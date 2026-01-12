@@ -497,4 +497,17 @@ export class ProfileHoverCardComponent {
       setTimeout(() => this.hoverCardService.closeHoverCard(), 100);
     }
   }
+
+  /**
+   * Navigate to profile using layout service
+   */
+  navigateToProfile(event: MouseEvent): void {
+    event.preventDefault();
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      this.layout.openProfile(pubkey);
+      // Close the hover card after navigation
+      this.hoverCardService.closeHoverCard();
+    }
+  }
 }

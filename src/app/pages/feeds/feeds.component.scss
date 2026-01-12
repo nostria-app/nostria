@@ -105,8 +105,9 @@ app-user-profile {
     }
 
     transition: transform 0.3s ease,
-    left 0.3s ease;
-    // Ensure it's above other content
+    left 0.3s ease,
+    right 0.3s ease;
+    // Ensure it's above other content but below detail view
     z-index: 100;
     // Allow clicks to pass through transparent areas between glass containers
     pointer-events: none;
@@ -2479,5 +2480,106 @@ h1 {
 :host-context(.dark) .relay-feed-container {
   .relay-feed-header {
     background-color: var(--mat-sys-surface-container);
+  }
+}
+
+// Detail View Styles
+.home-container.has-detail-view {
+  display: grid;
+  grid-template-columns: 1fr;
+
+  // Mobile: stack vertically, detail view overlays
+  @media (max-width: 767px) {
+    .detail-view-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background-color: var(--mat-sys-surface);
+    }
+  }
+
+  // Tablet and Desktop: side-by-side with equal widths
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 700px;
+    gap: 0;
+    max-width: 100%;
+    
+    // Move header to the left to avoid detail view
+    .header-section {
+      right: 716px; // 700px detail view + 16px spacing
+    }
+  }
+
+  // Wide screens: center the whole layout
+  @media (min-width: 1600px) {
+    max-width: 1600px;
+    margin: 0 auto;
+    
+    .header-section {
+      right: calc((100vw - 1600px) / 2 + 716px); // Account for centering and detail view
+    }
+  }
+}
+
+.detail-view-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mat-sys-surface);
+  border-left: 1px solid var(--mat-sys-outline-variant);
+  z-index: 110; // Above header (which is z-index: 100)
+
+  // On desktop, make it stick and scroll independently
+  @media (min-width: 768px) {
+    position: fixed;
+    right: 16px; // Space from edge for scrollbar
+    top: var(--toolbar-height, 64px);
+    bottom: 0;
+    width: 700px;
+    // Container should not scroll - let content scroll
+    overflow: visible;
+  }
+
+  // Wide screens: adjust position to stay within centered layout
+  @media (min-width: 1600px) {
+    right: calc((100vw - 1600px) / 2 + 16px); // Maintain spacing on wide screens
+  }
+
+  .detail-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; // Left-align the back button
+    padding: 8px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background-color: var(--mat-sys-surface);
+    z-index: 10;
+
+    // Account for toolbar on mobile
+    @media (max-width: 767px) {
+      margin-top: var(--toolbar-height, 64px);
+    }
+  }
+
+  .detail-view-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    // Ensure proper height calculation
+    height: 100%;
+    padding-bottom: 24px;
+  }
+}
+
+:host-context(.dark) .detail-view-container {
+  background-color: var(--mat-sys-surface);
+  border-left-color: var(--mat-sys-outline-variant);
+
+  .detail-view-header {
+    background-color: var(--mat-sys-surface);
   }
 }

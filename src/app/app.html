@@ -390,10 +390,22 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
-      <!-- Page content -->
+      <!-- Page content with dual-pane layout -->
       <div class="content-wrapper" [class.sidenav-open-expanded]="opened() && displayLabels() && !layout.isHandset()"
         [class.sidenav-open-collapsed]="opened() && !displayLabels() && !layout.isHandset()">
-        <router-outlet></router-outlet>
+        
+        <!-- Dual-pane container when feeds outlet is active -->
+        <div class="dual-pane-container">
+          <!-- Left pane: Feeds outlet -->
+          <div class="feeds-pane">
+            <router-outlet name="feeds"></router-outlet>
+          </div>
+          
+          <!-- Right pane: Main content outlet -->
+          <div class="detail-pane">
+            <router-outlet></router-outlet>
+          </div>
+        </div>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>

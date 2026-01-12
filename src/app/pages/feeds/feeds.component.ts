@@ -58,6 +58,8 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
 import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
+import { EventPageComponent } from '../event/event.component';
+import { ProfileComponent } from '../profile/profile.component';
 
 // NavLink interface removed because it was unused.
 
@@ -84,6 +86,8 @@ import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.compon
     TrendingColumnComponent,
     RelayColumnComponent,
     RelayFeedMenuComponent,
+    EventPageComponent,
+    ProfileComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -93,7 +97,7 @@ export class FeedsComponent implements OnDestroy {
   // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
-  private layoutService = inject(LayoutService);
+  layout = inject(LayoutService);
   private localSettings = inject(LocalSettingsService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -232,7 +236,7 @@ export class FeedsComponent implements OnDestroy {
   // On desktop, the sidenav pushes content, but fixed elements need manual offset
   sidenavOffset = computed(() => {
     // On mobile/handset, sidenav is in 'over' mode and doesn't need offset
-    if (this.layoutService.isHandset()) {
+    if (this.layout.isHandset()) {
       return 0;
     }
     // On desktop, check if sidenav is open
@@ -746,7 +750,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Set up scroll listener for header auto-hide
     effect(() => {
-      if (this.layoutService.isBrowser()) {
+      if (this.layout.isBrowser()) {
         setTimeout(() => {
           this.setupHeaderScrollListener();
         }, 500);
@@ -763,7 +767,7 @@ export class FeedsComponent implements OnDestroy {
         return;
       }
 
-      if (this.layoutService.isBrowser()) {
+      if (this.layout.isBrowser()) {
         // Wait for feed content to be rendered
         setTimeout(() => {
           this.setupFeedScrollListener(activeFeed);

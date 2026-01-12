@@ -23,11 +23,11 @@
     <!-- Avatar section - single image element -->
     @if (view() !== 'name' && view() !== 'tiny' && view() !== 'avatar') {
     <div class="user-profile-avatar-container">
-      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-avatar"
+      <a class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
         [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
         (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
-        (click)="disableLink() && $event.preventDefault()">
+        (click)="!disableLink() && navigateToProfile($event)">
         @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
         } @else if (profile()?.data?.picture && !imageLoadError()) {
@@ -69,8 +69,9 @@
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </div>
       } @else {
-      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()">
+      <a class="user-profile-name-link" #nameElement
+        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()"
+        (click)="navigateToProfile($event)">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
       }
@@ -90,17 +91,17 @@
     ) {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
+      <a class="user-profile-name-link" #nameElement
         (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()"
-        (click)="disableLink() && $event.preventDefault()">
+        (click)="!disableLink() && navigateToProfile($event)">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
-      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-npub-link" #npubElement
+      <a class="user-profile-npub-link" #npubElement
         (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()"
-        (click)="disableLink() && $event.preventDefault()">
+        (click)="!disableLink() && navigateToProfile($event)">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
       }
@@ -126,7 +127,7 @@
 
     @if (view() === 'name') {
     <div class="user-profile-content name-view">
-      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-avatar">
+      <a class="user-profile-avatar" (click)="navigateToProfile($event)">
         <div class="user-profile-avatar name-avatar">
           @if (isLoading()) {
           <mat-spinner [diameter]="24" color="primary"></mat-spinner>
@@ -156,7 +157,7 @@
     }
 
     @if (view() === 'tiny') {
-    <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-content tiny-view">
+    <a class="user-profile-content tiny-view" (click)="navigateToProfile($event)">
       <div class="user-profile-avatar name-avatar">
         @if (isLoading()) {
         <mat-spinner [diameter]="24" color="primary"></mat-spinner>
@@ -185,8 +186,8 @@
     }
 
     @if (view() === 'avatar') {
-    <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-avatar avatar-only"
-      [matTooltip]="getTooltipContent()" (click)="disableLink() && $event.preventDefault()">
+    <a class="user-profile-avatar avatar-only"
+      [matTooltip]="getTooltipContent()" (click)="!disableLink() && navigateToProfile($event)">
       @if (isLoading()) {
       <mat-spinner [diameter]="48" color="primary"></mat-spinner>
       } @else if (profile()?.data?.picture && !imageLoadError()) {

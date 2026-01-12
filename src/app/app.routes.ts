@@ -78,11 +78,17 @@ const profileChildren: Routes = [
 ];
 
 export const routes: Routes = [
-  // Home/Feeds - This is the main landing page, consider keeping eager for fastest FCP
+  // Home - activates feeds in the named 'feeds' outlet
   {
     path: '',
-    loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+    children: [
+      {
+        path: '',
+        outlet: 'feeds',
+        loadComponent: () =>
+          import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+      }
+    ],
     data: { isRoot: true },
     pathMatch: 'full',
     title: 'Home',
@@ -101,14 +107,26 @@ export const routes: Routes = [
   },
   {
     path: 'f',
-    loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+    children: [
+      {
+        path: '',
+        outlet: 'feeds',
+        loadComponent: () =>
+          import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+      }
+    ],
     title: 'Feeds',
   },
   {
     path: 'f/:path',
-    loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+    children: [
+      {
+        path: '',
+        outlet: 'feeds',
+        loadComponent: () =>
+          import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+      }
+    ],
     title: 'Feeds',
   },
   {

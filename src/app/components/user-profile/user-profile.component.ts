@@ -565,4 +565,15 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   onMouseLeave(): void {
     this.hoverCardService.hideHoverCard();
   }
+
+  /**
+   * Navigate to profile using layout service
+   */
+  navigateToProfile(event: MouseEvent): void {
+    event.preventDefault();
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      this.layout.openProfile(pubkey);
+    }
+  }
 }

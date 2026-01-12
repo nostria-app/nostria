@@ -16,7 +16,7 @@
 
     <!-- Profile Header -->
     <div class="profile-header">
-      <a [routerLink]="['/p', npubValue()]" class="avatar-link">
+      <a class="avatar-link" (click)="navigateToProfile($event)">
         @if (profile()?.data?.picture && !imageLoadError()) {
         @if (settingsService.settings().imageCacheEnabled && profile()?.data?.picture) {
         <img [src]="getOptimizedImageUrl(profile()!.data!.picture!)" (error)="onImageLoadError()" alt="User Avatar"
@@ -74,12 +74,12 @@
 
     <!-- Profile Info -->
     <div class="profile-info">
-      <a [routerLink]="['/p', npubValue()]" class="name-link">
+      <a class="name-link" (click)="navigateToProfile($event)">
         <div class="display-name">
           {{ profile()?.data?.display_name || profile()?.data?.name || 'Anonymous' }}
         </div>
       </a>
-      <a [routerLink]="['/p', npubValue()]" class="alias-link">
+      <a class="alias-link" (click)="navigateToProfile($event)">
         <div class="alias">{{ aliasOrNpub() }}</div>
       </a>
     </div>
@@ -132,9 +132,9 @@
         }
       </button>
       }
-      <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
+      <button mat-stroked-button (click)="navigateToProfile($event)">
         View Profile
-      </a>
+      </button>
     </div>
   </div>
   } @else {

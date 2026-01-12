@@ -201,6 +201,36 @@ export class ProfileComponent {
       // In browser, wait for full initialization
       const canProceed = this.app.isBrowser() ? this.app.initialized() : true;
 
+      // Check if we're in detail view mode (no route params, get pubkey from layout service)
+      const detailViewPubkey = this.layoutService.detailViewProfilePubkey();
+
+      if (detailViewPubkey) {
+        // We're in detail view mode, use the pubkey from layout service
+        untracked(async () => {
+          this.logger.debug('Profile in detail view mode with pubkey:', detailViewPubkey);
+
+          // Reset state when loading a new profile
+          this.userMetadata.set(undefined);
+          this.lightningQrCode.set('');
+          this.error.set(null);
+          this.isBlockedProfileRevealed.set(false);
+          this.previousBlockedState.set(false);
+
+          // Set the pubkey and load the profile
+          this.profileState.setCurrentProfilePubkey(detailViewPubkey);
+          this.pubkey.set(detailViewPubkey);
+          this.previousProfilePubkey = detailViewPubkey;
+
+          await this.loadUserProfile(detailViewPubkey);
+
+          // Track profile view (but not for own profile)
+          if (this.app.isBrowser() && !this.isOwnProfile()) {
+            await this.profileTracking.trackProfileView(detailViewPubkey);
+          }
+        });
+        return;
+      }
+
       // Only proceed if conditions are met and route params are available
       if (canProceed && this.routeParams() && this.routeData()) {
         untracked(async () => {
@@ -422,8 +452,10 @@ export class ProfileComponent {
         this.userMetadata.set(cachedMetadata);
         this.isLoading.set(false);
 
-        // Always scroll when we have data to show
-        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+        // Only scroll when NOT in detail view mode
+        if (!this.layoutService.detailViewProfilePubkey()) {
+          setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+        }
       }
 
       // Then force refresh profile data from relays to ensure it's up to date
@@ -445,7 +477,7 @@ export class ProfileComponent {
       }
 
       // If we haven't scrolled yet (no cached data case), scroll now
-      if (!cachedMetadata) {
+      if (!cachedMetadata && !this.layoutService.detailViewProfilePubkey()) {
         setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
       }
 

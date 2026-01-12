@@ -18,6 +18,7 @@ import { RouterModule } from '@angular/router';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 import { ScrollStateService } from '../../../services/scroll-state.service';
 import { SettingsService } from '../../../services/settings.service';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-profile-display-name',
@@ -34,6 +35,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   readonly utilities = inject(UtilitiesService);
   private scrollState = inject(ScrollStateService);
   private settingsService = inject(SettingsService);
+  private layout = inject(LayoutService);
 
   private linkElement: HTMLElement | null = null;
 
@@ -280,5 +282,16 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   onMouseLeave(): void {
     this.linkElement = null;
     this.hoverCardService.hideHoverCard();
+  }
+
+  /**
+   * Navigate to profile using layout service
+   */
+  navigateToProfile(event: MouseEvent): void {
+    event.preventDefault();
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      this.layout.openProfile(pubkey);
+    }
   }
 }

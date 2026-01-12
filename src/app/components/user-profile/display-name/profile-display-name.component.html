@@ -1,4 +1,4 @@
-<a [routerLink]="['/p', npubValue()]" class="profile-link" (mouseenter)="onMouseEnter($event)"
+<a class="profile-link" (click)="navigateToProfile($event)" (mouseenter)="onMouseEnter($event)"
   (mouseleave)="onMouseLeave()">
   @if (isLoading() || profile() === null) {
   ...

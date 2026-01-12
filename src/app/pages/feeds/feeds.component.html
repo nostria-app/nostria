@@ -1,7 +1,7 @@
 @if (!app.authenticated()) {
 <app-introduction></app-introduction>
 } @else {
-<div class="home-container" #homeContainer [ngClass]="columnLayout()">
+<div class="home-container" [class.has-detail-view]="layout.showDetailView()" #homeContainer [ngClass]="columnLayout()">
   <!-- Header Section -->
   <header class="header-section" [class.header-hidden]="headerHidden()" [style.left.px]="sidenavOffset()">
     <div class="title-section">
@@ -319,6 +319,26 @@
   @if (!isMobileView() && hasHorizontalOverflow()) {
   <div class="fixed-horizontal-scrollbar" #fixedScrollbar (scroll)="onFixedScrollbarScroll($event)">
     <div class="scrollbar-content" [style.width.px]="columnsScrollWidth()"></div>
+  </div>
+  }
+
+  <!-- Detail View Column -->
+  @if (layout.showDetailView()) {
+  <div class="detail-view-container">
+    <div class="detail-view-header">
+      <button mat-icon-button (click)="layout.goBackInDetailView()"
+        [attr.aria-label]="layout.canGoBackInDetailView() ? 'Go back' : 'Close'">
+        <mat-icon>{{ layout.canGoBackInDetailView() ? 'arrow_back' : 'close' }}</mat-icon>
+      </button>
+    </div>
+    <div class="detail-view-content">
+      @if (layout.detailViewEventId()) {
+      <app-event-page [dialogEventId]="layout.detailViewEventId()!"
+        [dialogEvent]="layout.detailViewEvent() || undefined" />
+      } @else if (layout.detailViewProfilePubkey()) {
+      <app-profile />
+      }
+    </div>
   </div>
   }
 </div>

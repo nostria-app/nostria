@@ -334,6 +334,71 @@ mat-sidenav-content {
   }
 }
 
+// Dual-pane layout for feeds + detail view
+.dual-pane-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 100%;
+  gap: 0;
+
+  // Mobile: stack vertically (detail pane overlays when active)
+  @media (max-width: 767px) {
+    .detail-pane:not(:empty) {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1100;
+      background-color: var(--mat-sys-surface);
+    }
+  }
+
+  // Tablet and Desktop: side-by-side
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 700px;
+    
+    .feeds-pane {
+      overflow: visible;
+    }
+    
+    .detail-pane {
+      position: fixed;
+      right: 16px;
+      top: var(--toolbar-height, 64px);
+      bottom: 0;
+      width: 700px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background-color: var(--mat-sys-surface);
+      border-left: 1px solid var(--mat-sys-outline-variant);
+      z-index: 110;
+    }
+  }
+
+  // Wide screens: adjust for centering
+  @media (min-width: 1600px) {
+    max-width: 1600px;
+    margin: 0 auto;
+    
+    .detail-pane {
+      right: calc((100vw - 1600px) / 2 + 16px);
+    }
+  }
+}
+
+// Hide feeds pane when detail pane has content on mobile
+@media (max-width: 767px) {
+  .dual-pane-container:has(.detail-pane:not(:empty)) .feeds-pane {
+    display: none;
+  }
+}
+
+:host-context(.dark) .dual-pane-container .detail-pane {
+  background-color: var(--mat-sys-surface);
+  border-left-color: var(--mat-sys-outline-variant);
+}
+
 // When media player is shown, add extra padding to content-wrapper
 // mat-sidenav-content.media-player-shown .content-wrapper {
 //   // We handle padding in individual components now to support glass effect

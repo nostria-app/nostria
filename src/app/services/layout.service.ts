@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone, computed } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -38,6 +38,7 @@ import { ReportTarget } from './reporting.service';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
+import { SidePanelService } from './side-panel.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -68,6 +69,17 @@ export class LayoutService implements OnDestroy {
   private feedService = inject(FeedService);
   private pool = inject(RelayPoolService);
   private onDemandUserData = inject(OnDemandUserDataService);
+
+  // Detail view state for showing events/profiles alongside feed
+  detailViewEventId = signal<string | null>(null);
+  detailViewEvent = signal<Event | null>(null);
+  detailViewProfilePubkey = signal<string | null>(null);
+  showDetailView = computed(() => !!this.detailViewEventId() || !!this.detailViewProfilePubkey());
+
+  // Navigation history for detail view
+  private detailViewHistory = signal<Array<{ type: 'event' | 'profile', eventId?: string, event?: Event, profilePubkey?: string }>>([]);
+  canGoBackInDetailView = computed(() => this.detailViewHistory().length > 1);
+
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
@@ -903,7 +915,55 @@ export class LayoutService implements OnDestroy {
   }
 
   openProfile(pubkey: string): void {
-    this.router.navigate(['/p', pubkey]);
+    // Check if we're on a page where we should preserve state by using detail view
+    const currentUrl = this.router.url;
+    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
+    const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
+
+    if (isOnFeedsPage || isOnPeoplePage) {
+      // Show in detail view to preserve page state and scroll position
+      this.detailViewEventId.set(null);
+      this.detailViewEvent.set(null);
+      this.detailViewProfilePubkey.set(pubkey);
+
+      // Add to navigation history
+      this.detailViewHistory.update(history => [...history, { type: 'profile', profilePubkey: pubkey }]);
+    } else {
+      // Navigate normally for direct links or other contexts
+      this.router.navigate(['/p', pubkey]);
+    }
+  }
+
+  closeDetailView(): void {
+    this.detailViewEventId.set(null);
+    this.detailViewEvent.set(null);
+    this.detailViewProfilePubkey.set(null);
+    this.detailViewHistory.set([]);
+  }
+
+  goBackInDetailView(): void {
+    const history = this.detailViewHistory();
+    if (history.length <= 1) {
+      // No history, just close
+      this.closeDetailView();
+      return;
+    }
+
+    // Remove current item from history
+    const newHistory = history.slice(0, -1);
+    this.detailViewHistory.set(newHistory);
+
+    // Navigate to previous item
+    const previous = newHistory[newHistory.length - 1];
+    if (previous.type === 'event') {
+      this.detailViewEventId.set(previous.eventId || null);
+      this.detailViewEvent.set(previous.event || null);
+      this.detailViewProfilePubkey.set(null);
+    } else {
+      this.detailViewProfilePubkey.set(previous.profilePubkey || null);
+      this.detailViewEventId.set(null);
+      this.detailViewEvent.set(null);
+    }
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
@@ -968,15 +1028,20 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
-    // Check if we're on a page where we should preserve state by using a dialog
+    // Check if we're on a page where we should preserve state by using detail view
     const currentUrl = this.router.url;
     const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
     const isOnProfilePage = currentUrl.startsWith('/p/') || currentUrl.startsWith('/u/');
     const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
 
     if (isOnFeedsPage || isOnProfilePage || isOnPeoplePage) {
-      // Open in dialog to preserve page state and scroll position
-      this.openEventInDialog(naddr, event, trustedByPubkey);
+      // Show in detail view to preserve page state and scroll position
+      this.detailViewProfilePubkey.set(null);
+      this.detailViewEventId.set(naddr);
+      this.detailViewEvent.set(event || null);
+
+      // Add to navigation history
+      this.detailViewHistory.update(history => [...history, { type: 'event', eventId: naddr, event: event || undefined }]);
     } else {
       // Navigate normally for direct links or other contexts
       this.router.navigate(['/e', naddr], { state: { event, trustedByPubkey } });
