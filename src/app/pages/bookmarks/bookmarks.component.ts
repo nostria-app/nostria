@@ -94,7 +94,7 @@ export class BookmarksComponent implements OnInit {
 
   // Default categories with types
   categories = signal<BookmarkCategory[]>([
-    { id: 'events', name: 'Events', color: '#2196f3' },
+    { id: 'events', name: 'Notes', color: '#2196f3' },
     { id: 'articles', name: 'Articles', color: '#4caf50' },
     { id: 'websites', name: 'Websites', color: '#ff9800' },
   ]);
