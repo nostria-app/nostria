@@ -46,11 +46,13 @@
     Share Event
   </button>
   <button mat-menu-item (click)="onBookmarkClick($event)">
-    <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
-      {{ bookmark.getBookmarkIcon(event().id) }}
+    <mat-icon
+      [matTooltip]="bookmark.getBookmarkTooltip(isArticle() ? articleId() : event().id, isArticle() ? 'a' : 'e')"
+      matTooltipPosition="below">
+      {{ bookmark.getBookmarkIcon(isArticle() ? articleId() : event().id, isArticle() ? 'a' : 'e') }}
     </mat-icon>
-    @if (bookmark.isBookmarkedInAnyList(event().id)) {
-    Manage Bookmarks
+    @if (bookmark.isBookmarkedInAnyList(isArticle() ? articleId() : event().id, isArticle() ? 'a' : 'e')) {
+    Bookmark
     } @else {
     Bookmark
     }
