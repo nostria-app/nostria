@@ -23,6 +23,7 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { FavoritesService } from '../../services/favorites.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AddPersonDialogComponent } from './add-person-dialog.component';
+import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './edit-people-list-dialog.component';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../components/create-list-dialog/create-list-dialog.component';
 import {
   Interest,
@@ -702,6 +703,33 @@ export class PeopleComponent implements OnDestroy {
     } catch (error) {
       this.logger.error('Failed to create list:', error);
       this.notificationService.notify('Failed to create list');
+    }
+  }
+
+  async openEditListDialog(): Promise<void> {
+    const selectedSet = this.selectedFollowSet();
+    if (!selectedSet) {
+      this.logger.warn('No follow set selected for editing');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(EditPeopleListDialogComponent, {
+      data: {
+        followSet: selectedSet,
+      },
+      width: '500px',
+      maxWidth: '90vw',
+    });
+
+    const result: EditPeopleListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+
+    if (result) {
+      this.logger.info('List updated, removed pubkeys:', result.removedPubkeys);
+
+      // Reload the profiles for the updated follow set
+      if (result.removedPubkeys.length > 0) {
+        await this.selectFollowSet(result.followSet);
+      }
     }
   }
 
