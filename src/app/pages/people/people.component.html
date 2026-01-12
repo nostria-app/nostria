@@ -35,25 +35,27 @@
         </mat-menu>
         }
 
-        <!-- Find People Button -->
-        <button mat-button routerLink="/people/discover" matTooltip="Discover new people to follow">
-          <mat-icon>explore</mat-icon>
-          Find<span class="hide-tiny"> People</span>
+        <!-- Actions menu -->
+        <button mat-icon-button [matMenuTriggerFor]="actionsMenu" matTooltip="More options">
+          <mat-icon>more_vert</mat-icon>
         </button>
 
-        <!-- Add Person Button -->
-        <button mat-button (click)="openAddPersonDialog()" matTooltip="Add a new person to follow">
-          <mat-icon>person_add</mat-icon>
-          Add<span class="hide-tiny"> Person</span>
-        </button>
-
-        <!-- Edit List Button - Only shown when a follow set is selected -->
-        @if (selectedFollowSet()) {
-        <button mat-button (click)="openEditListDialog()" matTooltip="Edit this list">
-          <mat-icon>edit</mat-icon>
-          Edit<span class="hide-tiny"> List</span>
-        </button>
-        }
+        <mat-menu #actionsMenu="matMenu">
+          <button mat-menu-item routerLink="/people/discover">
+            <mat-icon>explore</mat-icon>
+            <span>Find People</span>
+          </button>
+          <button mat-menu-item (click)="openAddPersonDialog()">
+            <mat-icon>person_add</mat-icon>
+            <span>Add Person</span>
+          </button>
+          @if (selectedFollowSet()) {
+          <button mat-menu-item (click)="openEditListDialog()">
+            <mat-icon>edit</mat-icon>
+            <span>Edit List</span>
+          </button>
+          }
+        </mat-menu>
 
         <!-- View menu -->
         <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View options">
