@@ -41,7 +41,7 @@ export class AddBookmarkDialogComponent {
 
   bookmarkTypes: { value: BookmarkType; label: string; icon: string }[] = [
     { value: 'r', label: 'Website', icon: 'link' },
-    { value: 'e', label: 'Event', icon: 'event' },
+    { value: 'e', label: 'Note', icon: 'event' },
     { value: 'a', label: 'Article', icon: 'article' },
   ];
 

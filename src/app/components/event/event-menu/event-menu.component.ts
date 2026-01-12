@@ -247,11 +247,15 @@ export class EventMenuComponent {
     event.stopPropagation();
     const targetItem = this.record();
     if (targetItem) {
+      // Use article ID for articles, event ID for regular events
+      const itemId = this.isArticle() ? this.articleId() : targetItem.event.id;
+      const itemType = this.isArticle() ? 'a' : 'e';
+
       // Open bookmark list selector dialog
       this.dialog.open(BookmarkListSelectorComponent, {
         data: {
-          itemId: targetItem.event.id,
-          type: 'e'
+          itemId: itemId,
+          type: itemType
         },
         width: '400px',
         panelClass: 'responsive-dialog'
