@@ -119,33 +119,22 @@
     } @else if (selectedCategory() === 'websites') {
     @for (bookmark of displayedUrls(); track bookmark.id) {
     @if (viewMode() === 'content') {
-    <div class="bookmark-url-card">
-      <mat-icon>link</mat-icon>
-      <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">{{ bookmark.id }}</a>
-      <button mat-icon-button
+    <div class="bookmark-url-preview">
+      <app-social-preview [url]="bookmark.id"></app-social-preview>
+      <button mat-icon-button class="remove-bookmark-btn"
         (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
-        matTooltip="Remove">
+        matTooltip="Remove from this list">
         <mat-icon>delete</mat-icon>
       </button>
     </div>
     } @else if (viewMode() === 'tiles') {
-    <div class="bookmark-tile">
-      <div class="tile-header">
-        <mat-icon>link</mat-icon>
-        <span class="tile-type">Website</span>
-      </div>
-      <div class="tile-content">
-        <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">
-          <h3>{{ bookmark.id.length > 30 ? bookmark.id.substring(0, 30) + '...' : bookmark.id }}</h3>
-        </a>
-      </div>
-      <div class="tile-actions">
-        <button mat-icon-button
-          (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
-          matTooltip="Remove">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </div>
+    <div class="bookmark-url-preview">
+      <app-social-preview [url]="bookmark.id"></app-social-preview>
+      <button mat-icon-button class="remove-bookmark-btn"
+        (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
+        matTooltip="Remove from this list">
+        <mat-icon>delete</mat-icon>
+      </button>
     </div>
     } @else {
     <div class="bookmark-detail">
