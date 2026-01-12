@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,8 +13,13 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { FollowSet, FollowSetsService } from '../../services/follow-sets.service';
 
 type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
+
+export interface AddPersonDialogData {
+  followSet?: FollowSet | null; // Optional: If provided, add to this set instead of following
+}
 
 @Component({
   selector: 'app-add-person-dialog',
@@ -28,12 +33,12 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
     MatProgressSpinnerModule,
     FormsModule,
     UserProfileComponent
-],
+  ],
   template: `
     <div class="add-person-dialog">
       <h2 mat-dialog-title>
         <mat-icon>person_add</mat-icon>
-        Add Person to Follow
+        {{ getDialogTitle() }}
       </h2>
 
       <mat-dialog-content>
@@ -118,9 +123,9 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
               mat-flat-button
               color="primary"
               (click)="onFollow()"
-              [disabled]="alreadyFollowing()"
+              [disabled]="alreadyFollowing() || alreadyInSet()"
             >
-              {{ alreadyFollowing() ? 'Already Following' : 'Follow' }}
+              {{ getActionButtonText() }}
             </button>
           }
           @case ('success') {
@@ -244,16 +249,19 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
 })
 export class AddPersonDialogComponent {
   private dialogRef = inject(MatDialogRef<AddPersonDialogComponent>);
+  private data = inject<AddPersonDialogData>(MAT_DIALOG_DATA, { optional: true });
   private discoveryRelay = inject(DiscoveryRelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
+  private followSetsService = inject(FollowSetsService);
 
   state = signal<DialogState>('input');
   inputValue = signal<string>('');
   errorMessage = signal<string>('');
   discoveredPubkey = signal<string | null>(null);
   alreadyFollowing = signal<boolean>(false);
+  alreadyInSet = signal<boolean>(false);
 
   onCancel(): void {
     this.dialogRef.close();
@@ -350,6 +358,11 @@ export class AddPersonDialogComponent {
       const isFollowing = this.accountState.isFollowing();
       this.alreadyFollowing.set(isFollowing(pubkey));
 
+      // Check if already in the target set (if adding to a set)
+      if (this.data?.followSet) {
+        this.alreadyInSet.set(this.data.followSet.pubkeys.includes(pubkey));
+      }
+
       // Query discovery relay for user's relays
       const relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
       this.logger.info('Found relay URLs:', relayUrls);
@@ -389,13 +402,27 @@ export class AddPersonDialogComponent {
       return;
     }
 
-    if (this.alreadyFollowing()) {
+    if (this.alreadyFollowing() && !this.data?.followSet) {
+      return;
+    }
+
+    if (this.alreadyInSet()) {
       return;
     }
 
     try {
       this.state.set('loading');
-      await this.accountState.follow(pubkey);
+
+      // If a follow set is provided, add to that set
+      if (this.data?.followSet) {
+        await this.followSetsService.addToFollowSet(this.data.followSet.dTag, pubkey);
+        this.logger.info(`Added ${pubkey} to follow set ${this.data.followSet.title}`);
+      } else {
+        // Otherwise, follow the user (add to main following list)
+        await this.accountState.follow(pubkey);
+        this.logger.info(`Followed user ${pubkey}`);
+      }
+
       this.state.set('success');
 
       // Auto-close after a short delay
@@ -403,9 +430,30 @@ export class AddPersonDialogComponent {
         this.onClose();
       }, 1500);
     } catch (err) {
-      this.logger.error('Error following user', err);
-      this.errorMessage.set('Failed to follow user. Please try again.');
+      this.logger.error('Error adding person', err);
+      const action = this.data?.followSet ? 'add to list' : 'follow';
+      this.errorMessage.set(`Failed to ${action}. Please try again.`);
       this.state.set('error');
     }
+  }
+
+  getDialogTitle(): string {
+    if (this.data?.followSet) {
+      return `Add Person to ${this.data.followSet.title}`;
+    }
+    return 'Add Person to Follow';
+  }
+
+  getActionButtonText(): string {
+    if (this.alreadyInSet()) {
+      return 'Already in List';
+    }
+    if (this.alreadyFollowing() && !this.data?.followSet) {
+      return 'Already Following';
+    }
+    if (this.data?.followSet) {
+      return 'Add to List';
+    }
+    return 'Follow';
   }
 }

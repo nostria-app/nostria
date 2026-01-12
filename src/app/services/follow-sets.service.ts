@@ -90,7 +90,23 @@ export class FollowSetsService {
       try {
         this.logger.debug('[FollowSets] Loading follow sets for pubkey:', pubkey);
 
-        // Fetch kind 30000 events from database and relays
+        // Ensure database is initialized before querying
+        await this.database.init();
+
+        // First, try to load from database
+        const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
+
+        if (dbEvents.length > 0) {
+          // Parse database events and update UI immediately
+          const dbSets = (await Promise.all(
+            dbEvents.map(event => this.parseFollowSetEvent(event))
+          )).filter((set): set is FollowSet => set !== null);
+
+          this.followSets.set(dbSets);
+          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database`);
+        }
+
+        // Then fetch from relays to get any updates
         const events = await this.dataService.getEventsByPubkeyAndKind(
           pubkey,
           30000,
@@ -106,7 +122,7 @@ export class FollowSetsService {
         )).filter((set): set is FollowSet => set !== null);
 
         this.followSets.set(sets);
-        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
+        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets (including relay updates)`);
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');

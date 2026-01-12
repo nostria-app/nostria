@@ -172,8 +172,8 @@ export class PeopleComponent implements OnDestroy {
     const selectedSet = this.selectedFollowSet();
     const followSetProfiles = this.followSetProfiles();
 
-    // If a follow set is selected, use the loaded follow set profiles
-    if (selectedSet && followSetProfiles.length > 0) {
+    // If a follow set is selected, use ONLY the loaded follow set profiles
+    if (selectedSet) {
       // Apply search if applicable
       let profiles = search
         ? followSetProfiles.filter(p => {
@@ -671,12 +671,20 @@ export class PeopleComponent implements OnDestroy {
       panelClass: 'responsive-dialog',
       disableClose: false,
       autoFocus: true,
+      data: {
+        followSet: this.selectedFollowSet(), // Pass the currently selected follow set (null if "All Following")
+      },
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.logger.info('Person added:', result);
         // FollowingService will automatically reload when following list changes
+        // If a follow set was selected, reload it
+        const selectedSet = this.selectedFollowSet();
+        if (selectedSet) {
+          this.selectFollowSet(selectedSet);
+        }
       }
     });
   }

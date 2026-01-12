@@ -40,6 +40,10 @@ export class ProfileHoverCardService implements OnDestroy {
     this.router.events
       .pipe(filter(event => event instanceof NavigationStart))
       .subscribe(() => {
+        // Reset mouse state immediately to prevent any pending timeouts from opening cards
+        this.isMouseOverTrigger.set(false);
+        this.isMouseOverCard.set(false);
+
         // Clear all timers and close immediately
         if (this.hoverTimeout) {
           window.clearTimeout(this.hoverTimeout);
@@ -94,7 +98,10 @@ export class ProfileHoverCardService implements OnDestroy {
 
     // Show hover card after delay
     this.hoverTimeout = window.setTimeout(() => {
-      this.createHoverCard(element, pubkey);
+      // Double-check we should still show the card (prevents race conditions)
+      if (this.isMouseOverTrigger()) {
+        this.createHoverCard(element, pubkey);
+      }
     }, delay);
   }
 
@@ -118,8 +125,14 @@ export class ProfileHoverCardService implements OnDestroy {
    * Creates and displays the hover card overlay
    */
   private async createHoverCard(element: HTMLElement, pubkey: string): Promise<void> {
-    // Don't show if already showing
-    if (this.overlayRef) {
+    // Don't show if already showing or if mouse is no longer over trigger
+    if (this.overlayRef || !this.isMouseOverTrigger()) {
+      return;
+    }
+
+    // Verify element is still in DOM and visible (prevents stuck cards after navigation)
+    if (!document.body.contains(element)) {
+      this.isMouseOverTrigger.set(false);
       return;
     }
 
@@ -127,6 +140,12 @@ export class ProfileHoverCardService implements OnDestroy {
     if (!this.ProfileHoverCardComponentType) {
       const { ProfileHoverCardComponent } = await import('../components/user-profile/hover-card/profile-hover-card.component');
       this.ProfileHoverCardComponentType = ProfileHoverCardComponent;
+    }
+
+    // Check again after async import - element might have been removed during import
+    if (!document.body.contains(element) || !this.isMouseOverTrigger()) {
+      this.isMouseOverTrigger.set(false);
+      return;
     }
 
     // Get element position and viewport dimensions
@@ -386,6 +405,10 @@ export class ProfileHoverCardService implements OnDestroy {
       window.clearTimeout(this.closeTimeout);
       this.closeTimeout = undefined;
     }
+
+    // Reset mouse state signals to prevent stuck states
+    this.isMouseOverTrigger.set(false);
+    this.isMouseOverCard.set(false);
 
     // Remove scroll listener
     window.removeEventListener('scroll', this.scrollListener, { capture: true });
