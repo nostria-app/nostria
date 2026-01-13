@@ -7,6 +7,7 @@ import {
   PLATFORM_ID,
   DOCUMENT,
   computed,
+  input,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import {
@@ -80,6 +81,9 @@ import { ReportingService } from '../../services/reporting.service';
   styleUrl: './profile.component.scss',
 })
 export class ProfileComponent {
+  // Input for two-column layout mode - when provided, uses this instead of route params
+  twoColumnPubkey = input<string | undefined>(undefined);
+  
   private data = inject(DataService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -195,37 +199,48 @@ export class ProfileComponent {
       }
     });
 
-    // React to changes in route parameters and app initialization
+    // React to changes in route parameters, input parameter, and app initialization
     effect(async () => {
       // During SSR, we don't need full app initialization (storage/nostr)
       // In browser, wait for full initialization
       const canProceed = this.app.isBrowser() ? this.app.initialized() : true;
+      
+      // Get pubkey from either input (two-column mode) or route params
+      const inputPubkey = this.twoColumnPubkey();
+      const hasRouteParams = this.routeParams() && this.routeData();
 
-      // Only proceed if conditions are met and route params are available
-      if (canProceed && this.routeParams() && this.routeData()) {
+      // Only proceed if conditions are met and we have either input or route params
+      if (canProceed && (inputPubkey || hasRouteParams)) {
         untracked(async () => {
           let id, username;
 
-          // For username routes (/u/:username), get username from params and resolve to pubkey
-          username = this.routeParams()?.get('username');
-          if (username) {
-            // Check if UsernameResolver already resolved the pubkey (handles NIP-05 and premium usernames)
-            const resolvedUser = this.routeData()?.['user'] as { id: string | undefined; username: string } | undefined;
-            if (resolvedUser?.id) {
-              id = resolvedUser.id;
-              this.logger.info('[ProfileComponent] Using resolved user from UsernameResolver:', { username, id });
-            } else if (this.app.isBrowser()) {
-              // Fallback: resolve username to pubkey (shouldn't normally happen if resolver works)
-              id = await this.username.getPubkey(username);
-              this.logger.info('[ProfileComponent] Resolved username in browser (fallback):', { username, id });
-            } else {
-              // During SSR, we don't have the id here, but the component will still render
-              // and the metadata is already loaded by DataResolver
-              this.logger.info('[ProfileComponent] Username route in SSR:', username);
-            }
+          // If we have a direct pubkey input (two-column mode), use it
+          if (inputPubkey) {
+            id = inputPubkey;
+            this.logger.debug('[ProfileComponent] Using pubkey from input:', id);
           } else {
-            // For /p/:id routes, get id directly from params
-            id = this.routeParams()?.get('id');
+            // Otherwise, use route params (normal navigation mode)
+            // For username routes (/u/:username), get username from params and resolve to pubkey
+            username = this.routeParams()?.get('username');
+            if (username) {
+              // Check if UsernameResolver already resolved the pubkey (handles NIP-05 and premium usernames)
+              const resolvedUser = this.routeData()?.['user'] as { id: string | undefined; username: string } | undefined;
+              if (resolvedUser?.id) {
+                id = resolvedUser.id;
+                this.logger.info('[ProfileComponent] Using resolved user from UsernameResolver:', { username, id });
+              } else if (this.app.isBrowser()) {
+                // Fallback: resolve username to pubkey (shouldn't normally happen if resolver works)
+                id = await this.username.getPubkey(username);
+                this.logger.info('[ProfileComponent] Resolved username in browser (fallback):', { username, id });
+              } else {
+                // During SSR, we don't have the id here, but the component will still render
+                // and the metadata is already loaded by DataResolver
+                this.logger.info('[ProfileComponent] Username route in SSR:', username);
+              }
+            } else {
+              // For /p/:id routes, get id directly from params
+              id = this.routeParams()?.get('id');
+            }
           }
 
           if (id) {

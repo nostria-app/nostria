@@ -78,11 +78,11 @@ const profileChildren: Routes = [
 ];
 
 export const routes: Routes = [
-  // Home/Feeds - This is the main landing page, consider keeping eager for fastest FCP
+  // Home - Two-column layout with feeds on left and dynamic content on right
   {
     path: '',
     loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+      import('./pages/home/home.component').then(m => m.HomeComponent),
     data: { isRoot: true },
     pathMatch: 'full',
     title: 'Home',
@@ -92,24 +92,23 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/share-target/share-target.component').then(m => m.ShareTargetComponent),
   },
+  // Legacy feed routes - redirect to home
+  {
+    path: 'f',
+    redirectTo: '',
+    pathMatch: 'full',
+  },
+  {
+    path: 'f/:path',
+    redirectTo: '',
+    pathMatch: 'full',
+  },
   {
     path: 'summary',
     loadComponent: () =>
       import('./pages/summary/summary.component').then(m => m.SummaryComponent),
     data: { isRoot: true },
     title: 'Summary',
-  },
-  {
-    path: 'f',
-    loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
-    title: 'Feeds',
-  },
-  {
-    path: 'f/:path',
-    loadComponent: () =>
-      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
-    title: 'Feeds',
   },
   {
     path: 'e/:id',
