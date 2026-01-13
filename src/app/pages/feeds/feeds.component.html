@@ -36,6 +36,13 @@
           }
           }
 
+          <!-- Public Relay Feeds Menu -->
+          <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+          </app-relay-feed-menu>
+
+          <!-- Spacer to push menu to the right -->
+          <span class="toolbar-spacer"></span>
+
           <!-- Feed menu with all actions -->
           <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
             <mat-icon>more_vert</mat-icon>
@@ -91,10 +98,6 @@
             </button>
           </mat-menu>
         </div>
-
-        <!-- Public Relay Feeds Menu - kept separate for better UX -->
-        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
-        </app-relay-feed-menu>
       </div>
     </div>
 
@@ -116,18 +119,6 @@
       </div>
     </div>
     } @else {
-    <!-- Scroll indicators -->
-    @if (!isMobileView() && canScrollLeft()) {
-    <div class="scroll-indicator left" (click)="scrollLeft()">
-      <mat-icon>chevron_left</mat-icon>
-    </div>
-    }
-    @if (!isMobileView() && canScrollRight()) {
-    <div class="scroll-indicator right" (click)="scrollRight()">
-      <mat-icon>chevron_right</mat-icon>
-    </div>
-    }
-
     <div class="columns-wrapper" #columnsWrapper>
       <!-- Normal Feeds with connected headers and content - only show when initialized -->
       @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded() && activeFeed()) {

@@ -56,7 +56,13 @@ app-user-profile {
   height: 100%;
   overflow: hidden;
   // Add padding at top so content starts below toolbar
+  // Only apply when feeds is standalone (not nested in home component)
   padding-top: var(--toolbar-height, 64px);
+
+  // When nested in home component's feed-column, don't add extra padding
+  :host-context(.feed-column) & {
+    padding-top: 0;
+  }
 
   // On mobile, allow full page scrolling instead of per-column scrolling
   @media (max-width: 1023px) {
@@ -213,6 +219,11 @@ app-user-profile {
               }
             }
           }
+
+          // Spacer to push relay menu to the right
+          .toolbar-spacer {
+            flex: 1;
+          }
         }
 
 
@@ -304,6 +315,13 @@ app-user-profile {
     // Add bottom padding for the fixed scrollbar
     padding-bottom: 16px;
     scrollbar-width: thin;
+    // Prevent sideways scrolling when content is narrower than container
+    max-width: 100%;
+
+    // When nested in home component, don't need top padding (header floats)
+    :host-context(.feed-column) & {
+      padding-top: 56px; // Keep padding for floating header in feed column
+    }
 
     &::-webkit-scrollbar {
       height: 12px;
