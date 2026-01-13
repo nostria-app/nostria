@@ -58,9 +58,10 @@
 }
 
 .feed-column {
-  flex: 0 0 700px;
+  flex: 1 1 700px; // Can grow and shrink from 700px base
   width: 700px;
   max-width: 700px;
+  min-width: 300px; // Allow shrinking but not too small
   height: 100%;
   overflow: hidden; // Let feeds component handle its own scrolling
   background-color: var(--mat-app-background-color);
@@ -70,13 +71,15 @@
     flex: 1;
     width: 100%;
     max-width: 100%;
+    min-width: 100%;
   }
 }
 
 .content-column {
-  flex: 0 0 700px;
+  flex: 1 1 700px; // Can grow and shrink from 700px base
   width: 700px;
   max-width: 700px;
+  min-width: 300px; // Allow shrinking but not too small
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -88,6 +91,7 @@
     flex: 1;
     width: 100%;
     max-width: 100%;
+    min-width: 100%;
   }
 }
 
@@ -143,7 +147,8 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // No top padding - content should stretch to top
+  // Add padding at top for floating header clearance
+  padding-top: 180px; // 48px header height + 8px top offset + 16px spacing
 
   // Ensure event content is left-aligned like comments
   app-event-page {

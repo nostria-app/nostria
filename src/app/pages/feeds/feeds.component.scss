@@ -313,7 +313,6 @@ app-user-profile {
     // Add top padding to account for fixed header on standalone (not nested)
     padding-top: 56px;
     // Add bottom padding for the fixed scrollbar
-    padding-bottom: 16px;
     scrollbar-width: thin;
     // Prevent sideways scrolling when content is narrower than container
     max-width: 100%;
@@ -354,7 +353,7 @@ app-user-profile {
       display: flex;
       flex: 0 0 auto;
       gap: 12px;
-      padding: 12px;
+      // padding: 12px;
       height: 100%;
 
       // When nested in home component, remove top padding so content goes to top
@@ -388,8 +387,8 @@ app-user-profile {
         flex-direction: column;
         width: 700px;
         max-width: 700px;
-        min-width: 700px; // Ensure consistent width during loading
-        flex: 0 0 700px; // Fixed width, don't grow or shrink
+        min-width: 300px; // Allow shrinking for responsive behavior
+        flex: 1 1 700px; // Can grow and shrink from 700px base
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
@@ -443,6 +442,11 @@ app-user-profile {
           overflow-y: auto;
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
+
+          // When nested in home component, add padding for toolbar clearance
+          :host-context(.feed-column) & {
+            padding-top: 180px; // Clearance for toolbar
+          }
 
           // Column header - inside scrollable content
           .column-header {
