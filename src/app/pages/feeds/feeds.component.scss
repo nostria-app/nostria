@@ -103,7 +103,7 @@ app-user-profile {
     background: transparent;
     // Position absolutely within the feeds container
     position: absolute;
-    top: calc(var(--toolbar-height, 64px) + 8px);
+    top: calc(var(--toolbar-height, 64px) + 60px);
     left: 0;
     right: 0;
     // Width constrained to feeds panel
@@ -433,6 +433,7 @@ app-user-profile {
           overflow-y: auto; // Enable scrolling here
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
+          padding-top: 180px;
 
           // No padding-top - content scrolls behind transparent toolbar
           // The floating header is positioned absolutely
