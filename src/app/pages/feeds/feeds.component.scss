@@ -553,7 +553,6 @@ app-user-profile {
             flex-direction: column;
             gap: 12px;
             width: 100%;
-            padding: 10px;
 
             // Remove padding on mobile for edge-to-edge content
             @media (max-width: 599px) {
