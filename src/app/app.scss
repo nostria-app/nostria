@@ -309,7 +309,7 @@ mat-sidenav-content {
   width: 100%;
   overflow: hidden;
   justify-content: center; // Center the two panes
-  padding-top: var(--toolbar-height, 64px); // Space for toolbar
+  // No padding - content renders behind transparent toolbar
 
   // When feeds panel is collapsed, just center the content
   &:not(.feeds-expanded) {
