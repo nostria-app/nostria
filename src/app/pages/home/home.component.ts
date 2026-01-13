@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { FeedsComponent } from '../feeds/feeds.component';
 import { EventPageComponent } from '../event/event.component';
 import { ProfileComponent } from '../profile/profile.component';
-import { NavigationStackService, NavigationItem } from '../../services/navigation-stack.service';
+import { NavigationStackService } from '../../services/navigation-stack.service';
 import { LayoutService } from '../../services/layout.service';
 import { ApplicationService } from '../../services/application.service';
 
@@ -16,7 +15,6 @@ import { ApplicationService } from '../../services/application.service';
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    FeedsComponent,
     EventPageComponent,
     ProfileComponent,
   ],
@@ -30,9 +28,6 @@ export class HomeComponent {
   private layout = inject(LayoutService);
   protected app = inject(ApplicationService);
 
-  // Track screen width for responsive behavior
-  screenWidth = signal(typeof window !== 'undefined' ? window.innerWidth : 1024);
-
   // Header hidden state for scroll behavior
   contentHeaderHidden = signal(false);
   private lastScrollTop = 0;
@@ -41,43 +36,6 @@ export class HomeComponent {
   hasNavigatedItems = computed(() => this.navigationStack.hasItems());
   hasMultipleItems = computed(() => this.navigationStack.hasMultipleItems());
   currentItem = computed(() => this.navigationStack.currentItem());
-
-  // Feed collapsed state from layout service
-  feedCollapsed = computed(() => this.layout.feedCollapsed());
-
-  // Mobile breakpoint
-  isMobile = computed(() => this.screenWidth() < 1024);
-
-  // Show feed or content on mobile
-  showFeedOnMobile = computed(() => {
-    const mobile = this.isMobile();
-    const hasItems = this.hasNavigatedItems();
-    // On mobile, show feed when there are no navigated items
-    return mobile && !hasItems;
-  });
-
-  showContentOnMobile = computed(() => {
-    const mobile = this.isMobile();
-    const hasItems = this.hasNavigatedItems();
-    // On mobile, show content when there are navigated items
-    return mobile && hasItems;
-  });
-
-  constructor() {
-    // Set up resize listener for responsive behavior
-    if (typeof window !== 'undefined') {
-      effect(() => {
-        const handleResize = () => {
-          this.screenWidth.set(window.innerWidth);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => {
-          window.removeEventListener('resize', handleResize);
-        };
-      });
-    }
-  }
 
   /**
    * Go back to the previous item in the navigation stack

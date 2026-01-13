@@ -301,36 +301,89 @@ mat-sidenav-content {
   }
 }
 
+// Main content layout - centered two-pane layout
+.main-content-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  justify-content: center; // Center the two panes
+  padding-top: var(--toolbar-height, 64px); // Space for toolbar
+  
+  // When feeds panel is collapsed, just center the content
+  &:not(.feeds-expanded) {
+    .content-wrapper {
+      max-width: 700px;
+    }
+  }
+}
+
 .content-wrapper {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Content scrolls behind transparent toolbar
-  // Padding at top for toolbar, at bottom for mobile menu
-  padding-top: var(--toolbar-height, 64px);
-  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  // Compensate for sidenav width to keep content centered on screen
-  // When sidenav is open in side mode, add equal padding-right to balance
-  // This keeps the scrollbar at the edge while centering the content
-  // Only apply on large screens where there's enough room (min 1200px)
-  // Full-width components can override this using CSS variables
-  @media (min-width: 1200px) {
-    &.sidenav-open-expanded {
-      padding-right: 220px; // Match expanded sidenav width (sidenav-labels)
-      --content-wrapper-padding-right: 220px;
-    }
-
-    &.sidenav-open-collapsed {
-      padding-right: 56px; // Match collapsed sidenav width (sidenav-small)
-      --content-wrapper-padding-right: 56px;
-    }
+  min-width: 0; // Prevent flex item from overflowing
+  max-width: 700px; // Limit content width for readability
+  
+  // When feeds are expanded, allow content to take more space
+  .feeds-expanded & {
+    max-width: 600px;
   }
 
-  // Add bottom padding for mobile navigation menu
-  @media (max-width: 599px) {
-    // Mobile nav height (64px) + bottom offset (24px) + safe area + extra space
-    // padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  // On smaller screens, take full width
+  @media (max-width: 1023px) {
+    max-width: 100%;
+  }
+}
+
+// Global Feeds Panel - side-by-side with content, centered layout
+.global-feeds-panel {
+  width: 400px;
+  min-width: 400px;
+  max-width: 400px;
+  height: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  // Hidden state - collapse width to 0
+  &.collapsed {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    pointer-events: none;
+  }
+  
+  // Visible state
+  &.expanded {
+    pointer-events: auto;
+  }
+
+  // On mobile, take full width when expanded (overlay behavior)
+  @media (max-width: 1023px) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 500;
+    background-color: var(--mat-app-background-color);
+    padding-top: var(--toolbar-height, 64px);
+    
+    &.expanded {
+      width: 100%;
+      min-width: 100%;
+      max-width: 100%;
+    }
+  }
+  
+  // Ensure the feeds component fills the panel
+  app-feeds {
+    display: block;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
   }
 }
 

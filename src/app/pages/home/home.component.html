@@ -1,47 +1,46 @@
 <div class="home-container">
-  <!-- Two-column layout on desktop, single column on mobile -->
-  <div class="columns-wrapper" [class.mobile]="isMobile()" [class.has-content]="hasNavigatedItems()"
-    [class.feed-collapsed]="feedCollapsed() && hasNavigatedItems()">
-
-    <!-- Left Column: Feeds (hidden when collapsed and has content) -->
-    @if (!(feedCollapsed() && hasNavigatedItems())) {
-    <div class="feed-column" [class.hidden-mobile]="showContentOnMobile()">
-      <app-feeds></app-feeds>
+  <!-- Home page now serves as the content viewer for navigation stack items -->
+  <!-- The global feeds panel is handled at the app level -->
+  
+  @if (hasNavigatedItems()) {
+  <div class="content-area-wrapper">
+    <!-- Navigation header for back/close -->
+    <div class="content-header" [class.header-hidden]="contentHeaderHidden()">
+      @if (hasMultipleItems()) {
+      <!-- Back button when there are multiple items -->
+      <button mat-icon-button (click)="goBack()" class="nav-button">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      } @else {
+      <!-- Close button when there's only one item -->
+      <button mat-icon-button (click)="close()" class="nav-button">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+      <span class="content-title">{{ getNavigationTitle() }}</span>
     </div>
-    }
 
-    <!-- Right Column: Dynamic Content (Event or Profile) -->
-    @if (hasNavigatedItems()) {
-    <div class="content-column" [class.hidden-mobile]="showFeedOnMobile()" [class.centered]="feedCollapsed()">
-      <!-- Navigation header -->
-      <div class="content-header" [class.header-hidden]="contentHeaderHidden()">
-        @if (hasMultipleItems()) {
-        <!-- Back button when there are multiple items -->
-        <button mat-icon-button (click)="goBack()" class="nav-button">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        } @else {
-        <!-- Close button when there's only one item -->
-        <button mat-icon-button (click)="close()" class="nav-button">
-          <mat-icon>close</mat-icon>
-        </button>
-        }
-        <span class="content-title">{{ getNavigationTitle() }}</span>
-      </div>
-
-      <!-- Content area -->
-      <div class="content-area" (scroll)="onContentScroll($event)">
-        @let item = currentItem();
-        @if (item) {
+    <!-- Content area -->
+    <div class="content-area" (scroll)="onContentScroll($event)">
+      @let item = currentItem();
+      @if (item) {
         @if (item.type === 'event') {
-        <app-event-page [dialogEventId]="item.id" [dialogEvent]="item.data">
-        </app-event-page>
+          <app-event-page [dialogEventId]="item.id" [dialogEvent]="item.data">
+          </app-event-page>
         } @else if (item.type === 'profile') {
-        <app-profile [twoColumnPubkey]="item.id"></app-profile>
+          <app-profile [twoColumnPubkey]="item.id"></app-profile>
         }
-        }
-      </div>
+      }
     </div>
-    }
   </div>
+  } @else {
+  <!-- Empty state when no navigation items - just show a placeholder -->
+  <!-- The feeds panel is the main content when expanded -->
+  <div class="empty-home-state">
+    <div class="empty-content">
+      <mat-icon class="empty-icon">dynamic_feed</mat-icon>
+      <p class="empty-text">Select an item from your feeds to view it here</p>
+    </div>
+  </div>
+  }
 </div>

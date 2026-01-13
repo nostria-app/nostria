@@ -35,9 +35,9 @@ app-user-profile {
   height: 100%;
 }
 
-// When feeds is used standalone (not inside home component), apply toolbar offset
-// This is detected by checking if we're NOT inside a .feed-column wrapper
-:host-context(:not(.feed-column)) {
+// When feeds is used standalone (outside global panel), apply toolbar offset
+// When inside global-feeds-panel, the panel handles positioning
+:host-context(:not(.global-feeds-panel)) {
   // Pull up into toolbar area
   margin-top: calc(-1 * var(--toolbar-height, 64px));
   // Compensate for the negative margin in height calculation
@@ -56,11 +56,10 @@ app-user-profile {
   height: 100%;
   overflow: hidden;
   // Add padding at top so content starts below toolbar
-  // Only apply when feeds is standalone (not nested in home component)
   padding-top: var(--toolbar-height, 64px);
 
-  // When nested in home component's feed-column, don't add extra padding
-  :host-context(.feed-column) & {
+  // When in global feeds panel, no toolbar padding needed (parent handles it)
+  :host-context(.global-feeds-panel) & {
     padding-top: 0;
   }
 
@@ -348,8 +347,8 @@ app-user-profile {
       // padding: 12px;
       height: 100%;
 
-      // When nested in home component, remove top padding so content goes to top
-      :host-context(.feed-column) & {
+      // When in global feeds panel, remove top padding so content goes to top
+      :host-context(.global-feeds-panel) & {
         padding-top: 0;
       }
 
@@ -387,8 +386,8 @@ app-user-profile {
         overflow: hidden;
         position: relative;
 
-        // When nested in home component, remove visual borders for seamless look
-        :host-context(.feed-column) & {
+        // When in global feeds panel, remove visual borders for seamless look
+        :host-context(.global-feeds-panel) & {
           border-radius: 0;
           box-shadow: none;
           width: 100%;
@@ -435,8 +434,8 @@ app-user-profile {
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
 
-          // Add padding for toolbar clearance when nested in home component
-          :host-context(.feed-column) & {
+          // Add padding for toolbar clearance when in global feeds panel
+          :host-context(.global-feeds-panel) & {
             padding-top: 80px; // Clearance for toolbar + feeds header (toolbar 64px + header gap 8px + header height ~48px)
           }
 

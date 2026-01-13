@@ -4,101 +4,21 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  // Pull up into toolbar area so content scrolls behind transparent toolbar
-  margin-top: calc(-1 * var(--toolbar-height, 64px));
-  // Compensate for the negative margin in height calculation
-  min-height: calc(100% + var(--toolbar-height, 64px));
-  // No padding-top - content renders to top and scrolls behind toolbar
-
-  @media (max-width: 599px) {
-    // Also pull down into mobile menu area
-    margin-bottom: calc(-100px - env(safe-area-inset-bottom, 0px));
-    min-height: calc(100% + var(--toolbar-height, 64px) + 100px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
-.columns-wrapper {
-  display: flex;
+// Content area wrapper - positioned next to global feeds panel
+.content-area-wrapper {
   flex: 1;
-  overflow: hidden;
-  width: 100%;
-  justify-content: center; // Always center the columns
-
-  // Default: two-column layout on desktop
-  &:not(.mobile) {
-    gap: 0;
-
-    // Center feed when no content is selected
-    &:not(.has-content) {
-      .feed-column {
-        max-width: 700px;
-      }
-    }
-
-    // When content is present, limit combined width and center
-    &.has-content {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    // When feed is collapsed, center the content column
-    &.feed-collapsed {
-      .content-column {
-        margin: 0 auto;
-      }
-    }
-  }
-
-  // Mobile: single column at a time
-  &.mobile {
-
-    .feed-column,
-    .content-column {
-      width: 100%;
-      flex: none;
-    }
-
-    .hidden-mobile {
-      display: none !important;
-    }
-  }
-}
-
-.feed-column {
-  flex: 1 1 700px; // Can grow and shrink from 700px base
-  width: 700px;
-  max-width: 700px;
-  min-width: 300px; // Allow shrinking but not too small
-  height: 100%;
-  overflow: hidden; // Let feeds component handle its own scrolling
-  background-color: var(--mat-app-background-color);
-
-  // Mobile: full width
-  @media (max-width: 1023px) {
-    flex: 1;
-    width: 100%;
-    max-width: 100%;
-    min-width: 100%;
-  }
-}
-
-.content-column {
-  flex: 1 1 700px; // Can grow and shrink from 700px base
-  width: 700px;
-  max-width: 700px;
-  min-width: 300px; // Allow shrinking but not too small
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: var(--mat-app-surface-color);
-  position: relative; // For positioning the floating header
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
 
-  // Mobile: full width
   @media (max-width: 1023px) {
-    flex: 1;
-    width: 100%;
     max-width: 100%;
-    min-width: 100%;
   }
 }
 
@@ -107,19 +27,17 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  // Position within content-column below the main toolbar
+  // Position below the main toolbar
   position: absolute;
-  top: calc(var(--toolbar-height, 64px) + 8px); // Below main toolbar with spacing
-  left: 1rem; // Align with content padding
-  z-index: 201; // Higher than feeds toolbar (200) to ensure visibility
+  top: calc(var(--toolbar-height, 64px) + 8px);
+  left: 1rem;
+  z-index: 201;
   border-radius: 24px;
   height: 48px;
-  // Ensure pointer events work
   pointer-events: auto;
-  // Smooth transition for scroll-hide animation
   transition: transform 0.3s ease, opacity 0.3s ease;
 
-  // Hidden state when scrolling down - match feeds toolbar behavior
+  // Hidden state when scrolling down
   &.header-hidden {
     transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
     pointer-events: none;
@@ -131,9 +49,9 @@
   backdrop-filter: blur(20px) saturate(1.8);
 
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-  inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-  0px 2px 8px rgba(17, 17, 26, 0.08),
-  0px 4px 16px rgba(17, 17, 26, 0.06);
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    0px 2px 8px rgba(17, 17, 26, 0.08),
+    0px 4px 16px rgba(17, 17, 26, 0.06);
 
   .nav-button {
     flex-shrink: 0;
@@ -142,7 +60,6 @@
   .content-title {
     flex: 1;
     font-size: 1rem;
-    font-weight: 500;
     color: var(--mat-sys-on-surface);
     padding-right: 8px;
   }
@@ -164,13 +81,38 @@
   overflow-y: auto;
   overflow-x: hidden;
   // Add padding at top for toolbar + floating header clearance
-  // Content header is at (toolbar + 8px) top, height 48px, so bottom is at (toolbar + 56px)
-  // Add some spacing (24px) = toolbar + 80px
   padding-top: calc(var(--toolbar-height, 64px) + 80px);
 
-  // Ensure event content is left-aligned like comments
   app-event-page {
     display: block;
     width: 100%;
+  }
+}
+
+// Empty state when no navigation items
+.empty-home-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--toolbar-height, 64px);
+  
+  .empty-content {
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+    
+    .empty-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      opacity: 0.5;
+      margin-bottom: 16px;
+    }
+    
+    .empty-text {
+      font-size: 1rem;
+      margin: 0;
+      max-width: 300px;
+    }
   }
 }
