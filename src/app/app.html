@@ -398,7 +398,8 @@
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
       <!-- Main content layout: feeds panel and page content side by side -->
-      <div class="main-content-layout" [class.feeds-expanded]="layout.feedsExpanded() && app.authenticated()">
+      <div class="main-content-layout" [class.feeds-expanded]="layout.feedsExpanded() && app.authenticated()"
+        [class.has-content]="layout.hasNavigationItems()" [class.home-route]="layout.isHomeRoute()">
         <!-- Global Feeds Panel - always rendered, visibility controlled by CSS -->
         @if (app.authenticated()) {
         <div class="global-feeds-panel" [class.expanded]="layout.feedsExpanded()"
@@ -406,7 +407,7 @@
           <app-feeds></app-feeds>
         </div>
         }
-        <!-- Page content -->
+        <!-- Page content - hidden when no navigation items on home route -->
         <div class="content-wrapper">
           <router-outlet></router-outlet>
         </div>
