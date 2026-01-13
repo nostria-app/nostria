@@ -76,6 +76,13 @@ export class LayoutService implements OnDestroy {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
 
+  /** Signal to control whether the feed column is collapsed on home page */
+  feedCollapsed = signal(false);
+
+  toggleFeedCollapsed() {
+    this.feedCollapsed.update((v) => !v);
+  }
+
   // Track currently open event dialog for back button handling
   // Using any type since EventDialogComponent is dynamically imported
   private currentEventDialogRef: CustomDialogRef<any> | null = null;
@@ -1062,7 +1069,20 @@ export class LayoutService implements OnDestroy {
   }
 
   openArticle(naddr: string, event?: Event): void {
-    this.router.navigate(['/a', naddr], { state: { event } });
+    // Check if we're on the home page where the two-column layout exists
+    const currentUrl = this.router.url;
+    const isOnHomePage = currentUrl === '/' ||
+      currentUrl.startsWith('/?') ||
+      currentUrl.startsWith('/#') ||
+      /^\/(\?|#|$)/.test(currentUrl);
+
+    if (isOnHomePage && event) {
+      // Use navigation stack for two-column layout
+      this.navigationStack.navigateToEvent(event.id, event);
+    } else {
+      // Navigate normally for other contexts
+      this.router.navigate(['/a', naddr], { state: { event } });
+    }
   }
 
   openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
