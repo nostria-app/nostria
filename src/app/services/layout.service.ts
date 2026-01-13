@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject, Injectable, signal, computed, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
-import { NavigationExtras, Router } from '@angular/router';
+import { NavigationEnd, NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { MatDialog } from '@angular/material/dialog';
@@ -82,6 +82,18 @@ export class LayoutService implements OnDestroy {
    * The feeds component is always rendered (never destroyed) to preserve state.
    */
   feedsExpanded = signal(true);
+
+  /**
+   * Signal that exposes whether there are items in the navigation stack.
+   * Used to determine if content is loaded in the two-column layout.
+   */
+  hasNavigationItems = computed(() => this.navigationStack.hasItems());
+
+  /**
+   * Signal tracking whether we're currently on the home route.
+   * Used to determine when to center the feeds panel.
+   */
+  isHomeRoute = signal(true);
 
   /** @deprecated Use feedsExpanded instead */
   feedCollapsed = computed(() => !this.feedsExpanded());
@@ -216,6 +228,15 @@ export class LayoutService implements OnDestroy {
         }
       });
     }
+
+    // Track whether we're on the home route
+    // Initialize with current route state
+    this.isHomeRoute.set(this.router.url === '/' || this.router.url.startsWith('/?'));
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.isHomeRoute.set(event.url === '/' || event.url.startsWith('/?'));
+      }
+    });
 
     effect(() => {
       if (this.isBrowser() && this.accountStateService.initialized()) {

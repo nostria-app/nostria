@@ -317,6 +317,13 @@ mat-sidenav-content {
       max-width: 700px;
     }
   }
+
+  // When on home route with feeds expanded but no content loaded, hide content-wrapper to center feeds
+  &.home-route.feeds-expanded:not(.has-content) {
+    .content-wrapper {
+      display: none;
+    }
+  }
 }
 
 .content-wrapper {
