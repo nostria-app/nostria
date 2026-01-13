@@ -307,10 +307,10 @@ app-user-profile {
     display: flex;
     flex-direction: row;
     flex: 1;
-    overflow-x: auto;
+    overflow-x: hidden; // No horizontal scroll - single column view
     overflow-y: hidden;
     position: relative;
-    // Add top padding to account for fixed header on all screen sizes
+    // Add top padding to account for fixed header on standalone (not nested)
     padding-top: 56px;
     // Add bottom padding for the fixed scrollbar
     padding-bottom: 16px;
@@ -318,9 +318,9 @@ app-user-profile {
     // Prevent sideways scrolling when content is narrower than container
     max-width: 100%;
 
-    // When nested in home component, don't need top padding (header floats)
+    // When nested in home component, no top padding needed - content starts at top
     :host-context(.feed-column) & {
-      padding-top: 56px; // Keep padding for floating header in feed column
+      padding-top: 0;
     }
 
     &::-webkit-scrollbar {
@@ -357,6 +357,11 @@ app-user-profile {
       padding: 12px;
       height: 100%;
 
+      // When nested in home component, remove top padding so content goes to top
+      :host-context(.feed-column) & {
+        padding-top: 0;
+      }
+
       // Expand to full width when showing empty/loading state
       &:has(.empty-columns-state) {
         flex: 1;
@@ -390,6 +395,16 @@ app-user-profile {
         box-shadow: var(--mat-sys-level1);
         overflow: hidden;
         position: relative;
+
+        // When nested in home component, remove visual borders for seamless look
+        :host-context(.feed-column) & {
+          border-radius: 0;
+          box-shadow: none;
+          width: 100%;
+          max-width: 100%;
+          min-width: 100%;
+          flex: 1;
+        }
 
         // Set a preferred width but allow shrinking when necessary
         // @media (max-width: 1500px) {

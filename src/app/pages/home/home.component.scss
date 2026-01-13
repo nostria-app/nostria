@@ -8,7 +8,7 @@
   margin-top: calc(-1 * var(--toolbar-height, 64px));
   // Compensate for the negative margin in height calculation
   min-height: calc(100% + var(--toolbar-height, 64px));
-  padding-top: var(--toolbar-height, 64px);
+  // No padding-top - content renders to top and scrolls behind toolbar
 
   @media (max-width: 599px) {
     // Also pull down into mobile menu area
