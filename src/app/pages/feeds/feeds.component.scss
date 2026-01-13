@@ -29,8 +29,15 @@ app-user-profile {
 }
 
 // Make feeds component render edge-to-edge behind transparent toolbar and mobile menu
+// Note: When used inside home component's two-column layout, the home component handles the toolbar offset
 :host {
   display: block;
+  height: 100%;
+}
+
+// When feeds is used standalone (not inside home component), apply toolbar offset
+// This is detected by checking if we're NOT inside a .feed-column wrapper
+:host-context(:not(.feed-column)) {
   // Pull up into toolbar area
   margin-top: calc(-1 * var(--toolbar-height, 64px));
   // Compensate for the negative margin in height calculation
@@ -208,30 +215,7 @@ app-user-profile {
           }
         }
 
-        .feed-actions {
-          // Glass container styling
-          display: flex;
-          align-items: center;
-          height: 48px;
-          padding: 0 4px;
-          border-radius: 24px;
-          // Re-enable clicks on the glass container
-          pointer-events: auto;
 
-          // Glass effect - light mode
-          background-color: rgba(255, 255, 255, 0.7);
-          -webkit-backdrop-filter: blur(20px) saturate(1.8);
-          backdrop-filter: blur(20px) saturate(1.8);
-
-          box-shadow:
-            // Inner white highlight
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-            // Inner glow
-            inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-            // Drop shadows
-            0px 2px 8px rgba(17, 17, 26, 0.08),
-            0px 4px 16px rgba(17, 17, 26, 0.06);
-        }
       }
     }
 
@@ -815,6 +799,8 @@ app-user-profile {
 
   &.two-columns-layout {
     .columns-wrapper {
+      justify-content: center; // Center the two columns together
+
       .column-unit {
         width: 700px;
         min-width: 350px; // Fixed minimum width for two columns
@@ -2431,15 +2417,7 @@ h1 {
         0px 4px 16px rgba(0, 0, 0, 0.25);
     }
 
-    .feed-actions {
-      background-color: rgba(0, 0, 0, 0.4);
 
-      box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-        inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-        0px 2px 8px rgba(0, 0, 0, 0.3),
-        0px 4px 16px rgba(0, 0, 0, 0.25);
-    }
   }
 }
 
