@@ -1,10 +1,10 @@
 :host {
   display: block;
-  margin: 0 auto;
 
-  // Only apply max-width when not in dialog mode
+  // Only apply max-width and centering when not in dialog mode
   &:not(.dialog-mode) {
     max-width: 680px;
+    margin: 0 auto;
   }
 
   // Override Angular Material card content padding
