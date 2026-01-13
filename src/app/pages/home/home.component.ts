@@ -32,7 +32,11 @@ export class HomeComponent {
 
   // Track screen width for responsive behavior
   screenWidth = signal(typeof window !== 'undefined' ? window.innerWidth : 1024);
-  
+
+  // Header hidden state for scroll behavior
+  contentHeaderHidden = signal(false);
+  private lastScrollTop = 0;
+
   // Computed signals from navigation stack
   hasNavigatedItems = computed(() => this.navigationStack.hasItems());
   hasMultipleItems = computed(() => this.navigationStack.hasMultipleItems());
@@ -92,11 +96,35 @@ export class HomeComponent {
   getNavigationTitle(): string {
     const item = this.currentItem();
     if (!item) return '';
-    
+
     if (item.type === 'event') {
       return 'Event';
     } else {
       return 'Profile';
     }
+  }
+
+  /**
+   * Called when content area scrolls - handles header hide/show
+   */
+  onContentScroll(event: Event): void {
+    const container = event.target as HTMLElement;
+    const scrollTop = container.scrollTop;
+    const scrollDelta = scrollTop - this.lastScrollTop;
+
+    // Scrolling down - hide header after scrolling down past threshold
+    if (scrollDelta > 10 && scrollTop > 100) {
+      this.contentHeaderHidden.set(true);
+    }
+    // Scrolling up - show header immediately
+    else if (scrollDelta < -10) {
+      this.contentHeaderHidden.set(false);
+    }
+    // At the very top - always show header
+    else if (scrollTop <= 50) {
+      this.contentHeaderHidden.set(false);
+    }
+
+    this.lastScrollTop = scrollTop;
   }
 }

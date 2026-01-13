@@ -100,26 +100,33 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  // Float at top with glass effect - position below the main toolbar
+  // Position within content-column at same visual height as feeds toolbar
   position: absolute;
-  top: calc(var(--toolbar-height, 64px) + 8px); // Below toolbar + spacing
-  left: 8px;
-  z-index: 100; // Higher z-index to ensure visibility
+  top: calc(var(--toolbar-height, 64px) - 8px); // Align with feeds toolbar top
+  left: 1rem; // Align with content padding
+  z-index: 201; // Higher than feeds toolbar (200) to ensure visibility
   border-radius: 24px;
   height: 48px;
   // Ensure pointer events work
   pointer-events: auto;
+  // Smooth transition for scroll-hide animation
+  transition: transform 0.3s ease, opacity 0.3s ease;
+
+  // Hidden state when scrolling down - match feeds toolbar behavior
+  &.header-hidden {
+    transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
+    pointer-events: none;
+  }
 
   // Glass effect - light mode
   background-color: rgba(255, 255, 255, 0.7);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-    0px 2px 8px rgba(17, 17, 26, 0.08),
-    0px 4px 16px rgba(17, 17, 26, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+  inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+  0px 2px 8px rgba(17, 17, 26, 0.08),
+  0px 4px 16px rgba(17, 17, 26, 0.06);
 
   .nav-button {
     flex-shrink: 0;
@@ -149,8 +156,10 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Add padding at top for floating header clearance
-  padding-top: 72px; // 48px header height + 8px top offset + 16px spacing
+  // Add padding at top for toolbar + floating header clearance
+  // Content header is at (toolbar - 8px) top, height 48px, so bottom is at (toolbar + 40px)
+  // Add some spacing (16px) = toolbar + 56px
+  padding-top: calc(var(--toolbar-height, 64px) + 56px);
 
   // Ensure event content is left-aligned like comments
   app-event-page {
