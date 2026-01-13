@@ -358,10 +358,8 @@ export class FeedsComponent implements OnDestroy {
   private _eventCache = new Map<string, Event[]>();
 
   // Flag to track if we're processing a URL-based navigation (prevents URL sync loop)
+  // NOTE: This is now only used for relay feed navigation, not for general feed routing
   private isProcessingUrlNavigation = false;
-
-  // Subscription for route params to prevent memory leaks
-  private routeParamsSubscription: import('rxjs').Subscription | null = null;
 
   // Virtual list configuration
   INITIAL_RENDER_COUNT = 30;
@@ -598,7 +596,10 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    // Monitor active feed changes for URL sync
+    // NOTE: URL synchronization logic has been disabled since Feeds is now embedded in HomeComponent
+    // and no longer a standalone route. Feed selection is managed through the UI only.
+    
+    // Monitor active feed changes
     effect(() => {
       const currentFeedId = this.feedsCollectionService.activeFeedId();
 
@@ -612,106 +613,10 @@ export class FeedsComponent implements OnDestroy {
         if (currentFeedId) {
           this.logger.debug('Active feed changed to:', currentFeedId);
         }
-
-        // Sync URL with active feed (only if not triggered by route change)
-        // This prevents infinite loops between route changes and feed changes
-        // Also skip if we're currently processing a URL-based navigation
-        // Also skip URL sync when showing a relay feed (to preserve the ?r= query param)
-        if (currentFeedId && !this.isProcessingUrlNavigation && !this.activeRelayDomain()) {
-          const feed = this.feedsCollectionService.feeds().find(f => f.id === currentFeedId);
-          if (feed) {
-            const currentPath = this.route.snapshot.params['path'];
-            const targetPath = feed.path;
-
-            // Check if there's a URL path that should take precedence over the saved active feed
-            // This handles the case where user directly navigates to /f/following but saved feed is "discover"
-            if (currentPath) {
-              const urlTargetFeed = this.feedsCollectionService.feeds().find(f => f.path === currentPath);
-              if (urlTargetFeed && urlTargetFeed.id !== currentFeedId) {
-                // URL points to a different feed - let the route params effect handle this
-                // Don't sync URL, the route params subscription will update the active feed
-                this.logger.debug(`URL path ${currentPath} differs from active feed - deferring to route handler`);
-                return;
-              }
-            }
-
-            // Only navigate if the URL doesn't already match the feed
-            // This check prevents loops: route change -> feed change -> route change
-            const urlMatchesFeed =
-              (targetPath && currentPath === targetPath) ||
-              (!targetPath && !currentPath && this.router.url === '/f') ||
-              (!targetPath && this.router.url === '/');
-
-            if (!urlMatchesFeed) {
-              if (targetPath) {
-                this.router.navigate(['/f', targetPath], { replaceUrl: true, queryParamsHandling: 'preserve' });
-                this.logger.debug(`Synced URL to feed path: /f/${targetPath}`);
-              } else if (this.router.url.startsWith('/f/')) {
-                // Feed has no path but URL has a path - navigate to /f
-                this.router.navigate(['/f'], { replaceUrl: true, queryParamsHandling: 'preserve' });
-                this.logger.debug('Synced URL to /f (feed has no path)');
-              }
-            }
-          }
-        }
       });
     });
 
-    // Handle route parameters for feed navigation
-    // This effect handles URL-based navigation to feeds (e.g., /f/discover, /f/articles)
-    // IMPORTANT: This must run BEFORE the URL sync effect to properly handle direct URL navigation
-    // Subscribe once and handle feeds loading within the subscription
-    this.routeParamsSubscription = this.route.params.subscribe(params => {
-      const pathParam = params['path'];
-      const feeds = this.feedsCollectionService.feeds();
-
-      // Wait for feeds to be loaded before processing route
-      if (feeds.length === 0) {
-        return;
-      }
-
-      if (pathParam) {
-        // Set flag to indicate we're processing URL navigation
-        // This prevents the URL sync effect from overriding our navigation
-        this.isProcessingUrlNavigation = true;
-
-        // Find feed by path parameter from URL
-        const targetFeed = feeds.find(feed => feed.path === pathParam);
-
-        if (targetFeed) {
-          // Set the active feed immediately (synchronous operation)
-          // Only set if it's different from current to avoid unnecessary updates
-          const currentActiveFeedId = this.feedsCollectionService.activeFeedId();
-          if (currentActiveFeedId !== targetFeed.id) {
-            this.feedsCollectionService.setActiveFeed(targetFeed.id);
-            this.logger.debug(`Activated feed from URL path: ${pathParam} -> ${targetFeed.id}`);
-          }
-        } else {
-          // If no feed with this path is found, redirect to default feed
-          console.warn(`No feed found with path: ${pathParam}`);
-          this.router.navigate(['/f'], { replaceUrl: true, queryParamsHandling: 'preserve' });
-        }
-
-        // Clear the flag after a short delay to allow the feed change to process
-        setTimeout(() => {
-          this.isProcessingUrlNavigation = false;
-        }, 100);
-      } else if (this.router.url.startsWith('/f')) {
-        // User navigated to /f without a path parameter
-        // Restore the previously active feed or use "For You" as default
-        const activeFeedId = this.feedsCollectionService.activeFeedId();
-
-        if (!activeFeedId && feeds.length > 0) {
-          // No active feed yet - prefer "For You" feed as it's optimized for new users
-          const forYouFeed = feeds.find(f => f.id === 'default-feed-for-you');
-          const defaultFeedId = forYouFeed ? forYouFeed.id : feeds[0].id;
-          this.feedsCollectionService.setActiveFeed(defaultFeedId);
-        }
-        // If there's already an active feed, keep it (already loaded from localStorage)
-      }
-    });
-
-    // Handle query parameters for relay feed (e.g., /f/?r=trending.relays.land)
+    // Handle query parameters for relay feed (e.g., /?r=trending.relays.land)
     this.queryParamsSubscription = this.route.queryParams.subscribe(params => {
       const relayParam = params['r'];
       if (relayParam) {
@@ -770,17 +675,6 @@ export class FeedsComponent implements OnDestroy {
         }, 500);
       }
     });
-
-    // Automatic refresh effect
-    // effect(() => {
-    //   const interval = setInterval(() => {
-    //     this.loadTrendingContent(true);
-    //   }, 60000); // Refresh every minute
-
-    //   return () => {
-    //     clearInterval(interval);
-    //   };
-    // });
   }
 
   /**
@@ -1273,12 +1167,6 @@ export class FeedsComponent implements OnDestroy {
   ngOnDestroy() {
     console.log('🧹 FeedsComponent destroying...');
     this.logger.debug('Cleaning up resources...');
-
-    // Clean up route params subscription
-    if (this.routeParamsSubscription) {
-      this.routeParamsSubscription.unsubscribe();
-      this.routeParamsSubscription = null;
-    }
 
     // Clean up query params subscription
     if (this.queryParamsSubscription) {
