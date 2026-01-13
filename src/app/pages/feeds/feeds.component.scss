@@ -434,10 +434,8 @@ app-user-profile {
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
 
-          // Add padding for toolbar clearance when in global feeds panel
-          :host-context(.global-feeds-panel) & {
-            padding-top: 80px; // Clearance for toolbar + feeds header (toolbar 64px + header gap 8px + header height ~48px)
-          }
+          // No padding-top - content scrolls behind transparent toolbar
+          // The floating header is positioned absolutely
 
           // Column header - inside scrollable content
           .column-header {
