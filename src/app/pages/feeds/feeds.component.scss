@@ -55,13 +55,9 @@ app-user-profile {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  // Add padding at top so content starts below toolbar
-  padding-top: var(--toolbar-height, 64px);
-
-  // When in global feeds panel, no toolbar padding needed (parent handles it)
-  :host-context(.global-feeds-panel) & {
-    padding-top: 0;
-  }
+  position: relative; // For absolute positioning of header
+  // No padding - content renders behind transparent toolbar
+  // Individual scroll areas handle their own padding
 
   // On mobile, allow full page scrolling instead of per-column scrolling
   @media (max-width: 1023px) {
@@ -94,7 +90,7 @@ app-user-profile {
     }
   }
 
-  // Header styles
+  // Header styles - sticky toolbar that auto-hides on scroll
   .header-section {
     padding: 0.25rem 1rem;
     display: flex;
@@ -105,11 +101,14 @@ app-user-profile {
     flex-shrink: 0; // Don't shrink header
     // Transparent background - glass containers handle the styling
     background: transparent;
-    // Position below toolbar - align with content header X/Back button
-    position: relative;
-    margin-top: calc(var(--toolbar-height, 64px) + 8px); // Match content-header position
-    // Full width within container
-    width: 100%;
+    // Position absolutely within the feeds container
+    position: absolute;
+    top: calc(var(--toolbar-height, 64px) + 8px);
+    left: 0;
+    right: 0;
+    // Width constrained to feeds panel
+    width: auto;
+    max-width: 100%;
 
     // Reduce padding on smaller screens to match toolbar
     @media (max-width: 1023px) {
@@ -125,7 +124,8 @@ app-user-profile {
     // Hidden state class (applied via JS when scrolling down)
     // Move up to hide
     &.header-hidden {
-      transform: translateY(-100%);
+      transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
+      pointer-events: none;
     }
 
     .title-section {
