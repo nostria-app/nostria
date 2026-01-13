@@ -1,7 +1,7 @@
 <div class="home-container">
   <!-- Home page now serves as the content viewer for navigation stack items -->
   <!-- The global feeds panel is handled at the app level -->
-  
+
   @if (hasNavigatedItems()) {
   <div class="content-area-wrapper">
     <!-- Navigation header for back/close -->
@@ -24,12 +24,12 @@
     <div class="content-area" (scroll)="onContentScroll($event)">
       @let item = currentItem();
       @if (item) {
-        @if (item.type === 'event') {
-          <app-event-page [dialogEventId]="item.id" [dialogEvent]="item.data">
-          </app-event-page>
-        } @else if (item.type === 'profile') {
-          <app-profile [twoColumnPubkey]="item.id"></app-profile>
-        }
+      @if (item.type === 'event') {
+      <app-event-page [dialogEventId]="item.id" [dialogEvent]="item.data">
+      </app-event-page>
+      } @else if (item.type === 'profile') {
+      <app-profile [twoColumnPubkey]="item.id"></app-profile>
+      }
       }
     </div>
   </div>
