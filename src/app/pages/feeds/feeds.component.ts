@@ -799,6 +799,30 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
+   * Handle scroll on column-content to auto-hide/show header
+   */
+  onColumnContentScroll(event: globalThis.Event): void {
+    const container = event.target as HTMLElement;
+    const scrollTop = container.scrollTop;
+    const scrollDelta = scrollTop - this.lastScrollTop;
+
+    // Scrolling down - hide header after scrolling down past threshold
+    if (scrollDelta > 10 && scrollTop > 100) {
+      this.headerHidden.set(true);
+    }
+    // Scrolling up - show header immediately
+    else if (scrollDelta < -10) {
+      this.headerHidden.set(false);
+    }
+    // At the very top - always show header
+    else if (scrollTop <= 50) {
+      this.headerHidden.set(false);
+    }
+
+    this.lastScrollTop = scrollTop;
+  }
+
+  /**
    * Handle scroll on columns container and sync fixed scrollbar
    */
   onColumnsScroll(event: globalThis.Event): void {
