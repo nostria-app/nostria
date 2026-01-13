@@ -1,0 +1,46 @@
+<div class="home-container">
+  <!-- Two-column layout on desktop, single column on mobile -->
+  <div class="columns-wrapper" [class.mobile]="isMobile()" [class.has-content]="hasNavigatedItems()">
+    
+    <!-- Left Column: Feeds (always rendered to preserve state) -->
+    <div class="feed-column" [class.hidden-mobile]="showContentOnMobile()">
+      <app-feeds></app-feeds>
+    </div>
+
+    <!-- Right Column: Dynamic Content (Event or Profile) -->
+    @if (hasNavigatedItems()) {
+      <div class="content-column" [class.hidden-mobile]="showFeedOnMobile()">
+        <!-- Navigation header -->
+        <div class="content-header">
+          @if (hasMultipleItems()) {
+            <!-- Back button when there are multiple items -->
+            <button mat-icon-button (click)="goBack()" class="nav-button">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
+          } @else {
+            <!-- Close button when there's only one item -->
+            <button mat-icon-button (click)="close()" class="nav-button">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          <span class="content-title">{{ getNavigationTitle() }}</span>
+        </div>
+
+        <!-- Content area -->
+        <div class="content-area">
+          @let item = currentItem();
+          @if (item) {
+            @if (item.type === 'event') {
+              <app-event-page 
+                [dialogEventId]="item.id"
+                [dialogEvent]="item.data">
+              </app-event-page>
+            } @else if (item.type === 'profile') {
+              <app-profile [twoColumnPubkey]="item.id"></app-profile>
+            }
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
