@@ -1327,7 +1327,17 @@ export class FeedsComponent implements OnDestroy {
    * Select a feed
    */
   selectFeed(feedId: string): void {
-    // Set the active feed using internal state management (no routing)
+    // Clear relay feed state if active
+    if (this.showRelayFeed()) {
+      this.activeRelayDomain.set('');
+      // Clear the relay query param from URL
+      this.router.navigate([], {
+        queryParams: { r: null },
+        queryParamsHandling: 'merge',
+      });
+    }
+
+    // Set the active feed using internal state management
     this.feedsCollectionService.setActiveFeed(feedId);
   }
 
