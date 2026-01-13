@@ -100,9 +100,9 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  // Float at top with glass effect - use fixed positioning relative to content-column
+  // Float at top with glass effect - position below the main toolbar
   position: absolute;
-  top: 8px;
+  top: calc(var(--toolbar-height, 64px) + 8px); // Below toolbar + spacing
   left: 8px;
   z-index: 100; // Higher z-index to ensure visibility
   border-radius: 24px;
