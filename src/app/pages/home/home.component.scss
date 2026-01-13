@@ -40,6 +40,13 @@
       max-width: 1400px;
       margin: 0 auto;
     }
+
+    // When feed is collapsed, center the content column
+    &.feed-collapsed {
+      .content-column {
+        margin: 0 auto;
+      }
+    }
   }
 
   // Mobile: single column at a time
@@ -100,9 +107,9 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  // Position within content-column at same visual height as feeds toolbar
+  // Position within content-column below the main toolbar
   position: absolute;
-  top: calc(var(--toolbar-height, 64px) - 8px); // Align with feeds toolbar top
+  top: calc(var(--toolbar-height, 64px) + 8px); // Below main toolbar with spacing
   left: 1rem; // Align with content padding
   z-index: 201; // Higher than feeds toolbar (200) to ensure visibility
   border-radius: 24px;
@@ -157,9 +164,9 @@
   overflow-y: auto;
   overflow-x: hidden;
   // Add padding at top for toolbar + floating header clearance
-  // Content header is at (toolbar - 8px) top, height 48px, so bottom is at (toolbar + 40px)
-  // Add some spacing (16px) = toolbar + 56px
-  padding-top: calc(var(--toolbar-height, 64px) + 56px);
+  // Content header is at (toolbar + 8px) top, height 48px, so bottom is at (toolbar + 56px)
+  // Add some spacing (24px) = toolbar + 80px
+  padding-top: calc(var(--toolbar-height, 64px) + 80px);
 
   // Ensure event content is left-aligned like comments
   app-event-page {

@@ -106,28 +106,27 @@ app-user-profile {
     flex-shrink: 0; // Don't shrink header
     // Transparent background - glass containers handle the styling
     background: transparent;
-    // Use fixed positioning for proper hide/show behavior on all screen sizes
-    position: fixed;
-    top: calc(var(--toolbar-height, 64px) - 8px);
-    left: 0;
-    right: 0;
+    // Position below toolbar - align with content header X/Back button
+    position: relative;
+    margin-top: calc(var(--toolbar-height, 64px) + 8px); // Match content-header position
+    // Full width within container
+    width: 100%;
 
     // Reduce padding on smaller screens to match toolbar
     @media (max-width: 1023px) {
       padding: 0.25rem 8px;
     }
 
-    transition: transform 0.3s ease,
-    left 0.3s ease;
+    transition: transform 0.3s ease;
     // Ensure it's above other content including reveal screens
     z-index: 200;
     // Allow clicks to pass through transparent areas between glass containers
     pointer-events: none;
 
     // Hidden state class (applied via JS when scrolling down)
-    // Move up by 100% of own height + toolbar height to completely hide
+    // Move up to hide
     &.header-hidden {
-      transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
+      transform: translateY(-100%);
     }
 
     .title-section {
@@ -156,19 +155,23 @@ app-user-profile {
           // Re-enable clicks on the glass container
           pointer-events: auto;
 
+          // Collapse button
+          .collapse-button {
+            flex-shrink: 0;
+          }
+
           // Glass effect - light mode
           background-color: rgba(255, 255, 255, 0.7);
           -webkit-backdrop-filter: blur(20px) saturate(1.8);
           backdrop-filter: blur(20px) saturate(1.8);
 
-          box-shadow:
-            // Inner white highlight
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-            // Inner glow
-            inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-            // Drop shadows
-            0px 2px 8px rgba(17, 17, 26, 0.08),
-            0px 4px 16px rgba(17, 17, 26, 0.06);
+          box-shadow: // Inner white highlight
+          inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+          // Inner glow
+          inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+          // Drop shadows
+          0px 2px 8px rgba(17, 17, 26, 0.08),
+          0px 4px 16px rgba(17, 17, 26, 0.06);
 
           .feed-tab {
             display: flex;
@@ -305,22 +308,11 @@ app-user-profile {
   // Columns container - main content area
   .columns-container {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     flex: 1;
-    overflow-x: hidden; // No horizontal scroll - single column view
-    overflow-y: hidden;
+    overflow: hidden; // Don't scroll here - content scrolls
     position: relative;
-    // Add top padding to account for fixed header on standalone (not nested)
-    padding-top: 56px;
-    // Add bottom padding for the fixed scrollbar
-    scrollbar-width: thin;
-    // Prevent sideways scrolling when content is narrower than container
     max-width: 100%;
-
-    // When nested in home component, no top padding needed - content starts at top
-    :host-context(.feed-column) & {
-      padding-top: 0;
-    }
 
     &::-webkit-scrollbar {
       height: 12px;
@@ -433,19 +425,19 @@ app-user-profile {
           z-index: 2;
         }
 
-        // Column content - now scrollable and contains the header
+        // Column content - scrollable area for feed items
         .column-content {
           scroll-behavior: smooth;
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow-y: auto;
+          overflow-y: auto; // Enable scrolling here
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
 
-          // When nested in home component, add padding for toolbar clearance
+          // Add padding for toolbar clearance when nested in home component
           :host-context(.feed-column) & {
-            padding-top: 180px; // Clearance for toolbar
+            padding-top: 80px; // Clearance for toolbar + feeds header (toolbar 64px + header gap 8px + header height ~48px)
           }
 
           // Column header - inside scrollable content
