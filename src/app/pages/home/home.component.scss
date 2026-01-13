@@ -100,13 +100,15 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  // Float at top with glass effect
+  // Float at top with glass effect - use fixed positioning relative to content-column
   position: absolute;
   top: 8px;
   left: 8px;
-  z-index: 10;
+  z-index: 100; // Higher z-index to ensure visibility
   border-radius: 24px;
   height: 48px;
+  // Ensure pointer events work
+  pointer-events: auto;
 
   // Glass effect - light mode
   background-color: rgba(255, 255, 255, 0.7);
@@ -148,7 +150,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   // Add padding at top for floating header clearance
-  padding-top: 180px; // 48px header height + 8px top offset + 16px spacing
+  padding-top: 72px; // 48px header height + 8px top offset + 16px spacing
 
   // Ensure event content is left-aligned like comments
   app-event-page {
