@@ -81,6 +81,12 @@ export class LayoutService implements OnDestroy {
   // Scroll position management for feeds
   private feedScrollPositions = new Map<string, number>();
 
+  // Dual outlet layout - signal to track if we should use side-by-side layout
+  useDualOutletLayout = signal(false);
+
+  // Detail outlet navigation stack for back button functionality
+  private detailOutletStack: Array<{ path: string[], state?: any }> = [];
+
   /**
    * Signal that indicates whether the content wrapper is scrolled to the top
    *
@@ -903,6 +909,16 @@ export class LayoutService implements OnDestroy {
   }
 
   openProfile(pubkey: string): void {
+    // Check if we're on feeds page - use dual outlet
+    const currentUrl = this.router.url;
+    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/') || currentUrl.startsWith('/f?');
+
+    if (isOnFeedsPage) {
+      // Add to navigation stack
+      this.detailOutletStack.push({ path: ['p', pubkey] });
+    }
+    
+    // Navigate to the profile route (route data will trigger dual outlet)
     this.router.navigate(['/p', pubkey]);
   }
 
@@ -968,13 +984,22 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
-    // Check if we're on a page where we should preserve state by using a dialog
+    // Check if we're on a page where we should use dual outlet layout
     const currentUrl = this.router.url;
-    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
+    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/') || currentUrl.startsWith('/f?');
     const isOnProfilePage = currentUrl.startsWith('/p/') || currentUrl.startsWith('/u/');
     const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
 
-    if (isOnFeedsPage || isOnProfilePage || isOnPeoplePage) {
+    if (isOnFeedsPage) {
+      // Add to navigation stack
+      this.detailOutletStack.push({
+        path: ['e', naddr],
+        state: { event, trustedByPubkey }
+      });
+
+      // Navigate to event route (URL will update, route data will trigger dual outlet)
+      this.router.navigate(['/e', naddr], { state: { event, trustedByPubkey } });
+    } else if (isOnProfilePage || isOnPeoplePage) {
       // Open in dialog to preserve page state and scroll position
       this.openEventInDialog(naddr, event, trustedByPubkey);
     } else {
@@ -1047,6 +1072,56 @@ export class LayoutService implements OnDestroy {
 
   openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
     this.router.navigate(['/b', badge], { ...extra, state: { event } });
+  }
+
+  /**
+   * Close the detail outlet (used in dual-outlet layout)
+   */
+  closeDetailOutlet(): void {
+    if (this.useDualOutletLayout()) {
+      // Clear the stack and disable dual outlet
+      this.detailOutletStack = [];
+      this.useDualOutletLayout.set(false);
+
+      // Navigate back to feeds
+      this.router.navigate(['/']);
+    }
+  }
+
+  /**
+   * Navigate back in the detail outlet stack
+   */
+  navigateBackInDetailOutlet(): void {
+    if (this.detailOutletStack.length <= 1) {
+      // No more items, close the outlet
+      this.closeDetailOutlet();
+      return;
+    }
+
+    // Remove current item
+    this.detailOutletStack.pop();
+
+    // Get previous item
+    const previous = this.detailOutletStack[this.detailOutletStack.length - 1];
+
+    // Navigate to previous route
+    this.router.navigate(['/', ...previous.path], {
+      state: previous.state
+    });
+  }
+
+  /**
+   * Check if there are items in the detail outlet stack to navigate back to
+   */
+  canNavigateBackInDetailOutlet(): boolean {
+    return this.detailOutletStack.length > 1;
+  }
+
+  /**
+   * Get the count of items in the detail outlet stack
+   */
+  getDetailOutletStackCount(): number {
+    return this.detailOutletStack.length;
   }
 
   scrollToOptimalProfilePosition() {

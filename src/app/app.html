@@ -390,10 +390,41 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
-      <!-- Page content -->
+      <!-- Page content - Dual outlet layout -->
       <div class="content-wrapper" [class.sidenav-open-expanded]="opened() && displayLabels() && !layout.isHandset()"
         [class.sidenav-open-collapsed]="opened() && !displayLabels() && !layout.isHandset()">
-        <router-outlet></router-outlet>
+
+        <!-- Container that holds both feeds and router-outlet -->
+        <div class="content-container" 
+             [class.dual-layout]="layout.useDualOutletLayout()"
+             [class.feeds-only]="!layout.useDualOutletLayout() && (router.url === '/' || router.url.startsWith('/f'))">
+          
+          <!-- Feeds component - always rendered, visibility controlled by CSS -->
+          <div class="feeds-wrapper">
+            <app-feeds></app-feeds>
+          </div>
+          
+          <!-- Router outlet wrapper -->
+          <div class="outlet-wrapper">
+            <!-- Close/Back button for dual outlet mode -->
+            @if (layout.useDualOutletLayout() && layout.getDetailOutletStackCount() > 0) {
+            <div class="detail-outlet-header">
+              @if (layout.canNavigateBackInDetailOutlet()) {
+              <button mat-icon-button class="detail-back-button" (click)="layout.navigateBackInDetailOutlet()"
+                matTooltip="Go back">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button class="detail-close-button" (click)="layout.closeDetailOutlet()"
+                matTooltip="Close">
+                <mat-icon>close</mat-icon>
+              </button>
+              }
+            </div>
+            }
+            <router-outlet></router-outlet>
+          </div>
+        </div>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>

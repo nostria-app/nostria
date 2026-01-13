@@ -67,6 +67,7 @@ import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { FollowSetsService } from './services/follow-sets.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
+import { FeedsComponent } from './pages/feeds/feeds.component';
 import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './pages/people/edit-people-list-dialog.component';
 import { FeedConfig } from './services/feed.service';
 import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
@@ -149,6 +150,7 @@ interface NavItem {
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
     NewFeedDialogComponent,
+    FeedsComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -704,6 +706,21 @@ export class App implements OnInit {
           this.accountLocalState.setLastRoute(pubkey, event.urlAfterRedirects);
           this.logger.debug(`[App] Saved last route for account: ${event.urlAfterRedirects}`);
         }
+
+        // Update dual outlet layout flag based on route data
+        const url = event.urlAfterRedirects;
+        
+        // Traverse the activated route tree to find the leaf route
+        let route = this.router.routerState.root;
+        while (route.firstChild) {
+          route = route.firstChild;
+        }
+        
+        const shouldUseDualOutlet = route.snapshot.data?.['useDualOutlet'] === true;
+        
+        this.layout.useDualOutletLayout.set(shouldUseDualOutlet);
+        this.logger.debug(`[App] Route data:`, route.snapshot.data);
+        this.logger.debug(`[App] Dual outlet layout ${shouldUseDualOutlet ? 'enabled' : 'disabled'} for route: ${url}`);
       });
 
     // Track account changes to reset the restoration flag

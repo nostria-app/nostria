@@ -617,7 +617,8 @@ export class FeedsComponent implements OnDestroy {
         // This prevents infinite loops between route changes and feed changes
         // Also skip if we're currently processing a URL-based navigation
         // Also skip URL sync when showing a relay feed (to preserve the ?r= query param)
-        if (currentFeedId && !this.isProcessingUrlNavigation && !this.activeRelayDomain()) {
+        // Also skip when in dual outlet mode (feeds are shown alongside event/profile)
+        if (currentFeedId && !this.isProcessingUrlNavigation && !this.activeRelayDomain() && !this.layoutService.useDualOutletLayout()) {
           const feed = this.feedsCollectionService.feeds().find(f => f.id === currentFeedId);
           if (feed) {
             const currentPath = this.route.snapshot.params['path'];

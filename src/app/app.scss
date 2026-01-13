@@ -339,6 +339,207 @@ mat-sidenav-content {
 //   // We handle padding in individual components now to support glass effect
 // }
 
+// Content container - holds both feeds and router-outlet
+.content-container {
+  display: flex;
+  flex-direction: row;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  margin: 0 auto;
+
+  // Default: Show only router-outlet (for non-feeds routes)
+  .feeds-wrapper {
+    display: none;
+  }
+
+  .outlet-wrapper {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: var(--toolbar-height, 64px);
+  }
+
+  // Feeds-only mode: Show only feeds, hide router-outlet
+  &.feeds-only {
+    .feeds-wrapper {
+      display: block;
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .outlet-wrapper {
+      display: none;
+    }
+  }
+
+  // Dual layout mode: Show both side-by-side
+  &.dual-layout {
+    max-width: 1800px;
+
+    .feeds-wrapper {
+      display: block;
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-top: var(--toolbar-height, 64px);
+      border-right: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .outlet-wrapper {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-top: var(--toolbar-height, 64px);
+    }
+
+    // Mobile: Stack or overlay
+    @media (max-width: 1023px) {
+      flex-direction: column;
+      max-width: 100%;
+
+      .outlet-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        background-color: var(--mat-sys-background);
+      }
+
+      .feeds-wrapper {
+        z-index: 1;
+      }
+    }
+  }
+}
+
+// Old dual-outlet-container styles - keep for backwards compatibility
+.dual-outlet-container {
+  display: flex;
+  flex-direction: row;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 1800px; // Maximum total width
+  margin: 0 auto; // Center the container
+  gap: 0; // No gap - outlets are close together
+
+  // On smaller screens, stack vertically or show only active outlet
+  @media (max-width: 1023px) {
+    flex-direction: column;
+    max-width: 100%;
+  }
+}
+
+.left-outlet-wrapper,
+.right-outlet-wrapper {
+  flex: 1; // Equal width
+  min-width: 0; // Allow shrinking below content width
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  // Add top padding to account for fixed toolbar
+  padding-top: var(--toolbar-height, 64px);
+  position: relative;
+
+  // Add subtle borders for visual separation on desktop
+  @media (min-width: 1024px) {
+    &:not(:last-child) {
+      border-right: 1px solid var(--mat-sys-outline-variant);
+    }
+  }
+}
+
+// Detail outlet header with close/back button
+.detail-outlet-header {
+  position: fixed;
+  top: calc(var(--toolbar-height, 64px) + 8px);
+  left: 8px;
+  z-index: 100;
+
+  // On desktop in dual-outlet mode, position relative to right panel
+  @media (min-width: 1024px) {
+    left: calc(50% + 8px); // Position in right half
+  }
+}
+
+.detail-back-button,
+.detail-close-button {
+  background-color: var(--mat-sys-surface-container) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  mat-icon {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high) !important;
+  }
+}
+
+:host-context(.dark) .detail-back-button,
+:host-context(.dark) .detail-close-button {
+  background-color: var(--mat-sys-surface-container) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+:host-context(.dark) .left-outlet-wrapper,
+:host-context(.dark) .right-outlet-wrapper {
+  @media (min-width: 1024px) {
+    &:not(:last-child) {
+      border-right: 1px solid var(--mat-sys-outline-variant);
+    }
+  }
+}
+
+// On mobile, only show one outlet at a time - right takes precedence
+@media (max-width: 1023px) {
+  .dual-outlet-container {
+    .right-outlet-wrapper:empty {
+      display: none;
+    }
+
+    .right-outlet-wrapper:not(:empty) {
+      flex: 1;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10; // Above left outlet
+      background-color: var(--mat-sys-background);
+    }
+
+    .left-outlet-wrapper {
+      // Left outlet stays rendered but hidden behind right
+      z-index: 1;
+    }
+  }
+
+  .detail-outlet-header {
+    left: 8px; // Reset to left edge on mobile
+  }
+}
+
+:host-context(.dark) .right-outlet-wrapper:not(:empty) {
+  @media (max-width: 1023px) {
+    background-color: var(--mat-sys-background);
+  }
+}
+
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;

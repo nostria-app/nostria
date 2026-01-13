@@ -111,11 +111,13 @@ export const routes: Routes = [
       import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
     title: 'Feeds',
   },
+  // Event and profile routes support dual outlet when navigated from feeds
   {
     path: 'e/:id',
     loadComponent: () =>
       import('./pages/event/event.component').then(m => m.EventPageComponent),
     resolve: { data: DataResolver },
+    data: { useDualOutlet: true },
     title: 'Event',
   },
   {
@@ -543,6 +545,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver },
+    data: { useDualOutlet: true },
     children: profileChildren,
   },
   {
@@ -550,6 +553,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver, user: UsernameResolver },
+    data: { useDualOutlet: true },
     children: profileChildren,
   },
   {
