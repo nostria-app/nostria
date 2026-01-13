@@ -12,7 +12,6 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,7 +43,7 @@ import {
 import { RelayFeedsService } from '../../services/relay-feeds.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
-import { UrlUpdateService } from '../../services/url-update.service';
+
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -98,11 +97,9 @@ export class FeedsComponent implements OnDestroy {
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private location = inject(Location);
   feedService = inject(FeedService);
   feedsCollectionService = inject(FeedsCollectionService);
   private logger = inject(LoggerService);
-  private url = inject(UrlUpdateService);
   private cdr = inject(ChangeDetectorRef);
   private mediaPlayerService = inject(MediaPlayerService);
   protected repostService = inject(RepostService);
@@ -358,10 +355,6 @@ export class FeedsComponent implements OnDestroy {
 
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
-
-  // Flag to track if we're processing a URL-based navigation (prevents URL sync loop)
-  // NOTE: This is now only used for relay feed navigation, not for general feed routing
-  private isProcessingUrlNavigation = false;
 
   // Virtual list configuration
   INITIAL_RENDER_COUNT = 30;
@@ -1334,19 +1327,8 @@ export class FeedsComponent implements OnDestroy {
    * Select a feed
    */
   selectFeed(feedId: string): void {
-    const feeds = this.feedsCollectionService.feeds();
-    const selectedFeed = feeds.find(feed => feed.id === feedId);
-
-    // Set the active feed (this happens synchronously now)
+    // Set the active feed using internal state management (no routing)
     this.feedsCollectionService.setActiveFeed(feedId);
-
-    // Navigate to the appropriate URL immediately
-    if (selectedFeed?.path) {
-      this.router.navigate(['/f', selectedFeed.path]);
-    } else {
-      // For feeds without a path, navigate to the base feeds route
-      this.router.navigate(['/f']);
-    }
   }
 
   /**
@@ -1368,14 +1350,12 @@ export class FeedsComponent implements OnDestroy {
         await this.feedsCollectionService.updateFeed(editingFeedData.id, {
           label: result.label,
           icon: result.icon,
-          path: result.path,
         });
       } else {
         // Add new feed
         const newBoard = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
-          path: result.path,
           type: result.type || 'notes',
           kinds: result.kinds || [1],
           source: result.source || 'public',
@@ -1395,10 +1375,6 @@ export class FeedsComponent implements OnDestroy {
           ...loaded,
           [newBoard.id]: true,
         }));
-
-        if (newBoard.path) {
-          this.url.updatePathSilently(['/f', newBoard.path]);
-        }
 
         // Set as active board (skip validation since feed was just added)
         this.feedsCollectionService.setActiveFeed(newBoard.id, true);

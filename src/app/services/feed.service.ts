@@ -60,7 +60,6 @@ export interface FeedConfig {
   id: string;
   label: string;
   icon: string;
-  path?: string;
   // Feed content configuration
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
@@ -139,7 +138,6 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-following',
     label: 'Following',
     icon: 'diversity_2',
-    path: 'following',
     type: 'notes',
     kinds: [kinds.ShortTextNote, kinds.Repost],
     source: 'following',
@@ -157,7 +155,6 @@ const TRENDING_FEED: FeedConfig = {
   id: TRENDING_FEED_ID,
   label: 'Trending',
   icon: 'trending_up',
-  path: 'trending',
   isSystem: true, // Cannot be deleted
   type: 'notes',
   kinds: [kinds.ShortTextNote],
@@ -3046,7 +3043,6 @@ export class FeedService {
           id: feedId,
           label: feedLabel,
           icon: feed.icon || column.icon || 'dynamic_feed',
-          path: index === 0 ? feed.path : undefined, // Only first feed keeps the path
           type: column.type || 'notes',
           kinds: column.kinds || [1, 6],
           source: column.source || 'public',
