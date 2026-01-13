@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; // For absolute positioning of content-header
 }
 
 // Content area wrapper - positioned next to global feeds panel

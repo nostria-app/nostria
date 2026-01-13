@@ -136,7 +136,7 @@
         }
 
         <!-- Feed Content with Individual Scrolling -->
-        <div class="column-content" #columnContent>
+        <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
 
           <!-- Floating new posts button -->
           @if (getPendingEventsCount(feed.id) > 0) {
