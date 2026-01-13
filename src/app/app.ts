@@ -1572,7 +1572,6 @@ export class App implements OnInit {
       await this.feedsCollectionService.updateFeed(feed.id, {
         label: result.label,
         icon: result.icon,
-        path: result.path,
       });
     }
   }
