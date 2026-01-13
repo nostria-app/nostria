@@ -185,6 +185,8 @@ export class FeedsComponent implements OnDestroy {
   screenWidth = signal(window.innerWidth);
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
+  // Feed collapsed state - use layoutService signal for cross-component communication
+  feedCollapsed = computed(() => this.layoutService.feedCollapsed());
   private lastScrollTop = 0;
 
   // Relay feed state - for showing public posts from a specific relay
@@ -598,7 +600,7 @@ export class FeedsComponent implements OnDestroy {
 
     // NOTE: URL synchronization logic has been disabled since Feeds is now embedded in HomeComponent
     // and no longer a standalone route. Feed selection is managed through the UI only.
-    
+
     // Monitor active feed changes
     effect(() => {
       const currentFeedId = this.feedsCollectionService.activeFeedId();
@@ -755,11 +757,11 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Set up scroll listener on main container to auto-hide/show header
+   * Set up scroll listener on column-content to auto-hide/show header
    */
   private setupHeaderScrollListener(): void {
-    // Scrolling happens on content-wrapper, not home-container
-    const container = document.querySelector('.content-wrapper') as HTMLElement;
+    // Scrolling happens on column-content (the scrollable feed area)
+    const container = document.querySelector('.column-content') as HTMLElement;
 
     if (!container) {
       return;
@@ -1077,6 +1079,13 @@ export class FeedsComponent implements OnDestroy {
 
 
 
+
+  /**
+   * Toggle feed collapsed state
+   */
+  toggleFeedCollapse(): void {
+    this.layoutService.toggleFeedCollapsed();
+  }
 
   /**
    * Toggle whether replies are shown in a feed

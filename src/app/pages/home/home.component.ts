@@ -42,6 +42,9 @@ export class HomeComponent {
   hasMultipleItems = computed(() => this.navigationStack.hasMultipleItems());
   currentItem = computed(() => this.navigationStack.currentItem());
 
+  // Feed collapsed state from layout service
+  feedCollapsed = computed(() => this.layout.feedCollapsed());
+
   // Mobile breakpoint
   isMobile = computed(() => this.screenWidth() < 1024);
 
