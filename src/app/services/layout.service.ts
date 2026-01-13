@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
+import { inject, Injectable, signal, computed, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -76,11 +76,34 @@ export class LayoutService implements OnDestroy {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
 
-  /** Signal to control whether the feed column is collapsed on home page */
-  feedCollapsed = signal(false);
+  /** 
+   * Signal to control whether the global feeds panel is expanded/visible.
+   * When true, the feeds panel is shown. When false, it's hidden.
+   * The feeds component is always rendered (never destroyed) to preserve state.
+   */
+  feedsExpanded = signal(true);
 
+  /** @deprecated Use feedsExpanded instead */
+  feedCollapsed = computed(() => !this.feedsExpanded());
+
+  /** Toggle the global feeds panel visibility */
+  toggleFeedsExpanded() {
+    this.feedsExpanded.update((v) => !v);
+  }
+
+  /** @deprecated Use toggleFeedsExpanded instead */
   toggleFeedCollapsed() {
-    this.feedCollapsed.update((v) => !v);
+    this.toggleFeedsExpanded();
+  }
+
+  /** Expand the feeds panel */
+  expandFeeds() {
+    this.feedsExpanded.set(true);
+  }
+
+  /** Collapse/hide the feeds panel */
+  collapseFeeds() {
+    this.feedsExpanded.set(false);
   }
 
   // Track currently open event dialog for back button handling

@@ -13,13 +13,6 @@
         <div class="feed-selector">
           <!-- Feed tabs - changes based on mobile/desktop view -->
           <div class="feed-tabs">
-            <!-- Collapse button -->
-            <button mat-icon-button (click)="toggleFeedCollapse()"
-              [matTooltip]="feedCollapsed() ? 'Expand feeds' : 'Collapse feeds'" class="collapse-button">
-              <mat-icon>{{ feedCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-            </button>
-
-            @if (!feedCollapsed()) {
             @if (isMobileView()) {
             <!-- Mobile: Dropdown menu for feeds -->
             <button mat-button [matMenuTriggerFor]="feedMenu">
@@ -58,7 +51,6 @@
             <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
               <mat-icon>more_vert</mat-icon>
             </button>
-            } <!-- end feedCollapsed -->
 
             <mat-menu #feedManagementMenu="matMenu">
               @let feed = activeFeed();
@@ -115,7 +107,6 @@
     </header>
 
     <!-- Relay Feed View - shown when relay query param is present -->
-    @if (!feedCollapsed()) {
     @if (showRelayFeed()) {
     <div class="relay-feed-container">
       <div class="relay-column-wrapper">
@@ -297,7 +288,6 @@
         } -->
     </div>
     }
-    } <!-- end feedCollapsed -->
   </div>
 </div>
 }

@@ -185,8 +185,8 @@ export class FeedsComponent implements OnDestroy {
   screenWidth = signal(window.innerWidth);
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
-  // Feed collapsed state - use layoutService signal for cross-component communication
-  feedCollapsed = computed(() => this.layoutService.feedCollapsed());
+  // Feed expanded state - use layoutService signal for cross-component communication
+  feedsExpanded = computed(() => this.layoutService.feedsExpanded());
   private lastScrollTop = 0;
 
   // Relay feed state - for showing public posts from a specific relay
@@ -1075,17 +1075,6 @@ export class FeedsComponent implements OnDestroy {
     });
   }
   // scrollToColumn method removed - no longer needed without column navigation
-
-
-
-
-
-  /**
-   * Toggle feed collapsed state
-   */
-  toggleFeedCollapse(): void {
-    this.layoutService.toggleFeedCollapsed();
-  }
 
   /**
    * Toggle whether replies are shown in a feed

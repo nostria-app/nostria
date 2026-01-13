@@ -98,6 +98,7 @@ import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 import { MessagingService } from './services/messaging.service';
+import { FeedsComponent } from './pages/feeds/feeds.component';
 
 interface NavItem {
   path: string;
@@ -149,6 +150,7 @@ interface NavItem {
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
     NewFeedDialogComponent,
+    FeedsComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
