@@ -294,13 +294,6 @@
     </div>
     }
   </div>
-
-  <!-- Fixed horizontal scrollbar for desktop when many columns -->
-  @if (!isMobileView() && hasHorizontalOverflow()) {
-  <div class="fixed-horizontal-scrollbar" #fixedScrollbar (scroll)="onFixedScrollbarScroll($event)">
-    <div class="scrollbar-content" [style.width.px]="columnsScrollWidth()"></div>
-  </div>
-  }
 </div>
 }
 
