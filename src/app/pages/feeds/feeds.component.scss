@@ -119,8 +119,8 @@ app-user-profile {
 
     transition: transform 0.3s ease,
     left 0.3s ease;
-    // Ensure it's above other content
-    z-index: 100;
+    // Ensure it's above other content including reveal screens
+    z-index: 200;
     // Allow clicks to pass through transparent areas between glass containers
     pointer-events: none;
 

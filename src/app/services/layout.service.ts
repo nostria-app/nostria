@@ -907,8 +907,12 @@ export class LayoutService implements OnDestroy {
   openProfile(pubkey: string): void {
     // Check if we're on the home page where the two-column layout exists
     const currentUrl = this.router.url;
-    const isOnHomePage = currentUrl === '/' || currentUrl.startsWith('/?');
-    
+    // Match home page: /, /?, /#, or any combination
+    const isOnHomePage = currentUrl === '/' ||
+      currentUrl.startsWith('/?') ||
+      currentUrl.startsWith('/#') ||
+      /^\/(\?|#|$)/.test(currentUrl);
+
     if (isOnHomePage) {
       // Use navigation stack for two-column layout
       this.navigationStack.navigateToProfile(pubkey);

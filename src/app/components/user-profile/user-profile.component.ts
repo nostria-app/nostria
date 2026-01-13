@@ -14,7 +14,6 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatListModule } from '@angular/material/list';
@@ -51,7 +50,6 @@ import { MatBadgeModule } from '@angular/material/badge';
     MatMenuModule,
     MatButtonModule,
     MatBadgeModule,
-    RouterModule,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss',
@@ -61,7 +59,6 @@ import { MatBadgeModule } from '@angular/material/badge';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserProfileComponent implements AfterViewInit, OnDestroy {
-  private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private data = inject(DataService);
   private logger = inject(LoggerService);
@@ -130,6 +127,15 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     }
 
     return nip19.npubEncode(pubkey);
+  });
+
+  /**
+   * Computed URL for the profile link - used for href attribute for accessibility
+   */
+  profileUrl = computed(() => {
+    const npub = this.npubValue();
+    const prefix = this.routePrefix();
+    return npub ? `${prefix}/${npub}` : '';
   });
 
   constructor() {
