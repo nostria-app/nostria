@@ -29,25 +29,10 @@ app-user-profile {
 }
 
 // Make feeds component render edge-to-edge behind transparent toolbar and mobile menu
-// Note: When used inside home component's two-column layout, the home component handles the toolbar offset
+// Note: Feeds is now always rendered inside global-feeds-panel, which handles positioning
 :host {
   display: block;
   height: 100%;
-}
-
-// When feeds is used standalone (outside global panel), apply toolbar offset
-// When inside global-feeds-panel, the panel handles positioning
-:host-context(:not(.global-feeds-panel)) {
-  // Pull up into toolbar area
-  margin-top: calc(-1 * var(--toolbar-height, 64px));
-  // Compensate for the negative margin in height calculation
-  min-height: calc(100% + var(--toolbar-height, 64px));
-
-  @media (max-width: 599px) {
-    // Also pull down into mobile menu area
-    margin-bottom: calc(-100px - env(safe-area-inset-bottom, 0px));
-    min-height: calc(100% + var(--toolbar-height, 64px) + 100px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 .home-container {
@@ -102,7 +87,7 @@ app-user-profile {
     background: transparent;
     // Position absolutely within the feeds container
     position: absolute;
-    top: calc(var(--toolbar-height, 64px) + 60px);
+    top: var(--toolbar-height, 64px);
     left: 0;
     right: 0;
     // Width constrained to feeds panel
@@ -432,7 +417,8 @@ app-user-profile {
           overflow-y: auto; // Enable scrolling here
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
-          padding-top: 180px;
+          // Add padding for the toolbar and floating header
+          padding-top: calc(var(--toolbar-height, 64px) + 60px);
 
           // No padding-top - content scrolls behind transparent toolbar
           // The floating header is positioned absolutely
