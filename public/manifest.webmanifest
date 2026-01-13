@@ -2,7 +2,7 @@
   "name": "Nostria",
   "short_name": "Nostria",
   "id": "app.nostria",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "dir": "auto",
   "lang": "en",
   "theme_color": "#5953a9",
@@ -223,6 +223,12 @@
       "type": "image/png",
       "purpose": "maskable"
     },
+       {
+      "src": "icons/icon-180x180-maskable.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "icons/icon-192x192-maskable.png",
       "sizes": "192x192",
@@ -268,6 +274,12 @@
     {
       "src": "icons/icon-152x152.png",
       "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+        {
+      "src": "icons/icon-180x180.png",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
