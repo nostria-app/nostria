@@ -81,7 +81,6 @@
   flex-direction: column;
   overflow: hidden;
   background-color: var(--mat-app-surface-color);
-  border-left: 1px solid var(--mat-sys-outline-variant);
   position: relative; // For positioning the floating header
 
   // Mobile: full width
@@ -89,7 +88,6 @@
     flex: 1;
     width: 100%;
     max-width: 100%;
-    border-left: none;
   }
 }
 
@@ -145,19 +143,11 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Add padding at top for the floating header
-  padding-top: 8px;
+  // No top padding - content should stretch to top
 
   // Ensure event content is left-aligned like comments
   app-event-page {
     display: block;
     width: 100%;
-  }
-}
-
-// Dark mode adjustments
-:host-context(.dark) {
-  .content-column {
-    border-left-color: var(--mat-sys-outline-variant);
   }
 }

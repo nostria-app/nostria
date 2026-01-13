@@ -565,4 +565,21 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   onMouseLeave(): void {
     this.hoverCardService.hideHoverCard();
   }
+
+  /**
+   * Handles navigation to profile - uses layout.openProfile to support two-column view
+   */
+  onProfileClick(event: MouseEvent): void {
+    if (this.disableLink()) {
+      event.preventDefault();
+      return;
+    }
+
+    // Prevent default router navigation
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Use layout service to handle navigation (supports two-column view)
+    this.layout.openProfile(this.pubkey());
+  }
 }
