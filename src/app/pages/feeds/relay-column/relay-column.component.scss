@@ -15,6 +15,7 @@
   gap: 12px;
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-top: calc(var(--toolbar-height, 64px) + 48px);
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);

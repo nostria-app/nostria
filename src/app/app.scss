@@ -391,7 +391,8 @@ mat-sidenav-content {
     display: block;
     height: 100%;
     width: 100%;
-    overflow-y: auto;
+    // Note: Don't add overflow-y: auto here - the .column-content inside handles scrolling
+    // Adding overflow here creates a double-scrollbar issue
   }
 }
 

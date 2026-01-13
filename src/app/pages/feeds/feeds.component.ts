@@ -1000,13 +1000,13 @@ export class FeedsComponent implements OnDestroy {
       this.feedsCollectionService.clearActiveFeed();
 
       // Navigate with relay query param (keeping nice URL without wss://)
-      this.router.navigate(['/f'], {
+      this.router.navigate(['/'], {
         queryParams: { r: domain },
         queryParamsHandling: 'merge',
       });
     } else {
       // Clear relay param when deselecting
-      this.router.navigate(['/f'], {
+      this.router.navigate(['/'], {
         queryParams: { r: null },
         queryParamsHandling: 'merge',
       });
@@ -1018,7 +1018,7 @@ export class FeedsComponent implements OnDestroy {
    */
   closeRelayFeed(): void {
     this.activeRelayDomain.set('');
-    this.router.navigate(['/f'], {
+    this.router.navigate(['/'], {
       queryParams: { r: null },
       queryParamsHandling: 'merge',
     });
