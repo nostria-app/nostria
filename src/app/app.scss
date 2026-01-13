@@ -310,7 +310,7 @@ mat-sidenav-content {
   overflow: hidden;
   justify-content: center; // Center the two panes
   padding-top: var(--toolbar-height, 64px); // Space for toolbar
-  
+
   // When feeds panel is collapsed, just center the content
   &:not(.feeds-expanded) {
     .content-wrapper {
@@ -325,10 +325,10 @@ mat-sidenav-content {
   overflow-x: hidden;
   min-width: 0; // Prevent flex item from overflowing
   max-width: 700px; // Limit content width for readability
-  
+
   // When feeds are expanded, allow content to take more space
   .feeds-expanded & {
-    max-width: 600px;
+    max-width: 800px;
   }
 
   // On smaller screens, take full width
@@ -339,15 +339,15 @@ mat-sidenav-content {
 
 // Global Feeds Panel - side-by-side with content, centered layout
 .global-feeds-panel {
-  width: 400px;
-  min-width: 400px;
-  max-width: 400px;
+  width: 700px;
+  min-width: 700px;
+  max-width: 700px;
   height: 100%;
   overflow: hidden;
   flex-shrink: 0;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
   // Hidden state - collapse width to 0
   &.collapsed {
     width: 0;
@@ -355,7 +355,7 @@ mat-sidenav-content {
     max-width: 0;
     pointer-events: none;
   }
-  
+
   // Visible state
   &.expanded {
     pointer-events: auto;
@@ -370,14 +370,14 @@ mat-sidenav-content {
     z-index: 500;
     background-color: var(--mat-app-background-color);
     padding-top: var(--toolbar-height, 64px);
-    
+
     &.expanded {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
     }
   }
-  
+
   // Ensure the feeds component fills the panel
   app-feeds {
     display: block;
