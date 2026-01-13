@@ -37,6 +37,13 @@
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
         <mat-icon>menu</mat-icon>
       </button>
+      @if (app.authenticated()) {
+      <button mat-icon-button (click)="layout.toggleFeedsExpanded()" 
+        [matTooltip]="layout.feedsExpanded() ? 'Hide feeds' : 'Show feeds'"
+        aria-label="Toggle feeds panel" class="feeds-toggle-button">
+        <mat-icon>{{ layout.feedsExpanded() ? 'view_sidebar' : 'menu_open' }}</mat-icon>
+      </button>
+      }
       <app-navigation></app-navigation>
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
@@ -390,10 +397,20 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
-      <!-- Page content -->
-      <div class="content-wrapper" [class.sidenav-open-expanded]="opened() && displayLabels() && !layout.isHandset()"
-        [class.sidenav-open-collapsed]="opened() && !displayLabels() && !layout.isHandset()">
-        <router-outlet></router-outlet>
+      <!-- Main content layout: feeds panel and page content side by side -->
+      <div class="main-content-layout" [class.feeds-expanded]="layout.feedsExpanded() && app.authenticated()">
+        <!-- Global Feeds Panel - always rendered, visibility controlled by CSS -->
+        @if (app.authenticated()) {
+        <div class="global-feeds-panel" 
+          [class.expanded]="layout.feedsExpanded()" 
+          [class.collapsed]="!layout.feedsExpanded()">
+          <app-feeds></app-feeds>
+        </div>
+        }
+        <!-- Page content -->
+        <div class="content-wrapper">
+          <router-outlet></router-outlet>
+        </div>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
