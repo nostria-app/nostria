@@ -164,7 +164,7 @@
               </button>
             </div>
           </div>
-          } @else if (feed.id === 'trending' || feed.path === 'trending') {
+          } @else if (feed.id === 'default-feed-trending' || feed.source === 'trending') {
           <!-- Trending column uses dedicated trending component -->
           <app-trending-column></app-trending-column>
           } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
@@ -203,9 +203,6 @@
               <span class="loading-text">Loading content...</span>
             </div>
           </div>
-          } @else if (feed.source === 'trending') {
-          <!-- Trending column uses dedicated trending component -->
-          <app-trending-column></app-trending-column>
           } @else {
           <div class="column-items">
             @let columnEventsData = columnEvents().get(feed.id);

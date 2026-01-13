@@ -128,7 +128,6 @@ export class NewFeedDialogComponent {
   feedForm = this.fb.group({
     label: ['', Validators.required],
     icon: ['dynamic_feed'],
-    path: [''],
     type: ['notes'],
     kinds: [[] as number[]],
     source: ['following'],
@@ -245,7 +244,6 @@ export class NewFeedDialogComponent {
         this.feedForm.patchValue({
           label: feedData.label || '',
           icon: feedData.icon || 'dynamic_feed',
-          path: feedData.path || '',
           type: feedData.type || 'notes',
           kinds: feedData.kinds || [1],
           source: feedData.source || 'following',
@@ -646,7 +644,6 @@ export class NewFeedDialogComponent {
         id: existingFeed?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
-        path: formValue.path || undefined,
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         kinds: this.selectedKinds(),
         source: (formValue.source || 'following') as 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending',
