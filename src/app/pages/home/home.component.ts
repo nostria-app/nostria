@@ -42,6 +42,10 @@ export class HomeComponent {
    */
   goBack() {
     this.navigationStack.pop();
+    // If stack is now empty, navigate to root
+    if (!this.navigationStack.hasItems()) {
+      this.router.navigate(['/']);
+    }
   }
 
   /**
@@ -49,6 +53,8 @@ export class HomeComponent {
    */
   close() {
     this.navigationStack.clear();
+    // Navigate to root to update the URL
+    this.router.navigate(['/']);
   }
 
   /**
