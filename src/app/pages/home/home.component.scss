@@ -1,0 +1,112 @@
+.home-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.columns-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
+  
+  // Default: two-column layout on desktop
+  &:not(.mobile) {
+    gap: 0;
+    
+    // Center feed when no content is selected
+    &:not(.has-content) {
+      justify-content: center;
+      
+      .feed-column {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+    }
+  }
+
+  // Mobile: single column at a time
+  &.mobile {
+    .feed-column,
+    .content-column {
+      width: 100%;
+      flex: none;
+    }
+    
+    .hidden-mobile {
+      display: none !important;
+    }
+  }
+}
+
+.feed-column {
+  flex: 0 0 700px;
+  width: 700px;
+  max-width: 700px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--mat-app-background-color);
+  
+  // Mobile: full width
+  @media (max-width: 1023px) {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.content-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--mat-app-surface-color);
+  border-left: 1px solid var(--mat-sys-outline-variant);
+
+  // Mobile: full width
+  @media (max-width: 1023px) {
+    flex: 1;
+    border-left: none;
+  }
+}
+
+.content-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--mat-app-surface-color);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  flex-shrink: 0;
+  z-index: 10;
+  
+  .nav-button {
+    flex-shrink: 0;
+  }
+  
+  .content-title {
+    flex: 1;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+  .content-column {
+    border-left-color: var(--mat-sys-outline-variant);
+  }
+  
+  .content-header {
+    border-bottom-color: var(--mat-sys-outline-variant);
+  }
+}

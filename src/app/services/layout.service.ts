@@ -38,6 +38,7 @@ import { ReportTarget } from './reporting.service';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
+import { NavigationStackService } from './navigation-stack.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -68,6 +69,7 @@ export class LayoutService implements OnDestroy {
   private feedService = inject(FeedService);
   private pool = inject(RelayPoolService);
   private onDemandUserData = inject(OnDemandUserDataService);
+  private navigationStack = inject(NavigationStackService);
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
@@ -903,7 +905,17 @@ export class LayoutService implements OnDestroy {
   }
 
   openProfile(pubkey: string): void {
-    this.router.navigate(['/p', pubkey]);
+    // Check if we're on the home page where the two-column layout exists
+    const currentUrl = this.router.url;
+    const isOnHomePage = currentUrl === '/' || currentUrl.startsWith('/?');
+    
+    if (isOnHomePage) {
+      // Use navigation stack for two-column layout
+      this.navigationStack.navigateToProfile(pubkey);
+    } else {
+      // Navigate normally for other contexts
+      this.router.navigate(['/p', pubkey]);
+    }
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
@@ -968,13 +980,17 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
-    // Check if we're on a page where we should preserve state by using a dialog
+    // Check if we're on a page where we should use the two-column layout
     const currentUrl = this.router.url;
-    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
+    const isOnHomePage = currentUrl === '/' || currentUrl.startsWith('/?');
+    const isOnFeedsPage = currentUrl.startsWith('/f/');
     const isOnProfilePage = currentUrl.startsWith('/p/') || currentUrl.startsWith('/u/');
     const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
 
-    if (isOnFeedsPage || isOnProfilePage || isOnPeoplePage) {
+    if (isOnHomePage || isOnFeedsPage) {
+      // Use navigation stack for two-column layout
+      this.navigationStack.navigateToEvent(naddr, event);
+    } else if (isOnProfilePage || isOnPeoplePage) {
       // Open in dialog to preserve page state and scroll position
       this.openEventInDialog(naddr, event, trustedByPubkey);
     } else {
