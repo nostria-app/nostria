@@ -147,7 +147,7 @@ export class AppsMenuComponent {
     {
       icon: 'bookmarks',
       label: 'Bookmarks',
-      route: ['/bookmarks'],
+      route: ['/collections/bookmarks'],
     },
     {
       icon: 'badge',

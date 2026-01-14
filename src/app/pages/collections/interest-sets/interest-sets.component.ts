@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +15,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { CollectionSetsService, InterestSet } from '../../../services/collection-sets.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
+import { LayoutService } from '../../../services/layout.service';
+import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 
 @Component({
   selector: 'app-interest-sets',
@@ -42,7 +43,8 @@ export class InterestSetsComponent implements OnInit {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
-  private router = inject(Router);
+  private layout = inject(LayoutService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   // State
   isLoading = signal(false);
@@ -53,6 +55,7 @@ export class InterestSetsComponent implements OnInit {
   editingHashtags = signal('');
 
   async ngOnInit() {
+    this.twoColumnLayout.setSplitView();
     await this.loadData();
   }
 
@@ -149,8 +152,7 @@ export class InterestSetsComponent implements OnInit {
   }
 
   searchHashtag(hashtag: string): void {
-    this.router.navigate(['/search'], {
-      queryParams: { q: `#${hashtag}` }
-    });
+    // Open search in the left panel
+    this.layout.openSearchInLeftPanel(`#${hashtag}`);
   }
 }

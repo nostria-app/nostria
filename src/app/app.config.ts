@@ -8,7 +8,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, withNavigationErrorHandler } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
 import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -25,6 +25,7 @@ import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
+import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 
 let appLang = 'en';
 
@@ -56,6 +57,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LOCALE_ID, useValue: appLang },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    { provide: RouteReuseStrategy, useClass: CustomReuseStrategy },
     {
       provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
       useValue: { touchGestures: 'off' },
@@ -92,6 +94,10 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(
       routes,
+      withInMemoryScrolling({
+        scrollPositionRestoration: 'enabled',
+        anchorScrolling: 'enabled',
+      }),
       withNavigationErrorHandler((error: any) => {
         const errorMessage = error?.message || error?.toString() || '';
         // Check for chunk loading errors during navigation

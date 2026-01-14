@@ -487,7 +487,7 @@ export class PeopleComponent implements OnDestroy {
   }
 
   viewProfile(pubkey: string) {
-    this.router.navigate(['/p', pubkey]);
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
   }
 
   /**

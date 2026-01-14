@@ -20,6 +20,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
 import { ImageCacheService } from '../../services/image-cache.service';
+import { LayoutService } from '../../services/layout.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import {
@@ -295,6 +296,7 @@ export class MusicPlaylistCardComponent {
   private clipboard = inject(Clipboard);
   private zapService = inject(ZapService);
   private imageCache = inject(ImageCacheService);
+  private layout = inject(LayoutService);
 
   event = input.required<Event>();
 
@@ -404,7 +406,7 @@ export class MusicPlaylistCardComponent {
     const event = this.event();
     const dTag = event.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
-      this.router.navigate(['/music/playlist', event.pubkey, dTag]);
+      this.layout.openMusicPlaylist(event.pubkey, dTag, event);
     }
   }
 

@@ -366,21 +366,21 @@ export class NoteContentComponent implements OnDestroy {
         const identifier = nostrUri.replace('nostr:', '');
         const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
         if (hexPubkey) {
-          this.router.navigate(['/p', hexPubkey]);
+          this.router.navigate([{ outlets: { right: ['p', hexPubkey] } }]);
         } else {
           // Fallback to raw identifier if conversion fails
-          this.router.navigate(['/p', identifier]);
+          this.router.navigate([{ outlets: { right: ['p', identifier] } }]);
         }
         return;
       } else if (nostrUri.startsWith('nostr:note') || nostrUri.startsWith('nostr:nevent')) {
         // Navigate to the event page using the raw note/nevent
         const identifier = nostrUri.replace('nostr:', '');
-        this.router.navigate(['/e', identifier]);
+        this.router.navigate([{ outlets: { right: ['e', identifier] } }]);
         return;
       } else if (nostrUri.startsWith('nostr:naddr')) {
         // Navigate to the article page using the raw naddr
         const identifier = nostrUri.replace('nostr:', '');
-        this.router.navigate(['/a', identifier]);
+        this.router.navigate([{ outlets: { right: ['a', identifier] } }]);
         return;
       }
     }

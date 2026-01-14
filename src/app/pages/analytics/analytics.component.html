@@ -342,7 +342,7 @@
         } @else {
         <div class="content-list">
           @for (item of topContent(); track item.id; let i = $index) {
-          <a [routerLink]="['/e', getNevent(item.id)]" class="content-item">
+          <a [routerLink]="[{ outlets: { right: ['e', getNevent(item.id)] } }]" class="content-item">
             <div class="content-rank">{{ i + 1 }}</div>
             <div class="content-type">
               <mat-icon [matTooltip]="getContentKindLabel(item.kind)">{{ getContentKindIcon(item.kind) }}</mat-icon>

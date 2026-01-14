@@ -92,11 +92,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/share-target/share-target.component').then(m => m.ShareTargetComponent),
   },
-  // Legacy feed routes - redirect to home
   {
     path: 'f',
-    redirectTo: '',
-    pathMatch: 'full',
+    loadComponent: () => import('./components/empty/empty.component').then(m => m.EmptyComponent),
+    title: 'Feeds',
   },
   {
     path: 'f/:path',
@@ -470,7 +469,7 @@ export const routes: Routes = [
     title: 'Collections',
   },
   {
-    path: 'bookmarks',
+    path: 'collections/bookmarks',
     data: { isRoot: true },
     loadComponent: () =>
       import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
@@ -625,19 +624,19 @@ export const routes: Routes = [
     title: 'Lists',
   },
   {
-    path: 'relay-sets',
+    path: 'collections/relays',
     data: { isRoot: true },
     loadComponent: () => import('./pages/collections/relay-sets/relay-sets.component').then(m => m.RelaySetsComponent),
     title: 'Relays',
   },
   {
-    path: 'emoji-sets',
+    path: 'collections/emojis',
     data: { isRoot: true },
     loadComponent: () => import('./pages/collections/emoji-sets/emoji-sets.component').then(m => m.EmojiSetsComponent),
     title: 'Emojis',
   },
   {
-    path: 'interest-sets',
+    path: 'collections/interests',
     data: { isRoot: true },
     loadComponent: () => import('./pages/collections/interest-sets/interest-sets.component').then(m => m.InterestSetsComponent),
     title: 'Interests',
@@ -675,5 +674,86 @@ export const routes: Routes = [
       import('./pages/invite/invite.component').then(m => m.InviteComponent),
     title: 'Join Nostria',
   },
+
+  // Right panel routes (named outlet)
+  {
+    path: 'e/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/event/event.component').then(m => m.EventPageComponent),
+    resolve: { data: DataResolver },
+    title: 'Event',
+  },
+  {
+    path: 'a/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/article/article.component').then(m => m.ArticleComponent),
+    title: 'Article',
+    resolve: { data: DataResolver },
+  },
+  {
+    path: 'a/:id/:slug',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/article/article.component').then(m => m.ArticleComponent),
+    title: 'Article',
+    resolve: { data: DataResolver, article: ArticleResolver },
+  },
+  {
+    path: 'p/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/profile/profile.component').then(m => m.ProfileComponent),
+    resolve: { data: DataResolver },
+    children: profileChildren,
+  },
+  {
+    path: 'stream/:encodedEvent',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),
+    title: 'Live Stream',
+    resolve: { streamData: streamResolver },
+  },
+  {
+    path: 'music/song/:pubkey/:identifier',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+    resolve: { data: DataResolver },
+    title: 'Song',
+  },
+  {
+    path: 'music/artist/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-artist/music-artist.component').then(m => m.MusicArtistComponent),
+    resolve: { data: DataResolver },
+    title: 'Artist',
+  },
+  {
+    path: 'music/playlist/:pubkey/:identifier',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-playlist/music-playlist.component').then(m => m.MusicPlaylistComponent),
+    resolve: { data: DataResolver },
+    title: 'Playlist',
+  },
+  {
+    path: 'music/liked',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-liked/music-liked.component').then(m => m.MusicLikedComponent),
+    title: 'Liked Songs',
+  },
+  {
+    path: 'music/liked-playlists',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
+    title: 'Liked Playlists',
+  },
+
   { path: '**', redirectTo: '/' },
 ];

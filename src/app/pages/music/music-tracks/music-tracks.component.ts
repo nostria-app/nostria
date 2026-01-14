@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild, input } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,9 +31,6 @@ const PAGE_SIZE = 24;
   template: `
     <div class="music-tracks-container">
       <div class="page-header">
-        <button mat-icon-button (click)="goBack()" aria-label="Go back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
         <div class="header-info">
           <h1 i18n="@@music.tracks.title">All Songs</h1>
           <p class="subtitle">{{ tracksCount() }} <span i18n="@@music.tracks.trackCount">tracks</span></p>
@@ -105,6 +102,10 @@ const PAGE_SIZE = 24;
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+    
     .music-tracks-container {
       display: flex;
       flex-direction: column;
@@ -254,6 +255,9 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
+  // Input for when opened via RightPanelService
+  sourceInput = input<'following' | 'public' | undefined>(undefined);
+
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
 
   allTracks = signal<Event[]>([]);
@@ -319,6 +323,14 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   ngOnInit(): void {
+    // Check for input first (when opened via RightPanelService)
+    const sourceFromInput = this.sourceInput();
+    if (sourceFromInput) {
+      this.source.set(sourceFromInput);
+      this.startSubscription();
+      return;
+    }
+
     // Get source from query params
     this.route.queryParams.subscribe(params => {
       const sourceParam = params['source'];

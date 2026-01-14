@@ -381,7 +381,7 @@ export class BadgeEditorComponent {
       // Navigate back to user's badges page
       const pubkey = this.accountState.pubkey();
       const npub = this.utilities.getNpubFromPubkey(pubkey);
-      this.router.navigate(['/p', npub || pubkey, 'badges']);
+      this.router.navigate([{ outlets: { right: ['p', npub || pubkey, 'badges'] } }]);
     } catch (error) {
       console.error('Error publishing badge:', error);
       this.snackBar.open(
@@ -400,6 +400,6 @@ export class BadgeEditorComponent {
   cancel(): void {
     const pubkey = this.accountState.pubkey();
     const npub = this.utilities.getNpubFromPubkey(pubkey);
-    this.router.navigate(['/p', npub || pubkey, 'badges']);
+    this.router.navigate([{ outlets: { right: ['p', npub || pubkey, 'badges'] } }]);
   }
 }

@@ -78,8 +78,18 @@ export class CollectionSetsService {
    */
   async getPreferredEmojis(pubkey: string): Promise<PreferredEmojiSet[]> {
     try {
-      // Query for user's preferred emoji list (kind 10030)
-      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+      // First check local database for faster loading
+      await this.database.init();
+      let events = await this.database.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+
+      // If no local data, fetch from relays
+      if (events.length === 0) {
+        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+        // Save to local database for next time
+        for (const event of events) {
+          await this.database.saveEvent(event);
+        }
+      }
 
       this.logger.info(`Found ${events.length} kind 10030 events for pubkey ${pubkey.substring(0, 8)}...`);
 
@@ -186,8 +196,19 @@ export class CollectionSetsService {
    */
   async getEmojiSets(pubkey: string): Promise<EmojiSet[]> {
     try {
-      // Query for all kind 30030 events
-      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
+      // First check local database for faster loading
+      await this.database.init();
+      let events = await this.database.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
+
+      // If no local data, fetch from relays
+      if (events.length === 0) {
+        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
+        // Save to local database for next time
+        for (const event of events) {
+          await this.database.saveEvent(event);
+        }
+      }
+
       this.logger.info(`Found ${events.length} kind 30030 events for pubkey ${pubkey.substring(0, 8)}...`);
 
       const sets: EmojiSet[] = [];
@@ -320,8 +341,18 @@ export class CollectionSetsService {
    */
   async getInterestSet(pubkey: string): Promise<InterestSet | null> {
     try {
-      // Try to get from database first
-      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+      // First check local database for faster loading
+      await this.database.init();
+      let events = await this.database.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+
+      // If no local data, fetch from relays
+      if (events.length === 0) {
+        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+        // Save to local database for next time
+        for (const event of events) {
+          await this.database.saveEvent(event);
+        }
+      }
 
       // Find the "interests" identifier event
       const event = events.find(e => {

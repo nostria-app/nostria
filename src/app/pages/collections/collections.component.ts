@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
-import { LayoutService } from '../../services/layout.service';
 
 interface CollectionItem {
   title: string;
@@ -26,7 +25,6 @@ interface CollectionItem {
 })
 export class CollectionsComponent {
   private router = inject(Router);
-  layout = inject(LayoutService);
 
   collections: CollectionItem[] = [
     {
@@ -40,33 +38,34 @@ export class CollectionsComponent {
       title: $localize`:@@collections.bookmarks.title:Bookmarks`,
       description: $localize`:@@collections.bookmarks.description:Your saved notes, articles, and links`,
       icon: 'bookmark',
-      route: '/bookmarks',
+      route: '/collections/bookmarks',
       color: '#2196f3',
     },
     {
       title: $localize`:@@collections.relays.title:Relays`,
       description: $localize`:@@collections.relays.description:Manage your relay connections`,
       icon: 'dns',
-      route: '/relay-sets',
+      route: '/collections/relays',
       color: '#ff9800',
     },
     {
       title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
       description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
       icon: 'emoji_emotions',
-      route: '/emoji-sets',
+      route: '/collections/emojis',
       color: '#00bcd4',
     },
     {
       title: $localize`:@@collections.interests.title:Interests`,
       description: $localize`:@@collections.interests.description:Topics and hashtags you follow`,
       icon: 'tag',
-      route: '/interest-sets',
+      route: '/collections/interests',
       color: '#9c27b0',
     },
   ];
 
   navigateTo(route: string): void {
+    // All collections are list views that open in left panel
     this.router.navigateByUrl(route);
   }
 }

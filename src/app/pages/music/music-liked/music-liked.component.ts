@@ -30,9 +30,6 @@ const PAGE_SIZE = 24;
   template: `
     <div class="music-liked-container">
       <div class="page-header">
-        <button mat-icon-button (click)="goBack()" aria-label="Go back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
         <div class="header-info">
           <div class="header-icon">
             <mat-icon>favorite</mat-icon>
@@ -90,6 +87,10 @@ const PAGE_SIZE = 24;
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+    
     .music-liked-container {
       display: flex;
       flex-direction: column;

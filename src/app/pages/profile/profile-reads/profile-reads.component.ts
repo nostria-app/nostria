@@ -223,7 +223,7 @@ export class ProfileReadsComponent implements OnChanges {
         pubkey: event.pubkey,
         kind: event.kind,
       });
-      this.router.navigate(['/a', naddr], { state: { event } });
+      this.router.navigate([{ outlets: { right: ['a', naddr] } }], { state: { event } });
     }
   }
 

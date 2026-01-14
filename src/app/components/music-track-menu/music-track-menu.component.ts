@@ -247,10 +247,10 @@ export class MusicTrackMenuComponent {
   }
 
   goToTrackDetails(): void {
-    const npub = this.getArtistNpub();
+    const ev = this.track();
     const id = this.getIdentifier();
-    if (npub && id) {
-      this.router.navigate(['/music/song', npub, id]);
+    if (ev?.pubkey && id) {
+      this.layout.openSongDetail(ev.pubkey, id, ev);
     }
   }
 
@@ -296,7 +296,7 @@ export class MusicTrackMenuComponent {
     const npub = this.getArtistNpub();
     const id = this.getIdentifier();
     const title = this.getTitle();
-    
+
     if (!npub || !id) {
       this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
       return;

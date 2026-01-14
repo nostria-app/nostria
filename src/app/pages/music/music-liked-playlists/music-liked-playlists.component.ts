@@ -27,9 +27,6 @@ const PAGE_SIZE = 24;
   template: `
     <div class="music-liked-playlists-container">
       <div class="page-header">
-        <button mat-icon-button (click)="goBack()" aria-label="Go back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
         <div class="header-info">
           <div class="header-icon">
             <mat-icon>playlist_play</mat-icon>
@@ -81,6 +78,10 @@ const PAGE_SIZE = 24;
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+    
     .music-liked-playlists-container {
       display: flex;
       flex-direction: column;

@@ -18,6 +18,8 @@ import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
 import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { LayoutService } from '../../services/layout.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -64,6 +66,8 @@ export class MusicComponent implements OnDestroy {
   private database = inject(DatabaseService);
   private offlineMusicService = inject(OfflineMusicService);
   private accountLocalState = inject(AccountLocalStateService);
+  private layout = inject(LayoutService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -326,6 +330,7 @@ export class MusicComponent implements OnDestroy {
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
 
   constructor() {
+    this.twoColumnLayout.setWideLeft();
     // Load collapsed state from storage
     const pubkey = this.currentPubkey();
     if (pubkey) {
@@ -463,6 +468,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.twoColumnLayout.setSplitView();
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
   }
@@ -656,19 +662,20 @@ export class MusicComponent implements OnDestroy {
   }
 
   // Navigation methods
+  // List views navigate in left panel (router), individual items open in right panel (layout)
   goToLikedSongs(): void {
-    this.router.navigate(['/music/liked']);
+    this.layout.openMusicLiked();
   }
 
   goToLikedPlaylists(): void {
-    this.router.navigate(['/music/liked-playlists']);
+    this.layout.openMusicLikedPlaylists();
   }
 
   goToYourRecords(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
       const npub = nip19.npubEncode(pubkey);
-      this.router.navigate(['/music/artist', npub]);
+      this.layout.openMusicArtist(npub);
     }
   }
 
@@ -698,7 +705,7 @@ export class MusicComponent implements OnDestroy {
 
   goToArtist(pubkey: string): void {
     const npub = nip19.npubEncode(pubkey);
-    this.router.navigate(['/music/artist', npub]);
+    this.layout.openMusicArtist(npub);
   }
 
   /**

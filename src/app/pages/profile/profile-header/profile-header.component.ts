@@ -1103,7 +1103,7 @@ export class ProfileHeaderComponent implements OnDestroy {
    * Navigates to the badges page
    */
   viewAllBadges(): void {
-    this.router.navigate(['/p', this.npub() || this.pubkey(), 'badges']);
+    this.router.navigate([{ outlets: { right: ['p', this.npub() || this.pubkey(), 'badges'] } }]);
   }
 
   // Badge hover card

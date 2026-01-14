@@ -1345,7 +1345,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   viewProfile(): void {
     const pubkey = this.selectedChat()?.pubkey;
     if (pubkey) {
-      this.router.navigate(['/p', pubkey]);
+      this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
     }
   }
 

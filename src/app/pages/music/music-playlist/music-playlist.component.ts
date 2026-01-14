@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input } from '@angular/core';
+import { ActivatedRoute, Router, ParamMap } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -70,6 +71,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   private zapService = inject(ZapService);
 
+  // Inputs for when opened via RightPanelService
+  pubkeyInput = input<string | undefined>(undefined);
+  dTagInput = input<string | undefined>(undefined);
+
+  // Convert route params to signal for reactive updates
+  private routeParams = toSignal<ParamMap>(this.route.paramMap);
+
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
   loading = signal(true);
@@ -89,8 +97,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private subscriptions: { close: () => void }[] = [];
   private likeSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
-  private tracksLoaded = false; // Prevent multiple loadPlaylistTracks calls
-  private likeChecked = false;
+  private currentPlaylistKey = ''; // Track current pubkey+dTag to detect changes
+
+  // Store event from router state (must be captured in constructor before navigation ends)
+  private routerStateEvent: Event | null = null;
 
   // Cache for artist profiles
   private artistProfiles = signal<Map<string, NostrRecord>>(new Map());
@@ -181,6 +191,46 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Capture router state in constructor - this must happen before navigation ends
+    const navigation = this.router.getCurrentNavigation();
+    const stateEvent = navigation?.extras?.state?.['playlistEvent'] as Event | undefined;
+    if (stateEvent) {
+      this.routerStateEvent = stateEvent;
+    }
+
+    // React to route param changes for playlist navigation
+    effect(() => {
+      // Check inputs first (when opened via RightPanelService)
+      const pubkeyFromInput = this.pubkeyInput();
+      const dTagFromInput = this.dTagInput();
+
+      let pubkey: string | null = null;
+      let identifier: string | null = null;
+
+      if (pubkeyFromInput && dTagFromInput) {
+        pubkey = pubkeyFromInput;
+        identifier = dTagFromInput;
+      } else {
+        // Use route params (when opened via router)
+        const params = this.routeParams();
+        if (params) {
+          pubkey = params.get('pubkey');
+          identifier = params.get('identifier');
+        }
+      }
+
+      if (pubkey && identifier) {
+        const newKey = `${pubkey}:${identifier}`;
+        // Only reload if this is a different playlist
+        if (newKey !== this.currentPlaylistKey) {
+          this.currentPlaylistKey = newKey;
+          untracked(() => {
+            this.resetAndLoadPlaylist(pubkey!, identifier!);
+          });
+        }
+      }
+    });
+
     // Load author profile when playlist loads
     effect(() => {
       const event = this.playlist();
@@ -196,9 +246,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Load tracks when playlist loads
     effect(() => {
       const refs = this.trackRefs();
-      // Only load if we have refs and haven't started loading yet
-      if (refs.length > 0 && !this.tracksLoaded) {
-        this.tracksLoaded = true;
+      const event = this.playlist();
+      // Only load if we have refs and the playlist is loaded
+      if (refs.length > 0 && event) {
         untracked(() => {
           this.loadPlaylistTracks(refs);
         });
@@ -209,8 +259,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     effect(() => {
       const event = this.playlist();
       const userPubkey = this.accountState.pubkey();
-      if (event && userPubkey && !this.likeChecked) {
-        this.likeChecked = true;
+      if (event && userPubkey) {
         untracked(() => {
           this.checkExistingLike(event, userPubkey);
         });
@@ -219,12 +268,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const pubkey = this.route.snapshot.paramMap.get('pubkey');
-    const identifier = this.route.snapshot.paramMap.get('identifier');
-
-    if (pubkey && identifier) {
-      this.loadPlaylist(pubkey, identifier);
-    } else {
+    // Initial load is now handled by the effect in the constructor
+    // This ensures both initial load and param changes work correctly
+    if (!this.routeParams() && !this.pubkeyInput()) {
       this.loading.set(false);
     }
   }
@@ -232,6 +278,44 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.close());
     this.likeSubscription?.close();
+  }
+
+  /**
+   * Reset state and load a new playlist.
+   * Called when navigating to a different playlist.
+   */
+  private resetAndLoadPlaylist(pubkey: string, identifier: string): void {
+    // Close existing subscriptions
+    this.subscriptions.forEach(sub => sub.close());
+    this.subscriptions = [];
+    this.likeSubscription?.close();
+    this.likeSubscription = null;
+
+    // Reset state
+    this.tracks.set([]);
+    this.loadingTracks.set(false);
+    this.authorProfile.set(undefined);
+    this.isLiked.set(false);
+    this.isLiking.set(false);
+    this.trackMap.clear();
+    this.artistProfiles.set(new Map());
+
+    // Check if we have the playlist from router state (instant rendering)
+    if (this.routerStateEvent &&
+      this.routerStateEvent.pubkey === pubkey &&
+      this.routerStateEvent.tags.find(t => t[0] === 'd')?.[1] === identifier) {
+      this.playlist.set(this.routerStateEvent);
+      this.loading.set(false);
+      this.routerStateEvent = null; // Clear after using
+      return;
+    }
+
+    // Need to load from relay
+    this.playlist.set(null);
+    this.loading.set(true);
+
+    // Load the new playlist
+    this.loadPlaylist(pubkey, identifier);
   }
 
   private loadPlaylist(pubkey: string, identifier: string): void {
@@ -423,7 +507,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   goToArtist(): void {
     const npub = this.artistNpub();
     if (npub) {
-      this.router.navigate(['/music/artist', npub]);
+      this.layout.openMusicArtist(npub);
     }
   }
 
@@ -568,14 +652,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     if (result?.updated && result?.playlist) {
       // Reload the page to show updated data
-      const pubkey = this.route.snapshot.paramMap.get('pubkey');
-      const identifier = this.route.snapshot.paramMap.get('identifier');
+      const params = this.routeParams();
+      const pubkey = params?.get('pubkey') || this.pubkeyInput();
+      const identifier = params?.get('identifier') || this.dTagInput();
       if (pubkey && identifier) {
-        // Reset state and reload
-        this.tracksLoaded = false;
-        this.trackMap.clear();
-        this.tracks.set([]);
-        this.loadPlaylist(pubkey, identifier);
+        // Reset state and reload using the proper method
+        this.resetAndLoadPlaylist(pubkey, identifier);
       }
     }
   }
@@ -789,11 +871,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   goToTrackDetails(track: Event): void {
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
-    try {
-      const npub = nip19.npubEncode(track.pubkey);
-      this.router.navigate(['/music/song', npub, dTag]);
-    } catch {
-      // Ignore
+    if (track.pubkey && dTag) {
+      this.layout.openSongDetail(track.pubkey, dTag, track);
     }
   }
 

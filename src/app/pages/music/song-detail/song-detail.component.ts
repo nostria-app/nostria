@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -85,6 +85,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+
+  // Inputs for when opened via RightPanelService
+  pubkeyInput = input<string | undefined>(undefined);
+  dTagInput = input<string | undefined>(undefined);
 
   song = signal<Event | null>(null);
   loading = signal(true);
@@ -320,7 +324,17 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return event && userPubkey && event.pubkey === userPubkey;
   });
 
+  // Store event from router state (must be captured in constructor before navigation ends)
+  private routerStateEvent: Event | null = null;
+
   constructor() {
+    // Capture router state in constructor - this must happen before navigation ends
+    const navigation = this.router.getCurrentNavigation();
+    const stateEvent = navigation?.extras?.state?.['songEvent'] as Event | undefined;
+    if (stateEvent) {
+      this.routerStateEvent = stateEvent;
+    }
+
     // Load author profile when song loads
     effect(() => {
       const event = this.song();
@@ -501,6 +515,24 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Check for router state first (event passed directly for instant rendering)
+    // Router state was captured in constructor before navigation ended
+    if (this.routerStateEvent) {
+      this.song.set(this.routerStateEvent);
+      this.loading.set(false);
+      return;
+    }
+
+    // Check for inputs (when opened via RightPanelService)
+    const pubkeyFromInput = this.pubkeyInput();
+    const dTagFromInput = this.dTagInput();
+
+    if (pubkeyFromInput && dTagFromInput) {
+      this.loadSong(pubkeyFromInput, dTagFromInput);
+      return;
+    }
+
+    // Fall back to route params (when opened via router)
     const pubkey = this.route.snapshot.paramMap.get('pubkey');
     const identifier = this.route.snapshot.paramMap.get('identifier');
 
@@ -581,9 +613,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   goToArtist(): void {
-    const event = this.song();
-    if (event) {
-      this.router.navigate(['/music/artist', this.artistNpub()]);
+    const npub = this.artistNpub();
+    if (npub) {
+      this.layout.openMusicArtist(npub);
     }
   }
 
@@ -925,7 +957,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         if (result.success) {
           // Delete from local database after successful deletion request
           await this.eventService.deleteEventFromLocalStorage(ev.id);
-          
+
           this.snackBar.open('Track deleted successfully', 'Dismiss', { duration: 3000 });
           // Navigate back after successful deletion request
           this.goBack();

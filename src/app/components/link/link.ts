@@ -2,7 +2,7 @@ import { Component, input, computed, inject } from '@angular/core';
 import { Event, nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
-import { Router } from '@angular/router';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-link',
@@ -11,8 +11,7 @@ import { Router } from '@angular/router';
   styleUrl: './link.scss',
 })
 export class Link {
-  // Inject Router for programmatic navigation
-  private router = inject(Router);
+  private layout = inject(LayoutService);
 
   // Input signal for the Nostr event
   event = input.required<Event>();
@@ -41,13 +40,17 @@ export class Link {
     return `${prefix}/${encoded}`;
   });
 
-  // Method to navigate with event data
+  // Method to navigate with event data - opens in right panel
   navigateToEvent() {
-    const route = this.link();
-    if (route) {
-      this.router.navigate([route], {
-        state: { event: this.event() },
-      });
-    }
+    const eventData = this.event();
+    if (!eventData) return;
+
+    const encoded = nip19.neventEncode({
+      id: eventData.id,
+      author: eventData.pubkey,
+      kind: eventData.kind,
+    });
+
+    this.layout.openGenericEvent(encoded, eventData);
   }
 }
