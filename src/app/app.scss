@@ -333,6 +333,13 @@ mat-sidenav-content {
       width: var(--left-column-width, 700px);
       min-width: var(--left-column-width, 700px);
       max-width: var(--left-column-width, 700px);
+
+      // Responsive: scale down on smaller screens
+      @media (max-width: 740px) {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+      }
     }
 
     .right-panel {
@@ -346,6 +353,13 @@ mat-sidenav-content {
       width: var(--left-column-width, 1400px);
       min-width: var(--left-column-width, 1400px);
       max-width: var(--left-column-width, 1400px);
+
+      // Responsive: scale down on smaller screens
+      @media (max-width: 1440px) {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+      }
     }
   }
 
@@ -378,6 +392,13 @@ mat-sidenav-content {
       width: 700px;
       min-width: 700px;
       max-width: 700px;
+
+      // Responsive: scale down on smaller screens
+      @media (max-width: 740px) {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+      }
     }
   }
 
@@ -470,6 +491,13 @@ mat-sidenav-content {
     transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
     z-index 0s linear 0.2s;
+
+  // Responsive: scale down on smaller screens (non-mobile)
+  @media (max-width: 740px) {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
 
   // When left panel has content, ensure proper layout for header + content
   &.has-content {
@@ -613,6 +641,13 @@ mat-sidenav-content {
     box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     z-index 0s linear;
 
+  // Responsive: allow shrinking on smaller screens
+  @media (max-width: 740px) {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+
   &.active {
     display: flex;
   }
@@ -651,6 +686,13 @@ mat-sidenav-content {
     &.full-width {
       max-width: none;
     }
+  }
+
+  // Responsive - smaller tablets and large phones
+  @media (max-width: 1023px) and (min-width: 600px) {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
   }
 }
 
