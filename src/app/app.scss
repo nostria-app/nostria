@@ -706,47 +706,48 @@ mat-sidenav-content {
 }
 
 // Panel Header - Navigation controls (used by both panels)
+// Container is transparent, child sections get glass effect
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 8px 8px 12px;
+  gap: 16px;
+  padding: 8px 16px;
   position: sticky;
   top: var(--toolbar-height, 64px);
   z-index: 201;
-  border-radius: 24px;
-  height: 48px;
-  margin: 8px 16px;
-  pointer-events: auto;
+  pointer-events: none;
   transition: transform 0.3s ease, opacity 0.3s ease;
   flex-shrink: 0;
-
-  // Glass effect - light mode
-  background-color: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-    0px 2px 8px rgba(17, 17, 26, 0.08),
-    0px 4px 16px rgba(17, 17, 26, 0.06);
 
   // Hidden state when scrolling down
   &.header-hidden {
     transform: translateY(calc(-100% - 16px));
     opacity: 0;
-    pointer-events: none;
   }
 
-  // Left section: back button + title
+  // Left section: back button + title - gets glass effect
   .header-left {
     display: flex;
     align-items: center;
     gap: 4px;
     min-width: 0;
     flex-shrink: 1;
+    height: 48px;
+    padding: 0 12px;
+    border-radius: 24px;
+    pointer-events: auto;
+
+    // Glass effect - light mode
+    background-color: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+      0px 2px 8px rgba(17, 17, 26, 0.08),
+      0px 4px 16px rgba(17, 17, 26, 0.06);
 
     .panel-title {
       font-size: 1rem;
@@ -757,34 +758,62 @@ mat-sidenav-content {
     }
   }
 
-  // Right section: actions + close button
+  // Right section: actions + close button - gets glass effect
   .header-right {
     display: flex;
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
+    height: 48px;
+    padding: 0 8px;
+    border-radius: 24px;
+    pointer-events: auto;
+
+    // Glass effect - light mode
+    background-color: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+      0px 2px 8px rgba(17, 17, 26, 0.08),
+      0px 4px 16px rgba(17, 17, 26, 0.06);
   }
 
   .nav-button,
   .action-button {
     flex-shrink: 0;
   }
+}
 
-  // Override global .close-button absolute positioning - keep in flex flow
-  // .close-button {
-  //   position: static;
-  // }
+// Left panel header - stays within left panel bounds
+.left-panel-header {
+  // Full width of the panel
+  width: 100%;
+  max-width: 100%;
+}
+
+// Right panel header - stays within right panel bounds  
+.right-panel-header {
+  // Full width of the panel
+  width: 100%;
+  max-width: 100%;
 }
 
 // Dark mode for panel headers
 :host-context(.dark) .panel-header {
-  background-color: rgba(0, 0, 0, 0.4);
 
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-    0px 2px 8px rgba(0, 0, 0, 0.3),
-    0px 4px 16px rgba(0, 0, 0, 0.25);
+  .header-left,
+  .header-right {
+    background-color: rgba(0, 0, 0, 0.4);
+
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+      inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
+      0px 2px 8px rgba(0, 0, 0, 0.3),
+      0px 4px 16px rgba(0, 0, 0, 0.25);
+  }
 }
 
 // Panel Content Area (used by both panels)
