@@ -717,13 +717,14 @@ mat-sidenav-content {
   top: var(--toolbar-height, 64px);
   z-index: 201;
   pointer-events: none;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition: transform 0.3s ease;
   flex-shrink: 0;
 
-  // Hidden state when scrolling down
+  // Hidden state when scrolling down - only use transform, not opacity
+  // Opacity causes backdrop-filter to flicker during transitions
   &.header-hidden {
     transform: translateY(calc(-100% - 16px));
-    opacity: 0;
+    pointer-events: none;
   }
 
   // Left section: back button + title - gets glass effect
@@ -737,6 +738,9 @@ mat-sidenav-content {
     padding: 0 12px;
     border-radius: 24px;
     pointer-events: auto;
+    // Force GPU layer to prevent backdrop-filter flicker
+    will-change: transform;
+    transform: translateZ(0);
 
     // Glass effect - light mode
     background-color: rgba(255, 255, 255, 0.7);
@@ -768,6 +772,9 @@ mat-sidenav-content {
     padding: 0 8px;
     border-radius: 24px;
     pointer-events: auto;
+    // Force GPU layer to prevent backdrop-filter flicker
+    will-change: transform;
+    transform: translateZ(0);
 
     // Glass effect - light mode
     background-color: rgba(255, 255, 255, 0.7);
