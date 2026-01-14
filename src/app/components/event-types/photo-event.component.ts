@@ -383,7 +383,7 @@ export class PhotoEventComponent {
           panelClass: 'media-with-comments-dialog',
         });
       } else {
-        this.router.navigate(['/e', event.id]);
+        this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
       }
     }
   }

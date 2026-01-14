@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  input,
   OnDestroy,
   signal,
 } from '@angular/core';
@@ -70,6 +71,10 @@ export class ArticleComponent implements OnDestroy {
 
   private routeSubscription?: Subscription;
 
+  // Input for when component is opened via RightPanelService
+  naddr = input<string | undefined>(undefined);
+  articleEvent = input<Event | undefined>(undefined);
+
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
   error = signal<string | null>(null);
@@ -103,10 +108,27 @@ export class ArticleComponent implements OnDestroy {
       this.speechSynthesis.onvoiceschanged = () => this.loadVoices();
     }
 
-    // Subscribe to route parameter changes
+    // Effect to handle naddr input (when opened via RightPanelService)
+    effect(() => {
+      const naddrValue = this.naddr();
+      const eventValue = this.articleEvent();
+      if (naddrValue) {
+        this.stopSpeech();
+        // If event is provided, use it directly
+        if (eventValue) {
+          this.event.set(eventValue);
+          this.link = naddrValue;
+        } else {
+          this.loadArticle(naddrValue);
+        }
+      }
+    });
+
+    // Subscribe to route parameter changes (when opened via router)
     this.routeSubscription = this.route.paramMap.subscribe(params => {
       const addrParam = params.get('id');
-      if (addrParam) {
+      // Only use route params if naddr input is not provided
+      if (addrParam && !this.naddr()) {
         // Stop speech when navigating to a new article
         this.stopSpeech();
         this.loadArticle(addrParam, params);
@@ -175,11 +197,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(receivedData.pubkey);
         if (receivedData.kind === 34139) {
           // Music playlist
-          this.router.navigate(['/music/playlist', npub, identifier], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, identifier] } }], { replaceUrl: true });
           return;
         } else if (receivedData.kind === 36787) {
           // Music track
-          this.router.navigate(['/music/song', npub, identifier], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'song', npub, identifier] } }], { replaceUrl: true });
           return;
         } else if (receivedData.kind === 32100) {
           // M3U Playlist - redirect to event page
@@ -188,7 +210,7 @@ export class ArticleComponent implements OnDestroy {
             author: receivedData.pubkey,
             kind: receivedData.kind,
           });
-          this.router.navigate(['/e', nevent], { replaceUrl: true, state: { event: receivedData } });
+          this.router.navigate([{ outlets: { right: ['e', nevent] } }], { replaceUrl: true, state: { event: receivedData } });
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
@@ -229,11 +251,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(addrData.pubkey);
         if (addrData.kind === 34139) {
           // Music playlist
-          this.router.navigate(['/music/playlist', npub, addrData.identifier], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, addrData.identifier] } }], { replaceUrl: true });
           return;
         } else if (addrData.kind === 36787) {
           // Music track
-          this.router.navigate(['/music/song', npub, addrData.identifier], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'song', npub, addrData.identifier] } }], { replaceUrl: true });
           return;
         } else if (addrData.kind === 32100) {
           // M3U Playlist - redirect to event page using naddr
@@ -242,7 +264,7 @@ export class ArticleComponent implements OnDestroy {
             pubkey: addrData.pubkey,
             identifier: addrData.identifier,
           });
-          this.router.navigate(['/e', naddr], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['e', naddr] } }], { replaceUrl: true });
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
@@ -264,11 +286,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(pubkey);
         if (kind === 34139) {
           // Music playlist
-          this.router.navigate(['/music/playlist', npub, slug], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, slug] } }], { replaceUrl: true });
           return;
         } else if (kind === 36787) {
           // Music track
-          this.router.navigate(['/music/song', npub, slug], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['music', 'song', npub, slug] } }], { replaceUrl: true });
           return;
         } else if (kind === 32100) {
           // M3U Playlist - redirect to event page using naddr
@@ -277,7 +299,7 @@ export class ArticleComponent implements OnDestroy {
             pubkey: pubkey,
             identifier: slug,
           });
-          this.router.navigate(['/e', naddr], { replaceUrl: true });
+          this.router.navigate([{ outlets: { right: ['e', naddr] } }], { replaceUrl: true });
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)

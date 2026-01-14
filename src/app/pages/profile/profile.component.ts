@@ -83,7 +83,7 @@ import { ReportingService } from '../../services/reporting.service';
 export class ProfileComponent {
   // Input for two-column layout mode - when provided, uses this instead of route params
   twoColumnPubkey = input<string | undefined>(undefined);
-  
+
   private data = inject(DataService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -204,10 +204,12 @@ export class ProfileComponent {
       // During SSR, we don't need full app initialization (storage/nostr)
       // In browser, wait for full initialization
       const canProceed = this.app.isBrowser() ? this.app.initialized() : true;
-      
+
       // Get pubkey from either input (two-column mode) or route params
       const inputPubkey = this.twoColumnPubkey();
-      const hasRouteParams = this.routeParams() && this.routeData();
+      const routeParams = this.routeParams();
+      // We only need routeParams to be available. routeData might be empty or undefined initially but isn't strictly required for basic ID lookup
+      const hasRouteParams = !!routeParams;
 
       // Only proceed if conditions are met and we have either input or route params
       if (canProceed && (inputPubkey || hasRouteParams)) {
@@ -221,7 +223,7 @@ export class ProfileComponent {
           } else {
             // Otherwise, use route params (normal navigation mode)
             // For username routes (/u/:username), get username from params and resolve to pubkey
-            username = this.routeParams()?.get('username');
+            username = routeParams?.get('username');
             if (username) {
               // Check if UsernameResolver already resolved the pubkey (handles NIP-05 and premium usernames)
               const resolvedUser = this.routeData()?.['user'] as { id: string | undefined; username: string } | undefined;
@@ -342,13 +344,13 @@ export class ProfileComponent {
     // Add effect to monitor router events for sub-route changes
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
-        // Check if we're navigating to a profile route
+        // Check if we're navigating to a profile route (supports both root and named outlets)
         const currentUrl = event.urlAfterRedirects;
-        const isProfileRoute = currentUrl.match(/^\/(p|u)\//);
+        const isProfileRoute = currentUrl.match(/(?:\/|\(|:)(p|u)\//);
         if (isProfileRoute) {
           // Extract the profile ID from the URL
-          const profileMatch = currentUrl.match(/^\/(p|u)\/([^/]+)/);
-          const urlProfileId = profileMatch ? profileMatch[2] : null;
+          const profileMatch = currentUrl.match(/(?:\/|\(|:)(?:p|u)\/([^/\)]+)/);
+          const urlProfileId = profileMatch ? profileMatch[1] : null;
 
           // Only trigger reload logic if the profile ID actually changed
           if (urlProfileId && urlProfileId !== this.previousProfilePubkey) {

@@ -25,6 +25,7 @@ import { LiveEventComponent } from '../../../components/event-types/live-event.c
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { LayoutService } from '../../../services/layout.service';
 
 /** Curated article item with parsed addressable ID and relay hints */
 interface CuratedArticle {
@@ -74,6 +75,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
   private destroy$ = new Subject<void>();
   private streamsSubscription: { close: () => void } | null = null;
 
@@ -372,12 +374,12 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   }
 
   viewCreator(pubkey: string): void {
-    this.router.navigate(['/p', pubkey]);
+    this.layout.openProfile(pubkey);
   }
 
   viewEvent(item: CuratedItem): void {
-    // Navigate to event view
-    this.router.navigate(['/e', item.id]);
+    // Navigate to event view in right panel
+    this.layout.openGenericEvent(item.id);
   }
 
   viewVideo(item: CuratedItem): void {
@@ -386,8 +388,8 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   }
 
   viewPicture(item: CuratedItem): void {
-    // Navigate to picture/event view
-    this.router.navigate(['/e', item.id]);
+    // Navigate to picture/event view in right panel
+    this.layout.openGenericEvent(item.id);
   }
 
   /**

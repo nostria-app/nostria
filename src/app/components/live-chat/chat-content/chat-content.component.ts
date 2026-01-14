@@ -20,11 +20,11 @@ interface ContentPart {
       @if (part.type === 'text') {
         <span>{{ part.content }}</span>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
-        <a class="nostr-mention" [routerLink]="['/p', part.pubkey]">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
+        <a class="nostr-mention" [routerLink]="[{ outlets: { right: ['p', part.pubkey] } }]">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
       } @else if (part.type === 'note' || part.type === 'nevent') {
-        <a class="nostr-event-link" [routerLink]="['/e', part.eventId]">📝 note</a>
+        <a class="nostr-event-link" [routerLink]="[{ outlets: { right: ['e', part.eventId] } }]">📝 note</a>
       } @else if (part.type === 'naddr') {
-        <a class="nostr-event-link" [routerLink]="['/a', part.encodedEvent]">📄 article</a>
+        <a class="nostr-event-link" [routerLink]="[{ outlets: { right: ['a', part.encodedEvent] } }]">📄 article</a>
       }
     }
   `,

@@ -23,6 +23,7 @@ import { ApplicationStateService } from '../../services/application-state.servic
 import { AccountStateService } from '../../services/account-state.service';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { EventComponent } from '../../components/event/event.component';
 import { ArticleComponent } from '../../components/article/article.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
@@ -82,6 +83,7 @@ export class BookmarksComponent implements OnInit {
   private appState = inject(ApplicationStateService);
   private router = inject(Router);
   layout = inject(LayoutService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   // Loading states
   loading = signal(false);
@@ -130,6 +132,7 @@ export class BookmarksComponent implements OnInit {
   });
 
   constructor() {
+    this.twoColumnLayout.setWideLeft();
     // Load categories and view preference from storage
     this.loadFromStorage();
 

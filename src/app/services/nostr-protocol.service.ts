@@ -209,7 +209,7 @@ export class NostrProtocolService {
         case 'npub':
           this.logger.info('[NostrProtocol] Routing to profile page for npub');
           this.logger.debug('[NostrProtocol] Profile pubkey:', data);
-          await this.router.navigate(['/p', data]);
+          await this.router.navigate([{ outlets: { right: ['p', data] } }]);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page');
           break;
 
@@ -223,14 +223,14 @@ export class NostrProtocolService {
             throw new Error('Invalid nprofile data: missing pubkey');
           }
 
-          await this.router.navigate(['/p', data.pubkey]);
+          await this.router.navigate([{ outlets: { right: ['p', data.pubkey] } }]);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page from nprofile');
           break;
 
         case 'note':
           this.logger.info('[NostrProtocol] Routing to event page for note');
           this.logger.debug('[NostrProtocol] Note id:', data);
-          await this.router.navigate(['/e', data]);
+          await this.router.navigate([{ outlets: { right: ['e', data] } }]);
           this.logger.info('[NostrProtocol] Successfully navigated to event page');
           break;
 
@@ -244,7 +244,7 @@ export class NostrProtocolService {
             throw new Error('Invalid nevent data: missing id');
           }
 
-          await this.router.navigate(['/e', data.id]);
+          await this.router.navigate([{ outlets: { right: ['e', data.id] } }]);
           this.logger.info('[NostrProtocol] Successfully navigated to event page from nevent');
           break;
 
@@ -260,7 +260,7 @@ export class NostrProtocolService {
               '[NostrProtocol] Using identifier for naddr routing:',
               data.identifier
             );
-            await this.router.navigate(['/e', data.identifier]);
+            await this.router.navigate([{ outlets: { right: ['e', data.identifier] } }]);
             this.logger.info('[NostrProtocol] Successfully navigated to event page from naddr');
           } else {
             this.logger.error('[NostrProtocol] No identifier found in naddr data:', data);

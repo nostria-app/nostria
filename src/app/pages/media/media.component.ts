@@ -39,6 +39,7 @@ import { MediaPublishDialogComponent, MediaPublishOptions } from './media-publis
 import { PublishService } from '../../services/publish.service';
 import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 
 @Component({
   selector: 'app-media',
@@ -78,6 +79,7 @@ export class MediaComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly regionService = inject(RegionService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly twoColumnLayout = inject(TwoColumnLayoutService);
   private readonly logger = inject(LoggerService);
   private readonly publishService = inject(PublishService);
 
@@ -106,6 +108,7 @@ export class MediaComponent {
   displayedColumns: string[] = ['select', 'name', 'mirrors', 'type', 'size', 'uploaded', 'actions'];
 
   constructor() {
+    this.twoColumnLayout.setWideLeft();
     // Restore the active tab from localStorage if available
     const savedTab = this.localStorage.getItem(this.appState.MEDIA_ACTIVE_TAB);
     if (savedTab && ['images', 'videos', 'files', 'servers'].includes(savedTab)) {
@@ -951,7 +954,7 @@ export class MediaComponent {
 
         // Navigate to the last successfully published event
         if (lastSuccessfulEventId) {
-          this.router.navigate(['/e', lastSuccessfulEventId]);
+          this.router.navigate([{ outlets: { right: ['e', lastSuccessfulEventId] } }]);
         }
       } else {
         this.snackBar.open('Failed to publish items', 'Close', { duration: 3000 });

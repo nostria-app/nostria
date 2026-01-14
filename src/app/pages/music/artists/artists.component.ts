@@ -14,6 +14,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ReportingService } from '../../../services/reporting.service';
 import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
+import { LayoutService } from '../../../services/layout.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
@@ -47,6 +48,7 @@ export class ArtistsComponent implements OnDestroy {
   private database = inject(DatabaseService);
   private dataService = inject(DataService);
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
 
   allTracks = signal<Event[]>([]);
@@ -179,7 +181,7 @@ export class ArtistsComponent implements OnDestroy {
 
   goToArtist(pubkey: string): void {
     const npub = nip19.npubEncode(pubkey);
-    this.router.navigate(['/music/artist', npub]);
+    this.layout.openMusicArtist(npub);
   }
 
   goBack(): void {
@@ -193,7 +195,7 @@ export class ArtistsComponent implements OnDestroy {
 
   zapArtist(event: MouseEvent, artistData: ArtistData): void {
     event.stopPropagation();
-    
+
     const profile = this.dataService.getCachedProfile(artistData.pubkey);
 
     const data: ZapDialogData = {

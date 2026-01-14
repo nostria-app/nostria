@@ -244,12 +244,12 @@ export class MeetingsComponent {
       window.open(serviceUrl, '_blank', 'noopener,noreferrer');
     } else {
       // Fallback to event page
-      this.router.navigate(['/e', space.id]);
+      this.router.navigate([{ outlets: { right: ['e', space.id] } }]);
     }
   }
 
   viewMeeting(meeting: Event): void {
-    this.router.navigate(['/e', meeting.id]);
+    this.router.navigate([{ outlets: { right: ['e', meeting.id] } }]);
   }
 
   getStatusIcon(status: string): string {

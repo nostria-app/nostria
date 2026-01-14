@@ -38,7 +38,7 @@ import { NostrRecord } from '../../interfaces';
     MatListModule,
     MatProgressSpinnerModule,
     DragDropModule
-],
+  ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss',
 })
@@ -188,7 +188,7 @@ export class BadgesComponent {
     const pubkey = this.viewingPubkey();
     if (pubkey) {
       const npub = this.utilities.getNpubFromPubkey(pubkey);
-      this.router.navigate(['/p', npub || pubkey]);
+      this.router.navigate([{ outlets: { right: ['p', npub || pubkey] } }]);
     } else {
       // Fallback to home if no pubkey
       this.router.navigate(['/']);

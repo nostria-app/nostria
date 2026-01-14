@@ -155,7 +155,7 @@ interface ZapHistoryEntry {
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                            <a [routerLink]="[{ outlets: { right: ['e', zap.eventId] } }]" class="context-link">
                               For event {{ zap.eventId.substring(0, 8) }}...
                             </a>
                           </div>
@@ -237,7 +237,7 @@ interface ZapHistoryEntry {
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                            <a [routerLink]="[{ outlets: { right: ['e', zap.eventId] } }]" class="context-link">
                               For event {{ zap.eventId.substring(0, 8) }}...
                             </a>
                           </div>
@@ -316,7 +316,7 @@ interface ZapHistoryEntry {
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                            <a [routerLink]="[{ outlets: { right: ['e', zap.eventId] } }]" class="context-link">
                               For event {{ zap.eventId.substring(0, 8) }}...
                             </a>
                           </div>

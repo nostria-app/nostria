@@ -57,7 +57,7 @@ export class FavoritesOverlayComponent {
   private touchCurrentY = 0;
   private touchCurrentX = 0;
   private touchDragTimer: ReturnType<typeof setTimeout> | null = null;
-  
+
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
 
@@ -303,7 +303,7 @@ export class FavoritesOverlayComponent {
 
   navigateToProfile(pubkey: string): void {
     this.hideOverlay();
-    this.router.navigate(['/p', pubkey]);
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
   }
 
   navigateToPeople(): void {

@@ -157,7 +157,8 @@
       <p class="section-description">Long-form articles published recently</p>
       <div class="articles-grid">
         @for (event of articleEvents().slice(0, 12); track event.id) {
-        <a class="article-card" [routerLink]="getArticleRoute(event)">
+        <div class="article-card" (click)="openArticle(event)" (keydown.enter)="openArticle(event)" tabindex="0"
+          role="button">
           @if (getArticleImage(event); as imageUrl) {
           <div class="article-image">
             <img [src]="imageUrl" alt="Article cover" loading="lazy" />
@@ -175,7 +176,7 @@
               <span class="article-time">{{ event.created_at | ago }}</span>
             </div>
           </div>
-        </a>
+        </div>
         }
       </div>
       }
@@ -213,7 +214,8 @@
           </div>
           <div class="media-overlay">
             <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
-            <a class="media-time" [routerLink]="['/e', event.id]" (click)="$event.stopPropagation()">{{ event.created_at
+            <a class="media-time" [routerLink]="[{ outlets: { right: ['e', event.id] } }]"
+              (click)="$event.stopPropagation()">{{ event.created_at
               | ago }}</a>
           </div>
         </div>
@@ -236,7 +238,7 @@
       </h2>
       <div class="poster-grid">
         @for (pubkey of profileUpdates(); track pubkey) {
-        <a class="poster-card" [routerLink]="['/p', pubkey]">
+        <a class="poster-card" [routerLink]="[{ outlets: { right: ['p', pubkey] } }]">
           <div class="poster-avatar">
             <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
           </div>

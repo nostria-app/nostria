@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -74,6 +74,8 @@ interface TopZapper {
   styleUrl: './article-display.component.scss',
 })
 export class ArticleDisplayComponent {
+  private router = inject(Router);
+
   // Input for article data
   article = input.required<ArticleData>();
 
@@ -381,6 +383,47 @@ export class ArticleDisplayComponent {
       return JSON.stringify(value, null, 2);
     } catch {
       return String(value);
+    }
+  }
+
+  /**
+   * Handle clicks on links in the content to support right panel navigation
+   */
+  handleContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const link = target.closest('a');
+
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    // Check for internal links and navigate using auxiliary route
+    if (href.startsWith('/p/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      const pubkey = href.split('/')[2];
+      this.layout.openProfile(pubkey);
+    } else if (href.startsWith('/e/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = href.split('/')[2];
+      this.router.navigate([{ outlets: { right: ['e', id] } }]);
+    } else if (href.startsWith('/a/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      // Handle article links: /a/naddr or /a/identifier
+      const parts = href.split('/');
+      if (parts.length > 2) {
+        const id = parts[2];
+        const slug = parts.length > 3 ? parts[3] : undefined;
+
+        if (slug) {
+          this.router.navigate([{ outlets: { right: ['a', id, slug] } }]);
+        } else {
+          this.router.navigate([{ outlets: { right: ['a', id] } }]);
+        }
+      }
     }
   }
 

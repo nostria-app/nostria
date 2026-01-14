@@ -11,12 +11,13 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DatabaseService } from '../../services/database.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { FavoritesService } from '../../services/favorites.service';
+import { LayoutService } from '../../services/layout.service';
 import { kinds } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import type { NostrRecord } from '../../interfaces';
@@ -40,7 +41,7 @@ export class TimelineHoverCardComponent {
   private database = inject(DatabaseService);
   private userRelayService = inject(UserRelayService);
   private favoritesService = inject(FavoritesService);
-  private router = inject(Router);
+  private layout = inject(LayoutService);
 
   pubkey = input.required<string>();
   profile = signal<{ data?: { display_name?: string; name?: string; picture?: string } } | null>(null);
@@ -202,7 +203,12 @@ export class TimelineHoverCardComponent {
       author: pubkey,
       kind: kind,
     });
-    this.router.navigate(['/e', neventId]);
+
+    if (kind === 30023) {
+      this.layout.openArticle(neventId);
+    } else {
+      this.layout.openGenericEvent(neventId);
+    }
   }
 
   toggleFavorite(event: Event): void {

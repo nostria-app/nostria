@@ -310,7 +310,7 @@ export class MediaDetailsComponent {
           author: signedEvent.pubkey,
           kind: signedEvent.kind,
         });
-        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
+        this.router.navigate([{ outlets: { right: ['e', neventId] } }], { state: { event: signedEvent } });
       } else {
         this.snackBar.open('Failed to publish to some relays', 'Close', {
           duration: 5000,

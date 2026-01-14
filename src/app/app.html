@@ -37,13 +37,6 @@
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
         <mat-icon>menu</mat-icon>
       </button>
-      @if (app.authenticated()) {
-      <button mat-icon-button (click)="layout.toggleFeedsExpanded()"
-        [matTooltip]="layout.feedsExpanded() ? 'Hide feeds' : 'Show feeds'" aria-label="Toggle feeds panel"
-        class="feeds-toggle-button">
-        <mat-icon>{{ layout.feedsExpanded() ? 'view_sidebar' : 'menu_open' }}</mat-icon>
-      </button>
-      }
       <app-navigation></app-navigation>
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
@@ -327,7 +320,7 @@
               <mat-icon>edit</mat-icon>
             </button>
           </div>
-          <a mat-list-item routerLink="/credentials" (click)="toggleProfileSidenav()">
+          <a mat-list-item routerLink="/credentials" (click)="navigateAndClearRightPanel('/credentials')">
             <mat-icon matListItemIcon>key</mat-icon>
             <span i18n="@@app.profile.credentials">Credentials</span>
           </a>
@@ -337,11 +330,11 @@
             <mat-icon matListItemIcon>person_add</mat-icon>
             <span i18n="@@app.profile.add-account">Add account</span>
           </a>
-          <a mat-list-item routerLink="/accounts" (click)="toggleProfileSidenav()">
+          <a mat-list-item routerLink="/accounts" (click)="navigateAndClearRightPanel('/accounts')">
             <mat-icon matListItemIcon>manage_accounts</mat-icon>
             <span i18n="@@app.profile.manage-accounts">Manage accounts</span>
           </a>
-          <a mat-list-item routerLink="/settings" (click)="toggleProfileSidenav()">
+          <a mat-list-item routerLink="/settings" (click)="navigateAndClearRightPanel('/settings')">
             <mat-icon matListItemIcon>settings</mat-icon>
             <span i18n="@@app.profile.settings">Settings</span>
           </a>
@@ -397,19 +390,86 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
-      <!-- Main content layout: feeds panel and page content side by side -->
-      <div class="main-content-layout" [class.feeds-expanded]="layout.feedsExpanded() && app.authenticated()"
-        [class.has-content]="layout.hasNavigationItems()" [class.home-route]="layout.isHomeRoute()">
-        <!-- Global Feeds Panel - always rendered, visibility controlled by CSS -->
-        @if (app.authenticated()) {
-        <div class="global-feeds-panel" [class.expanded]="layout.feedsExpanded()"
-          [class.collapsed]="!layout.feedsExpanded()">
-          <app-feeds></app-feeds>
-        </div>
+      <!-- Two-Column Layout Container -->
+      <div class="two-column-layout" [class.feeds-visible]="panelNav.showFeeds()"
+        [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
+        [style.--left-column-width.px]="twoColumnLayout.leftColumnWidth()"
+        [style.--right-column-width.px]="twoColumnLayout.rightColumnWidth()"
+        [class.feeds-centered]="panelNav.feedsCentered()" [class.has-left-content]="panelNav.hasLeftContent()"
+        [class.has-right-content]="hasRightContent()" [class.mobile-layout]="panelNav.isMobile()"
+        [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
+
+        <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
+        @if (hasRightContent() && !panelNav.isMobile()) {
+        <button mat-icon-button class="left-panel-toggle" (click)="toggleLeftPanelCollapse()"
+          [matTooltip]="leftPanelCollapsed() ? 'Show left panel' : 'Hide left panel'">
+          <mat-icon>{{ leftPanelCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        </button>
         }
-        <!-- Page content - hidden when no navigation items on home route -->
-        <div class="content-wrapper">
-          <router-outlet></router-outlet>
+
+        <!-- Left Panel: Feeds or list/root views -->
+        <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
+          [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()">
+
+          <!-- Feeds - Persistent (uses visibility for state preservation) -->
+          @if (app.authenticated()) {
+          <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
+            [class.feeds-hidden]="!panelNav.showFeeds()">
+            <app-feeds></app-feeds>
+          </div>
+          }
+
+          <!-- Left panel content header -->
+          @if (panelNav.hasLeftContent()) {
+          <div class="panel-header left-panel-header" [class.header-hidden]="leftPanelHeaderHidden()">
+            @if (panelNav.canGoBackLeft()) {
+            <button mat-icon-button (click)="goBackLeft()" class="nav-button back-button" matTooltip="Go back"
+              i18n-matTooltip="@@app.nav.back">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
+            }
+            <span class="panel-title">{{ panelNav.getLeftTitle() }}</span>
+            <span class="spacer"></span>
+            <button mat-icon-button (click)="closeLeftPanel()" class="nav-button close-button" matTooltip="Close"
+              i18n-matTooltip="@@app.nav.close">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+
+          <!-- Left panel content - router outlet renders here for list routes -->
+          <div class="panel-content left-panel-content" (scroll)="onLeftPanelScroll($event)">
+            <router-outlet></router-outlet>
+          </div>
+        </div>
+
+        <!-- Right Panel: Detail views (routed) -->
+        <div class="right-panel" [class.active]="hasRightContent()"
+          [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
+          [class.expanded]="leftPanelCollapsed() && hasRightContent()">
+
+          <!-- Right panel header -->
+          @if (hasRightContent()) {
+          <div class="panel-header right-panel-header">
+            @if (canGoBackRight()) {
+            <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
+              i18n-matTooltip="@@app.nav.back">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
+            }
+            <span class="panel-title">{{ rightPanelTitle() }}</span>
+            <span class="spacer"></span>
+            <button mat-icon-button (click)="closeRightPanel()" class="nav-button close-button" matTooltip="Close"
+              i18n-matTooltip="@@app.nav.close">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+
+          <!-- Right panel content - named router outlet for detail views -->
+          <div class="panel-content right-panel-content">
+            <router-outlet name="right"></router-outlet>
+          </div>
         </div>
       </div>
     </mat-sidenav-content>
@@ -423,13 +483,15 @@
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
   <div class="mobile-nav no-print">
-    <a mat-button class="mobile-nav-button" [routerLink]="['/']" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/']"
+      (click)="$event.preventDefault(); onMobileNavClick('/')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>home</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.home">Home</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/people']" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/people']"
+      (click)="$event.preventDefault(); onMobileNavClick('/people')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: false }">
       <mat-icon>people</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.people">People</div>
@@ -443,14 +505,15 @@
       </button>
     </div>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']"
+      (click)="$event.preventDefault(); onMobileNavClick('/messages')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon [matBadge]="getUnreadMessagesCount()" matBadgeSize="small">mail</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/p', accountState.pubkey()]" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{ exact: false }">
+    <a mat-button class="mobile-nav-button" [routerLink]="[{ outlets: { right: ['p', accountState.pubkey()] } }]"
+      routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: false }">
       <mat-icon>account_circle</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.profile">Profile</div>
     </a>

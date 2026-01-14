@@ -20,6 +20,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ZapService } from '../../services/zap.service';
 import { OfflineMusicService } from '../../services/offline-music.service';
 import { ImageCacheService } from '../../services/image-cache.service';
+import { LayoutService } from '../../services/layout.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -554,6 +555,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 })
 export class MusicEventComponent {
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
@@ -747,22 +749,22 @@ export class MusicEventComponent {
     }
   });
 
-  // Open song details page
+  // Open song details page in right panel
   openDetails(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
-    const npub = this.artistNpub();
+    const ev = this.event();
     const id = this.identifier();
-    if (npub && id) {
-      this.router.navigate(['/music/song', npub, id]);
+    if (ev.pubkey && id) {
+      this.layout.openSongDetail(ev.pubkey, id, ev);
     }
   }
 
-  // Open artist page
+  // Open artist page in right panel
   openArtist(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
     const npub = this.artistNpub();
     if (npub) {
-      this.router.navigate(['/music/artist', npub]);
+      this.layout.openMusicArtist(npub);
     }
   }
 

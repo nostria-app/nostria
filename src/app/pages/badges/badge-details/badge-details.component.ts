@@ -243,11 +243,11 @@ export class BadgeDetailsComponent {
 
       // Include tab index if available
       if (this.returnTabIndex() !== null) {
-        this.router.navigate(['/p', identifier, 'badges'], {
+        this.router.navigate([{ outlets: { right: ['p', identifier, 'badges'] } }], {
           queryParams: { tab: this.returnTabIndex() },
         });
       } else {
-        this.router.navigate(['/p', identifier, 'badges']);
+        this.router.navigate([{ outlets: { right: ['p', identifier, 'badges'] } }]);
       }
     } else {
       // Fallback to generic badges page if no creator info

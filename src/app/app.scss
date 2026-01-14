@@ -301,100 +301,453 @@ mat-sidenav-content {
   }
 }
 
-// Main content layout - centered two-pane layout
-.main-content-layout {
+// ============================================
+// Dual-Panel Layout System
+// ============================================
+// Layout rules:
+// - Left panel: Feeds (when empty) or list components (Profile, Music, etc.) - 700px or 1400px
+// - Right panel: Detail views (Events, Articles, Playlists, etc.) - 700px or full-width
+// - Feeds centered when both panels empty
+// - Each panel has independent Back/Close navigation
+// - On mobile, panels overlay each other
+// - Dynamic width: Some components (Music) use 1400px wide left, shrink to 700px when detail opens
+
+.dual-panel-layout {
   display: flex;
   flex-direction: row;
   height: 100%;
   width: 100%;
   overflow: hidden;
-  justify-content: center; // Center the two panes
-  // No padding - content renders behind transparent toolbar
+  justify-content: center;
+  position: relative;
+  // Enable 3D perspective for collapse animation
+  perspective: 1500px;
+  perspective-origin: center center;
 
-  // When feeds panel is collapsed, just center the content
-  &:not(.feeds-expanded) {
-    .content-wrapper {
+  // When feeds should be centered (both panels empty)
+  &.feeds-centered {
+    justify-content: center;
+
+    .left-panel {
+      // Use CSS variable for dynamic width
+      width: var(--left-column-width, 700px);
+      min-width: var(--left-column-width, 700px);
+      max-width: var(--left-column-width, 700px);
+    }
+
+    .right-panel {
+      display: none;
+    }
+  }
+
+  // Wide left mode (e.g., Music without detail open)
+  &.wide-left:not(.has-right-content) {
+    .left-panel {
+      width: var(--left-column-width, 1400px);
+      min-width: var(--left-column-width, 1400px);
+      max-width: var(--left-column-width, 1400px);
+    }
+  }
+
+  // When feeds visible but right has content
+  &.feeds-visible:not(.feeds-centered) {
+    justify-content: center;
+  }
+
+  // When left panel has routed content
+  &.has-left-content {
+    justify-content: center;
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  // When right panel has content
+  &.has-right-content {
+    justify-content: center;
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    // Ensure left panel shrinks to 700px when right has content
+    .left-panel {
+      width: 700px;
+      min-width: 700px;
       max-width: 700px;
     }
   }
 
-  // When on home route with feeds expanded but no content loaded, hide content-wrapper to center feeds
-  &.home-route.feeds-expanded:not(.has-content) {
-    .content-wrapper {
-      display: none;
+  // When left panel is collapsed, left panel recedes back in 3D and slides behind right panel
+  &.left-collapsed {
+    .left-panel {
+      // 3D transform: rotate back, scale down, and move back in Z-space
+      transform: perspective(1500px) translateZ(-200px) scale(0.8);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    // Right panel slides to center and stays on top
+    .right-panel {
+      // Use negative margin to slide over the left panel space
+      margin-left: -700px;
+      z-index: 10;
+      position: relative;
+      // Add shadow to emphasize being on top
+      box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
     }
   }
-}
 
-.content-wrapper {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-width: 0; // Prevent flex item from overflowing
-  max-width: 700px; // Limit content width for readability
-  // padding-top: 120px;
+  // Full-width mode for right panel (Streams, Meetings, etc.)
+  &.right-full-width {
+    justify-content: flex-start;
 
-  // When feeds are expanded, allow content to take more space
-  .feeds-expanded & {
-    max-width: 800px;
+    .left-panel {
+      flex-shrink: 0;
+    }
+
+    .right-panel {
+      flex: 1;
+      max-width: none;
+    }
   }
 
-  // On smaller screens, take full width
-  @media (max-width: 1023px) {
-    max-width: 100%;
-  }
-}
-
-// Global Feeds Panel - side-by-side with content, centered layout
-.global-feeds-panel {
-  width: 700px;
-  min-width: 700px;
-  max-width: 700px;
-  height: 100%;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  // Hidden state - collapse width to 0
-  &.collapsed {
-    width: 0;
-    min-width: 0;
-    max-width: 0;
-    pointer-events: none;
-  }
-
-  // Visible state
-  &.expanded {
-    pointer-events: auto;
-  }
-
-  // On mobile, take full width when expanded (overlay behavior)
-  @media (max-width: 1023px) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 500;
-    background-color: var(--mat-app-background-color);
-    padding-top: var(--toolbar-height, 64px);
-
-    &.expanded {
+  // Mobile layout - panels overlay
+  &.mobile-layout {
+    .left-panel {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
     }
+
+    &.has-right-content {
+      .left-panel.hidden-mobile {
+        display: none;
+      }
+
+      .right-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        z-index: 500;
+        background-color: var(--mat-app-background-color);
+
+        &.overlay-mode {
+          padding-top: var(--toolbar-height, 64px);
+        }
+      }
+    }
+  }
+}
+
+// Left Panel
+.left-panel {
+  width: var(--left-column-width, 700px);
+  min-width: var(--left-column-width, 700px);
+  max-width: var(--left-column-width, 700px);
+  height: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  // Enable 3D transforms
+  transform-style: preserve-3d;
+  // Smooth transitions for collapse animation
+  transition:
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
+    z-index 0s linear 0.2s;
+
+  // When left panel has content, ensure proper layout for header + content
+  &.has-content {
+
+    // Ensure router-outlet content fills available space
+    .panel-content {
+      flex: 1;
+      min-height: 0; // Required for flex children to shrink properly
+      display: flex;
+      flex-direction: column;
+
+      // Router outlet needs to be a flex item
+      router-outlet {
+        display: none; // router-outlet itself is just a placeholder
+      }
+
+      // Content rendered after router-outlet fills remaining space
+      router-outlet+* {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+    }
   }
 
-  // Ensure the feeds component fills the panel
+  // Feeds container - persistent, uses visibility for state preservation
+  .feeds-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    transition: opacity 0.2s ease;
+
+    // Active state - visible
+    &.feeds-active {
+      visibility: visible;
+      opacity: 1;
+      position: relative;
+    }
+
+    // Hidden state - preserve scroll position with visibility
+    &.feeds-hidden {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+  }
+
+  // Ensure feeds component fills container
   app-feeds {
     display: block;
     height: 100%;
     width: 100%;
-    // Note: Don't add overflow-y: auto here - the .column-content inside handles scrolling
-    // Adding overflow here creates a double-scrollbar issue
+  }
+
+  // When animating, ensure smooth transition
+  &.animating {
+    will-change: transform, opacity;
+  }
+
+  // Responsive - tablets
+  @media (max-width: 1440px) and (min-width: 1024px) {
+    // Use CSS variable but cap at 600px on tablets
+    width: min(var(--left-column-width, 700px), 600px);
+    min-width: min(var(--left-column-width, 700px), 600px);
+    max-width: min(var(--left-column-width, 700px), 600px);
   }
 }
+
+// Left Panel Toggle Button - positioned between left and right panels
+.left-panel-toggle {
+  position: absolute;
+  // Calculate position: center of container minus half of total panels width, plus left panel width
+  // When centered: (100% - (left + right)) / 2 + left = 50% - right/2 + left/2 = 50% + (left - right)/2
+  // For 700 + 700: 50% + 0 = 50%, but we need left edge at left panel end
+  // Simpler: 50% is center, left panel is 700, so toggle is at 50%
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  width: 24px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+  }
+}
+
+// When left panel is collapsed, move toggle to left edge of centered right panel
+.two-column-layout.left-collapsed .left-panel-toggle {
+  // Right panel is 700px wide and centered, so its left edge is at 50% - 350px
+  // Position toggle just to the left of that
+  left: calc(50% - 350px - 12px);
+  transform: translateY(-50%);
+
+  mat-icon {
+    transform: rotate(180deg);
+  }
+}
+
+// Right Panel
+.right-panel {
+  width: var(--right-column-width, 700px);
+  min-width: var(--right-column-width, 700px);
+  max-width: var(--right-column-width, 700px);
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 5;
+  background-color: var(--mat-sys-background);
+  // Smooth transitions for position and shadow changes
+  transition:
+    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    z-index 0s linear;
+
+  &.active {
+    display: flex;
+  }
+
+  &.full-width {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  // Ensure the container component fills the panel (legacy)
+  app-right-panel-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  // Ensure routed components fill the panel
+  .right-panel-content {
+    router-outlet+* {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+  }
+
+  // Responsive - tablets
+  @media (max-width: 1440px) and (min-width: 1024px) {
+    width: 600px;
+    max-width: 600px;
+
+    &.full-width {
+      max-width: none;
+    }
+  }
+}
+
+// Panel Header - Navigation controls (used by both panels)
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  position: sticky;
+  top: var(--toolbar-height, 64px);
+  z-index: 201;
+  border-radius: 24px;
+  height: 48px;
+  margin: 8px 16px;
+  pointer-events: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  flex-shrink: 0;
+
+  // Glass effect - light mode
+  background-color: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    0px 2px 8px rgba(17, 17, 26, 0.08),
+    0px 4px 16px rgba(17, 17, 26, 0.06);
+
+  // Hidden state when scrolling down
+  &.header-hidden {
+    transform: translateY(calc(-100% - 16px));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-button {
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+// Dark mode for panel headers
+:host-context(.dark) .panel-header {
+  background-color: rgba(0, 0, 0, 0.4);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
+    0px 2px 8px rgba(0, 0, 0, 0.3),
+    0px 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+// Panel Content Area (used by both panels)
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Only add padding when there's no header above (feeds mode)
+  // When panel-header is shown, it handles the toolbar offset via sticky positioning
+  padding-top: var(--toolbar-height, 64px);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+// When panel-header is present, reduce padding since header handles toolbar offset
+.left-panel.has-content .panel-content {
+  padding-top: 0;
+}
+
+// Legacy class names for backwards compatibility
+.two-column-layout {
+  @extend .dual-panel-layout;
+}
+
+.right-panel-header {
+  @extend .panel-header;
+}
+
+.right-panel-content {
+  @extend .panel-content;
+}
+
+// Legacy support - keep old class names working during transition
+// Note: These extend the new two-column layout classes for backwards compatibility
 
 // When media player is shown, add extra padding to content-wrapper
 // mat-sidenav-content.media-player-shown .content-wrapper {

@@ -39,6 +39,18 @@ import { ReportTarget } from './reporting.service';
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
 import { NavigationStackService } from './navigation-stack.service';
+import { RightPanelService } from './right-panel.service';
+import { PanelNavigationService } from './panel-navigation.service';
+import { ArticleComponent } from '../pages/article/article.component';
+import { MusicPlaylistComponent } from '../pages/music/music-playlist/music-playlist.component';
+import { MusicArtistComponent } from '../pages/music/music-artist/music-artist.component';
+import { SongDetailComponent } from '../pages/music/song-detail/song-detail.component';
+import { MusicLikedComponent } from '../pages/music/music-liked/music-liked.component';
+import { MusicLikedPlaylistsComponent } from '../pages/music/music-liked-playlists/music-liked-playlists.component';
+import { MusicTracksComponent } from '../pages/music/music-tracks/music-tracks.component';
+import { MusicPlaylistsComponent } from '../pages/music/music-playlists/music-playlists.component';
+import { EventPageComponent } from '../pages/event/event.component';
+import { ProfileComponent } from '../pages/profile/profile.component';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -70,6 +82,8 @@ export class LayoutService implements OnDestroy {
   private pool = inject(RelayPoolService);
   private onDemandUserData = inject(OnDemandUserDataService);
   private navigationStack = inject(NavigationStackService);
+  private rightPanel = inject(RightPanelService);
+  private panelNavigation = inject(PanelNavigationService);
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
@@ -898,9 +912,9 @@ export class LayoutService implements OnDestroy {
     if (value.startsWith('note')) {
       this.toggleSearch();
       try {
-        // Note ID - navigate to event page
+        // Note ID - open in right panel
         console.log('Opening note:', value);
-        await this.router.navigate(['/e', value]);
+        this.openGenericEvent(value);
       } catch (error) {
         console.warn('Failed to handle note:', value, error);
         this.toast('Invalid note format', 3000, 'error-snackbar');
@@ -956,21 +970,8 @@ export class LayoutService implements OnDestroy {
   }
 
   openProfile(pubkey: string): void {
-    // Check if we're on the home page where the two-column layout exists
-    const currentUrl = this.router.url;
-    // Match home page: /, /?, /#, or any combination
-    const isOnHomePage = currentUrl === '/' ||
-      currentUrl.startsWith('/?') ||
-      currentUrl.startsWith('/#') ||
-      /^\/(\?|#|$)/.test(currentUrl);
-
-    if (isOnHomePage) {
-      // Use navigation stack for two-column layout
-      this.navigationStack.navigateToProfile(pubkey);
-    } else {
-      // Navigate normally for other contexts
-      this.router.navigate(['/p', pubkey]);
-    }
+    // Profile always opens in the right panel using named outlet routing
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
@@ -1034,24 +1035,12 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
-    // Check if we're on a page where we should use the two-column layout
-    const currentUrl = this.router.url;
-    const isOnHomePage = currentUrl === '/' || currentUrl.startsWith('/?');
-    const isOnFeedsPage = currentUrl.startsWith('/f/');
-    const isOnProfilePage = currentUrl.startsWith('/p/') || currentUrl.startsWith('/u/');
-    const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
-
-    if (isOnHomePage || isOnFeedsPage) {
-      // Use navigation stack for two-column layout
-      this.navigationStack.navigateToEvent(naddr, event);
-    } else if (isOnProfilePage || isOnPeoplePage) {
-      // Open in dialog to preserve page state and scroll position
-      this.openEventInDialog(naddr, event, trustedByPubkey);
-    } else {
-      // Navigate normally for direct links or other contexts
-      this.router.navigate(['/e', naddr], { state: { event, trustedByPubkey } });
-    }
+  openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string): void {
+    // Open events in the right panel using named outlet routing
+    // This provides consistent behavior across all list views (bookmarks, summary, feeds, etc.)
+    this.router.navigate([{ outlets: { right: ['e', eventId] } }], {
+      state: { event, trustedByPubkey }
+    });
   }
 
   private async openEventInDialog(eventId: string, event?: Event, trustedByPubkey?: string): Promise<void> {
@@ -1113,19 +1102,89 @@ export class LayoutService implements OnDestroy {
   }
 
   openArticle(naddr: string, event?: Event): void {
-    // Check if we're on the home page where the two-column layout exists
-    const currentUrl = this.router.url;
-    const isOnHomePage = currentUrl === '/' ||
-      currentUrl.startsWith('/?') ||
-      currentUrl.startsWith('/#') ||
-      /^\/(\?|#|$)/.test(currentUrl);
+    // Open article in the right panel using named outlet routing
+    this.router.navigate([{ outlets: { right: ['a', naddr] } }], {
+      state: { articleEvent: event }
+    });
+  }
 
-    if (isOnHomePage && event) {
-      // Use navigation stack for two-column layout
-      this.navigationStack.navigateToEvent(event.id, event);
+  /**
+   * Open a music playlist in the right panel
+   */
+  openMusicPlaylist(pubkey: string, dTag: string, event?: Event): void {
+    this.router.navigate([{ outlets: { right: ['music', 'playlist', pubkey, dTag] } }], {
+      state: { playlistEvent: event }
+    });
+  }
+
+  /**
+   * Open a music artist in the right panel
+   */
+  openMusicArtist(npub: string): void {
+    this.router.navigate([{ outlets: { right: ['music', 'artist', npub] } }]);
+  }
+
+  /**
+   * Open a song detail in the right panel
+   */
+  openSongDetail(pubkey: string, dTag: string, event?: Event): void {
+    this.router.navigate([{ outlets: { right: ['music', 'song', pubkey, dTag] } }], {
+      state: { songEvent: event }
+    });
+  }
+
+  /**
+   * Open liked songs in the right panel
+   */
+  openMusicLiked(): void {
+    this.router.navigate([{ outlets: { right: ['music', 'liked'] } }]);
+  }
+
+  /**
+   * Open liked playlists in the right panel
+   */
+  openMusicLikedPlaylists(): void {
+    this.router.navigate([{ outlets: { right: ['music', 'liked-playlists'] } }]);
+  }
+
+  /**
+   * Open music tracks list in the left panel
+   */
+  openMusicTracks(source?: 'following' | 'public'): void {
+    const queryParams = source ? { source } : undefined;
+    this.router.navigate(['/music/tracks'], { queryParams });
+  }
+
+  /**
+   * Open music playlists list in the left panel
+   */
+  openMusicPlaylists(source?: 'following' | 'public'): void {
+    const queryParams = source ? { source } : undefined;
+    this.router.navigate(['/music/playlists'], { queryParams });
+  }
+
+  /**
+   * Open interest sets in the left panel (it's a list view)
+   */
+  openInterestSets(): void {
+    this.router.navigate(['/collections/interests']);
+  }
+
+  /**
+   * Open emoji sets in the left panel (it's a list view)
+   */
+  openEmojiSets(): void {
+    this.router.navigate(['/collections/emojis']);
+  }
+
+  /**
+   * Navigate to search in the left panel with optional query
+   */
+  openSearchInLeftPanel(query?: string): void {
+    if (query) {
+      this.router.navigate(['/search'], { queryParams: { q: query } });
     } else {
-      // Navigate normally for other contexts
-      this.router.navigate(['/a', naddr], { state: { event } });
+      this.router.navigate(['/search']);
     }
   }
 
@@ -1289,9 +1348,9 @@ export class LayoutService implements OnDestroy {
             const signedEvent = await this.nostrService.signEvent(event);
             await this.accountRelay.publish(signedEvent);
 
-            // Redirect to the event
+            // Show the published event in right panel
             this.ngZone.run(() => {
-              this.router.navigate(['/e', signedEvent.id]);
+              this.openGenericEvent(signedEvent.id);
             });
             this.snackBar.open('Voice message sent!', 'Close', { duration: 3000 });
           } else {
@@ -1326,7 +1385,7 @@ export class LayoutService implements OnDestroy {
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result?.published) {
-        // Navigate to the published media event
+        // Show the published media event in right panel
         if (result.mediaEvent) {
           const nevent = nip19.neventEncode({
             id: result.mediaEvent.id,
@@ -1334,7 +1393,7 @@ export class LayoutService implements OnDestroy {
             kind: result.mediaEvent.kind,
           });
           this.ngZone.run(() => {
-            this.router.navigate(['/e', nevent], { state: { event: result.mediaEvent } });
+            this.openGenericEvent(nevent);
           });
         }
       }
@@ -1420,13 +1479,13 @@ export class LayoutService implements OnDestroy {
           duration: 3000,
         });
 
-        // Navigate to the published event
+        // Show the published event in right panel
         const neventId = nip19.neventEncode({
           id: signedEvent.id,
           author: signedEvent.pubkey,
           kind: signedEvent.kind,
         });
-        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
+        this.openGenericEvent(neventId);
 
         return true;
       } else {

@@ -32,6 +32,8 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { DataService } from '../../services/data.service';
+import { LayoutService } from '../../services/layout.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -73,6 +75,8 @@ export class NotificationsComponent implements OnInit {
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
   private dataService = inject(DataService);
+  private layout = inject(LayoutService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   notifications = this.notificationService.notifications;
 
@@ -114,6 +118,7 @@ export class NotificationsComponent implements OnInit {
   });
 
   constructor() {
+    this.twoColumnLayout.setSplitView();
     // Save notification filters to localStorage whenever they change
     effect(() => {
       const filters = this.notificationFilters();
@@ -408,7 +413,7 @@ export class NotificationsComponent implements OnInit {
     if (contentNotif.authorPubkey) {
       // Mark notification as read
       this.markAsRead(notification.id);
-      this.router.navigate(['/p', contentNotif.authorPubkey]);
+      this.router.navigate([{ outlets: { right: ['p', contentNotif.authorPubkey] } }]);
     }
   }
 
@@ -423,7 +428,7 @@ export class NotificationsComponent implements OnInit {
 
     // For new follower notifications, navigate to the follower's profile
     if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
-      this.router.navigate(['/p', contentNotif.authorPubkey]);
+      this.router.navigate([{ outlets: { right: ['p', contentNotif.authorPubkey] } }]);
       return;
     }
 
@@ -449,14 +454,20 @@ export class NotificationsComponent implements OnInit {
         author: eventAuthor,
         kind: contentNotif.kind,
       });
-      this.router.navigate(['/e', neventId]);
+
+      // Open event in right panel
+      if (contentNotif.kind === 30023) {
+        this.layout.openArticle(neventId);
+      } else {
+        this.layout.openGenericEvent(neventId);
+      }
       return;
     }
 
     // For profile zaps (no specific event), navigate to recipient's profile
     if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
       const npubId = nip19.npubEncode(contentNotif.metadata.recipientPubkey);
-      this.router.navigate(['/p', npubId]);
+      this.layout.openProfile(contentNotif.metadata.recipientPubkey);
     }
   }
 
