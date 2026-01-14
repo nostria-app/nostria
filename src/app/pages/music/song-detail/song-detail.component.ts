@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input, TemplateRef, ViewChild, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,6 +29,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
 import { NostrService } from '../../../services/nostr.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
@@ -62,7 +63,7 @@ const MUSIC_KIND = 36787;
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
 })
-export class SongDetailComponent implements OnInit, OnDestroy {
+export class SongDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private pool = inject(RelayPoolService);
@@ -85,6 +86,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+  private panelActions = inject(PanelActionsService);
+
+  // Template for track menu (used in panel header)
+  @ViewChild('trackMenuTemplate') trackMenuTemplate!: TemplateRef<unknown>;
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -543,6 +548,33 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Set up panel actions after view is initialized
+    this.setupPanelActions();
+  }
+
+  private setupPanelActions(): void {
+    const actions = [
+      {
+        id: 'menu',
+        icon: 'more_vert',
+        label: 'Options',
+        tooltip: 'More options',
+        action: () => { },
+        menu: true,
+      }
+    ];
+
+    this.panelActions.setRightPanelActions(actions);
+
+    // Set menu template
+    setTimeout(() => {
+      if (this.trackMenuTemplate) {
+        this.panelActions.setRightPanelMenuTemplate(this.trackMenuTemplate);
+      }
+    });
+  }
+
   ngOnDestroy(): void {
     if (this.subscription) {
       this.subscription.close();
@@ -550,6 +582,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (this.likeSubscription) {
       this.likeSubscription.close();
     }
+    this.panelActions.clearRightPanelActions();
   }
 
   private loadSong(pubkey: string, identifier: string): void {

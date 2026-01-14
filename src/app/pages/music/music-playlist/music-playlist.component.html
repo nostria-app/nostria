@@ -1,58 +1,55 @@
 <div class="playlist-container">
-  <div class="header-actions">
-    <span class="spacer"></span>
-    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
-      <mat-icon>more_vert</mat-icon>
+  <!-- Playlist menu template for panel header -->
+  <ng-template #playlistMenuTemplate>
+    @if (isOwnPlaylist()) {
+    <button mat-menu-item (click)="editPlaylist()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Playlist</span>
     </button>
-    <mat-menu #menu="matMenu">
-      @if (isOwnPlaylist()) {
-      <button mat-menu-item (click)="editPlaylist()">
-        <mat-icon>edit</mat-icon>
-        <span>Edit Playlist</span>
-      </button>
-      }
-      <button mat-menu-item [matMenuTriggerFor]="copyMenu">
-        <mat-icon>content_copy</mat-icon>
-        <span>Copy</span>
-      </button>
-      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
-        <mat-icon>share</mat-icon>
-        <span>Share</span>
-      </button>
-      <button mat-menu-item (click)="downloadAsM3u8()" [disabled]="tracks().length === 0">
-        <mat-icon>download</mat-icon>
-        <span>Download (M3U8)</span>
-      </button>
-      <button mat-menu-item (click)="publishPlaylist()">
-        <mat-icon>publish</mat-icon>
-        <span>Publish Event</span>
-      </button>
-    </mat-menu>
-    <mat-menu #copyMenu="matMenu">
-      <button mat-menu-item (click)="copyEventLink()">
-        <mat-icon>link</mat-icon>
-        <span>Copy Link</span>
-      </button>
-      <button mat-menu-item (click)="copyEventId()">
-        <mat-icon>fingerprint</mat-icon>
-        <span>Copy Event ID</span>
-      </button>
-      <button mat-menu-item (click)="copyEventData()">
-        <mat-icon>data_object</mat-icon>
-        <span>Copy Event Data</span>
-      </button>
-    </mat-menu>
-    <mat-menu #shareMenu="matMenu">
-      <button mat-menu-item (click)="shareNative()">
-        <mat-icon>ios_share</mat-icon>
-        <span>Share via...</span>
-      </button>
-      <button mat-menu-item (click)="sharePlaylist()">
-        <mat-icon>edit_note</mat-icon>
-        <span>Share as Note</span>
-      </button>
-    </mat-menu>
-  </div>
+    }
+    <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+      <mat-icon>content_copy</mat-icon>
+      <span>Copy</span>
+    </button>
+    <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+      <mat-icon>share</mat-icon>
+      <span>Share</span>
+    </button>
+    <button mat-menu-item (click)="downloadAsM3u8()" [disabled]="tracks().length === 0">
+      <mat-icon>download</mat-icon>
+      <span>Download (M3U8)</span>
+    </button>
+    <button mat-menu-item (click)="publishPlaylist()">
+      <mat-icon>publish</mat-icon>
+      <span>Publish Event</span>
+    </button>
+  </ng-template>
+
+  <!-- Submenus (kept outside template for proper nesting) -->
+  <mat-menu #copyMenu="matMenu">
+    <button mat-menu-item (click)="copyEventLink()">
+      <mat-icon>link</mat-icon>
+      <span>Copy Link</span>
+    </button>
+    <button mat-menu-item (click)="copyEventId()">
+      <mat-icon>fingerprint</mat-icon>
+      <span>Copy Event ID</span>
+    </button>
+    <button mat-menu-item (click)="copyEventData()">
+      <mat-icon>data_object</mat-icon>
+      <span>Copy Event Data</span>
+    </button>
+  </mat-menu>
+  <mat-menu #shareMenu="matMenu">
+    <button mat-menu-item (click)="shareNative()">
+      <mat-icon>ios_share</mat-icon>
+      <span>Share via...</span>
+    </button>
+    <button mat-menu-item (click)="sharePlaylist()">
+      <mat-icon>edit_note</mat-icon>
+      <span>Share as Note</span>
+    </button>
+  </mat-menu>
 
   @if (loading()) {
   <div class="loading-container">

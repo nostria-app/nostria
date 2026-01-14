@@ -103,6 +103,8 @@ import { TwoColumnLayoutService } from './services/two-column-layout.service';
 import { NavigationStackService } from './services/navigation-stack.service';
 import { PanelNavigationService } from './services/panel-navigation.service';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
+import { PanelActionsService } from './services/panel-actions.service';
+import { NgTemplateOutlet } from '@angular/common';
 
 interface NavItem {
   path: string;
@@ -134,6 +136,7 @@ interface NavItem {
     MatSidenavModule,
     MatListModule,
     CommonModule,
+    NgTemplateOutlet,
     MatTooltipModule,
     MatDialogModule,
     MatDividerModule,
@@ -231,6 +234,7 @@ export class App implements OnInit {
   navigationStack = inject(NavigationStackService);
   panelNav = inject(PanelNavigationService);
   rightPanel = inject(RightPanelService);
+  panelActions = inject(PanelActionsService);
   private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
 
   // Right panel routing state
@@ -1685,6 +1689,10 @@ export class App implements OnInit {
     // Clear left stack
     this.panelNav.clearLeftStack();
 
+    // Clear panel actions immediately
+    this.panelActions.clearLeftPanelActions();
+    this.panelActions.clearRightPanelActions();
+
     // Clear right panel state first (without navigating yet)
     this._rightPanelHistory.set([]);
     this._hasRightContent.set(false);
@@ -1772,6 +1780,8 @@ export class App implements OnInit {
     this._rightPanelTitle.set('');
     // Also reset collapse state when closing right panel
     this.leftPanelCollapsed.set(false);
+    // Clear right panel actions immediately
+    this.panelActions.clearRightPanelActions();
     // Clear the panel navigation right stack
     this.panelNav.clearRightStack();
     // Navigate to clear the right outlet

@@ -1,74 +1,71 @@
 <div class="song-detail-container">
-  <div class="header-actions">
-    <span class="spacer"></span>
-    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
-      <mat-icon>more_vert</mat-icon>
+  <!-- Track menu template for panel header -->
+  <ng-template #trackMenuTemplate>
+    @if (isOwnTrack()) {
+    <button mat-menu-item (click)="editTrack()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Track</span>
     </button>
-    <mat-menu #menu="matMenu">
-      @if (isOwnTrack()) {
-      <button mat-menu-item (click)="editTrack()">
-        <mat-icon>edit</mat-icon>
-        <span>Edit Track</span>
-      </button>
-      }
-      @if (isAuthenticated()) {
-      <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
-        <mat-icon>playlist_add</mat-icon>
-        <span>Add to Playlist</span>
-      </button>
-      }
-      <button mat-menu-item (click)="addToQueue()">
-        <mat-icon>queue_music</mat-icon>
-        <span>Add to Queue</span>
-      </button>
-      <button mat-menu-item (click)="shareTrack()">
-        <mat-icon>share</mat-icon>
-        <span>Share</span>
-      </button>
-      <button mat-menu-item (click)="copyEventLink()">
-        <mat-icon>link</mat-icon>
-        <span>Copy Event Link</span>
-      </button>
-      <button mat-menu-item (click)="copyEventData()">
-        <mat-icon>data_object</mat-icon>
-        <span>Copy Event Data</span>
-      </button>
-      <button mat-menu-item (click)="publishTrack()">
-        <mat-icon>publish</mat-icon>
-        <span>Publish Event</span>
-      </button>
-      @if (isOwnTrack()) {
-      <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
-        <mat-icon>delete</mat-icon>
-        <span>Delete</span>
-      </button>
-      }
-    </mat-menu>
-    <mat-menu #playlistMenu="matMenu">
-      <button mat-menu-item (click)="createNewPlaylist()">
-        <mat-icon>add</mat-icon>
-        <span>New Playlist</span>
-      </button>
-      @if (playlistsLoading()) {
-      <div class="playlist-loading">
-        <mat-spinner diameter="20"></mat-spinner>
-        <span>Loading playlists...</span>
-      </div>
-      } @else {
-      @for (playlist of userPlaylists(); track playlist.id) {
-      <button mat-menu-item (click)="addToPlaylist(playlist.id)">
-        <mat-icon>queue_music</mat-icon>
-        <span>{{ playlist.title }}</span>
-      </button>
-      }
-      @if (userPlaylists().length === 0) {
-      <div class="no-playlists">
-        <span>No playlists yet</span>
-      </div>
-      }
-      }
-    </mat-menu>
-  </div>
+    }
+    @if (isAuthenticated()) {
+    <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+      <mat-icon>playlist_add</mat-icon>
+      <span>Add to Playlist</span>
+    </button>
+    }
+    <button mat-menu-item (click)="addToQueue()">
+      <mat-icon>queue_music</mat-icon>
+      <span>Add to Queue</span>
+    </button>
+    <button mat-menu-item (click)="shareTrack()">
+      <mat-icon>share</mat-icon>
+      <span>Share</span>
+    </button>
+    <button mat-menu-item (click)="copyEventLink()">
+      <mat-icon>link</mat-icon>
+      <span>Copy Event Link</span>
+    </button>
+    <button mat-menu-item (click)="copyEventData()">
+      <mat-icon>data_object</mat-icon>
+      <span>Copy Event Data</span>
+    </button>
+    <button mat-menu-item (click)="publishTrack()">
+      <mat-icon>publish</mat-icon>
+      <span>Publish Event</span>
+    </button>
+    @if (isOwnTrack()) {
+    <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
+      <mat-icon>delete</mat-icon>
+      <span>Delete</span>
+    </button>
+    }
+  </ng-template>
+
+  <!-- Playlist submenu (kept separate as it's nested) -->
+  <mat-menu #playlistMenu="matMenu">
+    <button mat-menu-item (click)="createNewPlaylist()">
+      <mat-icon>add</mat-icon>
+      <span>New Playlist</span>
+    </button>
+    @if (playlistsLoading()) {
+    <div class="playlist-loading">
+      <mat-spinner diameter="20"></mat-spinner>
+      <span>Loading playlists...</span>
+    </div>
+    } @else {
+    @for (playlist of userPlaylists(); track playlist.id) {
+    <button mat-menu-item (click)="addToPlaylist(playlist.id)">
+      <mat-icon>queue_music</mat-icon>
+      <span>{{ playlist.title }}</span>
+    </button>
+    }
+    @if (userPlaylists().length === 0) {
+    <div class="no-playlists">
+      <span>No playlists yet</span>
+    </div>
+    }
+    }
+  </mat-menu>
 
   @if (loading()) {
   <div class="loading-container">
