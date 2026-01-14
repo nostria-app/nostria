@@ -261,10 +261,10 @@ mat-sidenav-content {
   align-items: center;
 }
 
-.close-button {
-  position: absolute;
-  right: 16px;
-}
+// .close-button {
+//   position: absolute;
+//   right: 16px;
+// }
 
 .theme-button {
   position: absolute;
@@ -765,18 +765,15 @@ mat-sidenav-content {
     flex-shrink: 0;
   }
 
-  .nav-button {
-    flex-shrink: 0;
-  }
-
+  .nav-button,
   .action-button {
     flex-shrink: 0;
   }
 
   // Override global .close-button absolute positioning - keep in flex flow
-  .close-button {
-    position: static;
-  }
+  // .close-button {
+  //   position: static;
+  // }
 }
 
 // Dark mode for panel headers
