@@ -726,8 +726,9 @@ mat-sidenav-content {
 
   // Hidden state when scrolling down - only use transform, not opacity
   // Opacity causes backdrop-filter to flicker during transitions
+  // Move completely above the main toolbar (64px + header height 48px + margin 8px = ~120px)
   &.header-hidden {
-    transform: translateY(calc(-100% - 16px));
+    transform: translateY(calc(-1 * (var(--toolbar-height, 64px) + 72px)));
     pointer-events: none;
   }
 
