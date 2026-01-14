@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +15,8 @@ import { CollectionSetsService, EmojiSet, EmojiItem, PreferredEmojiSet } from '.
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { LayoutService } from '../../../services/layout.service';
+import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 
 @Component({
   selector: 'app-emoji-sets',
@@ -41,7 +42,8 @@ export class EmojiSetsComponent implements OnInit {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
-  private router = inject(Router);
+  private layout = inject(LayoutService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   // State
   isLoading = signal(false);
@@ -56,6 +58,7 @@ export class EmojiSetsComponent implements OnInit {
   editingSetEmojis = signal('');
 
   async ngOnInit() {
+    this.twoColumnLayout.setSplitView();
     await this.loadData();
   }
 
@@ -183,9 +186,8 @@ export class EmojiSetsComponent implements OnInit {
   }
 
   findEmojis(): void {
-    this.router.navigate(['/search'], {
-      queryParams: { q: 'kind:30030' }
-    });
+    // Open search in the left panel
+    this.layout.openSearchInLeftPanel('kind:30030');
   }
 
   async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {

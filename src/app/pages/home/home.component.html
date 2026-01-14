@@ -1,46 +1,200 @@
-<div class="home-container">
-  <!-- Home page now serves as the content viewer for navigation stack items -->
-  <!-- The global feeds panel is handled at the app level -->
-
-  @if (hasNavigatedItems()) {
-  <div class="content-area-wrapper">
-    <!-- Navigation header for back/close -->
-    <div class="content-header" [class.header-hidden]="contentHeaderHidden()">
-      @if (hasMultipleItems()) {
-      <!-- Back button when there are multiple items -->
-      <button mat-icon-button (click)="goBack()" class="nav-button">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      } @else {
-      <!-- Close button when there's only one item -->
-      <button mat-icon-button (click)="close()" class="nav-button">
-        <mat-icon>close</mat-icon>
-      </button>
-      }
-      <span class="content-title">{{ getNavigationTitle() }}</span>
+<div class="home-dashboard">
+  <!-- Hero Section - Primary CTA -->
+  <header class="hero-section">
+    <div class="hero-content">
+      <h1 class="greeting">
+        {{ getGreeting() }}@if (account.profile()?.data?.name) {<span class="user-name">, {{
+          account.profile()?.data?.name }}</span>}
+      </h1>
+      <p class="tagline" i18n="@@home.tagline">Your gateway to the decentralized web.</p>
     </div>
+    <button mat-fab extended class="create-cta" (click)="openCreateMenu()">
+      <mat-icon>edit</mat-icon>
+      <span i18n="@@home.action.create">What's on your mind?</span>
+    </button>
+  </header>
 
-    <!-- Content area -->
-    <div class="content-area" (scroll)="onContentScroll($event)">
-      @let item = currentItem();
-      @if (item) {
-      @if (item.type === 'event') {
-      <app-event-page [dialogEventId]="item.id" [dialogEvent]="item.data">
-      </app-event-page>
-      } @else if (item.type === 'profile') {
-      <app-profile [twoColumnPubkey]="item.id"></app-profile>
-      }
-      }
+  <!-- Primary Features - Large Cards -->
+  <section class="primary-features">
+    <!-- Feeds - Hero Card -->
+    <a routerLink="/f" class="hero-card feeds-hero" mat-ripple>
+      <div class="card-icon">
+        <mat-icon>dynamic_feed</mat-icon>
+      </div>
+      <div class="card-content">
+        <h2 i18n="@@home.feeds.title">Your Feeds</h2>
+        <p i18n="@@home.feeds.description">Stay updated with posts from people you follow</p>
+      </div>
+      <mat-icon class="card-arrow">arrow_forward</mat-icon>
+    </a>
+
+    <!-- Messages, Articles & Summary Row -->
+    <div class="triple-cards">
+      <a routerLink="/messages" class="feature-card primary-card messages-card" mat-ripple>
+        <div class="card-icon">
+          <mat-icon>mail</mat-icon>
+        </div>
+        <div class="card-content">
+          <h3 i18n="@@home.messages.title">Messages</h3>
+          <p i18n="@@home.messages.description">Private conversations</p>
+        </div>
+      </a>
+
+      <a routerLink="/articles" class="feature-card primary-card articles-card" mat-ripple>
+        <div class="card-icon">
+          <mat-icon>article</mat-icon>
+        </div>
+        <div class="card-content">
+          <h3 i18n="@@home.articles.title">Articles</h3>
+          <p i18n="@@home.articles.description">Long-form content</p>
+        </div>
+      </a>
+
+      <a routerLink="/summary" class="feature-card primary-card summary-card" mat-ripple>
+        <div class="card-icon">
+          <mat-icon>auto_awesome</mat-icon>
+        </div>
+        <div class="card-content">
+          <h3 i18n="@@home.summary.title">Summary</h3>
+          <p i18n="@@home.summary.description">Quick insight</p>
+        </div>
+      </a>
     </div>
-  </div>
+  </section>
+
+  <!-- Secondary Features - Compact Grid -->
+  <section class="secondary-features">
+    <h2 class="section-label" i18n="@@home.section.connect">Connect</h2>
+    <div class="compact-grid">
+      <a routerLink="/notifications" class="compact-card" mat-ripple>
+        <mat-icon class="compact-icon notifications-icon">notifications</mat-icon>
+        <span i18n="@@home.notifications">Notifications</span>
+      </a>
+
+      <a [routerLink]="['/p', account.pubkey()]" class="compact-card" mat-ripple>
+        <mat-icon class="compact-icon profile-icon">account_circle</mat-icon>
+        <span i18n="@@home.profile">Profile</span>
+      </a>
+
+      <a routerLink="/people" class="compact-card" mat-ripple>
+        <mat-icon class="compact-icon people-icon">people</mat-icon>
+        <span i18n="@@home.people">People</span>
+      </a>
+
+      <a routerLink="/discover" class="compact-card" mat-ripple>
+        <mat-icon class="compact-icon discover-icon">explore</mat-icon>
+        <span i18n="@@home.discover">Discover</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Media Section -->
+  <section class="media-features">
+    <h2 class="section-label" i18n="@@home.section.media">Media & Entertainment</h2>
+    <div class="media-grid">
+      <a routerLink="/music" class="media-card music-card" mat-ripple>
+        <mat-icon>music_note</mat-icon>
+        <div class="media-content">
+          <h3 i18n="@@home.music.title">Music</h3>
+          <p i18n="@@home.music.description">Listen & discover</p>
+        </div>
+      </a>
+
+      <a routerLink="/streams" class="media-card streams-card" mat-ripple>
+        <mat-icon>live_tv</mat-icon>
+        <div class="media-content">
+          <h3 i18n="@@home.streams.title">Streams</h3>
+          <p i18n="@@home.streams.description">Live broadcasts</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Library Section -->
+  <section class="library-features">
+    <h2 class="section-label" i18n="@@home.section.library">Your Library</h2>
+    <div class="library-grid">
+      <a routerLink="/collections" class="library-item" mat-ripple>
+        <mat-icon>collections_bookmark</mat-icon>
+        <span i18n="@@home.collections">Collections</span>
+      </a>
+
+      <a routerLink="/collections/relays" class="library-item" mat-ripple>
+        <mat-icon>hub</mat-icon>
+        <span i18n="@@home.relays">Relays</span>
+      </a>
+
+      <a routerLink="/badges" class="library-item" mat-ripple>
+        <mat-icon>badge</mat-icon>
+        <span i18n="@@home.badges">Badges</span>
+      </a>
+
+      <a routerLink="/settings" class="library-item" mat-ripple>
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@home.settings">Settings</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Premium Section -->
+  @if (account.hasActiveSubscription()) {
+  <section class="premium-features active">
+    <div class="premium-header">
+      <mat-icon class="star-icon">star</mat-icon>
+      <h2 i18n="@@home.section.premium">Premium Tools</h2>
+    </div>
+    <div class="premium-grid">
+      <a routerLink="/stats" class="premium-item" mat-ripple>
+        <mat-icon>bar_chart</mat-icon>
+        <span i18n="@@home.analytics">Analytics</span>
+      </a>
+      <a routerLink="/settings/backup" class="premium-item" mat-ripple>
+        <mat-icon>cloud_upload</mat-icon>
+        <span i18n="@@home.backup">Backup</span>
+      </a>
+      <a routerLink="/memos" class="premium-item" mat-ripple>
+        <mat-icon>sticky_note_2</mat-icon>
+        <span i18n="@@home.memos">Memos</span>
+      </a>
+      <a routerLink="/calendar" class="premium-item" mat-ripple>
+        <mat-icon>calendar_month</mat-icon>
+        <span i18n="@@home.calendar">Calendar</span>
+      </a>
+      <a routerLink="/youtube" class="premium-item" mat-ripple>
+        <mat-icon>video_library</mat-icon>
+        <span i18n="@@home.youtube">YouTube</span>
+      </a>
+      <a routerLink="/premium" class="premium-item" mat-ripple>
+        <mat-icon>card_membership</mat-icon>
+        <span i18n="@@home.subscription">Subscription</span>
+      </a>
+    </div>
+  </section>
   } @else {
-  <!-- Empty state when no navigation items - just show a placeholder -->
-  <!-- The feeds panel is the main content when expanded -->
-  <div class="empty-home-state">
-    <div class="empty-content">
-      <mat-icon class="empty-icon">dynamic_feed</mat-icon>
-      <p class="empty-text">Select an item from your feeds to view it here</p>
-    </div>
-  </div>
+  <section class="premium-features upsell">
+    <a routerLink="/premium" class="premium-upsell-card" mat-ripple>
+      <div class="upsell-content">
+        <mat-icon class="star-icon">star</mat-icon>
+        <div>
+          <h3 i18n="@@home.premium.title">Upgrade to Premium</h3>
+          <p i18n="@@home.premium.description">Get analytics, cloud backup, and more</p>
+        </div>
+      </div>
+      <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+    </a>
+  </section>
   }
+
+  <!-- Footer -->
+  <footer class="dashboard-footer">
+    <div class="footer-links">
+      <a href="https://github.com/nostria-app/nostria" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <span class="dot">•</span>
+      <a href="https://nostria.app/privacy" target="_blank" rel="noopener noreferrer"
+        i18n="@@home.footer.privacy">Privacy</a>
+      <span class="dot">•</span>
+      <a routerLink="/about" i18n="@@home.footer.about">About</a>
+    </div>
+    <span class="version">Nostria v{{ app.version }}</span>
+  </footer>
 </div>

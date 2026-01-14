@@ -1091,7 +1091,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             author: signedEvent.pubkey,
             kind: signedEvent.kind,
           });
-          this.router.navigate(['/e', nevent], { state: { event: signedEvent } });
+          this.router.navigate([{ outlets: { right: ['e', nevent] } }], { state: { event: signedEvent } });
 
           // Unsubscribe after handling
           if (this.publishSubscription) {
@@ -1977,7 +1977,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Dynamically import the media chooser dialog
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
-    
+
     const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
       title: 'Choose from Library',
       width: '700px',
@@ -2002,7 +2002,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Add the media URL to the content
     const currentContent = this.content();
     const urlToAdd = item.url;
-    
+
     // Check if URL is already in content
     if (currentContent.includes(urlToAdd)) {
       this.snackBar.open('This media is already in your note', 'Dismiss', { duration: 3000 });
@@ -2012,7 +2012,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Add to media metadata for preview/imeta tags
     const currentMetadata = this.mediaMetadata();
     const alreadyAdded = currentMetadata.some(m => m.url === urlToAdd);
-    
+
     if (!alreadyAdded) {
       this.mediaMetadata.set([
         ...currentMetadata,

@@ -194,7 +194,7 @@ export interface ReactionsDialogData {
                           [pubkey]="quote.event.pubkey"
                           view="compact"
                         ></app-user-profile>
-                        <a class="reaction-time quote-link" [routerLink]="['/e', getNevent(quote.event)]">
+                        <a class="reaction-time quote-link" [routerLink]="[{ outlets: { right: ['e', getNevent(quote.event)] } }]">
                           {{ quote.event.created_at | ago }}
                         </a>
                       </div>

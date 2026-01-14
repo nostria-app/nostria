@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import { DataService } from '../../../services/data.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { LayoutService } from '../../../services/layout.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
@@ -51,9 +52,13 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private reporting = inject(ReportingService);
   private mediaPlayer = inject(MediaPlayerService);
   private accountState = inject(AccountStateService);
+  private layout = inject(LayoutService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
   private dialog = inject(MatDialog);
+
+  // Input for when opened via RightPanelService
+  npubInput = input<string | undefined>(undefined);
 
   pubkey = signal<string>('');
   loading = signal(true);
@@ -126,7 +131,9 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const pubkeyParam = this.route.snapshot.paramMap.get('pubkey');
+    // Check for input first (when opened via RightPanelService)
+    const npubFromInput = this.npubInput();
+    const pubkeyParam = npubFromInput || this.route.snapshot.paramMap.get('pubkey');
 
     if (pubkeyParam) {
       let decodedPubkey = pubkeyParam;
@@ -247,7 +254,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   goToProfile(): void {
     const npub = this.artistNpub();
     if (npub) {
-      this.router.navigate(['/p', npub]);
+      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
     }
   }
 
@@ -410,11 +417,8 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   goToTrackDetails(track: Event): void {
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
-    try {
-      const npub = nip19.npubEncode(track.pubkey);
-      this.router.navigate(['/music/song', npub, dTag]);
-    } catch {
-      // Ignore
+    if (track.pubkey && dTag) {
+      this.layout.openSongDetail(track.pubkey, dTag, track);
     }
   }
 

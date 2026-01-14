@@ -11,7 +11,7 @@ import {
   OnInit,
   ElementRef,
 } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, RouteReuseStrategy, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -77,7 +77,6 @@ import { InstallService } from './services/install.service';
 import { ImageCacheService } from './services/image-cache.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
 import { AccountLocalStateService } from './services/account-local-state.service';
-import { NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
@@ -99,6 +98,11 @@ import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 import { MessagingService } from './services/messaging.service';
 import { FeedsComponent } from './pages/feeds/feeds.component';
+import { RightPanelService } from './services/right-panel.service';
+import { TwoColumnLayoutService } from './services/two-column-layout.service';
+import { NavigationStackService } from './services/navigation-stack.service';
+import { PanelNavigationService } from './services/panel-navigation.service';
+import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 
 interface NavItem {
   path: string;
@@ -187,6 +191,7 @@ export class App implements OnInit {
   app = inject(ApplicationService);
   layout = inject(LayoutService);
   router = inject(Router);
+  route = inject(ActivatedRoute);
   notificationService = inject(NotificationService);
   contentNotificationService = inject(ContentNotificationService);
   bottomSheet = inject(MatBottomSheet);
@@ -221,6 +226,28 @@ export class App implements OnInit {
   private readonly messagingService = inject(MessagingService);
   private readonly followSetsService = inject(FollowSetsService);
 
+  // Two-column layout services
+  twoColumnLayout = inject(TwoColumnLayoutService);
+  navigationStack = inject(NavigationStackService);
+  panelNav = inject(PanelNavigationService);
+  rightPanel = inject(RightPanelService);
+  private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
+
+  // Right panel routing state
+  private _hasRightContent = signal(false);
+  private _rightPanelTitle = signal('');
+  private _rightPanelHistory = signal<string[]>([]);
+  hasRightContent = this._hasRightContent.asReadonly();
+  rightPanelTitle = this._rightPanelTitle.asReadonly();
+  canGoBackRight = computed(() => this._rightPanelHistory().length > 1);
+
+  // Panel header scroll states
+  leftPanelHeaderHidden = signal(false);
+  private leftPanelLastScrollTop = 0;
+
+  // Left panel collapse state for focusing on right content
+  leftPanelCollapsed = signal(false);
+
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
@@ -247,6 +274,10 @@ export class App implements OnInit {
 
   // Track shortcuts dialog reference for toggle behavior
   private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
+
+  // Right panel header scroll state
+  rightPanelHeaderHidden = signal(false);
+  private rightPanelLastScrollTop = 0;
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -397,7 +428,7 @@ export class App implements OnInit {
             mediaSettings: true,
           },
           {
-            path: '/bookmarks',
+            path: '/collections/bookmarks',
             label: $localize`:@@app.nav.collections.bookmarks:Bookmarks`,
             icon: 'bookmark',
             authenticated: false,
@@ -415,19 +446,19 @@ export class App implements OnInit {
           //   authenticated: false,
           // },
           {
-            path: '/relay-sets',
+            path: '/collections/relays',
             label: $localize`:@@app.nav.collections.relays:Relays`,
             icon: 'dns',
             authenticated: false,
           },
           {
-            path: '/emoji-sets',
+            path: '/collections/emojis',
             label: $localize`:@@app.nav.collections.emojis:Emojis`,
             icon: 'emoji_emotions',
             authenticated: false,
           },
           {
-            path: '/interest-sets',
+            path: '/collections/interests',
             label: $localize`:@@app.nav.collections.interests:Interests`,
             icon: 'tag',
             authenticated: false,
@@ -465,7 +496,7 @@ export class App implements OnInit {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
+    { path: '/f', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
     { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     {
       path: 'messages',
@@ -535,6 +566,30 @@ export class App implements OnInit {
     this.logger.debug('[App] - NostrProtocolService injected:', !!this.nostrProtocol);
     this.logger.debug('[App] - ApplicationService injected:', !!this.app);
     this.logger.debug('[App] - LoggerService injected:', !!this.logger);
+
+    // Wire up route reuse cache clearing with panel navigation
+    if (this.customReuseStrategy && typeof this.customReuseStrategy.clearCache === 'function') {
+      this.panelNav.setClearCacheCallback(() => this.customReuseStrategy.clearCache());
+    }
+
+    // Wire up right panel clearing with panel navigation
+    this.panelNav.setClearRightPanelCallback(() => this.rightPanel.clearHistory());
+
+    // Track route changes for right panel state and cache clearing
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event) => {
+      this.updateRightPanelState();
+
+      // Clear route cache when navigating to root pages
+      const navEvent = event as NavigationEnd;
+      const url = navEvent.urlAfterRedirects || navEvent.url;
+      const primaryPath = url.split('(')[0].split('/')[1] || '';
+
+      if (this.customReuseStrategy.isRootNavigation(primaryPath)) {
+        this.customReuseStrategy.clearCache(true);
+      }
+    });
 
     if (!this.app.isBrowser()) {
       this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
@@ -1032,12 +1087,12 @@ export class App implements OnInit {
       if (entity.startsWith('npub') || entity.startsWith('nprofile')) {
         // Handle profile entities
         if (entity.startsWith('npub')) {
-          this.router.navigate(['/p', entity]);
+          this.router.navigate([{ outlets: { right: ['p', entity] } }]);
         } else {
           // nprofile - decode to get pubkey
           const decoded = nip19.decode(entity);
           if (decoded.type === 'nprofile' && typeof decoded.data === 'object' && decoded.data && 'pubkey' in decoded.data) {
-            this.router.navigate(['/p', decoded.data.pubkey]);
+            this.router.navigate([{ outlets: { right: ['p', decoded.data.pubkey] } }]);
           } else {
             throw new Error('Invalid nprofile data');
           }
@@ -1201,9 +1256,9 @@ export class App implements OnInit {
         this.localSettings.setMenuOpen(false);
       }
 
-      // Set the active feed and navigate to home
+      // Set the active feed and navigate to feeds view
       this.feedsCollectionService.setActiveFeed(feedId);
-      this.router.navigate(['/']);
+      this.router.navigate(['/f']);
     } catch (error) {
       this.logger.error('Error navigating to feed:', error);
       // Fallback: just navigate to home page
@@ -1240,6 +1295,12 @@ export class App implements OnInit {
       return;
     }
 
+    // For main navigation items (with path), reset navigation stack and navigate
+    if (item.path) {
+      event.preventDefault();
+      this.twoColumnLayout.resetNavigation(item.path);
+    }
+
     // For expandable items, we still want navigation to work
     // The expand button handles expansion separately with stopPropagation
 
@@ -1247,8 +1308,10 @@ export class App implements OnInit {
     if (this.layout.isHandset()) {
       this.toggleSidenav();
     }
+  }
 
-    // Let the default routerLink behavior handle navigation
+  onMobileNavClick(path: string) {
+    this.twoColumnLayout.resetNavigation(path);
   }
 
   async addAccount() {
@@ -1590,7 +1653,212 @@ export class App implements OnInit {
    */
   navigateToHome(): void {
     this.routeDataService.clearHistory();
+    this.navigationStack.clearAll();
+    this.panelNav.clearHistory();
     this.router.navigate(['/']);
+  }
+
+  /**
+   * Go back in left panel navigation stack.
+   * Navigates to previous entry or shows feeds if at root.
+   */
+  goBackLeft(): void {
+    this.panelNav.goBackLeft();
+  }
+
+  /**
+   * Navigate to a route and close the right panel.
+   * Used when navigating from sidebar to ensure right panel content is cleared.
+   */
+  navigateAndClearRightPanel(path: string): void {
+    this.toggleProfileSidenav();
+    this.closeRightPanel();
+    this.router.navigate([path]);
+  }
+
+  /**
+   * Close the left panel and return to home/feeds.
+   * When X is clicked on a list component, all left history is cleared
+   * and the user is taken back to home.
+   */
+  closeLeftPanel(): void {
+    // Clear left stack
+    this.panelNav.clearLeftStack();
+
+    // Clear right panel state first (without navigating yet)
+    this._rightPanelHistory.set([]);
+    this._hasRightContent.set(false);
+    this._rightPanelTitle.set('');
+    this.leftPanelCollapsed.set(false);
+    this.panelNav.clearRightStack();
+
+    // Navigate to feeds and clear right outlet in one navigation
+    this.router.navigate([{ outlets: { primary: ['f'], right: null } }]);
+  }
+
+  /**
+   * Toggle left panel collapsed state for focusing on right content.
+   * The left panel slides behind the right panel with a smooth animation.
+   */
+  toggleLeftPanelCollapse(): void {
+    this.leftPanelCollapsed.update(v => !v);
+  }
+
+  /**
+   * Update right panel state based on current route
+   */
+  private updateRightPanelState(url?: string): void {
+    // Check if there's a 'right' outlet in the current route using UrlTree
+    const currentUrl = url || this.router.url;
+    const tree = this.router.parseUrl(currentUrl);
+    const rightGroup = tree.root.children['right'];
+
+    const hasRight = !!rightGroup;
+    this._hasRightContent.set(hasRight);
+
+    if (hasRight) {
+      // Get the full path for the right outlet
+      const rightPath = rightGroup.toString();
+
+      // Only add to history if it's a new path
+      const history = this._rightPanelHistory();
+      if (history.length === 0 || history[history.length - 1] !== rightPath) {
+        this._rightPanelHistory.update(h => [...h, rightPath]);
+      }
+
+      // Set title based on path
+      if (rightPath.startsWith('e/')) {
+        this._rightPanelTitle.set('Thread');
+      } else if (rightPath.startsWith('a/')) {
+        this._rightPanelTitle.set('Article');
+      } else if (rightPath.startsWith('p/')) {
+        this._rightPanelTitle.set('Profile');
+      } else if (rightPath.startsWith('music/')) {
+        this._rightPanelTitle.set('Music');
+      } else if (rightPath.startsWith('stream/')) {
+        this._rightPanelTitle.set('Live Stream');
+      } else {
+        this._rightPanelTitle.set('');
+      }
+    } else {
+      // No right panel - clear title but preserve history for back navigation
+      this._rightPanelTitle.set('');
+    }
+  }
+
+  /**
+   * Go back in right panel navigation stack
+   */
+  goBackRight(): void {
+    const history = this._rightPanelHistory();
+    if (history.length > 1) {
+      // Remove current entry and navigate to previous
+      const previousPath = history[history.length - 2];
+      this._rightPanelHistory.update(h => h.slice(0, -1));
+      this.router.navigate([{ outlets: { right: previousPath.split('/') } }]);
+    } else {
+      // Close right panel
+      this.closeRightPanel();
+    }
+  }
+
+  /**
+   * Close the right panel and clear navigation history.
+   * When X is clicked, the panel is fully closed and history forgotten.
+   */
+  closeRightPanel(): void {
+    this._rightPanelHistory.set([]);
+    this._hasRightContent.set(false);
+    this._rightPanelTitle.set('');
+    // Also reset collapse state when closing right panel
+    this.leftPanelCollapsed.set(false);
+    // Clear the panel navigation right stack
+    this.panelNav.clearRightStack();
+    // Navigate to clear the right outlet
+    this.router.navigate([{ outlets: { right: null } }]);
+  }
+
+  /**
+   * Open event in right panel using routing
+   */
+  openEventInRightPanel(eventId: string): void {
+    this.router.navigate([{ outlets: { right: ['e', eventId] } }]);
+  }
+
+  /**
+   * Open article in right panel using routing
+   */
+  openArticleInRightPanel(naddr: string): void {
+    this.router.navigate([{ outlets: { right: ['a', naddr] } }]);
+  }
+
+  /**
+   * Open profile in right panel using routing
+   */
+  openProfileInRightPanel(pubkey: string): void {
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+  }
+
+  /**
+   * Get the title for the right panel based on current content
+   */
+  getRightPanelTitle(): string {
+    return this.panelNav.getRightTitle();
+  }
+
+  /**
+   * Get the title for the left panel based on current content
+   */
+  getLeftPanelTitle(): string {
+    return this.panelNav.getLeftTitle();
+  }
+
+  /**
+   * Handle scroll events on the left panel for header hide/show
+   */
+  onLeftPanelScroll(event: Event): void {
+    const container = event.target as HTMLElement;
+    const scrollTop = container.scrollTop;
+    const scrollDelta = scrollTop - this.leftPanelLastScrollTop;
+
+    // Scrolling down - hide header after scrolling down past threshold
+    if (scrollDelta > 10 && scrollTop > 100) {
+      this.leftPanelHeaderHidden.set(true);
+    }
+    // Scrolling up - show header immediately
+    else if (scrollDelta < -10) {
+      this.leftPanelHeaderHidden.set(false);
+    }
+    // At the very top - always show header
+    else if (scrollTop <= 50) {
+      this.leftPanelHeaderHidden.set(false);
+    }
+
+    this.leftPanelLastScrollTop = scrollTop;
+  }
+
+  /**
+   * Handle scroll events on the right panel for header hide/show
+   */
+  onRightPanelScroll(event: Event): void {
+    const container = event.target as HTMLElement;
+    const scrollTop = container.scrollTop;
+    const scrollDelta = scrollTop - this.rightPanelLastScrollTop;
+
+    // Scrolling down - hide header after scrolling down past threshold
+    if (scrollDelta > 10 && scrollTop > 100) {
+      this.rightPanelHeaderHidden.set(true);
+    }
+    // Scrolling up - show header immediately
+    else if (scrollDelta < -10) {
+      this.rightPanelHeaderHidden.set(false);
+    }
+    // At the very top - always show header
+    else if (scrollTop <= 50) {
+      this.rightPanelHeaderHidden.set(false);
+    }
+
+    this.rightPanelLastScrollTop = scrollTop;
   }
 
   exitFullscreen(): void {

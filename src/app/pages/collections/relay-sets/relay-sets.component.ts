@@ -15,6 +15,7 @@ import { RelayFeedsService, RelaySet } from '../../../services/relay-feeds.servi
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 
 @Component({
   selector: 'app-relay-sets',
@@ -40,6 +41,7 @@ export class RelaySetsComponent implements OnInit {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   // State
   isLoading = signal(false);
@@ -58,6 +60,7 @@ export class RelaySetsComponent implements OnInit {
   editingSetRelays = signal('');
 
   async ngOnInit() {
+    this.twoColumnLayout.setSplitView();
     await this.loadData();
   }
 

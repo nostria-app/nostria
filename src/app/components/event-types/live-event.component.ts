@@ -331,7 +331,7 @@ export class LiveEventComponent {
       // Fallback to event page
       const event = this.event();
       if (event) {
-        this.router.navigate(['/e', event.id]);
+        this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
       }
     }
   }

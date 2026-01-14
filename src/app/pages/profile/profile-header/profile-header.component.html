@@ -38,7 +38,7 @@
         @let parsedBadge = parsedBadges()[$index];
         @let isTimedOut = isBadgeTimedOut()[$index];
         @if (!isTimedOut) {
-        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item"
+        <a [routerLink]="[{ outlets: { right: ['p', npub() || pubkey(), 'badges'] } }]" class="badge-item"
           (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
           @if (isBadgeFailed()[$index]) {
           <!-- Show failed badge placeholder -->

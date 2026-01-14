@@ -1,4 +1,4 @@
-<a [routerLink]="['/p', npubValue()]" class="profile-link" (mouseenter)="onMouseEnter($event)"
+<a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="profile-link" (mouseenter)="onMouseEnter($event)"
   (mouseleave)="onMouseLeave()">
   @if (isLoading() || profile() === null) {
   ...

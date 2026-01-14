@@ -116,29 +116,41 @@ export class EventHeaderComponent {
     this.layout.openEvent(neventId, event);
   }
 
-  openEventAndStopPropagation(event: MouseEvent) {
+  openEventAndStopPropagation(mouseEvent: MouseEvent) {
     // Allow right-click (button 2) and middle-click (button 1) for "open in new tab"
     // Only handle left-click (button 0) for programmatic navigation
-    if (event.button !== 0) {
+    if (mouseEvent.button !== 0) {
       return;
     }
 
     const currentEvent = this.event();
+    if (!currentEvent) return;
 
     // Prevent default navigation for left-click so we can use router
-    event.preventDefault();
-    event.stopPropagation();
+    mouseEvent.preventDefault();
+    mouseEvent.stopPropagation();
 
-    // Always navigate to the event page - never open dialog from date link click
-    // The dialog should only be opened when clicking the card itself (for kind 1 events)
-    const url = this.eventUrl();
-    this.router.navigate([url], { state: { event: currentEvent } });
+    // Open event in right panel based on kind
+    const neventId = this.nevent();
+    if (currentEvent.kind === 30023) {
+      this.layout.openArticle(neventId);
+    } else {
+      this.layout.openGenericEvent(neventId, currentEvent);
+    }
   }
 
   navigateToEvent() {
     const currentEvent = this.event();
-    const url = this.eventUrl();
-    this.router.navigate([url], { state: { event: currentEvent } });
+    if (!currentEvent) return;
+
+    const neventId = this.nevent();
+    if (currentEvent.kind === 30023) {
+      // Open article in right panel
+      this.layout.openArticle(neventId);
+    } else {
+      // Open event in right panel
+      this.layout.openGenericEvent(neventId, currentEvent);
+    }
   }
 
   async deleteEvent() {
@@ -166,7 +178,7 @@ export class EventHeaderComponent {
         // Delete from local database after successful deletion request
         // This ensures the user doesn't see the event cached locally
         await this.eventService.deleteEventFromLocalStorage(event.id);
-        
+
         this.snackBar.open('Note deleted successfully', 'Dismiss', {
           duration: 3000,
         });

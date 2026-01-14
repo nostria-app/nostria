@@ -244,7 +244,7 @@ export class StreamViewerComponent implements OnInit {
     // If stream has ended, navigate to event details instead
     if (status === 'ended') {
       console.log('[StreamViewer] Stream has ended, redirecting to event details');
-      this.router.navigate(['/e', event.id]);
+      this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
       return;
     }
 
@@ -262,7 +262,7 @@ export class StreamViewerComponent implements OnInit {
     if (!streamUrl) {
       console.error('No streaming URL found in event');
       // For planned or ended streams without URL, show event details
-      this.router.navigate(['/e', event.id]);
+      this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
       return;
     }
 

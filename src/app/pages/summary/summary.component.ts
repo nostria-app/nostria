@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Location } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -34,6 +34,7 @@ import { CustomDialogService, CustomDialogRef } from '../../services/custom-dial
 import { EventDialogComponent } from '../event/event-dialog/event-dialog.component';
 import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { LayoutService } from '../../services/layout.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -97,9 +98,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
-
-  // Current event dialog reference
-  private currentEventDialogRef: CustomDialogRef<EventDialogComponent> | null = null;
+  private readonly router = inject(Router);
+  private readonly layout = inject(LayoutService);
 
   // ViewChild for load more sentinel
   loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
@@ -660,73 +660,31 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timelinePage.set(1);
   }
 
-  // Event dialog methods
+  // Open event detail in the right panel
   openEventDialog(event: MouseEvent, timelineEvent: TimelineEvent & { type: string }): void {
     event.preventDefault();
     event.stopPropagation();
 
-    // Close existing dialog if any
-    if (this.currentEventDialogRef) {
-      this.currentEventDialogRef.close();
-    }
-
-    // Determine the event ID
-    let eventId: string;
-    if (timelineEvent.kind === 30023 && timelineEvent.tags) {
-      // For articles, generate naddr
-      const dTag = timelineEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+    // For articles (kind 30023), use layout service to open in right panel
+    if (timelineEvent.kind === 30023) {
+      const dTag = timelineEvent.tags?.find(t => t[0] === 'd')?.[1] || '';
       try {
-        eventId = nip19.naddrEncode({
+        const naddr = nip19.naddrEncode({
           kind: 30023,
           pubkey: timelineEvent.pubkey,
           identifier: dTag,
         });
-      } catch {
-        eventId = timelineEvent.id;
+        this.layout.openArticle(naddr);
+        return;
+      } catch (err) {
+        console.error('[Summary] Failed to encode article naddr:', err);
+        // Fall through to regular event handling
       }
-    } else {
-      eventId = timelineEvent.id;
     }
 
-    // Update URL without navigation to support back button
-    // Use replaceState to avoid creating extra history entries
-    const previousUrl = this.location.path();
-    this.location.replaceState(`/e/${eventId}`);
-
-    // Open dialog using CustomDialogService
-    this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
-      title: 'Thread',
-      width: '800px',
-      maxWidth: '100%',
-      showBackButton: true,
-      showCloseButton: false,
-      data: { eventId },
-    });
-
-    // Set the data on the component instance
-    this.currentEventDialogRef.componentInstance.data = { eventId };
-
-    // Fetch author profile to update dialog title
-    this.onDemandUserData.getProfile(timelineEvent.pubkey).then(profile => {
-      if (profile && this.currentEventDialogRef) {
-        const authorName = profile.data?.display_name || profile.data?.name;
-        if (authorName) {
-          this.currentEventDialogRef.updateTitle(`${authorName}'s post`);
-        }
-      }
-    }).catch(() => {
-      // Silently ignore profile fetch errors, keep default title
-    });
-
-    // Restore URL when dialog is closed (only if not closed via back button)
-    this.currentEventDialogRef.afterClosed$.subscribe(({ closedViaBackButton }) => {
-      // Only restore URL if dialog was closed programmatically (not via back button)
-      // When closed via back button, the browser already handled the URL navigation
-      if (!closedViaBackButton) {
-        this.location.replaceState(previousUrl);
-      }
-      this.currentEventDialogRef = null;
-    });
+    // For regular events, navigate to event route in right outlet
+    const eventId = timelineEvent.id;
+    this.router.navigate([{ outlets: { right: ['e', eventId] } }]);
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {
@@ -748,6 +706,23 @@ export class SummaryComponent implements OnInit, OnDestroy {
       case 30023: return 'Article';
       case 20: return 'Media';
       default: return 'Event';
+    }
+  }
+
+  // Open article in the right panel
+  openArticle(event: TimelineEvent): void {
+    const dTag = event.tags?.find(t => t[0] === 'd')?.[1] || '';
+    try {
+      const naddr = nip19.naddrEncode({
+        kind: 30023,
+        pubkey: event.pubkey,
+        identifier: dTag,
+      });
+      this.layout.openArticle(naddr);
+    } catch (err) {
+      console.error('[Summary] Failed to encode article naddr:', err);
+      // Fallback to event dialog
+      this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
     }
   }
 

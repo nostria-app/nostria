@@ -10,10 +10,6 @@ import { MusicTermsContentComponent } from '../music-terms-content/music-terms-c
   imports: [MatButtonModule, MatIconModule, MusicTermsContentComponent],
   template: `
     <div class="terms-container">
-      <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Go back">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      
       <div class="terms-wrapper">
         <app-music-terms-content />
       </div>
@@ -25,10 +21,6 @@ import { MusicTermsContentComponent } from '../music-terms-content/music-terms-c
       margin: 0 auto;
       padding: 1rem;
       padding-bottom: 120px;
-    }
-
-    .back-button {
-      margin-bottom: 1rem;
     }
 
     .terms-wrapper {

@@ -21,9 +21,6 @@ import { MediaItem } from '../../../interfaces';
   template: `
     <div class="offline-music-container">
       <div class="header">
-        <button mat-icon-button (click)="goBack()" aria-label="Go back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
         <h1>Offline Library</h1>
         <span class="spacer"></span>
         @if (tracks().length > 0) {

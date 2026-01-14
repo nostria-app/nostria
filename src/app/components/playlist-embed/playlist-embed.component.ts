@@ -540,6 +540,6 @@ export class PlaylistEmbedComponent {
       author: ev.pubkey,
       kind: ev.kind,
     });
-    this.router.navigate(['/e', nevent], { state: { event: ev } });
+    this.router.navigate([{ outlets: { right: ['e', nevent] } }], { state: { event: ev } });
   }
 }

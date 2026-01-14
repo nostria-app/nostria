@@ -592,24 +592,24 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     switch (type) {
       case 'npub':
       case 'nprofile': {
-        // Navigate to profile page
+        // Open profile in right panel
         const record = data as Record<string, unknown>;
         const pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
-        this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
+        this.layoutService.openProfile(pubkey);
         break;
       }
       case 'note':
       case 'nevent': {
-        // Navigate to event page
+        // Open event in right panel using nevent format
         const record = data as Record<string, unknown>;
         const eventId = type === 'note' ? String(data) : String(record['id'] || '');
-        this.router.navigate(['/e', eventId]);
+        this.layoutService.openGenericEvent(eventId);
         break;
       }
       case 'naddr': {
-        // Navigate to address-based event
+        // Open address-based event (article) in right panel
         const encoded = this.parsing.extractNostrUriIdentifier(token.content);
-        this.router.navigate(['/a', encoded]);
+        this.layoutService.openArticle(encoded);
         break;
       }
       default:

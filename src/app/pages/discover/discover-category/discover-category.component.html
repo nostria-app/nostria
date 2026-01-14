@@ -2,9 +2,6 @@
   <!-- Header -->
   <header class="category-header" [style.background]="category()?.gradient">
     <div class="header-content">
-      <button mat-icon-button class="back-button" (click)="goBack()">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
       <div class="header-icon">
         <mat-icon>{{ category()?.icon }}</mat-icon>
       </div>
@@ -28,7 +25,7 @@
   <div class="error-container">
     <mat-icon>error_outline</mat-icon>
     <p>{{ error() }}</p>
-    <button mat-flat-button (click)="goBack()">Go Back</button>
+    <button mat-flat-button routerLink="/discover">Go Back</button>
   </div>
   }
 
@@ -366,7 +363,7 @@
       <mat-icon>explore_off</mat-icon>
       <h3>No curated content yet</h3>
       <p>We're working on curating amazing content for this category. Check back soon!</p>
-      <button mat-flat-button (click)="goBack()">Browse Other Categories</button>
+      <button mat-flat-button routerLink="/discover">Browse Other Categories</button>
     </div>
     }
   </div>

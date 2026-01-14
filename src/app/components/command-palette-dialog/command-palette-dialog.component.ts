@@ -72,14 +72,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-profile',
       label: 'Open Profile',
       icon: 'person',
-      action: () => this.router.navigate(['/p', this.accountState.pubkey()]), // Assuming /profile redirects to current user
+      action: () => this.router.navigate([{ outlets: { right: ['p', this.accountState.pubkey()] } }]), // Assuming /profile redirects to current user
       keywords: ['profile', 'me', 'account', 'user']
     },
     {
       id: 'nav-profile-edit',
       label: 'Edit Profile',
       icon: 'edit',
-      action: () => this.router.navigate(['/p', this.accountState.pubkey(), 'edit']), // Assuming /profile redirects to current user
+      action: () => this.router.navigate([{ outlets: { right: ['p', this.accountState.pubkey(), 'edit'] } }]), // Assuming /profile redirects to current user
       keywords: ['profile', 'me', 'account', 'user', 'edit']
     },
     {
@@ -107,7 +107,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-bookmarks',
       label: 'Open Bookmarks',
       icon: 'bookmarks',
-      action: () => this.router.navigate(['/bookmarks']),
+      action: () => this.router.navigate(['/collections/bookmarks']),
       keywords: ['bookmarks', 'saved', 'favorites']
     },
     {

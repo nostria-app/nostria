@@ -445,7 +445,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   openEvent(eventId: string) {
-    this.router.navigate(['/e', eventId]);
+    this.layout.openGenericEvent(eventId);
   }
 
   clearSearch() {
