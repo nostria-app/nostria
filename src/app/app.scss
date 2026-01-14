@@ -393,11 +393,20 @@ mat-sidenav-content {
       min-width: 700px;
       max-width: 700px;
 
-      // Responsive: scale down on smaller screens
-      @media (max-width: 740px) {
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
+      // Responsive: scale down proportionally when both panels shown
+      @media (max-width: 1440px) {
+        width: 50%;
+        min-width: 0;
+        max-width: 50%;
+      }
+    }
+
+    // Scale right panel proportionally too
+    .right-panel {
+      @media (max-width: 1440px) {
+        width: 50%;
+        min-width: 0;
+        max-width: 50%;
       }
     }
   }
