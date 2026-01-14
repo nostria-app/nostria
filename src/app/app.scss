@@ -643,7 +643,8 @@ mat-sidenav-content {
   overflow: hidden;
   position: relative;
   z-index: 5;
-  background-color: var(--mat-sys-background);
+  // Transparent background - content renders behind main toolbar
+  background-color: transparent;
   // Smooth transitions for position and shadow changes
   transition:
     margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -707,14 +708,17 @@ mat-sidenav-content {
 
 // Panel Header - Navigation controls (used by both panels)
 // Container is transparent, child sections get glass effect
+// Uses absolute positioning so content can scroll behind it
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 8px 16px;
-  position: sticky;
+  position: absolute;
   top: var(--toolbar-height, 64px);
+  left: 0;
+  right: 0;
   z-index: 201;
   pointer-events: none;
   transition: transform 0.3s ease;
@@ -828,16 +832,22 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Only add padding when there's no header above (feeds mode)
-  // When panel-header is shown, it handles the toolbar offset via sticky positioning
-  padding-top: var(--toolbar-height, 64px);
+  // Content scrolls from top (behind transparent toolbar)
+  // Padding-top ensures content isn't hidden behind toolbar + panel header
+  // toolbar (64px) + panel header (64px with margin) = ~128px
+  padding-top: calc(var(--toolbar-height, 64px) + 72px);
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
-// When panel-header is present, reduce padding since header handles toolbar offset
+// When left panel has content (has header), use full padding for header clearance
 .left-panel.has-content .panel-content {
-  padding-top: 0;
+  padding-top: calc(var(--toolbar-height, 64px) + 72px);
+}
+
+// When left panel shows feeds (no header), only need toolbar clearance
+.left-panel:not(.has-content) .panel-content {
+  padding-top: var(--toolbar-height, 64px);
 }
 
 // Legacy class names for backwards compatibility
@@ -851,6 +861,8 @@ mat-sidenav-content {
 
 .right-panel-content {
   @extend .panel-content;
+  // Right panel always has header, so always needs full padding
+  padding-top: calc(var(--toolbar-height, 64px) + 72px);
 }
 
 // Legacy support - keep old class names working during transition
