@@ -1,4 +1,4 @@
-<div class="app-container" [class.dark-theme]="themeService.darkMode()"
+<div class="app-container" [class.dark-theme]="themeService.darkMode()" [class.has-right-content]="hasRightContent()"
   [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
   [style.background-color]="themeService.darkMode() ? '#18111b' : '#FEF7FA'">
   <!-- Success overlay with checkmark -->
