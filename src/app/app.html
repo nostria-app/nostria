@@ -422,20 +422,43 @@
           <!-- Left panel content header -->
           @if (panelNav.hasLeftContent()) {
           <div class="panel-header left-panel-header" [class.header-hidden]="leftPanelHeaderHidden()">
-            @if (panelNav.canGoBackLeft()) {
-            <button mat-icon-button (click)="goBackLeft()" class="nav-button back-button" matTooltip="Go back"
-              i18n-matTooltip="@@app.nav.back">
-              <mat-icon>arrow_back</mat-icon>
-            </button>
-            }
-            <span class="panel-title">{{ panelNav.getLeftTitle() }}</span>
-            <span class="spacer"></span>
-            <button mat-icon-button (click)="closeLeftPanel()" class="nav-button close-button" matTooltip="Close"
-              i18n-matTooltip="@@app.nav.close">
-              <mat-icon>close</mat-icon>
-            </button>
+            <div class="header-left">
+              @if (panelNav.canGoBackLeft()) {
+              <button mat-icon-button (click)="goBackLeft()" class="nav-button back-button" matTooltip="Go back"
+                i18n-matTooltip="@@app.nav.back">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              }
+              <span class="panel-title">{{ panelNav.getLeftTitle() }}</span>
+            </div>
+            <div class="header-right">
+              @for (action of panelActions.leftPanelActions(); track action.id) {
+              @if (action.menu) {
+              <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsMenu"
+                [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+                [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              }
+              }
+              <button mat-icon-button (click)="closeLeftPanel()" class="nav-button close-button" matTooltip="Close"
+                i18n-matTooltip="@@app.nav.close">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           </div>
           }
+
+          <!-- Left panel actions menu (always present, template controls content) -->
+          <mat-menu #leftPanelActionsMenu="matMenu">
+            @if (panelActions.leftPanelMenuTemplate()) {
+            <ng-container *ngTemplateOutlet="panelActions.leftPanelMenuTemplate()!"></ng-container>
+            }
+          </mat-menu>
 
           <!-- Left panel content - router outlet renders here for list routes -->
           <div class="panel-content left-panel-content" (scroll)="onLeftPanelScroll($event)">
@@ -451,20 +474,43 @@
           <!-- Right panel header -->
           @if (hasRightContent()) {
           <div class="panel-header right-panel-header">
-            @if (canGoBackRight()) {
-            <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
-              i18n-matTooltip="@@app.nav.back">
-              <mat-icon>arrow_back</mat-icon>
-            </button>
-            }
-            <span class="panel-title">{{ rightPanelTitle() }}</span>
-            <span class="spacer"></span>
-            <button mat-icon-button (click)="closeRightPanel()" class="nav-button close-button" matTooltip="Close"
-              i18n-matTooltip="@@app.nav.close">
-              <mat-icon>close</mat-icon>
-            </button>
+            <div class="header-left">
+              @if (canGoBackRight()) {
+              <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
+                i18n-matTooltip="@@app.nav.back">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              }
+              <span class="panel-title">{{ rightPanelTitle() }}</span>
+            </div>
+            <div class="header-right">
+              @for (action of panelActions.rightPanelActions(); track action.id) {
+              @if (action.menu) {
+              <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu"
+                [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+                [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              }
+              }
+              <button mat-icon-button (click)="closeRightPanel()" class="nav-button close-button" matTooltip="Close"
+                i18n-matTooltip="@@app.nav.close">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           </div>
           }
+
+          <!-- Right panel actions menu (always present, template controls content) -->
+          <mat-menu #rightPanelActionsMenu="matMenu">
+            @if (panelActions.rightPanelMenuTemplate()) {
+            <ng-container *ngTemplateOutlet="panelActions.rightPanelMenuTemplate()!"></ng-container>
+            }
+          </mat-menu>
 
           <!-- Right panel content - named router outlet for detail views -->
           <div class="panel-content right-panel-content">
