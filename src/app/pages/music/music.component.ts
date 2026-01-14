@@ -1,5 +1,5 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect, HostListener } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect, HostListener, OnInit, TemplateRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,7 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -41,7 +42,6 @@ const SECTION_LIMIT = 12;
     MatIconModule,
     MatMenuModule,
     FormsModule,
-    RouterLink,
     MusicEventComponent,
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
@@ -52,7 +52,7 @@ const SECTION_LIMIT = 12;
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
 })
-export class MusicComponent implements OnDestroy {
+export class MusicComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -68,6 +68,7 @@ export class MusicComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private panelActions = inject(PanelActionsService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -329,6 +330,9 @@ export class MusicComponent implements OnDestroy {
   private readonly RELAY_SET_KIND = 30002;
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
 
+  // Template for add menu (used in panel header)
+  @ViewChild('addMenuTemplate') addMenuTemplate!: TemplateRef<unknown>;
+
   constructor() {
     this.twoColumnLayout.setWideLeft();
     // Load collapsed state from storage
@@ -340,6 +344,60 @@ export class MusicComponent implements OnDestroy {
 
     // Update container width after view init
     setTimeout(() => this.updateContainerWidth(), 100);
+  }
+
+  ngOnInit(): void {
+    // Register panel header actions
+    this.setupPanelActions();
+  }
+
+  private setupPanelActions(): void {
+    const actions = [
+      {
+        id: 'search',
+        icon: 'search',
+        label: 'Search',
+        tooltip: 'Search music',
+        action: () => this.toggleSearch(),
+      },
+    ];
+
+    if (this.isAuthenticated()) {
+      actions.push(
+        {
+          id: 'add',
+          icon: 'add',
+          label: 'Add',
+          tooltip: 'Add content',
+          action: () => { }, // Menu trigger handled by template
+          menu: true,
+        } as any,
+        {
+          id: 'settings',
+          icon: 'settings',
+          label: 'Settings',
+          tooltip: 'Music settings',
+          action: () => this.openSettings(),
+        }
+      );
+    }
+
+    actions.push({
+      id: 'refresh',
+      icon: 'refresh',
+      label: 'Refresh',
+      tooltip: 'Refresh music',
+      action: () => this.refresh(),
+    });
+
+    this.panelActions.setLeftPanelActions(actions);
+
+    // Set menu template after view init
+    setTimeout(() => {
+      if (this.addMenuTemplate) {
+        this.panelActions.setLeftPanelMenuTemplate(this.addMenuTemplate);
+      }
+    });
   }
 
   /**
@@ -471,6 +529,7 @@ export class MusicComponent implements OnDestroy {
     this.twoColumnLayout.setSplitView();
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
+    this.panelActions.clearLeftPanelActions();
   }
 
   /**

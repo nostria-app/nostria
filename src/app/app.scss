@@ -709,8 +709,9 @@ mat-sidenav-content {
 .panel-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 8px 8px 12px;
   position: sticky;
   top: var(--toolbar-height, 64px);
   z-index: 201;
@@ -739,20 +740,42 @@ mat-sidenav-content {
     pointer-events: none;
   }
 
+  // Left section: back button + title
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    flex-shrink: 1;
+
+    .panel-title {
+      font-size: 1rem;
+      color: var(--mat-sys-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // Right section: actions + close button
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
   .nav-button {
     flex-shrink: 0;
   }
 
-  .panel-title {
-    font-size: 1rem;
-    color: var(--mat-sys-on-surface);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .action-button {
+    flex-shrink: 0;
   }
 
-  .spacer {
-    flex: 1;
+  // Override global .close-button absolute positioning - keep in flex flow
+  .close-button {
+    position: static;
   }
 }
 
