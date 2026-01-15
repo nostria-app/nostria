@@ -109,19 +109,20 @@
   }
 }
 
-.header-actions {
+.remote-signer-status.inline-status {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin: 0 12px;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
 
-.spacer {
-  flex: 1;
-  /* takes remaining space */
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
 }
 
 .message-threads {

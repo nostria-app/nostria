@@ -303,7 +303,7 @@ export class TwoColumnLayoutService {
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
     const wideRoutes = ['streams', 'music', 'messages', 'collections/bookmarks', 'articles', 'discover'];
-    const isWideRoute = isHome || wideRoutes.includes(cleanUrl);
+    const isWideRoute = isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/'));
     if (isWideRoute) {
       this._leftWidthMode.set('wide');
     } else {

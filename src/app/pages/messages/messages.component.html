@@ -1,3 +1,19 @@
+<ng-template #menuTemplate>
+  <button mat-menu-item (click)="toggleShowHiddenChats()">
+    <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
+    <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
+  </button>
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="markAllChatsAsRead()">
+    <mat-icon>done_all</mat-icon>
+    <span>Mark All as Read</span>
+  </button>
+  <button mat-menu-item (click)="resetLocalMessagesCache()">
+    <mat-icon>delete_sweep</mat-icon>
+    <span>Reset Messages Cache</span>
+  </button>
+</ng-template>
+
 <div class="messages">
   @if (isLoading() && !selectedChat()) {
   <div class="loading-container">
@@ -24,45 +40,22 @@
   </div>
   } @else {
   <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
+    @if (showSearch()) {
     <div class="message-threads-header">
       <input class="chat-search-input" type="text" placeholder="Search chats..." [ngModel]="chatSearchQuery()"
-        (ngModelChange)="chatSearchQuery.set($event)" />
-      @if (chatSearchQuery()) {
-      <button mat-icon-button class="clear-search-button" (click)="chatSearchQuery.set('')" aria-label="Clear search">
+        (ngModelChange)="chatSearchQuery.set($event)" autofocus />
+      <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
         <mat-icon>close</mat-icon>
       </button>
-      }
-      <div class="header-actions">
-        <button mat-icon-button aria-label="New chat" (click)="startNewChat()" matTooltip="New chat">
-          <mat-icon>edit</mat-icon>
-        </button>
-        @if (encryption.pendingBunkerOperations() > 0 || encryption.isBunkerConnecting()) {
-        <button mat-icon-button
-          [matTooltip]="encryption.isBunkerConnecting() ? 'Connecting to remote signer...' : 'Decrypting ' + encryption.pendingBunkerOperations() + ' messages via remote signer'"
-          class="remote-signer-indicator">
-          <mat-icon class="rotating">sync</mat-icon>
-        </button>
-        }
-        <button mat-icon-button [matMenuTriggerFor]="chatSettingsMenu" aria-label="Chat settings">
-          <mat-icon>settings</mat-icon>
-        </button>
-        <mat-menu #chatSettingsMenu="matMenu">
-          <button mat-menu-item (click)="toggleShowHiddenChats()">
-            <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
-            <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
-          </button>
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="markAllChatsAsRead()">
-            <mat-icon>done_all</mat-icon>
-            <span>Mark All as Read</span>
-          </button>
-          <button mat-menu-item (click)="resetLocalMessagesCache()">
-            <mat-icon>delete_sweep</mat-icon>
-            <span>Reset Messages Cache</span>
-          </button>
-        </mat-menu>
-      </div>
     </div>
+    }
+    @if (encryption.pendingBunkerOperations() > 0 || encryption.isBunkerConnecting()) {
+    <div class="remote-signer-status inline-status">
+      <mat-icon class="rotating">sync</mat-icon>
+      <span>{{ encryption.isBunkerConnecting() ? 'Connecting to remote signer...' : 'Decrypting ' +
+        encryption.pendingBunkerOperations() + ' messages via remote signer' }}</span>
+    </div>
+    }
     <div class="message-threads" #messageThreads>
       @if (!hasChats()) {
       <div class="empty-chats">
