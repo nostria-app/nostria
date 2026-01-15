@@ -342,8 +342,11 @@ export class MusicComponent implements OnInit, OnDestroy {
     }
     this.initializeMusic();
 
-    // Update container width after view init
-    setTimeout(() => this.updateContainerWidth(), 100);
+    // Update container width after view init and after CSS transitions complete
+    // First update quickly for initial render
+    setTimeout(() => this.updateContainerWidth(), 50);
+    // Second update after CSS width transitions complete (transition is ~300ms)
+    setTimeout(() => this.updateContainerWidth(), 400);
   }
 
   ngOnInit(): void {
@@ -526,7 +529,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.twoColumnLayout.setSplitView();
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
     this.panelActions.clearLeftPanelActions();

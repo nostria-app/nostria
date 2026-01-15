@@ -1,8 +1,9 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, NavigationEnd, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { NavigationStackService } from './navigation-stack.service';
 import { PanelNavigationService } from './panel-navigation.service';
+import { PanelActionsService } from './panel-actions.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Event } from 'nostr-tools';
 
@@ -42,6 +43,7 @@ export class TwoColumnLayoutService {
   private router = inject(Router);
   private navigationStack = inject(NavigationStackService);
   private panelNav = inject(PanelNavigationService);
+  private panelActions = inject(PanelActionsService);
   private breakpointObserver = inject(BreakpointObserver);
 
   // Column widths
@@ -260,6 +262,15 @@ export class TwoColumnLayoutService {
       this.isMobile.set(result.matches);
     });
 
+    // Clear panel actions on navigation start (before new component loads)
+    // This ensures old component's actions don't persist to new component
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe(() => {
+      this.panelActions.clearLeftPanelActions();
+      this.panelActions.clearRightPanelActions();
+    });
+
     // Track route changes
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
@@ -288,10 +299,11 @@ export class TwoColumnLayoutService {
     this.isDetailRoute.set(false);
 
     // Set width mode based on route:
-    // - Home route and streams get wide mode (1400px)
+    // - Home, music, streams, messages, bookmarks, articles, and discover get wide mode (1400px)
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
-    const isWideRoute = isHome || cleanUrl === 'streams';
+    const wideRoutes = ['streams', 'music', 'messages', 'collections/bookmarks', 'articles', 'discover'];
+    const isWideRoute = isHome || wideRoutes.includes(cleanUrl);
     if (isWideRoute) {
       this._leftWidthMode.set('wide');
     } else {
