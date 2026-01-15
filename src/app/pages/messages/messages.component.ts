@@ -10,6 +10,7 @@ import {
   computed,
   effect,
   untracked,
+  TemplateRef,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -61,6 +62,7 @@ import { EncryptionPermissionService } from '../../services/encryption-permissio
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
@@ -153,11 +155,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
+  private panelActions = inject(PanelActionsService);
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly speechService = inject(SpeechService);
   private readonly settings = inject(SettingsService);
   readonly localSettings = inject(LocalSettingsService);
+
+  @ViewChild('menuTemplate') menuTemplate!: TemplateRef<unknown>;
+
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
@@ -169,6 +175,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   chatSearchQuery = signal<string>(''); // Search query for filtering chats
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
   showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
+  showSearch = signal<boolean>(false); // Toggle search input visibility
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
 
@@ -554,6 +561,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Setup panel actions
+    this.setupPanelActions();
+
     // Start live subscription for incoming DMs
     this.startLiveSubscription();
 
@@ -644,7 +654,44 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  private setupPanelActions(): void {
+    this.panelActions.setLeftPanelActions([
+      {
+        id: 'search',
+        icon: 'search',
+        label: 'Search',
+        tooltip: 'Search chats',
+        action: () => this.toggleSearch(),
+      },
+      {
+        id: 'new-chat',
+        icon: 'edit',
+        label: 'New chat',
+        tooltip: 'New chat',
+        action: () => this.startNewChat(),
+      },
+      {
+        id: 'more',
+        icon: 'more_vert',
+        label: 'More options',
+        tooltip: 'More options',
+        action: () => {},
+        menu: true,
+      },
+    ]);
+  }
+
+  toggleSearch(): void {
+    this.showSearch.update(v => !v);
+    if (!this.showSearch()) {
+      this.chatSearchQuery.set('');
+    }
+  }
+
   ngAfterViewInit(): void {
+    // Set up the menu template for panel actions
+    this.panelActions.setLeftPanelMenuTemplate(this.menuTemplate);
+
     // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
     setTimeout(() => {
       this.setupScrollListener();
@@ -827,6 +874,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    // Clear panel actions
+    this.panelActions.clearLeftPanelActions();
+
     // Reset mobile nav visibility
     this.layout.hideMobileNav.set(false);
 
