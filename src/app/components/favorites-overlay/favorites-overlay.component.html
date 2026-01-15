@@ -1,6 +1,6 @@
-<div class="favorites-container hide-tiny">
+<div class="favorites-container">
 
-  <!-- Top 5 favorites preview -->
+  <!-- Favorites preview in toolbar -->
   @if (favorites().length > 0) {
   <div class="favorites-preview">
     @for (item of topFavorites(); track item.pubkey) {

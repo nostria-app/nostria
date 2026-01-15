@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, untracked } from '@angular/core';
+import { Component, inject, computed, signal, effect, untracked, OnDestroy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,7 +26,7 @@ import { UtilitiesService } from '../../services/utilities.service';
   templateUrl: './favorites-overlay.component.html',
   styleUrl: './favorites-overlay.component.scss',
 })
-export class FavoritesOverlayComponent {
+export class FavoritesOverlayComponent implements OnDestroy {
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
   private data = inject(DataService);
@@ -51,12 +51,18 @@ export class FavoritesOverlayComponent {
   draggedIndex = signal<number | null>(null);
   dropTargetIndex = signal<number | null>(null);
 
+  // Signal to track visible favorites count based on screen width
+  visibleFavoritesCount = signal(5);
+
   // Track touch drag state
   private touchStartY = 0;
   private touchStartX = 0;
   private touchCurrentY = 0;
   private touchCurrentX = 0;
   private touchDragTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Resize handler reference for cleanup
+  private resizeHandler = () => this.updateVisibleFavoritesCount();
 
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
@@ -96,6 +102,14 @@ export class FavoritesOverlayComponent {
   });
 
   constructor() {
+    // Initialize visible favorites count based on screen width
+    this.updateVisibleFavoritesCount();
+    
+    // Listen for window resize to update visible count
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this.resizeHandler);
+    }
+
     // Load docked preference from account local state
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -208,14 +222,51 @@ export class FavoritesOverlayComponent {
     });
   }
 
-  // Computed to get top 5 favorites
+  // Calculate visible favorites based on screen width
+  private updateVisibleFavoritesCount(): void {
+    if (typeof window === 'undefined') {
+      this.visibleFavoritesCount.set(5);
+      return;
+    }
+    
+    const width = window.innerWidth;
+    // Each avatar takes approximately 42px (36px avatar + 6px gap)
+    // Reserve space for: hamburger (48px), navigation (48px), title (~120px), 
+    // search button (48px), notifications (48px), profile (48px) = ~360px minimum
+    // Plus the "more" button (42px) and some padding
+    
+    if (width < 600) {
+      // Mobile: show only 1
+      this.visibleFavoritesCount.set(1);
+    } else if (width < 768) {
+      // Small tablet: show 2
+      this.visibleFavoritesCount.set(2);
+    } else if (width < 1024) {
+      // Tablet: show 3
+      this.visibleFavoritesCount.set(3);
+    } else if (width < 1280) {
+      // Small desktop: show 5
+      this.visibleFavoritesCount.set(5);
+    } else if (width < 1600) {
+      // Medium desktop: show 7
+      this.visibleFavoritesCount.set(7);
+    } else if (width < 1920) {
+      // Large desktop: show 9
+      this.visibleFavoritesCount.set(9);
+    } else {
+      // Very large/ultrawide: show up to 12
+      this.visibleFavoritesCount.set(12);
+    }
+  }
+
+  // Computed to get visible favorites based on screen size
   topFavorites = computed(() => {
-    return this.favoritesWithProfiles().slice(0, 5);
+    return this.favoritesWithProfiles().slice(0, this.visibleFavoritesCount());
   });
 
-  // Computed to check if there are more than 5 favorites
+  // Computed to check if there are more favorites than shown
   hasMoreFavorites = computed(() => {
-    return this.favorites().length > 5;
+    return this.favorites().length > this.visibleFavoritesCount();
   });
 
   // Check if we should show the more button (has following beyond favorites)
@@ -593,5 +644,12 @@ export class FavoritesOverlayComponent {
     this.draggedIndex.set(null);
     this.dropTargetIndex.set(null);
     this.isDragging.set(false);
+  }
+
+  ngOnDestroy(): void {
+    // Clean up resize listener
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
   }
 }

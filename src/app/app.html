@@ -72,15 +72,14 @@
         </button>
         <app-search-results></app-search-results>
       </div>
-      @if (!layout.search() && app.authenticated()) {
-      <!-- Centered favorites overlay when not searching -->
-      <app-favorites-overlay></app-favorites-overlay>
-      }
     </span>
 
     <!-- Right section: action buttons and profile -->
     @if (!layout.search()) {
     <div class="toolbar-section toolbar-right">
+      @if (app.authenticated()) {
+      <app-favorites-overlay></app-favorites-overlay>
+      }
       @if (pwaUpdateService.updateAvailable()) {
       <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
         i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
