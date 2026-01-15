@@ -329,17 +329,10 @@ mat-sidenav-content {
     justify-content: center;
 
     .left-panel {
-      // Use CSS variable for dynamic width
-      width: var(--left-column-width, 700px);
-      min-width: var(--left-column-width, 700px);
-      max-width: var(--left-column-width, 700px);
-
-      // Responsive: scale down on smaller screens
-      @media (max-width: 740px) {
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
-      }
+      // Use CSS variable for dynamic width, clamped to available space
+      width: min(var(--left-column-width, 700px), 100%);
+      min-width: 0; // Allow shrinking
+      max-width: min(var(--left-column-width, 700px), 100%);
     }
 
     .right-panel {
@@ -350,16 +343,10 @@ mat-sidenav-content {
   // Wide left mode (e.g., Music without detail open)
   &.wide-left:not(.has-right-content) {
     .left-panel {
-      width: var(--left-column-width, 1400px);
-      min-width: var(--left-column-width, 1400px);
-      max-width: var(--left-column-width, 1400px);
-
-      // Responsive: scale down on smaller screens
-      @media (max-width: 1440px) {
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
-      }
+      // Use min() to clamp to available space while preferring the configured width
+      width: min(var(--left-column-width, 1400px), 100%);
+      min-width: 0; // Allow shrinking
+      max-width: min(var(--left-column-width, 1400px), 100%);
     }
   }
 
@@ -387,27 +374,18 @@ mat-sidenav-content {
       flex-direction: column;
     }
 
-    // Ensure left panel shrinks to 700px when right has content
+    // Ensure left panel shrinks to 700px when right has content, or smaller if space is tight
     .left-panel {
-      width: 700px;
-      min-width: 700px;
-      max-width: 700px;
-
-      // Responsive: scale down proportionally when both panels shown
-      @media (max-width: 1440px) {
-        width: 50%;
-        min-width: 0;
-        max-width: 50%;
-      }
+      width: min(700px, 50%);
+      min-width: 0;
+      max-width: min(700px, 50%);
     }
 
-    // Scale right panel proportionally too
+    // Scale right panel similarly
     .right-panel {
-      @media (max-width: 1440px) {
-        width: 50%;
-        min-width: 0;
-        max-width: 50%;
-      }
+      width: min(700px, 50%);
+      min-width: 0;
+      max-width: min(700px, 50%);
     }
   }
 
@@ -480,12 +458,13 @@ mat-sidenav-content {
 
 // Left Panel
 .left-panel {
-  width: var(--left-column-width, 700px);
-  min-width: var(--left-column-width, 700px);
-  max-width: var(--left-column-width, 700px);
+  // Use min() to allow shrinking when container is smaller than preferred width
+  width: min(var(--left-column-width, 700px), 100%);
+  min-width: 0; // Allow shrinking below preferred width
+  max-width: min(var(--left-column-width, 700px), 100%);
   height: 100%;
   overflow: hidden;
-  flex-shrink: 0;
+  flex-shrink: 1; // Allow flexbox to shrink this panel
   display: flex;
   flex-direction: column;
   position: relative;
@@ -500,13 +479,6 @@ mat-sidenav-content {
     transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
     z-index 0s linear 0.2s;
-
-  // Responsive: scale down on smaller screens (non-mobile)
-  @media (max-width: 740px) {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-  }
 
   // When left panel has content, ensure proper layout for header + content
   &.has-content {
@@ -570,14 +542,6 @@ mat-sidenav-content {
   // When animating, ensure smooth transition
   &.animating {
     will-change: transform, opacity;
-  }
-
-  // Responsive - tablets
-  @media (max-width: 1440px) and (min-width: 1024px) {
-    // Use CSS variable but cap at 600px on tablets
-    width: min(var(--left-column-width, 700px), 600px);
-    min-width: min(var(--left-column-width, 700px), 600px);
-    max-width: min(var(--left-column-width, 700px), 600px);
   }
 }
 

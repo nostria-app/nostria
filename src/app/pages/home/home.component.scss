@@ -551,6 +551,10 @@
 
 // Responsive Breakpoints
 @media (max-width: 1100px) {
+  .triple-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .media-features .media-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -561,6 +565,10 @@
 }
 
 @media (max-width: 800px) {
+  .triple-cards {
+    grid-template-columns: 1fr;
+  }
+
   .secondary-features .compact-grid {
     grid-template-columns: repeat(2, 1fr);
   }
