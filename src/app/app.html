@@ -45,76 +45,7 @@
       </span>
       }
     </div>
-
-    <!-- Center section: Panel toolbars aligned with content columns (wide screens only) -->
-    <div class="toolbar-center-panels hide-below-wide"
-      [style.--left-column-width.px]="twoColumnLayout.leftColumnWidth()">
-      <!-- Left panel toolbar - aligned with left content column -->
-      @if (panelActions.pageTitle() || panelActions.leftPanelActions().length > 0) {
-      <div class="toolbar-section toolbar-panel-left" [class.shrunk]="hasRightContent()">
-        <span class="panel-title title-font">{{ panelActions.pageTitle() }}</span>
-        @if (panelActions.leftPanelHeaderLeftContent()) {
-        <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
-        }
-        @for (action of panelActions.leftPanelActions(); track action.id) {
-        @if (action.menu) {
-        <button mat-icon-button [matMenuTriggerFor]="toolbarLeftPanelMenu" [matTooltip]="action.tooltip || action.label"
-          [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        } @else {
-        <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-          [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        }
-        }
-      </div>
-      }
-
-      <!-- Right panel toolbar - aligned with right content column -->
-      @if (hasRightContent() && (canGoBackRight() || rightPanelTitle() || panelActions.rightPanelActions().length > 0))
-      {
-      <div class="toolbar-section toolbar-panel-right">
-        @if (canGoBackRight()) {
-        <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
-          i18n-matTooltip="@@app.nav.back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        }
-        <span class="panel-title">{{ rightPanelTitle() }}</span>
-        @if (panelActions.rightPanelHeaderLeftContent()) {
-        <ng-container *ngTemplateOutlet="panelActions.rightPanelHeaderLeftContent()!"></ng-container>
-        }
-        @for (action of panelActions.rightPanelActions(); track action.id) {
-        @if (action.menu) {
-        <button mat-icon-button [matMenuTriggerFor]="toolbarRightPanelMenu"
-          [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        } @else {
-        <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-          [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        }
-        }
-      </div>
-      }
-    </div>
     }
-
-    <!-- Toolbar menus for panel actions -->
-    <mat-menu #toolbarLeftPanelMenu="matMenu">
-      @if (panelActions.leftPanelMenuTemplate()) {
-      <ng-container *ngTemplateOutlet="panelActions.leftPanelMenuTemplate()!"></ng-container>
-      }
-    </mat-menu>
-    <mat-menu #toolbarRightPanelMenu="matMenu">
-      @if (panelActions.rightPanelMenuTemplate()) {
-      <ng-container *ngTemplateOutlet="panelActions.rightPanelMenuTemplate()!"></ng-container>
-      }
-    </mat-menu>
 
     <span class="toolbar-spacer">
       <!-- Search container is always rendered but hidden via CSS for iOS Safari focus compatibility -->
@@ -465,6 +396,67 @@
         [class.feeds-centered]="panelNav.feedsCentered()" [class.has-left-content]="panelNav.hasLeftContent()"
         [class.has-right-content]="hasRightContent()" [class.mobile-layout]="panelNav.isMobile()"
         [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
+
+        <!-- Floating panel toolbars - positioned at main toolbar level on wide screens -->
+        <div class="floating-toolbars-container show-on-wide">
+          <!-- Left panel floating toolbar -->
+          @if (panelNav.hasLeftContent() && !panelNav.showFeeds() && (panelActions.pageTitle() ||
+          panelActions.leftPanelActions().length > 0)) {
+          <div class="panel-floating-toolbar left-toolbar">
+            <div class="floating-toolbar-content">
+              <span class="panel-title title-font">{{ panelActions.pageTitle() }}</span>
+              @if (panelActions.leftPanelHeaderLeftContent()) {
+              <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
+              }
+              @for (action of panelActions.leftPanelActions(); track action.id) {
+              @if (action.menu) {
+              <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsMenu"
+                [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+                [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              }
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Right panel floating toolbar -->
+          @if (hasRightContent() && (canGoBackRight() || rightPanelTitle() ||
+          panelActions.rightPanelHeaderLeftContent() || panelActions.rightPanelActions().length > 0)) {
+          <div class="panel-floating-toolbar right-toolbar">
+            <div class="floating-toolbar-content">
+              @if (canGoBackRight()) {
+              <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
+                i18n-matTooltip="@@app.nav.back">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              }
+              <span class="panel-title">{{ rightPanelTitle() }}</span>
+              @if (panelActions.rightPanelHeaderLeftContent()) {
+              <ng-container *ngTemplateOutlet="panelActions.rightPanelHeaderLeftContent()!"></ng-container>
+              }
+              @for (action of panelActions.rightPanelActions(); track action.id) {
+              @if (action.menu) {
+              <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu"
+                [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+                [disabled]="action.disabled" class="action-button">
+                <mat-icon>{{ action.icon }}</mat-icon>
+              </button>
+              }
+              }
+            </div>
+          </div>
+          }
+        </div>
 
         <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
         @if (hasRightContent() && !panelNav.isMobile()) {

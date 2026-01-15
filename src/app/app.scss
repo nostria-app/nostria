@@ -113,25 +113,52 @@ nav {
   flex-shrink: 0;
 }
 
-// Center section - panel toolbars aligned with content columns
-.toolbar-center-panels {
+// Floating toolbars container - positioned at main toolbar level on wide screens
+// Sits at the top of the two-column-layout but visually appears in the toolbar area
+.floating-toolbars-container {
+  position: fixed;
+  // Position vertically centered in the 64px toolbar
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 40px;
   display: flex;
-  flex: 1;
   justify-content: center;
   gap: 16px;
-  pointer-events: none; // Allow clicking through empty space
+  z-index: 1001; // Above toolbar
+  pointer-events: none;
+}
 
-  >* {
-    pointer-events: auto; // Re-enable on children
+// Individual floating toolbar for each panel
+.panel-floating-toolbar {
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+
+  &.left-toolbar {
+    // Match left panel width
+    width: min(var(--left-column-width, 700px), calc(50vw - 8px));
+    justify-content: flex-start;
+    padding-left: 8px;
   }
 
-  // Container for both panel toolbars - matches content layout
-  .toolbar-panel-left,
-  .toolbar-panel-right {
+  &.right-toolbar {
+    // Match right panel width (700px default)
+    width: min(var(--right-column-width, 700px), calc(50vw - 8px));
+    justify-content: flex-start;
+    padding-left: 8px;
+  }
+
+  .floating-toolbar-content {
+    @include glass-section;
     gap: 4px;
+    padding: 0 12px;
+    height: 40px;
+    border-radius: 20px;
+    pointer-events: auto;
 
     .panel-title {
-      font-size: 1rem;
+      font-size: 1.2em;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
@@ -139,38 +166,48 @@ nav {
       margin-right: 4px;
     }
 
-    .action-button {
+    .action-button,
+    .nav-button {
       flex-shrink: 0;
     }
   }
+}
 
-  // Left panel toolbar - matches left content column width
-  // When no right panel content, can be wider (use CSS variable from parent)
-  .toolbar-panel-left {
-    width: min(var(--left-column-width, 700px), 50vw);
-    max-width: min(var(--left-column-width, 700px), 50vw);
-    flex-shrink: 1;
-    justify-content: flex-start;
-    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-      max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-
-    // When right panel has content, shrink to 700px to match narrower left column
-    &.shrunk {
-      width: min(700px, calc(50vw - 8px));
-      max-width: min(700px, calc(50vw - 8px));
-    }
+// When left panel is collapsed, adjust the floating toolbars container
+.two-column-layout.left-collapsed .floating-toolbars-container {
+  .left-toolbar {
+    display: none;
   }
 
-  // Right panel toolbar - matches right content column width
-  .toolbar-panel-right {
-    width: min(700px, 50vw);
-    max-width: min(700px, 50vw);
-    flex-shrink: 1;
-    justify-content: flex-start;
+  .right-toolbar {
+    // Center the right toolbar when left is collapsed
+    width: min(var(--right-column-width, 700px), 100%);
   }
 }
 
-// Hide panel toolbars below wide screens (1400px)
+// When only left content is showing (no right panel), center the left toolbar
+.two-column-layout:not(.has-right-content) .floating-toolbars-container {
+  .left-toolbar {
+    // Use the wide left column width when it's the only panel
+    width: min(var(--left-column-width, 700px), 100%);
+  }
+}
+
+// Dark mode for floating toolbar
+:host-context(.dark) .panel-floating-toolbar .floating-toolbar-content {
+  @include glass-section-dark;
+}
+
+// Show/hide floating toolbar based on screen width
+.show-on-wide {
+  display: none;
+
+  @media (min-width: 1400px) {
+    display: flex;
+  }
+}
+
+// Hide panel toolbars below wide screens (1400px) - legacy support
 .hide-below-wide {
   display: none;
 
