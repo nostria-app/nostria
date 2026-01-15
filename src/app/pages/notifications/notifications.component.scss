@@ -5,54 +5,6 @@
   height: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: 24px;
-}
-
-// Header styles
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
-  padding: 8px 24px;
-  border-radius: 12px;
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-
-    .header-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      color: var(--mat-sys-primary);
-    }
-
-    .header-text {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      h1 {
-        margin: 0;
-        font-size: 28px;
-      }
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-}
-
-.page-subtitle {
-  margin: 0 0 24px 0;
-  padding: 0 24px;
-  opacity: 0.7;
-  font-size: 16px;
 }
 
 // Notifications container
@@ -65,7 +17,7 @@
   overflow: auto;
 }
 
-// Notification badge in header
+// Notification badge in panel header
 .notification-badge {
   background: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
@@ -74,11 +26,17 @@
   font-size: 12px;
   min-width: 20px;
   text-align: center;
+  margin-left: 8px;
 }
 
-// Active state for search button
-.header-actions button.active {
-  color: var(--mat-sys-primary);
+// Filter menu item with type icon
+.filter-menu-item {
+  .type-icon {
+    margin-left: 8px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
 // Search container
@@ -795,9 +753,6 @@
 
 // Responsive
 @media (max-width: 768px) {
-  .notifications-page {
-    padding: 16px;
-  }
 
   .page-header {
     flex-direction: row;
@@ -829,10 +784,6 @@
   .notification-item .notification-actions .mark-read-btn,
   .notification-system-item .notification-actions .mark-read-btn {
     display: none;
-  }
-
-  .notifications-page {
-    padding: 4px;
   }
 
   // Adjust viewport height for mobile

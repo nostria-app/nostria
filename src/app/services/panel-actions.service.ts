@@ -18,11 +18,11 @@ export interface PanelAction {
   providedIn: 'root'
 })
 export class PanelActionsService {
-  // Actions for left panel header
+  // Actions for left panel header (displayed on right side of header)
   private _leftPanelActions = signal<PanelAction[]>([]);
   leftPanelActions = this._leftPanelActions.asReadonly();
 
-  // Actions for right panel header
+  // Actions for right panel header (displayed on right side of header)
   private _rightPanelActions = signal<PanelAction[]>([]);
   rightPanelActions = this._rightPanelActions.asReadonly();
 
@@ -32,6 +32,13 @@ export class PanelActionsService {
 
   private _rightPanelMenuTemplate = signal<TemplateRef<unknown> | null>(null);
   rightPanelMenuTemplate = this._rightPanelMenuTemplate.asReadonly();
+
+  // Custom content templates for left side of panel headers (next to title)
+  private _leftPanelHeaderLeftContent = signal<TemplateRef<unknown> | null>(null);
+  leftPanelHeaderLeftContent = this._leftPanelHeaderLeftContent.asReadonly();
+
+  private _rightPanelHeaderLeftContent = signal<TemplateRef<unknown> | null>(null);
+  rightPanelHeaderLeftContent = this._rightPanelHeaderLeftContent.asReadonly();
 
   /**
    * Set actions for the left panel header
@@ -62,11 +69,26 @@ export class PanelActionsService {
   }
 
   /**
+   * Set custom content template for left side of left panel header (next to title)
+   */
+  setLeftPanelHeaderLeftContent(template: TemplateRef<unknown> | null): void {
+    this._leftPanelHeaderLeftContent.set(template);
+  }
+
+  /**
+   * Set custom content template for left side of right panel header (next to title)
+   */
+  setRightPanelHeaderLeftContent(template: TemplateRef<unknown> | null): void {
+    this._rightPanelHeaderLeftContent.set(template);
+  }
+
+  /**
    * Clear left panel actions (call on component destroy)
    */
   clearLeftPanelActions(): void {
     this._leftPanelActions.set([]);
     this._leftPanelMenuTemplate.set(null);
+    this._leftPanelHeaderLeftContent.set(null);
   }
 
   /**
@@ -75,6 +97,7 @@ export class PanelActionsService {
   clearRightPanelActions(): void {
     this._rightPanelActions.set([]);
     this._rightPanelMenuTemplate.set(null);
+    this._rightPanelHeaderLeftContent.set(null);
   }
 
   /**
