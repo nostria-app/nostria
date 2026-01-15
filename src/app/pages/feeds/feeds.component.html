@@ -11,34 +11,37 @@
       <div class="title-section">
         <!-- Feed Selector -->
         <div class="feed-selector">
-          <!-- Feed tabs - changes based on mobile/desktop view -->
-          <div class="feed-tabs">
-            @if (isMobileView()) {
-            <!-- Mobile: Dropdown menu for feeds -->
-            <button mat-button [matMenuTriggerFor]="feedMenu">
-              <mat-icon>{{ feedIcon() }}</mat-icon>
-              {{ feedLabel() }}
-            </button>
+          <!-- Feed tabs - changes based on mobile/desktop view or overflow -->
+          <div class="feed-tabs" #feedTabsContainer>
+            <!-- Feed buttons wrapper - used to measure if tabs fit -->
+            <div class="feed-tabs-inner" #feedTabsInner>
+              @if (useDropdownSelector()) {
+              <!-- Dropdown menu for feeds (mobile or when tabs overflow) -->
+              <button mat-button [matMenuTriggerFor]="feedMenu">
+                <mat-icon>{{ feedIcon() }}</mat-icon>
+                {{ feedLabel() }}
+              </button>
 
-            <mat-menu #feedMenu="matMenu">
+              <mat-menu #feedMenu="matMenu">
+                @for (feed of feeds(); track feed.id) {
+                <button mat-menu-item (click)="selectFeed(feed.id)">
+                  <mat-icon>{{ feed.icon }}</mat-icon>
+                  <span>{{ feed.label }}</span>
+                </button>
+                }
+              </mat-menu>
+              } @else {
+              <!-- Desktop: Feed tabs -->
               @for (feed of feeds(); track feed.id) {
-              <button mat-menu-item (click)="selectFeed(feed.id)">
+              <button class="feed-tab" mat-button
+                [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
+                (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
                 <mat-icon>{{ feed.icon }}</mat-icon>
                 <span>{{ feed.label }}</span>
               </button>
               }
-            </mat-menu>
-            } @else {
-            <!-- Desktop: Feed tabs -->
-            @for (feed of feeds(); track feed.id) {
-            <button class="feed-tab" mat-button
-              [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
-              (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
-              <mat-icon>{{ feed.icon }}</mat-icon>
-              <span>{{ feed.label }}</span>
-            </button>
-            }
-            }
+              }
+            </div>
 
             <!-- Public Relay Feeds Menu -->
             <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">

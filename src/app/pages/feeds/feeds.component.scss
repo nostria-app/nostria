@@ -118,6 +118,9 @@ app-user-profile {
       align-items: center;
       gap: 0.5rem;
       flex: 1;
+      // Prevent title section from growing beyond available space
+      min-width: 0;
+      overflow: hidden;
 
       .feed-selector {
         display: flex;
@@ -126,6 +129,9 @@ app-user-profile {
         gap: 0.5rem;
         flex-wrap: nowrap;
         width: 100%;
+        // Allow feed selector to shrink
+        min-width: 0;
+        overflow: hidden;
 
         .feed-tabs {
           // Glass container styling
@@ -137,6 +143,18 @@ app-user-profile {
           gap: 4px;
           // Re-enable clicks on the glass container
           pointer-events: auto;
+          // Allow tabs to shrink and track overflow
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+
+          // Inner wrapper for feed tabs - used for overflow measurement
+          .feed-tabs-inner {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0; // Don't shrink - we measure this to detect overflow
+          }
 
           // Collapse button
           .collapse-button {
@@ -164,6 +182,7 @@ app-user-profile {
             white-space: nowrap;
             transition: all 0.2s ease;
             text-decoration: none;
+            flex-shrink: 0; // Don't shrink - trigger dropdown instead
 
             mat-icon {
               font-size: 1.1rem;
