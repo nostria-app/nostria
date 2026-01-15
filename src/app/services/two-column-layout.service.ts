@@ -285,6 +285,16 @@ export class TwoColumnLayoutService {
     this.isListRoute.set(false);
     this.isDetailRoute.set(false);
 
+    // Set width mode based on route:
+    // - Home route gets wide mode (1400px)
+    // - Other routes get narrow mode (700px) by default
+    // Components can override this by calling setWideLeft() in their lifecycle
+    if (isHome) {
+      this._leftWidthMode.set('wide');
+    } else {
+      this._leftWidthMode.set('narrow');
+    }
+
     if (category) {
       if (category.type === 'list') {
         // List container - set flag (not home means it's Music, Collections, etc.)
