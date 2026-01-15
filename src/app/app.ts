@@ -250,9 +250,6 @@ export class App implements OnInit {
   leftPanelHeaderHidden = signal(false);
   private leftPanelLastScrollTop = 0;
 
-  // Left panel collapse state for focusing on right content
-  leftPanelCollapsed = signal(false);
-
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
@@ -287,6 +284,18 @@ export class App implements OnInit {
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
+
+  // User's preference for whether to collapse left panel when right panel has content
+  preferLeftPanelCollapsed = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return false;
+    return this.accountLocalState.getLeftPanelCollapsed(pubkey);
+  });
+
+  // Actual visual collapsed state: only collapse if user prefers AND right panel has content
+  leftPanelCollapsed = computed(() => {
+    return this.preferLeftPanelCollapsed() && this._hasRightContent();
+  });
 
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
@@ -1698,7 +1707,10 @@ export class App implements OnInit {
     this._rightPanelHistory.set([]);
     this._hasRightContent.set(false);
     this._rightPanelTitle.set('');
-    this.leftPanelCollapsed.set(false);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
+    }
     this.panelNav.clearRightStack();
 
     // Navigate to feeds and clear right outlet in one navigation
@@ -1706,11 +1718,14 @@ export class App implements OnInit {
   }
 
   /**
-   * Toggle left panel collapsed state for focusing on right content.
+   * Toggle left panel collapsed preference for focusing on right content.
    * The left panel slides behind the right panel with a smooth animation.
    */
   toggleLeftPanelCollapse(): void {
-    this.leftPanelCollapsed.update(v => !v);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
+    }
   }
 
   /**
@@ -1774,13 +1789,13 @@ export class App implements OnInit {
   /**
    * Close the right panel and clear navigation history.
    * When X is clicked, the panel is fully closed and history forgotten.
+   * Note: The collapse preference is preserved - left panel auto-expands because
+   * leftPanelCollapsed depends on hasRightContent.
    */
   closeRightPanel(): void {
     this._rightPanelHistory.set([]);
     this._hasRightContent.set(false);
     this._rightPanelTitle.set('');
-    // Also reset collapse state when closing right panel
-    this.leftPanelCollapsed.set(false);
     // Clear right panel actions immediately
     this.panelActions.clearRightPanelActions();
     // Clear the panel navigation right stack
