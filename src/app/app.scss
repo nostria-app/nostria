@@ -113,17 +113,64 @@ nav {
   flex-shrink: 0;
 }
 
-// Page actions section in toolbar - only shown on wide screens (≥1400px)
-.toolbar-page-actions {
-  flex-shrink: 0;
-  gap: 4px;
+// Center section - panel toolbars aligned with content columns
+.toolbar-center-panels {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none; // Allow clicking through empty space
 
-  .action-button {
-    flex-shrink: 0;
+  >* {
+    pointer-events: auto; // Re-enable on children
+  }
+
+  // Container for both panel toolbars - matches content layout
+  .toolbar-panel-left,
+  .toolbar-panel-right {
+    gap: 4px;
+
+    .panel-title {
+      font-size: 1rem;
+      color: var(--mat-sys-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 4px;
+    }
+
+    .action-button {
+      flex-shrink: 0;
+    }
+  }
+
+  // Left panel toolbar - matches left content column width
+  // When no right panel content, can be wider (use CSS variable from parent)
+  .toolbar-panel-left {
+    width: min(var(--left-column-width, 700px), 50vw);
+    max-width: min(var(--left-column-width, 700px), 50vw);
+    flex-shrink: 1;
+    justify-content: flex-start;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+      max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+    // When right panel has content, shrink to 700px to match narrower left column
+    &.shrunk {
+      width: min(700px, calc(50vw - 8px));
+      max-width: min(700px, calc(50vw - 8px));
+    }
+  }
+
+  // Right panel toolbar - matches right content column width
+  .toolbar-panel-right {
+    width: min(700px, 50vw);
+    max-width: min(700px, 50vw);
+    flex-shrink: 1;
+    justify-content: flex-start;
   }
 }
 
-// Hide page actions below wide screens (1400px)
+// Hide panel toolbars below wide screens (1400px)
 .hide-below-wide {
   display: none;
 
@@ -808,6 +855,13 @@ mat-sidenav-content {
   // Full width of the panel
   width: 100%;
   max-width: 100%;
+
+  // Hide on wide screens - toolbar shows the header
+  &.hide-on-wide {
+    @media (min-width: 1400px) {
+      display: none;
+    }
+  }
 }
 
 // Dark mode for panel headers
@@ -869,6 +923,11 @@ mat-sidenav-content {
   @extend .panel-content;
   // Right panel always has header, so always needs full padding
   padding-top: calc(var(--toolbar-height, 64px) + 72px);
+
+  // When panel header is hidden on wide screens, reduce padding
+  @media (min-width: 1400px) {
+    padding-top: var(--toolbar-height, 64px);
+  }
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
