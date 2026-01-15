@@ -243,7 +243,8 @@ export class App implements OnInit {
   private _rightPanelHistory = signal<string[]>([]);
   hasRightContent = this._hasRightContent.asReadonly();
   rightPanelTitle = this._rightPanelTitle.asReadonly();
-  canGoBackRight = computed(() => this._rightPanelHistory().length > 1);
+  // Show back button whenever there's content - clicking it will either go back in history or close the panel
+  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1);
 
   // Panel header scroll states
   leftPanelHeaderHidden = signal(false);
