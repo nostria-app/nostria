@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatRippleModule } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { ApplicationService } from '../../services/application.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
@@ -13,6 +14,9 @@ import { CreateOptionsSheetComponent } from '../../components/create-options-she
 import { AccountStateService } from '../../services/account-state.service';
 import { ThemeService } from '../../services/theme.service';
 import { LayoutService } from '../../services/layout.service';
+import { SettingsService } from '../../services/settings.service';
+import { InstallService } from '../../services/install.service';
+import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats-new-dialog.component';
 
 /**
  * Home component - Serves as the landing page and navigation hub.
@@ -45,7 +49,10 @@ export class HomeComponent {
   account = inject(AccountStateService);
   theme = inject(ThemeService);
   layout = inject(LayoutService);
+  settings = inject(SettingsService);
+  installService = inject(InstallService);
   private bottomSheet = inject(MatBottomSheet);
+  private dialog = inject(MatDialog);
 
   /**
    * Open the create content menu
@@ -61,5 +68,34 @@ export class HomeComponent {
     if (hour < 12) return 'Good Morning';
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
+  }
+
+  openCommandPalette(): void {
+    this.layout.openCommandPalette();
+  }
+
+  openPublishCustomEvent(): void {
+    this.layout.openPublishCustomEvent();
+  }
+
+  openInstallDialog(): void {
+    this.installService.openInstallDialog();
+  }
+
+  openWhatsNewDialog(): void {
+    this.dialog.open(WhatsNewDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'whats-new-dialog-container',
+    });
+  }
+
+  shouldShowInstallOption(): boolean {
+    return this.installService.shouldShowInstallOption();
+  }
+
+  isAiEnabled(): boolean {
+    return this.settings.settings().aiEnabled ?? false;
   }
 }

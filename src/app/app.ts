@@ -86,7 +86,6 @@ import { StandaloneLoginDialogComponent } from './components/standalone-login-di
 import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
 import { CreateMenuComponent } from './components/create-menu/create-menu.component';
 import { AiService } from './services/ai.service';
 import { CustomDialogService } from './services/custom-dialog.service';
@@ -252,13 +251,9 @@ export class App implements OnInit {
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
-  @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
-
-  // Apps menu overlay
-  private appsMenuOverlayRef?: OverlayRef;
 
   // Create menu overlay
   private createMenuOverlayRef?: OverlayRef;
@@ -1219,10 +1214,6 @@ export class App implements OnInit {
     this.profileSidenav.toggle();
   }
 
-  toggleAppsSidenav() {
-    this.appsSidenav.toggle();
-  }
-
   /**
    * Open search and focus the input.
    * The input is always in the DOM (hidden via CSS) for iOS Safari focus compatibility.
@@ -1516,61 +1507,6 @@ export class App implements OnInit {
     if (this.createMenuOverlayRef) {
       this.createMenuOverlayRef.dispose();
       this.createMenuOverlayRef = undefined;
-    }
-  }
-
-  toggleAppsMenu(event: MouseEvent): void {
-    if (this.appsMenuOverlayRef) {
-      this.closeAppsMenu();
-      return;
-    }
-
-    const target = event.currentTarget as HTMLElement;
-    const positionStrategy = this.overlay
-      .position()
-      .flexibleConnectedTo(target)
-      .withPositions([
-        {
-          originX: 'end',
-          originY: 'bottom',
-          overlayX: 'end',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'end',
-          originY: 'top',
-          overlayX: 'end',
-          overlayY: 'bottom',
-          offsetY: -8,
-        },
-      ]);
-
-    this.appsMenuOverlayRef = this.overlay.create({
-      positionStrategy,
-      scrollStrategy: this.overlay.scrollStrategies.reposition(),
-      hasBackdrop: true,
-      backdropClass: 'cdk-overlay-transparent-backdrop',
-    });
-
-    const portal = new ComponentPortal(AppsMenuComponent);
-    const componentRef = this.appsMenuOverlayRef.attach(portal);
-
-    // Listen for close event from the component
-    componentRef.instance.closed.subscribe(() => {
-      this.closeAppsMenu();
-    });
-
-    // Close when clicking backdrop
-    this.appsMenuOverlayRef.backdropClick().subscribe(() => {
-      this.closeAppsMenu();
-    });
-  }
-
-  closeAppsMenu(): void {
-    if (this.appsMenuOverlayRef) {
-      this.appsMenuOverlayRef.dispose();
-      this.appsMenuOverlayRef = undefined;
     }
   }
 

@@ -1025,19 +1025,6 @@ mat-sidenav-content {
   box-shadow: var(--mat-sys-level3);
 }
 
-.apps-sidenav {
-  width: 300px;
-  max-width: 90vw;
-}
-
-.apps-sidenav.mat-drawer {
-  transition: transform 0.3s ease-in-out;
-}
-
-.apps-list {
-  margin-top: 2.4rem;
-}
-
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;

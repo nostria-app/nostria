@@ -88,6 +88,32 @@
     </div>
   </section>
 
+  <!-- Content Section -->
+  <section class="content-features">
+    <h2 class="section-label" i18n="@@home.section.content">Content</h2>
+    <div class="content-grid">
+      <a routerLink="/media" class="content-item" mat-ripple>
+        <mat-icon>photo_library</mat-icon>
+        <span i18n="@@home.media">Media</span>
+      </a>
+
+      <a routerLink="/lists" class="content-item" mat-ripple>
+        <mat-icon>lists</mat-icon>
+        <span i18n="@@home.lists">Lists</span>
+      </a>
+
+      <a routerLink="/polls" class="content-item" mat-ripple>
+        <mat-icon>poll</mat-icon>
+        <span i18n="@@home.polls">Polls</span>
+      </a>
+
+      <a routerLink="/articles/edit" class="content-item" mat-ripple>
+        <mat-icon>edit_document</mat-icon>
+        <span i18n="@@home.my-articles">My Articles</span>
+      </a>
+    </div>
+  </section>
+
   <!-- Media Section -->
   <section class="media-features">
     <h2 class="section-label" i18n="@@home.section.media">Media & Entertainment</h2>
@@ -107,8 +133,59 @@
           <p i18n="@@home.streams.description">Live broadcasts</p>
         </div>
       </a>
+
+      <a routerLink="/playlists" class="media-card playlists-card" mat-ripple>
+        <mat-icon>playlist_play</mat-icon>
+        <div class="media-content">
+          <h3 i18n="@@home.playlists.title">Playlists</h3>
+          <p i18n="@@home.playlists.description">Your collections</p>
+        </div>
+      </a>
+
+      <a routerLink="/queue" class="media-card queue-card" mat-ripple>
+        <mat-icon>queue_music</mat-icon>
+        <div class="media-content">
+          <h3 i18n="@@home.queue.title">Queue</h3>
+          <p i18n="@@home.queue.description">Media queue</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="media-secondary">
+      <a routerLink="/meetings" class="media-secondary-item" mat-ripple>
+        <mat-icon>adaptive_audio_mic</mat-icon>
+        <span i18n="@@home.meetings">Live Meetings</span>
+      </a>
     </div>
   </section>
+
+  <!-- AI Section -->
+  @if (isAiEnabled()) {
+  <section class="ai-features">
+    <h2 class="section-label" i18n="@@home.section.ai">AI</h2>
+    <div class="ai-grid">
+      <a routerLink="/ai" class="ai-item" mat-ripple>
+        <mat-icon>psychology</mat-icon>
+        <span i18n="@@home.ai.models">AI Models</span>
+      </a>
+
+      <a routerLink="/ai/settings" class="ai-item" mat-ripple>
+        <mat-icon>settings_suggest</mat-icon>
+        <span i18n="@@home.ai.settings">AI Settings</span>
+      </a>
+    </div>
+  </section>
+  } @else {
+  <section class="ai-features">
+    <h2 class="section-label" i18n="@@home.section.ai">AI</h2>
+    <div class="ai-grid">
+      <a routerLink="/ai/settings" class="ai-item" mat-ripple>
+        <mat-icon>settings_suggest</mat-icon>
+        <span i18n="@@home.ai.settings">AI Settings</span>
+      </a>
+    </div>
+  </section>
+  }
 
   <!-- Library Section -->
   <section class="library-features">
@@ -119,19 +196,19 @@
         <span i18n="@@home.collections">Collections</span>
       </a>
 
+      <a routerLink="/collections/bookmarks" class="library-item" mat-ripple>
+        <mat-icon>bookmarks</mat-icon>
+        <span i18n="@@home.bookmarks">Bookmarks</span>
+      </a>
+
       <a routerLink="/collections/relays" class="library-item" mat-ripple>
         <mat-icon>hub</mat-icon>
         <span i18n="@@home.relays">Relays</span>
       </a>
 
-      <a routerLink="/badges" class="library-item" mat-ripple>
+      <a [routerLink]="['/p', account.pubkey(), 'badges']" class="library-item" mat-ripple>
         <mat-icon>badge</mat-icon>
         <span i18n="@@home.badges">Badges</span>
-      </a>
-
-      <a routerLink="/settings" class="library-item" mat-ripple>
-        <mat-icon>settings</mat-icon>
-        <span i18n="@@home.settings">Settings</span>
       </a>
     </div>
   </section>
@@ -184,6 +261,39 @@
     </a>
   </section>
   }
+
+  <!-- More Section -->
+  <section class="more-features">
+    <h2 class="section-label" i18n="@@home.section.more">More</h2>
+    <div class="more-grid">
+      <button class="more-item" mat-ripple (click)="openCommandPalette()">
+        <mat-icon>terminal</mat-icon>
+        <span i18n="@@home.commands">Commands</span>
+      </button>
+
+      <button class="more-item" mat-ripple (click)="openPublishCustomEvent()">
+        <mat-icon>publish</mat-icon>
+        <span i18n="@@home.publish-event">Publish Event</span>
+      </button>
+
+      @if (shouldShowInstallOption()) {
+      <button class="more-item" mat-ripple (click)="openInstallDialog()">
+        <mat-icon>download</mat-icon>
+        <span i18n="@@home.install-app">Install App</span>
+      </button>
+      }
+
+      <a routerLink="/settings" class="more-item" mat-ripple>
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@home.settings">Settings</span>
+      </a>
+
+      <button class="more-item" mat-ripple (click)="openWhatsNewDialog()">
+        <mat-icon>campaign</mat-icon>
+        <span i18n="@@home.whats-new">What's New</span>
+      </button>
+    </div>
+  </section>
 
   <!-- Footer -->
   <footer class="dashboard-footer">

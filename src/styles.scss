@@ -443,11 +443,6 @@ body {
   background: transparent;
 }
 
-// Apps menu overlay styles
-.cdk-overlay-pane:has(app-apps-menu) {
-  // Styles moved to apps-menu.component.scss to support glass effect
-}
-
 .cdk-overlay-pane .tooltip-content-card {
   box-shadow: var(--mat-sys-level4);
   border: 1px solid var(--mat-sys-outline-variant);
