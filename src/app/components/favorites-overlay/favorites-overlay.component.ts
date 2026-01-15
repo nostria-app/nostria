@@ -222,41 +222,27 @@ export class FavoritesOverlayComponent implements OnDestroy {
     });
   }
 
-  // Calculate visible favorites based on screen width
+  // Calculate visible favorites based on screen height (vertical sidebar)
   private updateVisibleFavoritesCount(): void {
     if (typeof window === 'undefined') {
       this.visibleFavoritesCount.set(5);
       return;
     }
     
-    const width = window.innerWidth;
-    // Each avatar takes approximately 42px (36px avatar + 6px gap)
-    // Reserve space for: hamburger (48px), navigation (48px), title (~120px), 
-    // search button (48px), notifications (48px), profile (48px) = ~360px minimum
-    // Plus the "more" button (42px) and some padding
+    const height = window.innerHeight;
+    // Each avatar takes approximately 48px (32px avatar + 8px gap + padding)
+    // Reserve space for the "more" button (48px) and top/bottom padding (24px)
+    // Available height for avatars = height - reserved space
+    // The sidebar is vertically centered, so we use the full height
     
-    if (width < 600) {
-      // Mobile: show only 1
-      this.visibleFavoritesCount.set(1);
-    } else if (width < 768) {
-      // Small tablet: show 2
-      this.visibleFavoritesCount.set(2);
-    } else if (width < 1024) {
-      // Tablet: show 3
-      this.visibleFavoritesCount.set(3);
-    } else if (width < 1280) {
-      // Small desktop: show 5
-      this.visibleFavoritesCount.set(5);
-    } else if (width < 1600) {
-      // Medium desktop: show 7
-      this.visibleFavoritesCount.set(7);
-    } else if (width < 1920) {
-      // Large desktop: show 9
-      this.visibleFavoritesCount.set(9);
-    } else {
-      // Very large/ultrawide: show up to 12
-      this.visibleFavoritesCount.set(12);
-    }
+    const reservedSpace = 72; // more button + padding
+    const avatarHeight = 48;
+    const availableHeight = height - reservedSpace;
+    const maxAvatars = Math.floor(availableHeight / avatarHeight);
+    
+    // Clamp between 3 and 15 avatars
+    const count = Math.max(3, Math.min(15, maxAvatars));
+    this.visibleFavoritesCount.set(count);
   }
 
   // Computed to get visible favorites based on screen size
