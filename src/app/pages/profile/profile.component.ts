@@ -79,6 +79,9 @@ import { ReportingService } from '../../services/reporting.service';
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
+  host: {
+    '[class.in-right-panel]': 'isInRightPanel()',
+  },
 })
 export class ProfileComponent {
   // Input for two-column layout mode - when provided, uses this instead of route params
@@ -108,6 +111,11 @@ export class ProfileComponent {
   userMetadata = signal<NostrRecord | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
+
+  // Detect if profile is rendered in the right panel outlet
+  isInRightPanel = computed(() => {
+    return this.route.outlet === 'right';
+  });
 
   isOwnProfile = computed(() => {
     return this.accountState.pubkey() === this.pubkey();
@@ -439,8 +447,11 @@ export class ProfileComponent {
         this.userMetadata.set(cachedMetadata);
         this.isLoading.set(false);
 
-        // Always scroll when we have data to show
-        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+        // Only scroll when not in right panel - right panel profiles don't need scrolling
+        // as the banner is already at the top
+        if (!this.isInRightPanel()) {
+          setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+        }
       }
 
       // Then force refresh profile data from relays to ensure it's up to date
@@ -462,7 +473,8 @@ export class ProfileComponent {
       }
 
       // If we haven't scrolled yet (no cached data case), scroll now
-      if (!cachedMetadata) {
+      // Skip scrolling in right panel mode as banner is already visible at top
+      if (!cachedMetadata && !this.isInRightPanel()) {
         setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
       }
 

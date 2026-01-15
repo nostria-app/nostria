@@ -835,6 +835,13 @@ mat-sidenav-content {
   @extend .panel-content;
   // Right panel always has header, so always needs full padding
   padding-top: calc(var(--toolbar-height, 64px) + 72px);
+
+  // Special case for profile component - no top padding needed
+  // Profile has its own banner that should extend to the top
+  &:has(app-profile) {
+    padding-top: 0px;
+    // padding-top: var(--toolbar-height, 0px);
+  }
 }
 
 // Legacy support - keep old class names working during transition
