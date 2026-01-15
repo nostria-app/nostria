@@ -12,6 +12,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { MusicDataService } from '../../../services/music-data.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 
 const PLAYLIST_KIND = 34139;
@@ -254,6 +255,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private app = inject(ApplicationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private musicData = inject(MusicDataService);
 
   // Input kept for potential future use with RightPanelService
   sourceInput = input<'following' | 'public' | undefined>(undefined);
@@ -331,7 +333,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const sourceFromInput = this.sourceInput();
     if (sourceFromInput) {
       this.source.set(sourceFromInput);
-      this.startSubscription();
+      this.initializePlaylists();
       return;
     }
 
@@ -342,6 +344,32 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
         this.source.set(sourceParam);
       }
     });
+    this.initializePlaylists();
+  }
+
+  /**
+   * Initialize playlists - use preloaded data if available, otherwise fetch from relays
+   */
+  private initializePlaylists(): void {
+    // Check if we have preloaded playlists from the music page
+    const preloadedPlaylists = this.musicData.consumePreloadedPlaylists();
+    if (preloadedPlaylists && preloadedPlaylists.length > 0) {
+      // Use preloaded data - populate playlist map and signal
+      for (const playlist of preloadedPlaylists) {
+        const dTag = playlist.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${playlist.pubkey}:${dTag}`;
+        this.playlistMap.set(uniqueId, playlist);
+      }
+      this.allPlaylists.set(
+        Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
+      );
+      this.loading.set(false);
+      // Still start subscription to get fresh/additional data
+      this.startSubscription();
+      return;
+    }
+
+    // No preloaded data - start fresh subscription
     this.startSubscription();
   }
 
