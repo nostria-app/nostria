@@ -214,6 +214,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Setup panel header actions for the column toolbar
    */
   private setupPanelActions(): void {
+    // Set the page title for the toolbar
+    this.panelActions.setPageTitle('Notifications');
+    
     const actions = [
       {
         id: 'search',

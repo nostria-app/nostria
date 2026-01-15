@@ -655,6 +655,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private setupPanelActions(): void {
+    // Set the page title for the toolbar
+    this.panelActions.setPageTitle('Messages');
+    
     this.panelActions.setLeftPanelActions([
       {
         id: 'search',

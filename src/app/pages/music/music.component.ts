@@ -357,6 +357,9 @@ export class MusicComponent implements OnInit, OnDestroy {
   }
 
   private setupPanelActions(): void {
+    // Set the page title for the toolbar
+    this.panelActions.setPageTitle('Music');
+    
     const actions = [
       {
         id: 'search',

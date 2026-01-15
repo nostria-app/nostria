@@ -113,6 +113,25 @@ nav {
   flex-shrink: 0;
 }
 
+// Page actions section in toolbar - only shown on wide screens (≥1400px)
+.toolbar-page-actions {
+  flex-shrink: 0;
+  gap: 4px;
+
+  .action-button {
+    flex-shrink: 0;
+  }
+}
+
+// Hide page actions below wide screens (1400px)
+.hide-below-wide {
+  display: none;
+
+  @media (min-width: 1400px) {
+    display: flex;
+  }
+}
+
 // Right section - action buttons, profile
 .toolbar-right {
   flex-shrink: 0;
@@ -775,6 +794,13 @@ mat-sidenav-content {
   // Full width of the panel
   width: 100%;
   max-width: 100%;
+
+  // Hide on wide screens when actions are in toolbar
+  &.hide-on-wide {
+    @media (min-width: 1400px) {
+      display: none;
+    }
+  }
 }
 
 // Right panel header - stays within right panel bounds  
@@ -815,6 +841,14 @@ mat-sidenav-content {
 // When left panel has content (has header), use full padding for header clearance
 .left-panel.has-content .panel-content {
   padding-top: calc(var(--toolbar-height, 64px) + 72px);
+}
+
+// When panel header is hidden on wide screens, reduce padding
+// Uses :has() to detect when the header has the hide-on-wide class
+.left-panel.has-content:has(.panel-header.hide-on-wide) .panel-content {
+  @media (min-width: 1400px) {
+    padding-top: var(--toolbar-height, 64px);
+  }
 }
 
 // When left panel shows feeds (no header), only need toolbar clearance
