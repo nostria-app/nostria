@@ -113,7 +113,7 @@ nav {
   flex-shrink: 0;
 }
 
-// Floating toolbars container - positioned at main toolbar level on wide screens
+// Floating toolbars container - positioned at main toolbar level
 // Sits at the top of the two-column-layout but visually appears in the toolbar area
 .floating-toolbars-container {
   position: fixed;
@@ -124,9 +124,15 @@ nav {
   height: 40px;
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 8px;
   z-index: 1001; // Above toolbar
   pointer-events: none;
+
+  // On mobile, use full width and single column
+  @media (max-width: 599px) {
+    gap: 0;
+    justify-content: center;
+  }
 }
 
 // Individual floating toolbar for each panel
@@ -136,10 +142,16 @@ nav {
   pointer-events: none;
 
   &.left-toolbar {
-    // Match left panel width
+    // Match left panel width on desktop
     width: min(var(--left-column-width, 700px), calc(50vw - 8px));
     justify-content: flex-start;
     padding-left: 8px;
+
+    @media (max-width: 599px) {
+      width: auto;
+      max-width: calc(100vw - 16px);
+      padding-left: 4px;
+    }
   }
 
   &.right-toolbar {
@@ -147,6 +159,12 @@ nav {
     width: min(var(--right-column-width, 700px), calc(50vw - 8px));
     justify-content: flex-start;
     padding-left: 8px;
+
+    @media (max-width: 599px) {
+      width: auto;
+      max-width: calc(100vw - 16px);
+      padding-left: 4px;
+    }
   }
 
   .floating-toolbar-content {
@@ -158,7 +176,7 @@ nav {
     pointer-events: auto;
 
     .panel-title {
-      font-size: 1.2em;
+      font-size: 1.1rem; // Match app-title size
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
@@ -170,6 +188,15 @@ nav {
     .nav-button {
       flex-shrink: 0;
     }
+  }
+}
+
+// When left toolbar has right panel alongside, use 700px fixed width
+.panel-floating-toolbar.left-toolbar.with-right {
+  width: min(700px, calc(50vw - 8px));
+
+  @media (max-width: 599px) {
+    display: none; // Hide left toolbar on mobile when right panel is open
   }
 }
 
@@ -190,6 +217,11 @@ nav {
   .left-toolbar {
     // Use the wide left column width when it's the only panel
     width: min(var(--left-column-width, 700px), 100%);
+
+    @media (max-width: 599px) {
+      width: auto;
+      max-width: calc(100vw - 16px);
+    }
   }
 }
 
@@ -198,13 +230,9 @@ nav {
   @include glass-section-dark;
 }
 
-// Show/hide floating toolbar based on screen width
+// Show floating toolbar on all screen sizes
 .show-on-wide {
-  display: none;
-
-  @media (min-width: 1400px) {
-    display: flex;
-  }
+  display: flex;
 }
 
 // Hide panel toolbars below wide screens (1400px) - legacy support
@@ -213,6 +241,20 @@ nav {
 
   @media (min-width: 1400px) {
     display: flex;
+  }
+}
+
+// Favorites sidebar - vertical on right side of screen
+.favorites-sidebar {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+
+  // Hide on mobile when there's not much space
+  @media (max-width: 599px) {
+    display: none;
   }
 }
 
@@ -879,11 +921,9 @@ mat-sidenav-content {
   width: 100%;
   max-width: 100%;
 
-  // Hide on wide screens when actions are in toolbar
+  // Hide when floating toolbar is showing (always now)
   &.hide-on-wide {
-    @media (min-width: 1400px) {
-      display: none;
-    }
+    display: none;
   }
 }
 
@@ -893,11 +933,9 @@ mat-sidenav-content {
   width: 100%;
   max-width: 100%;
 
-  // Hide on wide screens - toolbar shows the header
+  // Hide when floating toolbar is showing (always now)
   &.hide-on-wide {
-    @media (min-width: 1400px) {
-      display: none;
-    }
+    display: none;
   }
 }
 
@@ -934,12 +972,10 @@ mat-sidenav-content {
   padding-top: calc(var(--toolbar-height, 64px) + 72px);
 }
 
-// When panel header is hidden on wide screens, reduce padding
+// When panel header is hidden (floating toolbar active), reduce padding
 // Uses :has() to detect when the header has the hide-on-wide class
 .left-panel.has-content:has(.panel-header.hide-on-wide) .panel-content {
-  @media (min-width: 1400px) {
-    padding-top: var(--toolbar-height, 64px);
-  }
+  padding-top: var(--toolbar-height, 64px);
 }
 
 // When left panel shows feeds (no header), only need toolbar clearance
@@ -958,13 +994,8 @@ mat-sidenav-content {
 
 .right-panel-content {
   @extend .panel-content;
-  // Right panel always has header, so always needs full padding
-  padding-top: calc(var(--toolbar-height, 64px) + 72px);
-
-  // When panel header is hidden on wide screens, reduce padding
-  @media (min-width: 1400px) {
-    padding-top: var(--toolbar-height, 64px);
-  }
+  // Panel header is hidden (floating toolbar active), only need toolbar clearance
+  padding-top: var(--toolbar-height, 64px);
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top

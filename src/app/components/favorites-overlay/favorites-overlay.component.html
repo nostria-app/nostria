@@ -1,8 +1,8 @@
 <div class="favorites-container">
 
-  <!-- Favorites preview in toolbar -->
+  <!-- Vertical favorites sidebar (visible when there are favorites) -->
   @if (favorites().length > 0) {
-  <div class="favorites-preview">
+  <div class="favorites-preview vertical">
     @for (item of topFavorites(); track item.pubkey) {
     <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)" (contextmenu)="$event.preventDefault()"
       (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
