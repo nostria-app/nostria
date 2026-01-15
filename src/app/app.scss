@@ -117,11 +117,11 @@ nav {
 // Sits at the top of the two-column-layout but visually appears in the toolbar area
 .floating-toolbars-container {
   position: fixed;
-  // Position vertically centered in the 64px toolbar
-  top: 12px;
+  // Position vertically centered in the 64px toolbar (64 - 48) / 2 = 8px
+  top: 8px;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 48px;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -171,8 +171,8 @@ nav {
     @include glass-section;
     gap: 4px;
     padding: 0 12px;
-    height: 40px;
-    border-radius: 20px;
+    // height: 48px is inherited from glass-section mixin
+    border-radius: 24px;
     pointer-events: auto;
 
     .panel-title {
