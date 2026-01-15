@@ -263,12 +263,37 @@ export class TwoColumnLayoutService {
     });
 
     // Clear panel actions on navigation start (before new component loads)
-    // This ensures old component's actions don't persist to new component
+    // Only clear actions for panels that are actually changing
     this.router.events.pipe(
       filter(event => event instanceof NavigationStart)
-    ).subscribe(() => {
-      this.panelActions.clearLeftPanelActions();
-      this.panelActions.clearRightPanelActions();
+    ).subscribe((event) => {
+      const navStart = event as NavigationStart;
+      const newUrl = navStart.url;
+      const currentUrl = this.router.url;
+
+      // Parse both URLs to extract left (primary) and right (auxiliary) paths
+      const parseUrl = (url: string): { left: string; right: string } => {
+        const tree = this.router.parseUrl(url);
+        const primaryGroup = tree.root.children['primary'];
+        const rightGroup = tree.root.children['right'];
+        return {
+          left: primaryGroup ? primaryGroup.toString() : '',
+          right: rightGroup ? rightGroup.toString() : ''
+        };
+      };
+
+      const current = parseUrl(currentUrl);
+      const next = parseUrl(newUrl);
+
+      // Only clear left panel actions if the left (primary) route is changing
+      if (current.left !== next.left) {
+        this.panelActions.clearLeftPanelActions();
+      }
+
+      // Only clear right panel actions if the right route is changing
+      if (current.right !== next.right) {
+        this.panelActions.clearRightPanelActions();
+      }
     });
 
     // Track route changes
