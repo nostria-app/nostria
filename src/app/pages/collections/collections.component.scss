@@ -4,21 +4,6 @@
   margin: 0 auto;
 }
 
-.collections-header {
-  margin-bottom: 32px;
-
-  h1 {
-    font-size: 2rem;
-    margin: 0 0 8px 0;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-    margin: 0;
-    opacity: 0.7;
-  }
-}
-
 .collections-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

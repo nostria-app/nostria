@@ -1,35 +1,25 @@
-<div class="articles-container">
-  <div class="articles-header">
-    <h1>
-      <mat-icon>article</mat-icon>
-      <span i18n="@@articles.title">Articles</span>
-    </h1>
-    <div class="header-actions">
-      @if (isAuthenticated()) {
-      <mat-button-toggle-group [value]="feedSource()" (change)="onSourceChange($event.value)" class="source-toggle">
-        <mat-button-toggle value="following">
-          <mat-icon>people</mat-icon>
-          <span i18n="@@articles.toggle.following">Following</span>
-          @if (followingCount() > 0) {
-          <span class="toggle-count">{{ followingCount() }}</span>
-          }
-        </mat-button-toggle>
-        <mat-button-toggle value="public">
-          <mat-icon>public</mat-icon>
-          <span i18n="@@articles.toggle.public">Public</span>
-          @if (publicCount() > 0) {
-          <span class="toggle-count">{{ publicCount() }}</span>
-          }
-        </mat-button-toggle>
-      </mat-button-toggle-group>
+<ng-template #headerActionsTemplate>
+  @if (isAuthenticated()) {
+  <mat-button-toggle-group [value]="feedSource()" (change)="onSourceChange($event.value)" class="source-toggle">
+    <mat-button-toggle value="following">
+      <mat-icon>people</mat-icon>
+      <span i18n="@@articles.toggle.following">Following</span>
+      @if (followingCount() > 0) {
+      <span class="toggle-count">{{ followingCount() }}</span>
       }
-      <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@articles.refresh.aria"
-        aria-label="Refresh articles">
-        <mat-icon>refresh</mat-icon>
-      </button>
-    </div>
-  </div>
+    </mat-button-toggle>
+    <mat-button-toggle value="public">
+      <mat-icon>public</mat-icon>
+      <span i18n="@@articles.toggle.public">Public</span>
+      @if (publicCount() > 0) {
+      <span class="toggle-count">{{ publicCount() }}</span>
+      }
+    </mat-button-toggle>
+  </mat-button-toggle-group>
+  }
+</ng-template>
 
+<div class="articles-container">
   <div class="articles-content">
     @if (loading()) {
     <div class="loading-container">

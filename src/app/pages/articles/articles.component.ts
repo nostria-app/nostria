@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LayoutService } from '../../services/layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -33,7 +34,7 @@ const PAGE_SIZE = 30;
   templateUrl: './articles.component.html',
   styleUrls: ['./articles.component.scss'],
 })
-export class ArticlesDiscoverComponent implements OnDestroy {
+export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -41,6 +42,9 @@ export class ArticlesDiscoverComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private layout = inject(LayoutService);
+  private panelActions = inject(PanelActionsService);
+
+  @ViewChild('headerActionsTemplate') headerActionsTemplate!: TemplateRef<unknown>;
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -142,7 +146,29 @@ export class ArticlesDiscoverComponent implements OnDestroy {
     });
   }
 
+  ngOnInit(): void {
+    // Actions will be set up in ngAfterViewInit when templates are available
+  }
+
+  ngAfterViewInit(): void {
+    this.setupPanelActions();
+  }
+
+  private setupPanelActions(): void {
+    this.panelActions.setLeftPanelActions([
+      {
+        id: 'refresh',
+        icon: 'refresh',
+        label: 'Refresh',
+        tooltip: 'Refresh articles',
+        action: () => this.refresh(),
+      },
+    ]);
+    this.panelActions.setLeftPanelHeaderLeftContent(this.headerActionsTemplate);
+  }
+
   ngOnDestroy(): void {
+    this.panelActions.clearLeftPanelActions();
     if (this.subscription) {
       this.subscription.close();
     }
