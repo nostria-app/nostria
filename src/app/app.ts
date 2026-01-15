@@ -1825,22 +1825,29 @@ export class App implements OnInit {
 
   /**
    * Handle scroll events on the left panel for header hide/show
+   * Only auto-hides on mobile/smaller screens - desktop keeps header visible
    */
   onLeftPanelScroll(event: Event): void {
     const container = event.target as HTMLElement;
     const scrollTop = container.scrollTop;
     const scrollDelta = scrollTop - this.leftPanelLastScrollTop;
 
-    // Scrolling down - hide header after scrolling down past threshold
-    if (scrollDelta > 10 && scrollTop > 100) {
-      this.leftPanelHeaderHidden.set(true);
-    }
-    // Scrolling up - show header immediately
-    else if (scrollDelta < -10) {
-      this.leftPanelHeaderHidden.set(false);
-    }
-    // At the very top - always show header
-    else if (scrollTop <= 50) {
+    // Only auto-hide on mobile/smaller screens
+    if (this.layout.isHandset()) {
+      // Scrolling down - hide header after scrolling down past threshold
+      if (scrollDelta > 10 && scrollTop > 100) {
+        this.leftPanelHeaderHidden.set(true);
+      }
+      // Scrolling up - show header immediately
+      else if (scrollDelta < -10) {
+        this.leftPanelHeaderHidden.set(false);
+      }
+      // At the very top - always show header
+      else if (scrollTop <= 50) {
+        this.leftPanelHeaderHidden.set(false);
+      }
+    } else {
+      // On desktop, always keep header visible
       this.leftPanelHeaderHidden.set(false);
     }
 
@@ -1849,22 +1856,29 @@ export class App implements OnInit {
 
   /**
    * Handle scroll events on the right panel for header hide/show
+   * Only auto-hides on mobile/smaller screens - desktop keeps header visible
    */
   onRightPanelScroll(event: Event): void {
     const container = event.target as HTMLElement;
     const scrollTop = container.scrollTop;
     const scrollDelta = scrollTop - this.rightPanelLastScrollTop;
 
-    // Scrolling down - hide header after scrolling down past threshold
-    if (scrollDelta > 10 && scrollTop > 100) {
-      this.rightPanelHeaderHidden.set(true);
-    }
-    // Scrolling up - show header immediately
-    else if (scrollDelta < -10) {
-      this.rightPanelHeaderHidden.set(false);
-    }
-    // At the very top - always show header
-    else if (scrollTop <= 50) {
+    // Only auto-hide on mobile/smaller screens
+    if (this.layout.isHandset()) {
+      // Scrolling down - hide header after scrolling down past threshold
+      if (scrollDelta > 10 && scrollTop > 100) {
+        this.rightPanelHeaderHidden.set(true);
+      }
+      // Scrolling up - show header immediately
+      else if (scrollDelta < -10) {
+        this.rightPanelHeaderHidden.set(false);
+      }
+      // At the very top - always show header
+      else if (scrollTop <= 50) {
+        this.rightPanelHeaderHidden.set(false);
+      }
+    } else {
+      // On desktop, always keep header visible
       this.rightPanelHeaderHidden.set(false);
     }
 
