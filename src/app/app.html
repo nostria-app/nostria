@@ -117,10 +117,6 @@
       }
       }
 
-      <button mat-icon-button (click)="toggleAppsMenu($event)">
-        <mat-icon>apps</mat-icon>
-      </button>
-
       <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
         (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
         @if (accountState.profile()?.data?.picture) {
