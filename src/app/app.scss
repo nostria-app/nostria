@@ -170,18 +170,18 @@ nav {
   .floating-toolbar-content {
     @include glass-section;
     gap: 4px;
-    padding: 0 12px;
+    padding: 0 16px;
     // height: 48px is inherited from glass-section mixin
     border-radius: 24px;
     pointer-events: auto;
 
     .panel-title {
-      font-size: 1.1rem; // Match app-title size
+      font-size: 1.3rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-right: 4px;
+      margin: 0 8px;
     }
 
     .action-button,
