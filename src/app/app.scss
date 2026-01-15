@@ -898,7 +898,8 @@ mat-sidenav-content {
   /* Completely hide instead of z-index manipulation */
 }
 
-.mobile-nav a {
+.mobile-nav a,
+.mobile-nav button {
   color: #666;
 }
 
@@ -911,7 +912,8 @@ mat-sidenav-content {
     0px 4px 16px rgba(0, 0, 0, 0.4),
     0px 8px 24px rgba(0, 0, 0, 0.4);
 
-  a {
+  a,
+  button {
     color: rgba(255, 255, 255, 0.7);
   }
 }

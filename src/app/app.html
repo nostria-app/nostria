@@ -88,7 +88,7 @@
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
       } @else {
-      <button mat-icon-button (click)="openSearch()">
+      <button mat-icon-button (click)="openSearch()" class="hide-small">
         <mat-icon>search</mat-icon>
       </button>
       }
@@ -109,7 +109,7 @@
       </button>
       }
       @else {
-      <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
+      <button class="notification-toolbar hide-small" mat-icon-button routerLink="/notifications"
         i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
         <mat-icon
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
@@ -539,11 +539,11 @@
       <div class="mobile-nav-label" i18n="@@app.mobile.home">Home</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/people']"
-      (click)="$event.preventDefault(); onMobileNavClick('/people')" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{ exact: false }">
-      <mat-icon>people</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.people">People</div>
+    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']"
+      (click)="$event.preventDefault(); onMobileNavClick('/messages')" routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{ exact: true }">
+      <mat-icon [matBadge]="getUnreadMessagesCount()" matBadgeSize="small">mail</mat-icon>
+      <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
     </a>
 
     <!-- FAB button in the middle with circular cut-out -->
@@ -554,18 +554,18 @@
       </button>
     </div>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']"
-      (click)="$event.preventDefault(); onMobileNavClick('/messages')" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/notifications']"
+      (click)="$event.preventDefault(); onMobileNavClick('/notifications')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
-      <mat-icon [matBadge]="getUnreadMessagesCount()" matBadgeSize="small">mail</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
+      <mat-icon [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null"
+        matBadgeSize="small">notifications</mat-icon>
+      <div class="mobile-nav-label" i18n="@@app.mobile.notifications">Notifications</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="[{ outlets: { right: ['p', accountState.pubkey()] } }]"
-      routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: false }">
-      <mat-icon>account_circle</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.profile">Profile</div>
-    </a>
+    <button mat-button class="mobile-nav-button" (click)="openSearch()">
+      <mat-icon>search</mat-icon>
+      <div class="mobile-nav-label" i18n="@@app.mobile.search">Search</div>
+    </button>
   </div>
   }
   }
