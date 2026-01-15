@@ -159,6 +159,15 @@ bubblewrap build
 - Account - This is accounts of the user within the app.
 - Users - This is Nostr users. "User" and "Users" refer to Nostr users, not the current user of the app.
 
+
+## Developer Notes
+
+SVG to ICO: https://redketchup.io/icon-converter
+
+Sizes: 16, 32, 48, 180, 192, 512
+
+Extract PNG from ICO: https://cloudconvert.com/ico-to-png
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
