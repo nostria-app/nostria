@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, computed, effect } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ViewChild, TemplateRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatCardModule } from '@angular/material/card';
@@ -34,6 +34,7 @@ import { ProfileDisplayNameComponent } from '../../components/user-profile/displ
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -64,7 +65,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
 })
-export class NotificationsComponent implements OnInit {
+export class NotificationsComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
   private accountRelay = inject(AccountRelayService);
   private router = inject(Router);
@@ -77,6 +78,11 @@ export class NotificationsComponent implements OnInit {
   private dataService = inject(DataService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private panelActions = inject(PanelActionsService);
+
+  // Template refs for panel header content
+  @ViewChild('headerLeftContent') headerLeftContent!: TemplateRef<unknown>;
+  @ViewChild('headerActionsMenuTemplate') headerActionsMenuTemplate!: TemplateRef<unknown>;
 
   notifications = this.notificationService.notifications;
 
@@ -195,6 +201,48 @@ export class NotificationsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
+    // Setup panel header actions
+    this.setupPanelActions();
+  }
+
+  ngOnDestroy(): void {
+    // Clear panel actions when component is destroyed
+    this.panelActions.clearLeftPanelActions();
+  }
+
+  /**
+   * Setup panel header actions for the column toolbar
+   */
+  private setupPanelActions(): void {
+    const actions = [
+      {
+        id: 'search',
+        icon: 'search',
+        label: 'Search',
+        tooltip: 'Search notifications',
+        action: () => this.toggleSearch(),
+      },
+      {
+        id: 'more',
+        icon: 'more_vert',
+        label: 'More options',
+        tooltip: 'More options',
+        action: () => { }, // Menu trigger handled by template
+        menu: true,
+      },
+    ];
+
+    this.panelActions.setLeftPanelActions(actions);
+
+    // Set up templates after view init
+    setTimeout(() => {
+      if (this.headerLeftContent) {
+        this.panelActions.setLeftPanelHeaderLeftContent(this.headerLeftContent);
+      }
+      if (this.headerActionsMenuTemplate) {
+        this.panelActions.setLeftPanelMenuTemplate(this.headerActionsMenuTemplate);
+      }
+    });
   }
 
   /**

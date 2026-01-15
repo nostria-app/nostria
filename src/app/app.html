@@ -430,6 +430,9 @@
               </button>
               }
               <span class="panel-title">{{ panelNav.getLeftTitle() }}</span>
+              @if (panelActions.leftPanelHeaderLeftContent()) {
+              <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
+              }
             </div>
             <div class="header-right">
               @for (action of panelActions.leftPanelActions(); track action.id) {
@@ -481,6 +484,9 @@
               </button>
               }
               <span class="panel-title">{{ rightPanelTitle() }}</span>
+              @if (panelActions.rightPanelHeaderLeftContent()) {
+              <ng-container *ngTemplateOutlet="panelActions.rightPanelHeaderLeftContent()!"></ng-container>
+              }
             </div>
             <div class="header-right">
               @for (action of panelActions.rightPanelActions(); track action.id) {
