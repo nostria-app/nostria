@@ -106,6 +106,9 @@ export class StreamsComponent implements OnInit, OnDestroy {
    * Setup panel header actions for the column toolbar
    */
   private setupPanelActions(): void {
+    // Set the page title for the toolbar
+    this.panelActions.setPageTitle('Streams');
+    
     const actions = [
       {
         id: 'refresh',

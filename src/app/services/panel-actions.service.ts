@@ -18,6 +18,11 @@ export interface PanelAction {
   providedIn: 'root'
 })
 export class PanelActionsService {
+  // Current page title for toolbar (e.g., "Music", "Notifications")
+  // Components set this when they become active
+  private _pageTitle = signal<string>('');
+  pageTitle = this._pageTitle.asReadonly();
+
   // Actions for left panel header (displayed on right side of header)
   private _leftPanelActions = signal<PanelAction[]>([]);
   leftPanelActions = this._leftPanelActions.asReadonly();
@@ -39,6 +44,20 @@ export class PanelActionsService {
 
   private _rightPanelHeaderLeftContent = signal<TemplateRef<unknown> | null>(null);
   rightPanelHeaderLeftContent = this._rightPanelHeaderLeftContent.asReadonly();
+
+  /**
+   * Set the page title displayed in the toolbar
+   */
+  setPageTitle(title: string): void {
+    this._pageTitle.set(title);
+  }
+
+  /**
+   * Clear the page title
+   */
+  clearPageTitle(): void {
+    this._pageTitle.set('');
+  }
 
   /**
    * Set actions for the left panel header
@@ -89,6 +108,7 @@ export class PanelActionsService {
     this._leftPanelActions.set([]);
     this._leftPanelMenuTemplate.set(null);
     this._leftPanelHeaderLeftContent.set(null);
+    this._pageTitle.set('');
   }
 
   /**

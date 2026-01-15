@@ -155,6 +155,9 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private setupPanelActions(): void {
+    // Set the page title for the toolbar
+    this.panelActions.setPageTitle('Articles');
+    
     this.panelActions.setLeftPanelActions([
       {
         id: 'refresh',
