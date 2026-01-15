@@ -253,7 +253,7 @@
           <mat-icon>light_mode</mat-icon>
           }
         </button>
-        <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
+        <button class="close-button-right" mat-icon-button (click)="toggleProfileSidenav()">
           <mat-icon>close</mat-icon>
         </button>
         <div class="profile-header">
@@ -419,8 +419,8 @@
           </div>
           }
 
-          <!-- Left panel content header -->
-          @if (panelNav.hasLeftContent()) {
+          <!-- Left panel content header (not shown for Feeds - it has its own UI) -->
+          @if (panelNav.hasLeftContent() && !panelNav.showFeeds()) {
           <div class="panel-header left-panel-header" [class.header-hidden]="leftPanelHeaderHidden()">
             <div class="header-left">
               @if (panelNav.canGoBackLeft()) {
