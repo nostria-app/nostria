@@ -1,26 +1,17 @@
 <div class="streams-container">
-  <div class="streams-header">
-    <h1>
-      <mat-icon>sensors</mat-icon>
-      <span i18n="@@streams.title">Live Streams</span>
-    </h1>
-    <div class="header-actions">
-      <button mat-stroked-button (click)="openStreamingAppsDialog()" class="stream-button">
-        <mat-icon>videocam</mat-icon>
-        <span i18n="@@streams.wantToStream">Want to stream?</span>
-      </button>
-      @if (isAuthenticated()) {
-      <button mat-icon-button (click)="openSettings()" i18n-aria-label="@@streams.settings.aria"
-        aria-label="Streams settings">
-        <mat-icon>settings</mat-icon>
-      </button>
-      }
-      <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@streams.refresh.aria"
-        aria-label="Refresh streams">
-        <mat-icon>refresh</mat-icon>
-      </button>
-    </div>
-  </div>
+  <!-- Template for header actions menu -->
+  <ng-template #headerActionsMenuTemplate>
+    <button mat-menu-item (click)="openStreamingAppsDialog()">
+      <mat-icon>videocam</mat-icon>
+      <span i18n="@@streams.wantToStream">Want to stream?</span>
+    </button>
+    @if (isAuthenticated()) {
+    <button mat-menu-item (click)="openSettings()">
+      <mat-icon>settings</mat-icon>
+      <span i18n="@@streams.settings.label">Settings</span>
+    </button>
+    }
+  </ng-template>
 
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
     <mat-tab>

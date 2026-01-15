@@ -246,8 +246,10 @@ export class TwoColumnLayoutService {
     'playlists/edit': { type: 'detail' },
     'polls/edit': { type: 'detail' },
 
+    // Wide list views (left panel, 1400px)
+    'streams': { type: 'list', preserveOnNavigation: true },
+
     // Full-width views (right panel, takes remaining space)
-    'streams': { type: 'full-width' },
     'stream': { type: 'full-width' },
     'meetings': { type: 'full-width' },
   };
@@ -286,10 +288,11 @@ export class TwoColumnLayoutService {
     this.isDetailRoute.set(false);
 
     // Set width mode based on route:
-    // - Home route gets wide mode (1400px)
+    // - Home route and streams get wide mode (1400px)
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
-    if (isHome) {
+    const isWideRoute = isHome || cleanUrl === 'streams';
+    if (isWideRoute) {
       this._leftWidthMode.set('wide');
     } else {
       this._leftWidthMode.set('narrow');

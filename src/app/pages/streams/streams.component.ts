@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ViewChild, TemplateRef } from '@angular/core';
 
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
+import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -16,6 +17,8 @@ import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { DatabaseService } from '../../services/database.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
@@ -29,13 +32,14 @@ import { StreamsSettingsDialogComponent } from './streams-settings-dialog/stream
     MatChipsModule,
     MatTabsModule,
     MatCardModule,
+    MatMenuModule,
     LiveEventComponent,
     StreamsSettingsDialogComponent,
   ],
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
 })
-export class StreamsComponent implements OnDestroy {
+export class StreamsComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -45,6 +49,11 @@ export class StreamsComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private database = inject(DatabaseService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
+  private panelActions = inject(PanelActionsService);
+
+  // Template refs for panel header content
+  @ViewChild('headerActionsMenuTemplate') headerActionsMenuTemplate!: TemplateRef<unknown>;
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -88,6 +97,44 @@ export class StreamsComponent implements OnDestroy {
     this.initializeStreams();
   }
 
+  ngOnInit(): void {
+    // Setup panel header actions
+    this.setupPanelActions();
+  }
+
+  /**
+   * Setup panel header actions for the column toolbar
+   */
+  private setupPanelActions(): void {
+    const actions = [
+      {
+        id: 'refresh',
+        icon: 'refresh',
+        label: 'Refresh',
+        tooltip: 'Refresh streams',
+        action: () => this.refresh(),
+        disabled: this.loading(),
+      },
+      {
+        id: 'more',
+        icon: 'more_vert',
+        label: 'More options',
+        tooltip: 'More options',
+        action: () => { }, // Menu trigger handled by template
+        menu: true,
+      },
+    ];
+
+    this.panelActions.setLeftPanelActions(actions);
+
+    // Set up menu template after view init
+    setTimeout(() => {
+      if (this.headerActionsMenuTemplate) {
+        this.panelActions.setLeftPanelMenuTemplate(this.headerActionsMenuTemplate);
+      }
+    });
+  }
+
   /**
    * Initialize streams by first loading relay set, then starting subscriptions
    */
@@ -100,6 +147,8 @@ export class StreamsComponent implements OnDestroy {
     if (this.subscription) {
       this.subscription.close();
     }
+    // Clear panel actions when component is destroyed
+    this.panelActions.clearLeftPanelActions();
   }
 
   /**
