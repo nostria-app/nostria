@@ -200,6 +200,12 @@ export class FeedsComponent implements OnDestroy {
   hasHorizontalOverflow = signal(false);
   columnsScrollWidth = signal(0);
   columnsScrollLeft = signal(0);
+
+  // Feed tabs overflow detection - triggers dropdown mode when tabs don't fit
+  feedTabsOverflow = signal(false);
+  @ViewChild('feedTabsContainer') feedTabsContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('feedTabsInner') feedTabsInner?: ElementRef<HTMLDivElement>;
+  private feedTabsResizeObserver?: ResizeObserver;
   canScrollLeft = computed(() => this.columnsScrollLeft() > 0);
   canScrollRight = computed(() => {
     const scrollLeft = this.columnsScrollLeft();
@@ -225,6 +231,11 @@ export class FeedsComponent implements OnDestroy {
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
     return isMobile;
+  });
+
+  // Use dropdown selector when on mobile OR when tabs overflow
+  useDropdownSelector = computed(() => {
+    return this.isMobileView() || this.feedTabsOverflow();
   });
 
   // Calculate sidenav offset for fixed header positioning
@@ -636,12 +647,26 @@ export class FeedsComponent implements OnDestroy {
         this.screenWidth.set(window.innerWidth);
         // Update horizontal overflow on resize
         this.updateHorizontalOverflow();
+        // Check feed tabs overflow
+        this.checkFeedTabsOverflow();
       };
 
       window.addEventListener('resize', handleResize);
       return () => {
         window.removeEventListener('resize', handleResize);
       };
+    });
+
+    // Set up ResizeObserver for feed tabs overflow detection
+    effect(() => {
+      // Track feeds changes to re-check overflow when feeds are added/removed
+      const feeds = this.feeds();
+
+      // Delay check to allow DOM to update after feeds change
+      setTimeout(() => {
+        this.setupFeedTabsResizeObserver();
+        this.checkFeedTabsOverflow();
+      }, 200);
     });
 
     // Set up scroll listener for header auto-hide
@@ -860,6 +885,82 @@ export class FeedsComponent implements OnDestroy {
     const hasOverflow = container.scrollWidth > container.clientWidth;
     this.hasHorizontalOverflow.set(hasOverflow);
     this.columnsScrollWidth.set(container.scrollWidth);
+  }
+
+  /**
+   * Set up ResizeObserver for feed tabs to detect overflow
+   */
+  private setupFeedTabsResizeObserver(): void {
+    // Clean up existing observer
+    this.feedTabsResizeObserver?.disconnect();
+
+    const container = this.feedTabsContainer?.nativeElement;
+    if (!container) return;
+
+    this.feedTabsResizeObserver = new ResizeObserver(() => {
+      this.checkFeedTabsOverflow();
+    });
+
+    this.feedTabsResizeObserver.observe(container);
+  }
+
+  /**
+   * Check if feed tabs overflow their container and need dropdown mode
+   */
+  private checkFeedTabsOverflow(): void {
+    // If already in mobile view, no need to check - always use dropdown
+    if (this.isMobileView()) {
+      this.feedTabsOverflow.set(false);
+      return;
+    }
+
+    const container = this.feedTabsContainer?.nativeElement;
+    const inner = this.feedTabsInner?.nativeElement;
+
+    if (!container || !inner) {
+      this.feedTabsOverflow.set(false);
+      return;
+    }
+
+    // Get the feed tab buttons (excluding dropdown button if shown)
+    const feedTabs = inner.querySelectorAll('.feed-tab');
+
+    // If no feed tabs visible (dropdown is showing), check if we should switch back
+    if (feedTabs.length === 0) {
+      // We're in dropdown mode - estimate whether tabs would fit
+      const feeds = this.feeds();
+      // More conservative estimate: ~90px per tab on average
+      const estimatedTabsWidth = feeds.length * 90;
+
+      // Available width: container minus relay menu (~50px) and options button (~50px)
+      const availableWidth = container.clientWidth - 100;
+
+      // Switch back to tabs only if there's clearly enough room (20% buffer)
+      const hasOverflow = estimatedTabsWidth > availableWidth * 0.8;
+      this.feedTabsOverflow.set(hasOverflow);
+      return;
+    }
+
+    // Calculate actual width of feed tabs inner container
+    const innerWidth = inner.scrollWidth;
+
+    // Available width: container minus relay menu (~50px), spacer, and options button (~50px)
+    // But we need to account for the spacer which takes flex: 1
+    // So we measure the actual remaining space after other fixed elements
+    const relayMenu = container.querySelector('app-relay-feed-menu');
+    const optionsButton = container.querySelector('[matMenuTriggerFor="feedManagementMenu"]');
+
+    const relayMenuWidth = relayMenu ? (relayMenu as HTMLElement).offsetWidth : 50;
+    const optionsButtonWidth = optionsButton ? (optionsButton as HTMLElement).offsetWidth : 50;
+    const containerPadding = 16; // 8px on each side
+    const gap = 8; // gaps between elements
+
+    const fixedElementsWidth = relayMenuWidth + optionsButtonWidth + containerPadding + gap;
+    const availableWidth = container.clientWidth - fixedElementsWidth;
+
+    // Check if inner content overflows available width
+    const hasOverflow = innerWidth > availableWidth;
+    this.feedTabsOverflow.set(hasOverflow);
   }
 
   /**
@@ -1191,6 +1292,9 @@ export class FeedsComponent implements OnDestroy {
 
     // Clean up scroll listeners
     this.cleanupScrollListener();
+
+    // Clean up ResizeObserver for feed tabs
+    this.feedTabsResizeObserver?.disconnect();
 
     // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
     this.feedService.setFeedsPageActive(false);
