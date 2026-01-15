@@ -2,11 +2,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-right: 0.5rem;
 
   // Re-enable pointer events on glass sections
   pointer-events: auto;
-  // Always show at least the "..." button on mobile
 }
 
 .favorites-preview {
@@ -15,7 +13,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 24px;
-  height: 48px;
+  height: 40px;
 
   // Glass effect for the toolbar section
   background-color: rgba(255, 255, 255, 0.7);
@@ -30,20 +28,6 @@
     // Drop shadows
     0px 2px 8px rgba(17, 17, 26, 0.08),
     0px 4px 16px rgba(17, 17, 26, 0.06);
-
-  // On smallest screens, show only 1 favorite + more button
-  @media (max-width: 599px) {
-    .favorite-avatar:nth-child(n+2):not(.more-button) {
-      display: none;
-    }
-  }
-
-  // At tablet width (720px), show only 2 favorites + more button
-  @media (max-width: 720px) {
-    .favorite-avatar:nth-child(n+3):not(.more-button) {
-      display: none;
-    }
-  }
 }
 
 // Dark mode glass effect
@@ -61,8 +45,8 @@
 }
 
 .favorite-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid var(--mat-sys-surface);
@@ -93,7 +77,7 @@
   }
 
   .avatar-initials {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--mat-sys-on-surface-variant);
   }
@@ -102,9 +86,9 @@
     background-color: var(--mat-sys-primary-container);
 
     mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
       color: var(--mat-sys-on-primary-container);
     }
 
