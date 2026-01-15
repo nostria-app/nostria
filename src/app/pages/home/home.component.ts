@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,9 @@ import { LayoutService } from '../../services/layout.service';
  * Home component - Serves as the landing page and navigation hub.
  * When user navigates to home (/), the feeds panel is shown in the left column.
  * This component shows detailed navigation and discovery options in the right panel/main view.
+ * 
+ * Note: The TwoColumnLayoutService automatically sets wide mode (1400px) for the home route
+ * in its handleRouteChange method, so we don't need to manage it here.
  */
 @Component({
   selector: 'app-home',
@@ -36,21 +39,13 @@ import { LayoutService } from '../../services/layout.service';
   styleUrls: ['./home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent implements OnDestroy {
+export class HomeComponent {
   app = inject(ApplicationService);
   twoColumnLayout = inject(TwoColumnLayoutService);
   account = inject(AccountStateService);
   theme = inject(ThemeService);
   layout = inject(LayoutService);
   private bottomSheet = inject(MatBottomSheet);
-
-  constructor() {
-    this.twoColumnLayout.setWideLeft();
-  }
-
-  ngOnDestroy() {
-    this.twoColumnLayout.setSplitView();
-  }
 
   /**
    * Open the create content menu
