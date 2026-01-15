@@ -1,11 +1,10 @@
-<div class="people-page" [class.split-view]="selectedContactPubkey()">
-  <!-- Sidebar - People List -->
-  <div class="people-sidebar" [class.compact]="selectedContactPubkey()">
+<div class="people-page">
+  <!-- People List -->
+  <div class="people-sidebar">
     <!-- Header section with controls -->
     <div class="people-header">
       <div class="controls-section">
-        @if (!selectedContactPubkey()) {
-        <!-- Full header when no contact selected -->
+        <!-- Full header -->
         <!-- List Selector -->
         @if (allFollowSets().length > 0) {
         <button mat-button [matMenuTriggerFor]="followSetsMenu" class="follow-set-selector">
@@ -171,23 +170,13 @@
           </button>
           }
         </div>
-        } @else {
-        <!-- Compact header when contact selected -->
-        <div class="compact-header">
-          @if (searchTerm()) {
-          <button mat-icon-button (click)="updateSearch('')" matTooltip="Clear search">
-            <mat-icon>close</mat-icon>
-          </button>
-          }
-        </div>
-        }
       </div>
     </div>
 
     <mat-divider></mat-divider>
 
     <!-- Alphabet Navigation Sidebar -->
-    @if (showAlphabetNav() && !selectedContactPubkey() && sortedPeople().length > 0) {
+    @if (showAlphabetNav() && sortedPeople().length > 0) {
     <div class="alphabet-nav">
       @for (letter of availableLetters(); track letter) {
       <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
@@ -233,23 +222,24 @@
         }
       </div>
       } @else {
-      <!-- Apply different container classes based on viewMode() and compact state -->
-      <div class="people-container" [ngClass]="{              'comfortable-list': viewMode() === 'comfortable',              'large-grid': viewMode() === 'large' || viewMode() === 'grid',
+      <!-- Apply different container classes based on viewMode() -->
+      <div class="people-container" [ngClass]="{
+              'comfortable-list': viewMode() === 'comfortable',
+              'large-grid': viewMode() === 'large' || viewMode() === 'grid',
               'medium-grid': viewMode() === 'medium',
               'small-grid': viewMode() === 'small',
-              'details-list': viewMode() === 'details' || viewMode() === 'list',
-              'compact-avatars': selectedContactPubkey()
+              'details-list': viewMode() === 'details' || viewMode() === 'list'
             }">
         @for (pubkey of visiblePeople(); track pubkey) {
-        <div class="person-item" [class.selected]="selectedContactPubkey() === pubkey" [attr.data-pubkey]="pubkey"
-          (click)="selectContact(pubkey)" (keydown.enter)="selectContact(pubkey)"
-          (keydown.space)="selectContact(pubkey); $event.preventDefault()" tabindex="0" role="button"
+        <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
+          (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
+          tabindex="0" role="button"
           [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
-            [view]="selectedContactPubkey() ? 'avatar' : $any(viewMode())"
+            [view]="$any(viewMode())"
             [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
-            [showRank]="filters().showRank && !selectedContactPubkey()" [disableLink]="true">
+            [showRank]="filters().showRank" [disableLink]="true">
           </app-user-profile>
         </div>
         }
@@ -262,11 +252,4 @@
       }
     </div>
   </div>
-
-  <!-- Contact Card Panel -->
-  @if (selectedContactPubkey(); as contactPubkey) {
-  <div class="contact-panel">
-    <app-contact-card [pubkeyParam]="contactPubkey" (close)="closeContactCard()"></app-contact-card>
-  </div>
-  }
 </div>

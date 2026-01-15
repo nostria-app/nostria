@@ -16,7 +16,6 @@ import { debounceTime } from 'rxjs/operators';
 import { Subject, firstValueFrom } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { Router } from '@angular/router';
-import { ContactCardComponent } from './contact-card/contact-card.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
@@ -37,6 +36,7 @@ import { FollowingService, FollowingProfile } from '../../services/following.ser
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -60,7 +60,6 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
     MatRadioModule,
     RouterModule,
     UserProfileComponent,
-    ContactCardComponent,
     MatMenuModule
   ],
   templateUrl: './people.component.html',
@@ -83,13 +82,11 @@ export class PeopleComponent implements OnDestroy {
   private followSetsService = inject(FollowSetsService);
   private hoverCardService = inject(ProfileHoverCardService);
   private utilities = inject(UtilitiesService);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
 
   // Search functionality
   searchTerm = signal<string>('');
   private searchChanged = new Subject<string>();
-
-  // Selected contact for viewing in contact card panel
-  selectedContactPubkey = signal<string | null>(null);
 
   // Scroll container reference
   peopleContent = viewChild<ElementRef>('peopleContent');
@@ -286,6 +283,9 @@ export class PeopleComponent implements OnDestroy {
   });
 
   constructor() {
+    // Set wide left panel (1400px) like Music component
+    this.twoColumnLayout.setWideLeft();
+
     // Initialize search debounce
     this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
       this.searchTerm.set(term);
@@ -362,33 +362,6 @@ export class PeopleComponent implements OnDestroy {
       } else if (!setDTag && this.selectedFollowSet()) {
         // Clear selection when no set parameter
         this.selectFollowSet(null);
-      }
-    });
-
-    // Watch for 'contact' query parameter and open contact card
-    effect(() => {
-      const params = this.queryParams();
-      const contactNpub = params?.['contact'];
-
-      if (contactNpub && typeof contactNpub === 'string') {
-        try {
-          const decoded = this.utilities.getPubkeyFromNpub(contactNpub);
-          if (decoded && this.selectedContactPubkey() !== decoded) {
-            this.selectedContactPubkey.set(decoded);
-            setTimeout(() => this.scrollToSelectedContact(), 100);
-          }
-        } catch (e) {
-          this.logger.error('Invalid contact npub in URL:', contactNpub);
-        }
-      } else if (!contactNpub && this.selectedContactPubkey()) {
-        // Clear selection when no contact parameter (unless we just set it)
-        // Check if we're in the middle of a selectContact call by checking if the URL will be updated
-        setTimeout(() => {
-          const currentParams = this.queryParams();
-          if (!currentParams?.['contact']) {
-            this.selectedContactPubkey.set(null);
-          }
-        }, 50);
       }
     });
 
@@ -486,44 +459,14 @@ export class PeopleComponent implements OnDestroy {
     event.stopPropagation();
   }
 
-  viewProfile(pubkey: string) {
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
-  }
-
   /**
-   * Select a contact to view in the contact card panel
+   * Select a contact to view in the right panel
    */
   selectContact(pubkey: string) {
     // Close any open hover card to prevent interference
     this.hoverCardService.closeHoverCard();
-    this.selectedContactPubkey.set(pubkey);
-
-    // Update URL with contact parameter
-    const npub = this.utilities.getNpubFromPubkey(pubkey);
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { contact: npub },
-      queryParamsHandling: 'merge'
-    });
-
-    // Auto-scroll to selected contact in compact mode
-    setTimeout(() => this.scrollToSelectedContact(), 100);
-  }
-
-  /**
-   * Scroll to the selected contact in the people list
-   */
-  private scrollToSelectedContact() {
-    const selectedPubkey = this.selectedContactPubkey();
-    if (!selectedPubkey) return;
-
-    const container = this.peopleContent();
-    if (!container) return;
-
-    const element = container.nativeElement.querySelector(`[data-pubkey="${selectedPubkey}"]`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    // Navigate to profile in right panel
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
   }
 
   /**
@@ -574,21 +517,6 @@ export class PeopleComponent implements OnDestroy {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }
-
-  /**
-   * Close the contact card panel
-   */
-  closeContactCard() {
-    this.hoverCardService.closeHoverCard();
-    this.selectedContactPubkey.set(null);
-
-    // Remove contact parameter from URL
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { contact: null },
-      queryParamsHandling: 'merge'
-    });
   }
 
   /**

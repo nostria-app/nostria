@@ -10,19 +10,6 @@
   @media (min-width: 1200px) {
     margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
   }
-
-  &.split-view {
-    .people-sidebar {
-      flex: 0 0 auto;
-      max-width: 90px;
-      border-right: 1px solid var(--mat-sys-outline-variant);
-    }
-
-    .contact-panel {
-      flex: 1;
-      display: block;
-    }
-  }
 }
 
 .people-sidebar {
@@ -40,57 +27,6 @@
   @media (max-width: 599px) {
     padding-bottom: 80px;
   }
-
-  &.compact {
-    max-width: 90px;
-
-    .people-header {
-      padding: 0.5rem;
-
-      .compact-header {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        gap: 0.5rem;
-
-        h3 {
-          font-size: 0.75rem;
-          margin: 0;
-          writing-mode: vertical-rl;
-          text-orientation: mixed;
-        }
-      }
-    }
-
-    .people-content {
-
-      .loading-container,
-      .error-container,
-      .empty-container {
-        padding: 1rem 0.5rem;
-
-        p {
-          font-size: 0.75rem;
-        }
-
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
-  }
-}
-
-.contact-panel {
-  display: none;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: var(--mat-sys-surface-container-lowest);
-  height: 100%;
 }
 
 .people-container {
@@ -99,43 +35,6 @@
   // Add extra bottom padding on mobile for navigation menu
   @media (max-width: 599px) {
     padding-bottom: 120px;
-  }
-
-  &.compact-avatars {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem;
-
-    .person-item {
-      width: 64px;
-      height: 64px;
-      cursor: pointer;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-      border: 3px solid transparent;
-      position: relative;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-
-      &:hover {
-        transform: scale(1.05);
-        border-color: var(--mat-sys-outline);
-      }
-
-      &.selected {
-        border-color: var(--mat-sys-primary);
-        box-shadow: 0 0 0 2px var(--mat-sys-surface), 0 0 0 4px var(--mat-sys-primary);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--mat-sys-primary);
-        outline-offset: 2px;
-      }
-    }
   }
 }
 
