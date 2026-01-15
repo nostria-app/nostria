@@ -63,6 +63,7 @@ interface AccountLocalState {
   lastAppOpen?: number; // Timestamp (in seconds) when app was last opened
   musicYoursSectionCollapsed?: boolean; // Whether the "Yours" section in Music is collapsed
   favoritesMigrated?: boolean; // Whether favorites have been migrated to Nostr (kind 30000)
+  leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
 }
 
 /**
@@ -100,6 +101,9 @@ export class AccountLocalStateService {
 
   // Signal to trigger reactivity when hidden chat IDs change
   private hiddenChatIdsVersion = signal(0);
+
+  // Signal to trigger reactivity when left panel collapsed state changes
+  private leftPanelCollapsedVersion = signal(0);
 
   /**
    * Get all account states from cache or localStorage
@@ -936,6 +940,24 @@ export class AccountLocalStateService {
    */
   setFavoritesMigrated(pubkey: string, migrated: boolean): void {
     this.updateAccountState(pubkey, { favoritesMigrated: migrated });
+  }
+
+  /**
+   * Get left panel collapsed state for an account
+   */
+  getLeftPanelCollapsed(pubkey: string): boolean {
+    // Read version signal to enable reactivity
+    this.leftPanelCollapsedVersion();
+    const state = this.getAccountState(pubkey);
+    return state.leftPanelCollapsed || false;
+  }
+
+  /**
+   * Set left panel collapsed state for an account
+   */
+  setLeftPanelCollapsed(pubkey: string, collapsed: boolean): void {
+    this.updateAccountState(pubkey, { leftPanelCollapsed: collapsed });
+    this.leftPanelCollapsedVersion.update(v => v + 1);
   }
 
   /**
