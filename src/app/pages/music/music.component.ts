@@ -29,6 +29,7 @@ import { MusicTrackDialogComponent } from './music-track-dialog/music-track-dial
 import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.component';
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
+import { MusicDataService } from '../../services/music-data.service';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -69,6 +70,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private panelActions = inject(PanelActionsService);
+  private musicData = inject(MusicDataService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -745,22 +747,37 @@ export class MusicComponent implements OnInit, OnDestroy {
   }
 
   goToAllFollowingPlaylists(): void {
+    this.musicData.setPreloadedPlaylists(this.followingPlaylists());
     this.router.navigate(['/music/playlists'], { queryParams: { source: 'following' } });
   }
 
   goToAllFollowingTracks(): void {
+    this.musicData.setPreloadedTracks(this.followingTracks());
     this.router.navigate(['/music/tracks'], { queryParams: { source: 'following' } });
   }
 
   goToAllPublicPlaylists(): void {
+    this.musicData.setPreloadedPlaylists(this.publicPlaylists());
     this.router.navigate(['/music/playlists'], { queryParams: { source: 'public' } });
   }
 
   goToAllPublicTracks(): void {
+    this.musicData.setPreloadedTracks(this.publicTracks());
     this.router.navigate(['/music/tracks'], { queryParams: { source: 'public' } });
   }
 
   goToAllArtists(): void {
+    // Convert to ArtistData format with track counts
+    const artistsWithCount = this.allArtists().map(artist => ({
+      name: artist.name,
+      pubkey: artist.pubkey,
+      trackCount: this.allTracks().filter(track => {
+        const artistTag = track.tags.find(t => t[0] === 'artist');
+        return artistTag?.[1]?.trim() === artist.name;
+      }).length,
+    }));
+    this.musicData.setPreloadedArtists(artistsWithCount);
+    this.musicData.setPreloadedTracks(this.allTracks());
     this.router.navigate(['/music/artists']);
   }
 

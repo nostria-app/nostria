@@ -12,6 +12,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { MusicDataService } from '../../../services/music-data.service';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 
 const MUSIC_KIND = 36787;
@@ -254,6 +255,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private app = inject(ApplicationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private musicData = inject(MusicDataService);
 
   // Input for when opened via RightPanelService
   sourceInput = input<'following' | 'public' | undefined>(undefined);
@@ -327,7 +329,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     const sourceFromInput = this.sourceInput();
     if (sourceFromInput) {
       this.source.set(sourceFromInput);
-      this.startSubscription();
+      this.initializeTracks();
       return;
     }
 
@@ -338,6 +340,32 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         this.source.set(sourceParam);
       }
     });
+    this.initializeTracks();
+  }
+
+  /**
+   * Initialize tracks - use preloaded data if available, otherwise fetch from relays
+   */
+  private initializeTracks(): void {
+    // Check if we have preloaded tracks from the music page
+    const preloadedTracks = this.musicData.consumePreloadedTracks();
+    if (preloadedTracks && preloadedTracks.length > 0) {
+      // Use preloaded data - populate track map and signal
+      for (const track of preloadedTracks) {
+        const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${track.pubkey}:${dTag}`;
+        this.trackMap.set(uniqueId, track);
+      }
+      this.allTracks.set(
+        Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
+      );
+      this.loading.set(false);
+      // Still start subscription to get fresh/additional data
+      this.startSubscription();
+      return;
+    }
+
+    // No preloaded data - start fresh subscription
     this.startSubscription();
   }
 

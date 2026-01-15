@@ -15,17 +15,12 @@ import { ReportingService } from '../../../services/reporting.service';
 import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
+import { MusicDataService, ArtistData } from '../../../services/music-data.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
 
 type SortOption = 'name-asc' | 'name-desc' | 'tracks-asc' | 'tracks-desc';
-
-interface ArtistData {
-  name: string;
-  pubkey: string;
-  trackCount: number;
-}
 
 @Component({
   selector: 'app-music-artists',
@@ -50,8 +45,10 @@ export class ArtistsComponent implements OnDestroy {
   private router = inject(Router);
   private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
+  private musicData = inject(MusicDataService);
 
   allTracks = signal<Event[]>([]);
+  preloadedArtists = signal<ArtistData[] | null>(null);
   loading = signal(true);
   sortBy = signal<SortOption>('name-asc');
 
@@ -60,8 +57,16 @@ export class ArtistsComponent implements OnDestroy {
 
   /**
    * Extract all unique artists from tracks with track counts
+   * If preloaded artists are available, use those instead
    */
   private allArtistsData = computed(() => {
+    // Use preloaded artists if available
+    const preloaded = this.preloadedArtists();
+    if (preloaded && preloaded.length > 0) {
+      return preloaded;
+    }
+
+    // Otherwise, compute from tracks
     const artistMap = new Map<string, ArtistData>();
 
     this.allTracks().forEach(track => {
@@ -116,6 +121,31 @@ export class ArtistsComponent implements OnDestroy {
   }
 
   private async initializeArtists(): Promise<void> {
+    // Check if we have preloaded data from the music page
+    const preloadedArtists = this.musicData.consumePreloadedArtists();
+    const preloadedTracks = this.musicData.consumePreloadedTracks();
+
+    if (preloadedArtists && preloadedArtists.length > 0) {
+      // Use preloaded artists data for immediate rendering
+      this.preloadedArtists.set(preloadedArtists);
+      this.loading.set(false);
+
+      // If we also have preloaded tracks, use them
+      if (preloadedTracks && preloadedTracks.length > 0) {
+        for (const track of preloadedTracks) {
+          const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+          const uniqueId = `${track.pubkey}:${dTag}`;
+          this.trackMap.set(uniqueId, track);
+        }
+        this.allTracks.set(Array.from(this.trackMap.values()));
+      }
+
+      // Still start subscription to get fresh/additional data
+      this.startSubscription();
+      return;
+    }
+
+    // No preloaded data - load from database and then subscription
     await this.loadFromDatabase();
     this.startSubscription();
   }
