@@ -434,6 +434,7 @@
               <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
               }
             </div>
+            @if (panelActions.leftPanelActions().length > 0) {
             <div class="header-right">
               @for (action of panelActions.leftPanelActions(); track action.id) {
               @if (action.menu) {
@@ -449,6 +450,7 @@
               }
               }
             </div>
+            }
           </div>
           }
 
@@ -470,8 +472,9 @@
           [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
           [class.expanded]="leftPanelCollapsed() && hasRightContent()">
 
-          <!-- Right panel header -->
-          @if (hasRightContent()) {
+          <!-- Right panel header - only show if there's a back button, title, left content, or actions -->
+          @if (hasRightContent() && (canGoBackRight() || rightPanelTitle() || panelActions.rightPanelHeaderLeftContent()
+          || panelActions.rightPanelActions().length > 0)) {
           <div class="panel-header right-panel-header" [class.header-hidden]="rightPanelHeaderHidden()">
             <div class="header-left">
               @if (canGoBackRight()) {
@@ -485,6 +488,7 @@
               <ng-container *ngTemplateOutlet="panelActions.rightPanelHeaderLeftContent()!"></ng-container>
               }
             </div>
+            @if (panelActions.rightPanelActions().length > 0) {
             <div class="header-right">
               @for (action of panelActions.rightPanelActions(); track action.id) {
               @if (action.menu) {
@@ -500,6 +504,7 @@
               }
               }
             </div>
+            }
           </div>
           }
 
