@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect, HostListener, OnInit, TemplateRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, HostListener, OnInit, TemplateRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';

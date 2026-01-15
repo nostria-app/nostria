@@ -41,16 +41,6 @@ import { CommandPaletteDialogComponent } from '../components/command-palette-dia
 import { NavigationStackService } from './navigation-stack.service';
 import { RightPanelService } from './right-panel.service';
 import { PanelNavigationService } from './panel-navigation.service';
-import { ArticleComponent } from '../pages/article/article.component';
-import { MusicPlaylistComponent } from '../pages/music/music-playlist/music-playlist.component';
-import { MusicArtistComponent } from '../pages/music/music-artist/music-artist.component';
-import { SongDetailComponent } from '../pages/music/song-detail/song-detail.component';
-import { MusicLikedComponent } from '../pages/music/music-liked/music-liked.component';
-import { MusicLikedPlaylistsComponent } from '../pages/music/music-liked-playlists/music-liked-playlists.component';
-import { MusicTracksComponent } from '../pages/music/music-tracks/music-tracks.component';
-import { MusicPlaylistsComponent } from '../pages/music/music-playlists/music-playlists.component';
-import { EventPageComponent } from '../pages/event/event.component';
-import { ProfileComponent } from '../pages/profile/profile.component';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
