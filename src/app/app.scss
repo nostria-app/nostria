@@ -678,7 +678,7 @@ mat-sidenav-content {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 16px;
+  // padding: 8px 0px;
   position: absolute;
   top: var(--toolbar-height, 64px);
   left: 0;
@@ -760,6 +760,13 @@ mat-sidenav-content {
   .nav-button,
   .action-button {
     flex-shrink: 0;
+  }
+}
+
+// If smaller than 1024, the .panel-header should have padding on sides.
+@media (max-width: 1023px) {
+  .panel-header {
+    padding: 0 8px;
   }
 }
 
