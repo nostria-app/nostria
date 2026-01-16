@@ -1199,6 +1199,8 @@ export class FeedService {
 
       if (!searchQuery || searchQuery.trim() === '') {
         this.logger.warn('No search query specified for search feed');
+        feedData.isRefreshing?.set(false);
+        feedData.initialLoadComplete = true;
         return;
       }
 
@@ -1220,6 +1222,8 @@ export class FeedService {
 
       if (events.length === 0) {
         this.logger.info(`🔍 No events found for search query: "${searchQuery}"`);
+        feedData.isRefreshing?.set(false);
+        feedData.initialLoadComplete = true;
         return;
       }
 
@@ -1258,8 +1262,16 @@ export class FeedService {
       // Update lastRetrieved timestamp
       this.updateColumnLastRetrieved(feed.id);
 
+      // Mark initial load as complete and stop showing loading spinner
+      feedData.isRefreshing?.set(false);
+      feedData.initialLoadComplete = true;
+      this.logger.info(`✅ Search feed load complete for ${feed.id} - found ${events.length} events`);
+
     } catch (error) {
       this.logger.error('Error loading search feed:', error);
+      // Always mark as complete even on error to stop loading spinner
+      feedData.isRefreshing?.set(false);
+      feedData.initialLoadComplete = true;
     }
   }
 
