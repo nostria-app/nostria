@@ -161,13 +161,15 @@
       @let verifiedId = verifiedIdentifier();
 
       @if (verifiedId.value) {
-      <div class="profile-item" title="{{ verifiedId.status }}">
+      <div class="profile-item pointer" title="{{ verifiedId.status }}">
         @if (verifiedId.valid) {
         <mat-icon class="verified-icon">verified</mat-icon>
         } @else {
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
-        <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
+        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard()" (keydown.enter)="copyNip05ToClipboard()"
+          (keydown.space)="copyNip05ToClipboard()" tabindex="0" role="button"
+          [attr.aria-label]="'Copy ' + verifiedId.value + ' to clipboard'">{{ verifiedId.value }}</span>
 
         @if (verifiedFaviconUrl() && faviconVisible()) {
         <img [src]="verifiedFaviconUrl()" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
