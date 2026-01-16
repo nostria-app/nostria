@@ -26,6 +26,8 @@ import { ArticlesSettingsDialogComponent } from './articles-settings-dialog/arti
 const PAGE_SIZE = 30;
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
+const RELAY_QUERY_TIMEOUT_MS = 3000;
+const BATCH_DELAY_MS = 100;
 
 @Component({
   selector: 'app-articles-discover',
@@ -521,12 +523,12 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
           this.handleArticleEvent(event);
         });
 
-        // Close after 3 seconds
-        setTimeout(() => sub.close(), 3000);
+        // Close after timeout
+        setTimeout(() => sub.close(), RELAY_QUERY_TIMEOUT_MS);
       }
 
       // Small delay between batches to avoid overwhelming the system
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
     }
   }
 
@@ -599,8 +601,9 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
     // Update articles list
     this.updateArticlesList();
 
-    // Save to database for caching
+    // Save to database for caching in the background
     const dTagValue = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
+    // Fire and forget - don't block the UI thread
     this.database.saveEvent({ ...event, dTag: dTagValue }).catch(error => {
       console.error('[Articles] Error saving article to database:', error);
     });

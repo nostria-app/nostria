@@ -35,6 +35,10 @@ interface AccountLocalState {
   dismissedPushNotificationDialog?: boolean;
   dismissedCredentialsBackupDialog?: boolean;
   articlesActiveTab?: number;
+  /**
+   * Feed source preference for articles discover page (following or public).
+   * Defaults to 'following' to show articles from people the user follows.
+   */
   articlesDiscoverFeedSource?: 'following' | 'public'; // Feed source for articles discover page
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];

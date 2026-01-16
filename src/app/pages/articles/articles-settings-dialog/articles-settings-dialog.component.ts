@@ -22,7 +22,13 @@ import { DatabaseService } from '../../../services/database.service';
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
 
+// Timeout for relay queries
+const RELAY_QUERY_TIMEOUT_MS = 5000;
+const RELAY_SUBSCRIPTION_TIMEOUT_MS = 3000;
+
 // Default articles relays to suggest when user has no relay set
+// These are well-known relays that typically have good article content
+// Users can always customize this list through the settings dialog
 const DEFAULT_ARTICLES_RELAYS = [
   'wss://nos.lol/',
   'wss://relay.damus.io/',
@@ -144,7 +150,7 @@ export class ArticlesSettingsDialogComponent implements OnInit {
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => {
           resolve();
-        }, 5000);
+        }, RELAY_QUERY_TIMEOUT_MS);
 
         const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
           // Keep only the newest event
@@ -158,7 +164,7 @@ export class ArticlesSettingsDialogComponent implements OnInit {
           sub.close();
           clearTimeout(timeout);
           resolve();
-        }, 3000);
+        }, RELAY_SUBSCRIPTION_TIMEOUT_MS);
       });
 
       if (foundEvent) {
