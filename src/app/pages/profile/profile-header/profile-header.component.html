@@ -252,6 +252,28 @@
 
       <mat-menu #profileMenu="matMenu">
         @if (!isOwnProfile()) {
+        <button mat-menu-item (click)="layoutService.openSendMessage(pubkey())">
+          <mat-icon>message</mat-icon>
+          <span>Message</span>
+        </button>
+
+        @if (hasLightningAddress()) {
+        <button mat-menu-item (click)="zapUser()">
+          <mat-icon>bolt</mat-icon>
+          <span>Zap</span>
+        </button>
+        }
+
+        <!-- Gift Premium - Only show if user doesn't have premium -->
+        @if (!isPremium()) {
+        <button mat-menu-item (click)="giftPremium()">
+          <mat-icon>card_giftcard</mat-icon>
+          <span>Gift Premium</span>
+        </button>
+        }
+        }
+
+        <mat-divider></mat-divider>
         @if (!isFollowing()) {
         <button mat-menu-item (click)="followUser()">
           <mat-icon>person_add</mat-icon>
@@ -273,21 +295,7 @@
           <span>Add to list</span>
         </button>
 
-        @if (hasLightningAddress()) {
-        <button mat-menu-item (click)="zapUser()">
-          <mat-icon>bolt</mat-icon>
-          <span>Zap</span>
-        </button>
-        }
 
-        <!-- Gift Premium - Only show if user doesn't have premium -->
-        @if (!isPremium()) {
-        <button mat-menu-item (click)="giftPremium()">
-          <mat-icon>card_giftcard</mat-icon>
-          <span>Gift Premium</span>
-        </button>
-        }
-        }
 
         @if (isOwnProfile()) {
         <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
@@ -295,11 +303,6 @@
           <span>Edit Profile</span>
         </button>
         }
-
-        <button mat-menu-item (click)="layoutService.openSendMessage(pubkey())">
-          <mat-icon>message</mat-icon>
-          <span>Message</span>
-        </button>
 
         <button mat-menu-item [matMenuTriggerFor]="copyMenu">
           <mat-icon>content_copy</mat-icon>
@@ -342,11 +345,6 @@
       </mat-menu>
 
       <mat-menu #copyMenu="matMenu">
-        <button mat-menu-item (click)="copyInviteLink()">
-          <mat-icon>person_add</mat-icon>
-          <span>Invite Link</span>
-        </button>
-        <mat-divider></mat-divider>
         <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
           <span>Identifier (npub)</span>
         </button>
