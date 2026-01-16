@@ -225,6 +225,12 @@ export const routes: Routes = [
         title: 'Trust',
       },
       {
+        path: 'wallet',
+        loadComponent: () =>
+          import('./pages/settings/wallet/wallet.component').then(m => m.WalletSettingsComponent),
+        title: 'Wallet',
+      },
+      {
         path: 'backup',
         loadComponent: () =>
           import('./pages/backup/backup.component').then(m => m.BackupComponent),

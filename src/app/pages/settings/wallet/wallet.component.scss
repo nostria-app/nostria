@@ -1,0 +1,102 @@
+.wallet-settings {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+mat-card {
+  margin-bottom: 16px;
+}
+
+.amounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.amount-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.amount-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amount-value {
+  font-size: 1rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.custom-badge {
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
+.remove-button {
+  color: var(--mat-sys-error);
+}
+
+.add-custom-card {
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.add-custom-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+.custom-amount-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.info-section {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  margin-top: 24px;
+}
+
+.info-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
+.info-text {
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
+}

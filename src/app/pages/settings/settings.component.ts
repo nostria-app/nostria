@@ -64,6 +64,7 @@ export class SettingsComponent implements OnInit {
       authenticated: true,
     },
     { id: 'trust', title: $localize`:@@settings.sections.trust:Trust`, icon: 'verified_user', authenticated: true },
+    { id: 'wallet', title: $localize`:@@settings.sections.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
     { id: 'backup', title: $localize`:@@settings.sections.backup:Backup`, icon: 'archive', authenticated: true, premium: true },
     { id: 'premium', title: $localize`:@@settings.sections.premium:Premium`, icon: 'diamond', authenticated: true },
     { id: 'logs', title: $localize`:@@settings.sections.logs:Logs`, icon: 'article', authenticated: false },
