@@ -788,10 +788,8 @@ export class LayoutService implements OnDestroy {
   }
 
   navigateToProfile(npub: string): void {
-    this.router.navigate(['/p', npub]);
-    setTimeout(() => {
-      this.scrollToOptimalProfilePosition();
-    }, 300);
+    // Profile always opens in the right panel
+    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
   }
   onSearchInput(event: any) {
     if (event.target.value === null) {

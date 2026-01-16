@@ -336,10 +336,10 @@ export class NavigationStackService {
   }
 
   /**
-   * Navigate to a profile (left panel - it's a list container)
+   * Navigate to a profile (right panel - profiles are detail views)
    */
   navigateToProfile(pubkey: string) {
-    this.pushLeft({
+    this.pushRight({
       type: 'profile',
       id: pubkey,
       route: `/p/${pubkey}`

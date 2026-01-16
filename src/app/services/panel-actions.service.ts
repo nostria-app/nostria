@@ -23,6 +23,10 @@ export class PanelActionsService {
   private _pageTitle = signal<string>('');
   pageTitle = this._pageTitle.asReadonly();
 
+  // Right panel title (for components rendered in right panel outlet)
+  private _rightPanelTitle = signal<string>('');
+  rightPanelTitle = this._rightPanelTitle.asReadonly();
+
   // Actions for left panel header (displayed on right side of header)
   private _leftPanelActions = signal<PanelAction[]>([]);
   leftPanelActions = this._leftPanelActions.asReadonly();
@@ -57,6 +61,20 @@ export class PanelActionsService {
    */
   clearPageTitle(): void {
     this._pageTitle.set('');
+  }
+
+  /**
+   * Set the right panel title (overrides default URL-based title)
+   */
+  setRightPanelTitle(title: string): void {
+    this._rightPanelTitle.set(title);
+  }
+
+  /**
+   * Clear the right panel title (falls back to URL-based title)
+   */
+  clearRightPanelTitle(): void {
+    this._rightPanelTitle.set('');
   }
 
   /**

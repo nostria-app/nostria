@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -20,6 +20,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface ExternalIdentity {
   platform: string;
@@ -46,7 +47,7 @@ interface ExternalIdentity {
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss',
 })
-export class ProfileEditComponent implements OnInit {
+export class ProfileEditComponent implements OnInit, OnDestroy {
   nostr = inject(NostrService);
   database = inject(DatabaseService);
   data = inject(DataService);
@@ -55,6 +56,7 @@ export class ProfileEditComponent implements OnInit {
   media = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private profileService = inject(Profile);
+  private panelActions = inject(PanelActionsService);
   profile = signal<ProfileData | null>(null);
   pubkey = '';
   loading = signal<boolean>(false);
@@ -94,6 +96,9 @@ export class ProfileEditComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Set the page title for the floating toolbar
+    this.panelActions.setPageTitle('Editing profile');
+
     const metadata = this.accountState.profile();
 
     // Keep a reference to the pubkey for the profile being edited, used for navigation and updates
@@ -136,6 +141,11 @@ export class ProfileEditComponent implements OnInit {
         nip05: '',
       });
     }
+  }
+
+  ngOnDestroy() {
+    // Note: Profile component will handle setting the title back to "Profile"
+    // via its router events subscription when navigating away from edit
   }
 
   cancelEdit() {

@@ -709,6 +709,14 @@ export const routes: Routes = [
     children: profileChildren,
   },
   {
+    path: 'u/:username',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/profile/profile.component').then(m => m.ProfileComponent),
+    resolve: { data: DataResolver, user: UsernameResolver },
+    children: profileChildren,
+  },
+  {
     path: 'stream/:encodedEvent',
     outlet: 'right',
     loadComponent: () =>
