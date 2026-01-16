@@ -2667,6 +2667,14 @@ export class FeedService {
   }
 
   /**
+   * Check if initial load is complete for a column
+   * Used to distinguish between "still loading" and "no results"
+   */
+  getColumnInitialLoadComplete(columnId: string): boolean {
+    return this.data.get(columnId)?.initialLoadComplete ?? false;
+  }
+
+  /**
    * Public method to load more events for pagination
    * Called by components when user scrolls to bottom
    */

@@ -277,6 +277,18 @@ export class FeedsComponent implements OnDestroy {
     return eventMap;
   });
 
+  // Computed signal to check if a feed has completed initial load with no results
+  feedHasNoResults = computed(() => {
+    const resultMap = new Map<string, boolean>();
+    this.feeds().forEach(feed => {
+      const events = this.columnEvents().get(feed.id);
+      const hasEvents = events !== undefined && events.length > 0;
+      const initialLoadComplete = this.feedService.getColumnInitialLoadComplete(feed.id);
+      resultMap.set(feed.id, initialLoadComplete && !hasEvents);
+    });
+    return resultMap;
+  });
+
   // Legacy column references - kept for backward compatibility
   // columns now maps directly to feeds since we merged the column concept with feeds
   columns = computed(() => this.feeds());
