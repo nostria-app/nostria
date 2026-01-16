@@ -377,6 +377,75 @@ export class StateService {
 | `SettingsService` | User settings |
 | `LocalSettingsService` | Device-local settings |
 
+### AccountLocalStateService vs LocalSettingsService
+
+These two services serve different purposes for local storage:
+
+#### AccountLocalStateService
+
+**Purpose**: Per-account UI preferences and caching metadata stored locally.
+
+**When to use**: Settings that should be different for each Nostr account on the same device.
+
+**Storage key**: `nostria-account-states` (stores a map keyed by pubkey)
+
+**Examples**:
+- `notificationLastCheck`: Timestamp of last notification check (per-account)
+- `messagesLastCheck`: Timestamp of last messages check (per-account)
+- `zapHistoryLastTimestamp`: Most recent zap timestamp for incremental fetching
+- `activeFeed`: The currently selected feed for that account
+- `favorites`: User's favorite items
+- `musicYoursSectionCollapsed`: UI collapse state for music section
+- `trustedMediaAuthors`: Authors whose media is auto-loaded
+
+```typescript
+// Usage
+private accountLocalState = inject(AccountLocalStateService);
+
+// Get per-account timestamp
+const lastZapTimestamp = this.accountLocalState.getZapHistoryLastTimestamp(pubkey);
+
+// Set per-account timestamp
+this.accountLocalState.setZapHistoryLastTimestamp(pubkey, timestamp);
+```
+
+#### LocalSettingsService
+
+**Purpose**: Technical/global settings that apply across all accounts on the device.
+
+**When to use**: Device-level preferences that don't change based on which account is logged in.
+
+**Storage key**: `nostria-local-settings`
+
+**Examples**:
+- `useProxy`: Whether to use the image proxy (network optimization)
+- `proxyRegion`: Which regional proxy server to use
+- `mediaServer`: Preferred media upload server
+- `aiEnabled`: Whether AI features are enabled on this device
+- `virtualKeyboardHeight`: Cached keyboard height for mobile
+
+```typescript
+// Usage
+private localSettings = inject(LocalSettingsService);
+
+// Get global setting
+const useProxy = this.localSettings.settings().useProxy;
+
+// Update global setting
+this.localSettings.update({ useProxy: true });
+```
+
+#### Decision Guide
+
+| Scenario | Service to Use |
+|----------|----------------|
+| "Remember my last feed selection" | `AccountLocalStateService` |
+| "Remember the proxy region for this device" | `LocalSettingsService` |
+| "Track when I last checked notifications" | `AccountLocalStateService` |
+| "Enable AI features on this device" | `LocalSettingsService` |
+| "Cache timestamp for incremental fetching" | `AccountLocalStateService` |
+| "Store mobile keyboard height" | `LocalSettingsService` |
+
 ### Data Flow
 
 ```

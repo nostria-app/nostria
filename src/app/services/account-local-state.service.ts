@@ -69,6 +69,7 @@ interface AccountLocalState {
   musicYoursSectionCollapsed?: boolean; // Whether the "Yours" section in Music is collapsed
   favoritesMigrated?: boolean; // Whether favorites have been migrated to Nostr (kind 30000)
   leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
+  zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
 }
 
 /**
@@ -194,6 +195,21 @@ export class AccountLocalStateService {
    */
   setMessagesLastCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { messagesLastCheck: timestamp });
+  }
+
+  /**
+   * Get zap history last timestamp for an account (most recent zap timestamp)
+   */
+  getZapHistoryLastTimestamp(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.zapHistoryLastTimestamp || 0;
+  }
+
+  /**
+   * Set zap history last timestamp for an account
+   */
+  setZapHistoryLastTimestamp(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { zapHistoryLastTimestamp: timestamp });
   }
 
   /**
