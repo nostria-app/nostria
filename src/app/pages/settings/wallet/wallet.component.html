@@ -1,0 +1,87 @@
+<div class="wallet-settings">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>bolt</mat-icon>
+      <mat-card-title>Quick Zap Amounts</mat-card-title>
+      <mat-card-subtitle>
+        Select zap amounts for quick zapping. On mobile, long-press the zap button to see these options.
+        On desktop, hover over the zap button.
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="amounts-list">
+        @for (amount of zapAmounts(); track amount.value) {
+          <div class="amount-item">
+            <mat-slide-toggle
+              [(ngModel)]="amount.enabled"
+              (change)="toggleAmount(amount)"
+              color="primary"
+            >
+              <div class="amount-label">
+                <span class="amount-value">{{ formatAmount(amount.value) }} sats</span>
+                @if (amount.isCustom) {
+                  <span class="custom-badge">Custom</span>
+                }
+              </div>
+            </mat-slide-toggle>
+            @if (amount.isCustom) {
+              <button
+                mat-icon-button
+                (click)="removeCustomAmount(amount)"
+                matTooltip="Remove custom amount"
+                class="remove-button"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <mat-card appearance="outlined" class="add-custom-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>add_circle</mat-icon>
+          <mat-card-title>Add Custom Amount</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="add-custom-form">
+            <mat-form-field appearance="outline" class="custom-amount-field">
+              <mat-label>Amount (sats)</mat-label>
+              <input
+                matInput
+                type="number"
+                [(ngModel)]="newCustomAmount"
+                placeholder="Enter amount in sats"
+                (keyup.enter)="addCustomAmount()"
+                min="1"
+              />
+              <mat-icon matPrefix>bolt</mat-icon>
+            </mat-form-field>
+            <button
+              mat-flat-button
+              color="primary"
+              (click)="addCustomAmount()"
+              [disabled]="!newCustomAmount"
+            >
+              <mat-icon>add</mat-icon>
+              Add Amount
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <div class="info-section">
+        <mat-icon class="info-icon">info</mat-icon>
+        <div class="info-text">
+          <p>
+            <strong>Quick Zap Feature:</strong><br />
+            • On mobile: Long-press the zap button to see amount options<br />
+            • On desktop: Hover over the zap button to select an amount<br />
+            • If only one amount is enabled, long-press on mobile will immediately send that amount<br />
+            • Regular click still opens the full zap dialog
+          </p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
