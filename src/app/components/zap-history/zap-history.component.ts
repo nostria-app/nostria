@@ -407,6 +407,8 @@ interface ZapHistoryEntry {
 
       .type-icon {
         font-size: 20px;
+        width: 20px;
+        height: 20px;
         flex-shrink: 0;
       }
 
@@ -428,7 +430,9 @@ interface ZapHistoryEntry {
       .counterparty {
         color: var(--mat-sys-on-surface);
         min-width: 0;
+        max-width: 120px;
         flex-shrink: 1;
+        overflow: hidden;
       }
 
       .counterparty app-user-profile {
@@ -438,6 +442,8 @@ interface ZapHistoryEntry {
 
       .context-indicator {
         font-size: 18px;
+        width: 18px;
+        height: 18px;
         color: var(--mat-sys-on-surface-variant);
         flex-shrink: 0;
         cursor: pointer;
@@ -462,8 +468,9 @@ interface ZapHistoryEntry {
       .comment-text {
         font-size: 12px;
         color: var(--mat-sys-on-surface-variant);
-        flex: 1;
+        flex: 0 1 auto;
         min-width: 0;
+        max-width: 200px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -471,7 +478,7 @@ interface ZapHistoryEntry {
       }
 
       .spacer {
-        flex: 1;
+        flex: 1 1 0;
         min-width: 8px;
       }
 
@@ -485,6 +492,8 @@ interface ZapHistoryEntry {
       .bolt-icon {
         color: var(--nostria-bitcoin);
         font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
 
       .amount {
@@ -629,12 +638,27 @@ export class ZapHistoryComponent implements OnDestroy {
       // Process cached zaps for immediate display
       const cachedHistory = this.processZapReceipts(cachedReceived, cachedSent);
       if (cachedHistory.length > 0) {
+        cachedHistory.sort((a, b) => b.timestamp - a.timestamp);
         this.allZaps.set(cachedHistory);
+        // Hide loading spinner once we have cached data
+        this.isLoading.set(false);
         // Start prefetching profiles for cached data
         this.prefetchProfiles(cachedHistory);
       }
 
-      // Step 2: Fetch new zaps from relays
+      // Step 2: Fetch new zaps from relays in background
+      this.fetchFromRelays(userPubkey);
+    } catch (error) {
+      console.error('Failed to load zap history:', error);
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Fetch zaps from relays and merge with existing data
+   */
+  private async fetchFromRelays(userPubkey: string): Promise<void> {
+    try {
       const receivedZapReceipts = await this.zapService.getZapsForUser(userPubkey);
       const sentZapReceipts = await this.zapService.getZapsSentByUser(userPubkey);
 
@@ -644,25 +668,30 @@ export class ZapHistoryComponent implements OnDestroy {
         await this.database.saveEvents(newReceipts);
       }
 
-      // Process all zaps (relay data will include cached data, so we deduplicate)
+      // Process all zaps from relays
       const zapHistory = this.processZapReceipts(receivedZapReceipts, sentZapReceipts);
 
       // Sort by timestamp (most recent first)
       zapHistory.sort((a, b) => b.timestamp - a.timestamp);
 
-      this.allZaps.set(zapHistory);
+      // Only update if we have new data or different data
+      const currentZaps = this.allZaps();
+      if (zapHistory.length !== currentZaps.length ||
+        (zapHistory.length > 0 && currentZaps.length > 0 && zapHistory[0].zapReceipt.id !== currentZaps[0].zapReceipt.id)) {
+        this.allZaps.set(zapHistory);
+        // Prefetch profiles for any new zaps
+        await this.prefetchProfiles(zapHistory);
+      }
 
       // Update the last timestamp for tracking
       const newestTimestamp = zapHistory.length > 0 ? zapHistory[0].timestamp : 0;
       if (newestTimestamp > 0) {
         this.accountLocalState.setZapHistoryLastTimestamp(userPubkey, newestTimestamp);
       }
-
-      // Prefetch profiles for all zaps
-      await this.prefetchProfiles(zapHistory);
     } catch (error) {
-      console.error('Failed to load zap history:', error);
+      console.error('Failed to fetch zaps from relays:', error);
     } finally {
+      // Ensure loading is hidden even if no cached data existed
       this.isLoading.set(false);
     }
   }
