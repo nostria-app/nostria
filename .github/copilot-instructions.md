@@ -17,6 +17,8 @@ URL for this app is: https://nostria.app
 
 To understand the architecture, see [ARCHITECTURE.md](../ARCHITECTURE.md). Important to follow the architecture decisions made there.
 
+Whenever you are doing some architecture or implementation changes that are not trivial, make sure to update the architecture documentation.
+
 ## Command Palette
 
 When adding new features or routes, always add corresponding commands to the Command Palette (`src/app/components/command-palette-dialog/`). This ensures users can access all features via keyboard shortcuts (Ctrl+K).

@@ -640,6 +640,64 @@ onScroll(event: Event) {
 }
 ```
 
+### CDK Virtual Scrolling
+
+For lists with fixed-height items, use Angular CDK's `ScrollingModule`:
+
+```typescript
+import { ScrollingModule } from '@angular/cdk/scrolling';
+
+@Component({
+  imports: [ScrollingModule],
+  template: `
+    <cdk-virtual-scroll-viewport 
+      [itemSize]="72" 
+      [minBufferPx]="400" 
+      [maxBufferPx]="800"
+      class="virtual-viewport">
+      @for (item of items(); track item.id) {
+        <div class="fixed-height-item">{{ item.name }}</div>
+      }
+    </cdk-virtual-scroll-viewport>
+  `,
+  styles: [`
+    .virtual-viewport {
+      height: 100%;
+      /* or a fixed height like 500px */
+    }
+    .fixed-height-item {
+      height: 72px; /* Must match itemSize */
+    }
+  `]
+})
+```
+
+**When to use CDK Virtual Scrolling:**
+- Lists with **fixed-height items** (notifications, zap history, following lists)
+- Data sets with 100+ items
+- Items that don't need dynamic resizing
+
+**When NOT to use CDK Virtual Scrolling:**
+- **Feeds with variable content** (notes with images, articles, reposts)
+- Lists where items need to expand/collapse
+- Content with unknown height until rendered
+
+**Configuration Parameters:**
+| Parameter | Purpose | Typical Value |
+|-----------|---------|---------------|
+| `itemSize` | Height of each item in pixels | 48-96 |
+| `minBufferPx` | Minimum buffer of content to render | 400 |
+| `maxBufferPx` | Maximum buffer of content to render | 800 |
+
+**Fixed-Height Layout Strategies:**
+
+For items with optional content (comments, metadata), use these techniques to maintain fixed height:
+
+1. **Truncation with ellipsis**: Show first line with `...`
+2. **Inline layout**: Move optional content to same row
+3. **Tooltip for overflow**: Full content on hover
+4. **Expandable rows**: Click to expand (use manual virtualization instead)
+
 ### Image Optimization
 
 - **Profile images**: Always through image proxy (96x96)
