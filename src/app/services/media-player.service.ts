@@ -1576,10 +1576,12 @@ export class MediaPlayerService implements OnInitialized {
   forward(value: number) {
     // Support both video and audio playback
     if (this.videoMode() && this.videoElement) {
-      this.videoElement.currentTime = Math.min(
-        this.videoElement.duration || 0,
-        this.videoElement.currentTime + value
-      );
+      const currentTime = this.videoElement.currentTime;
+      const duration = this.videoElement.duration || 0;
+      // Only update if values are valid
+      if (isFinite(currentTime) && isFinite(duration)) {
+        this.videoElement.currentTime = Math.min(duration, currentTime + value);
+      }
     } else if (this.audio) {
       this.audio.currentTime += value;
     }
@@ -1588,10 +1590,11 @@ export class MediaPlayerService implements OnInitialized {
   rewind(value: number) {
     // Support both video and audio playback
     if (this.videoMode() && this.videoElement) {
-      this.videoElement.currentTime = Math.max(
-        0,
-        this.videoElement.currentTime - value
-      );
+      const currentTime = this.videoElement.currentTime;
+      // Only update if currentTime is valid
+      if (isFinite(currentTime)) {
+        this.videoElement.currentTime = Math.max(0, currentTime - value);
+      }
     } else if (this.audio) {
       this.audio.currentTime -= value;
     }
