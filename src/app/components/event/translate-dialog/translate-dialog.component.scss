@@ -8,6 +8,11 @@
   mat-form-field {
     flex: 1;
   }
+
+  .swap-button {
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
 }
 
 .result {
