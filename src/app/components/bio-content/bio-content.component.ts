@@ -138,8 +138,8 @@ export class BioContentComponent implements OnDestroy {
 
     // Regex patterns
     // Match both "nostr:npub..." and standalone "npub..." or "nprofile..."
-    // Use word boundary to avoid matching parts of URLs or other text
-    const nostrRegex = /(?:^|\s|nostr:)(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)/g;
+    // Uses word boundary and lookahead to ensure clean matching
+    const nostrRegex = /\b(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)\b|nostr:(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)/g;
     const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
 
     // Find all matches
@@ -158,20 +158,16 @@ export class BioContentComponent implements OnDestroy {
     let match: RegExpExecArray | null;
     while ((match = nostrRegex.exec(processedContent)) !== null) {
       const fullMatch = match[0];
-      const identifier = match[1]; // The npub/nprofile part
+      // The identifier is in group 1 (standalone) or group 2 (with nostr: prefix)
+      const identifier = match[1] || match[2];
       // Prepend "nostr:" prefix for parsing
       const uri = `nostr:${identifier}`;
       const parsed = await this.parseNostrUri(uri);
       if (parsed) {
-        // Calculate the actual start position (skip any leading whitespace in the match)
-        const leadingWhitespace = fullMatch.match(/^\s+/)?.[0]?.length || 0;
-        const actualStart = match.index + leadingWhitespace;
-        const actualContent = fullMatch.trim();
-        
         matches.push({
-          start: actualStart,
-          end: actualStart + actualContent.length,
-          content: actualContent,
+          start: match.index,
+          end: match.index + fullMatch.length,
+          content: fullMatch,
           type: 'nostr-mention',
           pubkey: parsed.pubkey,
           displayName: parsed.displayName,
