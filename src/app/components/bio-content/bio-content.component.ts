@@ -137,7 +137,8 @@ export class BioContentComponent implements OnDestroy {
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex patterns
-    const nostrRegex = /(nostr:(?:npub|nprofile)1[a-zA-Z0-9]+)/g;
+    // Match both "nostr:npub..." and standalone "npub..." or "nprofile..."
+    const nostrRegex = /(?:nostr:)?((?:npub|nprofile)1[a-zA-Z0-9]+)/g;
     const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
 
     // Find all matches
@@ -155,13 +156,16 @@ export class BioContentComponent implements OnDestroy {
     // Find nostr URIs
     let match: RegExpExecArray | null;
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      const uri = match[0];
+      const fullMatch = match[0];
+      const identifier = match[1]; // The npub/nprofile part
+      // Ensure it's a valid nostr URI format for parsing
+      const uri = identifier.startsWith('nostr:') ? identifier : `nostr:${identifier}`;
       const parsed = await this.parseNostrUri(uri);
       if (parsed) {
         matches.push({
           start: match.index,
-          end: match.index + match[0].length,
-          content: uri,
+          end: match.index + fullMatch.length,
+          content: fullMatch,
           type: 'nostr-mention',
           pubkey: parsed.pubkey,
           displayName: parsed.displayName,
