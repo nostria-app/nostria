@@ -1,0 +1,103 @@
+<app-custom-dialog [title]="'Articles Settings'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'500px'"
+  [maxWidth]="'95vw'" (closed)="onCancel()">
+
+  <div dialog-content>
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading settings...</p>
+    </div>
+    } @else {
+    <p class="dialog-subtitle">Configure which relays to use for discovering article content.</p>
+
+    <!-- Info banner for new users -->
+    @if (!hasExistingRelaySet()) {
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <div class="info-content">
+        <span class="info-title">No articles relay set found</span>
+        <span class="info-description">We've added some suggested relays to get you started. Feel free to customize this
+          list.</span>
+      </div>
+    </div>
+    }
+
+    <!-- Current relays -->
+    <div class="relays-section">
+      <h3>Articles Relays</h3>
+      <p class="section-description">These relays will be used for fetching articles from people you follow and public articles.</p>
+
+      @if (relays().length > 0) {
+      <div class="relays-list">
+        @for (relay of relays(); track relay) {
+        <div class="relay-item">
+          <div class="relay-url">
+            <mat-icon>hub</mat-icon>
+            <span>{{ relay }}</span>
+          </div>
+          <button mat-icon-button (click)="removeRelay(relay)" aria-label="Remove relay">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="empty-relays">
+        <mat-icon>warning</mat-icon>
+        <span>No relays configured. Add at least one relay to discover articles.</span>
+      </div>
+      }
+
+      <!-- Add new relay -->
+      <div class="add-relay-form">
+        <mat-form-field appearance="outline" class="relay-input">
+          <mat-label>Relay URL</mat-label>
+          <input matInput [(ngModel)]="newRelayUrl" placeholder="wss://relay.example.com" (keyup.enter)="addRelay()" />
+          <mat-hint>Enter a WebSocket relay URL</mat-hint>
+        </mat-form-field>
+        <button mat-icon-button (click)="addRelay()" [disabled]="!newRelayUrl()" aria-label="Add relay">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <!-- Suggested relays -->
+      @if (suggestedRelays.length > 0) {
+      <div class="suggested-relays">
+        <span class="suggested-label">Suggested relays:</span>
+        <div class="suggested-chips">
+          @for (relay of suggestedRelays; track relay) {
+          <button mat-stroked-button class="suggested-chip" (click)="addDefaultRelay(relay)">
+            <mat-icon>add</mat-icon>
+            <span>{{ relay }}</span>
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- What is this section -->
+    <div class="info-section">
+      <h4>What is an Articles Relay Set?</h4>
+      <p>A relay set is a list of Nostr relays that specialize in certain types of content. Articles relay sets help you
+        discover long-form content more efficiently by connecting to relays that focus on article content.</p>
+      <p class="nip-reference">This uses <a href="https://github.com/nostr-protocol/nips/blob/master/51.md"
+          target="_blank" rel="noopener">NIP-51</a> Relay Sets (kind 30002).</p>
+    </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    <button mat-button (click)="onCancel()" [disabled]="isSaving()">Cancel</button>
+    <button mat-flat-button (click)="saveRelaySet()" [disabled]="isSaving() || isLoading() || relays().length === 0">
+      @if (isSaving()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>save</mat-icon>
+      }
+      <span>{{ hasExistingRelaySet() ? 'Update' : 'Create' }} Relay Set</span>
+    </button>
+  </div>
+</app-custom-dialog>
