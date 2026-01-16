@@ -314,6 +314,17 @@
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed">
+            @if (message.replyTo) {
+              @let repliedMessage = getMessageById(message.replyTo);
+              @if (repliedMessage) {
+              <div class="reply-context">
+                <mat-icon>reply</mat-icon>
+                <div class="reply-content">
+                  <span class="reply-text">{{ repliedMessage.content }}</span>
+                </div>
+              </div>
+              }
+            }
             <span class="message-content" [innerHTML]="message.content | linkify"></span>
             <span class="message-inline-meta">
               <!-- Encryption status indicator -->
@@ -341,12 +352,29 @@
               <mat-icon>refresh</mat-icon>
             </button>
           </div>
+          } @else {
+          <div class="message-actions">
+            <button mat-icon-button class="reply-button" (click)="setReplyTo(message)" matTooltip="Reply">
+              <mat-icon>reply</mat-icon>
+            </button>
+          </div>
           }
         </div>
         }
         }
       </div>
       <div class="message-input-container">
+        @if (replyingToMessage()) {
+        <div class="reply-preview">
+          <div class="reply-preview-content">
+            <mat-icon>reply</mat-icon>
+            <span class="reply-preview-text">{{ replyingToMessage()!.content }}</span>
+          </div>
+          <button mat-icon-button class="cancel-reply-button" (click)="clearReply()" matTooltip="Cancel reply">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
         <input #messageInput class="message-input" [ngModel]="newMessageText()"
           (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
           (keyup.enter)="sendMessage()" />
