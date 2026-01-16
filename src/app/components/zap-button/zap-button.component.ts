@@ -1,9 +1,9 @@
-import { Component, inject, input, output, signal, computed } from '@angular/core';
+import { Component, inject, input, output, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event as NostrEvent } from 'nostr-tools';
@@ -33,8 +33,8 @@ import { BreakpointObserver } from '@angular/cdk/layout';
       (touchcancel)="onLongPressEnd($event)"
       (mouseenter)="onMouseEnter()"
       (mouseleave)="onMouseLeave()"
-      [matMenuTriggerFor]="isMobile() ? null : quickZapMenu"
-      #zapButtonElement
+      [matMenuTriggerFor]="quickZapMenu"
+      #menuTrigger="matMenuTrigger"
       [matTooltip]="getTooltip()"
       matTooltipPosition="below"
     >
@@ -125,6 +125,9 @@ export class ZapButtonComponent {
   // Outputs
   zapSent = output<number>();
 
+  // ViewChild for menu trigger
+  @ViewChild('menuTrigger') menuTrigger!: MatMenuTrigger;
+
   // Services
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -203,7 +206,7 @@ export class ZapButtonComponent {
     }, this.LONG_PRESS_DURATION);
   }
 
-  onLongPressEnd(event: TouchEvent): void {
+  onLongPressEnd(_event: TouchEvent): void {
     // Cancel the timer if it hasn't fired yet
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
@@ -215,12 +218,22 @@ export class ZapButtonComponent {
   }
 
   onMouseEnter(): void {
-    // Desktop hover behavior - show menu if there are quick zap amounts
-    // Menu is controlled by matMenuTriggerFor directive
+    // Desktop hover behavior - show menu if there are quick zap amounts and not on mobile
+    if (!this.isMobile() && this.quickZapAmounts().length > 0 && this.menuTrigger) {
+      this.menuTrigger.openMenu();
+    }
   }
 
   onMouseLeave(): void {
-    // Desktop hover behavior - menu will close automatically
+    // Desktop hover behavior - close menu when mouse leaves
+    if (!this.isMobile() && this.menuTrigger && this.menuTrigger.menuOpen) {
+      // Small delay to allow user to move to menu
+      setTimeout(() => {
+        if (this.menuTrigger && this.menuTrigger.menuOpen) {
+          this.menuTrigger.closeMenu();
+        }
+      }, 200);
+    }
   }
 
   private async handleLongPress(event: MouseEvent | TouchEvent): Promise<void> {
@@ -235,15 +248,18 @@ export class ZapButtonComponent {
       return;
     }
 
-    // If multiple amounts, we'll need to show a selection
-    // For mobile, we can trigger the menu programmatically or use a custom dialog
-    // For now, we'll just show a message - in production this would open amount selection
+    // If multiple amounts or no amounts, show the menu
     if (amounts.length === 0) {
       this.snackBar.open('No quick zap amounts configured. Go to Settings > Wallet to configure.', 'Dismiss', {
         duration: 4000,
       });
+      return;
     }
-    // The menu will be shown via matMenuTriggerFor on the button
+
+    // Open the menu for amount selection
+    if (this.menuTrigger) {
+      this.menuTrigger.openMenu();
+    }
   }
 
   async quickZap(amount: number): Promise<void> {
