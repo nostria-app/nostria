@@ -169,4 +169,40 @@ describe('MessagingService', () => {
 
     expect(decryptedMessageEvent2.id).toEqual(decryptedMessageEvent.id);
   });
+
+  it('should extract replyTo from e tag', () => {
+    // Test the private getReplyToFromTags method by testing a DirectMessage with e tag
+    const tags: string[][] = [
+      ['p', 'pubkey123'],
+      ['e', 'event-id-to-reply-to'],
+    ];
+
+    // Access the private method through any for testing
+    const replyTo = (service as any).getReplyToFromTags(tags);
+    
+    expect(replyTo).toBe('event-id-to-reply-to');
+  });
+
+  it('should return undefined when no e tag exists', () => {
+    const tags: string[][] = [
+      ['p', 'pubkey123'],
+    ];
+
+    const replyTo = (service as any).getReplyToFromTags(tags);
+    
+    expect(replyTo).toBeUndefined();
+  });
+
+  it('should handle multiple tags and find e tag', () => {
+    const tags: string[][] = [
+      ['p', 'pubkey123'],
+      ['subject', 'Test Subject'],
+      ['e', 'reply-event-id'],
+      ['other', 'value'],
+    ];
+
+    const replyTo = (service as any).getReplyToFromTags(tags);
+    
+    expect(replyTo).toBe('reply-event-id');
+  });
 });
