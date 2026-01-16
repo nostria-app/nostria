@@ -8,6 +8,8 @@ import {
   DOCUMENT,
   computed,
   input,
+  OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import {
@@ -53,6 +55,8 @@ import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { ReportingService } from '../../services/reporting.service';
+import { PanelActionsService, PanelAction } from '../../services/panel-actions.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-profile',
@@ -83,7 +87,7 @@ import { ReportingService } from '../../services/reporting.service';
     '[class.in-right-panel]': 'isInRightPanel()',
   },
 })
-export class ProfileComponent {
+export class ProfileComponent implements OnInit, OnDestroy {
   // Input for two-column layout mode - when provided, uses this instead of route params
   twoColumnPubkey = input<string | undefined>(undefined);
 
@@ -106,8 +110,22 @@ export class ProfileComponent {
   private readonly profileTracking = inject(ProfileTrackingService);
   private readonly metrics = inject(Metrics);
   private readonly reportingService = inject(ReportingService);
+  private readonly panelActions = inject(PanelActionsService);
+  private readonly customDialog = inject(CustomDialogService);
 
   pubkey = signal<string>('');
+
+  // Computed signal for profile display name (for toolbar title)
+  profileDisplayName = computed(() => {
+    const metadata = this.userMetadata();
+    if (!metadata) return 'Profile';
+
+    // Priority: display_name > name > nip05 > 'Profile'
+    if (metadata.data.display_name) return metadata.data.display_name;
+    if (metadata.data.name) return metadata.data.name;
+    if (metadata.data.nip05) return this.utilities.parseNip05(metadata.data.nip05) || 'Profile';
+    return 'Profile';
+  });
   userMetadata = signal<NostrRecord | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
@@ -178,6 +196,17 @@ export class ProfileComponent {
           this.userMetadata.set(profile);
         });
       }
+    });
+
+    // Update page title and set up panel actions whenever user metadata changes
+    effect(() => {
+      const displayName = this.profileDisplayName();
+      const isRightPanel = this.isInRightPanel();
+      untracked(() => {
+        this.updatePageTitle();
+        // Re-setup view options action to ensure it's on the correct panel
+        this.setupViewOptionsAction(isRightPanel);
+      });
     });
 
     // Reset blocked profile reveal when block status changes from false to true
@@ -356,6 +385,17 @@ export class ProfileComponent {
         const currentUrl = event.urlAfterRedirects;
         const isProfileRoute = currentUrl.match(/(?:\/|\(|:)(p|u)\//);
         if (isProfileRoute) {
+          // Update the page title based on the current sub-route
+          const isEditRoute = currentUrl.includes('/edit');
+          if (!isEditRoute) {
+            // Set title to profile name when not on edit page
+            if (this.isInRightPanel()) {
+              this.panelActions.setRightPanelTitle(this.profileDisplayName());
+            } else {
+              this.panelActions.setPageTitle(this.profileDisplayName());
+            }
+          }
+
           // Extract the profile ID from the URL
           const profileMatch = currentUrl.match(/(?:\/|\(|:)(?:p|u)\/([^/\)]+)/);
           const urlProfileId = profileMatch ? profileMatch[1] : null;
@@ -393,6 +433,69 @@ export class ProfileComponent {
         }
       }
     });
+  }
+
+  ngOnInit(): void {
+    // Set up panel actions for the toolbar
+    if (this.isInRightPanel()) {
+      // Profile is in right panel - set right panel title and actions
+      this.panelActions.setRightPanelTitle('Profile');
+      this.setupViewOptionsAction(true);
+    } else {
+      // Profile is in left panel (shouldn't happen with new routing, but keep for compatibility)
+      this.panelActions.setPageTitle('Profile');
+      this.setupViewOptionsAction(false);
+    }
+  }
+
+  /**
+   * Update the page title when metadata changes
+   */
+  private updatePageTitle(): void {
+    if (this.isInRightPanel()) {
+      this.panelActions.setRightPanelTitle(this.profileDisplayName());
+    } else {
+      this.panelActions.setPageTitle(this.profileDisplayName());
+    }
+  }
+
+  /**
+   * Set up the view options action button in the toolbar
+   */
+  private setupViewOptionsAction(isRightPanel: boolean): void {
+    const viewOptionsAction: PanelAction = {
+      id: 'view-options',
+      icon: 'tune',
+      label: 'View Options',
+      tooltip: 'Display options',
+      action: () => this.openViewOptionsDialog()
+    };
+    if (isRightPanel) {
+      this.panelActions.setRightPanelActions([viewOptionsAction]);
+    } else {
+      this.panelActions.setLeftPanelActions([viewOptionsAction]);
+    }
+  }
+
+  /**
+   * Open the view options dialog
+   */
+  async openViewOptionsDialog(): Promise<void> {
+    const { ProfileViewOptionsComponent } = await import('./profile-view-options/profile-view-options.component');
+    this.customDialog.open(ProfileViewOptionsComponent, {
+      title: 'Display Options',
+      width: '340px'
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Clear panel actions when leaving the profile
+    if (this.isInRightPanel()) {
+      this.panelActions.clearRightPanelActions();
+      this.panelActions.clearRightPanelTitle();
+    } else {
+      this.panelActions.clearLeftPanelActions();
+    }
   }
 
   /**
@@ -538,11 +641,6 @@ export class ProfileComponent {
     } catch (error) {
       return this.utilities.formatInvalidPubkey(this.pubkey());
     }
-  }
-
-  getDefaultBanner(): string {
-    // Return a default gradient for users without a banner
-    return 'linear-gradient(135deg, #8e44ad, #3498db)';
   }
 
   copyToClipboard(text: string, type: string): void {

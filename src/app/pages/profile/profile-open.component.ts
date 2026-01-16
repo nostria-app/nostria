@@ -16,7 +16,8 @@ export class ProfileOpenComponent {
       const npub = this.accountState.npub();
 
       if (npub) {
-        this.router.navigate(['/p', npub]);
+        // Navigate to profile in right panel
+        this.router.navigate([{ outlets: { right: ['p', npub] } }]);
       }
     });
   }

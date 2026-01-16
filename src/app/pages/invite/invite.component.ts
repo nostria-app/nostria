@@ -139,12 +139,12 @@ export class InviteComponent implements OnInit {
         // Clear the stored inviter pubkey
         sessionStorage.removeItem('nostria_invite_follow');
 
-        // Navigate to inviter's profile
-        this.router.navigate(['/p', storedInviterPubkey]);
+        // Navigate to inviter's profile (opens in right panel)
+        this.layout.openProfile(storedInviterPubkey);
       } catch (err) {
         this.logger.error('[InviteComponent] Failed to follow inviter', err);
         // Still navigate to inviter's profile even if follow fails
-        this.router.navigate(['/p', storedInviterPubkey]);
+        this.layout.openProfile(storedInviterPubkey);
       }
     } else if (currentPubkey) {
       // User logged in but no stored inviter (shouldn't happen)
@@ -163,7 +163,7 @@ export class InviteComponent implements OnInit {
       if (currentPubkey) {
         const inviterPubkey = this.inviterPubkey();
         if (inviterPubkey) {
-          this.router.navigate(['/p', inviterPubkey]);
+          this.layout.openProfile(inviterPubkey);
         } else {
           this.router.navigate(['/']);
         }

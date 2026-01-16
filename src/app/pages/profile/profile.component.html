@@ -72,11 +72,6 @@
   <!-- Normal Profile Content (only shown when not blocked or revealed) -->
   @if (!isProfileBlocked() || isBlockedProfileRevealed()) {
   <div class="profile-header">
-    <div class="profile-banner" [style.background-image]="
-            userMetadata()?.data.banner
-              ? 'url(' + userMetadata()!.data.banner + ')'
-              : getDefaultBanner()
-          "></div>
     <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()"></app-profile-header>
   </div>
 

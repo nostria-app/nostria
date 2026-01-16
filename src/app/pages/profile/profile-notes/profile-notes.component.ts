@@ -7,33 +7,24 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { EventComponent } from '../../../components/event/event.component';
 import { PinnedService } from '../../../services/pinned.service';
 import { DatabaseService } from '../../../services/database.service';
 import { NostrRecord } from '../../../interfaces';
 import { DataService } from '../../../services/data.service';
 import { UserRelayService } from '../../../services/relays/user-relay';
-import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
 
 @Component({
   selector: 'app-profile-notes',
-  standalone: true,
   imports: [
     EventComponent,
     MatIconModule,
     RouterModule,
     MatTooltipModule,
-    MatIconModule,
     MatButtonModule,
-    MatSlideToggleModule,
-    FormsModule,
-    MatProgressSpinnerModule,
-    MatExpansionModule
+    MatProgressSpinnerModule
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss',
@@ -57,11 +48,6 @@ export class ProfileNotesComponent {
   // Cooldown to prevent rapid-fire loading
   private lastLoadTime = 0;
   private readonly LOAD_COOLDOWN_MS = 1000;
-
-  // Timeline filter - access the signal from profileState
-  get timelineFilter(): TimelineFilterOptions {
-    return this.profileState.timelineFilter();
-  }
 
   constructor() {
     if (!this.layout.isBrowser()) {
@@ -247,12 +233,5 @@ export class ProfileNotesComponent {
       this.logger.error('Failed to load more timeline content', err);
       this.error.set('Failed to load older timeline content. Please try again.');
     }
-  }
-
-  /**
-   * Update a specific filter option
-   */
-  updateFilter(key: keyof TimelineFilterOptions, value: boolean): void {
-    this.profileState.updateTimelineFilter({ [key]: value });
   }
 }

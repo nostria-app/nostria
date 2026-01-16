@@ -238,10 +238,11 @@ export class App implements OnInit {
 
   // Right panel routing state
   private _hasRightContent = signal(false);
-  private _rightPanelTitle = signal('');
+  private _defaultRightPanelTitle = signal('');
   private _rightPanelHistory = signal<string[]>([]);
   hasRightContent = this._hasRightContent.asReadonly();
-  rightPanelTitle = this._rightPanelTitle.asReadonly();
+  // Use component-set title if available, otherwise fall back to URL-based title
+  rightPanelTitle = computed(() => this.panelActions.rightPanelTitle() || this._defaultRightPanelTitle());
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
   canGoBackRight = computed(() => this._rightPanelHistory().length >= 1);
 
@@ -1642,7 +1643,9 @@ export class App implements OnInit {
     // Clear right panel state first (without navigating yet)
     this._rightPanelHistory.set([]);
     this._hasRightContent.set(false);
-    this._rightPanelTitle.set('');
+    this._defaultRightPanelTitle.set('');
+    // Also clear component-set right panel title
+    this.panelActions.clearRightPanelTitle();
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
@@ -1688,21 +1691,21 @@ export class App implements OnInit {
 
       // Set title based on path
       if (rightPath.startsWith('e/')) {
-        this._rightPanelTitle.set('Thread');
+        this._defaultRightPanelTitle.set('Thread');
       } else if (rightPath.startsWith('a/')) {
-        this._rightPanelTitle.set('Article');
+        this._defaultRightPanelTitle.set('Article');
       } else if (rightPath.startsWith('p/')) {
-        this._rightPanelTitle.set('Profile');
+        this._defaultRightPanelTitle.set('Profile');
       } else if (rightPath.startsWith('music/')) {
-        this._rightPanelTitle.set('Music');
+        this._defaultRightPanelTitle.set('Music');
       } else if (rightPath.startsWith('stream/')) {
-        this._rightPanelTitle.set('Live Stream');
+        this._defaultRightPanelTitle.set('Live Stream');
       } else {
-        this._rightPanelTitle.set('');
+        this._defaultRightPanelTitle.set('');
       }
     } else {
       // No right panel - clear title but preserve history for back navigation
-      this._rightPanelTitle.set('');
+      this._defaultRightPanelTitle.set('');
     }
   }
 
@@ -1731,9 +1734,11 @@ export class App implements OnInit {
   closeRightPanel(): void {
     this._rightPanelHistory.set([]);
     this._hasRightContent.set(false);
-    this._rightPanelTitle.set('');
+    this._defaultRightPanelTitle.set('');
     // Clear right panel actions immediately
     this.panelActions.clearRightPanelActions();
+    // Also clear component-set right panel title
+    this.panelActions.clearRightPanelTitle();
     // Clear the panel navigation right stack
     this.panelNav.clearRightStack();
     // Navigate to clear the right outlet

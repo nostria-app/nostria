@@ -120,9 +120,9 @@ nav {
   // Position vertically centered in the 64px toolbar (64 - 48) / 2 = 8px
   top: 8px;
   // Align with centered content panels
-  // Calculate: (100vw - total-content-width) / 2, but minimum 120px to avoid hamburger
+  // Calculate: (100vw - total-content-width) / 2, but minimum 72px to avoid hamburger
   // Total content width comes from CSS variables set by TwoColumnLayoutService
-  left: max(120px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2));
+  left: max(72px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2));
   // Right side should also align with content
   right: max(0px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2));
   height: 48px;
@@ -134,7 +134,7 @@ nav {
 
   // On tablet, center the toolbar
   @media (max-width: 1023px) {
-    left: 120px;
+    left: 72px;
     right: 8px;
     justify-content: center;
   }
@@ -175,7 +175,7 @@ nav {
 
     @media (max-width: 1023px) {
       // On tablet/mobile, center the toolbar and take more width
-      width: min(var(--right-column-width, 700px), calc(100vw - 120px));
+      width: min(var(--right-column-width, 700px), calc(100vw - 80px));
     }
 
     @media (max-width: 599px) {
@@ -234,7 +234,7 @@ nav {
 // When only left content is showing (no right panel), adjust container alignment
 .two-column-layout:not(.has-right-content) .floating-toolbars-container {
   // When no right panel, align with just the left panel (which is centered)
-  left: max(120px, calc((100vw - var(--left-column-width, 700px)) / 2));
+  left: max(72px, calc((100vw - var(--left-column-width, 700px)) / 2));
   right: max(0px, calc((100vw - var(--left-column-width, 700px)) / 2));
 
   .left-toolbar {
@@ -993,12 +993,24 @@ mat-sidenav-content {
 // When left panel has content (has header), use full padding for header clearance
 .left-panel.has-content .panel-content {
   padding-top: calc(var(--toolbar-height, 64px) + 72px);
+
+  // Special case for profile component - no top padding needed
+  // Profile has its own banner that should extend to the top
+  &:has(app-profile) {
+    padding-top: 0px;
+  }
 }
 
 // When panel header is hidden (floating toolbar active), reduce padding
 // Uses :has() to detect when the header has the hide-on-wide class
 .left-panel.has-content:has(.panel-header.hide-on-wide) .panel-content {
   padding-top: var(--toolbar-height, 64px);
+
+  // Special case for profile component - no top padding needed
+  // Profile has its own banner that should extend to the top
+  &:has(app-profile) {
+    padding-top: 0px;
+  }
 }
 
 // When left panel shows feeds (no header), only need toolbar clearance
