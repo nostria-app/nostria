@@ -15,6 +15,7 @@ import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { DatabaseService } from '../../services/database.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -86,53 +87,55 @@ interface ZapHistoryEntry {
                   <p>Your zap history will appear here once you send or receive lightning payments.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="64" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of allZaps(); trackBy: trackByZapId"
                     class="zap-entry"
                     [class.sent]="zap.type === 'sent'"
                     [class.received]="zap.type === 'received'"
                   >
-                    <div class="zap-row">
-                      <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
-                      <span class="type-label">{{ zap.type === 'sent' ? 'Sent to' : 'From' }}</span>
-                      <span class="counterparty">
-                        <app-user-profile
-                          [pubkey]="zap.counterparty"
-                          view="icon"
-                          [hostWidthAuto]="true"
-                          [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                        ></app-user-profile>
-                      </span>
-                      @if (zap.comment) {
-                        <mat-icon class="comment-indicator" [matTooltip]="zap.comment">format_quote</mat-icon>
-                      }
-                      @if (zap.eventId) {
-                        <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                          <mat-icon class="context-indicator">note</mat-icon>
-                        </a>
-                      }
-                      <span class="spacer"></span>
-                      <div class="zap-amount">
-                        <mat-icon class="bolt-icon">bolt</mat-icon>
-                        <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                      </div>
-                      <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                        {{ zap.timestamp | ago }}
-                      </div>
-                      <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #zapMenu="matMenu">
-                        <button mat-menu-item (click)="copyEventData(zap)">
-                          <mat-icon>content_copy</mat-icon>
-                          <span>Copy Event Data</span>
+                    <div class="zap-entry-inner">
+                      <div class="zap-row">
+                        <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
+                        <span class="type-label">{{ zap.type === 'sent' ? 'Sent to' : 'From' }}</span>
+                        <span class="counterparty">
+                          <app-user-profile
+                            [pubkey]="zap.counterparty"
+                            view="icon"
+                            [hostWidthAuto]="true"
+                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
+                          ></app-user-profile>
+                        </span>
+                        @if (zap.comment) {
+                          <span class="comment-text">{{ zap.comment }}</span>
+                        }
+                        @if (zap.eventId) {
+                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
+                            <mat-icon class="context-indicator">note</mat-icon>
+                          </a>
+                        }
+                        <span class="spacer"></span>
+                        <div class="zap-amount">
+                          <mat-icon class="bolt-icon">bolt</mat-icon>
+                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
+                        </div>
+                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+                          {{ zap.timestamp | ago }}
+                        </div>
+                        <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options">
+                          <mat-icon>more_vert</mat-icon>
                         </button>
-                        <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                          <mat-icon>publish</mat-icon>
-                          <span>Publish Event</span>
-                        </button>
-                      </mat-menu>
+                        <mat-menu #zapMenu="matMenu">
+                          <button mat-menu-item (click)="copyEventData(zap)">
+                            <mat-icon>content_copy</mat-icon>
+                            <span>Copy Event Data</span>
+                          </button>
+                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                            <mat-icon>publish</mat-icon>
+                            <span>Publish Event</span>
+                          </button>
+                        </mat-menu>
+                      </div>
                     </div>
                   </div>
                 </cdk-virtual-scroll-viewport>
@@ -149,51 +152,53 @@ interface ZapHistoryEntry {
                   <p>Zaps you send to others will appear here.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="64" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of sentZaps(); trackBy: trackByZapId"
                     class="zap-entry sent"
                   >
-                    <div class="zap-row">
-                      <mat-icon class="type-icon">trending_up</mat-icon>
-                      <span class="type-label">Sent to</span>
-                      <span class="counterparty">
-                        <app-user-profile
-                          [pubkey]="zap.counterparty"
-                          view="icon"
-                          [hostWidthAuto]="true"
-                          [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                        ></app-user-profile>
-                      </span>
-                      @if (zap.comment) {
-                        <mat-icon class="comment-indicator" [matTooltip]="zap.comment">format_quote</mat-icon>
-                      }
-                      @if (zap.eventId) {
-                        <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                          <mat-icon class="context-indicator">note</mat-icon>
-                        </a>
-                      }
-                      <span class="spacer"></span>
-                      <div class="zap-amount">
-                        <mat-icon class="bolt-icon">bolt</mat-icon>
-                        <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                      </div>
-                      <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                        {{ zap.timestamp | ago }}
-                      </div>
-                      <button mat-icon-button [matMenuTriggerFor]="sentZapMenu" class="zap-menu-button" matTooltip="More options">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #sentZapMenu="matMenu">
-                        <button mat-menu-item (click)="copyEventData(zap)">
-                          <mat-icon>content_copy</mat-icon>
-                          <span>Copy Event Data</span>
+                    <div class="zap-entry-inner">
+                      <div class="zap-row">
+                        <mat-icon class="type-icon">trending_up</mat-icon>
+                        <span class="type-label">Sent to</span>
+                        <span class="counterparty">
+                          <app-user-profile
+                            [pubkey]="zap.counterparty"
+                            view="icon"
+                            [hostWidthAuto]="true"
+                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
+                          ></app-user-profile>
+                        </span>
+                        @if (zap.comment) {
+                          <span class="comment-text">{{ zap.comment }}</span>
+                        }
+                        @if (zap.eventId) {
+                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
+                            <mat-icon class="context-indicator">note</mat-icon>
+                          </a>
+                        }
+                        <span class="spacer"></span>
+                        <div class="zap-amount">
+                          <mat-icon class="bolt-icon">bolt</mat-icon>
+                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
+                        </div>
+                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+                          {{ zap.timestamp | ago }}
+                        </div>
+                        <button mat-icon-button [matMenuTriggerFor]="sentZapMenu" class="zap-menu-button" matTooltip="More options">
+                          <mat-icon>more_vert</mat-icon>
                         </button>
-                        <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                          <mat-icon>publish</mat-icon>
-                          <span>Publish Event</span>
-                        </button>
-                      </mat-menu>
+                        <mat-menu #sentZapMenu="matMenu">
+                          <button mat-menu-item (click)="copyEventData(zap)">
+                            <mat-icon>content_copy</mat-icon>
+                            <span>Copy Event Data</span>
+                          </button>
+                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                            <mat-icon>publish</mat-icon>
+                            <span>Publish Event</span>
+                          </button>
+                        </mat-menu>
+                      </div>
                     </div>
                   </div>
                 </cdk-virtual-scroll-viewport>
@@ -210,51 +215,53 @@ interface ZapHistoryEntry {
                   <p>Zaps you receive from others will appear here.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="64" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of receivedZaps(); trackBy: trackByZapId"
                     class="zap-entry received"
                   >
-                    <div class="zap-row">
-                      <mat-icon class="type-icon">trending_down</mat-icon>
-                      <span class="type-label">From</span>
-                      <span class="counterparty">
-                        <app-user-profile
-                          [pubkey]="zap.counterparty"
-                          view="icon"
-                          [hostWidthAuto]="true"
-                          [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                        ></app-user-profile>
-                      </span>
-                      @if (zap.comment) {
-                        <mat-icon class="comment-indicator" [matTooltip]="zap.comment">format_quote</mat-icon>
-                      }
-                      @if (zap.eventId) {
-                        <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                          <mat-icon class="context-indicator">note</mat-icon>
-                        </a>
-                      }
-                      <span class="spacer"></span>
-                      <div class="zap-amount">
-                        <mat-icon class="bolt-icon">bolt</mat-icon>
-                        <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                      </div>
-                      <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                        {{ zap.timestamp | ago }}
-                      </div>
-                      <button mat-icon-button [matMenuTriggerFor]="receivedZapMenu" class="zap-menu-button" matTooltip="More options">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #receivedZapMenu="matMenu">
-                        <button mat-menu-item (click)="copyEventData(zap)">
-                          <mat-icon>content_copy</mat-icon>
-                          <span>Copy Event Data</span>
+                    <div class="zap-entry-inner">
+                      <div class="zap-row">
+                        <mat-icon class="type-icon">trending_down</mat-icon>
+                        <span class="type-label">From</span>
+                        <span class="counterparty">
+                          <app-user-profile
+                            [pubkey]="zap.counterparty"
+                            view="icon"
+                            [hostWidthAuto]="true"
+                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
+                          ></app-user-profile>
+                        </span>
+                        @if (zap.comment) {
+                          <span class="comment-text">{{ zap.comment }}</span>
+                        }
+                        @if (zap.eventId) {
+                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
+                            <mat-icon class="context-indicator">note</mat-icon>
+                          </a>
+                        }
+                        <span class="spacer"></span>
+                        <div class="zap-amount">
+                          <mat-icon class="bolt-icon">bolt</mat-icon>
+                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
+                        </div>
+                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+                          {{ zap.timestamp | ago }}
+                        </div>
+                        <button mat-icon-button [matMenuTriggerFor]="receivedZapMenu" class="zap-menu-button" matTooltip="More options">
+                          <mat-icon>more_vert</mat-icon>
                         </button>
-                        <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                          <mat-icon>publish</mat-icon>
-                          <span>Publish Event</span>
-                        </button>
-                      </mat-menu>
+                        <mat-menu #receivedZapMenu="matMenu">
+                          <button mat-menu-item (click)="copyEventData(zap)">
+                            <mat-icon>content_copy</mat-icon>
+                            <span>Copy Event Data</span>
+                          </button>
+                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                            <mat-icon>publish</mat-icon>
+                            <span>Publish Event</span>
+                          </button>
+                        </mat-menu>
+                      </div>
                     </div>
                   </div>
                 </cdk-virtual-scroll-viewport>
@@ -358,21 +365,29 @@ interface ZapHistoryEntry {
       }
 
       .zap-entry {
-        height: 64px;
+        height: 68px;
         box-sizing: border-box;
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin-bottom: 4px;
-        background: var(--mat-sys-surface-container);
+        padding: 8px 12px 12px 12px;
         display: flex;
-        align-items: center;
+        flex-direction: column;
+        justify-content: center;
       }
 
-      .zap-entry.sent {
+      .zap-entry-inner {
+        background: var(--mat-sys-surface-container);
+        border-radius: 8px;
+        padding: 8px 12px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .zap-entry.sent .zap-entry-inner {
         border-left: 3px solid var(--mat-sys-error);
       }
 
-      .zap-entry.received {
+      .zap-entry.received .zap-entry-inner {
         border-left: 3px solid var(--mat-success-color);
       }
 
@@ -415,7 +430,6 @@ interface ZapHistoryEntry {
         transform-origin: left center;
       }
 
-      .comment-indicator,
       .context-indicator {
         font-size: 18px;
         color: var(--mat-sys-on-surface-variant);
@@ -423,7 +437,6 @@ interface ZapHistoryEntry {
         cursor: pointer;
       }
 
-      .comment-indicator:hover,
       .context-indicator:hover {
         color: var(--mat-sys-primary);
       }
@@ -433,10 +446,22 @@ interface ZapHistoryEntry {
         align-items: center;
         color: var(--mat-sys-on-surface-variant);
         text-decoration: none;
+        flex-shrink: 0;
       }
 
       .context-link:hover .context-indicator {
         color: var(--mat-sys-primary);
+      }
+
+      .comment-text {
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-style: italic;
       }
 
       .spacer {
@@ -534,6 +559,7 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private accountRelay = inject(AccountRelayService);
   private panelActions = inject(PanelActionsService);
+  private database = inject(DatabaseService);
   layout = inject(LayoutService);
 
   // State
@@ -607,104 +633,141 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
     try {
       const userPubkey = account.pubkey;
 
-      // Check for cached zap history timestamp (used for tracking what user has seen)
-      const lastZapTimestamp = this.accountLocalState.getZapHistoryLastTimestamp(userPubkey);
+      // Initialize database
+      await this.database.init();
 
-      // Get zaps received and sent by the user
-      // Note: The zap service fetches all zaps, and we track what's been seen using lastZapTimestamp
+      // Step 1: Load cached zap receipts from IndexedDB for instant display
+      const cachedReceipts = await this.database.getEventsByKind(9735);
+      const cachedReceived = cachedReceipts.filter(e => e.tags.some(t => t[0] === 'p' && t[1] === userPubkey));
+      const cachedSent = cachedReceipts.filter(e => e.tags.some(t => t[0] === 'P' && t[1] === userPubkey));
+
+      // Process cached zaps for immediate display
+      const cachedHistory = this.processZapReceipts(cachedReceived, cachedSent);
+      if (cachedHistory.length > 0) {
+        this.allZaps.set(cachedHistory);
+        // Start prefetching profiles for cached data
+        this.prefetchProfiles(cachedHistory);
+      }
+
+      // Step 2: Fetch new zaps from relays
       const receivedZapReceipts = await this.zapService.getZapsForUser(userPubkey);
       const sentZapReceipts = await this.zapService.getZapsSentByUser(userPubkey);
 
-      const zapHistory: ZapHistoryEntry[] = [];
-      const processedReceiptIds = new Set<string>();
-      let newestTimestamp = lastZapTimestamp || 0;
-
-      // Process received zaps
-      for (const receipt of receivedZapReceipts) {
-        if (processedReceiptIds.has(receipt.id)) {
-          continue;
-        }
-
-        const parsed = this.zapService.parseZapReceipt(receipt);
-
-        if (parsed.zapRequest && parsed.amount) {
-          const eventTag = receipt.tags.find(tag => tag[0] === 'e');
-          zapHistory.push({
-            type: 'received',
-            zapReceipt: receipt,
-            zapRequest: parsed.zapRequest,
-            amount: parsed.amount,
-            comment: parsed.comment,
-            counterparty: parsed.zapRequest.pubkey,
-            timestamp: receipt.created_at,
-            eventId: eventTag?.[1],
-          });
-          processedReceiptIds.add(receipt.id);
-          newestTimestamp = Math.max(newestTimestamp, receipt.created_at);
-        }
+      // Save new zap receipts to IndexedDB for future caching
+      const newReceipts = [...receivedZapReceipts, ...sentZapReceipts];
+      if (newReceipts.length > 0) {
+        await this.database.saveEvents(newReceipts);
       }
 
-      // Process sent zaps
-      for (const receipt of sentZapReceipts) {
-        if (processedReceiptIds.has(receipt.id)) {
-          continue;
-        }
-
-        const parsed = this.zapService.parseZapReceipt(receipt);
-        if (parsed.zapRequest && parsed.amount) {
-          const pTag = parsed.zapRequest.tags.find(t => t[0] === 'p');
-          const recipient = pTag && pTag[1] ? pTag[1] : parsed.zapRequest.pubkey;
-          const eventTag = receipt.tags.find(tag => tag[0] === 'e');
-
-          zapHistory.push({
-            type: 'sent',
-            zapReceipt: receipt,
-            zapRequest: parsed.zapRequest,
-            amount: parsed.amount,
-            comment: parsed.comment,
-            counterparty: recipient,
-            timestamp: receipt.created_at,
-            eventId: eventTag?.[1],
-          });
-          processedReceiptIds.add(receipt.id);
-          newestTimestamp = Math.max(newestTimestamp, receipt.created_at);
-        }
-      }
+      // Process all zaps (relay data will include cached data, so we deduplicate)
+      const zapHistory = this.processZapReceipts(receivedZapReceipts, sentZapReceipts);
 
       // Sort by timestamp (most recent first)
       zapHistory.sort((a, b) => b.timestamp - a.timestamp);
 
       this.allZaps.set(zapHistory);
 
-      // Update the last timestamp for caching
+      // Update the last timestamp for tracking
+      const newestTimestamp = zapHistory.length > 0 ? zapHistory[0].timestamp : 0;
       if (newestTimestamp > 0) {
         this.accountLocalState.setZapHistoryLastTimestamp(userPubkey, newestTimestamp);
       }
 
-      // Prefetch unique profiles
-      const uniquePubkeys = Array.from(new Set(zapHistory.map(z => z.counterparty)));
-      const profileMap: Record<string, unknown> = {};
-
-      await Promise.all(
-        uniquePubkeys.map(async pubkey => {
-          try {
-            const profile = await this.data.getProfile(pubkey);
-            if (profile) {
-              profileMap[pubkey] = profile;
-            }
-          } catch {
-            // ignore individual profile errors
-          }
-        })
-      );
-
-      if (Object.keys(profileMap).length) {
-        this.prefetchedProfiles.set(profileMap);
-      }
+      // Prefetch profiles for all zaps
+      await this.prefetchProfiles(zapHistory);
     } catch (error) {
       console.error('Failed to load zap history:', error);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Process zap receipts into ZapHistoryEntry objects
+   */
+  private processZapReceipts(
+    receivedReceipts: Event[],
+    sentReceipts: Event[]
+  ): ZapHistoryEntry[] {
+    const zapHistory: ZapHistoryEntry[] = [];
+    const processedReceiptIds = new Set<string>();
+
+    // Process received zaps
+    for (const receipt of receivedReceipts) {
+      if (processedReceiptIds.has(receipt.id)) {
+        continue;
+      }
+
+      const parsed = this.zapService.parseZapReceipt(receipt);
+
+      if (parsed.zapRequest && parsed.amount) {
+        const eventTag = receipt.tags.find(tag => tag[0] === 'e');
+        zapHistory.push({
+          type: 'received',
+          zapReceipt: receipt,
+          zapRequest: parsed.zapRequest,
+          amount: parsed.amount,
+          comment: parsed.comment,
+          counterparty: parsed.zapRequest.pubkey,
+          timestamp: receipt.created_at,
+          eventId: eventTag?.[1],
+        });
+        processedReceiptIds.add(receipt.id);
+      }
+    }
+
+    // Process sent zaps
+    for (const receipt of sentReceipts) {
+      if (processedReceiptIds.has(receipt.id)) {
+        continue;
+      }
+
+      const parsed = this.zapService.parseZapReceipt(receipt);
+      if (parsed.zapRequest && parsed.amount) {
+        const pTag = parsed.zapRequest.tags.find(t => t[0] === 'p');
+        const recipient = pTag && pTag[1] ? pTag[1] : parsed.zapRequest.pubkey;
+        const eventTag = receipt.tags.find(tag => tag[0] === 'e');
+
+        zapHistory.push({
+          type: 'sent',
+          zapReceipt: receipt,
+          zapRequest: parsed.zapRequest,
+          amount: parsed.amount,
+          comment: parsed.comment,
+          counterparty: recipient,
+          timestamp: receipt.created_at,
+          eventId: eventTag?.[1],
+        });
+        processedReceiptIds.add(receipt.id);
+      }
+    }
+
+    return zapHistory;
+  }
+
+  /**
+   * Prefetch profiles for zap counterparties
+   */
+  private async prefetchProfiles(zapHistory: ZapHistoryEntry[]): Promise<void> {
+    const uniquePubkeys = Array.from(new Set(zapHistory.map(z => z.counterparty)));
+    const profileMap: Record<string, unknown> = { ...this.prefetchedProfiles() };
+
+    await Promise.all(
+      uniquePubkeys.map(async pubkey => {
+        if (profileMap[pubkey]) return; // Skip if already fetched
+        try {
+          const profile = await this.data.getProfile(pubkey);
+          if (profile) {
+            profileMap[pubkey] = profile;
+          }
+        } catch {
+          // ignore individual profile errors
+        }
+      })
+    );
+
+    if (Object.keys(profileMap).length) {
+      this.prefetchedProfiles.set(profileMap);
     }
   }
 
