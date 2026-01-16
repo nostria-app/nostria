@@ -16,7 +16,7 @@ Created a centralized service for platform detection and keyboard modifier handl
 All keyboard shortcuts now work with the appropriate modifier key:
 
 **Global Shortcuts (App Component):**
-- Command Palette: `Alt+C` (Windows/Linux) or `Cmd+C` (Mac)
+- Command Palette: `Alt+C` (Windows/Linux) or `Cmd+C` (Mac) or `Ctrl+K` (all platforms)
 - Search: `Alt+S` (Windows/Linux) or `Cmd+S` (Mac)
 - Create Options: `Alt+N` (Windows/Linux) or `Cmd+N` (Mac)
 - Voice Command: `Alt+V` (Windows/Linux) or `Cmd+V` (Mac)

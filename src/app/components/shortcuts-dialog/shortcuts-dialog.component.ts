@@ -71,7 +71,7 @@ export class ShortcutsDialogComponent {
       { keys: `${modifier}+P`, description: $localize`:@@shortcuts.help:Show keyboard shortcuts` },
       { keys: `${modifier}+S`, description: $localize`:@@shortcuts.search:Toggle search` },
       { keys: `${modifier}+N`, description: $localize`:@@shortcuts.create:Open create options` },
-      { keys: `${modifier}+C`, description: $localize`:@@shortcuts.command:Open command palette` },
+      { keys: `${modifier}+C / Ctrl+K`, description: $localize`:@@shortcuts.command:Open command palette` },
       { keys: `${modifier}+V`, description: $localize`:@@shortcuts.voice:Open command palette with voice input` },
       { keys: 'Space / K', description: $localize`:@@shortcuts.video.play-pause:Play/pause video (when video player is active)` },
       { keys: 'J / ←', description: $localize`:@@shortcuts.video.rewind:Rewind video 10 seconds (when video player is active)` },

@@ -1397,6 +1397,12 @@ export class App implements OnInit {
       this.openCommandPalette();
     }
 
+    // Ctrl+K (all platforms) to open command palette - common in web apps
+    if (event.ctrlKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.openCommandPalette();
+    }
+
     // Alt+V (Windows/Linux) or Cmd+V (Mac) to open command palette in listening mode (voice command)
     if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'v') {
       event.preventDefault();

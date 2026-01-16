@@ -81,15 +81,15 @@ Applied the same pattern to note editor shortcuts:
 
 All shortcuts now work correctly on both platforms:
 
-| Action | Windows/Linux | Mac |
-|--------|--------------|-----|
-| Open Command Palette | Alt+C | Cmd+C (⌘+C) |
-| Toggle Search | Alt+S | Cmd+S (⌘+S) |
-| Open Create Options | Alt+N | Cmd+N (⌘+N) |
-| Voice Command | Alt+V | Cmd+V (⌘+V) |
-| Show Shortcuts | Alt+P | Cmd+P (⌘+P) |
-| Publish Note | Alt+Enter | Cmd+Enter (⌘+Enter) |
-| Toggle Dictation | Alt+D | Cmd+D (⌘+D) |
+| Action | Windows/Linux | Mac | Universal |
+|--------|--------------|-----|-----------|
+| Open Command Palette | Alt+C | Cmd+C (⌘+C) | Ctrl+K |
+| Toggle Search | Alt+S | Cmd+S (⌘+S) | |
+| Open Create Options | Alt+N | Cmd+N (⌘+N) | |
+| Voice Command | Alt+V | Cmd+V (⌘+V) | |
+| Show Shortcuts | Alt+P | Cmd+P (⌘+P) | |
+| Publish Note | Alt+Enter | Cmd+Enter (⌘+Enter) | |
+| Toggle Dictation | Alt+D | Cmd+D (⌘+D) | |
 
 ## Technical Details
 
