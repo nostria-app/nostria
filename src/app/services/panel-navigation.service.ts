@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router, NavigationEnd, PRIMARY_OUTLET, UrlTree } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { PanelActionsService } from './panel-actions.service';
 
 /**
  * Panel position - which side the content renders on
@@ -58,6 +59,7 @@ export type ClearRightPanelCallback = () => void;
 export class PanelNavigationService {
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
+  private panelActions = inject(PanelActionsService);
 
   // Navigation stacks for each panel
   private _leftStack = signal<NavigationEntry[]>([]);
@@ -100,6 +102,12 @@ export class PanelNavigationService {
   // Whether each panel has content
   hasLeftContent = computed(() => this._leftStack().length > 0);
   hasRightContent = computed(() => this._rightStack().length > 0);
+
+  // Whether the left panel is showing the home route (no header needed)
+  isHomeRoute = computed(() => {
+    const route = this.leftRoute();
+    return route?.path === '' || route?.path === '/';
+  });
 
   // Whether feeds should be shown (explicitly feeds route /f)
   showFeeds = computed(() => {
@@ -397,6 +405,11 @@ export class PanelNavigationService {
       if (!rightPath) {
         this._currentRoutePanel.set('left');
       }
+
+      // Clear the page title when left panel route changes
+      // Components that want a custom title will set it in their ngOnInit
+      this.panelActions.clearPageTitle();
+      this.panelActions.clearLeftPanelActions();
     }
 
     // --- RIGHT PANEL LOGIC ---

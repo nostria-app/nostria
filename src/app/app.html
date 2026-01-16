@@ -481,9 +481,9 @@
           </div>
           }
 
-          <!-- Left panel content header (not shown for Feeds - it has its own UI) -->
+          <!-- Left panel content header (not shown for Feeds or Home - they have their own UI) -->
           <!-- Hidden when floating toolbar is active -->
-          @if (panelNav.hasLeftContent() && !panelNav.showFeeds()) {
+          @if (panelNav.hasLeftContent() && !panelNav.showFeeds() && !panelNav.isHomeRoute()) {
           <div class="panel-header left-panel-header" [class.header-hidden]="leftPanelHeaderHidden()"
             [class.hide-on-wide]="panelActions.pageTitle() || panelActions.leftPanelActions().length > 0 || panelNav.canGoBackLeft()">
             <div class="header-left">
