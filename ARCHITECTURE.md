@@ -711,6 +711,8 @@ onScroll(event: Event) {
 
 ### CDK Virtual Scrolling
 
+If an component already uses Virtual Scrolling, don't automatically change to a different architecture unless explicitly told to do so.
+
 For lists with fixed-height items, use Angular CDK's `ScrollingModule`:
 
 ```typescript

@@ -1,6 +1,6 @@
-import { Component, inject, signal, computed, effect, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -20,7 +20,6 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -37,7 +36,6 @@ interface ZapHistoryEntry {
   selector: 'app-zap-history',
   imports: [
     CommonModule,
-    RouterLink,
     ScrollingModule,
     MatIconModule,
     MatButtonModule,
@@ -87,14 +85,14 @@ interface ZapHistoryEntry {
                   <p>Your zap history will appear here once you send or receive lightning payments.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of allZaps(); trackBy: trackByZapId"
                     class="zap-entry"
                     [class.sent]="zap.type === 'sent'"
                     [class.received]="zap.type === 'received'"
                   >
-                    <div class="zap-entry-inner">
+                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
                       <div class="zap-row">
                         <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
                         <span class="type-label">{{ zap.type === 'sent' ? 'Sent to' : 'From' }}</span>
@@ -106,13 +104,11 @@ interface ZapHistoryEntry {
                             [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                           ></app-user-profile>
                         </span>
-                        @if (zap.comment) {
-                          <span class="comment-text">{{ zap.comment }}</span>
-                        }
                         @if (zap.eventId) {
-                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                            <mat-icon class="context-indicator">note</mat-icon>
-                          </a>
+                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
+                        }
+                        @if (zap.comment) {
+                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
                         }
                         <span class="spacer"></span>
                         <div class="zap-amount">
@@ -122,7 +118,7 @@ interface ZapHistoryEntry {
                         <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                           {{ zap.timestamp | ago }}
                         </div>
-                        <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options">
+                        <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
                           <mat-icon>more_vert</mat-icon>
                         </button>
                         <mat-menu #zapMenu="matMenu">
@@ -152,12 +148,12 @@ interface ZapHistoryEntry {
                   <p>Zaps you send to others will appear here.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of sentZaps(); trackBy: trackByZapId"
                     class="zap-entry sent"
                   >
-                    <div class="zap-entry-inner">
+                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
                       <div class="zap-row">
                         <mat-icon class="type-icon">trending_up</mat-icon>
                         <span class="type-label">Sent to</span>
@@ -169,13 +165,11 @@ interface ZapHistoryEntry {
                             [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                           ></app-user-profile>
                         </span>
-                        @if (zap.comment) {
-                          <span class="comment-text">{{ zap.comment }}</span>
-                        }
                         @if (zap.eventId) {
-                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                            <mat-icon class="context-indicator">note</mat-icon>
-                          </a>
+                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
+                        }
+                        @if (zap.comment) {
+                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
                         }
                         <span class="spacer"></span>
                         <div class="zap-amount">
@@ -185,7 +179,7 @@ interface ZapHistoryEntry {
                         <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                           {{ zap.timestamp | ago }}
                         </div>
-                        <button mat-icon-button [matMenuTriggerFor]="sentZapMenu" class="zap-menu-button" matTooltip="More options">
+                        <button mat-icon-button [matMenuTriggerFor]="sentZapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
                           <mat-icon>more_vert</mat-icon>
                         </button>
                         <mat-menu #sentZapMenu="matMenu">
@@ -215,12 +209,12 @@ interface ZapHistoryEntry {
                   <p>Zaps you receive from others will appear here.</p>
                 </div>
               } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="68" [minBufferPx]="400" [maxBufferPx]="800" class="zaps-viewport">
+                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
                   <div
                     *cdkVirtualFor="let zap of receivedZaps(); trackBy: trackByZapId"
                     class="zap-entry received"
                   >
-                    <div class="zap-entry-inner">
+                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
                       <div class="zap-row">
                         <mat-icon class="type-icon">trending_down</mat-icon>
                         <span class="type-label">From</span>
@@ -232,13 +226,11 @@ interface ZapHistoryEntry {
                             [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                           ></app-user-profile>
                         </span>
-                        @if (zap.comment) {
-                          <span class="comment-text">{{ zap.comment }}</span>
-                        }
                         @if (zap.eventId) {
-                          <a [routerLink]="['/e', zap.eventId]" class="context-link" matTooltip="View zapped event">
-                            <mat-icon class="context-indicator">note</mat-icon>
-                          </a>
+                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
+                        }
+                        @if (zap.comment) {
+                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
                         }
                         <span class="spacer"></span>
                         <div class="zap-amount">
@@ -248,7 +240,7 @@ interface ZapHistoryEntry {
                         <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                           {{ zap.timestamp | ago }}
                         </div>
-                        <button mat-icon-button [matMenuTriggerFor]="receivedZapMenu" class="zap-menu-button" matTooltip="More options">
+                        <button mat-icon-button [matMenuTriggerFor]="receivedZapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
                           <mat-icon>more_vert</mat-icon>
                         </button>
                         <mat-menu #receivedZapMenu="matMenu">
@@ -277,6 +269,7 @@ interface ZapHistoryEntry {
       :host {
         display: block;
         height: 100%;
+        overflow: hidden;
       }
 
       .zap-history-page {
@@ -284,6 +277,7 @@ interface ZapHistoryEntry {
         display: flex;
         flex-direction: column;
         padding: 0 16px 16px 16px;
+        overflow: hidden;
       }
 
       .loading-container {
@@ -322,6 +316,7 @@ interface ZapHistoryEntry {
         display: flex;
         flex-direction: column;
         padding-top: 16px;
+        overflow: hidden;
       }
 
       .stats-row {
@@ -362,25 +357,35 @@ interface ZapHistoryEntry {
       .zaps-viewport {
         flex: 1;
         min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
       }
 
       .zap-entry {
-        height: 68px;
+        height: 56px;
         box-sizing: border-box;
-        padding: 8px 12px 12px 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        padding: 4px 0;
+        width: 100%;
+        overflow: hidden;
       }
 
       .zap-entry-inner {
         background: var(--mat-sys-surface-container);
         border-radius: 8px;
-        padding: 8px 12px;
-        height: 100%;
+        padding: 0 12px;
+        height: 48px;
         display: flex;
-        flex-direction: column;
-        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        overflow: hidden;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .zap-entry-inner:hover {
+        background: var(--mat-sys-surface-container-high);
       }
 
       .zap-entry.sent .zap-entry-inner {
@@ -397,6 +402,7 @@ interface ZapHistoryEntry {
         gap: 8px;
         width: 100%;
         min-width: 0;
+        overflow: hidden;
       }
 
       .type-icon {
@@ -550,7 +556,7 @@ interface ZapHistoryEntry {
     `,
   ],
 })
-export class ZapHistoryComponent implements OnInit, OnDestroy {
+export class ZapHistoryComponent implements OnDestroy {
   // Services
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);
@@ -558,8 +564,8 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
   private data = inject(DataService);
   private snackBar = inject(MatSnackBar);
   private accountRelay = inject(AccountRelayService);
-  private panelActions = inject(PanelActionsService);
   private database = inject(DatabaseService);
+  private router = inject(Router);
   layout = inject(LayoutService);
 
   // State
@@ -597,29 +603,8 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit(): void {
-    this.setupPanelActions();
-  }
-
   ngOnDestroy(): void {
     this.zapService.cleanupSubscriptions();
-    this.panelActions.clearLeftPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    this.panelActions.setPageTitle('Zap History');
-
-    const actions = [
-      {
-        id: 'refresh',
-        icon: 'refresh',
-        label: 'Refresh',
-        tooltip: 'Refresh zap history',
-        action: () => this.refreshHistory(),
-      },
-    ];
-
-    this.panelActions.setLeftPanelActions(actions);
   }
 
   private async loadZapHistory(): Promise<void> {
@@ -783,6 +768,23 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       return `${(amount / 1000).toFixed(1)}K`;
     }
     return amount.toString();
+  }
+
+  /**
+   * Open zapped event in right panel, or navigate to counterparty profile if no event
+   */
+  openZapEvent(zap: ZapHistoryEntry): void {
+    if (zap.eventId) {
+      // Open event in right panel
+      const neventId = nip19.neventEncode({
+        id: zap.eventId,
+        author: zap.counterparty,
+      });
+      this.layout.openGenericEvent(neventId);
+    } else {
+      // No event - navigate to counterparty's profile
+      this.layout.openProfile(zap.counterparty);
+    }
   }
 
   async copyEventData(zap: ZapHistoryEntry): Promise<void> {
