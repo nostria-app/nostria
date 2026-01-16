@@ -79,7 +79,7 @@ Nostria has opinions, and decisions is being made regarding parts of the Nostr p
 Here is a list of opinions and decisions made in Nostria:
 
 - [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md) - We are ignoring the READ/WRITE flags for relays and all relays are both read and writes.
-- [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md) - Follow sets (kind:30000) and Relay sets (kind:30002) will not be implemented. They are duplicate functionality and should be ignored.
+
 - [NIP-96: HTTP File Storage Integration](https://github.com/nostr-protocol/nips/blob/master/96.md) - This is a "duplicate" specification to Blossom, that has more features, but is additionally more complex. It allows metadata to be stored with the blob, but Nostria will not support this protocol. File storage server list (kind:10096) is therefore
   ignored.
 - NIP-58: Badges: Badges should be self-contained on the user's relays. That means both the badge definition and the badge claim should be on the user's relays. This is to ensure that the user has full set of data for their own needs. Maybe Nostria will perform lookup on issuer relays
