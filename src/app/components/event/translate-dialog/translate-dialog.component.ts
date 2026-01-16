@@ -106,6 +106,12 @@ export class TranslateDialogComponent {
     }
   }
 
+  swapLanguages(): void {
+    const temp = this.sourceLang();
+    this.setSourceLang(this.targetLang());
+    this.setTargetLang(temp);
+  }
+
   async translate() {
     this.isTranslating.set(true);
     this.error.set('');
