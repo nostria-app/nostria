@@ -103,6 +103,7 @@ import { NavigationStackService } from './services/navigation-stack.service';
 import { PanelNavigationService } from './services/panel-navigation.service';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { PanelActionsService } from './services/panel-actions.service';
+import { PlatformService } from './services/platform.service';
 import { NgTemplateOutlet } from '@angular/common';
 
 interface NavItem {
@@ -227,6 +228,7 @@ export class App implements OnInit {
   private readonly followingBackupService = inject(FollowingBackupService);
   private readonly messagingService = inject(MessagingService);
   private readonly followSetsService = inject(FollowSetsService);
+  private readonly platformService = inject(PlatformService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -1377,32 +1379,32 @@ export class App implements OnInit {
       }
     }
 
-    // ALT+S shortcut to toggle search (global shortcut)
-    if (event.altKey && event.key.toLowerCase() === 's') {
+    // ALT+S (Windows/Linux) or CMD+S (Mac) shortcut to toggle search (global shortcut)
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 's') {
       event.preventDefault();
       this.layout.toggleSearch();
     }
 
-    // ALT+N shortcut to open create options (global shortcut)
-    if (event.altKey && event.key.toLowerCase() === 'n') {
+    // ALT+N (Windows/Linux) or CMD+N (Mac) shortcut to open create options (global shortcut)
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       this.openCreateOptions();
     }
 
-    // Alt+C to open command palette
-    if (event.altKey && event.key.toLowerCase() === 'c') {
+    // Alt+C (Windows/Linux) or Cmd+C (Mac) to open command palette
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'c') {
       event.preventDefault();
       this.openCommandPalette();
     }
 
-    // Alt+V to open command palette in listening mode (voice command)
-    if (event.altKey && event.key.toLowerCase() === 'v') {
+    // Alt+V (Windows/Linux) or Cmd+V (Mac) to open command palette in listening mode (voice command)
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'v') {
       event.preventDefault();
       this.openCommandPalette(true);
     }
 
-    // Alt+P to show keyboard shortcuts dialog
-    if (event.altKey && event.key.toLowerCase() === 'p') {
+    // Alt+P (Windows/Linux) or Cmd+P (Mac) to show keyboard shortcuts dialog
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'p') {
       event.preventDefault();
       this.openShortcutsDialog();
     }

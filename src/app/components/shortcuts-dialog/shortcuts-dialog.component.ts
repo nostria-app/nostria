@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { PlatformService } from '../../services/platform.service';
 
 interface ShortcutItem {
   keys: string;
@@ -15,7 +16,7 @@ interface ShortcutItem {
     <h2 mat-dialog-title i18n="@@shortcuts.title">Keyboard Shortcuts</h2>
     <mat-dialog-content>
       <div class="shortcuts-list">
-        @for (shortcut of shortcuts; track shortcut.keys) {
+        @for (shortcut of shortcuts(); track shortcut.keys) {
         <div class="shortcut-item">
           <span class="shortcut-keys">{{ shortcut.keys }}</span>
           <span class="shortcut-description">{{ shortcut.description }}</span>
@@ -61,17 +62,22 @@ interface ShortcutItem {
 })
 export class ShortcutsDialogComponent {
   private dialogRef = inject(MatDialogRef<ShortcutsDialogComponent>);
+  private platformService = inject(PlatformService);
 
-  shortcuts: ShortcutItem[] = [
-    { keys: 'Alt + P', description: $localize`:@@shortcuts.help:Show keyboard shortcuts` },
-    { keys: 'Alt + S', description: $localize`:@@shortcuts.search:Toggle search` },
-    { keys: 'Alt + N', description: $localize`:@@shortcuts.create:Open create options` },
-    { keys: 'Alt + C', description: $localize`:@@shortcuts.command:Open command palette` },
-    { keys: 'Alt + V', description: $localize`:@@shortcuts.voice:Open command palette with voice input` },
-    { keys: 'Space / K', description: $localize`:@@shortcuts.video.play-pause:Play/pause video (when video player is active)` },
-    { keys: 'J / ←', description: $localize`:@@shortcuts.video.rewind:Rewind video 10 seconds (when video player is active)` },
-    { keys: 'L / →', description: $localize`:@@shortcuts.video.forward:Fast forward video 10 seconds (when video player is active)` },
-  ];
+  // Compute shortcuts based on platform
+  shortcuts = computed(() => {
+    const modifier = this.platformService.getModifierKeyDisplay();
+    return [
+      { keys: `${modifier}+P`, description: $localize`:@@shortcuts.help:Show keyboard shortcuts` },
+      { keys: `${modifier}+S`, description: $localize`:@@shortcuts.search:Toggle search` },
+      { keys: `${modifier}+N`, description: $localize`:@@shortcuts.create:Open create options` },
+      { keys: `${modifier}+C`, description: $localize`:@@shortcuts.command:Open command palette` },
+      { keys: `${modifier}+V`, description: $localize`:@@shortcuts.voice:Open command palette with voice input` },
+      { keys: 'Space / K', description: $localize`:@@shortcuts.video.play-pause:Play/pause video (when video player is active)` },
+      { keys: 'J / ←', description: $localize`:@@shortcuts.video.rewind:Rewind video 10 seconds (when video player is active)` },
+      { keys: 'L / →', description: $localize`:@@shortcuts.video.forward:Fast forward video 10 seconds (when video player is active)` },
+    ];
+  });
 
   close(): void {
     this.dialogRef.close();

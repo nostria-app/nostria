@@ -55,6 +55,7 @@ import { DataService } from '../../services/data.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { SpeechService } from '../../services/speech.service';
+import { PlatformService } from '../../services/platform.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -147,6 +148,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
+  private platformService = inject(PlatformService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -1518,8 +1520,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onHostKeyDown(event: KeyboardEvent): void {
-    // Alt+Enter shortcut to publish note
-    if (event.altKey && event.key === 'Enter') {
+    // Alt+Enter (Windows/Linux) or Cmd+Enter (Mac) shortcut to publish note
+    if (this.platformService.hasModifierKey(event) && event.key === 'Enter') {
       event.preventDefault();
       if (this.canPublish() && !this.isPublishing()) {
         this.publishNote();
@@ -1546,8 +1548,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   @HostListener('document:keydown', ['$event'])
   handleGlobalKeydown(event: KeyboardEvent) {
-    // Alt+D shortcut to toggle dictation
-    if (event.altKey && (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
+    // Alt+D (Windows/Linux) or Cmd+D (Mac) shortcut to toggle dictation
+    if (this.platformService.hasModifierKey(event) && (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
       event.preventDefault();
       if (!this.isUploading() && !this.isPublishing() && !this.showPreview() && !this.showAdvancedOptions() && !this.isTranscribing()) {
         this.toggleRecording();
