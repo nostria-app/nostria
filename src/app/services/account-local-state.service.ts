@@ -35,6 +35,7 @@ interface AccountLocalState {
   dismissedPushNotificationDialog?: boolean;
   dismissedCredentialsBackupDialog?: boolean;
   articlesActiveTab?: number;
+  articlesDiscoverFeedSource?: 'following' | 'public'; // Feed source for articles discover page
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];
   translationSourceLang?: string;
@@ -432,6 +433,21 @@ export class AccountLocalStateService {
    */
   setArticlesActiveTab(pubkey: string, tabIndex: number): void {
     this.updateAccountState(pubkey, { articlesActiveTab: tabIndex });
+  }
+
+  /**
+   * Get articles discover feed source for an account
+   */
+  getArticlesDiscoverFeedSource(pubkey: string): 'following' | 'public' {
+    const state = this.getAccountState(pubkey);
+    return state.articlesDiscoverFeedSource || 'following';
+  }
+
+  /**
+   * Set articles discover feed source for an account
+   */
+  setArticlesDiscoverFeedSource(pubkey: string, feedSource: 'following' | 'public'): void {
+    this.updateAccountState(pubkey, { articlesDiscoverFeedSource: feedSource });
   }
 
   /**

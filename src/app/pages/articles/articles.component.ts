@@ -17,6 +17,7 @@ import { PanelActionsService } from '../../services/panel-actions.service';
 import { DatabaseService } from '../../services/database.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -53,6 +54,7 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   private database = inject(DatabaseService);
   private accountRelay = inject(AccountRelayService);
   private userRelay = inject(UserRelayService);
+  private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
 
   @ViewChild('headerActionsTemplate') headerActionsTemplate!: TemplateRef<unknown>;
@@ -143,6 +145,15 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   isAuthenticated = computed(() => this.app.authenticated());
 
   constructor() {
+    // Load persisted feed source from local state
+    effect(() => {
+      const pubkey = this.currentPubkey();
+      if (pubkey) {
+        const savedFeedSource = this.accountLocalState.getArticlesDiscoverFeedSource(pubkey);
+        this.feedSource.set(savedFeedSource);
+      }
+    }, { allowSignalWrites: true });
+
     // Load cached articles from database first
     this.loadCachedArticles();
 
@@ -238,6 +249,12 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
 
   onSourceChange(source: 'following' | 'public'): void {
     this.feedSource.set(source);
+    
+    // Persist the selected feed source
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setArticlesDiscoverFeedSource(pubkey, source);
+    }
     
     // If switching to public, start public subscription
     if (source === 'public' && !this.publicSubscription) {
