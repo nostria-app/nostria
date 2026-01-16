@@ -489,12 +489,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Clear panel actions when leaving the profile
+    // Clear panel actions and title when leaving the profile
     if (this.isInRightPanel()) {
       this.panelActions.clearRightPanelActions();
       this.panelActions.clearRightPanelTitle();
     } else {
       this.panelActions.clearLeftPanelActions();
+      this.panelActions.clearPageTitle();
     }
   }
 
