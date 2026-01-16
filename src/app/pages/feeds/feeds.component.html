@@ -170,6 +170,25 @@
           } @else if (feed.id === 'default-feed-trending' || feed.source === 'trending') {
           <!-- Trending column uses dedicated trending component -->
           <app-trending-column></app-trending-column>
+          } @else if (feedHasNoResults().get(feed.id)) {
+          <!-- Show no results message when initial load is complete but no events found -->
+          <div class="no-results-state">
+            <div class="no-results-content">
+              <mat-icon class="no-results-icon">search_off</mat-icon>
+              <h3>No results found</h3>
+              <p>
+                @if (feed.source === 'search' && feed.searchQuery) {
+                No posts found matching "{{ feed.searchQuery }}".
+                } @else {
+                No posts found for this feed. Try adjusting the feed settings or check back later.
+                }
+              </p>
+              <button mat-stroked-button (click)="refreshFeed(feed)">
+                <mat-icon>refresh</mat-icon>
+                Try Again
+              </button>
+            </div>
+          </div>
           } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
           <!-- Show skeleton items while content is loading or no events available yet -->
           <div class="column-skeleton-items">

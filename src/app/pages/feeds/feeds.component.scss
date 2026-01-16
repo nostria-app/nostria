@@ -783,6 +783,71 @@ app-user-profile {
       }
     }
 
+    // No results state for feeds that completed loading with no events
+    .no-results-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      min-height: 400px;
+
+      .no-results-content {
+        text-align: center;
+        max-width: 400px;
+
+        .no-results-icon {
+          font-size: 64px;
+          width: 64px;
+          height: 64px;
+          color: var(--mat-sys-on-surface-variant);
+          margin-bottom: 1rem;
+          opacity: 0.6;
+        }
+
+        h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.3rem;
+          color: var(--mat-sys-on-surface);
+        }
+
+        p {
+          margin: 0 0 2rem 0;
+          color: var(--mat-sys-on-surface-variant);
+          line-height: 1.5;
+          font-size: 1rem;
+        }
+
+        button {
+          mat-icon {
+            margin-right: 8px;
+          }
+        }
+      }
+
+      // Responsive adjustments
+      @media (max-width: 600px) {
+        padding: 1rem;
+        min-height: 300px;
+
+        .no-results-content {
+          .no-results-icon {
+            font-size: 48px;
+            width: 48px;
+            height: 48px;
+          }
+
+          h3 {
+            font-size: 1.2rem;
+          }
+
+          p {
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+
     // Loading text for initialization
     .loading-text {
       margin-top: 1rem;
