@@ -46,6 +46,7 @@ interface DirectMessage {
   received?: boolean;
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
+  replyTo?: string; // The event ID this message is replying to (from 'e' tag)
 }
 
 @Injectable({
@@ -192,6 +193,15 @@ export class MessagingService implements NostriaService {
     if (!chat) return [];
 
     return Array.from(chat.messages.values()).sort((a, b) => a.created_at - b.created_at); // Oldest first
+  }
+
+  /**
+   * Extract the reply-to message ID from event tags
+   * According to NIP-17, 'e' tags denote the direct parent message
+   */
+  private getReplyToFromTags(tags: string[][]): string | undefined {
+    const eTag = tags.find(tag => tag[0] === 'e');
+    return eTag ? eTag[1] : undefined;
   }
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
@@ -684,6 +694,7 @@ export class MessagingService implements NostriaService {
           received: true,
           read: false,
           encryptionType: 'nip44',
+          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
         };
 
         this.addMessageToChat(targetPubkey, directMessage);
@@ -716,6 +727,7 @@ export class MessagingService implements NostriaService {
           received: true,
           read: false,
           encryptionType: 'nip04',
+          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
         };
 
         this.addMessageToChat(targetPubkey, directMessage);
@@ -817,6 +829,7 @@ export class MessagingService implements NostriaService {
                   received: true,
                   read: false,
                   encryptionType: 'nip44', // Gift-wrapped messages are NIP-44
+                  replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
                 };
 
                 let targetPubkey = wrappedevent.pubkey;
@@ -893,6 +906,7 @@ export class MessagingService implements NostriaService {
                     received: true,
                     read: false,
                     encryptionType: 'nip04',
+                    replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
                   };
 
                   // Add the message to the chat
@@ -956,6 +970,7 @@ export class MessagingService implements NostriaService {
                   received: true,
                   read: false,
                   encryptionType: 'nip44',
+                  replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
                 };
 
                 let targetPubkey = wrappedevent.pubkey;
@@ -1022,6 +1037,7 @@ export class MessagingService implements NostriaService {
                     received: true,
                     read: false,
                     encryptionType: 'nip04',
+                    replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
                   };
 
                   this.addMessageToChat(targetPubkey, directMessage);
@@ -1148,6 +1164,7 @@ export class MessagingService implements NostriaService {
               received: true,
               read: false,
               encryptionType: 'nip44',
+              replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
             };
 
             this.addMessageToChat(targetPubkey, directMessage);
@@ -1180,6 +1197,7 @@ export class MessagingService implements NostriaService {
               received: true,
               read: false,
               encryptionType: 'nip04',
+              replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
             };
 
             this.addMessageToChat(targetPubkey, directMessage);
@@ -1351,6 +1369,7 @@ export class MessagingService implements NostriaService {
             received: true,
             read: false,
             encryptionType: 'nip44',
+            replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
           };
 
           this.addMessageToChat(targetPubkey, directMessage);
@@ -1396,6 +1415,7 @@ export class MessagingService implements NostriaService {
             received: true,
             read: false,
             encryptionType: 'nip04',
+            replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
           };
 
           this.addMessageToChat(targetPubkey, directMessage);
@@ -1870,6 +1890,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip44',
+          replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
               };
 
               // Determine target pubkey for the chat
@@ -1945,6 +1966,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip04',
+          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
               };
 
               if (directMessage.isOutgoing) {
@@ -2010,6 +2032,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip44',
+          replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
               };
 
               // Determine target pubkey for the chat
@@ -2085,6 +2108,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip04',
+          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
               };
 
               if (directMessage.isOutgoing) {
