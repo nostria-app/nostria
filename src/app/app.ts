@@ -506,6 +506,7 @@ export class App implements OnInit {
   });
 
   navItems: NavItem[] = [
+    { path: '/', label: $localize`:@@app.nav.home:Home`, icon: 'home', authenticated: true },
     { path: '/f', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
     { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     {
@@ -1617,13 +1618,13 @@ export class App implements OnInit {
   }
 
   /**
-   * Navigate to home and clear navigation history
+   * Navigate to feeds and clear navigation history
    */
   navigateToHome(): void {
     this.routeDataService.clearHistory();
     this.navigationStack.clearAll();
     this.panelNav.clearHistory();
-    this.router.navigate(['/']);
+    this.router.navigate(['/f']);
   }
 
   /**
