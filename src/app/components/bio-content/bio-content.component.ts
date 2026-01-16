@@ -157,9 +157,9 @@ export class BioContentComponent implements OnDestroy {
     let match: RegExpExecArray | null;
     while ((match = nostrRegex.exec(processedContent)) !== null) {
       const fullMatch = match[0];
-      const identifier = match[1]; // The npub/nprofile part
-      // Ensure it's a valid nostr URI format for parsing
-      const uri = identifier.startsWith('nostr:') ? identifier : `nostr:${identifier}`;
+      const identifier = match[1]; // The npub/nprofile part (without "nostr:" prefix)
+      // Prepend "nostr:" prefix for parsing
+      const uri = `nostr:${identifier}`;
       const parsed = await this.parseNostrUri(uri);
       if (parsed) {
         matches.push({
