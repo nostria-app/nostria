@@ -13,6 +13,10 @@ For dialogs, don't use Angular Material dialogs, but the custom "CustomDialogCom
 
 URL for this app is: https://nostria.app
 
+## Architecture
+
+To understand the architecture, see [ARCHITECTURE.md](../ARCHITECTURE.md). Important to follow the architecture decisions made there.
+
 ## TypeScript Best Practices
 
 - Use strict type checking
@@ -80,6 +84,8 @@ Due to Angular component styles are encapsulated by default, so use this way to 
 Don't make documentation for every change, only important and hard to understand fixes.
 
 When you generate markdown documentation of what you have done, place those documents into the "docs" folder.
+
+## TODO: The color scheme will change, so don't rely on the colors, just the variables!
 
 These are the CSS variables for Angular Material 3, don't use old variables.
 

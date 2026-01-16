@@ -1208,13 +1208,13 @@ mat-sidenav-content {
   scale: 1.1;
 }
 
-// Sidenav FAB styles
-.sidenav-fab-container {
+// Sidenav FAB styles - bottom position
+.sidenav-fab-container-bottom {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  margin-top: 8px;
 }
 
 .sidenav-create-fab {

@@ -161,17 +161,6 @@
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
-      <!-- Create FAB at top of sidenav -->
-      @if (app.authenticated()) {
-      <div class="sidenav-fab-container">
-        <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateMenu($event)"
-          i18n-aria-label="@@app.create.aria" aria-label="Create new content"
-          [matTooltip]="displayLabels() ? '' : createLabel">
-          <mat-icon>add</mat-icon>
-        </button>
-      </div>
-      }
-
       <mat-nav-list>
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
@@ -226,6 +215,17 @@
         </div>
         }
         }
+        }
+
+        <!-- Create FAB at bottom of sidenav -->
+        @if (app.authenticated()) {
+        <div class="sidenav-fab-container-bottom">
+          <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateMenu($event)"
+            i18n-aria-label="@@app.create.aria" aria-label="Create new content"
+            [matTooltip]="displayLabels() ? '' : createLabel">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
         }
 
         <a mat-list-item (click)="toggleMenuSize()">
@@ -602,11 +602,11 @@
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
   <div class="mobile-nav no-print">
-    <a mat-button class="mobile-nav-button" [routerLink]="['/']"
-      (click)="$event.preventDefault(); onMobileNavClick('/')" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/f']"
+      (click)="$event.preventDefault(); onMobileNavClick('/f')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
-      <mat-icon>home</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.home">Home</div>
+      <mat-icon>stacks</mat-icon>
+      <div class="mobile-nav-label" i18n="@@app.mobile.feeds">Feeds</div>
     </a>
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/messages']"

@@ -47,11 +47,11 @@ export class NavigationComponent {
   }
 
   /**
-   * Navigate to home and clear navigation history
+   * Navigate to feeds and clear navigation history
    */
   navigateToHome(): void {
     this.routeDataService.clearHistory();
-    this.router.navigate(['/']);
+    this.router.navigate(['/f']);
   }
 
   // Right click - show context menu
