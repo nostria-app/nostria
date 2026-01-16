@@ -874,6 +874,13 @@ export class ProfileHeaderComponent implements OnDestroy {
     }
   }
 
+  copyNip05ToClipboard(): void {
+    const nip05Value = this.verifiedIdentifier().value;
+    if (nip05Value) {
+      this.layout.copyToClipboard(nip05Value, 'NIP-05');
+    }
+  }
+
   toggleFavorite(): void {
     const currentPubkey = this.pubkey();
     if (!currentPubkey) return;
