@@ -75,7 +75,6 @@ export class TranslateDialogComponent {
   });
 
   constructor() {
-    debugger;
     // Load saved translation preferences and validate against available languages
     const pubkey = this.accountState.pubkey();
     const savedSourceLang = pubkey ? this.accountLocalState.getTranslationSourceLang(pubkey) : undefined;
