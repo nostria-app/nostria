@@ -6,7 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Event } from 'nostr-tools';
+import { Event as NostrEvent } from 'nostr-tools';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ZapService } from '../../services/zap.service';
 import { DataService } from '../../services/data.service';
@@ -117,7 +117,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 })
 export class ZapButtonComponent {
   // Inputs
-  event = input<Event | null>(null);
+  event = input<NostrEvent | null>(null);
   recipientPubkey = input<string | null>(null);
   recipientName = input<string | null>(null);
   recipientMetadata = input<Record<string, unknown> | null>(null);
@@ -223,7 +223,7 @@ export class ZapButtonComponent {
     // Desktop hover behavior - menu will close automatically
   }
 
-  private async handleLongPress(event: Event): Promise<void> {
+  private async handleLongPress(event: MouseEvent | TouchEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
 
@@ -463,7 +463,7 @@ export class ZapButtonComponent {
   }
 
   private openZapSplitDialog(
-    event: Event,
+    event: NostrEvent,
     splits: { pubkey: string; relay: string; weight: number }[]
   ): void {
     // Prepare dialog data for zap split
