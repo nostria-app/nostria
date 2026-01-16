@@ -68,6 +68,9 @@ export class ShortcutsDialogComponent {
     { keys: 'Alt + N', description: $localize`:@@shortcuts.create:Open create options` },
     { keys: 'Alt + C', description: $localize`:@@shortcuts.command:Open command palette` },
     { keys: 'Alt + V', description: $localize`:@@shortcuts.voice:Open command palette with voice input` },
+    { keys: 'Space / K', description: $localize`:@@shortcuts.video.play-pause:Play/pause video (when video player is active)` },
+    { keys: 'J / ←', description: $localize`:@@shortcuts.video.rewind:Rewind video 10 seconds (when video player is active)` },
+    { keys: 'L / →', description: $localize`:@@shortcuts.video.forward:Fast forward video 10 seconds (when video player is active)` },
   ];
 
   close(): void {
