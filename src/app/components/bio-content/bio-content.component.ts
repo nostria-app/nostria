@@ -138,7 +138,7 @@ export class BioContentComponent implements OnDestroy {
 
     // Regex patterns
     // Match both "nostr:npub..." and standalone "npub..." or "nprofile..."
-    // Uses word boundary and lookahead to ensure clean matching
+    // Uses word boundaries to ensure clean matching
     const nostrRegex = /\b(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)\b|nostr:(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)/g;
     const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
 
@@ -160,8 +160,9 @@ export class BioContentComponent implements OnDestroy {
       const fullMatch = match[0];
       // The identifier is in group 1 (standalone) or group 2 (with nostr: prefix)
       const identifier = match[1] || match[2];
-      // Prepend "nostr:" prefix for parsing
-      const uri = `nostr:${identifier}`;
+      // If group 1 matched (standalone), prepend "nostr:" prefix for parsing
+      // If group 2 matched (already has prefix), use fullMatch as-is
+      const uri = match[1] ? `nostr:${identifier}` : fullMatch;
       const parsed = await this.parseNostrUri(uri);
       if (parsed) {
         matches.push({
