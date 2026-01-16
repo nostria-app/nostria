@@ -54,117 +54,161 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   isTranscribing = signal(false);
 
   commands: Command[] = [
+    // Navigation - Core Features
     {
-      id: 'nav-messages',
-      label: 'Open Messages',
-      icon: 'mail',
-      action: () => this.router.navigate(['/messages']),
-      keywords: ['messages', 'inbox', 'dm', 'chat']
-    },
-    {
-      id: 'nav-settings',
-      label: 'Open Settings',
-      icon: 'settings',
-      action: () => this.router.navigate(['/settings']),
-      keywords: ['settings', 'config', 'preferences', 'options']
-    },
-    {
-      id: 'nav-profile',
-      label: 'Open Profile',
-      icon: 'person',
-      action: () => this.router.navigate([{ outlets: { right: ['p', this.accountState.pubkey()] } }]), // Assuming /profile redirects to current user
-      keywords: ['profile', 'me', 'account', 'user']
-    },
-    {
-      id: 'nav-profile-edit',
-      label: 'Edit Profile',
-      icon: 'edit',
-      action: () => this.router.navigate([{ outlets: { right: ['p', this.accountState.pubkey(), 'edit'] } }]), // Assuming /profile redirects to current user
-      keywords: ['profile', 'me', 'account', 'user', 'edit']
+      id: 'nav-home',
+      label: 'Go to Home',
+      icon: 'home',
+      action: () => this.router.navigate(['/']),
+      keywords: ['home', 'main', 'start', 'feeds', 'timeline']
     },
     {
       id: 'nav-feeds',
       label: 'Open Feeds',
       icon: 'dynamic_feed',
       action: () => this.router.navigate(['/']),
-      keywords: ['feeds', 'home', 'timeline', 'posts']
+      keywords: ['feeds', 'timeline', 'posts', 'notes']
     },
     {
-      id: 'nav-streams',
-      label: 'Open Streams',
-      icon: 'live_tv',
-      action: () => this.router.navigate(['/streams']),
-      keywords: ['streams', 'live', 'video', 'tv']
+      id: 'nav-messages',
+      label: 'Open Messages',
+      icon: 'mail',
+      action: () => this.router.navigate(['/messages']),
+      keywords: ['messages', 'inbox', 'dm', 'chat', 'direct']
     },
     {
-      id: 'nav-media',
-      label: 'Open Media',
-      icon: 'photo_library',
-      action: () => this.router.navigate(['/media']),
-      keywords: ['media', 'photos', 'images', 'gallery']
+      id: 'nav-notifications',
+      label: 'Open Notifications',
+      icon: 'notifications',
+      action: () => this.router.navigate(['/notifications']),
+      keywords: ['notifications', 'alerts', 'mentions', 'replies', 'activity']
     },
     {
-      id: 'nav-bookmarks',
-      label: 'Open Bookmarks',
-      icon: 'bookmarks',
-      action: () => this.router.navigate(['/collections/bookmarks']),
-      keywords: ['bookmarks', 'saved', 'favorites']
-    },
-    {
-      id: 'nav-meetings',
-      label: 'Open Meetings',
-      icon: 'meeting_room',
-      action: () => this.router.navigate(['/meetings']),
-      keywords: ['meetings', 'calls', 'video chat']
-    },
-    {
-      id: 'nav-badges',
-      label: 'Open Badges',
-      icon: 'badge',
-      action: () => this.router.navigate(['/badges']),
-      keywords: ['badges', 'achievements', 'awards']
-    },
-    {
-      id: 'nav-notes',
-      label: 'Open Notes',
-      icon: 'notes',
-      action: () => this.router.navigate(['/notes']), // Assuming there is a notes route or feed
-      keywords: ['notes', 'text']
-    },
-    {
-      id: 'act-create-note',
-      label: 'Create Note',
-      icon: 'edit_note',
-      action: () => this.openNoteEditor(),
-      keywords: ['create note', 'write note', 'new note', 'post']
-    },
-    {
-      id: 'act-create-article',
-      label: 'Create Article',
-      icon: 'article',
-      action: () => this.layoutService.createArticle(),
-      keywords: ['create article', 'write article', 'new article', 'blog']
-    },
-    {
-      id: 'nav-analytics',
-      label: 'Open Analytics',
-      icon: 'analytics',
-      action: () => this.router.navigate(['/analytics']),
-      keywords: ['analytics', 'stats', 'statistics', 'insights']
+      id: 'nav-discover',
+      label: 'Open Discover',
+      icon: 'explore',
+      action: () => this.router.navigate(['/discover']),
+      keywords: ['discover', 'explore', 'browse', 'trending']
     },
     {
       id: 'nav-summary',
       label: 'Open Summary',
       icon: 'summarize',
       action: () => this.router.navigate(['/summary']),
-      keywords: ['summary', 'overview', 'dashboard']
+      keywords: ['summary', 'overview', 'dashboard', 'ai']
     },
+
+    // Navigation - Content
+    {
+      id: 'nav-articles',
+      label: 'Open Articles',
+      icon: 'article',
+      action: () => this.router.navigate(['/articles']),
+      keywords: ['articles', 'blogs', 'long-form', 'reads', 'posts']
+    },
+    {
+      id: 'nav-music',
+      label: 'Open Music',
+      icon: 'music_note',
+      action: () => this.router.navigate(['/music']),
+      keywords: ['music', 'songs', 'audio', 'tracks', 'artists', 'albums']
+    },
+    {
+      id: 'nav-streams',
+      label: 'Open Streams',
+      icon: 'live_tv',
+      action: () => this.router.navigate(['/streams']),
+      keywords: ['streams', 'live', 'video', 'tv', 'broadcast']
+    },
+    {
+      id: 'nav-media',
+      label: 'Open Media',
+      icon: 'photo_library',
+      action: () => this.router.navigate(['/media']),
+      keywords: ['media', 'photos', 'images', 'gallery', 'videos']
+    },
+
+    // Navigation - Collections & Organization
+    {
+      id: 'nav-collections',
+      label: 'Open Collections',
+      icon: 'folder_special',
+      action: () => this.router.navigate(['/collections']),
+      keywords: ['collections', 'organize', 'sets', 'groups']
+    },
+    {
+      id: 'nav-bookmarks',
+      label: 'Open Bookmarks',
+      icon: 'bookmarks',
+      action: () => this.router.navigate(['/collections/bookmarks']),
+      keywords: ['bookmarks', 'saved', 'favorites', 'later']
+    },
+    {
+      id: 'nav-people',
+      label: 'Open People',
+      icon: 'people',
+      action: () => this.router.navigate(['/people']),
+      keywords: ['people', 'following', 'followers', 'contacts', 'friends']
+    },
+    {
+      id: 'nav-lists',
+      label: 'Open Lists',
+      icon: 'list',
+      action: () => this.router.navigate(['/lists']),
+      keywords: ['lists', 'people lists', 'groups', 'follow sets']
+    },
+    {
+      id: 'nav-emojis',
+      label: 'Open Emoji Sets',
+      icon: 'emoji_emotions',
+      action: () => this.router.navigate(['/collections/emojis']),
+      keywords: ['emojis', 'emoji sets', 'custom emojis', 'reactions']
+    },
+    {
+      id: 'nav-interests',
+      label: 'Open Interests',
+      icon: 'interests',
+      action: () => this.router.navigate(['/collections/interests']),
+      keywords: ['interests', 'topics', 'hashtags', 'tags']
+    },
+
+    // Navigation - Media & Entertainment
+    {
+      id: 'nav-playlists',
+      label: 'Open Playlists',
+      icon: 'playlist_play',
+      action: () => this.router.navigate(['/playlists']),
+      keywords: ['playlists', 'music playlists', 'queue']
+    },
+    {
+      id: 'nav-media-queue',
+      label: 'Open Media Queue',
+      icon: 'queue_music',
+      action: () => this.router.navigate(['/queue']),
+      keywords: ['queue', 'media queue', 'watch later', 'play queue']
+    },
+    {
+      id: 'nav-youtube',
+      label: 'Open YouTube',
+      icon: 'smart_display',
+      action: () => this.router.navigate(['/youtube']),
+      keywords: ['youtube', 'videos', 'watch']
+    },
+    {
+      id: 'nav-meetings',
+      label: 'Open Meetings',
+      icon: 'meeting_room',
+      action: () => this.router.navigate(['/meetings']),
+      keywords: ['meetings', 'calls', 'video chat', 'conference']
+    },
+
+    // Navigation - Tools & Utilities
     {
       id: 'nav-memos',
       label: 'Open Memos',
       icon: 'sticky_note_2',
       action: () => this.router.navigate(['/memos']),
-      keywords: ['memos', 'notes', 'reminders', 'private notes']
+      keywords: ['memos', 'private notes', 'reminders', 'personal']
     },
     {
       id: 'nav-calendar',
@@ -174,53 +218,122 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['calendar', 'events', 'schedule', 'dates']
     },
     {
-      id: 'nav-backup',
-      label: 'Open Backup',
-      icon: 'backup',
-      action: () => this.router.navigate(['/backup']),
-      keywords: ['backup', 'export', 'save', 'restore']
-    },
-    {
-      id: 'nav-playlists',
-      label: 'Open Playlists',
-      icon: 'playlist_play',
-      action: () => this.router.navigate(['/playlists']),
-      keywords: ['playlists', 'music', 'queue', 'videos']
-    },
-    {
-      id: 'nav-media-queue',
-      label: 'Open Media Queue',
-      icon: 'queue_music',
-      action: () => this.router.navigate(['/queue']),
-      keywords: ['queue', 'media queue', 'playlist', 'watch later']
-    },
-    {
-      id: 'nav-lists',
-      label: 'Open Lists',
-      icon: 'list',
-      action: () => this.router.navigate(['/lists']),
-      keywords: ['lists', 'people lists', 'groups']
-    },
-    {
       id: 'nav-polls',
       label: 'Open Polls',
       icon: 'poll',
       action: () => this.router.navigate(['/polls']),
-      keywords: ['polls', 'voting', 'survey']
+      keywords: ['polls', 'voting', 'survey', 'questions']
     },
     {
-      id: 'nav-notifications',
-      label: 'Open Notifications',
-      icon: 'notifications',
-      action: () => this.router.navigate(['/notifications']),
-      keywords: ['notifications', 'alerts', 'mentions', 'replies']
+      id: 'nav-badges',
+      label: 'Open Badges',
+      icon: 'badge',
+      action: () => this.router.navigate(['/badges']),
+      keywords: ['badges', 'achievements', 'awards', 'credentials']
     },
     {
-      id: 'nav-discover',
-      label: 'Open Discover',
-      icon: 'explore',
-      action: () => this.router.navigate(['/discover']),
-      keywords: ['discovery', 'discovery', 'explore', 'browse']
+      id: 'nav-zaps',
+      label: 'Open Zap History',
+      icon: 'bolt',
+      action: () => this.router.navigate(['/zaps']),
+      keywords: ['zaps', 'payments', 'lightning', 'bitcoin', 'tips', 'history']
+    },
+    {
+      id: 'nav-analytics',
+      label: 'Open Analytics',
+      icon: 'analytics',
+      action: () => this.router.navigate(['/analytics']),
+      keywords: ['analytics', 'stats', 'statistics', 'insights', 'metrics']
+    },
+
+    // Navigation - Account & Settings
+    {
+      id: 'nav-profile',
+      label: 'Open My Profile',
+      icon: 'person',
+      action: () => this.router.navigate(['/p', this.accountState.pubkey()]),
+      keywords: ['profile', 'me', 'account', 'user', 'my profile']
+    },
+    {
+      id: 'nav-profile-edit',
+      label: 'Edit Profile',
+      icon: 'edit',
+      action: () => this.router.navigate(['/p', this.accountState.pubkey(), 'edit']),
+      keywords: ['edit profile', 'update profile', 'change profile']
+    },
+    {
+      id: 'nav-accounts',
+      label: 'Open Accounts',
+      icon: 'manage_accounts',
+      action: () => this.router.navigate(['/accounts']),
+      keywords: ['accounts', 'switch account', 'identities', 'login']
+    },
+    {
+      id: 'nav-settings',
+      label: 'Open Settings',
+      icon: 'settings',
+      action: () => this.router.navigate(['/settings']),
+      keywords: ['settings', 'config', 'preferences', 'options']
+    },
+    {
+      id: 'nav-relays',
+      label: 'Open Relays',
+      icon: 'dns',
+      action: () => this.router.navigate(['/settings/relays']),
+      keywords: ['relays', 'servers', 'connections', 'network']
+    },
+    {
+      id: 'nav-wallet',
+      label: 'Open Wallet Settings',
+      icon: 'account_balance_wallet',
+      action: () => this.router.navigate(['/settings/wallet']),
+      keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments']
+    },
+    {
+      id: 'nav-backup',
+      label: 'Open Backup',
+      icon: 'backup',
+      action: () => this.router.navigate(['/backup']),
+      keywords: ['backup', 'export', 'save', 'restore', 'keys']
+    },
+    {
+      id: 'nav-premium',
+      label: 'Open Premium',
+      icon: 'workspace_premium',
+      action: () => this.router.navigate(['/premium']),
+      keywords: ['premium', 'subscription', 'upgrade', 'pro']
+    },
+
+    // Navigation - AI Features
+    {
+      id: 'nav-ai',
+      label: 'Open AI Features',
+      icon: 'psychology',
+      action: () => this.router.navigate(['/ai']),
+      keywords: ['ai', 'artificial intelligence', 'models', 'machine learning']
+    },
+    {
+      id: 'nav-ai-settings',
+      label: 'Open AI Settings',
+      icon: 'psychology_alt',
+      action: () => this.router.navigate(['/ai/settings']),
+      keywords: ['ai settings', 'ai config', 'models', 'transformers']
+    },
+
+    // Actions - Content Creation
+    {
+      id: 'act-create-note',
+      label: 'Create Note',
+      icon: 'edit_note',
+      action: () => this.openNoteEditor(),
+      keywords: ['create note', 'write note', 'new note', 'post', 'compose']
+    },
+    {
+      id: 'act-create-article',
+      label: 'Create Article',
+      icon: 'post_add',
+      action: () => this.layoutService.createArticle(),
+      keywords: ['create article', 'write article', 'new article', 'blog', 'long-form']
     }
   ];
 

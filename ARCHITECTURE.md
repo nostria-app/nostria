@@ -22,8 +22,10 @@
 14. [Server-Side Rendering (SSR)](#server-side-rendering-ssr)
 15. [Platform Support](#platform-support)
 16. [Content Creation](#content-creation)
-17. [Key Design Decisions](#key-design-decisions)
-18. [Development Guidelines](#development-guidelines)
+17. [Command Palette](#command-palette)
+18. [AI Features](#ai-features)
+19. [Key Design Decisions](#key-design-decisions)
+20. [Development Guidelines](#development-guidelines)
 
 ---
 
@@ -799,6 +801,196 @@ Uses Blossom protocol (BUD-01/02/03):
 const uploadResult = await mediaService.uploadFile(file);
 // Returns Blossom URL for inclusion in event
 ```
+
+---
+
+## Command Palette
+
+### Overview
+
+The Command Palette provides quick keyboard-driven access to all app features. It's opened with `Ctrl+K` (or `Cmd+K` on Mac) and supports both keyboard navigation and voice commands.
+
+**Location**: `src/app/components/command-palette-dialog/`
+
+### Features
+
+- **Fuzzy Search**: Commands filtered by label and keywords
+- **Keyboard Navigation**: Arrow keys, Enter to execute, Escape to close
+- **Voice Commands**: Transcription via local AI (requires AI enabled)
+- **Categorized Commands**: Navigation, actions, settings
+
+### Command Structure
+
+```typescript
+interface Command {
+  id: string;           // Unique identifier (e.g., 'nav-music')
+  label: string;        // Display label (e.g., 'Open Music')
+  icon: string;         // Material icon name
+  action: () => void;   // Action to execute
+  keywords?: string[];  // Search keywords for fuzzy matching
+  description?: string; // Optional description
+}
+```
+
+### Adding New Commands
+
+**IMPORTANT**: When adding new features or routes to the app, always add corresponding commands to the Command Palette.
+
+```typescript
+// In command-palette-dialog.component.ts
+commands: Command[] = [
+  // ... existing commands
+  {
+    id: 'nav-newfeature',
+    label: 'Open New Feature',
+    icon: 'feature_icon',
+    action: () => this.router.navigate(['/newfeature']),
+    keywords: ['new feature', 'related', 'search', 'terms']
+  },
+];
+```
+
+### Command Categories
+
+| Category | ID Prefix | Purpose |
+|----------|-----------|---------|
+| Navigation - Core | `nav-` | Home, Feeds, Messages, Notifications |
+| Navigation - Content | `nav-` | Articles, Music, Streams, Media |
+| Navigation - Collections | `nav-` | Collections, Bookmarks, People, Lists |
+| Navigation - Tools | `nav-` | Memos, Calendar, Polls, Analytics |
+| Navigation - Account | `nav-` | Profile, Settings, Accounts, Backup |
+| Actions | `act-` | Create Note, Create Article, etc. |
+
+### Voice Commands
+
+When AI transcription is enabled, users can speak commands:
+
+- **Direct navigation**: "Open Music", "Go to Settings"
+- **Search**: "Search <term>", "Find <term>"
+- **Actions**: "Create Note", "Create Article"
+
+---
+
+## AI Features
+
+### Overview
+
+Nostria includes privacy-focused AI features powered by **Transformers.js**, which runs machine learning models entirely in the browser. No data is sent to external servers, ensuring complete privacy for users.
+
+**Location**: `src/app/services/ai.service.ts` and `src/app/workers/ai.worker.ts`
+
+### Architecture
+
+```
+User Request
+    ↓
+AiService (main thread)
+    ↓
+Web Worker (ai.worker.ts)
+    ↓
+Transformers.js (ONNX Runtime)
+    ↓
+Local ML Models (cached in browser)
+```
+
+### Supported Tasks
+
+| Task | Model | Use Case |
+|------|-------|----------|
+| **Summarization** | distilbart-cnn-6-6 | Summarize long articles/threads |
+| **Translation** | opus-mt-* | Translate content between languages |
+| **Transcription** | whisper-tiny | Voice-to-text for command palette |
+| **Text-to-Speech** | speecht5_tts | Read content aloud |
+| **Sentiment Analysis** | distilbert-sst-2 | Analyze content sentiment |
+| **Text Generation** | LaMini-Flan-T5-783M | Generate text responses |
+
+### Privacy Model
+
+**Key Principle**: All AI processing happens locally in the user's browser.
+
+- Models are downloaded once and cached in IndexedDB
+- No API calls to external AI services
+- User content never leaves the device
+- Full functionality works offline (after initial model download)
+
+### Service Usage
+
+```typescript
+// AiService injection
+private ai = inject(AiService);
+
+// Check if AI is enabled in settings
+if (this.settings.settings().aiEnabled) {
+  // Summarize text
+  const summary = await this.ai.summarizeText(longText);
+  
+  // Translate content
+  const translated = await this.ai.translateText(
+    text, 
+    'Xenova/opus-mt-es-en'  // Spanish to English
+  );
+  
+  // Transcribe audio
+  const transcript = await this.ai.transcribeAudio(audioData);
+}
+```
+
+### Model Management
+
+Models are managed through the AI Settings page (`/ai/settings`):
+
+```typescript
+// Load a model (downloads if not cached)
+await ai.loadModel('summarization', ai.summarizationModelId, (progress) => {
+  console.log('Download progress:', progress);
+});
+
+// Check if model is loaded/cached
+const status = await ai.checkModel('summarization', modelId);
+// { loaded: boolean, cached: boolean }
+
+// Delete model from cache
+await ai.deleteModelFromCache(modelId);
+
+// Clear all cached models
+await ai.clearAllCache();
+```
+
+### Settings Integration
+
+AI features are controlled via user settings:
+
+| Setting | Purpose |
+|---------|---------|
+| `aiEnabled` | Master toggle for all AI features |
+| `aiSummarizationEnabled` | Enable content summarization |
+| `aiTranslationEnabled` | Enable translation |
+| `aiTranscriptionEnabled` | Enable voice transcription |
+| `aiSpeechEnabled` | Enable text-to-speech |
+| `aiSentimentEnabled` | Enable sentiment analysis |
+
+### Web Worker Implementation
+
+AI processing runs in a Web Worker to prevent UI blocking:
+
+```typescript
+// ai.worker.ts handles:
+// - Model loading and caching
+// - Inference execution
+// - Progress reporting back to main thread
+
+// Main thread receives:
+// - 'progress' events during model download
+// - 'error' events on failure
+// - Result payload on success
+```
+
+### Available Translation Models
+
+The app includes 50+ translation model pairs supporting languages including:
+- European: English, Spanish, French, German, Italian, Portuguese, etc.
+- Asian: Chinese, Japanese, Korean, Vietnamese, Thai, Hindi, etc.
+- Other: Arabic, Russian, Ukrainian, Turkish, etc.
 
 ---
 
