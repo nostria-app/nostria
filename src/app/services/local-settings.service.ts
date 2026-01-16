@@ -3,6 +3,7 @@ import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
+import { Subject, debounceTime } from 'rxjs';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
@@ -72,6 +73,9 @@ export class LocalSettingsService {
   // Track which fonts have been loaded
   private loadedFonts = new Set<string>();
 
+  // Debounced save subject to batch rapid settings changes
+  private saveSubject = new Subject<LocalSettings>();
+
   // Signal containing all local settings
   readonly settings = signal<LocalSettings>({ ...DEFAULT_LOCAL_SETTINGS });
 
@@ -94,12 +98,17 @@ export class LocalSettingsService {
   readonly timeFormat = computed(() => this.settings().timeFormat);
 
   constructor() {
+    // Set up debounced save - waits 300ms after last change before saving
+    this.saveSubject.pipe(debounceTime(300)).subscribe(settings => {
+      this.saveSettings(settings);
+    });
+
     this.loadSettings();
 
-    // Auto-save settings whenever they change
+    // Auto-save settings whenever they change (debounced)
     effect(() => {
       const currentSettings = this.settings();
-      this.saveSettings(currentSettings);
+      this.saveSubject.next(currentSettings);
     });
 
     // Apply locale class to document element for font styling
