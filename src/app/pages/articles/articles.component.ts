@@ -17,6 +17,7 @@ import { PanelActionsService } from '../../services/panel-actions.service';
 import { DatabaseService } from '../../services/database.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
@@ -56,6 +57,7 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   private database = inject(DatabaseService);
   private accountRelay = inject(AccountRelayService);
   private userRelay = inject(UserRelayService);
+  private userRelays = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
 
@@ -203,7 +205,7 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   private setupPanelActions(): void {
     // Set the page title for the toolbar
     this.panelActions.setPageTitle('Articles');
-    
+
     this.panelActions.setLeftPanelActions([
       {
         id: 'refresh',
@@ -251,13 +253,13 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
 
   onSourceChange(source: 'following' | 'public'): void {
     this.feedSource.set(source);
-    
+
     // Persist the selected feed source
     const pubkey = this.currentPubkey();
     if (pubkey) {
       this.accountLocalState.setArticlesDiscoverFeedSource(pubkey, source);
     }
-    
+
     // If switching to public, start public subscription
     if (source === 'public' && !this.publicSubscription) {
       this.startPublicSubscription();
@@ -320,20 +322,20 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
 
       if (cachedArticles.length > 0) {
         console.log('[Articles] Loaded', cachedArticles.length, 'cached articles from database');
-        
+
         // Update event map with cached articles
         cachedArticles.forEach(article => {
           const dTag = article.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
           const uniqueId = `${article.pubkey}:${dTag}`;
-          
+
           // Skip if blocked
           if (this.reporting.isUserBlocked(article.pubkey) || this.reporting.isContentBlocked(article)) {
             return;
           }
-          
+
           this.eventMap.set(uniqueId, article);
         });
-        
+
         this.updateArticlesList();
       }
     } catch (error) {
@@ -442,7 +444,7 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
 
     // Get account relays
     const accountRelays = this.accountRelay.getRelayUrls();
-    
+
     // Combine with articles-specific relays from the user's relay set
     const customArticlesRelays = this.articlesRelays();
     const baseRelays = [...new Set([...accountRelays, ...customArticlesRelays])];
@@ -496,13 +498,13 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
    */
   private async queryIndividualRelays(pubkeys: string[]): Promise<void> {
     const BATCH_SIZE = 10;
-    
+
     for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
       const batch = pubkeys.slice(i, i + BATCH_SIZE);
-      
+
       // Get relay lists for this batch of users
       const relayPromises = batch.map(async (pubkey) => {
-        const relays = await this.userRelay.getUserRelays(pubkey);
+        const relays = await this.userRelays.getUserRelays(pubkey);
         return { pubkey, relays };
       });
 
@@ -545,7 +547,7 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
 
     // Get account relays
     const accountRelays = this.accountRelay.getRelayUrls();
-    
+
     // Combine with articles-specific relays
     const customArticlesRelays = this.articlesRelays();
     const allRelayUrls = [...new Set([...accountRelays, ...customArticlesRelays])];
