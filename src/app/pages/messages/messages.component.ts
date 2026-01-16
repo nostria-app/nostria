@@ -661,7 +661,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private setupPanelActions(): void {
     // Set the page title for the toolbar
     this.panelActions.setPageTitle('Messages');
-    
+
     this.panelActions.setLeftPanelActions([
       {
         id: 'search',
@@ -682,7 +682,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         icon: 'more_vert',
         label: 'More options',
         tooltip: 'More options',
-        action: () => {},
+        action: () => { },
         menu: true,
       },
     ]);
@@ -1104,6 +1104,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
 
+      // Capture the reply context before clearing
+      const replyToMessage = this.replyingToMessage();
+
       // Clear the input and reply context
       this.newMessageText.set('');
       this.replyingToMessage.set(null);
@@ -1119,14 +1122,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         finalMessage = await this.sendNip44Message(
           messageText,
           receiverPubkey,
-          myPubkey
+          myPubkey,
+          replyToMessage?.id
         );
       } else {
         // Use NIP-04 encryption for backwards compatibility
         finalMessage = await this.sendNip04Message(
           messageText,
           receiverPubkey,
-          myPubkey
+          myPubkey,
+          replyToMessage?.id
         );
       }
 
@@ -1467,7 +1472,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async sendNip04Message(
     messageText: string,
     receiverPubkey: string,
-    myPubkey: string
+    myPubkey: string,
+    replyToId?: string
   ): Promise<DirectMessage> {
     try {
       // Encrypt the message using NIP-04
@@ -1475,11 +1481,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Build tags
       const tags: string[][] = [['p', receiverPubkey]];
-      
+
       // Add 'e' tag if this is a reply (NIP-17 - also supported in NIP-04 for compatibility)
-      const replyingTo = this.replyingToMessage();
-      if (replyingTo) {
-        tags.push(['e', replyingTo.id]);
+      if (replyToId) {
+        tags.push(['e', replyToId]);
       }
 
       // Create the event
@@ -1519,18 +1524,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async sendNip44Message(
     messageText: string,
     receiverPubkey: string,
-    myPubkey: string
+    myPubkey: string,
+    replyToId?: string
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
       const tags: string[][] = [['p', receiverPubkey]];
-      
+
       // Add 'e' tag if this is a reply (NIP-17)
-      const replyingTo = this.replyingToMessage();
-      if (replyingTo) {
-        tags.push(['e', replyingTo.id]);
+      if (replyToId) {
+        tags.push(['e', replyToId]);
       }
-      
+
       const unsignedMessage = {
         kind: kinds.PrivateDirectMessage,
         pubkey: myPubkey,

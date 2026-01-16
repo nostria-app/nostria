@@ -417,6 +417,7 @@ export class MessagingService implements NostriaService {
             received: storedMsg.received,
             read: storedMsg.read,
             encryptionType: storedMsg.encryptionType,
+            replyTo: this.getReplyToFromTags(storedMsg.tags || []),
           };
 
           messagesMap.set(dm.id, dm);
@@ -1890,7 +1891,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip44',
-          replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
               };
 
               // Determine target pubkey for the chat
@@ -1966,7 +1967,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip04',
-          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+                replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
               };
 
               if (directMessage.isOutgoing) {
@@ -2032,7 +2033,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip44',
-          replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
               };
 
               // Determine target pubkey for the chat
@@ -2108,7 +2109,7 @@ export class MessagingService implements NostriaService {
                 received: true,
                 read: false,
                 encryptionType: 'nip04',
-          replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+                replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
               };
 
               if (directMessage.isOutgoing) {
