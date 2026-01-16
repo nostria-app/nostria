@@ -97,6 +97,7 @@ interface DirectMessage {
   received?: boolean;
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
+  replyTo?: string; // The event ID this message is replying to (from 'e' tag)
 }
 
 interface MessageGroup {
@@ -259,6 +260,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   newMessageText = signal<string>('');
   hasMoreMessages = signal<boolean>(false);
+  // Track which message is being replied to
+  replyingToMessage = signal<DirectMessage | null>(null);
   // Track the last selected chat to determine if we should scroll to bottom
   private lastSelectedChatId = signal<string | null>(null);
   // Track if we're currently loading more messages to avoid scrolling
@@ -463,8 +466,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.logger.debug('New chat selected in effect:', chatId);
             // New chat selected - load all messages and scroll to bottom
             this.lastSelectedChatId.set(chatId);
-            // Clear pending messages when switching chats
+            // Clear pending messages and reply context when switching chats
             this.pendingMessages.set([]);
+            this.replyingToMessage.set(null);
             this.hasMoreMessages.set(true);
             // Reset message count tracking for the new chat
             this.lastMessageCount.set(chatMessages.length);
@@ -1100,8 +1104,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
 
-      // Clear the input
+      // Clear the input and reply context
       this.newMessageText.set('');
+      this.replyingToMessage.set(null);
 
       // Determine which encryption to use based on chat and client capabilities
       const selectedChat = this.selectedChat()!;
@@ -1181,6 +1186,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Then set its content to the input field so the user can try again
     this.newMessageText.set(message.content);
+  }
+
+  /**
+   * Set a message to reply to
+   */
+  setReplyTo(message: DirectMessage): void {
+    this.replyingToMessage.set(message);
+    // Focus the message input
+    setTimeout(() => {
+      this.messageInput?.nativeElement.focus();
+    }, 100);
+  }
+
+  /**
+   * Clear the reply context
+   */
+  clearReply(): void {
+    this.replyingToMessage.set(null);
+  }
+
+  /**
+   * Get a message by ID for displaying reply context
+   */
+  getMessageById(messageId: string): DirectMessage | undefined {
+    const messages = this.messages();
+    return messages.find(m => m.id === messageId);
   }
 
   /**
@@ -1442,12 +1473,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
 
+      // Build tags
+      const tags: string[][] = [['p', receiverPubkey]];
+      
+      // Add 'e' tag if this is a reply (NIP-17 - also supported in NIP-04 for compatibility)
+      const replyingTo = this.replyingToMessage();
+      if (replyingTo) {
+        tags.push(['e', replyingTo.id]);
+      }
+
       // Create the event
       const event = {
         kind: kinds.EncryptedDirectMessage,
         pubkey: myPubkey,
         created_at: Math.floor(Date.now() / 1000),
-        tags: [['p', receiverPubkey]],
+        tags: tags,
         content: encryptedContent,
       };
 
@@ -1483,11 +1523,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
+      const tags: string[][] = [['p', receiverPubkey]];
+      
+      // Add 'e' tag if this is a reply (NIP-17)
+      const replyingTo = this.replyingToMessage();
+      if (replyingTo) {
+        tags.push(['e', replyingTo.id]);
+      }
+      
       const unsignedMessage = {
         kind: kinds.PrivateDirectMessage,
         pubkey: myPubkey,
         created_at: Math.floor(Date.now() / 1000),
-        tags: [['p', receiverPubkey]],
+        tags: tags,
         content: messageText,
       };
 
