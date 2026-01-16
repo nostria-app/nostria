@@ -628,6 +628,7 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
   min-width: 0;
+  position: relative;
 
   // Push time to edges using margin-auto on bubble
   .message-time-side {
@@ -810,20 +811,33 @@
 // Message actions (reply button)
 .message-actions {
   display: none;
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
+  margin-left: 4px;
 
   .reply-button,
   .retry-button {
     opacity: 0.7;
     transition: opacity 0.2s ease;
+    width: 32px;
+    height: 32px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
 
     &:hover {
       opacity: 1;
     }
   }
+}
+
+// For outgoing messages, show actions on the left side
+.message-bubble-container.outgoing .message-actions {
+  order: -1;
+  margin-left: 0;
+  margin-right: 4px;
 }
 
 .message-bubble-container:hover .message-actions {
