@@ -34,6 +34,8 @@ export interface UserSettings {
   aiSpeechEnabled?: boolean;
   aiVoice?: 'female' | 'male';
   aiNativeLanguage?: string;
+  // Wallet Settings
+  zapQuickAmounts?: number[]; // Array of amounts enabled for quick zapping
   // Add more settings as needed
 }
 
@@ -61,6 +63,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   aiSpeechEnabled: true,
   aiVoice: 'female',
   aiNativeLanguage: 'en',
+  // Wallet Defaults - enable common zap amounts
+  zapQuickAmounts: [21, 210, 420, 1000, 5000, 10000],
 };
 
 @Injectable({
