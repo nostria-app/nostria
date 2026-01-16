@@ -1340,21 +1340,38 @@ export class App implements OnInit {
       return;
     }
 
-    // Spacebar to toggle media player play/pause (when not in an input field)
-    if (event.code === 'Space' && this.layout.showMediaPlayer()) {
-      const target = event.target as HTMLElement;
-      const isInputField = target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable ||
-        target.closest('mat-form-field') !== null;
+    // Check if user is typing in an input field
+    const target = event.target as HTMLElement;
+    const isInputField = target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable ||
+      target.closest('mat-form-field') !== null;
 
-      if (!isInputField) {
+    // Video playback shortcuts (only when media player is active and not typing)
+    if (this.layout.showMediaPlayer() && !isInputField) {
+      // Space or K to toggle play/pause
+      if (event.code === 'Space' || event.key.toLowerCase() === 'k') {
         event.preventDefault();
         if (this.media.paused) {
           this.media.resume();
         } else {
           this.media.pause();
         }
+        return;
+      }
+
+      // J or Left Arrow to rewind 10 seconds
+      if (event.key.toLowerCase() === 'j' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        this.media.rewind(10);
+        return;
+      }
+
+      // L or Right Arrow to fast forward 10 seconds
+      if (event.key.toLowerCase() === 'l' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        this.media.forward(10);
+        return;
       }
     }
 

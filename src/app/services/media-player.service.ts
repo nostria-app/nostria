@@ -1574,19 +1574,27 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   forward(value: number) {
-    if (!this.audio) {
-      return;
+    // Support both video and audio playback
+    if (this.videoMode() && this.videoElement) {
+      this.videoElement.currentTime = Math.min(
+        this.videoElement.duration || 0,
+        this.videoElement.currentTime + value
+      );
+    } else if (this.audio) {
+      this.audio.currentTime += value;
     }
-
-    this.audio.currentTime += value;
   }
 
   rewind(value: number) {
-    if (!this.audio) {
-      return;
+    // Support both video and audio playback
+    if (this.videoMode() && this.videoElement) {
+      this.videoElement.currentTime = Math.max(
+        0,
+        this.videoElement.currentTime - value
+      );
+    } else if (this.audio) {
+      this.audio.currentTime -= value;
     }
-
-    this.audio.currentTime -= value;
   }
 
   rate() {
