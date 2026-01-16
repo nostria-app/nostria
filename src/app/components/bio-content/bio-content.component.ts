@@ -137,7 +137,9 @@ export class BioContentComponent implements OnDestroy {
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex patterns
-    const nostrRegex = /(nostr:(?:npub|nprofile)1[a-zA-Z0-9]+)/g;
+    // Match both "nostr:npub..." and standalone "npub..." or "nprofile..."
+    // Uses word boundaries to ensure clean matching
+    const nostrRegex = /\b(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)\b|nostr:(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)/g;
     const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
 
     // Find all matches
@@ -155,13 +157,18 @@ export class BioContentComponent implements OnDestroy {
     // Find nostr URIs
     let match: RegExpExecArray | null;
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      const uri = match[0];
+      const fullMatch = match[0];
+      // The identifier is in group 1 (standalone) or group 2 (with nostr: prefix)
+      const identifier = match[1] || match[2];
+      // If group 1 matched (standalone), prepend "nostr:" prefix for parsing
+      // If group 2 matched (already has prefix), use fullMatch as-is
+      const uri = match[1] ? `nostr:${identifier}` : fullMatch;
       const parsed = await this.parseNostrUri(uri);
       if (parsed) {
         matches.push({
           start: match.index,
-          end: match.index + match[0].length,
-          content: uri,
+          end: match.index + fullMatch.length,
+          content: fullMatch,
           type: 'nostr-mention',
           pubkey: parsed.pubkey,
           displayName: parsed.displayName,
