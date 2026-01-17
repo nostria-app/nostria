@@ -84,6 +84,9 @@ export class RightPanelService {
     this._stack.update(stack => [...stack, entry]);
     this._activeIndex.set(this._stack().length - 1);
 
+    // Scroll to top immediately when opening new content
+    this.scrollToTop();
+
     // Update browser URL if provided (for sharing/bookmarking)
     if (url && typeof window !== 'undefined') {
       window.history.pushState({ rightPanel: true }, '', url);
@@ -108,8 +111,19 @@ export class RightPanelService {
    */
   private getCurrentScrollPosition(): number {
     if (typeof document === 'undefined') return 0;
-    const content = document.querySelector('.right-panel .panel-content');
+    const content = document.querySelector('.right-panel-content');
     return content?.scrollTop ?? 0;
+  }
+
+  /**
+   * Scroll the right panel content to top
+   */
+  private scrollToTop(): void {
+    if (typeof document === 'undefined') return;
+    const content = document.querySelector('.right-panel-content');
+    if (content) {
+      content.scrollTop = 0;
+    }
   }
 
   /**
