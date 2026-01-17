@@ -304,6 +304,57 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['premium', 'subscription', 'upgrade', 'pro']
     },
 
+    // Navigation - Settings Sections (detailed)
+    {
+      id: 'nav-settings-general',
+      label: 'Open General Settings',
+      icon: 'settings',
+      action: () => this.router.navigate(['/settings/general']),
+      keywords: ['general settings', 'dark mode', 'theme', 'language', 'locale', 'media privacy', 'autoplay', 'client tags', 'external links', 'emoji cache']
+    },
+    {
+      id: 'nav-settings-algorithm',
+      label: 'Open Algorithm Settings',
+      icon: 'model_training',
+      action: () => this.router.navigate(['/settings/algorithm']),
+      keywords: ['algorithm', 'feed algorithm', 'ranking', 'scoring', 'personalization', 'weights', 'boost']
+    },
+    {
+      id: 'nav-settings-search',
+      label: 'Open Search Settings',
+      icon: 'search',
+      action: () => this.router.navigate(['/settings/search']),
+      keywords: ['search settings', 'elasticsearch', 'indexing', 'search providers']
+    },
+    {
+      id: 'nav-settings-privacy',
+      label: 'Open Privacy & Safety Settings',
+      icon: 'security',
+      action: () => this.router.navigate(['/settings/privacy']),
+      keywords: ['privacy', 'safety', 'security', 'mute', 'block', 'hide reports', 'nudity', 'spam', 'image cache', 'tracking', 'trusted media']
+    },
+    {
+      id: 'nav-settings-trust',
+      label: 'Open Trust Settings',
+      icon: 'verified_user',
+      action: () => this.router.navigate(['/settings/trust']),
+      keywords: ['trust', 'web of trust', 'wot', 'reputation', 'verification']
+    },
+    {
+      id: 'nav-settings-logs',
+      label: 'Open Logs Settings',
+      icon: 'article',
+      action: () => this.router.navigate(['/settings/logs']),
+      keywords: ['logs', 'debug', 'console', 'errors', 'diagnostics', 'troubleshooting']
+    },
+    {
+      id: 'nav-settings-about',
+      label: 'Open About',
+      icon: 'info',
+      action: () => this.router.navigate(['/settings/about']),
+      keywords: ['about', 'version', 'info', 'nostria', 'credits', 'license', 'support']
+    },
+
     // Navigation - AI Features
     {
       id: 'nav-ai',
