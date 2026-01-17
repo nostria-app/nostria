@@ -46,8 +46,8 @@
       <!-- Mobile mode - left panel hidden behind right, show right panel info -->
       <!-- Hides when right floating toolbar is visible (920px+) -->
       @if (canGoBackRight()) {
-      <button mat-icon-button (click)="goBackRight()" class="nav-button back-button hide-on-wide-right" matTooltip="Go back"
-        i18n-matTooltip="@@app.nav.back">
+      <button mat-icon-button (click)="goBackRight()" class="nav-button back-button hide-on-wide-right"
+        matTooltip="Go back" i18n-matTooltip="@@app.nav.back">
         <mat-icon>arrow_back</mat-icon>
       </button>
       }

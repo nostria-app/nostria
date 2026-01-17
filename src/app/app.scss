@@ -221,12 +221,17 @@ nav {
 
 // When left panel is collapsed, adjust the floating toolbars container
 .two-column-layout.left-collapsed .floating-toolbars-container {
+  // When left is collapsed, center the container on just the right panel
+  // Right panel is centered in the viewport when left is collapsed
+  left: max(72px, calc((100vw - var(--right-column-width, 700px)) / 2));
+  right: max(0px, calc((100vw - var(--right-column-width, 700px)) / 2));
+
   .left-toolbar {
     display: none;
   }
 
   .right-toolbar {
-    // Center the right toolbar when left is collapsed
+    // Right toolbar takes full width of centered right panel
     width: min(var(--right-column-width, 700px), 100%);
   }
 }
