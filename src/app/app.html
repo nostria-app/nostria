@@ -40,7 +40,7 @@
       <app-navigation></app-navigation>
       <!-- Page title or app title -->
       @if (panelActions.pageTitle()) {
-      <span class="page-title title-font">
+      <span class="page-title title-font hide-on-wide-dual">
         {{ panelActions.pageTitle() }}
       </span>
       } @else {
@@ -399,9 +399,9 @@
         [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
 
         <!-- Floating panel toolbars - positioned at main toolbar level -->
-        <div class="floating-toolbars-container show-on-wide">
-          <!-- Left panel floating toolbar - shows when there's actions or back button (NOT for title - that's in main toolbar now) -->
-          @if ((panelActions.leftPanelActions().length > 0 || panelNav.canGoBackLeft()) &&
+        <div class="floating-toolbars-container show-on-wide-dual">
+          <!-- Left panel floating toolbar - shows when there's title, actions, or back button -->
+          @if ((panelActions.pageTitle() || panelActions.leftPanelActions().length > 0 || panelNav.canGoBackLeft()) &&
           !panelNav.showFeeds()) {
           <div class="panel-floating-toolbar left-toolbar" [class.with-right]="hasRightContent()">
             <div class="floating-toolbar-content">
@@ -410,6 +410,9 @@
                 i18n-matTooltip="@@app.nav.back">
                 <mat-icon>arrow_back</mat-icon>
               </button>
+              }
+              @if (panelActions.pageTitle()) {
+              <span class="panel-title title-font">{{ panelActions.pageTitle() }}</span>
               }
               @if (panelActions.leftPanelHeaderLeftContent()) {
               <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
@@ -584,7 +587,10 @@
 
           <!-- Right panel content - named router outlet for detail views -->
           <div class="panel-content right-panel-content" (scroll)="onRightPanelScroll($event)">
+            <!-- Router-based right panel content -->
             <router-outlet name="right"></router-outlet>
+            <!-- Dynamic component-based right panel content (e.g., from RightPanelService) -->
+            <app-right-panel-container></app-right-panel-container>
           </div>
         </div>
       </div>
