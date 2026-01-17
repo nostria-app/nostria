@@ -503,7 +503,7 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
-        padding-top: var(--toolbar-height, 64px);
+        // Note: padding-top removed - content handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -576,9 +576,8 @@ mat-sidenav-content {
         z-index: 500;
         background-color: var(--mat-app-background-color);
 
-        &.overlay-mode {
-          padding-top: var(--toolbar-height, 64px);
-        }
+        // Note: padding-top removed from overlay-mode
+        // Content inside handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -836,11 +835,32 @@ mat-sidenav-content {
 
 // Right panel content
 .right-panel-content {
+  // Remove default padding - content will add its own padding to scroll to top
+  padding-top: 0px;
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
   &:has(app-profile) {
     padding-top: 0px;
+  }
+
+  // Add padding inside the content wrapper for components that need it
+  >router-outlet+*:not(app-profile):not(app-right-panel-container) {
+    padding-top: var(--toolbar-height, 64px);
+  }
+
+  // Right panel container also needs padding
+  app-right-panel-container {
+    display: block;
+
+    >* {
+      padding-top: var(--toolbar-height, 64px);
+    }
+
+    // Profile handles its own spacing
+    >app-profile {
+      padding-top: 0;
+    }
   }
 }
 

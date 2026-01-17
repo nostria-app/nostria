@@ -1,5 +1,7 @@
 :host {
   display: block;
+  // Add padding-top so content renders below toolbar
+  padding-top: var(--toolbar-height, 64px);
 
   // Only apply max-width and centering when not in dialog mode
   &:not(.dialog-mode) {
