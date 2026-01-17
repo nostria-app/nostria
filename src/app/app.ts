@@ -583,7 +583,16 @@ export class App implements OnInit {
     }
 
     // Wire up right panel clearing with panel navigation
-    this.panelNav.setClearRightPanelCallback(() => this.rightPanel.clearHistory());
+    // When switching sections, fully close the right panel (both RightPanelService and router outlet)
+    this.panelNav.setClearRightPanelCallback(() => {
+      this.rightPanel.clearHistory();
+      // Also clear router-based right panel content
+      this._rightPanelHistory.set([]);
+      this._hasRightRouterContent.set(false);
+      this.panelActions.clearRightPanelActions();
+      // Navigate to clear the right outlet
+      this.router.navigate([{ outlets: { right: null } }], { replaceUrl: true });
+    });
 
     // Track route changes for right panel state and cache clearing
     this.router.events.pipe(

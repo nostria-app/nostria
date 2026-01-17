@@ -39,8 +39,8 @@
       </button>
       <app-navigation></app-navigation>
 
-      <!-- Breadcrumb navigation for left panel content -->
-      @if (panelActions.breadcrumbs().length > 0 && !showRightPanelInMainToolbar()) {
+      <!-- Breadcrumb navigation for left panel content - always shows when breadcrumbs exist -->
+      @if (panelActions.breadcrumbs().length > 0) {
       <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         @for (crumb of panelActions.breadcrumbs(); track $index; let last = $last) {
         @if (!last && crumb.action) {
@@ -54,10 +54,35 @@
         }
       </nav>
       } @else if (!showRightPanelInMainToolbar()) {
-      <!-- No breadcrumbs - show app title -->
+      <!-- No breadcrumbs - show app title (hide on mobile when right panel is active) -->
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
       </span>
+      }
+
+      <!-- Left panel actions (next to breadcrumbs/title) -->
+      @if (panelActions.leftPanelActions().length > 0 && !showRightPanelInMainToolbar()) {
+      <!-- Collapsed menu for small screens -->
+      <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsCollapsedMenu" matTooltip="Actions"
+        class="action-button collapsed-actions-button">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <!-- Individual buttons for larger screens -->
+      <div class="expanded-actions">
+        @for (action of panelActions.leftPanelActions(); track action.id) {
+        @if (action.menu) {
+        <button mat-icon-button [matMenuTriggerFor]="globalLeftPanelActionsMenu"
+          [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
+          <mat-icon>{{ action.icon }}</mat-icon>
+        </button>
+        } @else {
+        <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+          [disabled]="action.disabled" class="action-button">
+          <mat-icon>{{ action.icon }}</mat-icon>
+        </button>
+        }
+        }
+      </div>
       }
     </div>
     }
@@ -95,23 +120,6 @@
     <!-- Right section: action buttons and profile -->
     @if (!layout.search()) {
     <div class="toolbar-section toolbar-right">
-      <!-- Left panel actions (always visible when set) -->
-      @if (panelActions.leftPanelActions().length > 0 && !showRightPanelInMainToolbar()) {
-      @for (action of panelActions.leftPanelActions(); track action.id) {
-      @if (action.menu) {
-      <button mat-icon-button [matMenuTriggerFor]="globalLeftPanelActionsMenu"
-        [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
-        <mat-icon>{{ action.icon }}</mat-icon>
-      </button>
-      } @else {
-      <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-        [disabled]="action.disabled" class="action-button">
-        <mat-icon>{{ action.icon }}</mat-icon>
-      </button>
-      }
-      }
-      }
-
       <!-- Right panel back button and actions (when right panel has content) -->
       @if (hasRightContent()) {
       <!-- Back button for right panel -->
@@ -573,6 +581,23 @@
 <mat-menu #globalLeftPanelActionsMenu="matMenu">
   @if (panelActions.leftPanelMenuTemplate()) {
   <ng-container *ngTemplateOutlet="panelActions.leftPanelMenuTemplate()!"></ng-container>
+  }
+</mat-menu>
+
+<!-- Collapsed left panel actions menu for small screens -->
+<mat-menu #leftPanelActionsCollapsedMenu="matMenu">
+  @for (action of panelActions.leftPanelActions(); track action.id) {
+  @if (action.menu) {
+  <button mat-menu-item [matMenuTriggerFor]="globalLeftPanelActionsMenu" [disabled]="action.disabled">
+    <mat-icon>{{ action.icon }}</mat-icon>
+    <span>{{ action.label }}</span>
+  </button>
+  } @else {
+  <button mat-menu-item (click)="action.action()" [disabled]="action.disabled">
+    <mat-icon>{{ action.icon }}</mat-icon>
+    <span>{{ action.label }}</span>
+  </button>
+  }
   }
 </mat-menu>
 

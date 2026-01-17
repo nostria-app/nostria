@@ -171,6 +171,26 @@ nav {
   padding: 4px 0;
 }
 
+// Left panel actions - responsive collapse behavior
+.expanded-actions {
+  display: flex;
+  align-items: center;
+
+  // Hide on small screens (show collapsed menu instead)
+  @media (max-width: 599px) {
+    display: none;
+  }
+}
+
+.collapsed-actions-button {
+  // Only show on small screens
+  display: none;
+
+  @media (max-width: 599px) {
+    display: inline-flex;
+  }
+}
+
 // Favorites sidebar - vertical on right side of screen
 .favorites-sidebar {
   position: fixed;
