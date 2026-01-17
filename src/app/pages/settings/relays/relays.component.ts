@@ -45,6 +45,7 @@ import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { EventRepublishService } from '../../../services/event-republish.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -87,6 +88,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly eventRepublish = inject(EventRepublishService);
   readonly relayAuth = inject(RelayAuthService);
   private readonly panelActions = inject(PanelActionsService);
+  private readonly rightPanel = inject(RightPanelService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -289,11 +291,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.panelActions.setPageTitle($localize`:@@settings.relays.title:Relays`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.relays.title:Relays`);
+    }
   }
 
   ngOnDestroy() {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   cleanFollowingList() {

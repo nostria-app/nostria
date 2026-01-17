@@ -22,6 +22,7 @@ import { ReportingService } from '../../../services/reporting.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -54,13 +55,19 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   accountLocalState = inject(AccountLocalStateService);
   router = inject(Router);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.privacy.title:Privacy & Safety`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.privacy.title:Privacy & Safety`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   // NIP-56 report types

@@ -20,6 +20,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 export interface RelayClusterOutput {
   relay: string;
@@ -65,13 +66,19 @@ export class LogsSettingsComponent implements OnInit, OnDestroy {
   logger = inject(LoggerService);
   utilities = inject(UtilitiesService);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.logs.title:Logs`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.logs.title:Logs`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   disabledRelays = signal<any>([]);

@@ -34,22 +34,8 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
   ],
   template: `
     <div class="right-panel-wrapper" [class.has-content]="rightPanel.hasContent()">
-      @if (rightPanel.hasContent()) {
-      <div class="panel-header">
-        @if (rightPanel.canGoBack()) {
-        <button mat-icon-button (click)="rightPanel.goBack()" class="nav-button back-button" 
-                matTooltip="Go back" i18n-matTooltip="@@app.nav.back">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        }
-        <span class="panel-title">{{ rightPanel.title() }}</span>
-        <span class="spacer"></span>
-        <button mat-icon-button (click)="rightPanel.close()" class="nav-button close-button"
-                matTooltip="Close" i18n-matTooltip="@@app.nav.close">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-      }
+      <!-- Note: Header is handled by app.html's right panel header -->
+      <!-- This component only renders dynamic content -->
       
       <!-- Dynamic component container -->
       <div class="panel-content" #panelContent>
@@ -66,63 +52,10 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
       overflow: hidden;
     }
     
-    .panel-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      position: sticky;
-      top: var(--toolbar-height, 64px);
-      z-index: 201;
-      border-radius: 24px;
-      height: 48px;
-      margin: 8px 16px;
-      pointer-events: auto;
-      flex-shrink: 0;
-      
-      // Glass effect - light mode
-      background-color: rgba(255, 255, 255, 0.7);
-      -webkit-backdrop-filter: blur(20px) saturate(1.8);
-      backdrop-filter: blur(20px) saturate(1.8);
-      
-      box-shadow: 
-        inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-        inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-        0px 2px 8px rgba(17, 17, 26, 0.08),
-        0px 4px 16px rgba(17, 17, 26, 0.06);
-    }
-    
-    :host-context(.dark) .panel-header {
-      background-color: rgba(0, 0, 0, 0.4);
-      
-      box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-        inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-        0px 2px 8px rgba(0, 0, 0, 0.3),
-        0px 4px 16px rgba(0, 0, 0, 0.25);
-    }
-    
-    .nav-button {
-      flex-shrink: 0;
-    }
-    
-    .panel-title {
-      font-size: 1rem;
-      color: var(--mat-sys-on-surface);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .spacer {
-      flex: 1;
-    }
-    
     .panel-content {
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding-top: var(--toolbar-height, 64px);
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       min-height: 0; // Important for flex children to allow shrinking
@@ -137,11 +70,6 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
     // Hide inactive components but keep them in DOM
     .panel-content ::ng-deep .panel-item-hidden {
       display: none !important;
-    }
-    
-    // When there's content, the header is shown so reduce top padding
-    .right-panel-wrapper.has-content .panel-content {
-      padding-top: 0;
     }
   `]
 })
