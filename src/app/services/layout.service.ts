@@ -41,6 +41,7 @@ import { CommandPaletteDialogComponent } from '../components/command-palette-dia
 import { NavigationStackService } from './navigation-stack.service';
 import { RightPanelService } from './right-panel.service';
 import { PanelNavigationService } from './panel-navigation.service';
+import { SearchActionService } from './search-action.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -50,6 +51,7 @@ export class LayoutService implements OnDestroy {
   /** Used to perform queries or search when input has been parsed to be NIP-5 or similar. */
   query = signal<string | null>(null);
   search = signal(false);
+  private searchAction = inject(SearchActionService);
   router = inject(Router);
   location = inject(Location);
   private logger = inject(LoggerService);
@@ -524,30 +526,56 @@ export class LayoutService implements OnDestroy {
     }
   }
 
+  /**
+   * Toggle search - first checks if any component wants to handle it,
+   * otherwise opens/closes global search.
+   */
   toggleSearch() {
-    const newSearchState = !this.search();
-    this.search.set(newSearchState);
-    if (newSearchState) {
-      // Add ESC key listener when search is opened
-      this.setupEscKeyListener();
-
-      // Focus on search input after DOM update
-      setTimeout(() => {
-        const searchInput = document.querySelector('.search-input') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-          this.logger.debug('Search input focused');
-        } else {
-          this.logger.error('Search input element not found for focusing');
-        }
-      }, 100);
-    } else {
-      // Remove ESC key listener when search is closed
-      this.removeEscKeyListener();
-      // Clear search input and query when closing
-      this.searchInput = '';
-      this.query.set('');
+    // Try component-specific search first (components handle their own toggle)
+    const handled = this.searchAction.triggerSearch();
+    if (handled) {
+      // Component handled the search, don't interact with global search
+      return;
     }
+
+    // No component handler - toggle global search
+    if (this.search()) {
+      this.closeSearch();
+    } else {
+      this.openGlobalSearch();
+    }
+  }
+
+  /**
+   * Force open global search (bypasses component handlers)
+   */
+  openGlobalSearch(): void {
+    this.search.set(true);
+    // Add ESC key listener when search is opened
+    this.setupEscKeyListener();
+
+    // Focus on search input after DOM update
+    setTimeout(() => {
+      const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        this.logger.debug('Search input focused');
+      } else {
+        this.logger.error('Search input element not found for focusing');
+      }
+    }, 100);
+  }
+
+  /**
+   * Close global search
+   */
+  closeSearch(): void {
+    this.search.set(false);
+    // Remove ESC key listener when search is closed
+    this.removeEscKeyListener();
+    // Clear search input and query when closing
+    this.searchInput = '';
+    this.query.set('');
   }
 
   private escKeyListener: ((event: KeyboardEvent) => void) | null = null;

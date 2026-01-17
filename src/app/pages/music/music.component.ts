@@ -21,6 +21,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { PanelActionsService } from '../../services/panel-actions.service';
+import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -70,6 +71,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private panelActions = inject(PanelActionsService);
+  private searchAction = inject(SearchActionService);
   private musicData = inject(MusicDataService);
 
   allTracks = signal<Event[]>([]);
@@ -80,6 +82,9 @@ export class MusicComponent implements OnInit, OnDestroy {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
+
+  // Search handler reference for cleanup
+  private searchHandler: SearchHandler;
 
   // "Yours" section collapsed state
   yoursSectionCollapsed = signal(false);
@@ -349,26 +354,41 @@ export class MusicComponent implements OnInit, OnDestroy {
     setTimeout(() => this.updateContainerWidth(), 50);
     // Second update after CSS width transitions complete (transition is ~300ms)
     setTimeout(() => this.updateContainerWidth(), 400);
+
+    // Create search handler that intercepts global search (toggle behavior)
+    this.searchHandler = (query: string) => {
+      // Toggle search visibility
+      const newState = !this.showSearch();
+      this.showSearch.set(newState);
+      
+      if (newState) {
+        if (query) {
+          this.searchQuery.set(query);
+        }
+        // Focus search input after DOM update
+        setTimeout(() => {
+          this.searchInput?.nativeElement?.focus();
+        }, 50);
+      } else {
+        // Clear search when closing
+        this.clearSearch();
+      }
+      return { handled: true };
+    };
   }
 
   ngOnInit(): void {
     // Register panel header actions
     this.setupPanelActions();
+    // Register search handler to intercept global search
+    this.searchAction.registerHandler(this.searchHandler);
   }
 
   private setupPanelActions(): void {
     // Set the page title for the toolbar
     this.panelActions.setPageTitle('Music');
     
-    const actions = [
-      {
-        id: 'search',
-        icon: 'search',
-        label: 'Search',
-        tooltip: 'Search music',
-        action: () => this.toggleSearch(),
-      },
-    ];
+    const actions = [];
 
     if (this.isAuthenticated()) {
       actions.push(
@@ -537,6 +557,8 @@ export class MusicComponent implements OnInit, OnDestroy {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
     this.panelActions.clearLeftPanelActions();
+    // Unregister search handler
+    this.searchAction.unregisterHandler(this.searchHandler);
   }
 
   /**

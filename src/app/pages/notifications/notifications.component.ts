@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ViewChild, TemplateRef } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ViewChild, TemplateRef, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatCardModule } from '@angular/material/card';
@@ -35,6 +35,7 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { PanelActionsService } from '../../services/panel-actions.service';
+import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -79,10 +80,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private panelActions = inject(PanelActionsService);
+  private searchAction = inject(SearchActionService);
 
   // Template refs for panel header content
   @ViewChild('headerLeftContent') headerLeftContent!: TemplateRef<unknown>;
   @ViewChild('headerActionsMenuTemplate') headerActionsMenuTemplate!: TemplateRef<unknown>;
+  @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
   notifications = this.notificationService.notifications;
 
@@ -93,6 +96,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Whether to show system notifications view
   showSystemNotifications = signal(false);
   notificationType = NotificationType;
+
+  // Search handler reference for cleanup
+  private searchHandler: SearchHandler;
 
   // State for loading older notifications
   isLoadingMore = signal(false);
@@ -130,6 +136,27 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       const filters = this.notificationFilters();
       this.localStorage.setItem(NOTIFICATION_FILTERS_KEY, JSON.stringify(filters));
     });
+
+    // Create search handler that intercepts global search (toggle behavior)
+    this.searchHandler = (query: string) => {
+      // Toggle search visibility
+      const newState = !this.showSearch();
+      this.showSearch.set(newState);
+      
+      if (newState) {
+        if (query) {
+          this.searchQuery.set(query);
+        }
+        // Focus search input after DOM update
+        setTimeout(() => {
+          this.searchInputElement?.nativeElement?.focus();
+        }, 50);
+      } else {
+        // Clear search when closing
+        this.searchQuery.set('');
+      }
+      return { handled: true };
+    };
   }
 
   // Helper to check if notification is a system notification (technical)
@@ -203,11 +230,15 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.loadNotificationFilters();
     // Setup panel header actions
     this.setupPanelActions();
+    // Register search handler to intercept global search
+    this.searchAction.registerHandler(this.searchHandler);
   }
 
   ngOnDestroy(): void {
     // Clear panel actions when component is destroyed
     this.panelActions.clearLeftPanelActions();
+    // Unregister search handler
+    this.searchAction.unregisterHandler(this.searchHandler);
   }
 
   /**
@@ -218,13 +249,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.panelActions.setPageTitle('Notifications');
     
     const actions = [
-      {
-        id: 'search',
-        icon: 'search',
-        label: 'Search',
-        tooltip: 'Search notifications',
-        action: () => this.toggleSearch(),
-      },
       {
         id: 'more',
         icon: 'more_vert',
