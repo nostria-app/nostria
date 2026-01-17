@@ -276,18 +276,67 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['settings', 'config', 'preferences', 'options']
     },
     {
+      id: 'nav-settings-general',
+      label: 'Settings: General',
+      icon: 'settings',
+      action: () => this.router.navigate(['/settings/general']),
+      keywords: ['general settings', 'language', 'theme', 'dark mode', 'media']
+    },
+    {
+      id: 'nav-settings-algorithm',
+      label: 'Settings: Algorithm',
+      icon: 'model_training',
+      action: () => this.router.navigate(['/settings/algorithm']),
+      keywords: ['algorithm', 'metrics', 'engagement', 'favorites']
+    },
+    {
       id: 'nav-relays',
-      label: 'Open Relays',
+      label: 'Settings: Relays',
       icon: 'dns',
       action: () => this.router.navigate(['/settings/relays']),
       keywords: ['relays', 'servers', 'connections', 'network']
     },
     {
+      id: 'nav-settings-search',
+      label: 'Settings: Search',
+      icon: 'search',
+      action: () => this.router.navigate(['/settings/search']),
+      keywords: ['search settings', 'search relays']
+    },
+    {
+      id: 'nav-settings-privacy',
+      label: 'Settings: Privacy & Safety',
+      icon: 'security',
+      action: () => this.router.navigate(['/settings/privacy']),
+      keywords: ['privacy', 'safety', 'mute', 'block', 'content warning']
+    },
+    {
+      id: 'nav-settings-trust',
+      label: 'Settings: Trust',
+      icon: 'verified_user',
+      action: () => this.router.navigate(['/settings/trust']),
+      keywords: ['trust', 'verify', 'web of trust', 'reputation']
+    },
+    {
       id: 'nav-wallet',
-      label: 'Open Wallet Settings',
+      label: 'Settings: Wallet',
       icon: 'account_balance_wallet',
       action: () => this.router.navigate(['/settings/wallet']),
-      keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments']
+      keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
+    },
+    {
+      id: 'nav-settings-logs',
+      label: 'Settings: Logs',
+      icon: 'article',
+      action: () => this.router.navigate(['/settings/logs']),
+      keywords: ['logs', 'debug', 'console', 'errors']
+    },
+    {
+      id: 'nav-settings-about',
+      label: 'Settings: About',
+      icon: 'info',
+      action: () => this.router.navigate(['/settings/about']),
+      keywords: ['about', 'version', 'info', 'credits']
     },
     {
       id: 'nav-backup',

@@ -185,7 +185,12 @@ export const routes: Routes = [
     data: { isRoot: true },
     title: 'Settings',
     children: [
-      { path: '', redirectTo: 'general', pathMatch: 'full' },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/settings/home/settings-home.component').then(m => m.SettingsHomeComponent),
+        title: 'Settings',
+      },
       {
         path: 'general',
         loadComponent: () =>
