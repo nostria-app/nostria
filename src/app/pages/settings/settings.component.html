@@ -10,8 +10,28 @@
   @if (!isMobile() || !showDetails()) {
     <div class="settings-sidebar">
       <h1 class="page-title" i18n="@@settings.title">Settings</h1>
+      
+      <!-- Search input -->
+      <div class="search-container">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-icon matIconPrefix>search</mat-icon>
+          <input 
+            matInput 
+            [(ngModel)]="searchQuery"
+            placeholder="Search settings..." 
+            i18n-placeholder="@@settings.search.placeholder"
+            autocomplete="off"
+          />
+          @if (searchQuery()) {
+            <button mat-icon-button matIconSuffix (click)="clearSearch()" aria-label="Clear search">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+      </div>
+
       <mat-nav-list>
-        @for (section of sections; track section.id) {
+        @for (section of filteredSections(); track section.id) {
           @if (section.premium) {
             @if (accountState.hasActiveSubscription()) {
               <a
@@ -42,6 +62,12 @@
               <span matListItemTitle>{{ section.title }}</span>
             </a>
           }
+        }
+        @if (filteredSections().length === 0) {
+          <div class="no-results">
+            <mat-icon>search_off</mat-icon>
+            <p i18n="@@settings.search.no-results">No settings found</p>
+          </div>
         }
       </mat-nav-list>
     </div>
