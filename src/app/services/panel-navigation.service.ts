@@ -365,7 +365,7 @@ export class PanelNavigationService {
 
       // Logic for clearing history vs pushing
       if (!this._isBackNavigation && !isSameSection && !shouldPreserveRightPanel && !isSearchNavigation) {
-        // Switching sections (e.g. Music -> Search)
+        // Switching sections (e.g. Music -> Notifications)
 
         // Special seeding for Collections
         if ((entry.path.startsWith('collections/') || entry.path.startsWith('media')) && entry.path !== 'collections') {
@@ -375,12 +375,11 @@ export class PanelNavigationService {
           this._leftStack.set([entry]);
         }
 
-        // If the URL *DOES NOT* have a right component, clear the right stack too.
-        if (!rightPath) {
-          this._rightStack.set([]);
-          if (this._clearRightPanelCallback) this._clearRightPanelCallback();
-          if (this._clearCacheCallback) this._clearCacheCallback();
-        }
+        // Always clear the right panel when switching sections
+        // This ensures right panel content doesn't persist across unrelated sections
+        this._rightStack.set([]);
+        if (this._clearRightPanelCallback) this._clearRightPanelCallback();
+        if (this._clearCacheCallback) this._clearCacheCallback();
 
       } else {
         // Same section OR Back nav OR Preserved
@@ -406,10 +405,13 @@ export class PanelNavigationService {
         this._currentRoutePanel.set('left');
       }
 
-      // Clear the page title when left panel route changes
+      // Clear the page title when left panel route actually changes (not just when right panel opens)
       // Components that want a custom title will set it in their ngOnInit
-      this.panelActions.clearPageTitle();
-      this.panelActions.clearLeftPanelActions();
+      const leftPathActuallyChanged = !currentLeft || currentLeft.path !== leftPath;
+      if (leftPathActuallyChanged) {
+        this.panelActions.clearPageTitle();
+        this.panelActions.clearLeftPanelActions();
+      }
     }
 
     // --- RIGHT PANEL LOGIC ---
