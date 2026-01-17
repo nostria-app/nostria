@@ -388,13 +388,16 @@ export class SearchService {
    * @param queryContext - The search query that triggered this enrichment (for race condition prevention)
    */
   private async enrichWithWoTScoresAndSort(results: SearchResultProfile[], queryContext?: string): Promise<void> {
-    if (!this.trustService || !this.trustService.isEnabled() || results.length === 0) {
-      // If WoT is not available/enabled, just set results without scoring
+    if (!this.trustService.isEnabled() || results.length === 0) {
+      // If WoT is not enabled, just set results without scoring
       untracked(() => {
         this.searchResults.set(results);
       });
       return;
     }
+
+    // Helper to check if query is stale
+    const isStaleQuery = () => queryContext !== undefined && this.#lastQuery !== queryContext;
 
     try {
       // Batch fetch WoT metrics for all profiles
@@ -402,7 +405,7 @@ export class SearchService {
       const metricsMap = await this.trustService.fetchMetricsBatch(pubkeys);
 
       // Check if query is still current (prevent race conditions)
-      if (queryContext && this.#lastQuery !== queryContext) {
+      if (isStaleQuery()) {
         this.logger.debug(`Skipping stale WoT enrichment for query: ${queryContext}`);
         return;
       }
@@ -433,7 +436,7 @@ export class SearchService {
       });
 
       // Final check before updating (prevent race conditions)
-      if (queryContext && this.#lastQuery !== queryContext) {
+      if (isStaleQuery()) {
         this.logger.debug(`Skipping stale WoT results update for query: ${queryContext}`);
         return;
       }
