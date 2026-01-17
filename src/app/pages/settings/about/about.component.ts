@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, OnInit } from '@angular/core';
+import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { MatButtonModule } from '@angular/material/button';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface WebManifest {
   version?: string;
@@ -27,12 +28,13 @@ interface WebManifest {
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })
-export class AboutComponent implements OnInit {
+export class AboutComponent implements OnInit, OnDestroy {
   private readonly app = inject(ApplicationService);
   private readonly meta = inject(MetaService);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
+  private readonly panelActions = inject(PanelActionsService);
   version = signal('Loading...');
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
@@ -73,7 +75,13 @@ export class AboutComponent implements OnInit {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() { }
+  async ngOnInit() {
+    this.panelActions.setPageTitle($localize`:@@settings.about.title:About`);
+  }
+
+  ngOnDestroy() {
+    this.panelActions.clearPageTitle();
+  }
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side

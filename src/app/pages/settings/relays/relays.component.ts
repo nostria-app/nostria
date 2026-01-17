@@ -4,6 +4,7 @@ import {
   inject,
   signal,
   OnInit,
+  OnDestroy,
   computed,
   ViewChild,
   TemplateRef,
@@ -43,6 +44,7 @@ import { DiscoveryRelayService } from '../../../services/relays/discovery-relay'
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { EventRepublishService } from '../../../services/event-republish.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -65,7 +67,7 @@ import { EventRepublishService } from '../../../services/event-republish.service
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss',
 })
-export class RelaysComponent implements OnInit {
+export class RelaysComponent implements OnInit, OnDestroy {
   // relay = inject(RelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
@@ -84,6 +86,7 @@ export class RelaysComponent implements OnInit {
   private readonly relaysService = inject(RelaysService);
   private readonly eventRepublish = inject(EventRepublishService);
   readonly relayAuth = inject(RelayAuthService);
+  private readonly panelActions = inject(PanelActionsService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -285,7 +288,13 @@ export class RelaysComponent implements OnInit {
     }
   }
 
-  ngOnInit() { }
+  ngOnInit() {
+    this.panelActions.setPageTitle($localize`:@@settings.relays.title:Relays`);
+  }
+
+  ngOnDestroy() {
+    this.panelActions.clearPageTitle();
+  }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {

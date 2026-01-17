@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -23,6 +23,7 @@ import { ExternalLinkHandlerService } from '../../../services/external-link-hand
 import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface Language {
   code: string;
@@ -47,7 +48,7 @@ interface Language {
   templateUrl: './general.component.html',
   styleUrl: './general.component.scss',
 })
-export class GeneralSettingsComponent {
+export class GeneralSettingsComponent implements OnInit, OnDestroy {
   logger = inject(LoggerService);
   themeService = inject(ThemeService);
   appState = inject(ApplicationStateService);
@@ -61,6 +62,15 @@ export class GeneralSettingsComponent {
   accountLocalState = inject(AccountLocalStateService);
   emojiSetService = inject(EmojiSetService);
   snackBar = inject(MatSnackBar);
+  private panelActions = inject(PanelActionsService);
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.general.title:General`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
+  }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 

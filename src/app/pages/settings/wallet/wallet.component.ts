@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SettingsService } from '../../../services/settings.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface ZapAmount {
   value: number;
@@ -33,9 +34,10 @@ interface ZapAmount {
   templateUrl: './wallet.component.html',
   styleUrls: ['./wallet.component.scss'],
 })
-export class WalletSettingsComponent {
+export class WalletSettingsComponent implements OnInit, OnDestroy {
   private settingsService = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
+  private panelActions = inject(PanelActionsService);
 
   // Predefined default amounts for quick zap menu (legacy)
   private defaultAmounts = [21, 69, 100, 210, 420, 500, 1000, 2100, 5000, 10000, 21000, 42000, 100000];
@@ -49,6 +51,14 @@ export class WalletSettingsComponent {
 
   constructor() {
     this.loadSettings();
+  }
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.wallet.title:Wallet`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
   }
 
   private loadSettings(): void {

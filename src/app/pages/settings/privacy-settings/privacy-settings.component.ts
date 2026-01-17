@@ -1,4 +1,4 @@
-import { Component, inject, computed, ViewChild, TemplateRef } from '@angular/core';
+import { Component, inject, computed, ViewChild, TemplateRef, OnInit, OnDestroy } from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,7 @@ import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tool
 import { ReportingService } from '../../../services/reporting.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -43,7 +44,7 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
   templateUrl: './privacy-settings.component.html',
   styleUrls: ['./privacy-settings.component.scss'],
 })
-export class PrivacySettingsComponent {
+export class PrivacySettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
@@ -52,6 +53,15 @@ export class PrivacySettingsComponent {
   localSettingsService = inject(LocalSettingsService);
   accountLocalState = inject(AccountLocalStateService);
   router = inject(Router);
+  private panelActions = inject(PanelActionsService);
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.privacy.title:Privacy & Safety`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
+  }
 
   // NIP-56 report types
   reportTypes = [

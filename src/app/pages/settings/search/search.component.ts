@@ -7,6 +7,8 @@ import {
   ViewChild,
   TemplateRef,
   ChangeDetectionStrategy,
+  OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -30,6 +32,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { SearchRelayService, SearchRelayListKind } from '../../../services/relays/search-relay';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { DataService } from '../../../services/data.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 @Component({
   selector: 'app-search-settings',
@@ -50,7 +53,7 @@ import { DataService } from '../../../services/data.service';
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss',
 })
-export class SearchSettingsComponent {
+export class SearchSettingsComponent implements OnInit, OnDestroy {
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
@@ -61,6 +64,7 @@ export class SearchSettingsComponent {
   private readonly accountRelay = inject(AccountRelayService);
   readonly searchRelay = inject(SearchRelayService);
   private readonly data = inject(DataService);
+  private readonly panelActions = inject(PanelActionsService);
 
   newSearchRelayUrl = signal('');
   isPublishing = signal(false);
@@ -86,6 +90,14 @@ export class SearchSettingsComponent {
         await this.loadSearchRelays(pubkey);
       }
     });
+  }
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.search.title:Search Settings`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
   }
 
   private async loadSearchRelays(pubkey: string) {

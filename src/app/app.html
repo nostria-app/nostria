@@ -38,8 +38,12 @@
         <mat-icon>menu</mat-icon>
       </button>
       <app-navigation></app-navigation>
-      <!-- App title only shown when no page-specific toolbar is active -->
-      @if (!panelActions.pageTitle()) {
+      <!-- Page title or app title -->
+      @if (panelActions.pageTitle()) {
+      <span class="page-title title-font">
+        {{ panelActions.pageTitle() }}
+      </span>
+      } @else {
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
       </span>
@@ -396,8 +400,8 @@
 
         <!-- Floating panel toolbars - positioned at main toolbar level -->
         <div class="floating-toolbars-container show-on-wide">
-          <!-- Left panel floating toolbar - shows when there's a page title or actions -->
-          @if ((panelActions.pageTitle() || panelActions.leftPanelActions().length > 0 || panelNav.canGoBackLeft()) &&
+          <!-- Left panel floating toolbar - shows when there's actions or back button (NOT for title - that's in main toolbar now) -->
+          @if ((panelActions.leftPanelActions().length > 0 || panelNav.canGoBackLeft()) &&
           !panelNav.showFeeds()) {
           <div class="panel-floating-toolbar left-toolbar" [class.with-right]="hasRightContent()">
             <div class="floating-toolbar-content">
@@ -407,7 +411,6 @@
                 <mat-icon>arrow_back</mat-icon>
               </button>
               }
-              <span class="panel-title title-font">{{ panelActions.pageTitle() }}</span>
               @if (panelActions.leftPanelHeaderLeftContent()) {
               <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
               }
@@ -493,7 +496,6 @@
                 <mat-icon>arrow_back</mat-icon>
               </button>
               }
-              <span class="panel-title">{{ panelNav.getLeftTitle() }}</span>
               @if (panelActions.leftPanelHeaderLeftContent()) {
               <ng-container *ngTemplateOutlet="panelActions.leftPanelHeaderLeftContent()!"></ng-container>
               }

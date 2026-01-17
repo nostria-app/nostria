@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, effect, OnInit, OnDestroy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { ApplicationService } from '../../services/application.service';
 import { WebRequest } from '../../services/web-request';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
 
 interface SettingsSection {
   id: string;
@@ -36,7 +37,7 @@ interface SettingsSection {
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   private breakpointObserver = inject(BreakpointObserver);
   private titleService = inject(Title);
   app = inject(ApplicationService);
@@ -45,6 +46,7 @@ export class SettingsComponent implements OnInit {
   web = inject(WebRequest);
   accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
+  private panelActions = inject(PanelActionsService);
 
   // Track active section
   activeSection = signal('general');
@@ -110,6 +112,16 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     // Scroll to top when settings page is opened
     this.layout.scrollToTop();
+    // Setup panel header
+    this.setupPanelActions();
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearLeftPanelActions();
+  }
+
+  private setupPanelActions(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.title:Settings`);
   }
 
   selectSection(sectionId: string): void {
