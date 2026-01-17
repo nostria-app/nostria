@@ -15,6 +15,7 @@ import { MediaPlayerService } from './media-player.service';
 import { RssParserService } from './rss-parser.service';
 import { SearchRelayService } from './relays/search-relay';
 import { LoggerService } from './logger.service';
+import { TrustService } from './trust.service';
 
 export interface SearchAction {
   icon: string;
@@ -25,6 +26,7 @@ export interface SearchAction {
 
 export interface SearchResultProfile extends NostrRecord {
   source: 'following' | 'cached' | 'remote';
+  wotRank?: number; // Web of Trust rank score
 }
 
 @Injectable({
@@ -44,6 +46,7 @@ export class SearchService {
   rssParser = inject(RssParserService);
   searchRelay = inject(SearchRelayService);
   logger = inject(LoggerService);
+  trustService = inject(TrustService);
 
   // Search results from cached profiles
   searchResults = signal<SearchResultProfile[]>([]);
@@ -226,10 +229,8 @@ export class SearchService {
         // Combine following and cached results
         const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
 
-        // Use untracked to prevent creating reactive dependencies
-        untracked(() => {
-          this.searchResults.set(allLocalResults);
-        });
+        // Fetch WoT scores and sort results
+        await this.enrichWithWoTScoresAndSort(allLocalResults);
 
         // Also search for profiles on search relays (in background)
         this.searchProfilesOnSearchRelays(searchValue, allLocalResults);
@@ -382,6 +383,63 @@ export class SearchService {
   }
 
   /**
+   * Enrich search results with Web of Trust scores and sort by WoT rank
+   */
+  private async enrichWithWoTScoresAndSort(results: SearchResultProfile[]): Promise<void> {
+    if (!this.trustService.isEnabled() || results.length === 0) {
+      // If WoT is not enabled, just set results without scoring
+      untracked(() => {
+        this.searchResults.set(results);
+      });
+      return;
+    }
+
+    try {
+      // Batch fetch WoT metrics for all profiles
+      const pubkeys = results.map(r => r.event.pubkey);
+      const metricsMap = await this.trustService.fetchMetricsBatch(pubkeys);
+
+      // Enrich results with WoT rank
+      const enrichedResults = results.map(result => {
+        const metrics = metricsMap.get(result.event.pubkey);
+        return {
+          ...result,
+          wotRank: metrics?.rank,
+        };
+      });
+
+      // Sort by WoT rank (lower is better, with undefined ranks at the end)
+      // Then by source priority: following > cached > remote
+      enrichedResults.sort((a, b) => {
+        // First, sort by WoT rank if both have it
+        if (a.wotRank !== undefined && b.wotRank !== undefined) {
+          return a.wotRank - b.wotRank; // Lower rank = higher trust
+        }
+        // If only one has a rank, it comes first
+        if (a.wotRank !== undefined) return -1;
+        if (b.wotRank !== undefined) return 1;
+
+        // If neither has a rank, sort by source priority
+        const sourcePriority = { following: 0, cached: 1, remote: 2 };
+        return sourcePriority[a.source] - sourcePriority[b.source];
+      });
+
+      // Update search results
+      untracked(() => {
+        this.searchResults.set(enrichedResults);
+      });
+
+      this.logger.debug(`Enriched ${enrichedResults.length} profiles with WoT scores`);
+    } catch (error) {
+      this.logger.error('Failed to enrich results with WoT scores', error);
+      // Fall back to unsorted results
+      untracked(() => {
+        this.searchResults.set(results);
+      });
+    }
+  }
+
+  /**
    * Search for profiles on search relays and merge with local results
    */
   private async searchProfilesOnSearchRelays(
@@ -421,14 +479,14 @@ export class SearchService {
         if (remoteResults.length > 0) {
           this.logger.debug(`Found ${remoteResults.length} remote profiles for "${searchValue}"`);
 
-          // Merge local and remote results
-          untracked(() => {
-            const currentResults = this.searchResults();
-            // Only update if we still have the same search query
-            if (this.#lastQuery === searchValue) {
-              this.searchResults.set([...currentResults, ...remoteResults]);
-            }
-          });
+          // Enrich remote results with WoT scores and merge with current results
+          const currentResults = this.searchResults();
+          const allResults = [...currentResults, ...remoteResults];
+          
+          // Only update if we still have the same search query
+          if (this.#lastQuery === searchValue) {
+            await this.enrichWithWoTScoresAndSort(allResults);
+          }
         }
       }
     } catch (error) {
