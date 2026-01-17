@@ -97,6 +97,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       action: () => this.router.navigate(['/summary']),
       keywords: ['summary', 'overview', 'dashboard', 'ai']
     },
+    {
+      id: 'nav-search',
+      label: 'Open Advanced Search',
+      icon: 'manage_search',
+      action: () => this.router.navigate(['/search']),
+      keywords: ['search', 'advanced search', 'find', 'lookup', 'query']
+    },
 
     // Navigation - Content
     {
