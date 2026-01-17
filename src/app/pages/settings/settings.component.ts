@@ -65,7 +65,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // Listen to route changes to scroll to top
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateActiveSection();
-      this.layout.scrollToTop();
+      // Scroll the settings container to top (it has overflow-y: auto)
+      this.layout.scrollToTop('.settings-container');
     });
 
     // Set initial active section
@@ -81,7 +82,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.layout.scrollToTop();
+    this.layout.scrollToTop('.settings-container');
   }
 
   ngOnDestroy(): void {

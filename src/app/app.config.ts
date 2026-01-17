@@ -95,7 +95,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withInMemoryScrolling({
-        scrollPositionRestoration: 'enabled',
+        // Disabled: With two-column layout, scroll containers are .left-panel-content and .right-panel-content
+        // Angular tracks the wrong element, and we manage scroll manually where needed
+        scrollPositionRestoration: 'disabled',
         anchorScrolling: 'enabled',
       }),
       withNavigationErrorHandler((error: any) => {
