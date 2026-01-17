@@ -1,3 +1,16 @@
+.settings-container {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+// Common styles for child setting components
 h2 {
   margin-top: 2em;
 }
@@ -6,70 +19,6 @@ h2 {
   h2 {
     color: #f44336;
     margin-bottom: 8px;
-  }
-}
-
-.settings-container {
-  display: flex;
-  width: 100%;
-  gap: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-  height: calc(100vh - 100px);
-  position: relative;
-  overflow: hidden;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    height: auto;
-    overflow: visible;
-  }
-}
-
-.settings-sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  overflow-y: auto;
-  height: 100%;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    height: auto;
-    overflow-y: visible;
-  }
-
-  .active {
-    background-color: rgba(var(--mat-sys-background), 0.1);
-    color: var(--mat-sys-primary);
-  }
-}
-
-.settings-content {
-  flex: 1;
-  overflow-y: auto;
-  height: 100%;
-
-  @media (max-width: 768px) {
-    overflow-y: visible;
-    height: auto;
-    padding-bottom: 80px;
-  }
-}
-
-.settings-card {
-  width: 100%;
-  margin-bottom: 16px;
-  box-shadow: var(--mat-sys-level1);
-}
-
-.mobile-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-
-  h2 {
-    margin: 0;
-    margin-left: 8px;
   }
 }
 

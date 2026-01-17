@@ -1,36 +1,3 @@
 <div class="settings-container">
-  <!-- Left sidebar with navigation options -->
-  @if (!isMobile() || !showDetails()) {
-  <div class="settings-sidebar">
-    <mat-nav-list>
-      @for (section of sections; track section.id) {
-      @if (section.premium) {
-      @if (accountState.hasActiveSubscription()) {
-      <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
-        <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
-        <span matListItemTitle>{{ section.title }}</span>
-      </a>
-      }
-      } @else if (section.authenticated && app.authenticated()) {
-      <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
-        <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
-        <span matListItemTitle>{{ section.title }}</span>
-      </a>
-      } @else if (!section.authenticated) {
-      <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
-        <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
-        <span matListItemTitle>{{ section.title }}</span>
-      </a>
-      }
-      }
-    </mat-nav-list>
-  </div>
-  }
-
-  <!-- Right content area showing the selected section details -->
-  @if (!isMobile() || showDetails()) {
-  <div class="settings-content">
-    <router-outlet></router-outlet>
-  </div>
-  }
+  <router-outlet></router-outlet>
 </div>

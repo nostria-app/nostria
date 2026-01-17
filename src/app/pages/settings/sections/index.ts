@@ -1,0 +1,14 @@
+// Export all setting section components
+export { SettingDarkModeComponent } from './dark-mode.component';
+export { SettingLanguageComponent } from './language.component';
+export { SettingLoggingComponent } from './logging.component';
+export { SettingMediaComponent } from './media.component';
+export { SettingNavigationComponent } from './navigation.component';
+export { SettingCalendarComponent } from './calendar.component';
+export { SettingRelayAuthComponent } from './relay-auth.component';
+export { SettingClientTagsComponent } from './client-tags.component';
+export { SettingMaxRelaysComponent } from './max-relays.component';
+export { SettingExternalLinksComponent } from './external-links.component';
+export { SettingCacheComponent } from './cache.component';
+export { SettingDangerZoneComponent } from './danger-zone.component';
+export { SettingStorageComponent } from './storage.component';
