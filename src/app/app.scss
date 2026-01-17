@@ -826,6 +826,12 @@ mat-sidenav-content {
   &:has(app-profile) {
     padding-top: 0px;
   }
+
+  // Special case for notifications - uses virtual scroll that manages its own scrolling
+  &:has(app-notifications) {
+    padding-top: 0px;
+    overflow: hidden; // Virtual scroll handles scrolling
+  }
 }
 
 // Right panel content
