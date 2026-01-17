@@ -533,6 +533,7 @@ export class App implements OnInit {
       icon: 'article',
     },
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
+    { path: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },
 
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
