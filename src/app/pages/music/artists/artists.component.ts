@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { MusicDataService, ArtistData } from '../../../services/music-data.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 const MUSIC_KIND = 36787;
 
@@ -35,7 +36,7 @@ type SortOption = 'name-asc' | 'name-desc' | 'tracks-asc' | 'tracks-desc';
   templateUrl: './artists.component.html',
   styleUrls: ['./artists.component.scss'],
 })
-export class ArtistsComponent implements OnDestroy {
+export class ArtistsComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -46,6 +47,7 @@ export class ArtistsComponent implements OnDestroy {
   private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private musicData = inject(MusicDataService);
+  private panelActions = inject(PanelActionsService);
 
   allTracks = signal<Event[]>([]);
   preloadedArtists = signal<ArtistData[] | null>(null);
@@ -116,8 +118,17 @@ export class ArtistsComponent implements OnDestroy {
     this.initializeArtists();
   }
 
+  ngOnInit(): void {
+    // Set breadcrumbs for navigation
+    this.panelActions.setBreadcrumbs([
+      { label: $localize`:@@nav.music:Music`, action: () => this.router.navigate(['/music']) },
+      { label: $localize`:@@music.artists.title:Artists` }
+    ]);
+  }
+
   ngOnDestroy(): void {
     this.trackSubscription?.close();
+    this.panelActions.clearBreadcrumbs();
   }
 
   private async initializeArtists(): Promise<void> {

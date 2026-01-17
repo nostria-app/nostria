@@ -108,219 +108,67 @@ nav {
   @include glass-section-dark;
 }
 
-// Left section - hamburger, navigation, title
+// Left section - hamburger, navigation, breadcrumbs
 .toolbar-left {
   flex-shrink: 0;
 }
 
-// Floating toolbars container - positioned at main toolbar level
-// Sits at the top of the two-column-layout but visually appears in the toolbar area
-.floating-toolbars-container {
-  position: fixed;
-  // Position vertically centered in the 64px toolbar (64 - 48) / 2 = 8px
-  top: 8px;
-  // Use CSS variable set by app component based on sidenav state
-  // Default: center toolbars in viewport
-  left: var(--floating-toolbar-left, 72px);
-  right: var(--floating-toolbar-right, 0px);
-  height: 48px;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  z-index: 1001; // Above toolbar
-  pointer-events: none;
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  // On mobile, adjust positioning
-  @media (max-width: 599px) {
-    left: 56px;
-    right: 8px;
-    gap: 0;
-  }
-}
-
-// Individual floating toolbar for each panel
-.panel-floating-toolbar {
+// Breadcrumb navigation styles
+.breadcrumb-nav {
   display: flex;
   align-items: center;
-  pointer-events: none;
+  gap: 4px;
+  margin-left: 8px;
+  overflow: hidden;
+  white-space: nowrap;
 
-  &.left-toolbar {
-    // Match left panel width on desktop
-    width: min(var(--left-column-width, 700px), calc(50vw - 8px));
-    justify-content: flex-start;
-    padding-left: 8px;
-
-    @media (max-width: 599px) {
-      width: auto;
-      max-width: calc(100vw - 16px);
-      padding-left: 4px;
-    }
-  }
-
-  &.right-toolbar {
-    // Match right panel width (700px default)
-    width: min(var(--right-column-width, 700px), calc(50vw - 8px));
-    justify-content: flex-start;
-    padding-left: 8px;
-
-    @media (max-width: 1023px) {
-      // On tablet/mobile, center the toolbar and take more width
-      width: min(var(--right-column-width, 700px), calc(100vw - 80px));
-    }
-
-    @media (max-width: 599px) {
-      width: auto;
-      max-width: calc(100vw - 72px);
-      padding-left: 4px;
-    }
-  }
-
-  .floating-toolbar-content {
-    @include glass-section;
-    gap: 4px;
-    padding: 0 16px;
-    // height: 48px is inherited from glass-section mixin
-    border-radius: 24px;
-    pointer-events: auto;
-
-    .panel-title {
-      font-size: 1.5rem; // Use rem for consistent size with main toolbar
-      color: var(--mat-sys-on-surface);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin: 0 8px;
-    }
-
-    .action-button,
-    .nav-button {
-      flex-shrink: 0;
-    }
-  }
-}
-
-// When left toolbar has right panel alongside, use 700px fixed width
-.panel-floating-toolbar.left-toolbar.with-right {
-  width: min(700px, calc(50vw - 8px));
-
-  // Hide left toolbar when right panel is open on tablet/mobile (left panel is hidden)
-  @media (max-width: 1023px) {
+  // Hide on very small screens (360px and below)
+  @media (max-width: 360px) {
     display: none;
   }
 }
 
-// When left panel is collapsed, adjust the floating toolbars
-.two-column-layout.left-collapsed .floating-toolbars-container {
-  .left-toolbar {
-    display: none;
+.breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  border-radius: 4px;
+
+  &:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05);
   }
 
-  .right-toolbar {
-    // Right toolbar takes full width of centered right panel (responsive)
-    width: min(700px, calc(100vw - 80px));
-  }
-}
-
-// When left floating toolbar is hidden in dual-pane mode (below 1660px), 
-// only show right toolbar
-.two-column-layout.has-right-content:not(.left-collapsed):not(.mobile-layout) .floating-toolbars-container {
-  @media (max-width: 1659px) and (min-width: 920px) {
-    // Left toolbar is hidden by other rules, just ensure right aligns
-  }
-}
-
-// When only left content is showing (no right panel), adjust toolbar width
-.two-column-layout:not(.has-right-content) .floating-toolbars-container {
-  .left-toolbar {
-    // Use the wide left column width when it's the only panel
-    width: min(var(--left-column-width, 700px), 100%);
-
-    @media (max-width: 599px) {
-      width: auto;
-      max-width: calc(100vw - 16px);
-    }
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 }
 
-// Dark mode for floating toolbar
-:host-context(.dark) .panel-floating-toolbar .floating-toolbar-content {
-  @include glass-section-dark;
-}
-
-// Show floating toolbar on all screen sizes
-.show-on-wide {
-  display: flex;
-}
-
-// Floating toolbar container - always visible when there's content
-// Individual toolbars inside control their own visibility
-.show-on-wide-dual {
-  display: none;
-
-  // Show container when there's right content AND not mobile
-  .two-column-layout.has-right-content:not(.mobile-layout) & {
-    display: flex;
-  }
-
-  // Also show when there's left content only (single pane) AND not mobile
-  .two-column-layout:not(.has-right-content):not(.mobile-layout) & {
-    display: flex;
-  }
-
-  // Never show on mobile
-  .two-column-layout.mobile-layout & {
-    display: none !important;
+:host-context(.dark) .breadcrumb-link {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 }
 
-// Left floating toolbar visibility
-.panel-floating-toolbar.left-toolbar {
-
-  // In dual-pane mode: show at 1660px+
-  .two-column-layout.has-right-content:not(.left-collapsed) & {
-    display: none;
-
-    @media (min-width: 1660px) {
-      display: flex;
-    }
-  }
-
-  // In single-pane mode (no right content): show at 920px+
-  .two-column-layout:not(.has-right-content) & {
-    display: none;
-
-    @media (min-width: 920px) {
-      display: flex;
-    }
-  }
-
-  // When left is collapsed, always hide left toolbar
-  .two-column-layout.left-collapsed & {
-    display: none !important;
-  }
+.breadcrumb-separator {
+  color: var(--mat-sys-on-surface);
+  opacity: 0.5;
+  font-size: 1rem;
+  user-select: none;
 }
 
-// Right floating toolbar visibility  
-.panel-floating-toolbar.right-toolbar {
-
-  // Show at 920px+ when there's right content
-  .two-column-layout.has-right-content:not(.mobile-layout) & {
-    display: none;
-
-    @media (min-width: 920px) {
-      display: flex;
-    }
-  }
-}
-
-// Hide panel toolbars below wide screens (1400px) - legacy support
-.hide-below-wide {
-  display: none;
-
-  @media (min-width: 1400px) {
-    display: flex;
-  }
+.breadcrumb-current {
+  font-size: 1.2rem;
+  color: var(--mat-sys-on-surface);
+  padding: 4px 0;
 }
 
 // Favorites sidebar - vertical on right side of screen
@@ -521,54 +369,6 @@ mat-sidenav-content {
       outline: 2px solid currentColor;
       outline-offset: 2px;
       border-radius: 2px;
-    }
-  }
-}
-
-// Page title shown in the main toolbar when a page sets panelActions.pageTitle()
-.page-title {
-  margin-left: 8px;
-  margin-right: 8px;
-  font-size: 1.5rem; // Use rem for consistent size with floating toolbar
-  color: var(--mat-sys-on-surface);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  // Hide on very small screens (360px and below)
-  @media (max-width: 360px) {
-    display: none;
-  }
-}
-
-// Hide elements in main toolbar when LEFT floating toolbar is showing
-// This class is applied to main toolbar elements (like left panel title/actions)
-// that should hide when the left floating toolbar is visible
-.hide-on-wide-dual {
-
-  // In dual-pane mode: hide at 1660px+ (matching left floating toolbar visibility)
-  .app-container:has(.two-column-layout.has-right-content:not(.left-collapsed):not(.mobile-layout)) & {
-    @media (min-width: 1660px) {
-      display: none !important;
-    }
-  }
-
-  // In single-pane mode (no right content): hide at 920px+ (matching left floating toolbar)
-  .app-container:has(.two-column-layout:not(.has-right-content):not(.mobile-layout)) & {
-    @media (min-width: 920px) {
-      display: none !important;
-    }
-  }
-}
-
-// Hide right panel elements in main toolbar when RIGHT floating toolbar is showing
-// Applied to right panel title/back button in main toolbar
-.hide-on-wide-right {
-
-  // Hide at 920px+ when there's right content AND not mobile (floating toolbar only shows when not mobile)
-  .app-container:has(.two-column-layout.has-right-content:not(.mobile-layout)) & {
-    @media (min-width: 920px) {
-      display: none !important;
     }
   }
 }

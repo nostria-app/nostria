@@ -1,4 +1,5 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +41,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
+  private router = inject(Router);
 
   // Predefined default amounts for quick zap menu (legacy)
   private defaultAmounts = [21, 69, 100, 210, 420, 500, 1000, 2100, 5000, 10000, 21000, 42000, 100000];
@@ -56,15 +58,18 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Only set page title if not in right panel (right panel has its own title)
+    // Only set breadcrumbs if not in right panel
     if (!this.rightPanel.hasContent()) {
-      this.panelActions.setPageTitle($localize`:@@settings.wallet.title:Wallet`);
+      this.panelActions.setBreadcrumbs([
+        { label: $localize`:@@settings.title:Settings`, action: () => this.router.navigate(['/settings']) },
+        { label: $localize`:@@settings.wallet.title:Wallet` }
+      ]);
     }
   }
 
   ngOnDestroy(): void {
     if (!this.rightPanel.hasContent()) {
-      this.panelActions.clearPageTitle();
+      this.panelActions.clearBreadcrumbs();
     }
   }
 
