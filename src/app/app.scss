@@ -1095,8 +1095,15 @@ mat-sidenav-content {
     0px 4px 16px rgba(17, 17, 26, 0.1),
     0px 8px 24px rgba(17, 17, 26, 0.1);
 
-  /* Smooth transition for hide/show */
-  transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
+  /* Smooth transition for hide/show on scroll */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Hidden state when scrolling down
+  &.scroll-hidden {
+    transform: translateX(-50%) translateY(calc(100% + 16px));
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 // Hide mobile nav completely when fullscreen is active
