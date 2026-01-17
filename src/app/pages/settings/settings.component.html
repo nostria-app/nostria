@@ -17,7 +17,8 @@
           <mat-icon matIconPrefix>search</mat-icon>
           <input 
             matInput 
-            [(ngModel)]="searchQuery"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
             placeholder="Search settings..." 
             i18n-placeholder="@@settings.search.placeholder"
             autocomplete="off"
