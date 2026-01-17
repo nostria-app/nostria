@@ -340,6 +340,14 @@ export class SongDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       this.routerStateEvent = stateEvent;
     }
 
+    // Update right panel title when title changes
+    effect(() => {
+      const titleValue = this.title();
+      untracked(() => {
+        this.panelActions.setRightPanelTitle(titleValue);
+      });
+    });
+
     // Load author profile when song loads
     effect(() => {
       const event = this.song();
@@ -583,6 +591,7 @@ export class SongDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       this.likeSubscription.close();
     }
     this.panelActions.clearRightPanelActions();
+    this.panelActions.clearRightPanelTitle();
   }
 
   private loadSong(pubkey: string, identifier: string): void {

@@ -203,6 +203,14 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy, AfterViewInit 
       this.routerStateEvent = stateEvent;
     }
 
+    // Update right panel title when title changes
+    effect(() => {
+      const titleValue = this.title();
+      untracked(() => {
+        this.panelActions.setRightPanelTitle(titleValue);
+      });
+    });
+
     // React to route param changes for playlist navigation
     effect(() => {
       // Check inputs first (when opened via RightPanelService)
@@ -311,6 +319,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy, AfterViewInit 
     this.subscriptions.forEach(sub => sub.close());
     this.likeSubscription?.close();
     this.panelActions.clearRightPanelActions();
+    this.panelActions.clearRightPanelTitle();
   }
 
   /**
