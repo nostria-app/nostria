@@ -11,34 +11,6 @@
 .articles-header {
   margin-bottom: 32px;
 
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-
-    h1 {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 0;
-      font-size: 2rem;
-      font-weight: 500;
-
-      mat-icon {
-        font-size: 2rem;
-        width: 2rem;
-        height: 2rem;
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-  }
-
   .tag-filters {
     display: flex;
     align-items: center;

@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { Component, inject, signal, effect, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,10 +11,10 @@ import { MemosService } from '../../services/memos.service';
 import { Memo } from '../../models/memo.model';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
-import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 import { MemoCardComponent } from './memos-card/memo-card.component';
 import { MemosDownloadDialogComponent } from './memos-download-dialog/memos-download-dialog.component';
 import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-history-dialog.component';
+import { PanelActionsService } from '../../services/panel-actions.service';
 
 @Component({
   selector: 'app-memos',
@@ -27,8 +27,8 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
     MatTooltipModule,
     RouterModule,
     MemoCardComponent,
-    InfoTooltipComponent
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!app.authenticated()) {
       <div class="unauthenticated-state">
@@ -126,27 +126,6 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
       </div>
     } @else {
       <div class="notes-container">
-
-      <header class="notes-header">
-        <h1>
-          Memos 
-          <mat-icon class="premium-icon">diamond</mat-icon>
-          <app-info-tooltip [content]="notesInfoContent" ariaLabel="Learn about Memos privacy" />
-        </h1>
-        <div class="header-actions">
-          <button mat-icon-button (click)="openHistory()" matTooltip="History">
-            <mat-icon>history</mat-icon>
-          </button>
-          <button mat-raised-button (click)="downloadMemos()">
-            <mat-icon>download</mat-icon>
-            Download
-          </button>
-          <button mat-flat-button (click)="createNewMemo()" [disabled]="loading()">
-            <mat-icon>add</mat-icon>
-            New Memo
-          </button>
-        </div>
-      </header>
 
       <ng-template #notesInfoContent>
         <div class="info-content">
@@ -543,12 +522,13 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
     }
   `],
 })
-export class MemosComponent {
+export class MemosComponent implements OnDestroy {
   private readonly memosService = inject(MemosService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly accountState = inject(AccountStateService);
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
+  private readonly panelActions = inject(PanelActionsService);
 
   readonly loading = signal(true);
   readonly memos = this.memosService.memos;
@@ -560,6 +540,9 @@ export class MemosComponent {
   });
 
   constructor() {
+    // Setup panel actions for toolbar
+    this.setupPanelActions();
+
     // Reload memos when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
@@ -572,6 +555,40 @@ export class MemosComponent {
         this.memosService.memos.set([]);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearLeftPanelActions();
+  }
+
+  private setupPanelActions(): void {
+    this.panelActions.setPageTitle('Memos');
+
+    const actions = [
+      {
+        id: 'history',
+        icon: 'history',
+        label: 'History',
+        tooltip: 'View memo history',
+        action: () => this.openHistory(),
+      },
+      {
+        id: 'download',
+        icon: 'download',
+        label: 'Download',
+        tooltip: 'Download memos',
+        action: () => this.downloadMemos(),
+      },
+      {
+        id: 'new-memo',
+        icon: 'add',
+        label: 'New Memo',
+        tooltip: 'Create new memo',
+        action: () => this.createNewMemo(),
+      },
+    ];
+
+    this.panelActions.setLeftPanelActions(actions);
   }
 
   async loadMemos() {
