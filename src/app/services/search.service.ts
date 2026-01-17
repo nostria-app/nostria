@@ -230,7 +230,7 @@ export class SearchService {
         const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
 
         // Fetch WoT scores and sort results
-        await this.enrichWithWoTScoresAndSort(allLocalResults);
+        await this.enrichWithWoTScoresAndSort(allLocalResults, searchValue);
 
         // Also search for profiles on search relays (in background)
         this.searchProfilesOnSearchRelays(searchValue, allLocalResults);
@@ -384,10 +384,12 @@ export class SearchService {
 
   /**
    * Enrich search results with Web of Trust scores and sort by WoT rank
+   * @param results - The search results to enrich
+   * @param queryContext - The search query that triggered this enrichment (for race condition prevention)
    */
-  private async enrichWithWoTScoresAndSort(results: SearchResultProfile[]): Promise<void> {
-    if (!this.trustService.isEnabled() || results.length === 0) {
-      // If WoT is not enabled, just set results without scoring
+  private async enrichWithWoTScoresAndSort(results: SearchResultProfile[], queryContext?: string): Promise<void> {
+    if (!this.trustService || !this.trustService.isEnabled() || results.length === 0) {
+      // If WoT is not available/enabled, just set results without scoring
       untracked(() => {
         this.searchResults.set(results);
       });
@@ -398,6 +400,12 @@ export class SearchService {
       // Batch fetch WoT metrics for all profiles
       const pubkeys = results.map(r => r.event.pubkey);
       const metricsMap = await this.trustService.fetchMetricsBatch(pubkeys);
+
+      // Check if query is still current (prevent race conditions)
+      if (queryContext && this.#lastQuery !== queryContext) {
+        this.logger.debug(`Skipping stale WoT enrichment for query: ${queryContext}`);
+        return;
+      }
 
       // Enrich results with WoT rank
       const enrichedResults = results.map(result => {
@@ -423,6 +431,12 @@ export class SearchService {
         const sourcePriority = { following: 0, cached: 1, remote: 2 };
         return sourcePriority[a.source] - sourcePriority[b.source];
       });
+
+      // Final check before updating (prevent race conditions)
+      if (queryContext && this.#lastQuery !== queryContext) {
+        this.logger.debug(`Skipping stale WoT results update for query: ${queryContext}`);
+        return;
+      }
 
       // Update search results
       untracked(() => {
@@ -485,7 +499,7 @@ export class SearchService {
           
           // Only update if we still have the same search query
           if (this.#lastQuery === searchValue) {
-            await this.enrichWithWoTScoresAndSort(allResults);
+            await this.enrichWithWoTScoresAndSort(allResults, searchValue);
           }
         }
       }
