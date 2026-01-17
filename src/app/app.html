@@ -603,7 +603,7 @@
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
-  <div class="mobile-nav no-print">
+  <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()">
     <a mat-button class="mobile-nav-button" [routerLink]="['/f']"
       (click)="$event.preventDefault(); onMobileNavClick('/f')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">

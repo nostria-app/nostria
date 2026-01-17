@@ -205,6 +205,15 @@ export class LayoutService implements OnDestroy {
   private isScrollMonitoringReady = signal(false);
 
   /**
+   * Signal that indicates whether the mobile nav should be hidden due to scroll direction.
+   * Hidden when scrolling down, shown when scrolling up.
+   */
+  mobileNavScrollHidden = signal(false);
+  private mobileNavScrollState = new Map<Element, number>(); // Track last scroll position per element
+  private scrollDirectionThreshold = 10; // Minimum scroll distance to trigger hide/show
+  private mobileScrollListener?: (event: globalThis.Event) => void;
+
+  /**
    * Signal that indicates whether scroll monitoring is ready and initialized
    * Use this to ensure scroll signals are reliable before reacting to them
    */
@@ -2345,6 +2354,52 @@ export class LayoutService implements OnDestroy {
           }
         }
       }, 100);
+
+      // Setup mobile nav scroll detection using event capturing
+      // This catches scroll events from any element, including scrollable divs
+      this.mobileScrollListener = (event: globalThis.Event) => {
+        // Only process on mobile
+        if (!this.isHandset()) return;
+
+        const target = event.target;
+        if (!target || !(target instanceof Element)) return;
+
+        // Get scroll position - handle both element and document scrolling
+        let scrollTop: number;
+        if (target === document.documentElement || target === document.body) {
+          scrollTop = window.scrollY || document.documentElement.scrollTop;
+        } else {
+          scrollTop = (target as HTMLElement).scrollTop;
+        }
+
+        const lastScrollTop = this.mobileNavScrollState.get(target) ?? scrollTop;
+        const scrollDelta = scrollTop - lastScrollTop;
+
+        // Update stored scroll position for this element
+        this.mobileNavScrollState.set(target, scrollTop);
+
+        // Show nav when at top of page
+        if (scrollTop <= 5) {
+          if (this.mobileNavScrollHidden()) {
+            this.ngZone.run(() => this.mobileNavScrollHidden.set(false));
+          }
+        }
+        // Hide when scrolling down past threshold
+        else if (scrollDelta > this.scrollDirectionThreshold) {
+          if (!this.mobileNavScrollHidden()) {
+            this.ngZone.run(() => this.mobileNavScrollHidden.set(true));
+          }
+        }
+        // Show when scrolling up past threshold
+        else if (scrollDelta < -this.scrollDirectionThreshold) {
+          if (this.mobileNavScrollHidden()) {
+            this.ngZone.run(() => this.mobileNavScrollHidden.set(false));
+          }
+        }
+      };
+
+      // Use capturing phase to catch scroll events from all elements
+      document.addEventListener('scroll', this.mobileScrollListener as EventListener, { capture: true, passive: true });
     });
   }
 }
