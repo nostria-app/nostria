@@ -98,6 +98,7 @@ import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcut
 import { MessagingService } from './services/messaging.service';
 import { FeedsComponent } from './pages/feeds/feeds.component';
 import { RightPanelService } from './services/right-panel.service';
+import { RightPanelContainerComponent } from './components/right-panel-container/right-panel-container.component';
 import { TwoColumnLayoutService } from './services/two-column-layout.service';
 import { NavigationStackService } from './services/navigation-stack.service';
 import { PanelNavigationService } from './services/panel-navigation.service';
@@ -158,6 +159,7 @@ interface NavItem {
     StandaloneTermsDialogComponent,
     NewFeedDialogComponent,
     FeedsComponent,
+    RightPanelContainerComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -239,14 +241,15 @@ export class App implements OnInit {
   private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
 
   // Right panel routing state
-  private _hasRightContent = signal(false);
+  private _hasRightRouterContent = signal(false);
   private _defaultRightPanelTitle = signal('');
   private _rightPanelHistory = signal<string[]>([]);
-  hasRightContent = this._hasRightContent.asReadonly();
+  // hasRightContent checks both router-based content AND RightPanelService content
+  hasRightContent = computed(() => this._hasRightRouterContent() || this.rightPanel.hasContent());
   // Use component-set title if available, otherwise fall back to URL-based title
-  rightPanelTitle = computed(() => this.panelActions.rightPanelTitle() || this._defaultRightPanelTitle());
+  rightPanelTitle = computed(() => this.panelActions.rightPanelTitle() || this.rightPanel.title() || this._defaultRightPanelTitle());
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
-  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1);
+  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.canGoBack());
 
   // Panel header scroll states
   leftPanelHeaderHidden = signal(false);
@@ -292,7 +295,7 @@ export class App implements OnInit {
 
   // Actual visual collapsed state: only collapse if user prefers AND right panel has content
   leftPanelCollapsed = computed(() => {
-    return this.preferLeftPanelCollapsed() && this._hasRightContent();
+    return this.preferLeftPanelCollapsed() && this.hasRightContent();
   });
 
   // Signal to track expanded menu items
@@ -1668,7 +1671,7 @@ export class App implements OnInit {
 
     // Clear right panel state first (without navigating yet)
     this._rightPanelHistory.set([]);
-    this._hasRightContent.set(false);
+    this._hasRightRouterContent.set(false);
     this._defaultRightPanelTitle.set('');
     // Also clear component-set right panel title
     this.panelActions.clearRightPanelTitle();
@@ -1703,7 +1706,7 @@ export class App implements OnInit {
     const rightGroup = tree.root.children['right'];
 
     const hasRight = !!rightGroup;
-    this._hasRightContent.set(hasRight);
+    this._hasRightRouterContent.set(hasRight);
 
     if (hasRight) {
       // Get the full path for the right outlet
@@ -1739,6 +1742,13 @@ export class App implements OnInit {
    * Go back in right panel navigation stack
    */
   goBackRight(): void {
+    // First check if RightPanelService has content to go back from
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.goBack();
+      return;
+    }
+
+    // Otherwise, handle router-based navigation
     const history = this._rightPanelHistory();
     if (history.length > 1) {
       // Remove current entry and navigate to previous
@@ -1758,8 +1768,14 @@ export class App implements OnInit {
    * leftPanelCollapsed depends on hasRightContent.
    */
   closeRightPanel(): void {
+    // Close RightPanelService content if any
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.close();
+    }
+
+    // Clear router-based state
     this._rightPanelHistory.set([]);
-    this._hasRightContent.set(false);
+    this._hasRightRouterContent.set(false);
     this._defaultRightPanelTitle.set('');
     // Clear right panel actions immediately
     this.panelActions.clearRightPanelActions();

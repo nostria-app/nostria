@@ -258,6 +258,15 @@ nav {
   display: flex;
 }
 
+// Show floating toolbar only on wide dual-pane screens (1024px+)
+.show-on-wide-dual {
+  display: none;
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+}
+
 // Hide panel toolbars below wide screens (1400px) - legacy support
 .hide-below-wide {
   display: none;
@@ -478,6 +487,13 @@ mat-sidenav-content {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+// Hide page title in main toolbar on large screens (shown in floating toolbar instead)
+.hide-on-wide-dual {
+  @media (min-width: 1024px) {
+    display: none !important;
+  }
 }
 
 // ============================================
