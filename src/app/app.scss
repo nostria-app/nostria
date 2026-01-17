@@ -554,6 +554,11 @@ mat-sidenav-content {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  // Hide on very small screens (360px and below)
+  @media (max-width: 360px) {
+    display: none;
+  }
 }
 
 // Hide elements in main toolbar when LEFT floating toolbar is showing
