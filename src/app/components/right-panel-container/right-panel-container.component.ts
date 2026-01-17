@@ -62,9 +62,16 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
     }
     
     // Ensure dynamically inserted components fill the panel content
+    // Add padding-top so content doesn't render behind toolbar
     .panel-content ::ng-deep > * {
       display: block;
       min-height: 100%;
+      padding-top: var(--toolbar-height, 64px);
+    }
+    
+    // Profile handles its own spacing with banner
+    .panel-content ::ng-deep > app-profile {
+      padding-top: 0;
     }
     
     // Hide inactive components but keep them in DOM
