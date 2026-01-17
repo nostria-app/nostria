@@ -1,3 +1,11 @@
+// Host element styles - fill the full height of the container
+:host {
+  display: block;
+  height: calc(100vh - var(--toolbar-height, 64px));
+  // Override parent's overflow-y: auto so virtual scroll can manage its own scroll
+  overflow: hidden !important;
+}
+
 // Main container styles
 .notifications-page {
   display: flex;
@@ -5,6 +13,7 @@
   height: 100%;
   max-width: 900px;
   margin: 0 auto;
+  width: 100%;
 }
 
 // Notifications container
@@ -12,9 +21,9 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; // Allow flex child to shrink
+  min-height: 0;
+  position: relative; // For absolute positioned viewport
   border-radius: 12px;
-  overflow: auto;
 }
 
 // Notification badge in panel header
@@ -97,10 +106,14 @@
   }
 }
 
-// Notification list
+// Notification list - CDK virtual scroll requires explicit height
 .notification-viewport {
-  height: calc(100vh - 150px); // Account for header
-  width: 100%;
+  // Use absolute positioning to fill container
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding-bottom: 80px; // Space for mobile navigation menu
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
@@ -786,9 +799,8 @@
     display: none;
   }
 
-  // Adjust viewport height for mobile
+  // Adjust viewport for mobile - use flex sizing, add extra bottom padding
   .notification-viewport {
-    height: calc(100vh - 130px);
     padding-bottom: 120px; // Extra space for mobile navigation menu
   }
 
