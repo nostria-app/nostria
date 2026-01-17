@@ -1245,11 +1245,82 @@ this.http.get(url).subscribe(data => ...);
 
 ### Testing
 
+Nostria uses a comprehensive testing strategy with both unit tests (Karma/Jasmine) and end-to-end tests (Playwright).
+
+**Unit Tests (Karma/Jasmine)**:
 ```bash
-npm run test          # Run tests
+npm run test          # Run unit tests
+```
+
+**E2E Tests (Playwright)**:
+```bash
+npm run test:e2e          # Run all e2e tests
+npm run test:e2e:ui       # Run with Playwright UI
+npm run test:e2e:headed   # Run in headed browser mode
+npm run test:e2e:debug    # Run in debug mode
+npm run test:e2e:ai       # Run with AI-optimized settings (full artifacts)
+npm run test:e2e:report   # View HTML test report
+npm run test:e2e:codegen  # Generate tests via recording
+```
+
+**Other Tools**:
+```bash
 npm run lint          # Run linter
 npm run format:check  # Check formatting
 ```
+
+For complete E2E testing documentation, see [TESTING.md](TESTING.md).
+
+---
+
+## E2E Testing Architecture
+
+### Overview
+
+The E2E testing setup is designed for **AI/LLM-driven test automation**, with emphasis on:
+- Structured output formats (JSON) for programmatic analysis
+- Automatic screenshot and video capture
+- Console log collection for debugging
+- Semantic page analysis utilities
+
+### Directory Structure
+
+```
+e2e/
+├── fixtures.ts           # Extended test fixtures with AI utilities
+├── global-setup.ts       # Pre-test setup (creates directories, metadata)
+├── global-teardown.ts    # Post-test cleanup and summary generation
+├── helpers/
+│   └── ai-automation.ts  # AI-specific automation helpers
+├── pages/
+│   └── index.ts          # Page Object Models for all pages
+└── tests/
+    ├── home.spec.ts      # Home page tests
+    ├── navigation.spec.ts # Navigation tests
+    └── accessibility.spec.ts # Accessibility tests
+```
+
+### Test Artifacts
+
+All test artifacts are stored in `test-results/`:
+
+| Directory | Contents |
+|-----------|----------|
+| `screenshots/` | Named screenshots from tests |
+| `videos/` | Video recordings (on failure by default) |
+| `traces/` | Playwright traces for debugging |
+| `logs/` | Console log captures |
+| `ai-states/` | Page state snapshots for AI analysis |
+| `artifacts/` | General test artifacts |
+
+### AI Automation Features
+
+The testing setup includes special utilities for AI-driven testing:
+
+1. **Page State Capture**: Structured JSON containing all interactive elements, visible text, errors, and network requests
+2. **Semantic Actions**: Natural language-like commands (`clickButton('Submit')`, `fillInput('Email', 'test@example.com')`)
+3. **Console Log Collection**: Automatic capture of all console output for debugging
+4. **Screenshot Helpers**: Named screenshots with timestamps
 
 ---
 
