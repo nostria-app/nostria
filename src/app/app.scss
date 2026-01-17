@@ -194,7 +194,7 @@ nav {
     pointer-events: auto;
 
     .panel-title {
-      font-size: 1.3rem;
+      font-size: 1.5rem; // Use rem for consistent size with main toolbar
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
@@ -231,6 +231,16 @@ nav {
   }
 }
 
+// When left floating toolbar is hidden in dual-pane mode (below 1660px), 
+// shift the container so right toolbar aligns with right panel
+.two-column-layout.has-right-content:not(.left-collapsed):not(.mobile-layout) .floating-toolbars-container {
+  @media (max-width: 1659px) and (min-width: 920px) {
+    // Align container with right panel position
+    // Right panel starts at: (100vw - left-width - right-width) / 2 + left-width
+    left: max(72px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2 + var(--left-column-width, 700px)));
+  }
+}
+
 // When only left content is showing (no right panel), adjust container alignment
 .two-column-layout:not(.has-right-content) .floating-toolbars-container {
   // When no right panel, align with just the left panel (which is centered)
@@ -258,12 +268,64 @@ nav {
   display: flex;
 }
 
-// Show floating toolbar only on wide dual-pane screens (1024px+)
+// Floating toolbar container - always visible when there's content
+// Individual toolbars inside control their own visibility
 .show-on-wide-dual {
   display: none;
 
-  @media (min-width: 1024px) {
+  // Show container when there's right content AND not mobile
+  .two-column-layout.has-right-content:not(.mobile-layout) & {
     display: flex;
+  }
+
+  // Also show when there's left content only (single pane) AND not mobile
+  .two-column-layout:not(.has-right-content):not(.mobile-layout) & {
+    display: flex;
+  }
+
+  // Never show on mobile
+  .two-column-layout.mobile-layout & {
+    display: none !important;
+  }
+}
+
+// Left floating toolbar visibility
+.panel-floating-toolbar.left-toolbar {
+
+  // In dual-pane mode: show at 1660px+
+  .two-column-layout.has-right-content:not(.left-collapsed) & {
+    display: none;
+
+    @media (min-width: 1660px) {
+      display: flex;
+    }
+  }
+
+  // In single-pane mode (no right content): show at 920px+
+  .two-column-layout:not(.has-right-content) & {
+    display: none;
+
+    @media (min-width: 920px) {
+      display: flex;
+    }
+  }
+
+  // When left is collapsed, always hide left toolbar
+  .two-column-layout.left-collapsed & {
+    display: none !important;
+  }
+}
+
+// Right floating toolbar visibility  
+.panel-floating-toolbar.right-toolbar {
+
+  // Show at 920px+ when there's right content
+  .two-column-layout.has-right-content:not(.mobile-layout) & {
+    display: none;
+
+    @media (min-width: 920px) {
+      display: flex;
+    }
   }
 }
 
@@ -482,17 +544,42 @@ mat-sidenav-content {
 .page-title {
   margin-left: 8px;
   margin-right: 8px;
-  font-size: 1.2em;
+  font-size: 1.5rem; // Use rem for consistent size with floating toolbar
   color: var(--mat-sys-on-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-// Hide page title in main toolbar on large screens (shown in floating toolbar instead)
+// Hide elements in main toolbar when LEFT floating toolbar is showing
+// This class is applied to main toolbar elements (like left panel title/actions)
+// that should hide when the left floating toolbar is visible
 .hide-on-wide-dual {
-  @media (min-width: 1024px) {
-    display: none !important;
+
+  // In dual-pane mode: hide at 1660px+ (matching left floating toolbar visibility)
+  .app-container:has(.two-column-layout.has-right-content:not(.left-collapsed):not(.mobile-layout)) & {
+    @media (min-width: 1660px) {
+      display: none !important;
+    }
+  }
+
+  // In single-pane mode (no right content): hide at 920px+ (matching left floating toolbar)
+  .app-container:has(.two-column-layout:not(.has-right-content):not(.mobile-layout)) & {
+    @media (min-width: 920px) {
+      display: none !important;
+    }
+  }
+}
+
+// Hide right panel elements in main toolbar when RIGHT floating toolbar is showing
+// Applied to right panel title/back button in main toolbar
+.hide-on-wide-right {
+
+  // Hide at 920px+ when there's right content AND not mobile (floating toolbar only shows when not mobile)
+  .app-container:has(.two-column-layout.has-right-content:not(.mobile-layout)) & {
+    @media (min-width: 920px) {
+      display: none !important;
+    }
   }
 }
 
@@ -865,161 +952,20 @@ mat-sidenav-content {
   }
 }
 
-// Panel Header - Navigation controls (used by both panels)
-// Container is transparent, child sections get glass effect
-// Uses absolute positioning so content can scroll behind it
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 10px 0 0; // Adds some padding towards the scrollbar.
-  position: absolute;
-  top: var(--toolbar-height, 64px);
-  left: 0;
-  right: 0;
-  z-index: 201;
-  pointer-events: none;
-  transition: transform 0.3s ease;
-  flex-shrink: 0;
-
-  // Hidden state when scrolling down - only use transform, not opacity
-  // Opacity causes backdrop-filter to flicker during transitions
-  // Move completely above the main toolbar (64px + header height 48px + margin 8px = ~120px)
-  &.header-hidden {
-    transform: translateY(calc(-1 * (var(--toolbar-height, 64px) + 72px)));
-    pointer-events: none;
-  }
-
-  // Left section: back button + title - gets glass effect
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    flex-shrink: 1;
-    height: 48px;
-    padding: 0 12px;
-    border-radius: 24px;
-    pointer-events: auto;
-    // Force GPU layer to prevent backdrop-filter flicker
-    will-change: transform;
-    transform: translateZ(0);
-
-    // Glass effect - light mode
-    background-color: rgba(255, 255, 255, 0.7);
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-    backdrop-filter: blur(20px) saturate(1.8);
-
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-      0px 2px 8px rgba(17, 17, 26, 0.08),
-      0px 4px 16px rgba(17, 17, 26, 0.06);
-
-    .panel-title {
-      font-size: 1rem;
-      color: var(--mat-sys-on-surface);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  // Right section: actions + close button - gets glass effect
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-    height: 48px;
-    padding: 0 8px;
-    border-radius: 24px;
-    pointer-events: auto;
-    // Force GPU layer to prevent backdrop-filter flicker
-    will-change: transform;
-    transform: translateZ(0);
-
-    // Glass effect - light mode
-    background-color: rgba(255, 255, 255, 0.7);
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-    backdrop-filter: blur(20px) saturate(1.8);
-
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-      0px 2px 8px rgba(17, 17, 26, 0.08),
-      0px 4px 16px rgba(17, 17, 26, 0.06);
-  }
-
-  .nav-button,
-  .action-button {
-    flex-shrink: 0;
-  }
-}
-
-// If smaller than 1024, the .panel-header should have padding on sides.
-@media (max-width: 1023px) {
-  .panel-header {
-    padding: 0 8px;
-  }
-}
-
-// Left panel header - stays within left panel bounds
-.left-panel-header {
-  // Full width of the panel
-  width: 100%;
-  max-width: 100%;
-
-  // Hide when floating toolbar is showing (always now)
-  &.hide-on-wide {
-    display: none;
-  }
-}
-
-// Right panel header - stays within right panel bounds  
-.right-panel-header {
-  // Full width of the panel
-  width: 100%;
-  max-width: 100%;
-
-  // Hide when floating toolbar is showing (always now)
-  &.hide-on-wide {
-    display: none;
-  }
-}
-
-// Dark mode for panel headers
-:host-context(.dark) .panel-header {
-
-  .header-left,
-  .header-right {
-    background-color: rgba(0, 0, 0, 0.4);
-
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-      0px 2px 8px rgba(0, 0, 0, 0.3),
-      0px 4px 16px rgba(0, 0, 0, 0.25);
-  }
-}
-
 // Panel Content Area (used by both panels)
+// Now that panel headers are removed, content only needs toolbar clearance
 .panel-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   // Content scrolls from top (behind transparent toolbar)
-  // Padding-top ensures content isn't hidden behind toolbar + panel header
-  // toolbar (64px) + panel header (64px with margin) = ~128px
-  padding-top: calc(var(--toolbar-height, 64px) + 72px);
+  padding-top: var(--toolbar-height, 64px);
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
-// When left panel has content (has header), use full padding for header clearance
-.left-panel.has-content .panel-content {
-  padding-top: calc(var(--toolbar-height, 64px) + 72px);
+// Left panel content
+.left-panel .panel-content {
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
@@ -1028,43 +974,19 @@ mat-sidenav-content {
   }
 }
 
-// When panel header is hidden (floating toolbar active), reduce padding
-// Uses :has() to detect when the header has the hide-on-wide class
-.left-panel.has-content:has(.panel-header.hide-on-wide) .panel-content {
-  padding-top: var(--toolbar-height, 64px);
+// Right panel content
+.right-panel-content {
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
   &:has(app-profile) {
     padding-top: 0px;
   }
-}
-
-// When left panel shows feeds (no header), only need toolbar clearance
-.left-panel:not(.has-content) .panel-content {
-  padding-top: var(--toolbar-height, 64px);
 }
 
 // Legacy class names for backwards compatibility
 .two-column-layout {
   @extend .dual-panel-layout;
-}
-
-.right-panel-header {
-  @extend .panel-header;
-}
-
-.right-panel-content {
-  @extend .panel-content;
-  // Panel header is hidden (floating toolbar active), only need toolbar clearance
-  padding-top: var(--toolbar-height, 64px);
-
-  // Special case for profile component - no top padding needed
-  // Profile has its own banner that should extend to the top
-  &:has(app-profile) {
-    padding-top: 0px;
-    // padding-top: var(--toolbar-height, 0px);
-  }
 }
 
 // Legacy support - keep old class names working during transition

@@ -252,6 +252,9 @@ export class App implements OnInit {
   // Also show when RightPanelService has content (so user can close it)
   canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.hasContent());
 
+  // When on mobile with right panel content showing (overlay mode), the main toolbar should show right panel info
+  showRightPanelInMainToolbar = computed(() => this.panelNav.isMobile() && this.hasRightContent());
+
   // Panel header scroll states
   leftPanelHeaderHidden = signal(false);
   private leftPanelLastScrollTop = 0;
