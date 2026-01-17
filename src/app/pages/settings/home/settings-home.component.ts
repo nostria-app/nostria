@@ -317,7 +317,9 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.title:Settings`);
+    this.panelActions.setBreadcrumbs([
+      { label: $localize`:@@settings.title:Settings` }
+    ]);
 
     // Handle URL-based section opening for deep linking
     const sectionId = this.route.snapshot.paramMap.get('section');
@@ -334,7 +336,7 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    this.panelActions.clearBreadcrumbs();
   }
 
   canShowItem(item: SettingsItem): boolean {

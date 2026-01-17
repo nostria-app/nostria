@@ -11,21 +11,26 @@ export interface PanelAction {
 }
 
 /**
+ * Represents a breadcrumb item for navigation
+ */
+export interface BreadcrumbItem {
+  label: string;
+  action?: () => void; // If provided, clicking navigates; if not, it's the current page
+}
+
+/**
  * Service to manage dynamic actions in panel headers.
- * Components can register their actions to be displayed in the glass toolbar.
+ * Components can register their actions to be displayed in the main toolbar.
+ * Left panel uses breadcrumb navigation, right panel uses back button.
  */
 @Injectable({
   providedIn: 'root'
 })
 export class PanelActionsService {
-  // Current page title for toolbar (e.g., "Music", "Notifications")
-  // Components set this when they become active
-  private _pageTitle = signal<string>('');
-  pageTitle = this._pageTitle.asReadonly();
-
-  // Right panel title (for components rendered in right panel outlet)
-  private _rightPanelTitle = signal<string>('');
-  rightPanelTitle = this._rightPanelTitle.asReadonly();
+  // Breadcrumb items for left panel navigation (e.g., ["Music", "Songs"])
+  // The last item is the current page (not clickable)
+  private _breadcrumbs = signal<BreadcrumbItem[]>([]);
+  breadcrumbs = this._breadcrumbs.asReadonly();
 
   // Actions for left panel header (displayed on right side of header)
   private _leftPanelActions = signal<PanelAction[]>([]);
@@ -46,35 +51,35 @@ export class PanelActionsService {
   private _leftPanelHeaderLeftContent = signal<TemplateRef<unknown> | null>(null);
   leftPanelHeaderLeftContent = this._leftPanelHeaderLeftContent.asReadonly();
 
-  private _rightPanelHeaderLeftContent = signal<TemplateRef<unknown> | null>(null);
-  rightPanelHeaderLeftContent = this._rightPanelHeaderLeftContent.asReadonly();
+  /**
+   * Set breadcrumbs for left panel navigation.
+   * @param items Array of breadcrumb items. Last item is current page (not clickable).
+   * @example setBreadcrumbs([{ label: 'Music', action: () => router.navigate(['/music']) }, { label: 'Songs' }])
+   */
+  setBreadcrumbs(items: BreadcrumbItem[]): void {
+    this._breadcrumbs.set(items);
+  }
 
   /**
-   * Set the page title displayed in the toolbar
+   * Set a simple page title (converts to single breadcrumb)
+   * @deprecated Use setBreadcrumbs for proper navigation context
    */
   setPageTitle(title: string): void {
-    this._pageTitle.set(title);
+    this._breadcrumbs.set([{ label: title }]);
   }
 
   /**
-   * Clear the page title
+   * Clear breadcrumbs
+   */
+  clearBreadcrumbs(): void {
+    this._breadcrumbs.set([]);
+  }
+
+  /**
+   * @deprecated Use clearBreadcrumbs instead
    */
   clearPageTitle(): void {
-    this._pageTitle.set('');
-  }
-
-  /**
-   * Set the right panel title (overrides default URL-based title)
-   */
-  setRightPanelTitle(title: string): void {
-    this._rightPanelTitle.set(title);
-  }
-
-  /**
-   * Clear the right panel title (falls back to URL-based title)
-   */
-  clearRightPanelTitle(): void {
-    this._rightPanelTitle.set('');
+    this.clearBreadcrumbs();
   }
 
   /**
@@ -106,17 +111,10 @@ export class PanelActionsService {
   }
 
   /**
-   * Set custom content template for left side of left panel header (next to title)
+   * Set custom content template for left side of left panel header (next to breadcrumbs)
    */
   setLeftPanelHeaderLeftContent(template: TemplateRef<unknown> | null): void {
     this._leftPanelHeaderLeftContent.set(template);
-  }
-
-  /**
-   * Set custom content template for left side of right panel header (next to title)
-   */
-  setRightPanelHeaderLeftContent(template: TemplateRef<unknown> | null): void {
-    this._rightPanelHeaderLeftContent.set(template);
   }
 
   /**
@@ -126,7 +124,7 @@ export class PanelActionsService {
     this._leftPanelActions.set([]);
     this._leftPanelMenuTemplate.set(null);
     this._leftPanelHeaderLeftContent.set(null);
-    this._pageTitle.set('');
+    this._breadcrumbs.set([]);
   }
 
   /**
@@ -135,7 +133,6 @@ export class PanelActionsService {
   clearRightPanelActions(): void {
     this._rightPanelActions.set([]);
     this._rightPanelMenuTemplate.set(null);
-    this._rightPanelHeaderLeftContent.set(null);
   }
 
   /**

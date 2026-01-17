@@ -14,6 +14,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MusicDataService } from '../../../services/music-data.service';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 const MUSIC_KIND = 36787;
 const PAGE_SIZE = 24;
@@ -256,6 +257,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
+  private panelActions = inject(PanelActionsService);
 
   // Input for when opened via RightPanelService
   sourceInput = input<'following' | 'public' | undefined>(undefined);
@@ -325,6 +327,12 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   ngOnInit(): void {
+    // Set breadcrumbs for navigation
+    this.panelActions.setBreadcrumbs([
+      { label: $localize`:@@nav.music:Music`, action: () => this.router.navigate(['/music']) },
+      { label: $localize`:@@music.tracks.title:Songs` }
+    ]);
+
     // Check for input first (when opened via RightPanelService)
     const sourceFromInput = this.sourceInput();
     if (sourceFromInput) {
@@ -376,6 +384,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.intersectionObserver?.disconnect();
+    this.panelActions.clearBreadcrumbs();
   }
 
   private setupIntersectionObserver(): void {

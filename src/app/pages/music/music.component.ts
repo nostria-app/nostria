@@ -385,8 +385,10 @@ export class MusicComponent implements OnInit, OnDestroy {
   }
 
   private setupPanelActions(): void {
-    // Set the page title for the toolbar
-    this.panelActions.setPageTitle('Music');
+    // Set breadcrumb for the toolbar - Music is the root level
+    this.panelActions.setBreadcrumbs([
+      { label: $localize`:@@nav.music:Music` }
+    ]);
     
     const actions = [];
 
@@ -557,6 +559,7 @@ export class MusicComponent implements OnInit, OnDestroy {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
     this.panelActions.clearLeftPanelActions();
+    this.panelActions.clearBreadcrumbs();
     // Unregister search handler
     this.searchAction.unregisterHandler(this.searchHandler);
   }

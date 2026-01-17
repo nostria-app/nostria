@@ -388,10 +388,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // Update the page title based on the current sub-route
           const isEditRoute = currentUrl.includes('/edit');
           if (!isEditRoute) {
-            // Set title to profile name when not on edit page
-            if (this.isInRightPanel()) {
-              this.panelActions.setRightPanelTitle(this.profileDisplayName());
-            } else {
+            // Set title to profile name when not on edit page (only for left panel)
+            if (!this.isInRightPanel()) {
               this.panelActions.setPageTitle(this.profileDisplayName());
             }
           }
@@ -438,8 +436,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Set up panel actions for the toolbar
     if (this.isInRightPanel()) {
-      // Profile is in right panel - set right panel title and actions
-      this.panelActions.setRightPanelTitle('Profile');
+      // Profile is in right panel - only set up actions (no title for right panel)
       this.setupViewOptionsAction(true);
     } else {
       // Profile is in left panel (shouldn't happen with new routing, but keep for compatibility)
@@ -449,12 +446,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Update the page title when metadata changes
+   * Update the page title when metadata changes (only for left panel)
    */
   private updatePageTitle(): void {
-    if (this.isInRightPanel()) {
-      this.panelActions.setRightPanelTitle(this.profileDisplayName());
-    } else {
+    if (!this.isInRightPanel()) {
       this.panelActions.setPageTitle(this.profileDisplayName());
     }
   }
@@ -489,10 +484,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Clear panel actions and title when leaving the profile
+    // Clear panel actions when leaving the profile
     if (this.isInRightPanel()) {
       this.panelActions.clearRightPanelActions();
-      this.panelActions.clearRightPanelTitle();
     } else {
       this.panelActions.clearLeftPanelActions();
       this.panelActions.clearPageTitle();

@@ -242,22 +242,15 @@ export class App implements OnInit {
 
   // Right panel routing state
   private _hasRightRouterContent = signal(false);
-  private _defaultRightPanelTitle = signal('');
   private _rightPanelHistory = signal<string[]>([]);
   // hasRightContent checks both router-based content AND RightPanelService content
   hasRightContent = computed(() => this._hasRightRouterContent() || this.rightPanel.hasContent());
-  // Use component-set title if available, otherwise fall back to URL-based title
-  rightPanelTitle = computed(() => this.panelActions.rightPanelTitle() || this.rightPanel.title() || this._defaultRightPanelTitle());
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
   // Also show when RightPanelService has content (so user can close it)
   canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.hasContent());
 
   // When on mobile with right panel content showing (overlay mode), the main toolbar should show right panel info
   showRightPanelInMainToolbar = computed(() => this.panelNav.isMobile() && this.hasRightContent());
-
-  // Panel header scroll states
-  leftPanelHeaderHidden = signal(false);
-  private leftPanelLastScrollTop = 0;
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -281,10 +274,6 @@ export class App implements OnInit {
 
   // Track shortcuts dialog reference for toggle behavior
   private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
-
-  // Right panel header scroll state
-  rightPanelHeaderHidden = signal(false);
-  private rightPanelLastScrollTop = 0;
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -1708,9 +1697,6 @@ export class App implements OnInit {
     // Clear right panel state first (without navigating yet)
     this._rightPanelHistory.set([]);
     this._hasRightRouterContent.set(false);
-    this._defaultRightPanelTitle.set('');
-    // Also clear component-set right panel title
-    this.panelActions.clearRightPanelTitle();
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
@@ -1753,24 +1739,6 @@ export class App implements OnInit {
       if (history.length === 0 || history[history.length - 1] !== rightPath) {
         this._rightPanelHistory.update(h => [...h, rightPath]);
       }
-
-      // Set title based on path
-      if (rightPath.startsWith('e/')) {
-        this._defaultRightPanelTitle.set('Thread');
-      } else if (rightPath.startsWith('a/')) {
-        this._defaultRightPanelTitle.set('Article');
-      } else if (rightPath.startsWith('p/')) {
-        this._defaultRightPanelTitle.set('Profile');
-      } else if (rightPath.startsWith('music/')) {
-        this._defaultRightPanelTitle.set('Music');
-      } else if (rightPath.startsWith('stream/')) {
-        this._defaultRightPanelTitle.set('Live Stream');
-      } else {
-        this._defaultRightPanelTitle.set('');
-      }
-    } else {
-      // No right panel - clear title but preserve history for back navigation
-      this._defaultRightPanelTitle.set('');
     }
   }
 
@@ -1812,11 +1780,8 @@ export class App implements OnInit {
     // Clear router-based state
     this._rightPanelHistory.set([]);
     this._hasRightRouterContent.set(false);
-    this._defaultRightPanelTitle.set('');
     // Clear right panel actions immediately
     this.panelActions.clearRightPanelActions();
-    // Also clear component-set right panel title
-    this.panelActions.clearRightPanelTitle();
     // Clear the panel navigation right stack
     this.panelNav.clearRightStack();
     // Navigate to clear the right outlet
@@ -1859,65 +1824,19 @@ export class App implements OnInit {
   }
 
   /**
-   * Handle scroll events on the left panel for header hide/show
-   * Only auto-hides on mobile/smaller screens - desktop keeps header visible
+   * Handle scroll events on the left panel
+   * Currently unused but kept for future scroll-based features
    */
-  onLeftPanelScroll(event: Event): void {
-    const container = event.target as HTMLElement;
-    const scrollTop = container.scrollTop;
-    const scrollDelta = scrollTop - this.leftPanelLastScrollTop;
-
-    // Only auto-hide on mobile/smaller screens
-    if (this.layout.isHandset()) {
-      // Scrolling down - hide header after scrolling down past threshold
-      if (scrollDelta > 10 && scrollTop > 100) {
-        this.leftPanelHeaderHidden.set(true);
-      }
-      // Scrolling up - show header immediately
-      else if (scrollDelta < -10) {
-        this.leftPanelHeaderHidden.set(false);
-      }
-      // At the very top - always show header
-      else if (scrollTop <= 50) {
-        this.leftPanelHeaderHidden.set(false);
-      }
-    } else {
-      // On desktop, always keep header visible
-      this.leftPanelHeaderHidden.set(false);
-    }
-
-    this.leftPanelLastScrollTop = scrollTop;
+  onLeftPanelScroll(_event: Event): void {
+    // Scroll tracking removed - floating toolbars have been consolidated into main toolbar
   }
 
   /**
-   * Handle scroll events on the right panel for header hide/show
-   * Only auto-hides on mobile/smaller screens - desktop keeps header visible
+   * Handle scroll events on the right panel
+   * Currently unused but kept for future scroll-based features
    */
-  onRightPanelScroll(event: Event): void {
-    const container = event.target as HTMLElement;
-    const scrollTop = container.scrollTop;
-    const scrollDelta = scrollTop - this.rightPanelLastScrollTop;
-
-    // Only auto-hide on mobile/smaller screens
-    if (this.layout.isHandset()) {
-      // Scrolling down - hide header after scrolling down past threshold
-      if (scrollDelta > 10 && scrollTop > 100) {
-        this.rightPanelHeaderHidden.set(true);
-      }
-      // Scrolling up - show header immediately
-      else if (scrollDelta < -10) {
-        this.rightPanelHeaderHidden.set(false);
-      }
-      // At the very top - always show header
-      else if (scrollTop <= 50) {
-        this.rightPanelHeaderHidden.set(false);
-      }
-    } else {
-      // On desktop, always keep header visible
-      this.rightPanelHeaderHidden.set(false);
-    }
-
-    this.rightPanelLastScrollTop = scrollTop;
+  onRightPanelScroll(_event: Event): void {
+    // Scroll tracking removed - floating toolbars have been consolidated into main toolbar
   }
 
   exitFullscreen(): void {
