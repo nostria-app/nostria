@@ -1,9 +1,11 @@
 // Host element styles - fill the full height of the container
 :host {
   display: block;
-  height: calc(100vh - var(--toolbar-height, 64px));
+  height: 100%;
   // Override parent's overflow-y: auto so virtual scroll can manage its own scroll
   overflow: hidden !important;
+  // Remove any generic padding added by parent
+  padding-top: 0 !important;
 }
 
 // Main container styles
@@ -14,6 +16,8 @@
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  // Remove any inherited padding
+  padding-top: 0;
 }
 
 // Notifications container
@@ -118,6 +122,8 @@
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
+    // Add padding at top so first item doesn't render behind toolbar
+    padding-top: calc(var(--toolbar-height, 64px) + 16px);
   }
 
   // Fixed height for virtual scrolling items only
