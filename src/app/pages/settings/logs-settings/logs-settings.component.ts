@@ -1,4 +1,4 @@
-import { Component, inject, computed, effect, signal } from '@angular/core';
+import { Component, inject, computed, effect, signal, OnInit, OnDestroy } from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +19,7 @@ import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 export interface RelayClusterOutput {
   relay: string;
@@ -54,7 +55,7 @@ export interface RelayConnection {
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss'],
 })
-export class LogsSettingsComponent {
+export class LogsSettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
   database = inject(DatabaseService);
@@ -63,6 +64,15 @@ export class LogsSettingsComponent {
   app = inject(ApplicationService);
   logger = inject(LoggerService);
   utilities = inject(UtilitiesService);
+  private panelActions = inject(PanelActionsService);
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.logs.title:Logs`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
+  }
 
   disabledRelays = signal<any>([]);
   relayStats = computed(() => this.relaysService.relayStatsSignal());

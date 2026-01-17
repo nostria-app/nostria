@@ -469,6 +469,17 @@ mat-sidenav-content {
   }
 }
 
+// Page title shown in the main toolbar when a page sets panelActions.pageTitle()
+.page-title {
+  margin-left: 8px;
+  margin-right: 8px;
+  font-size: 1.2em;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 // ============================================
 // Dual-Panel Layout System
 // ============================================

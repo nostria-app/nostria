@@ -9,10 +9,6 @@ h2 {
   }
 }
 
-.page-title {
-  padding-left: 1rem;
-}
-
 .settings-container {
   display: flex;
   width: 100%;
@@ -27,20 +23,6 @@ h2 {
     flex-direction: column;
     height: auto;
     overflow: visible;
-  }
-}
-
-.mobile-close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  background-color: rgba(0, 0, 0, 0.1);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-
-  @media (prefers-color-scheme: dark) {
-    background-color: rgba(255, 255, 255, 0.1);
   }
 }
 

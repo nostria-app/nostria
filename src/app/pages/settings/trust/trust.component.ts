@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface TrustRelay {
   url: string;
@@ -29,8 +30,17 @@ interface TrustRelay {
   templateUrl: './trust.component.html',
   styleUrl: './trust.component.scss',
 })
-export class TrustSettingsComponent {
+export class TrustSettingsComponent implements OnInit, OnDestroy {
   localSettings = inject(LocalSettingsService);
+  private panelActions = inject(PanelActionsService);
+
+  ngOnInit(): void {
+    this.panelActions.setPageTitle($localize`:@@settings.trust.title:Trust`);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearPageTitle();
+  }
 
   // Available trust relays
   trustRelays: TrustRelay[] = [

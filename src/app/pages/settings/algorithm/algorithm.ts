@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, effect } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +21,7 @@ import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { PanelActionsService } from '../../../services/panel-actions.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -45,7 +46,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
   templateUrl: './algorithm.html',
   styleUrl: './algorithm.scss',
 })
-export class AlgorithmComponent implements OnInit {
+export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly metrics = inject(Metrics);
   private readonly algorithms = inject(Algorithms);
   private readonly utilities = inject(UtilitiesService);
@@ -53,6 +54,7 @@ export class AlgorithmComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly favoritesService = inject(FavoritesService);
   private readonly accountState = inject(AccountStateService);
+  private readonly panelActions = inject(PanelActionsService);
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);
@@ -152,7 +154,12 @@ export class AlgorithmComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.panelActions.setPageTitle($localize`:@@settings.algorithm.title:Algorithm Settings`);
     await this.loadData();
+  }
+
+  ngOnDestroy() {
+    this.panelActions.clearPageTitle();
   }
 
   async loadData() {
