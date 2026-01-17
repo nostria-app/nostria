@@ -468,6 +468,13 @@ Component Template (re-renders via OnPush)
 
 ## Navigation & Layout System
 
+There are 4 main toolbars in the app, so understand and don't confuse between them.
+
+- Left Main Toolbar (contains the main hamburger menu).
+- Right Main Toolbar (contains the profile menu).
+- Left Panel Toolbar (dynamic based on left panel content).
+- Right Panel Toolbar (dynamic based on right panel content).
+
 ### Two-Column Layout
 
 The app uses a sophisticated two-column layout system:
