@@ -249,7 +249,8 @@ export class App implements OnInit {
   // Use component-set title if available, otherwise fall back to URL-based title
   rightPanelTitle = computed(() => this.panelActions.rightPanelTitle() || this.rightPanel.title() || this._defaultRightPanelTitle());
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
-  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.canGoBack());
+  // Also show when RightPanelService has content (so user can close it)
+  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.hasContent());
 
   // Panel header scroll states
   leftPanelHeaderHidden = signal(false);

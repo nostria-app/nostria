@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { MatButtonModule } from '@angular/material/button';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 interface WebManifest {
   version?: string;
@@ -35,6 +36,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   private readonly panelActions = inject(PanelActionsService);
+  private readonly rightPanel = inject(RightPanelService);
   version = signal('Loading...');
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
@@ -76,11 +78,16 @@ export class AboutComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    this.panelActions.setPageTitle($localize`:@@settings.about.title:About`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.about.title:About`);
+    }
   }
 
   ngOnDestroy() {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   private async fetchManifestVersion(): Promise<void> {

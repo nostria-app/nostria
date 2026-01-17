@@ -22,6 +22,7 @@ import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -55,6 +56,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly accountState = inject(AccountStateService);
   private readonly panelActions = inject(PanelActionsService);
+  private readonly rightPanel = inject(RightPanelService);
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);
@@ -154,12 +156,17 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    this.panelActions.setPageTitle($localize`:@@settings.algorithm.title:Algorithm Settings`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.algorithm.title:Algorithm Settings`);
+    }
     await this.loadData();
   }
 
   ngOnDestroy() {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   async loadData() {

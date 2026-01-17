@@ -24,6 +24,7 @@ import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 interface Language {
   code: string;
@@ -63,13 +64,19 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   emojiSetService = inject(EmojiSetService);
   snackBar = inject(MatSnackBar);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.general.title:General`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.general.title:General`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());

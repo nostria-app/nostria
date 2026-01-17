@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 interface TrustRelay {
   url: string;
@@ -33,13 +34,19 @@ interface TrustRelay {
 export class TrustSettingsComponent implements OnInit, OnDestroy {
   localSettings = inject(LocalSettingsService);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.trust.title:Trust`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.trust.title:Trust`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   // Available trust relays

@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SettingsService } from '../../../services/settings.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 interface ZapAmount {
   value: number;
@@ -38,6 +39,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   private settingsService = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
 
   // Predefined default amounts for quick zap menu (legacy)
   private defaultAmounts = [21, 69, 100, 210, 420, 500, 1000, 2100, 5000, 10000, 21000, 42000, 100000];
@@ -54,11 +56,16 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.wallet.title:Wallet`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.wallet.title:Wallet`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   private loadSettings(): void {

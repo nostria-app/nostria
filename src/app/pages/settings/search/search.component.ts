@@ -33,6 +33,7 @@ import { SearchRelayService, SearchRelayListKind } from '../../../services/relay
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { DataService } from '../../../services/data.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-search-settings',
@@ -65,6 +66,7 @@ export class SearchSettingsComponent implements OnInit, OnDestroy {
   readonly searchRelay = inject(SearchRelayService);
   private readonly data = inject(DataService);
   private readonly panelActions = inject(PanelActionsService);
+  private readonly rightPanel = inject(RightPanelService);
 
   newSearchRelayUrl = signal('');
   isPublishing = signal(false);
@@ -93,11 +95,16 @@ export class SearchSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.panelActions.setPageTitle($localize`:@@settings.search.title:Search Settings`);
+    // Only set page title if not in right panel (right panel has its own title)
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.setPageTitle($localize`:@@settings.search.title:Search Settings`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearPageTitle();
+    if (!this.rightPanel.hasContent()) {
+      this.panelActions.clearPageTitle();
+    }
   }
 
   private async loadSearchRelays(pubkey: string) {
