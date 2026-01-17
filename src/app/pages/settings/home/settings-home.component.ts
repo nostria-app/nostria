@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, OnDestroy, computed, ElementRef, viewChild } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,7 @@ import { ApplicationService } from '../../../services/application.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { getSettingComponent } from '../sections/settings-components.map';
+import { getSettingsSectionComponent } from '../settings-section-components.map';
 
 @Component({
   selector: 'app-settings-home',
@@ -279,6 +280,7 @@ import { getSettingComponent } from '../sections/settings-components.map';
 export class SettingsHomeComponent implements OnInit, OnDestroy {
   readonly registry = inject(SettingsRegistryService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
   private readonly panelActions = inject(PanelActionsService);
@@ -319,10 +321,18 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.panelActions.setPageTitle($localize`:@@settings.title:Settings`);
 
-    // Focus search input on init
-    setTimeout(() => {
-      this.searchInput()?.nativeElement?.focus();
-    }, 100);
+    // Handle URL-based section opening for deep linking
+    const sectionId = this.route.snapshot.paramMap.get('section');
+    if (sectionId && !this.rightPanel.hasContent()) {
+      this.openSectionInRightPanel(sectionId);
+    }
+
+    // Focus search input on init (only if no section is open)
+    if (!sectionId) {
+      setTimeout(() => {
+        this.searchInput()?.nativeElement?.focus();
+      }, 100);
+    }
   }
 
   ngOnDestroy(): void {
@@ -338,13 +348,37 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  navigateToItem(item: SettingsItem): void {
-    // Navigate to the section, the right panel will show the section content
-    this.router.navigateByUrl(item.route);
+  /**
+   * Opens a settings section in the right panel
+   */
+  async openSectionInRightPanel(sectionId: string): Promise<void> {
+    const section = this.registry.sections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const componentLoader = getSettingsSectionComponent(sectionId);
+    if (!componentLoader) return;
+
+    try {
+      const component = await componentLoader();
+      this.rightPanel.open({
+        component,
+        title: section.title,
+      }, section.route);
+    } catch (error) {
+      console.error(`Failed to load settings section component: ${sectionId}`, error);
+    }
   }
 
-  navigateToSection(section: SettingsSection): void {
-    this.router.navigateByUrl(section.route);
+  async navigateToItem(item: SettingsItem): Promise<void> {
+    // Extract section from route (e.g., /settings/general -> general)
+    const sectionMatch = item.route.match(/\/settings\/([^?#\/]+)/);
+    if (sectionMatch && sectionMatch[1]) {
+      await this.openSectionInRightPanel(sectionMatch[1]);
+    }
+  }
+
+  async navigateToSection(section: SettingsSection): Promise<void> {
+    await this.openSectionInRightPanel(section.id);
   }
 
   clearSearch(): void {

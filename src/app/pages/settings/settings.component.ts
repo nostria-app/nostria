@@ -13,6 +13,7 @@ import { PanelActionsService } from '../../services/panel-actions.service';
 import { SettingsRegistryService, SettingsItem, SettingsSection } from '../../services/settings-registry.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { RightPanelService } from '../../services/right-panel.service';
 
 @Component({
   selector: 'app-settings',
@@ -34,6 +35,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   private readonly panelActions = inject(PanelActionsService);
+  private readonly rightPanel = inject(RightPanelService);
   readonly registry = inject(SettingsRegistryService);
   private readonly accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
@@ -60,7 +62,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Listen to route changes to update active section
+    // Listen to route changes to scroll to top
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateActiveSection();
       this.layout.scrollToTop();
@@ -96,6 +98,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   navigateHome(): void {
+    this.rightPanel.close();
     this.router.navigate(['/settings']);
   }
 

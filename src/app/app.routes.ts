@@ -192,74 +192,11 @@ export const routes: Routes = [
         title: 'Settings',
       },
       {
-        path: 'general',
+        // Catch all settings sub-routes - section components are opened in right panel
+        path: ':section',
         loadComponent: () =>
-          import('./pages/settings/general/general.component').then(m => m.GeneralSettingsComponent),
-        title: 'General',
-      },
-      {
-        path: 'algorithm',
-        loadComponent: () =>
-          import('./pages/settings/algorithm/algorithm').then(m => m.AlgorithmComponent),
-        title: 'Algorithm',
-      },
-      {
-        path: 'relays',
-        loadComponent: () =>
-          import('./pages/settings/relays/relays.component').then(m => m.RelaysComponent),
-        title: 'Relays',
-      },
-      {
-        path: 'search',
-        loadComponent: () =>
-          import('./pages/settings/search/search.component').then(m => m.SearchSettingsComponent),
-        title: 'Search',
-      },
-      {
-        path: 'privacy',
-        loadComponent: () =>
-          import('./pages/settings/privacy-settings/privacy-settings.component').then(
-            m => m.PrivacySettingsComponent
-          ),
-        title: 'Privacy & Safety',
-      },
-      {
-        path: 'trust',
-        loadComponent: () =>
-          import('./pages/settings/trust/trust.component').then(m => m.TrustSettingsComponent),
-        title: 'Trust',
-      },
-      {
-        path: 'wallet',
-        loadComponent: () =>
-          import('./pages/settings/wallet/wallet.component').then(m => m.WalletSettingsComponent),
-        title: 'Wallet',
-      },
-      {
-        path: 'backup',
-        loadComponent: () =>
-          import('./pages/backup/backup.component').then(m => m.BackupComponent),
-        title: 'Backup',
-      },
-      {
-        path: 'premium',
-        loadComponent: () =>
-          import('./pages/premium/settings/settings').then(m => m.PremiumSettings),
-        title: 'Premium',
-      },
-      {
-        path: 'logs',
-        loadComponent: () =>
-          import('./pages/settings/logs-settings/logs-settings.component').then(
-            m => m.LogsSettingsComponent
-          ),
-        title: 'Logs',
-      },
-      {
-        path: 'about',
-        loadComponent: () =>
-          import('./pages/settings/about/about.component').then(m => m.AboutComponent),
-        title: 'About',
+          import('./pages/settings/home/settings-home.component').then(m => m.SettingsHomeComponent),
+        title: 'Settings',
       },
     ],
   },
