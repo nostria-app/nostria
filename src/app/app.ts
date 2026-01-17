@@ -612,6 +612,16 @@ export class App implements OnInit {
       }
     });
 
+    // Track sidenav size changes to update floating toolbar position
+    effect(() => {
+      // Read signals to establish dependency
+      const displayLabels = this.displayLabels();
+      const opened = this.opened();
+      const isHandset = this.layout.isHandset();
+      // Update toolbar position when any of these change
+      this.updateFloatingToolbarPosition();
+    });
+
     if (!this.app.isBrowser()) {
       this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;
@@ -1003,6 +1013,8 @@ export class App implements OnInit {
         this.sidenav.close();
       }
     }
+    // Set initial floating toolbar position
+    this.updateFloatingToolbarPosition();
   }
 
   qrScan() {
@@ -1213,12 +1225,31 @@ export class App implements OnInit {
     if (this.localSettings.menuOpen()) {
       this.localSettings.setMenuOpen(false);
     }
+    this.updateFloatingToolbarPosition();
   }
 
   onSidenavOpened() {
     // Sync local settings when sidenav is opened
     if (!this.localSettings.menuOpen()) {
       this.localSettings.setMenuOpen(true);
+    }
+    this.updateFloatingToolbarPosition();
+  }
+
+  /** Update CSS variables for floating toolbar position based on sidenav state */
+  private updateFloatingToolbarPosition() {
+    if (!this.app.isBrowser()) return;
+
+    const isOpen = this.opened();
+    const isSideMode = !this.layout.isHandset();
+
+    if (isOpen && isSideMode) {
+      // Sidenav is open in side mode - it pushes content
+      const sidenavWidth = this.displayLabels() ? 220 : 56;
+      document.documentElement.style.setProperty('--floating-toolbar-left', `${72 + sidenavWidth}px`);
+    } else {
+      // Sidenav closed or in overlay mode - no offset needed
+      document.documentElement.style.setProperty('--floating-toolbar-left', '72px');
     }
   }
 

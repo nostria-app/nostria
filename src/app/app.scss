@@ -119,32 +119,23 @@ nav {
   position: fixed;
   // Position vertically centered in the 64px toolbar (64 - 48) / 2 = 8px
   top: 8px;
-  // Align with centered content panels
-  // Calculate: (100vw - total-content-width) / 2, but minimum 72px to avoid hamburger
-  // Total content width comes from CSS variables set by TwoColumnLayoutService
-  left: max(72px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2));
-  // Right side should also align with content
-  right: max(0px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2));
+  // Use CSS variable set by app component based on sidenav state
+  // Default: center toolbars in viewport
+  left: var(--floating-toolbar-left, 72px);
+  right: var(--floating-toolbar-right, 0px);
   height: 48px;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 8px;
   z-index: 1001; // Above toolbar
   pointer-events: none;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  // On tablet, center the toolbar
-  @media (max-width: 1023px) {
-    left: 72px;
-    right: 8px;
-    justify-content: center;
-  }
-
-  // On mobile, less space needed for hamburger only
+  // On mobile, adjust positioning
   @media (max-width: 599px) {
     left: 56px;
     right: 8px;
     gap: 0;
-    justify-content: center;
   }
 }
 
@@ -219,13 +210,8 @@ nav {
   }
 }
 
-// When left panel is collapsed, adjust the floating toolbars container
+// When left panel is collapsed, adjust the floating toolbars
 .two-column-layout.left-collapsed .floating-toolbars-container {
-  // When left is collapsed, center the container on just the right panel
-  // Right panel takes min(700px, 100%) and is centered
-  left: max(72px, calc((100vw - min(700px, 100vw)) / 2));
-  right: max(0px, calc((100vw - min(700px, 100vw)) / 2));
-
   .left-toolbar {
     display: none;
   }
@@ -237,21 +223,15 @@ nav {
 }
 
 // When left floating toolbar is hidden in dual-pane mode (below 1660px), 
-// shift the container so right toolbar aligns with right panel
+// only show right toolbar
 .two-column-layout.has-right-content:not(.left-collapsed):not(.mobile-layout) .floating-toolbars-container {
   @media (max-width: 1659px) and (min-width: 920px) {
-    // Align container with right panel position
-    // Right panel starts at: (100vw - left-width - right-width) / 2 + left-width
-    left: max(72px, calc((100vw - var(--left-column-width, 700px) - var(--right-column-width, 700px)) / 2 + var(--left-column-width, 700px)));
+    // Left toolbar is hidden by other rules, just ensure right aligns
   }
 }
 
-// When only left content is showing (no right panel), adjust container alignment
+// When only left content is showing (no right panel), adjust toolbar width
 .two-column-layout:not(.has-right-content) .floating-toolbars-container {
-  // When no right panel, align with just the left panel (which is centered)
-  left: max(72px, calc((100vw - var(--left-column-width, 700px)) / 2));
-  right: max(0px, calc((100vw - var(--left-column-width, 700px)) / 2));
-
   .left-toolbar {
     // Use the wide left column width when it's the only panel
     width: min(var(--left-column-width, 700px), 100%);
