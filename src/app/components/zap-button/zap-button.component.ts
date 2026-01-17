@@ -19,46 +19,71 @@ import { BreakpointObserver } from '@angular/cdk/layout';
   selector: 'app-zap-button',
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule],
   template: `
-    <button
-      mat-icon-button
-      [class]="{
-        'zap-button': true,
-        zapped: hasZapped(),
-      }"
-      [disabled]="isLoading()"
-      (click)="onZapClick($event)"
-      (contextmenu)="onLongPressStart($event)"
-      (touchstart)="onLongPressStart($event)"
-      (touchend)="onLongPressEnd($event)"
-      (touchcancel)="onLongPressEnd($event)"
+    <div
+      class="zap-button-wrapper"
       (mouseenter)="onMouseEnter()"
       (mouseleave)="onMouseLeave()"
-      [matMenuTriggerFor]="quickZapMenu"
-      #menuTrigger="matMenuTrigger"
-      [matTooltip]="getTooltip()"
-      matTooltipPosition="below"
     >
-      <mat-icon>bolt</mat-icon>
-    </button>
+      <button
+        mat-icon-button
+        [class]="{
+          'zap-button': true,
+          zapped: hasZapped(),
+        }"
+        [disabled]="isLoading()"
+        (click)="onZapClick($event)"
+        (contextmenu)="onContextMenu($event)"
+        (touchstart)="onLongPressStart($event)"
+        (touchend)="onLongPressEnd($event)"
+        (touchcancel)="onLongPressEnd($event)"
+        [matTooltip]="tooltip()"
+        matTooltipPosition="below"
+      >
+        <mat-icon>bolt</mat-icon>
+      </button>
+
+      <!-- Hidden trigger for the menu, positioned at bottom of button -->
+      <div
+        class="menu-trigger"
+        [matMenuTriggerFor]="quickZapMenu"
+        #menuTrigger="matMenuTrigger"
+      ></div>
+    </div>
 
     <!-- Quick zap menu for desktop (hover) and mobile (long press) -->
-    <mat-menu #quickZapMenu="matMenu" class="quick-zap-menu">
-      @if (quickZapAmounts().length > 0) {
-        @for (amount of quickZapAmounts(); track amount) {
-          <button mat-menu-item (click)="quickZap(amount)">
-            <mat-icon>bolt</mat-icon>
-            <span>{{ formatZapAmount(amount) }} sats</span>
+    <mat-menu #quickZapMenu="matMenu" class="quick-zap-menu" [hasBackdrop]="false" yPosition="below" (closed)="onMenuClosed()">
+      <div (mouseenter)="onMenuMouseEnter()" (mouseleave)="onMenuMouseLeave()">
+        @if (quickZapAmounts().length > 0) {
+          @for (amount of quickZapAmounts(); track amount) {
+            <button mat-menu-item (click)="quickZap(amount)">
+              <mat-icon>bolt</mat-icon>
+              <span>{{ formatZapAmount(amount) }} sats</span>
+            </button>
+          }
+        } @else {
+          <button mat-menu-item disabled>
+            <span>No quick zap amounts configured</span>
           </button>
         }
-      } @else {
-        <button mat-menu-item disabled>
-          <span>No quick zap amounts configured</span>
-        </button>
-      }
+      </div>
     </mat-menu>
   `,
   styles: [
     `
+      .zap-button-wrapper {
+        display: inline-block;
+        position: relative;
+      }
+
+      .menu-trigger {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+
       .zap-button {
         color: var(--nostria-bitcoin) !important;
         transition: all 0.2s ease;
@@ -148,11 +173,26 @@ export class ZapButtonComponent {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // milliseconds
   private isLongPressing = false;
+  private hoverOpenedMenu = false;
+  private menuClosedRecently = false;
 
   // Get quick zap amounts from settings
   quickZapAmounts = computed(() => {
     const settings = this.settings.settings();
     return settings.zapQuickAmounts || [];
+  });
+
+  // Computed tooltip to avoid repeated function calls
+  tooltip = computed(() => {
+    const target = this.event() ? 'event' : 'user';
+    const name = this.recipientName() || 'user';
+    const total = this.totalZaps();
+
+    if (total) {
+      return `${this.formatZapAmount(total)} sats zapped to this ${target}. Click to send a zap to ${name}.`;
+    }
+
+    return `Send a Lightning zap to ${name}`;
   });
 
   constructor() {
@@ -163,17 +203,6 @@ export class ZapButtonComponent {
     this.breakpointObserver.observe('(max-width: 768px)').subscribe(result => {
       this.isMobile.set(result.matches);
     });
-  }
-
-  getTooltip(): string {
-    const target = this.event() ? 'event' : 'user';
-    const name = this.recipientName() || 'user';
-
-    if (this.totalZaps()) {
-      return `${this.formatZapAmount(this.totalZaps())} sats zapped to this ${target}. Click to send a zap to ${name}.`;
-    }
-
-    return `Send a Lightning zap to ${name}`;
   }
 
   formatZapAmount(amount: number): string {
@@ -187,14 +216,8 @@ export class ZapButtonComponent {
   }
 
   onLongPressStart(event: MouseEvent | TouchEvent): void {
-    // Prevent context menu on right-click
-    if (event instanceof MouseEvent && event.button === 2) {
-      event.preventDefault();
-      return;
-    }
-
-    // Only handle long press on mobile
-    if (!this.isMobile()) {
+    // Only handle long press on mobile (touch events)
+    if (!(event instanceof TouchEvent) || !this.isMobile()) {
       return;
     }
 
@@ -219,20 +242,54 @@ export class ZapButtonComponent {
 
   onMouseEnter(): void {
     // Desktop hover behavior - show menu if there are quick zap amounts and not on mobile
-    if (!this.isMobile() && this.quickZapAmounts().length > 0 && this.menuTrigger) {
+    if (!this.isMobile() && this.quickZapAmounts().length > 0 && this.menuTrigger && !this.menuClosedRecently) {
+      this.hoverOpenedMenu = true;
       this.menuTrigger.openMenu();
     }
   }
 
   onMouseLeave(): void {
-    // Desktop hover behavior - close menu when mouse leaves
-    if (!this.isMobile() && this.menuTrigger && this.menuTrigger.menuOpen) {
-      // Small delay to allow user to move to menu
+    // Start a timer to close the menu - gives user time to move to the menu panel
+    if (this.hoverOpenedMenu && this.menuTrigger?.menuOpen) {
+      this.hoverOpenedMenu = false;
       setTimeout(() => {
-        if (this.menuTrigger && this.menuTrigger.menuOpen) {
+        // Only close if hoverOpenedMenu is still false (user didn't enter menu panel)
+        if (!this.hoverOpenedMenu && this.menuTrigger?.menuOpen) {
           this.menuTrigger.closeMenu();
         }
-      }, 200);
+      }, 100);
+    }
+  }
+
+  onMenuClosed(): void {
+    // Prevent immediate re-opening when menu closes
+    this.menuClosedRecently = true;
+    this.hoverOpenedMenu = false;
+    setTimeout(() => {
+      this.menuClosedRecently = false;
+    }, 200);
+  }
+
+  onMenuMouseEnter(): void {
+    // User is in menu panel, cancel any pending close
+    this.hoverOpenedMenu = true;
+  }
+
+  onMenuMouseLeave(): void {
+    // User left menu panel, close it
+    this.hoverOpenedMenu = false;
+    if (this.menuTrigger?.menuOpen) {
+      this.menuTrigger.closeMenu();
+    }
+  }
+
+  onContextMenu(event: MouseEvent): void {
+    // Right-click to open quick zap menu on desktop
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.quickZapAmounts().length > 0 && this.menuTrigger) {
+      this.hoverOpenedMenu = false; // Mark as manually opened
+      this.menuTrigger.openMenu();
     }
   }
 
@@ -346,7 +403,7 @@ export class ZapButtonComponent {
       );
 
       // Show success message
-      const recipientName = this.recipientName() || 
+      const recipientName = this.recipientName() ||
         (typeof metadata?.['name'] === 'string' ? metadata['name'] : undefined) ||
         (typeof metadata?.['display_name'] === 'string' ? metadata['display_name'] : undefined);
 
