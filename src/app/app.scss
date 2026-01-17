@@ -193,7 +193,7 @@ nav {
     border-radius: 24px;
     pointer-events: auto;
 
-    .panel-title {
+    .title-font {
       font-size: 1.3rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
@@ -890,7 +890,7 @@ mat-sidenav-content {
       0px 2px 8px rgba(17, 17, 26, 0.08),
       0px 4px 16px rgba(17, 17, 26, 0.06);
 
-    .panel-title {
+    span {
       font-size: 1rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;

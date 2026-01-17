@@ -42,7 +42,7 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
           <mat-icon>arrow_back</mat-icon>
         </button>
         }
-        <span class="panel-title">{{ rightPanel.title() }}</span>
+        <span>{{ rightPanel.title() }}</span>
         <span class="spacer"></span>
         <button mat-icon-button (click)="rightPanel.close()" class="nav-button close-button"
                 matTooltip="Close" i18n-matTooltip="@@app.nav.close">
@@ -106,7 +106,7 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
       flex-shrink: 0;
     }
     
-    .panel-title {
+    span {
       font-size: 1rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
