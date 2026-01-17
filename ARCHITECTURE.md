@@ -979,6 +979,50 @@ commands: Command[] = [
 ];
 ```
 
+### Searchable Settings
+
+The settings page includes a keyword-based search feature that allows users to quickly find and navigate to specific settings sections.
+
+**Location**: `src/app/pages/settings/`
+
+**Key Features**:
+- Real-time filtering as users type
+- Keyword-based search for each settings section
+- "No results" message when no sections match
+- Clear button to reset search
+- Fully integrated with Command Palette (Ctrl+K)
+
+**Implementation**:
+```typescript
+// Settings sections with keywords
+sections: SettingsSection[] = [
+  { 
+    id: 'general', 
+    title: 'General', 
+    icon: 'settings',
+    keywords: ['dark mode', 'theme', 'language', 'media', ...]
+  },
+  // ... more sections
+];
+
+// Computed signal for filtered sections
+filteredSections = computed(() => {
+  const query = this.searchQuery().toLowerCase().trim();
+  if (!query) return this.sections;
+  return this.sections.filter(section => 
+    section.title.toLowerCase().includes(query) ||
+    section.keywords?.some(k => k.toLowerCase().includes(query))
+  );
+});
+```
+
+**When adding new settings sections**:
+1. Add keywords to the section definition
+2. Add a corresponding command to the Command Palette
+3. Use specific, searchable keywords that users would naturally type
+
+See `docs/searchable-settings.md` for comprehensive documentation.
+
 ### Command Categories
 
 | Category | ID Prefix | Purpose |
