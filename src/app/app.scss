@@ -688,8 +688,8 @@ mat-sidenav-content {
 
     // Right panel slides to center and stays on top
     .right-panel {
-      // Use negative margin to slide over the left panel space
-      margin-left: -700px;
+      // Use negative margin matching the actual left panel width (uses CSS variable)
+      margin-left: calc(-1 * min(var(--left-column-width, 700px), 50%));
       z-index: 10;
       position: relative;
       // Add shadow to emphasize being on top
