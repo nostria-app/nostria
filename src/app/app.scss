@@ -222,17 +222,17 @@ nav {
 // When left panel is collapsed, adjust the floating toolbars container
 .two-column-layout.left-collapsed .floating-toolbars-container {
   // When left is collapsed, center the container on just the right panel
-  // Right panel is centered in the viewport when left is collapsed
-  left: max(72px, calc((100vw - var(--right-column-width, 700px)) / 2));
-  right: max(0px, calc((100vw - var(--right-column-width, 700px)) / 2));
+  // Right panel takes min(700px, 100%) and is centered
+  left: max(72px, calc((100vw - min(700px, 100vw)) / 2));
+  right: max(0px, calc((100vw - min(700px, 100vw)) / 2));
 
   .left-toolbar {
     display: none;
   }
 
   .right-toolbar {
-    // Right toolbar takes full width of centered right panel
-    width: min(var(--right-column-width, 700px), 100%);
+    // Right toolbar takes full width of centered right panel (responsive)
+    width: min(700px, calc(100vw - 80px));
   }
 }
 
@@ -679,22 +679,58 @@ mat-sidenav-content {
       min-width: 0;
       max-width: min(700px, 50%);
     }
+
+    // At tablet breakpoint (below 1024px), switch to overlay mode even if mobile-layout class hasn't been applied yet
+    // This prevents the squished side-by-side layout during the JS/CSS transition
+    @media (max-width: 1023px) {
+      .left-panel {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+      }
+
+      .left-panel.hidden-mobile {
+        display: none;
+      }
+
+      .right-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        z-index: 500;
+        background-color: var(--mat-app-background-color);
+        padding-top: var(--toolbar-height, 64px);
+      }
+    }
   }
 
   // When left panel is collapsed, left panel recedes back in 3D and slides behind right panel
   &.left-collapsed {
+    // Center the right panel when left is collapsed
+    justify-content: center;
+
     .left-panel {
       // 3D transform: rotate back, scale down, and move back in Z-space
       transform: perspective(1500px) translateZ(-200px) scale(0.8);
       opacity: 0;
       pointer-events: none;
       z-index: 0;
+      // Remove from layout flow
+      position: absolute;
     }
 
-    // Right panel slides to center and stays on top
+    // Right panel is centered and responsive
     .right-panel {
-      // Use negative margin matching the actual left panel width (uses CSS variable)
-      margin-left: calc(-1 * min(var(--left-column-width, 700px), 50%));
+      // Override the 50% constraint from .has-right-content
+      // Use full available width up to 700px, scaling down on smaller screens
+      width: min(700px, 100%);
+      min-width: 0;
+      max-width: min(700px, 100%);
+      margin-left: 0; // No negative margin needed - flexbox centering handles it
       z-index: 10;
       position: relative;
       // Add shadow to emphasize being on top
@@ -840,10 +876,10 @@ mat-sidenav-content {
 // Left Panel Toggle Button - positioned between left and right panels
 .left-panel-toggle {
   position: absolute;
-  // Calculate position: center of container minus half of total panels width, plus left panel width
-  // When centered: (100% - (left + right)) / 2 + left = 50% - right/2 + left/2 = 50% + (left - right)/2
-  // For 700 + 700: 50% + 0 = 50%, but we need left edge at left panel end
-  // Simpler: 50% is center, left panel is 700, so toggle is at 50%
+  // Position at the edge between left and right panels
+  // The panels are centered with justify-content: center, so calculate from center
+  // When panels are 700+700, center is between them at 50%
+  // When panels shrink to 50%+50%, center is still at 50%
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -863,6 +899,11 @@ mat-sidenav-content {
     transform 0.2s ease,
     left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
+  // Hide on tablet (below 1023px) - mobile mode takes over
+  @media (max-width: 1023px) {
+    display: none;
+  }
+
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
     transform: translate(-50%, -50%) scale(1.05);
@@ -878,9 +919,12 @@ mat-sidenav-content {
 
 // When left panel is collapsed, move toggle to left edge of centered right panel
 .two-column-layout.left-collapsed .left-panel-toggle {
-  // Right panel is 700px wide and centered, so its left edge is at 50% - 350px
-  // Position toggle just to the left of that
-  left: calc(50% - 350px - 12px);
+  // Right panel is centered and takes min(700px, 100%)
+  // Position toggle at the left edge of the right panel
+  // The right panel's left edge is at: 50% - min(350px, 50%)
+  // Use calc with min() to be responsive
+  left: calc(50% - min(350px, 50%));
+  margin-left: -12px; // Offset for toggle width
   transform: translateY(-50%);
 
   mat-icon {
