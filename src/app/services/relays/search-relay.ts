@@ -202,10 +202,28 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
       const pool = this.getPool();
       const events = await pool.querySync(urls, filter);
 
-      // Filter out expired events
-      const validEvents = events.filter(event => !this.utilities.isEventExpired(event));
+      // Deduplicate events by pubkey (for profiles) or id (for other events)
+      // Multiple relays may return the same event
+      const seen = new Set<string>();
+      const uniqueEvents = events.filter(event => {
+        // For kind 0 (profiles), deduplicate by pubkey and keep newest
+        const key = event.kind === 0 ? event.pubkey : event.id;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
 
-      this.logger.debug(`Search returned ${validEvents.length} results`);
+      // For profiles, sort by created_at descending to keep newest when deduplicating
+      if (kinds.includes(0)) {
+        uniqueEvents.sort((a, b) => b.created_at - a.created_at);
+      }
+
+      // Filter out expired events
+      const validEvents = uniqueEvents.filter(event => !this.utilities.isEventExpired(event));
+
+      this.logger.debug(`Search returned ${validEvents.length} results (${events.length} before dedup)`);
       return validEvents;
     } catch (error) {
       this.logger.error('Search query failed', error);

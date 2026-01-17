@@ -103,7 +103,6 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
                         <span class="item-description">{{ item.description }}</span>
                       }
                     </div>
-                    <mat-icon matListItemMeta>chevron_right</mat-icon>
                   </a>
                 }
               }
@@ -126,7 +125,6 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
                   <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
                   <div matListItemTitle>{{ item.title }}</div>
                   <div matListItemLine class="item-description">{{ item.description }}</div>
-                  <mat-icon matListItemMeta>chevron_right</mat-icon>
                 </a>
               }
             }
@@ -143,7 +141,6 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
               <a mat-list-item (click)="navigateToSection(section)" (keydown.enter)="navigateToSection(section)" tabindex="0" class="section-item">
                 <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
                 <div matListItemTitle>{{ section.title }}</div>
-                <mat-icon matListItemMeta>chevron_right</mat-icon>
               </a>
             }
           </mat-nav-list>
@@ -154,7 +151,8 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
   styles: [`
     .settings-home {
       padding: 16px;
-      max-width: 600px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .search-section {

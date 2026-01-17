@@ -498,8 +498,13 @@ export class SearchService {
 
           // Enrich remote results with WoT scores and merge with current results
           const currentResults = this.searchResults();
-          const allResults = [...currentResults, ...remoteResults];
-          
+
+          // Deduplicate: keep only remote results that don't already exist in current results
+          const existingPubkeys = new Set(currentResults.map(r => r.event.pubkey));
+          const uniqueRemoteResults = remoteResults.filter(r => !existingPubkeys.has(r.event.pubkey));
+
+          const allResults = [...currentResults, ...uniqueRemoteResults];
+
           // Only update if we still have the same search query
           if (this.#lastQuery === searchValue) {
             await this.enrichWithWoTScoresAndSort(allResults, searchValue);

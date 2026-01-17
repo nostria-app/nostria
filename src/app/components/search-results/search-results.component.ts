@@ -67,7 +67,7 @@ import { LayoutService } from '../../services/layout.service';
           <div class="search-results-list">
             @for (
               profile of searchService.searchResults();
-              track profile.event.pubkey;
+              track profile.event.pubkey + '-' + profile.source;
               let i = $index
             ) {
               <div

@@ -4,6 +4,7 @@ import { filter } from 'rxjs/operators';
 import { NavigationStackService } from './navigation-stack.service';
 import { PanelNavigationService } from './panel-navigation.service';
 import { PanelActionsService } from './panel-actions.service';
+import { RightPanelService } from './right-panel.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Event } from 'nostr-tools';
 
@@ -44,6 +45,7 @@ export class TwoColumnLayoutService {
   private navigationStack = inject(NavigationStackService);
   private panelNav = inject(PanelNavigationService);
   private panelActions = inject(PanelActionsService);
+  private rightPanel = inject(RightPanelService);
   private breakpointObserver = inject(BreakpointObserver);
 
   // Column widths
@@ -464,6 +466,8 @@ export class TwoColumnLayoutService {
    */
   resetNavigation(route: string): void {
     this.navigationStack.clearAll();
+    // Clear right panel component stack (RightPanelService manages component instances)
+    this.rightPanel.clearHistory();
     // Reset internal state
     this.rightPanelRoute.set(null);
     this._viewMode.set('fixed');
