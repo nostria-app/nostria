@@ -42,8 +42,8 @@
   <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
     @if (showSearch()) {
     <div class="message-threads-header">
-      <input class="chat-search-input" type="text" placeholder="Search chats..." [ngModel]="chatSearchQuery()"
-        (ngModelChange)="chatSearchQuery.set($event)" autofocus />
+      <input #chatSearchInput class="chat-search-input" type="text" placeholder="Search chats..."
+        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)" autofocus />
       <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
         <mat-icon>close</mat-icon>
       </button>
@@ -315,15 +315,15 @@
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed">
             @if (message.replyTo) {
-              @let repliedMessage = getMessageById(message.replyTo);
-              @if (repliedMessage) {
-              <div class="reply-context">
-                <mat-icon>reply</mat-icon>
-                <div class="reply-content">
-                  <span class="reply-text">{{ repliedMessage.content }}</span>
-                </div>
+            @let repliedMessage = getMessageById(message.replyTo);
+            @if (repliedMessage) {
+            <div class="reply-context">
+              <mat-icon>reply</mat-icon>
+              <div class="reply-content">
+                <span class="reply-text">{{ repliedMessage.content }}</span>
               </div>
-              }
+            </div>
+            }
             }
             <span class="message-content" [innerHTML]="message.content | linkify"></span>
             <span class="message-inline-meta">
