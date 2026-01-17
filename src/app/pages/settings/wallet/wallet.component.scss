@@ -8,6 +8,23 @@ mat-card {
   margin-bottom: 16px;
 }
 
+// Quick Zap Button section
+.quick-zap-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quick-zap-toggle {
+  padding: 8px 0;
+}
+
+.quick-zap-amount {
+  .amount-field {
+    max-width: 300px;
+  }
+}
+
 .amounts-list {
   display: flex;
   flex-direction: column;

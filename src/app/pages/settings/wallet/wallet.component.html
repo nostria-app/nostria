@@ -1,85 +1,42 @@
 <div class="wallet-settings">
+  <!-- Quick Zap Button Settings -->
   <mat-card appearance="outlined">
     <mat-card-header>
-      <mat-icon mat-card-avatar>bolt</mat-icon>
-      <mat-card-title>Quick Zap Amounts</mat-card-title>
+      <mat-icon mat-card-avatar>electric_bolt</mat-icon>
+      <mat-card-title>Quick Zap Button</mat-card-title>
       <mat-card-subtitle>
-        Select zap amounts for quick zapping. On mobile, long-press the zap button to see these options.
-        On desktop, hover over the zap button.
+        Enable a separate quick zap button that sends a preset amount instantly with one click.
       </mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
-      <div class="amounts-list">
-        @for (amount of zapAmounts(); track amount.value) {
-          <div class="amount-item">
-            <mat-slide-toggle
-              [(ngModel)]="amount.enabled"
-              (change)="toggleAmount(amount)"
-              color="primary"
-            >
-              <div class="amount-label">
-                <span class="amount-value">{{ formatAmount(amount.value) }} sats</span>
-                @if (amount.isCustom) {
-                  <span class="custom-badge">Custom</span>
-                }
-              </div>
-            </mat-slide-toggle>
-            @if (amount.isCustom) {
-              <button
-                mat-icon-button
-                (click)="removeCustomAmount(amount)"
-                matTooltip="Remove custom amount"
-                class="remove-button"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
-            }
-          </div>
+      <div class="quick-zap-settings">
+        <div class="quick-zap-toggle">
+          <mat-slide-toggle [checked]="quickZapEnabled()" (change)="toggleQuickZap()">
+            Enable Quick Zap Button
+          </mat-slide-toggle>
+        </div>
+
+        @if (quickZapEnabled()) {
+        <div class="quick-zap-amount">
+          <mat-form-field appearance="outline" class="amount-field">
+            <mat-label>Quick Zap Amount</mat-label>
+            <input matInput type="number" [ngModel]="quickZapAmount()" (ngModelChange)="quickZapAmount.set($event)"
+              (blur)="updateQuickZapAmount()" (keyup.enter)="updateQuickZapAmount()" placeholder="Enter amount in sats"
+              min="1" />
+            <mat-icon matPrefix>bolt</mat-icon>
+            <span matSuffix>sats</span>
+          </mat-form-field>
+        </div>
         }
-      </div>
 
-      <mat-card appearance="outlined" class="add-custom-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>add_circle</mat-icon>
-          <mat-card-title>Add Custom Amount</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="add-custom-form">
-            <mat-form-field appearance="outline" class="custom-amount-field">
-              <mat-label>Amount (sats)</mat-label>
-              <input
-                matInput
-                type="number"
-                [(ngModel)]="newCustomAmount"
-                placeholder="Enter amount in sats"
-                (keyup.enter)="addCustomAmount()"
-                min="1"
-              />
-              <mat-icon matPrefix>bolt</mat-icon>
-            </mat-form-field>
-            <button
-              mat-flat-button
-              color="primary"
-              (click)="addCustomAmount()"
-              [disabled]="!newCustomAmount"
-            >
-              <mat-icon>add</mat-icon>
-              Add Amount
-            </button>
+        <div class="info-section">
+          <mat-icon class="info-icon">info</mat-icon>
+          <div class="info-text">
+            <p>
+              When enabled, a quick zap button (⚡) appears next to the regular zap button.
+              Clicking it instantly sends the configured amount without opening any dialog.
+            </p>
           </div>
-        </mat-card-content>
-      </mat-card>
-
-      <div class="info-section">
-        <mat-icon class="info-icon">info</mat-icon>
-        <div class="info-text">
-          <p>
-            <strong>Quick Zap Feature:</strong><br />
-            • On mobile: Long-press the zap button to see amount options<br />
-            • On desktop: Hover over the zap button to select an amount<br />
-            • If only one amount is enabled, long-press on mobile will immediately send that amount<br />
-            • Regular click still opens the full zap dialog
-          </p>
         </div>
       </div>
     </mat-card-content>

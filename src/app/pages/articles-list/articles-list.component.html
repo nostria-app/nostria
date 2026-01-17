@@ -1,21 +1,5 @@
 <div class="articles-container">
   <div class="articles-header">
-    <div class="header-content">
-      <h1>
-        <mat-icon>article</mat-icon>
-        My Articles
-      </h1>
-      <div class="header-actions">
-        <button mat-flat-button (click)="createNewArticle()">
-          <mat-icon>add</mat-icon>
-          New Article
-        </button>
-        <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
-          <mat-icon>refresh</mat-icon>
-        </button>
-      </div>
-    </div>
-
     <mat-tab-group [selectedIndex]="selectedTab()" (selectedIndexChange)="onTabChange($event)" animationDuration="0ms">
       <mat-tab label="Drafts"></mat-tab>
       <mat-tab label="Published"></mat-tab>

@@ -37,23 +37,33 @@ export class WalletSettingsComponent {
   private settingsService = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
 
-  // Predefined default amounts
+  // Predefined default amounts for quick zap menu (legacy)
   private defaultAmounts = [21, 69, 100, 210, 420, 500, 1000, 2100, 5000, 10000, 21000, 42000, 100000];
 
   zapAmounts = signal<ZapAmount[]>([]);
   newCustomAmount = '';
 
+  // Quick Zap Button settings
+  quickZapEnabled = signal(false);
+  quickZapAmount = signal(21);
+
   constructor() {
-    this.loadZapAmounts();
+    this.loadSettings();
   }
 
-  private loadZapAmounts(): void {
+  private loadSettings(): void {
     const currentSettings = this.settingsService.settings();
+
+    // Load quick zap button settings
+    this.quickZapEnabled.set(currentSettings.quickZapEnabled ?? false);
+    this.quickZapAmount.set(currentSettings.quickZapAmount ?? 21);
+
+    // Load zap amounts for legacy menu
     const enabledAmounts = currentSettings.zapQuickAmounts || [];
 
     // Create array combining all default amounts and custom amounts
     const allAmounts = new Set([...this.defaultAmounts, ...enabledAmounts]);
-    
+
     const amounts: ZapAmount[] = Array.from(allAmounts)
       .sort((a, b) => a - b)
       .map(value => ({
@@ -65,17 +75,57 @@ export class WalletSettingsComponent {
     this.zapAmounts.set(amounts);
   }
 
+  async toggleQuickZap(): Promise<void> {
+    const newValue = !this.quickZapEnabled();
+    this.quickZapEnabled.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        quickZapEnabled: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Quick Zap enabled' : 'Quick Zap disabled',
+        'Dismiss',
+        { duration: 2000 }
+      );
+    } catch (error) {
+      console.error('Failed to save quick zap setting:', error);
+      this.quickZapEnabled.set(!newValue); // Revert
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async updateQuickZapAmount(): Promise<void> {
+    const amount = this.quickZapAmount();
+    if (amount <= 0) {
+      this.snackBar.open('Please enter a valid positive number', 'Dismiss', { duration: 3000 });
+      return;
+    }
+
+    try {
+      await this.settingsService.updateSettings({
+        quickZapAmount: amount,
+      });
+      this.snackBar.open(`Quick zap amount set to ${this.formatAmount(amount)} sats`, 'Dismiss', {
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Failed to save quick zap amount:', error);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
   async toggleAmount(amount: ZapAmount): Promise<void> {
     // Update the local state
     amount.enabled = !amount.enabled;
-    
+
     // Save to settings
     await this.saveZapAmounts();
   }
 
   async addCustomAmount(): Promise<void> {
     const value = parseInt(this.newCustomAmount, 10);
-    
+
     if (isNaN(value) || value <= 0) {
       this.snackBar.open('Please enter a valid positive number', 'Dismiss', {
         duration: 3000,
@@ -84,7 +134,7 @@ export class WalletSettingsComponent {
     }
 
     const currentAmounts = this.zapAmounts();
-    
+
     // Check if amount already exists
     if (currentAmounts.some(a => a.value === value)) {
       this.snackBar.open('This amount already exists', 'Dismiss', {
@@ -102,9 +152,9 @@ export class WalletSettingsComponent {
 
     this.zapAmounts.set(updatedAmounts);
     this.newCustomAmount = '';
-    
+
     await this.saveZapAmounts();
-    
+
     this.snackBar.open('Custom amount added', 'Dismiss', {
       duration: 2000,
     });
@@ -117,9 +167,9 @@ export class WalletSettingsComponent {
 
     const updatedAmounts = this.zapAmounts().filter(a => a.value !== amount.value);
     this.zapAmounts.set(updatedAmounts);
-    
+
     await this.saveZapAmounts();
-    
+
     this.snackBar.open('Custom amount removed', 'Dismiss', {
       duration: 2000,
     });

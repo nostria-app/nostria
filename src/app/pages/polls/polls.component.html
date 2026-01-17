@@ -1,20 +1,4 @@
 <div class="polls-container">
-  <header class="polls-header">
-    <div class="header-content">
-      <h1>Polls</h1>
-      <div class="header-actions">
-        <button mat-icon-button [matTooltip]="selectedView() === 'grid' ? 'List view' : 'Grid view'"
-          (click)="toggleView()">
-          <mat-icon>{{ selectedView() === 'grid' ? 'view_list' : 'view_module' }}</mat-icon>
-        </button>
-        <button mat-flat-button color="primary" (click)="createNewPoll()">
-          <mat-icon>add</mat-icon>
-          New Poll
-        </button>
-      </div>
-    </div>
-  </header>
-
   <main class="polls-content">
     <!-- Loading indicator -->
     @if (isLoading()) {
@@ -34,7 +18,8 @@
             <mat-icon mat-card-avatar>edit</mat-icon>
             <mat-card-title>{{ draft.content }}</mat-card-title>
             <mat-card-subtitle>
-              {{ draft.options.length }} options · {{ draft.pollType === 'singlechoice' ? 'Single choice' : 'Multiple choice' }}
+              {{ draft.options.length }} options · {{ draft.pollType === 'singlechoice' ? 'Single choice' : 'Multiple
+              choice' }}
             </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -77,12 +62,8 @@
       } @else {
       <div class="poll-grid" [class.list-view]="selectedView() === 'list'">
         @for (poll of getDisplayedPolls(); track poll.id) {
-        <app-poll-card
-          [poll]="poll"
-          [results]="getResultsForPoll(poll)?.results ?? null"
-          [hasVoted]="hasUserVoted(poll)"
-          [canVote]="!isPollEnded(poll)"
-          (vote)="submitVote(poll, $event)"
+        <app-poll-card [poll]="poll" [results]="getResultsForPoll(poll)?.results ?? null"
+          [hasVoted]="hasUserVoted(poll)" [canVote]="!isPollEnded(poll)" (vote)="submitVote(poll, $event)"
           (viewDetails)="viewPollResults(poll)">
         </app-poll-card>
         }

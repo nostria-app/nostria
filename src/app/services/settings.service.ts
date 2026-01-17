@@ -35,7 +35,9 @@ export interface UserSettings {
   aiVoice?: 'female' | 'male';
   aiNativeLanguage?: string;
   // Wallet Settings
-  zapQuickAmounts?: number[]; // Array of amounts enabled for quick zapping
+  zapQuickAmounts?: number[]; // Array of amounts enabled for quick zapping (legacy, for menu)
+  quickZapEnabled?: boolean; // Enable the quick zap button
+  quickZapAmount?: number; // Amount for instant quick zap button
   // Add more settings as needed
 }
 
@@ -65,6 +67,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   aiNativeLanguage: 'en',
   // Wallet Defaults - enable common zap amounts
   zapQuickAmounts: [21, 210, 420, 1000, 5000, 10000],
+  quickZapEnabled: false, // Off by default
+  quickZapAmount: 21, // Default quick zap amount
 };
 
 @Injectable({
