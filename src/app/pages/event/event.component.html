@@ -1,125 +1,144 @@
-@if (isLoading() && !event()) {
-<div class="thread-loading">
-  <mat-spinner diameter="32"></mat-spinner>
-  <p class="loading-text">Loading thread...</p>
+<!-- Panel Header - Fixed at top -->
+<div class="panel-header" [class.below-toolbar]="!isInDialogMode()">
+  @if (!isInDialogMode()) {
+  <button mat-icon-button class="back-button" (click)="goBack()" matTooltip="Go back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  }
+  <h2 class="panel-title title-font">Thread</h2>
+  <span class="panel-header-spacer"></span>
+  @if (event()) {
+  <button mat-icon-button matTooltip="Reply" (click)="openReplyDialog()">
+    <mat-icon>reply</mat-icon>
+  </button>
+  }
 </div>
-} @else {
-<!-- Loading indicator for parent events when they're still loading -->
-@if (isLoadingParents()) {
-<div class="parent-events">
-  <div class="section-loading">
-    <mat-spinner diameter="16"></mat-spinner>
-    <p class="loading-text">Loading thread context...</p>
-  </div>
-</div>
-}
 
-<!-- Display parent events in thread (if any) -->
-@if (parentEvents().length > 0) {
-<div class="parent-events">
-  <!-- <h3>Thread Context</h3> -->
-  @for (parentEvent of parentEvents(); track parentEvent.id) {
-  <div class="parent-event">
-    <app-event [event]="parentEvent" appearance="plain" mode="thread"></app-event>
+<!-- Scrollable Content -->
+<div class="event-content">
+  @if (isLoading() && !event()) {
+  <div class="thread-loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <p class="loading-text">Loading thread...</p>
+  </div>
+  } @else {
+  <!-- Loading indicator for parent events when they're still loading -->
+  @if (isLoadingParents()) {
+  <div class="parent-events">
+    <div class="section-loading">
+      <mat-spinner diameter="16"></mat-spinner>
+      <p class="loading-text">Loading thread context...</p>
+    </div>
   </div>
   }
-  <!-- <div class="thread-indicator">
-        <hr />
-        <span>Reply below</span>
-        <hr />
-      </div> -->
-</div>
-}
 
-<!-- Main event -->
-@if (event()) {
-<div id="main-event">
-  <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
-    [trustedByPubkey]="trustedByPubkey()"></app-event>
-</div>
-}
-
-<!-- Loading status indicator - shows thread loading -->
-@if (isLoadingParents()) {
-<div class="loading-status">
-  <div class="status-item">
-    <mat-spinner diameter="14"></mat-spinner>
-    <span>Loading thread...</span>
+  <!-- Display parent events in thread (if any) -->
+  @if (parentEvents().length > 0) {
+  <div class="parent-events">
+    <!-- <h3>Thread Context</h3> -->
+    @for (parentEvent of parentEvents(); track parentEvent.id) {
+    <div class="parent-event">
+      <app-event [event]="parentEvent" appearance="plain" mode="thread"></app-event>
+    </div>
+    }
+    <!-- <div class="thread-indicator">
+          <hr />
+          <span>Reply below</span>
+          <hr />
+        </div> -->
   </div>
-</div>
-}
+  }
 
-<!-- <div class="reactions">
-    @for (reaction of reactions(); track reaction.emoji) {
-      <div class="reaction">
-        <span class="emoji">{{ reaction.emoji }}</span>
+  <!-- Main event -->
+  @if (event()) {
+  <div id="main-event">
+    <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
+      [trustedByPubkey]="trustedByPubkey()"></app-event>
+  </div>
+  }
+
+  <!-- Loading status indicator - shows thread loading -->
+  @if (isLoadingParents()) {
+  <div class="loading-status">
+    <div class="status-item">
+      <mat-spinner diameter="14"></mat-spinner>
+      <span>Loading thread...</span>
+    </div>
+  </div>
+  }
+
+  <!-- <div class="reactions">
+      @for (reaction of reactions(); track reaction.emoji) {
+        <div class="reaction">
+          <span class="emoji">{{ reaction.emoji }}</span>
         <span class="count">{{ reaction.count }}</span>
       </div>
     }
   </div> -->
 
-@if (error()) {
-<div class="error-container">
-  @if (isDeleted()) {
-  <mat-icon class="error-icon deleted-icon">delete_forever</mat-icon>
-  <h3 class="error-title">This event has been deleted</h3>
-  <p class="deletion-info">The author has requested deletion of this content.</p>
-  @if (deletionReason()) {
-  <p class="deletion-reason">Reason: {{ deletionReason() }}</p>
-  }
-  } @else {
-  <mat-icon class="error-icon">error_outline</mat-icon>
-  <h3 class="error-title">{{ error() }}</h3>
+  @if (error()) {
+  <div class="error-container">
+    @if (isDeleted()) {
+    <mat-icon class="error-icon deleted-icon">delete_forever</mat-icon>
+    <h3 class="error-title">This event has been deleted</h3>
+    <p class="deletion-info">The author has requested deletion of this content.</p>
+    @if (deletionReason()) {
+    <p class="deletion-reason">Reason: {{ deletionReason() }}</p>
+    }
+    } @else {
+    <mat-icon class="error-icon">error_outline</mat-icon>
+    <h3 class="error-title">{{ error() }}</h3>
 
-  @if (error() === 'Event not found') {
-  <div class="deep-resolution-section">
-    <p class="deep-resolution-description">
-      Deep Resolution attempts to find this event by querying multiple relays and checking for reposts or quotes that
-      might contain the original content.
-    </p>
-    <div class="deep-resolution-actions">
-      <button mat-flat-button color="primary" (click)="startDeepResolution()" [disabled]="isLoading()">
-        <mat-icon>search</mat-icon>
-        Try Deep Resolution
-      </button>
+    @if (error() === 'Event not found') {
+    <div class="deep-resolution-section">
+      <p class="deep-resolution-description">
+        Deep Resolution attempts to find this event by querying multiple relays and checking for reposts or quotes that
+        might contain the original content.
+      </p>
+      <div class="deep-resolution-actions">
+        <button mat-flat-button color="primary" (click)="startDeepResolution()" [disabled]="isLoading()">
+          <mat-icon>search</mat-icon>
+          Try Deep Resolution
+        </button>
+      </div>
     </div>
-  </div>
-  }
-  }
-</div>
-}
-
-@if (deepResolutionProgress()) {
-<div class="deep-resolution-progress">
-  <mat-spinner diameter="20"></mat-spinner>
-  <span>{{ deepResolutionProgress() }}</span>
-</div>
-}
-
-<div class="replies-section">
-  <!-- Always show loading indicator when replies are being fetched -->
-  @if (isLoadingReplies()) {
-  <div class="replies-loading-header">
-    <mat-spinner diameter="16"></mat-spinner>
-    <p class="loading-text">Loading replies...</p>
+    }
+    }
   </div>
   }
 
-  <!-- Show replies if available -->
-  @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
-  <ng-container [ngTemplateOutlet]="replyTemplate"
-    [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
+  @if (deepResolutionProgress()) {
+  <div class="deep-resolution-progress">
+    <mat-spinner diameter="20"></mat-spinner>
+    <span>{{ deepResolutionProgress() }}</span>
+  </div>
   }
 
-  <!-- Only show "No replies yet" when loading is complete AND there are no replies -->
-  @if (threadedReplies().length === 0 && !isLoadingReplies()) {
-  <div class="no-replies">
-    <mat-icon>chat_bubble_outline</mat-icon>
-    <p>No replies yet</p>
+  <div class="replies-section">
+    <!-- Always show loading indicator when replies are being fetched -->
+    @if (isLoadingReplies()) {
+    <div class="replies-loading-header">
+      <mat-spinner diameter="16"></mat-spinner>
+      <p class="loading-text">Loading replies...</p>
+    </div>
+    }
+
+    <!-- Show replies if available -->
+    @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
+    <ng-container [ngTemplateOutlet]="replyTemplate"
+      [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
+    }
+
+    <!-- Only show "No replies yet" when loading is complete AND there are no replies -->
+    @if (threadedReplies().length === 0 && !isLoadingReplies()) {
+    <div class="no-replies">
+      <mat-icon>chat_bubble_outline</mat-icon>
+      <p>No replies yet</p>
+    </div>
+    }
   </div>
   }
 </div>
-}
 
 <ng-template #replyTemplate let-threadedEvent="threadedEvent">
   <div class="threaded-reply" [class.has-replies]="threadedEvent.replies.length > 0"
