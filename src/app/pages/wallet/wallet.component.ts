@@ -20,6 +20,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.component';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-wallet',
@@ -49,6 +50,7 @@ export class WalletComponent {
   nwcService = inject(NwcService);
   wallets = inject(Wallets);
   private customDialog = inject(CustomDialogService);
+  private settingsService = inject(SettingsService);
 
   connectionStringControl = new FormControl('', [
     Validators.required,
@@ -390,6 +392,10 @@ export class WalletComponent {
    * Format transaction amount with sign
    */
   formatTransactionAmount(tx: NwcTransaction): string {
+    if (this.settingsService.settings().hideWalletAmounts) {
+      const sign = tx.type === 'incoming' ? '+' : '-';
+      return `${sign}****`;
+    }
     const sign = tx.type === 'incoming' ? '+' : '-';
     return `${sign}${this.formatMsats(tx.amount)}`;
   }
@@ -430,7 +436,28 @@ export class WalletComponent {
       return '...';
     }
 
+    // Check if amounts should be hidden
+    if (this.settingsService.settings().hideWalletAmounts) {
+      return '****';
+    }
+
     const sats = Math.floor(totalMsats / 1000);
+    return sats.toLocaleString();
+  }
+
+  /**
+   * Format balance to sats or hide if setting is enabled
+   */
+  getDisplayBalance(msats: number | undefined): string {
+    if (msats === undefined) {
+      return '...';
+    }
+
+    if (this.settingsService.settings().hideWalletAmounts) {
+      return '****';
+    }
+
+    const sats = Math.floor(msats / 1000);
     return sats.toLocaleString();
   }
 
