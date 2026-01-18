@@ -112,46 +112,27 @@
     @if (currentStep() === LoginStep.LOGIN_OPTIONS) {
 
     <div class="login-options-section">
-      <div class="login-options">
-        <mat-card class="login-card nsec" (click)="goToStep(LoginStep.NSEC_LOGIN)">
-          <mat-card-content>
-            <div class="card-content">
-              <div class="card-text">
-                <h3><mat-icon>key</mat-icon>Private Key</h3>
-                <p>Sign in with your Nostr private key</p>
-              </div>
+      <!-- Primary login option -->
+      <mat-card class="login-card nsec featured" (click)="goToStep(LoginStep.NSEC_LOGIN)">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon class="featured-icon">key</mat-icon>
+            <div class="card-text">
+              <h3>Private Key (nsec)</h3>
+              <p>Sign in with your Nostr private key or recovery phrase</p>
             </div>
-          </mat-card-content>
-        </mat-card>
+          </div>
+        </mat-card-content>
+      </mat-card>
 
+      <!-- Secondary login options -->
+      <div class="login-options secondary">
         <mat-card class="login-card extension" (click)="loginWithExtension()">
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
                 <h3><mat-icon>extension</mat-icon>Extension</h3>
-                <p>Connect via browser extension</p>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="login-card connect" (click)="goToStep(LoginStep.NOSTR_CONNECT)">
-          <mat-card-content>
-            <div class="card-content">
-              <div class="card-text">
-                <h3><mat-icon>phone_iphone</mat-icon>Remote Key</h3>
-                <p>Sign in with remote signer</p>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="login-card external" (click)="goToStep(LoginStep.EXTERNAL_SIGNER)">
-          <mat-card-content>
-            <div class="card-content">
-              <div class="card-text">
-                <h3><mat-icon>open_in_new</mat-icon>External Signer</h3>
-                <p>Use an external signer app (NIP-55)</p>
+                <p>Browser extension</p>
               </div>
             </div>
           </mat-card-content>
@@ -161,8 +142,30 @@
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
-                <h3><mat-icon>visibility</mat-icon>Preview Only</h3>
-                <p>Use any public key in read-only mode</p>
+                <h3><mat-icon>visibility</mat-icon>Preview</h3>
+                <p>Read-only mode</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="login-card connect" (click)="goToStep(LoginStep.NOSTR_CONNECT)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>phone_iphone</mat-icon>Remote Signer</h3>
+                <p>Amber, nsec.app, etc.</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="login-card external" (click)="goToStep(LoginStep.EXTERNAL_SIGNER)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>smartphone</mat-icon>Local Signer</h3>
+                <p>NIP-55 signer app</p>
               </div>
             </div>
           </mat-card-content>
@@ -196,7 +199,7 @@
 
     <div class="nsec-input-container">
       <mat-form-field class="nsec-input">
-        <mat-label>Private Key or Recovery Phrase</mat-label>
+        <mat-label>Private Key (nsec) or Recovery Phrase</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
           autocomplete="off" autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
           onfocus="this.removeAttribute('readonly');" />
@@ -319,11 +322,11 @@
     </mat-card>
     }
 
-    <!-- External Signer Login -->
+    <!-- Local Signer Login -->
     @if (currentStep() === LoginStep.EXTERNAL_SIGNER) {
     <div class="external-signer-section">
       <p class="instruction-text">
-        Use an external signer app like Amber to log in.
+        Use a local signer app like Amber to log in.
       </p>
 
       <div class="actions">

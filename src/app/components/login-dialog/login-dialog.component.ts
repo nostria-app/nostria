@@ -1042,14 +1042,14 @@ export class LoginDialogComponent implements OnDestroy {
 
       const newUser: NostrUser = {
         pubkey,
-        name: 'External Signer',
+        name: 'Local Signer',
         source: 'external',
         lastUsed: Date.now(),
         hasActivated: true,
       };
 
       await this.nostrService.setAccount(newUser);
-      this.logger.debug('External signer account set successfully', { pubkey });
+      this.logger.debug('Local signer account set successfully', { pubkey });
 
       // Check if the user has relay configuration
       const currentAccount = this.accountState.account();
