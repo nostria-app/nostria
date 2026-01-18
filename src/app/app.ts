@@ -168,8 +168,6 @@ interface NavItem {
   },
 })
 export class App implements OnInit {
-  title = 'Nostria';
-
   // Translated labels for use in templates
   createLabel = $localize`:@@app.create.label:Create`;
   publishingEventLabel = $localize`:@@app.tooltip.publishing-event:Publishing event...`;
@@ -248,9 +246,6 @@ export class App implements OnInit {
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
   // Also show when RightPanelService has content (so user can close it)
   canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.hasContent());
-
-  // When on mobile with right panel content showing (overlay mode), the main toolbar should show right panel info
-  showRightPanelInMainToolbar = computed(() => this.panelNav.isMobile() && this.hasRightContent());
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
