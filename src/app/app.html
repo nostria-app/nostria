@@ -29,10 +29,14 @@
   </div>
   }
   @if (app.initialized()) {
-  <!-- Top toolbar - now outside and above the sidenav container -->
-  <mat-toolbar class="app-toolbar no-print no-select">
-    <!-- Left section: hamburger menu, navigation, and breadcrumbs -->
-    @if (!layout.search()) {
+  <!-- Top toolbar - full-width, dynamically resizes on scroll -->
+  <mat-toolbar class="app-toolbar no-print no-select" 
+    [class.toolbar-collapsed]="layout.toolbarCollapsed() && !layout.toolbarHovered()"
+    [class.toolbar-expanded]="layout.toolbarExpanded()"
+    (mouseenter)="layout.setToolbarHovered(true)"
+    (mouseleave)="layout.setToolbarHovered(false)">
+    
+    <!-- Left section: hamburger menu/avatar and app icon -->
     <div class="toolbar-section toolbar-left">
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
         [class.profile-button-picture]="accountState.profile()?.data?.picture">
@@ -53,18 +57,18 @@
       </button>
       <app-navigation></app-navigation>
     </div>
-    }
 
-    <span class="toolbar-spacer">
-      <!-- Search container is always rendered but hidden via CSS for iOS Safari focus compatibility -->
-      <div class="search-container toolbar-section" [class.search-hidden]="!layout.search()">
+    <!-- Center section: Always-visible search -->
+    <div class="toolbar-center">
+      <div class="search-container toolbar-section" [class.search-active]="layout.search()">
+        <mat-icon class="search-icon">search</mat-icon>
         <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
-          (paste)="onSearchInputPaste($event)" i18n-placeholder="@@app.search.placeholder"
-          placeholder="Search for profiles or paste identifiers..." [attr.tabindex]="layout.search() ? 0 : -1" />
+          (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
+          placeholder="Search..." />
+        @if (layout.search()) {
         <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
-          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
           @if (isSearchListening()) {
           <mat-icon class="pulse-icon">mic</mat-icon>
           } @else if (isSearchTranscribing()) {
@@ -73,24 +77,21 @@
           <mat-icon>mic</mat-icon>
           }
         </button>
-        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
         </button>
-        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
           <mat-icon>close</mat-icon>
         </button>
+        }
         <app-search-results></app-search-results>
       </div>
-    </span>
+    </div>
 
-    <!-- Right section: action buttons and profile -->
-    @if (!layout.search()) {
+    <!-- Right section: action buttons and notifications -->
     <div class="toolbar-section toolbar-right">
       <!-- Right panel actions (when right panel has content) -->
       @if (hasRightContent()) {
-      <!-- Right panel actions -->
       @for (action of panelActions.rightPanelActions(); track action.id) {
       @if (action.menu) {
       <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu" [matTooltip]="action.tooltip || action.label"
@@ -112,10 +113,6 @@
         aria-label="Update application">
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
-      } @else {
-      <button mat-icon-button (click)="openSearch()" class="hide-small">
-        <mat-icon>search</mat-icon>
-      </button>
       }
 
       @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
@@ -134,7 +131,7 @@
       </button>
       }
       @else {
-      <button class="notification-toolbar hide-small" mat-icon-button routerLink="/notifications"
+      <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
         i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
         <mat-icon
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
@@ -142,7 +139,6 @@
       }
       }
     </div>
-    }
   </mat-toolbar>
   }
 

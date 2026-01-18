@@ -25,6 +25,7 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { EmojiSetService } from '../../../services/emoji-set.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
 
 interface Language {
   code: string;
@@ -45,6 +46,7 @@ interface Language {
     MatSliderModule,
     MatInputModule,
     StorageStatsComponent,
+    SettingMenuEditorComponent,
   ],
   templateUrl: './general.component.html',
   styleUrl: './general.component.scss',

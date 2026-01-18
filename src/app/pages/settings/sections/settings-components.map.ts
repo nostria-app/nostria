@@ -12,6 +12,7 @@ import { SettingExternalLinksComponent } from './external-links.component';
 import { SettingCacheComponent } from './cache.component';
 import { SettingDangerZoneComponent } from './danger-zone.component';
 import { SettingStorageComponent } from './storage.component';
+import { SettingMenuEditorComponent } from './menu-editor.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
@@ -33,6 +34,9 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
 
   // Navigation settings
   'navigation-settings': SettingNavigationComponent,
+
+  // Menu customization
+  'menu-customization': SettingMenuEditorComponent,
 
   // Calendar settings
   'calendar-system': SettingCalendarComponent,

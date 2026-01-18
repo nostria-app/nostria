@@ -378,8 +378,38 @@ export class App implements OnInit {
     const feeds = this.feedsCollectionService.feeds();
     const followSets = this.followSetsService.followSets();
     const expandedItems = this.expandedMenuItems();
+    const menuConfig = this.localSettings.menuItems();
 
-    return this.navItems.map(item => {
+    // Get the base items to display based on menu configuration
+    let baseItems: NavItem[];
+    if (menuConfig.length === 0) {
+      // Use default menu items when no custom config is set
+      baseItems = this.navItems.filter(item => this.defaultMenuIds.includes(item.path));
+      // Sort by default order
+      baseItems.sort((a, b) => this.defaultMenuIds.indexOf(a.path) - this.defaultMenuIds.indexOf(b.path));
+    } else {
+      // Use custom menu configuration, deduplicating any duplicate IDs
+      const seenIds = new Set<string>();
+      const visibleIds = menuConfig
+        .filter(config => {
+          if (!config.visible || seenIds.has(config.id)) {
+            return false;
+          }
+          seenIds.add(config.id);
+          return true;
+        })
+        .map(config => config.id);
+
+      // Create a map for quick lookup
+      const navItemMap = new Map(this.navItems.map(item => [item.path, item]));
+
+      // Build items in the order specified by config
+      baseItems = visibleIds
+        .map(id => navItemMap.get(id))
+        .filter((item): item is NavItem => item !== undefined);
+    }
+
+    return baseItems.map(item => {
       // For the Feeds item, add feed boards as children
       if (item.label === 'Feeds') {
         const feedChildren: NavItem[] = feeds.map(feed => ({
@@ -511,15 +541,6 @@ export class App implements OnInit {
       authenticated: true,
       badge: () => this.getUnreadMessagesCount(),
     },
-    // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
-    // {
-    //   path: 'articles',
-    //   label: 'Articles',
-    //   icon: 'article',
-    //   level: 'preview',
-    //   authenticated: true,
-    // },
-    // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     {
       path: 'articles',
       label: $localize`:@@app.nav.articles:Articles`,
@@ -527,10 +548,8 @@ export class App implements OnInit {
     },
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
     { path: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },
-
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
-
     {
       path: 'music',
       label: $localize`:@@app.nav.music:Music`,
@@ -541,21 +560,6 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.streams:Streams`,
       icon: 'live_tv',
     },
-    // {
-    //   path: 'analytics',
-    //   label: $localize`:@@app.nav.analytics:Analytics`,
-    //   icon: 'insights',
-    //   authenticated: true,
-    // },
-    // {
-    //   path: 'bookmarks',
-    //   label: 'Bookmarks',
-    //   icon: 'bookmarks',
-    //   authenticated: true,
-    // },
-    // { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
-    // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
-    // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     {
       path: 'premium',
       label: $localize`:@@app.nav.premium:Premium`,
@@ -563,8 +567,28 @@ export class App implements OnInit {
       authenticated: true,
       hideOnSubscribed: true,
     },
-    // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
-    // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
+    // Additional items available for menu customization
+    { path: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },
+    { path: 'media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
+    { path: 'lists', label: $localize`:@@menu.lists:Lists`, icon: 'lists', authenticated: true },
+    { path: 'polls', label: $localize`:@@menu.polls:Polls`, icon: 'poll', authenticated: false },
+    { path: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
+    { path: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
+    { path: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
+    { path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
+    { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
+    { path: 'stats', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
+    { path: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
+  ];
+
+  /** Default menu item IDs that show when no custom config is set */
+  private readonly defaultMenuIds = [
+    '/',
+    '/f',
+    'articles',
+    'messages',
+    'people',
+    'collections',
   ];
 
   constructor() {
@@ -1285,6 +1309,16 @@ export class App implements OnInit {
 
     // Then open search (removes the hidden class)
     this.layout.toggleSearch();
+  }
+
+  /**
+   * Handle search input focus event.
+   * Opens the search results panel when the always-visible search input is focused.
+   */
+  onSearchFocus(): void {
+    if (!this.layout.search()) {
+      this.layout.toggleSearch();
+    }
   }
 
   toggleMediaPlayer() {

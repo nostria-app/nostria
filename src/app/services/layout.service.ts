@@ -204,6 +204,45 @@ export class LayoutService implements OnDestroy {
   private mobileScrollListener?: (event: globalThis.Event) => void;
 
   /**
+   * Signal that indicates whether the top toolbar should be collapsed (minimized).
+   * Collapsed when scrolling down in either panel, expanded on hover or scroll up.
+   */
+  toolbarCollapsed = signal(false);
+
+  /**
+   * Signal that indicates whether the user is hovering over the toolbar.
+   * Used to expand the toolbar temporarily while hovering.
+   */
+  toolbarHovered = signal(false);
+
+  /**
+   * Computed signal that determines if the toolbar should be displayed in expanded state.
+   * True when not collapsed OR when hovered.
+   */
+  toolbarExpanded = computed(() => !this.toolbarCollapsed() || this.toolbarHovered());
+
+  /**
+   * Set toolbar hover state
+   */
+  setToolbarHovered(hovered: boolean): void {
+    this.toolbarHovered.set(hovered);
+  }
+
+  /**
+   * Collapse the toolbar (when scrolling down)
+   */
+  collapseToolbar(): void {
+    this.toolbarCollapsed.set(true);
+  }
+
+  /**
+   * Expand the toolbar (when scrolling up or at top)
+   */
+  expandToolbar(): void {
+    this.toolbarCollapsed.set(false);
+  }
+
+  /**
    * Signal that indicates whether scroll monitoring is ready and initialized
    * Use this to ensure scroll signals are reliable before reacting to them
    */
@@ -396,6 +435,11 @@ export class LayoutService implements OnDestroy {
     }
   }
 
+  // Track last scroll position for toolbar collapse behavior
+  private lastLeftPanelScrollTop = 0;
+  private lastRightPanelScrollTop = 0;
+  private toolbarScrollThreshold = 50; // Minimum scroll distance to trigger collapse/expand
+
   /**
    * Handle scroll events from the left panel (called by app.ts)
    * @param event - The scroll event from left panel
@@ -410,6 +454,7 @@ export class LayoutService implements OnDestroy {
     }
 
     this.checkPanelScrollPosition(target, 'left');
+    this.updateToolbarCollapseState(target, 'left');
   }
 
   /**
@@ -426,6 +471,44 @@ export class LayoutService implements OnDestroy {
     }
 
     this.checkPanelScrollPosition(target, 'right');
+    this.updateToolbarCollapseState(target, 'right');
+  }
+
+  /**
+   * Update toolbar collapse state based on scroll direction
+   * Collapses toolbar when scrolling down, expands when scrolling up
+   */
+  private updateToolbarCollapseState(element: Element, panel: 'left' | 'right'): void {
+    const scrollTop = element.scrollTop;
+    const lastScrollTop = panel === 'left' ? this.lastLeftPanelScrollTop : this.lastRightPanelScrollTop;
+    const scrollDelta = scrollTop - lastScrollTop;
+
+    // Update last scroll position
+    if (panel === 'left') {
+      this.lastLeftPanelScrollTop = scrollTop;
+    } else {
+      this.lastRightPanelScrollTop = scrollTop;
+    }
+
+    // At the very top, always expand toolbar
+    if (scrollTop <= 5) {
+      this.expandToolbar();
+      return;
+    }
+
+    // Only trigger collapse/expand if scroll delta is significant
+    if (Math.abs(scrollDelta) < this.scrollDirectionThreshold) {
+      return;
+    }
+
+    // Scrolling down - collapse toolbar (after scrolling past threshold from top)
+    if (scrollDelta > 0 && scrollTop > this.toolbarScrollThreshold) {
+      this.collapseToolbar();
+    }
+    // Scrolling up - expand toolbar
+    else if (scrollDelta < 0) {
+      this.expandToolbar();
+    }
   }
 
   /**
