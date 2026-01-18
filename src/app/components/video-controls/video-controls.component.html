@@ -2,8 +2,8 @@
   <!-- Top gradient (for visibility when hovering) -->
   <div class="gradient-top"></div>
 
-  <!-- Center play button (large, only when paused) -->
-  @if (paused()) {
+  <!-- Center play button (large, only when paused and never played) -->
+  @if (paused() && !hasPlayedOnce()) {
   <button class="center-play-btn" mat-icon-button (click)="onCenterPlayButtonClick()" aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
