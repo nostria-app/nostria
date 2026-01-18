@@ -76,6 +76,10 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   private publicSubscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
   private wasScrolledToBottom = false;
+  
+  // Cooldown to prevent rapid-fire loading
+  private lastLoadTime = 0;
+  private readonly LOAD_COOLDOWN_MS = 2000;
 
   // Articles relay set state
   articlesRelaySet = signal<Event | null>(null);
@@ -190,6 +194,13 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
       if (this.loadingMore() || !this.hasMore()) {
         return;
       }
+
+      // Apply cooldown to prevent rapid-fire loading
+      const now = Date.now();
+      if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+        return;
+      }
+      this.lastLoadTime = now;
 
       this.loadMore();
     });

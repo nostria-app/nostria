@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
@@ -45,7 +45,10 @@ export class ProfileNotesComponent {
 
   // Cooldown to prevent rapid-fire relay loading
   private lastLoadTime = 0;
-  private readonly LOAD_COOLDOWN_MS = 1000;
+  private readonly LOAD_COOLDOWN_MS = 2000; // Increased to 2 seconds
+  
+  // Flag to prevent re-entry during scroll handling
+  private isHandlingScroll = false;
 
   constructor() {
     if (!this.layout.isBrowser()) {
@@ -100,7 +103,13 @@ export class ProfileNotesComponent {
 
       // Only auto-load if we have insufficient filtered content and not already loading
       if (hasInsufficientContent && !isLoading && !isInitiallyLoading) {
+        // Apply cooldown to prevent rapid-fire loading
+        const now = Date.now();
+        if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+          return;
+        }
         this.logger.debug('Insufficient filtered content, auto-loading more events...');
+        this.lastLoadTime = now;
         this.loadMoreNotes();
       }
     });
@@ -109,6 +118,7 @@ export class ProfileNotesComponent {
     // Continuously loads more content while user is at bottom for smooth infinite scroll
     // Dynamically uses the correct panel's scroll signal based on where profile is rendered
     effect(() => {
+      // Only track scroll position signals - use untracked for other state reads
       const isInRightPanel = this.profileState.isInRightPanel();
       const isAtBottom = isInRightPanel 
         ? this.layout.rightPanelScrolledToBottom() 
@@ -122,54 +132,68 @@ export class ProfileNotesComponent {
         return;
       }
 
-      // If we have no content yet, skip (initial load will handle it)
-      if (this.profileState.displayedTimeline().length === 0) {
+      // Prevent re-entry during scroll handling
+      if (this.isHandlingScroll) {
         return;
       }
 
-      // First priority: show more already-loaded items (instant, no cooldown needed)
-      if (this.profileState.hasMoreToDisplay()) {
-        this.logger.debug('Increasing display limit to show more cached items');
-        this.profileState.increaseDisplayLimit();
+      // Use untracked to read state without creating dependencies
+      untracked(() => {
+        // If we have no content yet, skip (initial load will handle it)
+        if (this.profileState.displayedTimeline().length === 0) {
+          return;
+        }
 
-        // After DOM updates, recheck scroll position to continue loading if still at bottom
-        setTimeout(() => {
-          if (this.profileState.isInRightPanel()) {
-            this.layout.refreshRightPanelScroll();
-          } else {
-            this.layout.refreshLeftPanelScroll();
+        this.isHandlingScroll = true;
+
+        try {
+          // First priority: show more already-loaded items (instant, no cooldown needed)
+          if (this.profileState.hasMoreToDisplay()) {
+            this.logger.debug('Increasing display limit to show more cached items');
+            this.profileState.increaseDisplayLimit();
+
+            // Schedule a scroll position recheck after DOM updates
+            // Use a longer delay to allow rendering to complete
+            setTimeout(() => {
+              if (this.profileState.isInRightPanel()) {
+                this.layout.refreshRightPanelScroll();
+              } else {
+                this.layout.refreshLeftPanelScroll();
+              }
+            }, 100);
+
+            // Don't preload from relays while showing cached items - wait until exhausted
+            this.isHandlingScroll = false;
+            return;
           }
-        }, 50);
 
-        // Also check if we should preload more from relays (with cooldown)
-        const now = Date.now();
-        if (this.profileState.shouldLoadMoreFromRelay() && 
-            !this.profileState.isLoadingMoreNotes() &&
-            now - this.lastLoadTime >= this.LOAD_COOLDOWN_MS) {
-          this.logger.debug('Preloading more items from relays');
+          // No more cached items - check if we should load from relays (with cooldown)
+          const now = Date.now();
+          if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+            this.isHandlingScroll = false;
+            return;
+          }
+
+          if (this.profileState.isLoadingMoreNotes()) {
+            this.isHandlingScroll = false;
+            return;
+          }
+
+          if (!this.profileState.hasMoreNotes()) {
+            this.isHandlingScroll = false;
+            return;
+          }
+
+          this.logger.debug('Loading more timeline content from relays...');
           this.lastLoadTime = now;
           this.loadMoreNotes();
+        } finally {
+          // Reset flag after a short delay to prevent rapid re-entry
+          setTimeout(() => {
+            this.isHandlingScroll = false;
+          }, 100);
         }
-        return;
-      }
-
-      // No more cached items - need to load from relays (with cooldown)
-      const now = Date.now();
-      if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
-        return;
-      }
-
-      if (this.profileState.isLoadingMoreNotes()) {
-        return;
-      }
-
-      if (!this.profileState.hasMoreNotes()) {
-        return;
-      }
-
-      this.logger.debug('Loading more timeline content from relays...');
-      this.lastLoadTime = now;
-      this.loadMoreNotes();
+      });
     });
   }
 

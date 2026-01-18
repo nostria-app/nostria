@@ -1,4 +1,4 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy, computed, untracked } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -73,6 +73,10 @@ export class ProfileReadsComponent implements OnChanges {
   isLoading = signal(true);
   error = signal<string | null>(null);
 
+  // Cooldown to prevent rapid-fire relay loading
+  private lastLoadTime = 0;
+  private readonly LOAD_COOLDOWN_MS = 2000;
+
   constructor() {
     // Effect to load initial articles if none are present and profile is loaded
     effect(() => {
@@ -101,15 +105,26 @@ export class ProfileReadsComponent implements OnChanges {
         : this.layoutService.leftPanelScrollReady();
       
       // Only proceed if scroll monitoring is ready and user has scrolled to bottom
-      if (
-        isReady &&
-        isAtBottom &&
-        !this.profileState.isLoadingMoreArticles() &&
-        this.profileState.hasMoreArticles()
-      ) {
-        this.logger.debug('Scrolled to bottom, loading more articles...');
-        this.loadMoreArticles();
+      if (!isReady || !isAtBottom) {
+        return;
       }
+
+      // Use untracked to read state without creating dependencies
+      untracked(() => {
+        if (this.profileState.isLoadingMoreArticles() || !this.profileState.hasMoreArticles()) {
+          return;
+        }
+
+        // Apply cooldown to prevent rapid-fire loading
+        const now = Date.now();
+        if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+          return;
+        }
+
+        this.logger.debug('Scrolled to bottom, loading more articles...');
+        this.lastLoadTime = now;
+        this.loadMoreArticles();
+      });
     });
 
     // Effect to load engagement data when articles change
