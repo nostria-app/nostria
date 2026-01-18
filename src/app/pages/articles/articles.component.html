@@ -3,22 +3,47 @@
   <h2 class="panel-title title-font">Articles</h2>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
-  <mat-button-toggle-group [value]="feedSource()" (change)="onSourceChange($event.value)" class="source-toggle">
-    <mat-button-toggle value="following">
-      <mat-icon>people</mat-icon>
-      <span i18n="@@articles.toggle.following">Following</span>
-      @if (followingCount() > 0) {
-      <span class="toggle-count">{{ followingCount() }}</span>
-      }
-    </mat-button-toggle>
-    <mat-button-toggle value="public">
-      <mat-icon>public</mat-icon>
-      <span i18n="@@articles.toggle.public">Public</span>
-      @if (publicCount() > 0) {
-      <span class="toggle-count">{{ publicCount() }}</span>
-      }
-    </mat-button-toggle>
-  </mat-button-toggle-group>
+  <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Display options">
+    <mat-icon>tune</mat-icon>
+  </button>
+  
+  <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
+    <div class="filter-menu-header" (click)="preventMenuClose($event)">
+      <span>Display Options</span>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="filter-section" (click)="preventMenuClose($event)">
+      <mat-slide-toggle 
+        [checked]="showFollowing()" 
+        (change)="toggleShowFollowing()">
+        <div class="toggle-content">
+          <mat-icon>people</mat-icon>
+          <div class="toggle-text">
+            <span class="toggle-label">Following</span>
+            <span class="toggle-description">Articles from people you follow</span>
+            @if (followingCount() > 0) {
+            <span class="toggle-count">{{ followingCount() }}</span>
+            }
+          </div>
+        </div>
+      </mat-slide-toggle>
+      
+      <mat-slide-toggle 
+        [checked]="showPublic()" 
+        (change)="toggleShowPublic()">
+        <div class="toggle-content">
+          <mat-icon>public</mat-icon>
+          <div class="toggle-text">
+            <span class="toggle-label">Public</span>
+            <span class="toggle-description">Articles from the wider network</span>
+            @if (publicCount() > 0) {
+            <span class="toggle-count">{{ publicCount() }}</span>
+            }
+          </div>
+        </div>
+      </mat-slide-toggle>
+    </div>
+  </mat-menu>
   }
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh articles">
     <mat-icon>refresh</mat-icon>
@@ -40,9 +65,11 @@
       <mat-icon>menu_book</mat-icon>
       <h2 i18n="@@articles.empty.title">No articles found</h2>
       <p>
-        @if (feedSource() === 'following' && isAuthenticated()) {
-        <span i18n="@@articles.empty.following">People you follow haven't published any articles yet. Switch to Public
-          to discover articles from the wider Nostr network.</span>
+        @if (!showFollowing() && !showPublic()) {
+        <span>No sources selected. Enable "Following" or "Public" in Display Options to see articles.</span>
+        } @else if (showFollowing() && !showPublic() && isAuthenticated()) {
+        <span i18n="@@articles.empty.following">People you follow haven't published any articles yet. Enable "Public"
+          in Display Options to discover articles from the wider Nostr network.</span>
         } @else {
         <span i18n="@@articles.empty.public">No articles have been published yet. Articles will appear here when authors
           publish them.</span>

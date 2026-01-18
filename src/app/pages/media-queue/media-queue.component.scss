@@ -1,8 +1,6 @@
 .page {
   display: flex;
   flex-direction: column;
-  margin-top: calc(var(--toolbar-height) * -1);
-  padding-top: var(--toolbar-height);
   min-height: calc(100vh - var(--toolbar-height));
   width: 100%;
   max-width: 100%;

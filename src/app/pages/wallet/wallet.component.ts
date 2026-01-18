@@ -11,12 +11,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 import { RouterModule } from '@angular/router';
 import { Wallets, Wallet } from '../../services/wallets';
 import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
 import { LN, USD } from '@getalby/sdk';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.component';
 
 @Component({
   selector: 'app-wallet',
@@ -30,6 +33,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
     MatTooltipModule,
     MatSelectModule,
     MatProgressSpinnerModule,
+    MatTabsModule,
     ReactiveFormsModule,
     RouterModule,
     UserProfileComponent,
@@ -44,6 +48,7 @@ export class WalletComponent {
   snackBar = inject(MatSnackBar);
   nwcService = inject(NwcService);
   wallets = inject(Wallets);
+  private customDialog = inject(CustomDialogService);
 
   connectionStringControl = new FormControl('', [
     Validators.required,
@@ -74,6 +79,9 @@ export class WalletComponent {
   donationSuccess = signal(false);
   donationError = signal<string | null>(null);
 
+  // Active tab index
+  activeTabIndex = signal(0);
+
   constructor() {
     // Auto-load wallet balances when wallets change
     effect(() => {
@@ -95,6 +103,14 @@ export class WalletComponent {
           this.nwcService.getBalance(pubkey);
         }
       });
+    });
+  }
+
+  openAddWalletDialog(): void {
+    this.customDialog.open(AddWalletDialogComponent, {
+      title: $localize`:@@wallet.add.title:Add Wallet`,
+      headerIcon: 'add',
+      width: '500px',
     });
   }
 
@@ -392,5 +408,87 @@ export class WalletComponent {
    */
   formatTransactionDate(timestamp: number): Date {
     return new Date(timestamp * 1000);
+  }
+
+  /**
+   * Get total balance across all wallets
+   */
+  getTotalBalance(): string {
+    const walletEntries = this.getWalletEntries();
+    let totalMsats = 0;
+    let hasData = false;
+
+    for (const [pubkey] of walletEntries) {
+      const walletData = this.nwcService.getWalletData(pubkey);
+      if (walletData?.balance) {
+        totalMsats += walletData.balance.balance;
+        hasData = true;
+      }
+    }
+
+    if (!hasData) {
+      return '...';
+    }
+
+    const sats = Math.floor(totalMsats / 1000);
+    return sats.toLocaleString();
+  }
+
+  /**
+   * Get all transactions across all wallets, sorted by date
+   */
+  getAllTransactions(): { tx: NwcTransaction; walletName: string; walletPubkey: string }[] {
+    const allTransactions: { tx: NwcTransaction; walletName: string; walletPubkey: string }[] = [];
+    const walletEntries = this.getWalletEntries();
+
+    for (const [pubkey, wallet] of walletEntries) {
+      const walletData = this.getWalletData(pubkey);
+      if (walletData?.transactions) {
+        for (const tx of walletData.transactions) {
+          allTransactions.push({
+            tx,
+            walletName: this.getWalletName(wallet),
+            walletPubkey: pubkey,
+          });
+        }
+      }
+    }
+
+    // Sort by date, newest first
+    allTransactions.sort((a, b) => b.tx.created_at - a.tx.created_at);
+
+    return allTransactions;
+  }
+
+  /**
+   * Check if any wallet is loading transactions
+   */
+  isLoadingTransactions(): boolean {
+    const walletEntries = this.getWalletEntries();
+    for (const [pubkey] of walletEntries) {
+      const walletData = this.getWalletData(pubkey);
+      if (walletData?.loading) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Load all transactions across all wallets for the Transactions tab
+   */
+  async loadAllTransactions(): Promise<void> {
+    const walletEntries = this.getWalletEntries();
+    for (const [pubkey] of walletEntries) {
+      await this.nwcService.getTransactions(pubkey, { limit: 20 });
+    }
+  }
+
+  onTabChange(index: number): void {
+    this.activeTabIndex.set(index);
+    // Load transactions when switching to Transactions tab
+    if (index === 1) {
+      this.loadAllTransactions();
+    }
   }
 }

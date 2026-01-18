@@ -2,10 +2,13 @@ import { Component, inject, signal, computed, OnDestroy, OnInit, effect } from '
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDividerModule } from '@angular/material/divider';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -36,9 +39,11 @@ const BATCH_DELAY_MS = 100;
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
-    MatButtonToggleModule,
     MatCardModule,
     MatTooltipModule,
+    MatMenuModule,
+    MatSlideToggleModule,
+    MatDividerModule,
     ArticleEventComponent,
     UserProfileComponent,
     AgoPipe,
@@ -64,7 +69,16 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   allArticles = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
-  feedSource = signal<'following' | 'public'>('following');
+  
+  // Filter signals for which articles to show
+  showFollowing = signal(true);
+  showPublic = signal(false);
+
+  // Computed feed source based on what's enabled (for toggle UI)
+  feedSource = computed(() => {
+    if (this.showFollowing()) return 'following';
+    return 'public';
+  });
 
   // Pagination state
   followingDisplayCount = signal(PAGE_SIZE);
@@ -120,9 +134,22 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   currentArticles = computed(() => {
-    const source = this.feedSource();
-    if (source === 'following') return this.followingArticles();
-    return this.publicArticles();
+    const showFollowing = this.showFollowing();
+    const showPublic = this.showPublic();
+    
+    // Combine articles based on what's enabled
+    const articles: Event[] = [];
+    
+    if (showFollowing) {
+      articles.push(...this.followingArticles());
+    }
+    
+    if (showPublic) {
+      articles.push(...this.publicArticles());
+    }
+    
+    // Sort combined articles by date (newest first)
+    return articles.sort((a, b) => b.created_at - a.created_at);
   });
 
   // Check if there are more articles to load
@@ -135,9 +162,13 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   hasMore = computed(() => {
-    const source = this.feedSource();
-    if (source === 'following') return this.hasMoreFollowing();
-    return this.hasMorePublic();
+    const showFollowing = this.showFollowing();
+    const showPublic = this.showPublic();
+    
+    // Has more if either enabled source has more
+    if (showFollowing && this.hasMoreFollowing()) return true;
+    if (showPublic && this.hasMorePublic()) return true;
+    return false;
   });
 
   // Total counts
@@ -151,23 +182,31 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   isAuthenticated = computed(() => this.app.authenticated());
 
   constructor() {
-    // Load persisted feed source from local state
+    // Load persisted filter settings from local state
     effect(() => {
       const pubkey = this.currentPubkey();
       if (pubkey) {
-        const savedFeedSource = this.accountLocalState.getArticlesDiscoverFeedSource(pubkey);
-        this.feedSource.set(savedFeedSource);
+        const savedShowFollowing = this.accountLocalState.getArticlesShowFollowing(pubkey);
+        const savedShowPublic = this.accountLocalState.getArticlesShowPublic(pubkey);
+        this.showFollowing.set(savedShowFollowing);
+        this.showPublic.set(savedShowPublic);
       }
     }, { allowSignalWrites: true });
 
     // Load cached articles from database first
     this.loadCachedArticles();
 
-    // Then start subscription based on feed source
+    // Start subscriptions based on filter settings
     effect(() => {
-      const source = this.feedSource();
-      if (source === 'following') {
+      const showFollowing = this.showFollowing();
+      const showPublic = this.showPublic();
+      
+      if (showFollowing) {
         this.startFollowingSubscription();
+      }
+      
+      if (showPublic && !this.publicSubscription) {
+        this.startPublicSubscription();
       }
     });
 
@@ -223,29 +262,81 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     this.loadingMore.set(true);
 
     setTimeout(() => {
-      const source = this.feedSource();
-      if (source === 'following') {
+      // Load more for whichever sources are enabled and have more
+      if (this.showFollowing() && this.hasMoreFollowing()) {
         this.followingDisplayCount.update(count => count + PAGE_SIZE);
-      } else {
+      }
+      if (this.showPublic() && this.hasMorePublic()) {
         this.publicDisplayCount.update(count => count + PAGE_SIZE);
       }
       this.loadingMore.set(false);
     }, 100);
   }
 
-  onSourceChange(source: 'following' | 'public'): void {
-    this.feedSource.set(source);
+  toggleShowFollowing(): void {
+    const newValue = !this.showFollowing();
+    this.showFollowing.set(newValue);
 
-    // Persist the selected feed source
+    // Persist the setting
     const pubkey = this.currentPubkey();
     if (pubkey) {
-      this.accountLocalState.setArticlesDiscoverFeedSource(pubkey, source);
+      this.accountLocalState.setArticlesShowFollowing(pubkey, newValue);
     }
 
-    // If switching to public, start public subscription
-    if (source === 'public' && !this.publicSubscription) {
+    // Start subscription if enabling and not already subscribed
+    if (newValue && !this.followingSubscription) {
+      this.startFollowingSubscription();
+    }
+  }
+
+  toggleShowPublic(): void {
+    const newValue = !this.showPublic();
+    this.showPublic.set(newValue);
+
+    // Persist the setting
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setArticlesShowPublic(pubkey, newValue);
+    }
+
+    // Start subscription if enabling and not already subscribed
+    if (newValue && !this.publicSubscription) {
       this.startPublicSubscription();
     }
+  }
+
+  /**
+   * Handle feed source toggle change from UI
+   */
+  onSourceChange(source: string): void {
+    if (source === 'following') {
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    } else {
+      this.showFollowing.set(false);
+      this.showPublic.set(true);
+    }
+
+    // Persist the settings
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setArticlesShowFollowing(pubkey, this.showFollowing());
+      this.accountLocalState.setArticlesShowPublic(pubkey, this.showPublic());
+    }
+
+    // Start appropriate subscription if not already running
+    if (source === 'following' && !this.followingSubscription) {
+      this.startFollowingSubscription();
+    } else if (source === 'public' && !this.publicSubscription) {
+      this.startPublicSubscription();
+    }
+  }
+
+  /**
+   * Prevent menu from closing when clicking on toggle
+   */
+  preventMenuClose(event: MouseEvent): void {
+    event.stopPropagation();
   }
 
   openArticle(event: Event): void {
@@ -615,11 +706,17 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       this.publicSubscription = null;
     }
 
-    const source = this.feedSource();
-    if (source === 'following') {
+    // Start subscriptions based on what's enabled
+    if (this.showFollowing()) {
       this.startFollowingSubscription();
-    } else {
+    }
+    if (this.showPublic()) {
       this.startPublicSubscription();
+    }
+    
+    // If nothing is enabled, stop loading
+    if (!this.showFollowing() && !this.showPublic()) {
+      this.loading.set(false);
     }
   }
 }

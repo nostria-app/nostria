@@ -1,4 +1,34 @@
 <div class="wallet-settings">
+  <!-- Hide Wallet Amounts Settings -->
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>visibility_off</mat-icon>
+      <mat-card-title>Hide Wallet Amounts</mat-card-title>
+      <mat-card-subtitle>
+        Hide the amount of sats in your wallet for privacy.
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="hide-amounts-settings">
+        <div class="hide-amounts-toggle">
+          <mat-slide-toggle [checked]="hideWalletAmounts()" (change)="toggleHideWalletAmounts()">
+            Hide Wallet Amounts
+          </mat-slide-toggle>
+        </div>
+
+        <div class="info-section">
+          <mat-icon class="info-icon">info</mat-icon>
+          <div class="info-text">
+            <p>
+              When enabled, sat amounts in your wallet will be hidden and replaced with asterisks (****).
+              This provides privacy when viewing your wallet on shared or public screens.
+            </p>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
   <!-- Quick Zap Button Settings -->
   <mat-card appearance="outlined">
     <mat-card-header>

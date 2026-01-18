@@ -153,8 +153,8 @@
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
-    // Add padding at top so first item doesn't render behind toolbar
-    padding-top: calc(var(--toolbar-height, 64px) + 16px);
+    // Add padding at top for spacing
+    padding-top: 16px;
   }
 
   // Fixed height for virtual scrolling items only

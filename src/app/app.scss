@@ -323,8 +323,9 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  // Content flows to top - scrolls behind transparent toolbar
-  margin-top: 0;
+  // Content starts below the fixed toolbar
+  padding-top: var(--toolbar-height, 64px);
+  box-sizing: border-box;
 
   // Add margin when following sidebar is docked (this is a real sidebar, not centering compensation)
   &.following-sidebar-docked {
@@ -774,7 +775,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: 0;
+        top: var(--toolbar-height, 64px);
         left: 0;
         right: 0;
         bottom: 0;
@@ -782,7 +783,6 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
-        // Note: padding-top removed - content handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -846,7 +846,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: 0;
+        top: var(--toolbar-height, 64px);
         left: 0;
         right: 0;
         bottom: 0;
@@ -854,9 +854,6 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
-
-        // Note: padding-top removed from overlay-mode
-        // Content inside handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -1103,7 +1100,7 @@ mat-sidenav-content {
 // Panel Header Styles (Fixed headers for each panel)
 // ============================================
 // Panel headers are sticky-positioned within each panel's scroll container
-// They appear below the main toolbar and stay fixed while scrolling
+// They stay fixed while scrolling
 
 .panel-header {
   position: sticky;
@@ -1123,11 +1120,6 @@ mat-sidenav-content {
 
   // Subtle bottom border
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-
-  // For panels that need to render behind main toolbar, add top padding
-  &.below-toolbar {
-    padding-top: var(--toolbar-height, 64px);
-  }
 
   &.transparent {
     background-color: transparent;
@@ -1173,30 +1165,12 @@ mat-sidenav-content {
 
 // Left panel content
 .left-panel .panel-content {
-  // Add padding top to account for main toolbar - content scrolls behind it
-  padding-top: var(--toolbar-height, 64px);
-
-  // Special case for profile component - no top padding needed
-  // Profile has its own banner that should extend to the top
-  &:has(app-profile) {
-    padding-top: 0px;
-  }
+  // Content now starts below toolbar (mat-sidenav-content has padding-top)
+  // No additional padding needed here
 
   // Special case for notifications - uses virtual scroll that manages its own scrolling
   &:has(app-notifications) {
-    padding-top: 0px;
     overflow: hidden; // Virtual scroll handles scrolling
-  }
-
-  // Special case for components with sticky panel headers - they manage their own top spacing
-  &:has(.panel-with-sticky-header) {
-    padding-top: 0px;
-  }
-
-  // When panel has a header component, this rule may be used in the future
-  // Currently app-panel-header is not used in templates
-  &:has(app-panel-header) {
-    padding-top: var(--toolbar-height, 64px);
   }
 }
 
