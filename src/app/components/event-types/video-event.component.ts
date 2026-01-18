@@ -80,6 +80,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   // Track actual video dimensions after metadata loads (accounts for rotation)
   private videoActualDimensions = signal<{ width: number; height: number } | undefined>(undefined);
 
+  // Track video playback state for center play button (positioned on video, not container)
+  videoPaused = signal(true);
+  hasPlayedOnce = signal(false);
+
   // Short form video detection and settings
   isShortFormVideo = computed(() => {
     const event = this.event();
@@ -429,6 +433,16 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   collapseVideo(): void {
     this.isExpanded.set(false);
+    // Reset play state when collapsing so next expansion shows play button
+    this.hasPlayedOnce.set(false);
+    this.videoPaused.set(true);
+  }
+
+  /**
+   * Handle center play button click - starts video and hides the big play button
+   */
+  onCenterPlayButtonClick(): void {
+    this.togglePlayPause();
   }
 
   /**
@@ -439,6 +453,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const videoElement = event.target as HTMLVideoElement;
     if (videoElement) {
       this.videoPlayback.registerPlaying(videoElement);
+      this.videoPaused.set(false);
+      this.hasPlayedOnce.set(true);
     }
   }
 
@@ -449,6 +465,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const videoElement = event.target as HTMLVideoElement;
     if (videoElement) {
       this.videoPlayback.unregisterPlaying(videoElement);
+      this.videoPaused.set(true);
     }
   }
 
