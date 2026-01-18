@@ -28,11 +28,13 @@ nav {
   right: 0;
   bottom: 0;
 
-  // CSS variable for toolbar height
+  // CSS variable for toolbar height (expanded and collapsed states)
   --toolbar-height: 64px;
+  --toolbar-height-collapsed: 40px;
+  --toolbar-transition-duration: 0.3s;
 }
 
-// Glass toolbar styles - transparent container
+// Glass toolbar styles - full-width dynamic toolbar
 .app-toolbar {
   position: fixed !important;
   top: 0;
@@ -43,20 +45,79 @@ nav {
   padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
 
-  // Transparent background - no glass effect on the toolbar itself
-  background: transparent !important;
-  box-shadow: none;
-  border: none;
+  // Glass effect background for the entire toolbar
+  background-color: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-  // Allow clicks to pass through transparent areas
-  pointer-events: none;
+  // Enable pointer events on toolbar
+  pointer-events: auto;
 
-  // Reduce padding on smaller screens to match feeds selection menu
+  // Smooth transition for collapse/expand
+  transition: 
+    height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    transform var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Reduce padding on smaller screens
   @media (max-width: 1023px) {
     padding: 8px 8px;
+    gap: 8px;
   }
+
+  // Collapsed state - smaller height, elements shrink
+  &.toolbar-collapsed {
+    height: var(--toolbar-height-collapsed);
+    padding: 4px 16px;
+
+    @media (max-width: 1023px) {
+      padding: 4px 8px;
+    }
+
+    .toolbar-section {
+      height: 32px;
+      
+      .menu-profile-avatar {
+        width: 24px;
+        height: 24px;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .toolbar-center .search-container {
+      height: 32px;
+
+      .search-input {
+        font-size: 13px;
+      }
+
+      .search-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  // Expanded state - full height
+  &.toolbar-expanded {
+    height: var(--toolbar-height);
+  }
+}
+
+// Dark mode toolbar
+:host-context(.dark) .app-toolbar {
+  background-color: rgba(24, 17, 27, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 // Glass section mixin for toolbar sections
@@ -70,47 +131,114 @@ nav {
   // Re-enable pointer events on glass sections
   pointer-events: auto;
 
-  // Glass effect
-  background-color: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
+  // Subtle background for sections within the glass toolbar
+  background-color: rgba(0, 0, 0, 0.04);
 
-  box-shadow:
-    // Inner white highlight
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    // Inner glow
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-    // Drop shadows
-    0px 2px 8px rgba(17, 17, 26, 0.08),
-    0px 4px 16px rgba(17, 17, 26, 0.06);
+  // Smooth transition for collapse animation
+  transition: 
+    height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @mixin glass-section-dark {
-  background-color: rgba(0, 0, 0, 0.4);
-
-  box-shadow:
-    // Inner highlight (subtler in dark mode)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    // Inner glow
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-    // Drop shadows
-    0px 2px 8px rgba(0, 0, 0, 0.3),
-    0px 4px 16px rgba(0, 0, 0, 0.25);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
-// Toolbar sections with glass effect
+// Toolbar sections
 .toolbar-section {
   @include glass-section;
 }
 
-// Dark mode for toolbar sections - use :host-context since .dark is on html element
+// Dark mode for toolbar sections
 :host-context(.dark) .toolbar-section {
   @include glass-section-dark;
 }
 
-// Left section - hamburger, navigation, breadcrumbs
+// Left section - hamburger/avatar and app icon
 .toolbar-left {
   flex-shrink: 0;
+  gap: 4px;
+}
+
+// Center section - always-visible search
+.toolbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  min-width: 0;
+
+  // On mobile, allow search to take more space
+  @media (max-width: 599px) {
+    max-width: none;
+  }
+
+  .search-container {
+    flex: 1;
+    max-width: 100%;
+    height: 48px;
+    padding: 0 12px;
+    gap: 8px;
+    position: relative;
+
+    // Smooth transition for collapse animation
+    transition: 
+      height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
+      padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+
+    .search-icon {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      transition: font-size var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface);
+      outline: none;
+      min-width: 0;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
+      }
+
+      // Hide default search clear button
+      &::-webkit-search-cancel-button {
+        display: none;
+      }
+    }
+
+    // Search action buttons (voice, qr, close) - shown when search is active
+    .search-action-button {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    // When search is active, show additional action buttons
+    &.search-active {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+  }
+}
+
+:host-context(.dark) .toolbar-center .search-container {
+  &.search-active {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+// Right section - action buttons and notifications
+.toolbar-right {
+  flex-shrink: 0;
+  gap: 4px;
 }
 
 // Breadcrumb navigation styles
@@ -206,22 +334,12 @@ nav {
   }
 }
 
-// Right section - action buttons, profile
-.toolbar-right {
-  flex-shrink: 0;
-}
+// Right section (already defined in toolbar-right above)
 
-// Search container also gets glass styling
-.search-container.toolbar-section {
-  flex: 1;
-  max-width: 600px;
-  position: relative;
-}
-
-// Dark mode - transparent toolbar maintained
+// Dark mode - glass toolbar background maintained
 :host-context(.dark) .app-toolbar {
-  background: transparent !important;
-  box-shadow: none;
+  background-color: rgba(24, 17, 27, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .premium-label {
@@ -1568,93 +1686,8 @@ mat-sidenav-content {
   object-fit: cover;
 }
 
-.search-container {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-
-  // Hidden state for iOS Safari focus compatibility
-  // We keep the element in DOM but visually hidden so focus works
-  &.search-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-    pointer-events: none;
-  }
-
-  // When used in toolbar with glass effect
-  &.toolbar-section {
-    padding: 0 4px 0 12px;
-
-    .search-input {
-      border: none;
-      background: transparent;
-      box-shadow: none;
-
-      &:focus {
-        outline: none;
-        border: none;
-        box-shadow: none;
-      }
-    }
-  }
-}
-
-.search-input {
-  width: 100%;
-  padding: 9px 138px 9px 13px; // Increased padding for 3 action buttons
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 24px;
-  background: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface);
-  font-size: 16px; // Must be 16px or larger to prevent iOS Safari zoom on focus
-  height: 40px; // Slightly taller than original
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: var(--mat-sys-primary);
-    box-shadow: 0 0 0 2px rgba(var(--mat-sys-primary-rgb), 0.1);
-  }
-
-  &::placeholder {
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.search-action-button {
-  position: absolute;
-  right: 4px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  min-width: 40px;
-
-  .mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &.voice-search-button {
-    right: 88px;
-  }
-
-  &.qr-button {
-    right: 48px;
-  }
-
-  &.close-button {
-    right: 4px;
-  }
-}
+// Legacy search styles removed - search is now in .toolbar-center
+// See lines ~164-236 for new toolbar search styles
 
 /* Floating offline indicator styles */
 .floating-offline-indicator {

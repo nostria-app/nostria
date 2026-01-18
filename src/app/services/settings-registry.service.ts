@@ -166,6 +166,18 @@ export class SettingsRegistryService {
       priority: 6,
     },
     {
+      id: 'menu-customization',
+      title: $localize`:@@settings.menu.title:Menu Customization`,
+      description: $localize`:@@settings.menu.description:Drag items to reorder. Move items between lists to show or hide them.`,
+      keywords: ['menu', 'customize', 'sidebar', 'navigation', 'order', 'reorder', 'drag', 'drop', 'hide', 'show'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'menu',
+      route: '/settings/general',
+      priority: 7,
+      popular: true,
+    },
+    {
       id: 'event-expiration',
       title: $localize`:@@settings.event-expiration.title:Global Event Expiration`,
       description: $localize`:@@settings.event-expiration.description:When enabled, all events you create will include an expiration tag (NIP-40)`,
