@@ -53,6 +53,9 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   quickZapEnabled = signal(false);
   quickZapAmount = signal(21);
 
+  // Hide wallet amounts setting
+  hideWalletAmounts = signal(false);
+
   constructor() {
     this.loadSettings();
   }
@@ -79,6 +82,9 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
     // Load quick zap button settings
     this.quickZapEnabled.set(currentSettings.quickZapEnabled ?? false);
     this.quickZapAmount.set(currentSettings.quickZapAmount ?? 21);
+
+    // Load hide wallet amounts setting
+    this.hideWalletAmounts.set(currentSettings.hideWalletAmounts ?? false);
 
     // Load zap amounts for legacy menu
     const enabledAmounts = currentSettings.zapQuickAmounts || [];
@@ -133,6 +139,26 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
       });
     } catch (error) {
       console.error('Failed to save quick zap amount:', error);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async toggleHideWalletAmounts(): Promise<void> {
+    const newValue = !this.hideWalletAmounts();
+    this.hideWalletAmounts.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        hideWalletAmounts: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Wallet amounts hidden' : 'Wallet amounts visible',
+        'Dismiss',
+        { duration: 2000 }
+      );
+    } catch (error) {
+      console.error('Failed to save hide wallet amounts setting:', error);
+      this.hideWalletAmounts.set(!newValue); // Revert
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
   }

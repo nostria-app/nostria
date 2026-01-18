@@ -68,6 +68,72 @@
   font-size: 0.75rem;
 }
 
+// Filter menu styles
+::ng-deep .filter-menu {
+  min-width: 280px;
+  
+  .filter-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    color: var(--mat-sys-on-surface);
+    
+    span {
+      font-size: 0.875rem;
+    }
+  }
+  
+  .filter-section {
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    
+    mat-slide-toggle {
+      width: 100%;
+    }
+    
+    .toggle-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding-left: 0.5rem;
+      
+      mat-icon {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 1.25rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+      }
+      
+      .toggle-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        
+        .toggle-label {
+          color: var(--mat-sys-on-surface);
+          font-size: 0.875rem;
+        }
+        
+        .toggle-description {
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 0.75rem;
+        }
+        
+        .toggle-count {
+          display: inline-block;
+          margin-left: 0;
+          margin-top: 0.25rem;
+        }
+      }
+    }
+  }
+}
+
 .articles-content {
   padding: 1rem 0;
 }

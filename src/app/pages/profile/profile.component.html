@@ -4,9 +4,17 @@
   </button>
   <h2 class="panel-title title-font">{{ profileDisplayName() }}</h2>
   <span class="panel-header-spacer"></span>
-  <button mat-icon-button (click)="openViewOptionsDialog()" matTooltip="Display options">
+  <button mat-icon-button [matMenuTriggerFor]="viewOptionsMenu" matTooltip="Display options">
     <mat-icon>tune</mat-icon>
   </button>
+  
+  <mat-menu #viewOptionsMenu="matMenu" class="view-options-menu" [overlapTrigger]="false">
+    <div class="view-options-header" (click)="preventMenuClose($event)">
+      <span>Display Options</span>
+    </div>
+    <mat-divider></mat-divider>
+    <app-profile-view-options-inline (click)="preventMenuClose($event)"></app-profile-view-options-inline>
+  </mat-menu>
 </div>
 
 <div class="profile-page">

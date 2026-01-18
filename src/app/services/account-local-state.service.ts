@@ -36,10 +36,21 @@ interface AccountLocalState {
   dismissedCredentialsBackupDialog?: boolean;
   articlesActiveTab?: number;
   /**
+   * @deprecated Use articlesShowFollowing and articlesShowPublic instead
    * Feed source preference for articles discover page (following or public).
    * Defaults to 'following' to show articles from people the user follows.
    */
   articlesDiscoverFeedSource?: 'following' | 'public'; // Feed source for articles discover page
+  /**
+   * Whether to show articles from people the user follows.
+   * Defaults to true.
+   */
+  articlesShowFollowing?: boolean;
+  /**
+   * Whether to show articles from the public feed (people not followed).
+   * Defaults to false.
+   */
+  articlesShowPublic?: boolean;
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];
   translationSourceLang?: string;
@@ -465,9 +476,42 @@ export class AccountLocalStateService {
 
   /**
    * Set articles discover feed source for an account
+   * @deprecated Use setArticlesShowFollowing and setArticlesShowPublic instead
    */
   setArticlesDiscoverFeedSource(pubkey: string, feedSource: 'following' | 'public'): void {
     this.updateAccountState(pubkey, { articlesDiscoverFeedSource: feedSource });
+  }
+
+  /**
+   * Get whether to show articles from following for an account
+   */
+  getArticlesShowFollowing(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    // Default to true if not set, for backward compatibility with old 'following' default
+    return state.articlesShowFollowing ?? true;
+  }
+
+  /**
+   * Set whether to show articles from following for an account
+   */
+  setArticlesShowFollowing(pubkey: string, show: boolean): void {
+    this.updateAccountState(pubkey, { articlesShowFollowing: show });
+  }
+
+  /**
+   * Get whether to show public articles for an account
+   */
+  getArticlesShowPublic(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    // Default to false for backward compatibility
+    return state.articlesShowPublic ?? false;
+  }
+
+  /**
+   * Set whether to show public articles for an account
+   */
+  setArticlesShowPublic(pubkey: string, show: boolean): void {
+    this.updateAccountState(pubkey, { articlesShowPublic: show });
   }
 
   /**

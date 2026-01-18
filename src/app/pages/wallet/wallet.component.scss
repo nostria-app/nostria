@@ -1,47 +1,140 @@
 .wallet-page {
-  padding: 16px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-h1 {
-  margin-bottom: 24px;
-  color: var(--mat-card-title-text-color);
+// Toolbar styles
+.wallet-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  flex-wrap: wrap;
+
+  .toolbar-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      color: var(--mat-sys-primary);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .toolbar-balance {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--mat-sys-primary-container);
+    border-radius: 20px;
+
+    .balance-value {
+      font-size: 20px;
+      color: var(--mat-sys-on-primary-container);
+    }
+
+    .balance-label {
+      font-size: 12px;
+      color: var(--mat-sys-on-primary-container);
+      opacity: 0.8;
+    }
+  }
+
+  .toolbar-spacer {
+    flex: 1;
+  }
+
+  .add-wallet-btn {
+    flex-shrink: 0;
+  }
 }
 
-h2 {
-  margin: 24px 0 16px;
-  color: var(--mat-card-title-text-color);
+// Tabs styles
+.wallet-tabs {
+  ::ng-deep {
+    .mat-mdc-tab-labels {
+      padding: 0 16px;
+    }
+
+    .mat-mdc-tab {
+      min-width: 100px;
+
+      .mdc-tab__content {
+        gap: 8px;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
 }
 
-.full-width {
-  width: 100%;
+.tab-content {
+  padding: 16px;
 }
 
-.large-icon {
-  font-size: 48px;
-}
-
-.empty-list {
+// Empty state styles
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 2rem;
+  justify-content: center;
+  padding: 48px 24px;
   text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: var(--mat-sys-outline);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    max-width: 300px;
+  }
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
 }
 
-.wallet-form {
+// Loading state
+.loading-state {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
   gap: 16px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
+// Wallet card styles
 .wallet-card {
   margin-bottom: 16px;
   border-left: 4px solid var(--mat-sys-primary);
@@ -127,13 +220,12 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
 
   strong {
-    color: var(--mat-card-title-text-color);
-    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   app-user-profile {
@@ -173,8 +265,10 @@ h2 {
 .developers-section {
   h4 {
     margin: 0 0 12px 0;
-    color: var(--mat-card-title-text-color);
-    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 }
 
@@ -187,8 +281,10 @@ h2 {
 .wallet-selection {
   h4 {
     margin: 0 0 12px 0;
-    color: var(--mat-card-title-text-color);
-    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 }
 
@@ -200,8 +296,10 @@ h2 {
 .donation-amounts {
   h4 {
     margin: 0 0 12px 0;
-    color: var(--mat-card-title-text-color);
-    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 }
 
@@ -263,50 +361,7 @@ h2 {
   }
 }
 
-// Transactions Section
-.transactions-section {
-  margin-top: 16px;
-}
-
-.transactions-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  margin: -4px -12px 0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: var(--mat-sys-surface-container);
-  }
-
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-    color: var(--mat-card-title-text-color);
-    font-size: 14px;
-
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      color: var(--mat-sys-primary);
-    }
-  }
-
-  .expand-icon {
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.transactions-content {
-  margin-top: 12px;
-}
-
+// Transactions List (for Transactions tab)
 .transactions-list {
   display: flex;
   flex-direction: column;
@@ -317,9 +372,9 @@ h2 {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 12px 16px;
   background-color: var(--mat-sys-surface-container);
-  border-radius: 8px;
+  border-radius: 12px;
   transition: background-color 0.2s ease;
 
   &:hover {
@@ -331,10 +386,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: var(--mat-sys-surface-container-high);
+  flex-shrink: 0;
 
   mat-icon {
     font-size: 20px;
@@ -343,7 +399,7 @@ h2 {
   }
 
   .tx-incoming & {
-    background-color: rgba(76, 175, 80, 0.1);
+    background-color: rgba(76, 175, 80, 0.15);
 
     mat-icon {
       color: var(--mat-success-color);
@@ -351,7 +407,7 @@ h2 {
   }
 
   .tx-outgoing & {
-    background-color: rgba(244, 67, 54, 0.1);
+    background-color: rgba(244, 67, 54, 0.15);
 
     mat-icon {
       color: var(--mat-sys-error);
@@ -363,7 +419,7 @@ h2 {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -375,14 +431,30 @@ h2 {
   text-overflow: ellipsis;
 }
 
-.tx-date {
+.tx-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.tx-wallet {
+  color: var(--mat-sys-primary);
+}
+
+.tx-separator {
+  opacity: 0.5;
+}
+
+.tx-date {
   color: var(--mat-sys-on-surface-variant);
 }
 
 .tx-amount {
   font-size: 14px;
   white-space: nowrap;
+  flex-shrink: 0;
 
   &.tx-incoming {
     color: var(--mat-success-color);
@@ -393,53 +465,79 @@ h2 {
   }
 }
 
-.no-transactions {
-  padding: 16px;
+// Zaps redirect section
+.zaps-redirect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
   text-align: center;
-  color: var(--mat-sys-on-surface-variant);
-  font-style: italic;
-}
 
-.loading-transactions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  color: var(--mat-sys-on-surface-variant);
-}
-
-// Zap History Link
-.zap-history-link {
-  margin-top: 16px;
-}
-
-.zap-history-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-
-  .history-icon {
-    font-size: 32px;
-    width: 32px;
-    height: 32px;
+  .zaps-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
     color: var(--mat-sys-primary);
+    margin-bottom: 16px;
   }
 
-  .history-text {
-    flex: 1;
-    min-width: 200px;
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
 
-    h3 {
-      margin: 0 0 4px 0;
-      font-size: 16px;
-      color: var(--mat-card-title-text-color);
+  p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    max-width: 300px;
+  }
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+// Mobile responsive adjustments
+@media (max-width: 600px) {
+  .wallet-toolbar {
+    .toolbar-title {
+      h1 {
+        font-size: 20px;
+      }
     }
 
-    p {
-      margin: 0;
-      font-size: 14px;
-      color: var(--mat-sys-on-surface-variant);
+    .toolbar-balance {
+      .balance-value {
+        font-size: 16px;
+      }
     }
+
+    .add-wallet-btn {
+      // Shrink to icon-only on mobile
+      ::ng-deep {
+        .mat-mdc-extended-fab > .mat-icon {
+          margin-right: 0;
+        }
+
+        .mdc-fab__label {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .wallet-card mat-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wallet-balance-header {
+    margin-left: 0;
+    margin-top: 8px;
   }
 }

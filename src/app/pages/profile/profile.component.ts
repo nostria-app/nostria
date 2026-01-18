@@ -56,6 +56,7 @@ import { Metrics } from '../../services/metrics';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { ReportingService } from '../../services/reporting.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { ProfileViewOptionsInlineComponent } from './profile-view-options/profile-view-options-inline.component';
 
 @Component({
   selector: 'app-profile',
@@ -79,6 +80,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
     FormsModule,
     MatFormFieldModule,
     ProfileHeaderComponent,
+    ProfileViewOptionsInlineComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -425,14 +427,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Open the view options dialog
+   * Prevent menu from closing when clicking on toggle
    */
-  async openViewOptionsDialog(): Promise<void> {
-    const { ProfileViewOptionsComponent } = await import('./profile-view-options/profile-view-options.component');
-    this.customDialog.open(ProfileViewOptionsComponent, {
-      title: 'Display Options',
-      width: '340px'
-    });
+  preventMenuClose(event: MouseEvent): void {
+    event.stopPropagation();
   }
 
   ngOnDestroy(): void {
