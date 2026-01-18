@@ -38,6 +38,10 @@ export class ProfileStateService {
       : currentPubkey;
   });
 
+  // Signal to track which panel the profile is rendered in
+  // Set by the profile component based on route outlet
+  isInRightPanel = signal<boolean>(false);
+
   // Signal to force reload even with same pubkey
   private reloadTrigger = signal<number>(0);
 

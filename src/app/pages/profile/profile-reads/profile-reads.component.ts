@@ -90,11 +90,20 @@ export class ProfileReadsComponent implements OnChanges {
     this.loadReads();
 
     // Set up continuous scrolling effect
+    // Dynamically uses the correct panel's scroll signal based on where profile is rendered
     effect(() => {
+      const isInRightPanel = this.profileState.isInRightPanel();
+      const isAtBottom = isInRightPanel 
+        ? this.layoutService.rightPanelScrolledToBottom() 
+        : this.layoutService.leftPanelScrolledToBottom();
+      const isReady = isInRightPanel 
+        ? this.layoutService.rightPanelScrollReady() 
+        : this.layoutService.leftPanelScrollReady();
+      
       // Only proceed if scroll monitoring is ready and user has scrolled to bottom
       if (
-        this.layoutService.scrollMonitoringReady() &&
-        this.layoutService.scrolledToBottom() &&
+        isReady &&
+        isAtBottom &&
         !this.profileState.isLoadingMoreArticles() &&
         this.profileState.hasMoreArticles()
       ) {
