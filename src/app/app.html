@@ -39,8 +39,8 @@
       </button>
       <app-navigation></app-navigation>
 
-      <!-- Breadcrumb navigation for left panel content - always shows when breadcrumbs exist -->
-      @if (panelActions.breadcrumbs().length > 0) {
+      <!-- Breadcrumb navigation for left panel content - hide on mobile when right panel is active -->
+      @if (panelActions.breadcrumbs().length > 0 && !showRightPanelInMainToolbar()) {
       <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         @for (crumb of panelActions.breadcrumbs(); track $index; let last = $last) {
         @if (!last && crumb.action) {
@@ -60,7 +60,7 @@
       </span>
       }
 
-      <!-- Left panel actions (next to breadcrumbs/title) -->
+      <!-- Left panel actions (next to breadcrumbs/title) - hide on mobile when right panel is active -->
       @if (panelActions.leftPanelActions().length > 0 && !showRightPanelInMainToolbar()) {
       <!-- Collapsed menu for small screens -->
       <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsCollapsedMenu" matTooltip="Actions"
