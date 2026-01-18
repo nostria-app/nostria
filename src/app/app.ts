@@ -1834,18 +1834,18 @@ export class App implements OnInit {
 
   /**
    * Handle scroll events on the left panel
-   * Currently unused but kept for future scroll-based features
+   * Updates LayoutService scroll signals for infinite scroll and other features
    */
-  onLeftPanelScroll(_event: Event): void {
-    // Scroll tracking removed - floating toolbars have been consolidated into main toolbar
+  onLeftPanelScroll(event: Event): void {
+    this.layout.handleLeftPanelScroll(event);
   }
 
   /**
    * Handle scroll events on the right panel
-   * Currently unused but kept for future scroll-based features
+   * Updates LayoutService scroll signals for infinite scroll and other features
    */
-  onRightPanelScroll(_event: Event): void {
-    // Scroll tracking removed - floating toolbars have been consolidated into main toolbar
+  onRightPanelScroll(event: Event): void {
+    this.layout.handleRightPanelScroll(event);
   }
 
   exitFullscreen(): void {

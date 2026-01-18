@@ -64,6 +64,12 @@ export class ProfileStateService {
   // Timeline filter options
   timelineFilter = signal<TimelineFilterOptions>({ ...DEFAULT_TIMELINE_FILTER });
 
+  // Display limit for virtualized rendering - only render this many items initially
+  // This prevents browser sluggishness when many events are loaded
+  private readonly INITIAL_DISPLAY_LIMIT = 10;
+  private readonly DISPLAY_INCREMENT = 10;
+  displayLimit = signal<number>(this.INITIAL_DISPLAY_LIMIT);
+
   constructor() {
     effect(async () => {
       const pubkey = this.pubkey();
@@ -131,6 +137,8 @@ export class ProfileStateService {
     this.hasMoreNotes.set(true);
     this.hasMoreArticles.set(true);
     this.hasMoreMedia.set(true);
+    // Reset display limit to initial value for new profile
+    this.displayLimit.set(this.INITIAL_DISPLAY_LIMIT);
   }
 
   // Computed signals for sorted data
@@ -185,6 +193,19 @@ export class ProfileStateService {
     return items.sort((a, b) => b.event.created_at - a.event.created_at);
   });
 
+  // Displayed timeline - only shows items up to displayLimit for performance
+  // This prevents browser sluggishness when many events are loaded into memory
+  displayedTimeline = computed(() => {
+    const timeline = this.sortedTimeline();
+    const limit = this.displayLimit();
+    return timeline.slice(0, limit);
+  });
+
+  // Check if there are more items to display (beyond current displayLimit)
+  hasMoreToDisplay = computed(() => {
+    return this.sortedTimeline().length > this.displayLimit();
+  });
+
   sortedReplies = computed(() =>
     [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
@@ -200,6 +221,8 @@ export class ProfileStateService {
   // Update timeline filter options
   updateTimelineFilter(filter: Partial<TimelineFilterOptions>): void {
     this.timelineFilter.update(current => ({ ...current, ...filter }));
+    // Reset display limit when filter changes
+    this.displayLimit.set(this.INITIAL_DISPLAY_LIMIT);
 
     // Reload data with new filter to ensure we have the content for enabled filters
     const pubkey = this.pubkey();
@@ -211,6 +234,70 @@ export class ProfileStateService {
   // Reset timeline filter to defaults
   resetTimelineFilter(): void {
     this.timelineFilter.set({ ...DEFAULT_TIMELINE_FILTER });
+    this.displayLimit.set(this.INITIAL_DISPLAY_LIMIT);
+  }
+
+  /**
+   * Increase the display limit to show more items in the timeline.
+   * Call this when user scrolls near the bottom of the visible content.
+   * Returns true if limit was increased, false if already at max.
+   */
+  increaseDisplayLimit(): boolean {
+    const currentLimit = this.displayLimit();
+    const totalItems = this.sortedTimeline().length;
+
+    // If we're already showing all items, no need to increase
+    if (currentLimit >= totalItems) {
+      return false;
+    }
+
+    // Increase the limit
+    this.displayLimit.update(limit => limit + this.DISPLAY_INCREMENT);
+    this.logger.debug(`Increased display limit to ${this.displayLimit()}, total items: ${totalItems}`);
+    return true;
+  }
+
+  /**
+   * Check if we need to load more events from relays.
+   * This is needed when the display limit approaches the total loaded items
+   * and there might be more events available from relays.
+   * 
+   * Special handling for filtered views (e.g., "notes only"):
+   * When user has filtered to show only original posts (not replies),
+   * we may need to fetch more events because many events in the relay
+   * could be replies that don't match the filter.
+   */
+  shouldLoadMoreFromRelay(): boolean {
+    const displayLimit = this.displayLimit();
+    const totalFiltered = this.sortedTimeline().length;
+    const hasMore = this.hasMoreNotes();
+
+    // Calculate buffer based on filter settings
+    // If filtering heavily (e.g., notes only), use a larger buffer
+    const filter = this.timelineFilter();
+    const isHeavilyFiltered = filter.showNotes && !filter.showReplies && !filter.showReposts;
+    const buffer = isHeavilyFiltered ? 10 : 5;
+
+    // Load more when we're within buffer items of the end and there might be more
+    return hasMore && (displayLimit + buffer >= totalFiltered);
+  }
+
+  /**
+   * Check if the filtered timeline has too few items and we should load more.
+   * This handles the case where user has a restrictive filter (e.g., "notes only")
+   * but most loaded events are replies.
+   * 
+   * @returns true if we should auto-load more events
+   */
+  hasInsufficientFilteredContent(): boolean {
+    const displayLimit = this.displayLimit();
+    const filteredCount = this.sortedTimeline().length;
+    const hasMore = this.hasMoreNotes();
+    const isLoading = this.isLoadingMoreNotes();
+
+    // If we don't have enough filtered content to fill the display limit
+    // and there might be more events available, we should load more
+    return hasMore && !isLoading && filteredCount < displayLimit;
   }
 
   /**

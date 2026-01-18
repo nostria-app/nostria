@@ -43,9 +43,7 @@ export class ProfileNotesComponent {
   pinnedNotes = signal<NostrRecord[]>([]);
   isLoadingPinned = signal<boolean>(false);
 
-  // Track the previous scrolledToBottom state to detect transitions
-  private wasScrolledToBottom = false;
-  // Cooldown to prevent rapid-fire loading
+  // Cooldown to prevent rapid-fire relay loading
   private lastLoadTime = 0;
   private readonly LOAD_COOLDOWN_MS = 1000;
 
@@ -84,7 +82,7 @@ export class ProfileNotesComponent {
     // Effect to load initial notes if none are present and profile is loaded
     effect(() => {
       const currentPubkey = this.profileState.pubkey();
-      const currentNotes = this.profileState.sortedTimeline();
+      const currentNotes = this.profileState.displayedTimeline();
 
       // If we have a pubkey but no notes, and we're not already loading, load some notes
       if (currentPubkey && currentNotes.length === 0 && !this.profileState.isLoadingMoreNotes()) {
@@ -93,47 +91,72 @@ export class ProfileNotesComponent {
       }
     });
 
-    // Effect to handle scroll events from layout service when user scrolls to bottom
-    // Only reacts to scrolledToBottom signal changes, checks other conditions imperatively
+    // Effect to auto-load more content when filtered view has insufficient items
+    // This handles the case where user filters to "notes only" but most cached events are replies
     effect(() => {
-      const isAtBottom = this.layout.scrolledToBottom();
-      const isReady = this.layout.scrollMonitoringReady();
+      const hasInsufficientContent = this.profileState.hasInsufficientFilteredContent();
+      const isLoading = this.profileState.isLoadingMoreNotes();
+      const isInitiallyLoading = this.profileState.isInitiallyLoading();
 
-      // Detect transition from not-at-bottom to at-bottom
-      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
+      // Only auto-load if we have insufficient filtered content and not already loading
+      if (hasInsufficientContent && !isLoading && !isInitiallyLoading) {
+        this.logger.debug('Insufficient filtered content, auto-loading more events...');
+        this.loadMoreNotes();
+      }
+    });
 
-      // Update the previous state BEFORE any async operations
-      this.wasScrolledToBottom = isAtBottom;
+    // Effect to handle scroll events from layout service when user scrolls to bottom
+    // Continuously loads more content while user is at bottom for smooth infinite scroll
+    // Uses leftPanelScrolledToBottom since profile pages render in the left panel
+    effect(() => {
+      const isAtBottom = this.layout.leftPanelScrolledToBottom();
+      const isReady = this.layout.leftPanelScrollReady();
 
-      // Only proceed if we just scrolled to bottom
-      if (!justScrolledToBottom) {
+      // Only proceed if we're at the bottom and scroll monitoring is ready
+      if (!isReady || !isAtBottom) {
         return;
       }
 
-      // Check cooldown to prevent rapid-fire loading
+      // If we have no content yet, skip (initial load will handle it)
+      if (this.profileState.displayedTimeline().length === 0) {
+        return;
+      }
+
+      // First priority: show more already-loaded items (instant, no cooldown needed)
+      if (this.profileState.hasMoreToDisplay()) {
+        this.logger.debug('Increasing display limit to show more cached items');
+        this.profileState.increaseDisplayLimit();
+
+        // After DOM updates, recheck scroll position to continue loading if still at bottom
+        setTimeout(() => this.layout.refreshLeftPanelScroll(), 50);
+
+        // Also check if we should preload more from relays (with cooldown)
+        const now = Date.now();
+        if (this.profileState.shouldLoadMoreFromRelay() && 
+            !this.profileState.isLoadingMoreNotes() &&
+            now - this.lastLoadTime >= this.LOAD_COOLDOWN_MS) {
+          this.logger.debug('Preloading more items from relays');
+          this.lastLoadTime = now;
+          this.loadMoreNotes();
+        }
+        return;
+      }
+
+      // No more cached items - need to load from relays (with cooldown)
       const now = Date.now();
       if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
-        this.logger.debug('Load cooldown active, skipping');
         return;
       }
 
-      // Check other conditions imperatively (not as signal dependencies)
       if (this.profileState.isLoadingMoreNotes()) {
-        this.logger.debug('Already loading more notes, skipping');
         return;
       }
 
       if (!this.profileState.hasMoreNotes()) {
-        this.logger.debug('No more notes available, skipping');
         return;
       }
 
-      if (this.profileState.sortedTimeline().length === 0) {
-        this.logger.debug('No timeline content yet, skipping');
-        return;
-      }
-
-      this.logger.debug('Scrolled to bottom (transition detected), loading more timeline content...');
+      this.logger.debug('Loading more timeline content from relays...');
       this.lastLoadTime = now;
       this.loadMoreNotes();
     });

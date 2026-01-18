@@ -1,7 +1,7 @@
 <div class="tab-content">
   <div class="notes-container">
     <div class="notes-list-container">
-      @if (profileState.isInitiallyLoading() && profileState.sortedTimeline().length === 0) {
+      @if (profileState.isInitiallyLoading() && profileState.displayedTimeline().length === 0) {
       <div class="loading-state">
         <mat-spinner [diameter]="40"></mat-spinner>
         <p>Loading timeline...</p>
@@ -30,7 +30,7 @@
       </div>
       }
 
-      @if (profileState.sortedTimeline().length === 0) {
+      @if (profileState.displayedTimeline().length === 0) {
       <div class="empty-state">
         <mat-icon>timeline</mat-icon>
         <p>No timeline content to display yet</p>
@@ -38,7 +38,7 @@
       } @else {
 
       <div class="notes-list">
-        @for (item of profileState.sortedTimeline(); track item.event.id || $index) {
+        @for (item of profileState.displayedTimeline(); track item.event.id || $index) {
         <app-event [event]="item.event" appearance="plain"></app-event>
         }
 
@@ -51,7 +51,7 @@
         }
 
         <!-- No more notes indicator -->
-        @if (!profileState.hasMoreNotes() && profileState.sortedTimeline().length > 0) {
+        @if (!profileState.hasMoreNotes() && !profileState.hasMoreToDisplay() && profileState.displayedTimeline().length > 0) {
         <div class="no-more-indicator">
           <mat-icon>inbox</mat-icon>
           <p>You've reached the end</p>
