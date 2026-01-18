@@ -28,13 +28,11 @@ nav {
   right: 0;
   bottom: 0;
 
-  // CSS variable for toolbar height (expanded and collapsed states)
+  // CSS variable for toolbar height
   --toolbar-height: 64px;
-  --toolbar-height-collapsed: 40px;
-  --toolbar-transition-duration: 0.3s;
 }
 
-// Glass toolbar styles - full-width dynamic toolbar
+// Glass toolbar styles - full-width toolbar
 .app-toolbar {
   position: fixed !important;
   top: 0;
@@ -57,60 +55,10 @@ nav {
   // Enable pointer events on toolbar
   pointer-events: auto;
 
-  // Smooth transition for collapse/expand
-  transition: 
-    height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
-    padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
-    transform var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
-
   // Reduce padding on smaller screens
   @media (max-width: 1023px) {
     padding: 8px 8px;
     gap: 8px;
-  }
-
-  // Collapsed state - smaller height, elements shrink
-  &.toolbar-collapsed {
-    height: var(--toolbar-height-collapsed);
-    padding: 4px 16px;
-
-    @media (max-width: 1023px) {
-      padding: 4px 8px;
-    }
-
-    .toolbar-section {
-      height: 32px;
-      
-      .menu-profile-avatar {
-        width: 24px;
-        height: 24px;
-      }
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .toolbar-center .search-container {
-      height: 32px;
-
-      .search-input {
-        font-size: 13px;
-      }
-
-      .search-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
-  }
-
-  // Expanded state - full height
-  &.toolbar-expanded {
-    height: var(--toolbar-height);
   }
 }
 
@@ -133,11 +81,6 @@ nav {
 
   // Subtle background for sections within the glass toolbar
   background-color: rgba(0, 0, 0, 0.04);
-
-  // Smooth transition for collapse animation
-  transition: 
-    height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
-    padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @mixin glass-section-dark {
@@ -239,6 +182,13 @@ nav {
 .toolbar-right {
   flex-shrink: 0;
   gap: 4px;
+
+  // Create button - clean and simple
+  .create-button {
+    mat-icon {
+      font-size: 24px;
+    }
+  }
 }
 
 // Breadcrumb navigation styles
@@ -610,6 +560,61 @@ mat-sidenav-content {
     &:hover {
       color: var(--mat-sys-primary);
     }
+  }
+}
+
+// Sidenav Wallet Section
+.sidenav-wallet-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--mat-sys-surface-container);
+  transition: background-color 0.2s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+    transform: translateX(2px);
+  }
+
+  &:active {
+    transform: translateX(0);
+  }
+
+  .wallet-icon {
+    color: var(--mat-sys-primary);
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .wallet-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .wallet-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .wallet-balance {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+:host-context(.dark) .sidenav-wallet-section {
+  &:hover {
+    background: var(--mat-sys-surface-container-highest);
   }
 }
 
@@ -1403,19 +1408,6 @@ mat-sidenav-content {
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
   scale: 1.1;
-}
-
-// Sidenav FAB styles - bottom position
-.sidenav-fab-container-bottom {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  margin-top: 8px;
-}
-
-.sidenav-create-fab {
-  box-shadow: var(--mat-sys-level3);
 }
 
 

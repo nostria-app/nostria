@@ -43,6 +43,7 @@ export class ProfileHomeComponent {
     { path: 'notes', label: 'Timeline', icon: 'timeline' },
     { path: 'reads', label: 'Articles', icon: 'article' },
     { path: 'media', label: 'Media', icon: 'image' },
+    { path: 'connection', label: 'Connection', icon: 'connect_without_contact' },
   ];
 
   // Get dynamic label for a nav link

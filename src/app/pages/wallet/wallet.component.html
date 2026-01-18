@@ -1,0 +1,294 @@
+<div class="wallet-page">
+  <h1 i18n="@@wallet.title">Wallet</h1>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title i18n="@@wallet.add.title">Add Wallet</mat-card-title>
+      <mat-card-subtitle i18n="@@wallet.add.subtitle">Connect your wallet using Nostr Wallet Connect</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="wallet-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@wallet.connection-string">Connection String</mat-label>
+          <input matInput [formControl]="connectionStringControl" placeholder="nostr+walletconnect://..."
+            type="text" (keydown.enter)="addWallet()" />
+          <mat-hint i18n="@@wallet.connection-string.hint">Paste your Nostr Wallet Connect connection string here</mat-hint>
+          @if (connectionStringControl.hasError('required')) {
+          <mat-error i18n="@@wallet.error.required">Connection string is required</mat-error>
+          }
+          @if (connectionStringControl.hasError('pattern')) {
+          <mat-error i18n="@@wallet.error.pattern">Invalid connection string format</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-raised-button color="primary" type="button" (click)="addWallet()"
+            [disabled]="connectionStringControl.invalid || isAddingWallet()">
+            @if (isAddingWallet()) {
+            <span i18n="@@wallet.adding">Adding...</span>
+            } @else {
+            <span i18n="@@wallet.add-button">Add Wallet</span>
+            }
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <br />
+
+  @if (wallets.hasWallets()) {
+  <h2 i18n="@@wallet.connected.title">Connected Wallets</h2>
+
+  @for (wallet of getWalletEntries(); track wallet[0]) {
+  @let walletData = getWalletData(wallet[0]);
+  <mat-card class="wallet-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>wallet</mat-icon>
+        @if (editingWallet() === wallet[0]) {
+        <mat-form-field appearance="outline" class="edit-name-field">
+          <input matInput [formControl]="editNameControl" placeholder="Wallet name"
+            (keydown.enter)="saveWalletName()" (keydown.escape)="cancelEditingWallet()" />
+        </mat-form-field>
+        } @else {
+        <span>{{ getWalletName(wallet[1]) }}</span>
+        }
+      </mat-card-title>
+      <!-- Balance shown prominently in header -->
+      <div class="wallet-balance-header">
+        @if (walletData?.loading && !walletData?.balance) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else if (walletData?.balance) {
+        <span class="balance-value">{{ formatBalanceToSats(walletData!.balance!.balance) | number }}</span>
+        <span class="balance-label" i18n="@@wallet.sats">sats</span>
+        <button mat-icon-button matTooltip="Refresh balance" i18n-matTooltip="@@wallet.refresh-balance"
+          (click)="refreshBalance(wallet[0]); $event.stopPropagation()" [disabled]="walletData?.loading"
+          class="refresh-btn">
+          @if (walletData?.loading) {
+          <mat-spinner diameter="16"></mat-spinner>
+          } @else {
+          <mat-icon>refresh</mat-icon>
+          }
+        </button>
+        } @else if (walletData?.error) {
+        <span class="balance-error" matTooltip="{{ walletData!.error }}">
+          <mat-icon>error_outline</mat-icon>
+        </span>
+        <button mat-icon-button matTooltip="Retry" i18n-matTooltip="@@wallet.retry" (click)="refreshBalance(wallet[0]); $event.stopPropagation()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        } @else {
+        <span class="balance-loading" i18n="@@wallet.loading">Loading...</span>
+        }
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="wallet-info">
+        <!-- Wallet Provider Profile -->
+        <div class="wallet-provider">
+          <strong i18n="@@wallet.provider">Provider:</strong>
+          <app-user-profile [pubkey]="wallet[0]" view="compact"></app-user-profile>
+        </div>
+      </div>
+
+      <!-- Transactions Section - Always visible with button to load/show -->
+      <div class="transactions-section">
+        <div class="transactions-header" (click)="toggleWalletDetails(wallet[0])">
+          <h4>
+            <mat-icon>receipt_long</mat-icon>
+            <span i18n="@@wallet.transaction-history">Transaction History</span>
+          </h4>
+          <mat-icon class="expand-icon">{{ expandedWallet() === wallet[0] ? 'expand_less' : 'expand_more'
+            }}</mat-icon>
+        </div>
+
+        @if (expandedWallet() === wallet[0]) {
+        <div class="transactions-content">
+          @if (walletData?.transactions && walletData!.transactions.length > 0) {
+          <div class="transactions-list">
+            @for (tx of walletData!.transactions; track tx.payment_hash) {
+            <div class="transaction-item" [class]="getTransactionClass(tx)">
+              <div class="tx-icon">
+                <mat-icon>{{ getTransactionIcon(tx) }}</mat-icon>
+              </div>
+              <div class="tx-details">
+                <span class="tx-description">{{ getTransactionDescription(tx) }}</span>
+                <span class="tx-date">{{ formatTransactionDate(tx.created_at) | date:'short' }}</span>
+              </div>
+              <div class="tx-amount" [class]="getTransactionClass(tx)">
+                {{ formatTransactionAmount(tx) }}
+              </div>
+            </div>
+            }
+          </div>
+          } @else if (walletData?.loading) {
+          <div class="loading-transactions">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span i18n="@@wallet.loading-transactions">Loading transactions...</span>
+          </div>
+          } @else {
+          <div class="no-transactions" i18n="@@wallet.no-transactions">No recent transactions</div>
+          }
+        </div>
+        }
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      @if (editingWallet() === wallet[0]) {
+      <button mat-button color="primary" (click)="saveWalletName()" [disabled]="editNameControl.invalid">
+        <mat-icon>save</mat-icon>
+        <span i18n="@@wallet.save">Save</span>
+      </button>
+      <button mat-button (click)="cancelEditingWallet()">
+        <mat-icon>cancel</mat-icon>
+        <span i18n="@@wallet.cancel">Cancel</span>
+      </button>
+      } @else {
+      <button mat-icon-button matTooltip="Edit wallet name" i18n-matTooltip="@@wallet.edit-name"
+        (click)="startEditingWallet(wallet[0], getWalletName(wallet[1]))">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Copy connection string" i18n-matTooltip="@@wallet.copy-connection"
+        (click)="copyToClipboard(getFirstConnectionString(wallet[1]), 'Connection string')">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button mat-icon-button color="warn" matTooltip="Remove wallet" i18n-matTooltip="@@wallet.remove"
+        (click)="removeWallet(wallet[0])">
+        <mat-icon>delete</mat-icon>
+      </button>
+      }
+    </mat-card-actions>
+  </mat-card>
+  }
+
+  <!-- Donation Card -->
+  <mat-card class="donation-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>volunteer_activism</mat-icon>
+        <span i18n="@@wallet.donation.title">Support Nostria Development</span>
+      </mat-card-title>
+      <mat-card-subtitle i18n="@@wallet.donation.subtitle">Help us keep building the future of Nostr</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="donation-content">
+        <!-- Developer Profiles -->
+        <div class="developers-section">
+          <h4 i18n="@@wallet.developers">Meet the Developers</h4>
+          <div class="developer-profiles">
+            @for (pubkey of developerPubkeys; track pubkey) {
+            <app-user-profile [pubkey]="pubkey" [view]="'small'" [hostWidthAuto]="true"></app-user-profile>
+            }
+          </div>
+        </div>
+
+        <!-- Wallet/Connection Selection (only if multiple connections) -->
+        @if (getAllConnections().length > 1) {
+        <div class="wallet-selection">
+          <h4 i18n="@@wallet.select-connection">Select Wallet Connection</h4>
+          <mat-form-field appearance="outline" class="wallet-select-field">
+            <mat-label i18n="@@wallet.pay-from">Pay from</mat-label>
+            <mat-select [value]="selectedConnectionString()" (selectionChange)="selectConnection($event.value)">
+              @for (conn of getAllConnections(); track conn.connectionString) {
+              <mat-option [value]="conn.connectionString">
+                {{ conn.walletName }}
+              </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        }
+
+        <!-- Donation Amount Selection -->
+        <div class="donation-amounts">
+          <h4 i18n="@@wallet.choose-amount">Choose Amount</h4>
+          <div class="amount-buttons">
+            <button mat-stroked-button [class.selected]="selectedDonationAmount() === 0.5"
+              (click)="selectDonationAmount(0.5)">
+              $0.50
+            </button>
+            <button mat-stroked-button [class.selected]="selectedDonationAmount() === 5"
+              (click)="selectDonationAmount(5)">
+              $5.00
+            </button>
+            <button mat-stroked-button
+              [class.selected]="selectedDonationAmount() === null && customDonationAmount.value"
+              (click)="selectCustomAmount()" i18n="@@wallet.custom">
+              Custom
+            </button>
+          </div>
+
+          @if (selectedDonationAmount() === null) {
+          <mat-form-field appearance="outline" class="custom-amount-field">
+            <mat-label i18n="@@wallet.custom-amount">Custom Amount (USD)</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput [formControl]="customDonationAmount" type="number" placeholder="Enter amount"
+              min="0.01" step="0.01" />
+            @if (customDonationAmount.hasError('min')) {
+            <mat-error i18n="@@wallet.min-amount-error">Minimum amount is $0.01</mat-error>
+            }
+          </mat-form-field>
+          }
+        </div>
+
+        @if (donationError()) {
+        <div class="donation-error">
+          <mat-icon>error</mat-icon>
+          <span>{{ donationError() }}</span>
+        </div>
+        }
+
+        @if (donationSuccess()) {
+        <div class="donation-success">
+          <mat-icon>check_circle</mat-icon>
+          <span i18n="@@wallet.donation.success">Thank you for your support!</span>
+        </div>
+        }
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-flat-button (click)="donateWithSelectedWallet()"
+        [disabled]="isDonating() || (!selectedDonationAmount() && !customDonationAmount.value) || (getAllConnections().length > 1 && !selectedConnectionString())">
+        @if (isDonating()) {
+        <span i18n="@@wallet.processing">Processing...</span>
+        } @else if (getDonationAmount()) {
+        <span i18n="@@wallet.donate-amount">Donate ${{ getDonationAmount()?.toFixed(2) }}</span>
+        } @else {
+        <span i18n="@@wallet.select-amount">Select Amount</span>
+        }
+      </button>
+    </mat-card-actions>
+  </mat-card>
+  <br />
+  } @else {
+  <div class="empty-list">
+    <mat-icon inline="true" class="large-icon">wallet</mat-icon>
+    <p i18n="@@wallet.empty">No wallets connected. Add your first wallet using the form above.</p>
+  </div>
+  }
+
+  <!-- Link to Zap History -->
+  <div class="zap-history-link">
+    <mat-card>
+      <mat-card-content>
+        <div class="zap-history-info">
+          <mat-icon class="history-icon">bolt</mat-icon>
+          <div class="history-text">
+            <h3 i18n="@@wallet.zap-history.title">View Zap History</h3>
+            <p i18n="@@wallet.zap-history.description">Track all your sent and received lightning payments</p>
+          </div>
+          <button mat-raised-button color="primary" routerLink="/zaps">
+            <mat-icon>visibility</mat-icon>
+            <span i18n="@@wallet.zap-history.button">View History</span>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

@@ -29,12 +29,8 @@
   </div>
   }
   @if (app.initialized()) {
-  <!-- Top toolbar - full-width, dynamically resizes on scroll -->
-  <mat-toolbar class="app-toolbar no-print no-select" 
-    [class.toolbar-collapsed]="layout.toolbarCollapsed() && !layout.toolbarHovered()"
-    [class.toolbar-expanded]="layout.toolbarExpanded()"
-    (mouseenter)="layout.setToolbarHovered(true)"
-    (mouseleave)="layout.setToolbarHovered(false)">
+  <!-- Top toolbar - full-width -->
+  <mat-toolbar class="app-toolbar no-print no-select">
     
     <!-- Left section: hamburger menu/avatar and app icon -->
     <div class="toolbar-section toolbar-left">
@@ -123,6 +119,12 @@
       </button>
       }
       @if (app.authenticated()) {
+      <!-- Create new content button -->
+      <button mat-icon-button class="create-button" (click)="openCreateMenu($event)"
+        i18n-matTooltip="@@app.create.tooltip" matTooltip="Create"
+        i18n-aria-label="@@app.create.aria" aria-label="Create new content">
+        <mat-icon>add</mat-icon>
+      </button>
       @if (appState.isPublishing() || ai.processingState().isProcessing) {
       <button mat-icon-button class="profile-cache-button" routerLink="/notifications"
         [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
@@ -234,6 +236,17 @@
         </div>
         }
 
+        <!-- Wallet Balance Section (only if user has wallets) -->
+        @if (wallets.hasWallets()) {
+        <div class="sidenav-wallet-section" routerLink="/wallet" (click)="closeSidenavOnMobile()">
+          <mat-icon class="wallet-icon">account_balance_wallet</mat-icon>
+          <div class="wallet-info">
+            <span class="wallet-label" i18n="@@app.sidenav.wallet">Wallet</span>
+            <span class="wallet-balance">{{ getTotalWalletBalance() }}</span>
+          </div>
+        </div>
+        }
+
         <!-- Quick Actions Row -->
         <div class="sidenav-profile-actions">
           @if (app.authenticated()) {
@@ -317,17 +330,6 @@
         </div>
         }
         }
-        }
-
-        <!-- Create FAB at bottom of sidenav -->
-        @if (app.authenticated()) {
-        <div class="sidenav-fab-container-bottom">
-          <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateMenu($event)"
-            i18n-aria-label="@@app.create.aria" aria-label="Create new content"
-            [matTooltip]="displayLabels() ? '' : createLabel">
-            <mat-icon>add</mat-icon>
-          </button>
-        </div>
         }
 
         <a mat-list-item (click)="toggleMenuSize()">

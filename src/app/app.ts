@@ -59,6 +59,7 @@ import { PublishQueueService } from './services/publish-queue';
 import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
 import { Wallets } from './services/wallets';
+import { NwcService } from './services/nwc.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
 import { SleepModeService } from './services/sleep-mode.service';
@@ -219,7 +220,8 @@ export class App implements OnInit {
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
   metricsTracking = inject(MetricsTrackingService);
-  private readonly wallets = inject(Wallets);
+  protected readonly wallets = inject(Wallets);
+  private readonly nwcService = inject(NwcService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly accountLocalState = inject(AccountLocalStateService);
@@ -371,6 +373,31 @@ export class App implements OnInit {
     }
 
     return null;
+  }
+
+  /**
+   * Get total wallet balance across all wallets
+   * Returns formatted string with total sats
+   */
+  getTotalWalletBalance(): string {
+    const walletEntries = Object.entries(this.wallets.wallets());
+    let totalMsats = 0;
+    let hasData = false;
+
+    for (const [pubkey] of walletEntries) {
+      const walletData = this.nwcService.getWalletData(pubkey);
+      if (walletData?.balance) {
+        totalMsats += walletData.balance.balance;
+        hasData = true;
+      }
+    }
+
+    if (!hasData) {
+      return '...';
+    }
+
+    const sats = Math.floor(totalMsats / 1000);
+    return `${sats.toLocaleString()} sats`;
   }
 
   navigationItems = computed(() => {
@@ -579,6 +606,7 @@ export class App implements OnInit {
     { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
     { path: 'stats', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
     { path: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
+    { path: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
   ];
 
   /** Default menu item IDs that show when no custom config is set */
