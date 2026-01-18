@@ -1,19 +1,36 @@
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font" i18n="@@nav.music">Music</h2>
+  <span class="panel-header-spacer"></span>
+  @if (isAuthenticated()) {
+  <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add content">
+    <mat-icon>add</mat-icon>
+  </button>
+  <button mat-icon-button (click)="openSettings()" matTooltip="Music settings">
+    <mat-icon>settings</mat-icon>
+  </button>
+  }
+  <button mat-icon-button (click)="refresh()" matTooltip="Refresh music">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
+
+<mat-menu #addMenu="matMenu">
+  <button mat-menu-item (click)="openUploadTrack()">
+    <mat-icon>upload</mat-icon>
+    <span i18n="@@music.menu.uploadTrack">Upload Track</span>
+  </button>
+  <button mat-menu-item (click)="openCreatePlaylist()">
+    <mat-icon>playlist_add</mat-icon>
+    <span i18n="@@music.menu.createPlaylist">Create Playlist</span>
+  </button>
+  <button mat-menu-item (click)="openImportFromRss()">
+    <mat-icon>rss_feed</mat-icon>
+    <span i18n="@@music.menu.importRss">Import from RSS</span>
+  </button>
+</mat-menu>
+
 <div class="music-container">
-  <!-- Add menu template for panel header -->
-  <ng-template #addMenuTemplate>
-    <button mat-menu-item (click)="openUploadTrack()">
-      <mat-icon>upload</mat-icon>
-      <span i18n="@@music.menu.uploadTrack">Upload Track</span>
-    </button>
-    <button mat-menu-item (click)="openCreatePlaylist()">
-      <mat-icon>playlist_add</mat-icon>
-      <span i18n="@@music.menu.createPlaylist">Create Playlist</span>
-    </button>
-    <button mat-menu-item (click)="openImportFromRss()">
-      <mat-icon>rss_feed</mat-icon>
-      <span i18n="@@music.menu.importRss">Import from RSS</span>
-    </button>
-  </ng-template>
 
   <!-- Search Bar (always in DOM for Safari/iOS focus support) -->
   <div class="search-bar" [class.hidden]="!showSearch()">

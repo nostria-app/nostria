@@ -1,4 +1,7 @@
-<ng-template #headerActionsTemplate>
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font">Articles</h2>
+  <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
   <mat-button-toggle-group [value]="feedSource()" (change)="onSourceChange($event.value)" class="source-toggle">
     <mat-button-toggle value="following">
@@ -17,7 +20,13 @@
     </mat-button-toggle>
   </mat-button-toggle-group>
   }
-</ng-template>
+  <button mat-icon-button (click)="refresh()" matTooltip="Refresh articles">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  <button mat-icon-button (click)="openSettings()" matTooltip="Configure article relays">
+    <mat-icon>settings</mat-icon>
+  </button>
+</div>
 
 <div class="articles-container">
   <div class="articles-content">

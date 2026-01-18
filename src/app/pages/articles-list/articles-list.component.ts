@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,7 +25,6 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 
 export interface ArticleItem {
   id: string;
@@ -63,7 +62,7 @@ export interface ArticleItem {
   styleUrl: './articles-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ArticlesListComponent implements OnDestroy {
+export class ArticlesListComponent {
   private router = inject(Router);
   private nostrService = inject(NostrService);
   private accountRelay = inject(AccountRelayService);
@@ -75,7 +74,6 @@ export class ArticlesListComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
-  private panelActions = inject(PanelActionsService);
 
   isLoading = signal(true);
   articles = signal<ArticleItem[]>([]);
@@ -128,9 +126,6 @@ export class ArticlesListComponent implements OnDestroy {
   });
 
   constructor() {
-    // Setup panel actions for toolbar
-    this.setupPanelActions();
-
     effect(() => {
       if (this.app.initialized() && this.accountState.account()) {
         const pubkey = this.accountState.account()!.pubkey;
@@ -138,33 +133,6 @@ export class ArticlesListComponent implements OnDestroy {
         this.loadArticles();
       }
     });
-  }
-
-  ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    this.panelActions.setPageTitle('Articles');
-
-    const actions = [
-      {
-        id: 'new-article',
-        icon: 'add',
-        label: 'New Article',
-        tooltip: 'Create new article',
-        action: () => this.createNewArticle(),
-      },
-      {
-        id: 'refresh',
-        icon: 'refresh',
-        label: 'Refresh',
-        tooltip: 'Refresh articles',
-        action: () => this.refreshArticles(),
-      },
-    ];
-
-    this.panelActions.setLeftPanelActions(actions);
   }
 
   async loadArticles(): Promise<void> {

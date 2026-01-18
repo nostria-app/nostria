@@ -269,7 +269,7 @@ export class FollowSetsService {
     dTag: string,
     title: string,
     pubkeys: string[],
-    isPrivate: boolean = false
+    isPrivate = false
   ): Promise<FollowSet | null> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
@@ -450,7 +450,7 @@ export class FollowSetsService {
   /**
    * Create a new follow set with a unique d-tag
    */
-  async createFollowSet(title: string, pubkeys: string[] = [], isPrivate: boolean = false): Promise<FollowSet | null> {
+  async createFollowSet(title: string, pubkeys: string[] = [], isPrivate = false): Promise<FollowSet | null> {
     // Generate a unique d-tag from the title
     const baseDTag = title
       .toLowerCase()

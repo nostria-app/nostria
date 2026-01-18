@@ -1,10 +1,11 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, effect, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -13,7 +14,6 @@ import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LayoutService } from '../../services/layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { DatabaseService } from '../../services/database.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
@@ -38,6 +38,7 @@ const BATCH_DELAY_MS = 100;
     MatIconModule,
     MatButtonToggleModule,
     MatCardModule,
+    MatTooltipModule,
     ArticleEventComponent,
     UserProfileComponent,
     AgoPipe,
@@ -45,7 +46,7 @@ const BATCH_DELAY_MS = 100;
   templateUrl: './articles.component.html',
   styleUrls: ['./articles.component.scss'],
 })
-export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -53,15 +54,12 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private layout = inject(LayoutService);
-  private panelActions = inject(PanelActionsService);
   private database = inject(DatabaseService);
   private accountRelay = inject(AccountRelayService);
   private userRelay = inject(UserRelayService);
   private userRelays = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
-
-  @ViewChild('headerActionsTemplate') headerActionsTemplate!: TemplateRef<unknown>;
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -207,38 +205,10 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnInit(): void {
-    // Actions will be set up in ngAfterViewInit when templates are available
-  }
-
-  ngAfterViewInit(): void {
-    this.setupPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    // Set the page title for the toolbar
-    this.panelActions.setPageTitle('Articles');
-
-    this.panelActions.setLeftPanelActions([
-      {
-        id: 'refresh',
-        icon: 'refresh',
-        label: 'Refresh',
-        tooltip: 'Refresh articles',
-        action: () => this.refresh(),
-      },
-      {
-        id: 'settings',
-        icon: 'settings',
-        label: 'Settings',
-        tooltip: 'Configure article relays',
-        action: () => this.openSettings(),
-      },
-    ]);
-    this.panelActions.setLeftPanelHeaderLeftContent(this.headerActionsTemplate);
+    // No panel actions setup needed - header is rendered directly in template
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
     if (this.followingSubscription) {
       this.followingSubscription.close();
     }

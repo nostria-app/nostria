@@ -1,10 +1,11 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, HostListener, OnInit, TemplateRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -20,7 +21,6 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
@@ -43,6 +43,7 @@ const SECTION_LIMIT = 12;
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatTooltipModule,
     FormsModule,
     MusicEventComponent,
     MusicPlaylistCardComponent,
@@ -70,7 +71,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private panelActions = inject(PanelActionsService);
   private searchAction = inject(SearchActionService);
   private musicData = inject(MusicDataService);
 
@@ -337,9 +337,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   private readonly RELAY_SET_KIND = 30002;
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
 
-  // Template for add menu (used in panel header)
-  @ViewChild('addMenuTemplate') addMenuTemplate!: TemplateRef<unknown>;
-
   constructor() {
     this.twoColumnLayout.setWideLeft();
     // Load collapsed state from storage
@@ -378,56 +375,8 @@ export class MusicComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Register panel header actions
-    this.setupPanelActions();
     // Register search handler to intercept global search
     this.searchAction.registerHandler(this.searchHandler);
-  }
-
-  private setupPanelActions(): void {
-    // Set breadcrumb for the toolbar - Music is the root level
-    this.panelActions.setBreadcrumbs([
-      { label: $localize`:@@nav.music:Music` }
-    ]);
-    
-    const actions = [];
-
-    if (this.isAuthenticated()) {
-      actions.push(
-        {
-          id: 'add',
-          icon: 'add',
-          label: 'Add',
-          tooltip: 'Add content',
-          action: () => { }, // Menu trigger handled by template
-          menu: true,
-        } as any,
-        {
-          id: 'settings',
-          icon: 'settings',
-          label: 'Settings',
-          tooltip: 'Music settings',
-          action: () => this.openSettings(),
-        }
-      );
-    }
-
-    actions.push({
-      id: 'refresh',
-      icon: 'refresh',
-      label: 'Refresh',
-      tooltip: 'Refresh music',
-      action: () => this.refresh(),
-    });
-
-    this.panelActions.setLeftPanelActions(actions);
-
-    // Set menu template after view init
-    setTimeout(() => {
-      if (this.addMenuTemplate) {
-        this.panelActions.setLeftPanelMenuTemplate(this.addMenuTemplate);
-      }
-    });
   }
 
   /**
@@ -558,8 +507,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
-    this.panelActions.clearLeftPanelActions();
-    this.panelActions.clearBreadcrumbs();
     // Unregister search handler
     this.searchAction.unregisterHandler(this.searchHandler);
   }

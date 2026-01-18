@@ -53,50 +53,11 @@
       </button>
       <app-navigation></app-navigation>
 
-      <!-- Breadcrumb navigation for left panel content - hide on mobile when right panel is active -->
-      @if (panelActions.breadcrumbs().length > 0 && !showRightPanelInMainToolbar()) {
-      <nav class="breadcrumb-nav" aria-label="Breadcrumb">
-        @for (crumb of panelActions.breadcrumbs(); track $index; let last = $last) {
-        @if (!last && crumb.action) {
-        <button type="button" class="breadcrumb-link title-font" (click)="crumb.action()">
-          {{ crumb.label }}
-        </button>
-        <span class="breadcrumb-separator">/</span>
-        } @else {
-        <span class="breadcrumb-current title-font">{{ crumb.label }}</span>
-        }
-        }
-      </nav>
-      } @else if (!showRightPanelInMainToolbar()) {
-      <!-- No breadcrumbs - show app title (hide on mobile when right panel is active) -->
+      <!-- App title - always show when no right panel content is active on mobile -->
+      @if (!showRightPanelInMainToolbar()) {
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
       </span>
-      }
-
-      <!-- Left panel actions (next to breadcrumbs/title) - hide on mobile when right panel is active -->
-      @if (panelActions.leftPanelActions().length > 0 && !showRightPanelInMainToolbar()) {
-      <!-- Collapsed menu for small screens -->
-      <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsCollapsedMenu" matTooltip="Actions"
-        class="action-button collapsed-actions-button">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <!-- Individual buttons for larger screens -->
-      <div class="expanded-actions">
-        @for (action of panelActions.leftPanelActions(); track action.id) {
-        @if (action.menu) {
-        <button mat-icon-button [matMenuTriggerFor]="globalLeftPanelActionsMenu"
-          [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        } @else {
-        <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-          [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        }
-        }
-      </div>
       }
     </div>
     }
