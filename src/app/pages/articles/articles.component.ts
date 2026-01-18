@@ -170,9 +170,10 @@ export class ArticlesDiscoverComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     // Effect to handle scroll events from layout service when user scrolls to bottom
+    // Uses leftPanelScrolledToBottom since articles render in the left panel
     effect(() => {
-      const isAtBottom = this.layout.scrolledToBottom();
-      const isReady = this.layout.scrollMonitoringReady();
+      const isAtBottom = this.layout.leftPanelScrolledToBottom();
+      const isReady = this.layout.leftPanelScrollReady();
 
       // Detect transition from not-at-bottom to at-bottom
       const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;

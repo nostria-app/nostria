@@ -107,10 +107,15 @@ export class ProfileNotesComponent {
 
     // Effect to handle scroll events from layout service when user scrolls to bottom
     // Continuously loads more content while user is at bottom for smooth infinite scroll
-    // Uses leftPanelScrolledToBottom since profile pages render in the left panel
+    // Dynamically uses the correct panel's scroll signal based on where profile is rendered
     effect(() => {
-      const isAtBottom = this.layout.leftPanelScrolledToBottom();
-      const isReady = this.layout.leftPanelScrollReady();
+      const isInRightPanel = this.profileState.isInRightPanel();
+      const isAtBottom = isInRightPanel 
+        ? this.layout.rightPanelScrolledToBottom() 
+        : this.layout.leftPanelScrolledToBottom();
+      const isReady = isInRightPanel 
+        ? this.layout.rightPanelScrollReady() 
+        : this.layout.leftPanelScrollReady();
 
       // Only proceed if we're at the bottom and scroll monitoring is ready
       if (!isReady || !isAtBottom) {
@@ -128,7 +133,13 @@ export class ProfileNotesComponent {
         this.profileState.increaseDisplayLimit();
 
         // After DOM updates, recheck scroll position to continue loading if still at bottom
-        setTimeout(() => this.layout.refreshLeftPanelScroll(), 50);
+        setTimeout(() => {
+          if (this.profileState.isInRightPanel()) {
+            this.layout.refreshRightPanelScroll();
+          } else {
+            this.layout.refreshLeftPanelScroll();
+          }
+        }, 50);
 
         // Also check if we should preload more from relays (with cooldown)
         const now = Date.now();

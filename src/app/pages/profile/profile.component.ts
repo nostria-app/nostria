@@ -344,6 +344,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
             // Always set the profile pubkey first
             this.profileState.setCurrentProfilePubkey(id);
 
+            // Tell ProfileStateService which panel we're in for scroll signal handling
+            this.profileState.isInRightPanel.set(this.route.outlet === 'right');
+
             this.pubkey.set(id);
 
             // Update the tracked profile pubkey for router change detection
