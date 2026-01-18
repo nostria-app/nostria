@@ -4,15 +4,15 @@
     [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
     (click)="onVideoClick($event)" (dblclick)="onVideoDoubleClick($event)"></video>
 
-  <!-- Center play button - always visible when paused -->
-  @if (paused()) {
+  <!-- Center play button - only visible before first play -->
+  @if (paused() && !hasPlayedOnce()) {
   <button class="center-play-btn" (click)="onPlayButtonClick()" aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
   }
 
-  <!-- Controls overlay - only visible on hover while playing -->
-  <div class="controls-overlay" [class.visible]="controlsVisible() && !paused()">
+  <!-- Controls overlay - visible on hover while playing, or when paused after first play -->
+  <div class="controls-overlay" [class.visible]="(controlsVisible() && !paused()) || (paused() && hasPlayedOnce())">
     <!-- Gradient background -->
     <div class="gradient-bottom"></div>
 
@@ -91,11 +91,4 @@
       </div>
     </div>
   </div>
-
-  <!-- Center pause button overlay when playing and hovering -->
-  @if (!paused() && controlsVisible()) {
-  <button class="center-pause-btn" (click)="onPauseButtonClick()" aria-label="Pause">
-    <mat-icon>pause</mat-icon>
-  </button>
-  }
 </div>

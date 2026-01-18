@@ -61,7 +61,7 @@
   pointer-events: none;
 }
 
-// Center play button (shown when paused)
+// Center play button (shown only before first play)
 .center-play-btn {
   position: absolute;
   top: 50%;
@@ -85,42 +85,6 @@
   &:hover {
     background: rgba(0, 0, 0, 0.8);
     transform: translate(-50%, -50%) scale(1.1);
-  }
-
-  mat-icon {
-    font-size: 44px;
-    width: 44px;
-    height: 44px;
-    color: white;
-  }
-}
-
-// Center pause button (shown when playing and hovering)
-.center-pause-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 72px;
-  height: 72px;
-  background: rgba(0, 0, 0, 0.4);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.15s ease;
-  pointer-events: auto;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;
-  opacity: 0.8;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.7);
-    transform: translate(-50%, -50%) scale(1.1);
-    opacity: 1;
   }
 
   mat-icon {

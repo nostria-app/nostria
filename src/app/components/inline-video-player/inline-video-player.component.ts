@@ -55,6 +55,7 @@ export class InlineVideoPlayerComponent implements OnDestroy {
 
   // State signals
   paused = signal(true);
+  hasPlayedOnce = signal(false); // Track if video has been played at least once
   currentTime = signal(0);
   duration = signal(0);
   buffered = signal(0);
@@ -120,6 +121,7 @@ export class InlineVideoPlayerComponent implements OnDestroy {
   private attachVideoListeners(video: HTMLVideoElement): void {
     const onPlay = () => {
       this.paused.set(false);
+      this.hasPlayedOnce.set(true); // Mark that video has been played
       this.videoPlay.emit();
     };
     const onPause = () => {
@@ -226,10 +228,6 @@ export class InlineVideoPlayerComponent implements OnDestroy {
   }
 
   onPlayButtonClick(): void {
-    this.togglePlay();
-  }
-
-  onPauseButtonClick(): void {
     this.togglePlay();
   }
 
