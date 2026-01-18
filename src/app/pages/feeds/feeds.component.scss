@@ -85,9 +85,9 @@ app-user-profile {
     flex-shrink: 0; // Don't shrink header
     min-height: 56px;
 
-    // Fixed position at top of panel, below main toolbar
+    // Sticky position at top of panel (panel already accounts for toolbar offset)
     position: sticky;
-    top: var(--toolbar-height, 64px);
+    top: 0;
     left: 0;
     right: 0;
     z-index: 50;
@@ -102,7 +102,6 @@ app-user-profile {
     // Reduce padding on smaller screens to match toolbar
     @media (max-width: 1023px) {
       padding: 8px;
-      top: var(--toolbar-height, 64px);
     }
 
     // Hidden state class (applied via JS when scrolling down) - smooth transition
@@ -311,12 +310,13 @@ app-user-profile {
     }
   }
 
-  // Columns container - main content area
+  // Columns container - main content area and scroll container
   .columns-container {
     display: flex;
     flex-direction: column;
     flex: 1;
-    overflow: hidden; // Don't scroll here - content scrolls
+    overflow-y: auto; // Enable vertical scrolling for sticky header to work
+    overflow-x: hidden;
     position: relative;
     max-width: 100%;
 
@@ -349,10 +349,10 @@ app-user-profile {
 
     .columns-wrapper {
       display: flex;
-      flex: 0 0 auto;
+      flex: 1 0 auto; // Grow to fill space, don't shrink, auto basis
       gap: 12px;
       // padding: 12px;
-      height: 100%;
+      min-height: 0; // Allow flex items to shrink below content size
 
       // When in global feeds panel, remove top padding so content goes to top
       :host-context(.global-feeds-panel) & {
@@ -390,7 +390,7 @@ app-user-profile {
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
-        overflow: hidden;
+        overflow: visible; // Content flows in parent scroll container
         position: relative;
 
         // When in global feeds panel, remove visual borders for seamless look
@@ -431,13 +431,13 @@ app-user-profile {
           z-index: 2;
         }
 
-        // Column content - scrollable area for feed items
+        // Column content - contains feed items
         .column-content {
           scroll-behavior: smooth;
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow-y: auto; // Enable scrolling here
+          overflow-y: visible; // Content flows in parent scroll container
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
           // Content starts below the fixed header (header is ~56px)
