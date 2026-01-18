@@ -133,65 +133,53 @@ export class LayoutService implements OnDestroy {
 
   /**
    * Signal that indicates whether the content wrapper is scrolled to the top
-   *
-   * Usage example in components:
-   * ```typescript
-   * import { inject, effect } from '@angular/core';
-   * import { LayoutService } from '../services/layout.service';
-   *     * export class MyComponent {
-   *   private layout = inject(LayoutService);
-   *
-   *   constructor() {
-   *     // React to scroll to top events
-   *     effect(() => {
-   *       // Only react if scroll monitoring is ready to prevent early triggers
-   *       if (this.layout.scrollMonitoringReady() && this.layout.scrolledToTop()) {
-   *         console.log('User scrolled to top - refresh data?');
-   *         // Add your logic here (e.g., pull to refresh)
-   *       }
-   *     });
-   *   }
-   * }
-   * ```
+   * @deprecated Use leftPanelScrolledToTop or rightPanelScrolledToTop instead
    */
   scrolledToTop = signal(false);
 
   /**
    * Signal that indicates whether the content wrapper is scrolled to the bottom
-   *
-   * Usage example in components:
-   * ```typescript
-   * import { inject, effect } from '@angular/core';
-   * import { LayoutService } from '../services/layout.service';
-   *
-   * export class MyComponent {
-   *   private layout = inject(LayoutService);
-   *   private loading = signal(false);
-   *     *   constructor() {
-   *     // React to scroll to bottom events for infinite loading
-   *     effect(() => {
-   *       // Only react if scroll monitoring is ready to prevent early triggers
-   *       if (this.layout.scrollMonitoringReady() && this.layout.scrolledToBottom() && !this.loading()) {
-   *         console.log('User scrolled to bottom - load more data');
-   *         this.loadMoreData();
-   *       }
-   *     });
-   *   }
-   *
-   *   private async loadMoreData() {
-   *     this.loading.set(true);
-   *     try {
-   *       // Fetch more data
-   *       const newData = await this.dataService.loadMore();
-   *       // Process and add to existing data
-   *     } finally {
-   *       this.loading.set(false);
-   *     }
-   *   }
-   * }
-   * ```
+   * @deprecated Use leftPanelScrolledToBottom or rightPanelScrolledToBottom instead
    */
   scrolledToBottom = signal(false);
+
+  // ============================================
+  // Panel-specific scroll signals (two-pane layout)
+  // ============================================
+
+  /**
+   * Signal that indicates whether the LEFT panel is scrolled to the top
+   * Use this for left panel content (main routes, feeds, profile pages, etc.)
+   */
+  leftPanelScrolledToTop = signal(false);
+
+  /**
+   * Signal that indicates whether the LEFT panel is scrolled to the bottom
+   * Use this for infinite scroll loading in left panel content
+   */
+  leftPanelScrolledToBottom = signal(false);
+
+  /**
+   * Signal that indicates whether the RIGHT panel is scrolled to the top
+   * Use this for right panel content (detail views opened from left panel)
+   */
+  rightPanelScrolledToTop = signal(false);
+
+  /**
+   * Signal that indicates whether the RIGHT panel is scrolled to the bottom
+   * Use this for infinite scroll loading in right panel content
+   */
+  rightPanelScrolledToBottom = signal(false);
+
+  /**
+   * Signal indicating that left panel scroll monitoring is ready
+   */
+  leftPanelScrollReady = signal(false);
+
+  /**
+   * Signal indicating that right panel scroll monitoring is ready
+   */
+  rightPanelScrollReady = signal(false);
 
   /**
    * Signal that indicates whether the user is currently scrolling
@@ -384,6 +372,98 @@ export class LayoutService implements OnDestroy {
    */
   refreshScrollMonitoring(): void {
     this.checkScrollPosition();
+  }
+
+  /**
+   * Refresh left panel scroll monitoring (useful after content changes)
+   */
+  refreshLeftPanelScroll(): void {
+    // Find and check left panel scroll position
+    const leftPanel = document.querySelector('.left-panel-content');
+    if (leftPanel) {
+      this.checkPanelScrollPosition(leftPanel, 'left');
+    }
+  }
+
+  /**
+   * Refresh right panel scroll monitoring (useful after content changes)
+   */
+  refreshRightPanelScroll(): void {
+    // Find and check right panel scroll position
+    const rightPanel = document.querySelector('.right-panel-content');
+    if (rightPanel) {
+      this.checkPanelScrollPosition(rightPanel, 'right');
+    }
+  }
+
+  /**
+   * Handle scroll events from the left panel (called by app.ts)
+   * @param event - The scroll event from left panel
+   */
+  handleLeftPanelScroll(event: globalThis.Event): void {
+    const target = (event as any).target as Element;
+    if (!target) return;
+
+    // Mark left panel scroll as ready on first scroll event
+    if (!this.leftPanelScrollReady()) {
+      this.leftPanelScrollReady.set(true);
+    }
+
+    this.checkPanelScrollPosition(target, 'left');
+  }
+
+  /**
+   * Handle scroll events from the right panel (called by app.ts)
+   * @param event - The scroll event from right panel
+   */
+  handleRightPanelScroll(event: globalThis.Event): void {
+    const target = (event as any).target as Element;
+    if (!target) return;
+
+    // Mark right panel scroll as ready on first scroll event
+    if (!this.rightPanelScrollReady()) {
+      this.rightPanelScrollReady.set(true);
+    }
+
+    this.checkPanelScrollPosition(target, 'right');
+  }
+
+  /**
+   * Check scroll position of a specific panel and update signals
+   * @param element - The scrollable panel element
+   * @param panel - 'left' or 'right'
+   */
+  private checkPanelScrollPosition(element: Element, panel: 'left' | 'right'): void {
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight;
+    const clientHeight = element.clientHeight;
+    const threshold = 5;
+
+    const isAtTop = scrollTop <= threshold;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+
+    if (panel === 'left') {
+      if (isAtTop !== this.leftPanelScrolledToTop()) {
+        this.leftPanelScrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.leftPanelScrolledToBottom()) {
+        this.leftPanelScrolledToBottom.set(isAtBottom);
+      }
+      // Also update the legacy signals for backward compatibility
+      if (isAtTop !== this.scrolledToTop()) {
+        this.scrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.scrolledToBottom()) {
+        this.scrolledToBottom.set(isAtBottom);
+      }
+    } else {
+      if (isAtTop !== this.rightPanelScrolledToTop()) {
+        this.rightPanelScrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.rightPanelScrolledToBottom()) {
+        this.rightPanelScrolledToBottom.set(isAtBottom);
+      }
+    }
   }
 
   /**
