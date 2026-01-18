@@ -253,7 +253,6 @@ export class App implements OnInit {
   showRightPanelInMainToolbar = computed(() => this.panelNav.isMobile() && this.hasRightContent());
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
-  @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
@@ -293,6 +292,9 @@ export class App implements OnInit {
 
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
+
+  // Signal to track if accounts list is expanded in sidenav
+  accountsExpanded = signal(false);
 
   // Feed edit dialog state
   showFeedEditDialog = signal(false);
@@ -1218,11 +1220,25 @@ export class App implements OnInit {
     }
   }
 
+  /** Toggle the accounts list expansion in sidenav */
+  toggleAccountsExpanded() {
+    this.accountsExpanded.update(v => !v);
+  }
+
+  /** Close sidenav on mobile (overlay mode) after navigation */
+  closeSidenavOnMobile() {
+    if (this.layout.isHandset() && this.sidenav?.opened) {
+      this.sidenav.close();
+    }
+  }
+
   onSidenavClosed() {
     // Sync local settings when sidenav is closed (e.g., via backdrop click)
     if (this.localSettings.menuOpen()) {
       this.localSettings.setMenuOpen(false);
     }
+    // Collapse accounts when sidenav closes
+    this.accountsExpanded.set(false);
     this.updateFloatingToolbarPosition();
   }
 
@@ -1249,10 +1265,6 @@ export class App implements OnInit {
       // Sidenav closed or in overlay mode - no offset needed
       document.documentElement.style.setProperty('--floating-toolbar-left', '72px');
     }
-  }
-
-  toggleProfileSidenav() {
-    this.profileSidenav.toggle();
   }
 
   /**
@@ -1685,7 +1697,7 @@ export class App implements OnInit {
    * Used when navigating from sidebar to ensure right panel content is cleared.
    */
   navigateAndClearRightPanel(path: string): void {
-    this.toggleProfileSidenav();
+    this.closeSidenavOnMobile();
     this.closeRightPanel();
     this.router.navigate([path]);
   }

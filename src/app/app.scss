@@ -301,6 +301,199 @@ mat-sidenav-content {
   background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
+// Menu profile button in toolbar (replaces hamburger)
+.menu-profile-button {
+  padding: 0 !important;
+  overflow: hidden;
+
+  &.profile-button-picture {
+    .menu-profile-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  }
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+// Sidenav Profile Section styles
+.sidenav-profile-section {
+  padding: 0 8px 8px;
+}
+
+.sidenav-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+:host-context(.dark) .sidenav-profile-header {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sidenav-profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mat-sys-surface-container);
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.sidenav-profile-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidenav-profile-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--mat-sys-on-surface);
+}
+
+.sidenav-premium-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.expand-accounts-icon {
+  color: var(--mat-sys-on-surface-variant);
+  transition: transform 0.2s ease;
+}
+
+// Expandable accounts list in sidenav
+.sidenav-accounts-list {
+  padding-left: 8px;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+  margin-left: 28px;
+}
+
+.sidenav-account-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  color: var(--mat-sys-on-surface);
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &.sidenav-add-account {
+    color: var(--mat-sys-primary);
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+:host-context(.dark) .sidenav-account-item {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sidenav-account-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mat-sys-surface-container);
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.sidenav-account-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Profile quick actions row
+.sidenav-profile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 0;
+
+  button {
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
 // Override Angular Material's hover state to use lighter colors
 .sidenav mat-nav-list {
 
@@ -353,14 +546,7 @@ mat-sidenav-content {
   align-items: center;
 }
 
-.close-button-right {
-  position: absolute;
-  right: 16px;
-}
 
-.theme-button {
-  position: absolute;
-}
 
 .app-title {
   margin-left: 4px;
@@ -1057,147 +1243,7 @@ mat-sidenav-content {
   box-shadow: var(--mat-sys-level3);
 }
 
-.profile-sidenav {
-  width: 300px;
-  max-width: 90vw;
-  z-index: 100 !important;
-  position: fixed !important;
-  // Sidenav renders below toolbar - use margin-top and adjusted height
-  margin-top: var(--toolbar-height, 64px) !important;
-  height: calc(100% - var(--toolbar-height, 64px)) !important;
-  box-sizing: border-box;
 
-  // Glass effect - similar to favorites overlay (light mode)
-  background-color: rgba(255, 255, 255, 0.7) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-
-  box-shadow:
-    // Inner white highlight (sharp edge)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.1),
-    // Drop shadows
-    -4px 0 16px rgba(17, 17, 26, 0.1),
-    -8px 0 24px rgba(17, 17, 26, 0.1);
-}
-
-// Dark mode glass effect - use :host-context to access parent .dark class
-:host-context(.dark) .profile-sidenav {
-  background-color: rgba(0, 0, 0, 0.6) !important;
-
-  box-shadow:
-    // Inner highlight (subtler in dark mode)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.03),
-    // Drop shadows (darker)
-    -4px 0 16px rgba(0, 0, 0, 0.5),
-    -8px 0 24px rgba(0, 0, 0, 0.5);
-}
-
-// Animation for the profile sidenav
-.profile-sidenav.mat-drawer {
-  transition: transform 0.3s ease-in-out;
-  z-index: 100 !important;
-}
-
-// Ensure the sidenav container doesn't resize when right-side sidenavs open
-.sidenav-container.mat-sidenav-container {
-  // Don't prevent transforms on the container - let left sidenav work normally
-
-  // Only prevent right sidenav from pushing content
-  mat-sidenav[position="end"] {
-
-    // Right sidenavs should overlay, not push
-    &.mat-drawer-over {
-      z-index: 120 !important;
-    }
-  }
-
-  // Ensure backdrop appears correctly and above toolbar but below sidenav
-  .mat-sidenav-backdrop {
-    position: fixed !important;
-    z-index: 110 !important; // Above toolbar (100), below sidenav (120)
-  }
-}
-
-.profile-button {
-  margin-left: 8px;
-
-  .profile-button-avatar {
-    margin: 4px;
-  }
-}
-
-.profile-button-picture {
-  padding: 0 !important;
-}
-
-.profile-content {
-  padding: 16px;
-
-  @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-.profile-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 16px;
-  text-align: center; // Center all text content
-}
-
-.profile-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: var(--mat-primary-300);
-  margin-bottom: 16px;
-  overflow: hidden; // Add this to ensure image doesn't overflow
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; // Ensures image covers the area properly
-}
-
-.avatar-icon {
-  font-size: 64px;
-  height: 64px;
-  width: 64px;
-  color: var(--mat-card-title-text-color); // Changed from fixed white color to theme-dependent variable
-}
-
-.profile-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 500;
-  margin-bottom: 4px; // Add space below name
-}
-
-.nip05-identifier {
-  font-size: 14px;
-  color: var(--mat-sys-primary);
-  margin-bottom: 8px; // Add space below NIP-05
-}
-
-.user-about {
-  font-size: 14px;
-  color: var(--mat-subtitle-text-color);
-  margin-top: 8px;
-  margin-bottom: 0;
-  max-height: 80px;
-  overflow-y: auto;
-  text-align: center;
-  line-height: 1.4;
-}
 
 .sidenav-labels {
   width: 220px;
@@ -1666,12 +1712,6 @@ mat-sidenav-content {
   100% {
     transform: rotate(360deg);
   }
-}
-
-// Additional z-index fixes for Material sidenav
-.profile-sidenav .mat-drawer-inner-container {
-  z-index: 1001;
-  background: transparent !important; // Ensure inner container doesn't override glass effect
 }
 
 // Ensure backdrop appears above toolbar and mobile nav but below sidenav
