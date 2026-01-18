@@ -74,13 +74,22 @@
     @if (blurhashUrl && !videoReady()) {
     <img [src]="blurhashUrl" class="video-placeholder-bg" alt="" aria-hidden="true" />
     }
-    <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
-      [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
-      (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()"
-      (canplay)="onVideoCanPlay()" (click)="togglePlayPause()" (dblclick)="onVideoDoubleClick($event)">
-      <source [src]="videoInfo.url" [type]="videoMimeType()" />
-      Your browser does not support the video tag.
-    </video>
+    <!-- Video wrapper for proper play button positioning -->
+    <div class="video-wrapper">
+      <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
+        [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
+        (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()"
+        (canplay)="onVideoCanPlay()" (click)="togglePlayPause()" (dblclick)="onVideoDoubleClick($event)">
+        <source [src]="videoInfo.url" [type]="videoMimeType()" />
+        Your browser does not support the video tag.
+      </video>
+      <!-- Center play button positioned relative to actual video -->
+      @if (videoPaused() && !hasPlayedOnce()) {
+      <button class="video-center-play-btn" (click)="onCenterPlayButtonClick(); $event.stopPropagation()" aria-label="Play video">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      }
+    </div>
     <app-video-controls [videoElement]="videoElement()" [config]="{ showQuality: false, isLiveStream: false }"
       (playPause)="togglePlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
       (muteToggle)="onMuteToggle()" (playbackRateChange)="onPlaybackRateChange($event)"
