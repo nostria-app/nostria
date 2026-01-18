@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,7 +14,6 @@ import { ApplicationService } from '../../services/application.service';
 import { MemoCardComponent } from './memos-card/memo-card.component';
 import { MemosDownloadDialogComponent } from './memos-download-dialog/memos-download-dialog.component';
 import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-history-dialog.component';
-import { PanelActionsService } from '../../services/panel-actions.service';
 
 @Component({
   selector: 'app-memos',
@@ -30,6 +29,23 @@ import { PanelActionsService } from '../../services/panel-actions.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <h2 class="panel-title title-font">Memos</h2>
+      <span class="panel-header-spacer"></span>
+      @if (app.authenticated() && isPremium()) {
+        <button mat-icon-button (click)="openHistory()" matTooltip="View memo history">
+          <mat-icon>history</mat-icon>
+        </button>
+        <button mat-icon-button (click)="downloadMemos()" matTooltip="Download memos">
+          <mat-icon>download</mat-icon>
+        </button>
+        <button mat-icon-button (click)="createNewMemo()" matTooltip="Create new memo">
+          <mat-icon>add</mat-icon>
+        </button>
+      }
+    </div>
+
     @if (!app.authenticated()) {
       <div class="unauthenticated-state">
         <mat-icon>account_circle</mat-icon>
@@ -179,6 +195,37 @@ import { PanelActionsService } from '../../services/panel-actions.service';
     }
   `,
   styles: [`
+    /* Panel header styles - fixed at top */
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .panel-header-spacer {
+      flex: 1;
+    }
+
+    :host-context(.dark) .panel-header {
+      background-color: rgba(24, 17, 27, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
     .unauthenticated-state {
       display: flex;
       flex-direction: column;
@@ -522,13 +569,12 @@ import { PanelActionsService } from '../../services/panel-actions.service';
     }
   `],
 })
-export class MemosComponent implements OnDestroy {
+export class MemosComponent {
   private readonly memosService = inject(MemosService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly accountState = inject(AccountStateService);
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
-  private readonly panelActions = inject(PanelActionsService);
 
   readonly loading = signal(true);
   readonly memos = this.memosService.memos;
@@ -540,9 +586,6 @@ export class MemosComponent implements OnDestroy {
   });
 
   constructor() {
-    // Setup panel actions for toolbar
-    this.setupPanelActions();
-
     // Reload memos when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
@@ -555,40 +598,6 @@ export class MemosComponent implements OnDestroy {
         this.memosService.memos.set([]);
       }
     });
-  }
-
-  ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    this.panelActions.setPageTitle('Memos');
-
-    const actions = [
-      {
-        id: 'history',
-        icon: 'history',
-        label: 'History',
-        tooltip: 'View memo history',
-        action: () => this.openHistory(),
-      },
-      {
-        id: 'download',
-        icon: 'download',
-        label: 'Download',
-        tooltip: 'Download memos',
-        action: () => this.downloadMemos(),
-      },
-      {
-        id: 'new-memo',
-        icon: 'add',
-        label: 'New Memo',
-        tooltip: 'Create new memo',
-        action: () => this.createNewMemo(),
-      },
-    ];
-
-    this.panelActions.setLeftPanelActions(actions);
   }
 
   async loadMemos() {

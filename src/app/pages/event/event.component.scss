@@ -37,11 +37,6 @@
   // Subtle bottom border
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-  // When below toolbar, add padding to account for it
-  &.below-toolbar {
-    top: var(--toolbar-height, 64px);
-  }
-
   .panel-title {
     margin: 0;
     font-size: 1.25rem;

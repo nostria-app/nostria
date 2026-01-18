@@ -199,9 +199,10 @@ nav {
   transform: translateY(-50%);
   z-index: 100;
 
-  // Hide on mobile when there's not much space
+  // On mobile, don't center vertically - position at top for full-height overlay
   @media (max-width: 599px) {
-    display: none;
+    top: 0;
+    transform: none;
   }
 }
 

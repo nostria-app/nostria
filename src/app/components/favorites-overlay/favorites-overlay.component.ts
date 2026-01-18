@@ -44,6 +44,9 @@ export class FavoritesOverlayComponent implements OnDestroy {
   // Signal to track if overlay is docked/pinned
   isDocked = signal(false);
 
+  // Signal to track if overlay is collapsed (minimized)
+  isCollapsed = signal(false);
+
   // Signal to track if currently dragging
   isDragging = signal(false);
 
@@ -323,6 +326,10 @@ export class FavoritesOverlayComponent implements OnDestroy {
     if (newDocked) {
       this.isVisible.set(true);
     }
+  }
+
+  toggleCollapse(): void {
+    this.isCollapsed.update(v => !v);
   }
 
   onAvatarMouseEnter(event: MouseEvent, pubkey: string): void {
