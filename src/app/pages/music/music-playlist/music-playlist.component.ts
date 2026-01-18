@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input, ViewChild, TemplateRef } from '@angular/core';
 import { ActivatedRoute, Router, ParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -23,7 +24,6 @@ import { EventService } from '../../../services/event';
 import { LayoutService } from '../../../services/layout.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { ZapService } from '../../../services/zap.service';
-import { PanelActionsService } from '../../../services/panel-actions.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -45,6 +45,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatChipsModule,
     MatMenuModule,
     MatSnackBarModule,
+    MatTooltipModule,
     EditMusicPlaylistDialogComponent,
     MusicTrackMenuComponent,
     MusicTrackDialogComponent,
@@ -52,7 +53,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
 })
-export class MusicPlaylistComponent implements OnInit, OnDestroy, AfterViewInit {
+export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private pool = inject(RelayPoolService);
@@ -71,7 +72,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy, AfterViewInit 
   private imageCache = inject(ImageCacheService);
   private dialog = inject(MatDialog);
   private zapService = inject(ZapService);
-  private panelActions = inject(PanelActionsService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -280,37 +280,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
-  ngAfterViewInit(): void {
-    // Set up panel actions after view is initialized
-    this.setupPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    const actions = [
-      {
-        id: 'menu',
-        icon: 'more_vert',
-        label: 'Options',
-        tooltip: 'More options',
-        action: () => { },
-        menu: true,
-      }
-    ];
-
-    this.panelActions.setRightPanelActions(actions);
-
-    // Set menu template
-    setTimeout(() => {
-      if (this.playlistMenuTemplate) {
-        this.panelActions.setRightPanelMenuTemplate(this.playlistMenuTemplate);
-      }
-    });
-  }
-
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.close());
     this.likeSubscription?.close();
-    this.panelActions.clearRightPanelActions();
   }
 
   /**

@@ -38,6 +38,7 @@ const SECTION_LIMIT = 12;
 
 @Component({
   selector: 'app-music',
+  host: { 'class': 'panel-with-sticky-header' },
   imports: [
     MatProgressSpinnerModule,
     MatButtonModule,

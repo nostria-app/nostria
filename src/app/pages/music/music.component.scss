@@ -1,4 +1,8 @@
-// Panel header styles - fixed at top
+:host {
+  display: block;
+}
+
+// Panel header styles - fixed at top, below main toolbar
 .panel-header {
   position: sticky;
   top: 0;

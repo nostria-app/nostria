@@ -52,13 +52,6 @@
         }
       </button>
       <app-navigation></app-navigation>
-
-      <!-- App title - always show when no right panel content is active on mobile -->
-      @if (!showRightPanelInMainToolbar()) {
-      <span class="app-title title-font hide-small">
-        <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
-      </span>
-      }
     </div>
     }
 
@@ -95,15 +88,8 @@
     <!-- Right section: action buttons and profile -->
     @if (!layout.search()) {
     <div class="toolbar-section toolbar-right">
-      <!-- Right panel back button and actions (when right panel has content) -->
+      <!-- Right panel actions (when right panel has content) -->
       @if (hasRightContent()) {
-      <!-- Back button for right panel -->
-      @if (canGoBackRight()) {
-      <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
-        i18n-matTooltip="@@app.nav.back">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      }
       <!-- Right panel actions -->
       @for (action of panelActions.rightPanelActions(); track action.id) {
       @if (action.menu) {

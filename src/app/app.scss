@@ -549,37 +549,6 @@ mat-sidenav-content {
 
 
 
-.app-title {
-  margin-left: 4px;
-  margin-right: 8px;
-  font-size: 1.2em;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-
-  .title-button {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-    outline: none;
-
-    &:hover {
-      opacity: 0.8;
-    }
-
-    &:focus-visible {
-      outline: 2px solid currentColor;
-      outline-offset: 2px;
-      border-radius: 2px;
-    }
-  }
-}
-
 // ============================================
 // Dual-Panel Layout System
 // ============================================
@@ -1096,7 +1065,13 @@ mat-sidenav-content {
     overflow: hidden; // Virtual scroll handles scrolling
   }
 
-  // When panel has a header component, reduce padding
+  // Special case for components with sticky panel headers - they manage their own top spacing
+  &:has(.panel-with-sticky-header) {
+    padding-top: 0px;
+  }
+
+  // When panel has a header component, this rule may be used in the future
+  // Currently app-panel-header is not used in templates
   &:has(app-panel-header) {
     padding-top: var(--toolbar-height, 64px);
   }
@@ -1104,25 +1079,9 @@ mat-sidenav-content {
 
 // Right panel content
 .right-panel-content {
-  // Add padding top to account for main toolbar - content scrolls behind it
-  padding-top: var(--toolbar-height, 64px);
-
-  // Special case for profile component - no top padding needed
-  // Profile has its own banner that should extend to the top
-  &:has(app-profile) {
-    padding-top: 0px;
-  }
-
-  // When panel has a header component, the header handles toolbar clearance
-  &:has(app-panel-header),
-  &:has(.panel-header) {
-    padding-top: var(--toolbar-height, 64px);
-
-    // The content after the header doesn't need extra padding
-    >*:not(app-panel-header):not(.panel-header) {
-      padding-top: 0;
-    }
-  }
+  // No top padding - components handle their own positioning via sticky panel headers
+  // The panel headers stick below the main toolbar using top: var(--toolbar-height)
+  padding-top: 0;
 
   // Routed components - they manage their own padding
   >router-outlet+*:not(app-profile):not(app-right-panel-container) {
