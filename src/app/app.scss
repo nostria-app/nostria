@@ -992,19 +992,96 @@ mat-sidenav-content {
 }
 
 // Panel Content Area (used by both panels)
-// Now that panel headers are removed, content only needs toolbar clearance
+// Content scrolls below the fixed panel header
 .panel-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Content scrolls from top (behind transparent toolbar)
-  padding-top: var(--toolbar-height, 64px);
+  display: flex;
+  flex-direction: column;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  // Panel header is now inside the content, positioned sticky
+  // So we don't need toolbar clearance here - the header handles it
+  padding-top: 0;
+}
+
+// ============================================
+// Panel Header Styles (Fixed headers for each panel)
+// ============================================
+// Panel headers are sticky-positioned within each panel's scroll container
+// They appear below the main toolbar and stay fixed while scrolling
+
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+
+  // Glass effect - light mode
+  background-color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  // Subtle bottom border
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  // For panels that need to render behind main toolbar, add top padding
+  &.below-toolbar {
+    padding-top: var(--toolbar-height, 64px);
+  }
+
+  &.transparent {
+    background-color: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
+  }
+
+  .panel-title {
+    margin: 0;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+
+  .panel-header-spacer {
+    flex: 1;
+  }
+
+  .panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(24, 17, 27, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &.transparent {
+    background-color: transparent;
+    border-bottom: none;
+  }
 }
 
 // Left panel content
 .left-panel .panel-content {
+  // Add padding top to account for main toolbar - content scrolls behind it
+  padding-top: var(--toolbar-height, 64px);
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
@@ -1017,12 +1094,17 @@ mat-sidenav-content {
     padding-top: 0px;
     overflow: hidden; // Virtual scroll handles scrolling
   }
+
+  // When panel has a header component, reduce padding
+  &:has(app-panel-header) {
+    padding-top: var(--toolbar-height, 64px);
+  }
 }
 
 // Right panel content
 .right-panel-content {
-  // Remove default padding - content will add its own padding to scroll to top
-  padding-top: 0px;
+  // Add padding top to account for main toolbar - content scrolls behind it
+  padding-top: var(--toolbar-height, 64px);
 
   // Special case for profile component - no top padding needed
   // Profile has its own banner that should extend to the top
@@ -1030,9 +1112,24 @@ mat-sidenav-content {
     padding-top: 0px;
   }
 
-  // Add padding inside the content wrapper for components that need it
-  >router-outlet+*:not(app-profile):not(app-right-panel-container) {
+  // When panel has a header component, the header handles toolbar clearance
+  &:has(app-panel-header),
+  &:has(.panel-header) {
     padding-top: var(--toolbar-height, 64px);
+
+    // The content after the header doesn't need extra padding
+    >*:not(app-panel-header):not(.panel-header) {
+      padding-top: 0;
+    }
+  }
+
+  // Routed components - they manage their own padding
+  >router-outlet+*:not(app-profile):not(app-right-panel-container) {
+
+    // Only add padding if the component doesn't have its own panel header
+    &:not(:has(app-panel-header)):not(:has(.panel-header)) {
+      // padding-top handled by component itself or parent
+    }
   }
 
   // Right panel container also needs padding
@@ -1040,7 +1137,7 @@ mat-sidenav-content {
     display: block;
 
     >* {
-      padding-top: var(--toolbar-height, 64px);
+      // Removed default padding - components handle their own via panel-header
     }
 
     // Profile handles its own spacing
