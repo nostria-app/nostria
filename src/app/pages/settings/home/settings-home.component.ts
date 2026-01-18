@@ -13,7 +13,6 @@ import { MatCardModule } from '@angular/material/card';
 import { SettingsRegistryService, SettingsItem, SettingsSection } from '../../../services/settings-registry.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
-import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { getSettingComponent } from '../sections/settings-components.map';
 import { getSettingsSectionComponent } from '../settings-section-components.map';
@@ -281,7 +280,6 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
-  private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -317,10 +315,6 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.panelActions.setBreadcrumbs([
-      { label: $localize`:@@settings.title:Settings` }
-    ]);
-
     // Handle URL-based section opening for deep linking
     const sectionId = this.route.snapshot.paramMap.get('section');
     if (sectionId && !this.rightPanel.hasContent()) {
@@ -336,7 +330,7 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearBreadcrumbs();
+    // Component cleanup - no panel actions to clear anymore
   }
 
   canShowItem(item: SettingsItem): boolean {

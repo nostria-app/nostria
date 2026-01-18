@@ -1,3 +1,14 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">{{ profileDisplayName() }}</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="openViewOptionsDialog()" matTooltip="Display options">
+    <mat-icon>tune</mat-icon>
+  </button>
+</div>
+
 <div class="profile-page">
   @if (isLoading()) {
   <div class="profile-loading-container">

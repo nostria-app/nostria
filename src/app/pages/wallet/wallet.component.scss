@@ -1,0 +1,445 @@
+.wallet-page {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin-bottom: 24px;
+  color: var(--mat-card-title-text-color);
+}
+
+h2 {
+  margin: 24px 0 16px;
+  color: var(--mat-card-title-text-color);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.large-icon {
+  font-size: 48px;
+}
+
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem;
+  text-align: center;
+}
+
+.wallet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wallet-card {
+  margin-bottom: 16px;
+  border-left: 4px solid var(--mat-sys-primary);
+}
+
+.wallet-card mat-card-header {
+  padding-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 150px;
+}
+
+// Wallet balance in header
+.wallet-balance-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 20px;
+
+  .balance-value {
+    font-size: 18px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .balance-label {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .balance-loading {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .balance-error {
+    display: flex;
+    align-items: center;
+    color: var(--mat-sys-error);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .refresh-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    mat-spinner {
+      margin: 0;
+    }
+  }
+}
+
+.wallet-info {
+  margin: 8px 0;
+}
+
+.wallet-provider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  strong {
+    color: var(--mat-card-title-text-color);
+    font-size: 14px;
+  }
+
+  app-user-profile {
+    max-width: 100%;
+  }
+}
+
+.edit-name-field {
+  flex: 1;
+  margin-left: 8px;
+}
+
+.edit-name-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+// Donation card styles
+.donation-card {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  border-left: 4px solid var(--mat-sys-tertiary);
+}
+
+.donation-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.donation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 1rem;
+}
+
+.developers-section {
+  h4 {
+    margin: 0 0 12px 0;
+    color: var(--mat-card-title-text-color);
+    font-size: 14px;
+  }
+}
+
+.developer-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.wallet-selection {
+  h4 {
+    margin: 0 0 12px 0;
+    color: var(--mat-card-title-text-color);
+    font-size: 14px;
+  }
+}
+
+.wallet-select-field {
+  width: 100%;
+  max-width: 300px;
+}
+
+.donation-amounts {
+  h4 {
+    margin: 0 0 12px 0;
+    color: var(--mat-card-title-text-color);
+    font-size: 14px;
+  }
+}
+
+.amount-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  button {
+    min-width: 80px;
+
+    &.selected {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      border-color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.custom-amount-field {
+  width: 100%;
+  max-width: 200px;
+}
+
+.donation-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: rgba(255, 82, 82, 0.1);
+  border-radius: 4px;
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+.donation-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  color: var(--mat-success-color);
+
+  mat-icon {
+    color: var(--mat-success-color);
+  }
+}
+
+.donation-card mat-card-actions {
+  padding: 16px;
+
+  button {
+    min-width: 150px;
+  }
+}
+
+// Transactions Section
+.transactions-section {
+  margin-top: 16px;
+}
+
+.transactions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin: -4px -12px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--mat-card-title-text-color);
+    font-size: 14px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  .expand-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.transactions-content {
+  margin-top: 12px;
+}
+
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+.tx-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-surface-container-high);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .tx-incoming & {
+    background-color: rgba(76, 175, 80, 0.1);
+
+    mat-icon {
+      color: var(--mat-success-color);
+    }
+  }
+
+  .tx-outgoing & {
+    background-color: rgba(244, 67, 54, 0.1);
+
+    mat-icon {
+      color: var(--mat-sys-error);
+    }
+  }
+}
+
+.tx-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tx-description {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-date {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.tx-amount {
+  font-size: 14px;
+  white-space: nowrap;
+
+  &.tx-incoming {
+    color: var(--mat-success-color);
+  }
+
+  &.tx-outgoing {
+    color: var(--mat-sys-error);
+  }
+}
+
+.no-transactions {
+  padding: 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.loading-transactions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Zap History Link
+.zap-history-link {
+  margin-top: 16px;
+}
+
+.zap-history-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .history-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: var(--mat-sys-primary);
+  }
+
+  .history-text {
+    flex: 1;
+    min-width: 200px;
+
+    h3 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      color: var(--mat-card-title-text-color);
+    }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
