@@ -106,6 +106,7 @@ export class VideoControlsComponent implements OnDestroy {
 
   // Video state signals (updated via event listeners)
   paused = signal(true);
+  hasPlayedOnce = signal(false); // Track if video has been played at least once
   currentTime = signal(0);
   duration = signal(0);
   buffered = signal(0);
@@ -164,6 +165,7 @@ export class VideoControlsComponent implements OnDestroy {
       const video = this.videoElement();
       console.log('[VideoControls] videoElement changed:', !!video, video?.src);
       this.cleanupVideoListeners();
+      this.hasPlayedOnce.set(false); // Reset when video element changes
 
       if (video) {
         this.attachVideoListeners(video);
@@ -210,7 +212,10 @@ export class VideoControlsComponent implements OnDestroy {
   }
 
   private attachVideoListeners(video: HTMLVideoElement): void {
-    const onPlay = () => this.paused.set(false);
+    const onPlay = () => {
+      this.paused.set(false);
+      this.hasPlayedOnce.set(true);
+    };
     const onPause = () => this.paused.set(true);
     const onTimeUpdate = () => {
       this.currentTime.set(video.currentTime);
