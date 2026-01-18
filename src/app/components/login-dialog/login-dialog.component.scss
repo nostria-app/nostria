@@ -673,6 +673,196 @@
   transition: all 0.3s ease;
 }
 
+// Featured primary login card (nsec)
+.login-card.featured {
+  height: auto;
+  min-height: 120px;
+  margin-bottom: 24px;
+  border: 2px solid var(--mat-sys-primary);
+  background: linear-gradient(135deg, var(--mat-sys-surface) 0%, var(--mat-sys-surface-container) 100%);
+
+  @media (max-height: 700px) {
+    min-height: 100px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-height: 600px) {
+    min-height: 90px;
+    margin-bottom: 12px;
+  }
+
+  &::after {
+    height: 6px;
+    background: linear-gradient(90deg, #673ab7, #3f51b5);
+  }
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+    box-shadow: var(--mat-sys-level4);
+
+    &::after {
+      height: 8px;
+    }
+  }
+
+  .mat-mdc-card-content {
+    padding: 24px;
+
+    @media (max-height: 700px) {
+      padding: 16px;
+    }
+
+    @media (max-height: 600px) {
+      padding: 12px;
+    }
+  }
+
+  .card-content {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+
+    @media (max-width: 400px) {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .featured-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-sys-primary);
+      flex-shrink: 0;
+
+      @media (max-height: 700px) {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+      }
+
+      @media (max-height: 600px) {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+      }
+
+      @media (max-width: 400px) {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    .card-text {
+      text-align: left;
+
+      @media (max-width: 400px) {
+        text-align: center;
+      }
+
+      h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+
+        @media (max-height: 700px) {
+          font-size: 18px;
+          margin-bottom: 6px;
+        }
+
+        @media (max-height: 600px) {
+          font-size: 16px;
+          margin-bottom: 4px;
+        }
+      }
+
+      p {
+        font-size: 15px;
+
+        @media (max-height: 700px) {
+          font-size: 14px;
+        }
+
+        @media (max-height: 600px) {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+}
+
+// Secondary login options grid
+.login-options.secondary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  @media (max-height: 600px) {
+    gap: 8px;
+  }
+
+  .login-card {
+    height: 90px;
+
+    @media (max-height: 700px) {
+      height: 80px;
+    }
+
+    @media (max-height: 600px) {
+      height: 70px;
+    }
+
+    @media (max-width: 400px) {
+      height: 70px;
+    }
+
+    .mat-mdc-card-content {
+      padding: 12px;
+
+      @media (max-height: 600px) {
+        padding: 8px;
+      }
+    }
+
+    .card-content {
+      .card-text {
+        h3 {
+          font-size: 15px;
+          margin-bottom: 4px;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+          }
+
+          @media (max-height: 700px) {
+            font-size: 14px;
+          }
+
+          @media (max-height: 600px) {
+            font-size: 13px;
+          }
+        }
+
+        p {
+          font-size: 12px;
+          line-height: 1.3;
+
+          @media (max-height: 600px) {
+            font-size: 11px;
+          }
+        }
+      }
+    }
+  }
+}
+
 .accounts-section {
   margin-top: 10px;
 }
