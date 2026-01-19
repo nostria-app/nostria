@@ -247,7 +247,8 @@ export class PeopleComponent implements OnDestroy {
   });
 
   // Loading and error states from FollowingService
-  isLoading = computed(() => this.followingService.isLoading());
+  // Include loadingFollowSetProfiles to show loading state when switching lists
+  isLoading = computed(() => this.followingService.isLoading() || this.loadingFollowSetProfiles());
   error = signal<string | null>(null);
 
   // Virtual scrolling settings
@@ -539,8 +540,10 @@ export class PeopleComponent implements OnDestroy {
   selectContact(pubkey: string) {
     // Close any open hover card to prevent interference
     this.hoverCardService.closeHoverCard();
-    // Navigate to profile in right panel
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+    // Navigate to profile in right panel, preserving query params (like ?set=xxx)
+    this.router.navigate([{ outlets: { right: ['p', pubkey] } }], {
+      queryParamsHandling: 'preserve'
+    });
   }
 
   /**

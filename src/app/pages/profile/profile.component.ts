@@ -8,10 +8,6 @@ import {
   DOCUMENT,
   computed,
   input,
-  OnInit,
-  OnDestroy,
-  ElementRef,
-  NgZone,
 } from '@angular/core';
 import { isPlatformBrowser, Location } from '@angular/common';
 import {
@@ -91,7 +87,7 @@ import { ProfileViewOptionsInlineComponent } from './profile-view-options/profil
     'class': 'panel-with-sticky-header',
   },
 })
-export class ProfileComponent implements OnInit, OnDestroy {
+export class ProfileComponent {
   // Input for two-column layout mode - when provided, uses this instead of route params
   twoColumnPubkey = input<string | undefined>(undefined);
 
@@ -116,15 +112,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private readonly metrics = inject(Metrics);
   private readonly reportingService = inject(ReportingService);
   private readonly customDialog = inject(CustomDialogService);
-  private readonly elementRef = inject(ElementRef);
-  private readonly ngZone = inject(NgZone);
 
   pubkey = signal<string>('');
-  
-  // Header auto-hide on scroll
-  headerHidden = signal(false);
-  private lastScrollTop = 0;
-  private scrollListener: (() => void) | null = null;
 
   // Computed signal for profile display name (for toolbar title)
   profileDisplayName = computed(() => {
@@ -427,62 +416,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit(): void {
-    // Component initialized - panel header is now inline in template
-    // Set up scroll listener for header auto-hide
-    this.setupHeaderScrollListener();
-  }
-
-  /**
-   * Set up scroll listener to auto-hide/show header based on scroll direction
-   */
-  private setupHeaderScrollListener(): void {
-    if (!this.app.isBrowser()) return;
-
-    // Run outside Angular zone for better performance
-    this.ngZone.runOutsideAngular(() => {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        // Find the appropriate scroll container based on which panel we're in
-        const isInRightPanel = this.isInRightPanel();
-        const container = isInRightPanel
-          ? document.querySelector('.right-panel-content')
-          : document.querySelector('.left-panel-content');
-
-        if (!container) {
-          this.logger.debug('[ProfileComponent] Scroll container not found, retrying...');
-          // Retry after a short delay if container not found yet
-          setTimeout(() => this.setupHeaderScrollListener(), 200);
-          return;
-        }
-
-        this.logger.debug('[ProfileComponent] Setting up header scroll listener on', isInRightPanel ? 'right' : 'left', 'panel');
-
-        this.scrollListener = () => {
-          const scrollTop = container.scrollTop;
-          const scrollDelta = scrollTop - this.lastScrollTop;
-
-          // Scrolling down - hide header after scrolling down past threshold
-          if (scrollDelta > 10 && scrollTop > 100) {
-            this.ngZone.run(() => this.headerHidden.set(true));
-          }
-          // Scrolling up - show header immediately
-          else if (scrollDelta < -10) {
-            this.ngZone.run(() => this.headerHidden.set(false));
-          }
-          // At the very top - always show header
-          else if (scrollTop <= 50) {
-            this.ngZone.run(() => this.headerHidden.set(false));
-          }
-
-          this.lastScrollTop = scrollTop;
-        };
-
-        container.addEventListener('scroll', this.scrollListener, { passive: true });
-      }, 100);
-    });
-  }
-
   goBack(): void {
     this.location.back();
   }
@@ -492,21 +425,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
    */
   preventMenuClose(event: MouseEvent): void {
     event.stopPropagation();
-  }
-
-  ngOnDestroy(): void {
-    // Component cleanup - remove scroll listener
-    if (this.scrollListener && this.app.isBrowser()) {
-      const isInRightPanel = this.isInRightPanel();
-      const container = isInRightPanel
-        ? document.querySelector('.right-panel-content')
-        : document.querySelector('.left-panel-content');
-      
-      if (container) {
-        container.removeEventListener('scroll', this.scrollListener);
-      }
-      this.scrollListener = null;
-    }
   }
 
   /**

@@ -837,31 +837,40 @@ mat-sidenav-content {
     }
   }
 
-  // When left panel is collapsed, left panel recedes back in 3D and slides behind right panel
+  // When left panel is collapsed, left panel scales down and slides behind right panel
+  // The left panel stays in layout flow but shrinks its width to 0, while visually
+  // transforming to appear to go behind the right panel
   &.left-collapsed {
-    // Center the right panel when left is collapsed
-    justify-content: center;
-
+    // Keep normal justify-content - don't force center, let the width animation handle it
+    
     .left-panel {
-      // 3D transform: rotate back, scale down, and move back in Z-space
-      transform: perspective(1500px) translateZ(-200px) scale(0.8);
+      // Shrink width to 0 to naturally push right panel to take over space
+      width: 0;
+      min-width: 0;
+      max-width: 0;
+      // Scale down and slide down/back to go "behind" the right panel
+      transform: scale(0.88) translateY(30px);
       opacity: 0;
       pointer-events: none;
+      // Keep z-index low so it appears behind
       z-index: 0;
-      // Remove from layout flow
-      position: absolute;
+      // Stay in layout flow - NO position: absolute
+      // Filter to make it appear further back
+      filter: blur(2px);
+      // Hide overflow during collapse
+      overflow: hidden;
     }
 
-    // Right panel is centered and responsive
+    // Right panel expands to fill available space naturally
     .right-panel {
-      // Override the 50% constraint from .has-right-content
-      // Use full available width up to 700px, scaling down on smaller screens
+      // Let it grow to fill the space left by the collapsing left panel
       width: min(700px, 100%);
       min-width: 0;
       max-width: min(700px, 100%);
-      margin-left: 0; // No negative margin needed - flexbox centering handles it
       z-index: 10;
       position: relative;
+      // Subtle scale up to emphasize "coming forward"
+      transform: scale(1.01);
       // Add shadow to emphasize being on top
       box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
     }
@@ -922,16 +931,18 @@ mat-sidenav-content {
   flex-direction: column;
   position: relative;
   z-index: 1;
-  // Enable 3D transforms
-  transform-style: preserve-3d;
-  // Smooth transitions for collapse animation
+  // Base transform for expanded state
+  transform: scale(1) translateY(0);
+  filter: blur(0);
+  // DEBUG: Long duration for debugging (change back to ~0.4s later)
   transition:
-    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
-    z-index 0s linear 0.2s;
+    width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    z-index 0s linear 1.5s;
 
   // When left panel has content, ensure proper layout for header + content
   &.has-content {
@@ -1070,10 +1081,16 @@ mat-sidenav-content {
   z-index: 5;
   // Transparent background - content renders behind main toolbar
   background-color: transparent;
-  // Smooth transitions for position and shadow changes
+  // Base transform
+  transform: scale(1) translateY(0);
+  // DEBUG: Long duration for debugging (change back to ~0.4s later)
   transition:
-    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 3s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     z-index 0s linear;
 
   // Responsive: allow shrinking on smaller screens
