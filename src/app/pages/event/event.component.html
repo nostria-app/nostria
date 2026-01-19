@@ -7,11 +7,6 @@
   }
   <h2 class="panel-title title-font">Thread</h2>
   <span class="panel-header-spacer"></span>
-  @if (event()) {
-  <button mat-icon-button matTooltip="Reply" (click)="openReplyDialog()">
-    <mat-icon>reply</mat-icon>
-  </button>
-  }
 </div>
 
 <!-- Scrollable Content -->
@@ -55,6 +50,9 @@
     <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
       [trustedByPubkey]="trustedByPubkey()"></app-event>
   </div>
+
+  <!-- Inline Reply using the full-featured note editor -->
+  <app-note-editor-dialog [inlineMode]="true" [replyToEvent]="event()!"></app-note-editor-dialog>
   }
 
   <!-- Loading status indicator - shows thread loading -->

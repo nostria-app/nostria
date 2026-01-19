@@ -95,12 +95,6 @@ nav {
   @include glass-section-dark;
 }
 
-// Collapse sidenav button (shown when sidenav is visible)
-.collapse-sidenav-button {
-  flex-shrink: 0;
-  margin-right: 8px;
-}
-
 // Left section - hamburger/avatar and app icon
 .toolbar-left {
   flex-shrink: 0;
@@ -444,18 +438,10 @@ mat-sidenav-content {
   gap: 12px;
   padding: 8px;
   border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
 }
 
 :host-context(.dark) .sidenav-profile-header {
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
+  // No hover state needed - individual elements handle their own interactions
 }
 
 .sidenav-profile-avatar {
@@ -468,6 +454,17 @@ mat-sidenav-content {
   align-items: center;
   justify-content: center;
   background-color: var(--mat-sys-surface-container);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 
   .avatar-image {
     width: 100%;
@@ -480,6 +477,12 @@ mat-sidenav-content {
     width: 40px;
     height: 40px;
     color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+:host-context(.dark) .sidenav-profile-avatar {
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -509,9 +512,14 @@ mat-sidenav-content {
   width: fit-content;
 }
 
-.expand-accounts-icon {
+.expand-accounts-button {
   color: var(--mat-sys-on-surface-variant);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
 }
 
 // Expandable accounts list in sidenav

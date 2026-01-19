@@ -227,7 +227,7 @@
 }
 
 #main-event {
-  margin-bottom: 1rem;
+  margin-bottom: 0; // No gap - inline reply attaches directly below
   // Account for fixed toolbar and favorites bar when scrolling into view
   scroll-margin-top: calc(var(--toolbar-height, 64px) + 80px);
 
@@ -236,6 +236,11 @@
     border-left: none !important;
     padding-left: 0 !important;
   }
+}
+
+// Inline reply editor - attach to main event
+::ng-deep app-note-editor-dialog.inline-mode {
+  margin-bottom: 1rem;
 }
 
 // Progressive loading animations

@@ -958,3 +958,195 @@
     }
   }
 }
+
+// ===================================
+// Inline Mode Styles
+// ===================================
+
+:host.inline-mode {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+// Collapsed state (inline mode)
+:host.collapsed {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-lowest);
+  }
+}
+
+// Collapsed state UI
+.inline-collapsed-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+
+  .avatar-wrapper {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-sys-surface-container);
+
+    .default-avatar {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    app-user-profile {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .placeholder-text {
+    flex: 1;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reply-button {
+    flex-shrink: 0;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+// Inline editor styles (expanded state)
+.inline-editor {
+  // Remove dialog-specific styling
+  height: auto !important;
+  min-height: unset;
+  max-height: unset;
+
+  .dialog-content-wrapper {
+    padding: 8px 0;
+    overflow: visible;
+
+    // Smaller reply context in inline mode
+    .reply-context {
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+
+      .reply-label {
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-right: 4px;
+      }
+
+      .reply-author {
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+  }
+
+  // Smaller textarea for inline mode
+  .content-editor-section {
+    .content-field {
+      .content-textarea {
+        min-height: 60px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+    }
+
+    // No margin on form field in inline mode
+    .mat-mdc-form-field-subscript-wrapper {
+      margin-bottom: 0;
+    }
+  }
+
+  // Simplified action bar for inline mode
+  .action-container.inline-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 !important;
+    min-height: unset;
+    border-top: none;
+    background-color: transparent; // Match note background for coherent look
+
+    .left-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto; // Don't grow, just fit content
+    }
+
+    .right-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto; // Don't grow, just fit content
+      margin-left: auto; // Push to the right
+    }
+
+    // Smaller buttons in inline mode
+    .mat-mdc-icon-button {
+      width: 36px;
+      height: 36px;
+      padding: 6px;
+
+      .mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .publish-button {
+      min-width: unset;
+      padding: 0 16px;
+      height: 36px;
+      font-size: 14px;
+    }
+  }
+
+  // Hide mentions/hashtags sections in inline mode for cleaner look
+  .mentions-section,
+  .hashtags-section {
+    margin-bottom: 4px;
+    
+    .mentions-label,
+    .hashtags-label {
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .mat-mdc-chip {
+      height: 24px;
+      font-size: 12px;
+    }
+  }
+}
+
+// Media thumbnails in inline mode
+.inline-editor .media-thumbnails {
+  margin-bottom: 8px;
+  gap: 6px;
+
+  .media-thumbnail {
+    width: 60px;
+    height: 60px;
+  }
+}

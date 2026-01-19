@@ -9,6 +9,9 @@ import {
   OnDestroy,
   OnInit,
   HostListener,
+  input,
+  output,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -56,6 +59,7 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -115,16 +119,37 @@ interface NoteAutoDraft {
     ContentComponent,
     MentionAutocompleteComponent,
     MatMenuModule,
-    DragDropModule
+    DragDropModule,
+    UserProfileComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(keydown)': 'onHostKeyDown($event)',
+    '[class.inline-mode]': 'inlineMode()',
+    '[class.collapsed]': 'inlineMode() && !isExpanded()',
   },
 })
 export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
+  // Inline mode inputs/outputs
+  /** When true, renders in inline mode (embedded in page) instead of dialog mode */
+  inlineMode = input(false);
+
+  /** For inline mode: the event being replied to */
+  replyToEvent = input<NostrEvent | null>(null);
+
+  /** Emitted when a reply is successfully published (inline mode) */
+  replyPublished = output<NostrEvent>();
+
+  /** Emitted when the editor is cancelled/dismissed (inline mode) */
+  cancelled = output<void>();
+
+  // Inline mode state
+  isExpanded = signal(false);
+  private elementRef = inject(ElementRef);
+
   dialogRef?: CustomDialogRef<NoteEditorDialogComponent, { published: boolean; event?: NostrEvent }>;
   data: NoteEditorDialogData = {};
   private nostrService = inject(NostrService);
@@ -279,6 +304,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const profile = this.currentAccountProfile();
     return profile?.data?.picture || null;
   });
+
+  // Check if user is logged in
+  isLoggedIn = computed(() => !!this.currentAccountPubkey());
 
   // charactersRemaining = computed(() => 280 - this.characterCount());
   // isOverLimit = computed(() => this.characterCount() > 280);
@@ -552,12 +580,62 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
 
-    // Auto-focus the textarea
+    // Auto-focus the textarea (only in dialog mode)
+    if (!this.inlineMode()) {
+      setTimeout(() => {
+        if (this.contentTextarea) {
+          this.contentTextarea.nativeElement.focus();
+        }
+      }, 100);
+    }
+  }
+
+  // ===============================
+  // Inline Mode Methods
+  // ===============================
+
+  /**
+   * Expand the inline editor (inline mode only)
+   */
+  expandEditor(): void {
+    if (!this.isLoggedIn()) {
+      this.snackBar.open('Please log in to reply', 'Close', { duration: 3000 });
+      return;
+    }
+    this.isExpanded.set(true);
     setTimeout(() => {
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.focus();
-      }
-    }, 100);
+      this.contentTextarea?.nativeElement?.focus();
+    }, 50);
+  }
+
+  /**
+   * Collapse the inline editor if content is empty (inline mode only)
+   */
+  collapseEditor(): void {
+    if (!this.content().trim() && !this.isPublishing() && !this.isUploading()) {
+      this.isExpanded.set(false);
+    }
+  }
+
+  /**
+   * Handle clicks outside the component to collapse editor (inline mode only)
+   */
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    // Only apply in inline mode when expanded
+    if (!this.inlineMode() || !this.isExpanded()) return;
+
+    // Don't collapse if busy or has content
+    if (this.isPublishing() || this.isUploading() || this.content().trim()) return;
+
+    const clickedInside = this.elementRef.nativeElement.contains(event.target);
+    // Also check if clicking on mention autocomplete (which may be outside component)
+    const mentionAutocomplete = document.querySelector('app-mention-autocomplete');
+    const clickedOnMentionAutocomplete = mentionAutocomplete?.contains(event.target as Node);
+
+    if (!clickedInside && !clickedOnMentionAutocomplete) {
+      this.isExpanded.set(false);
+    }
   }
 
   ngOnDestroy() {
@@ -598,6 +676,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnInit() {
+    // In inline mode, set up data from the replyToEvent input
+    if (this.inlineMode() && this.replyToEvent()) {
+      const event = this.replyToEvent()!;
+      this.data = {
+        replyTo: {
+          id: event.id,
+          pubkey: event.pubkey,
+          event: event,
+        }
+      };
+    }
+
     // Store initial state for dirty detection BEFORE loading draft
     // This captures the truly empty/initial state so isDirty can detect restored drafts
     this.initialContent = this.content();
@@ -605,8 +695,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.initialMediaMetadata = [...this.mediaMetadata()];
     this.initialTitle = this.title();
 
-    // Load auto-saved draft if available
-    this.loadAutoDraft();
+    // Load auto-saved draft if available (skip for inline mode to keep it simple)
+    if (!this.inlineMode()) {
+      this.loadAutoDraft();
+    }
 
     // Initialize content with quote if provided
     if (this.data?.quote) {
@@ -1078,14 +1170,28 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           publishedEventId = relayEvent.event.id;
 
           // Clear draft and close dialog immediately after first successful publish
-          this.clearAutoDraft();
-          this.snackBar.open('Note published successfully!', 'Close', {
+          if (!this.inlineMode()) {
+            this.clearAutoDraft();
+          }
+          this.snackBar.open(this.inlineMode() ? 'Reply published!' : 'Note published successfully!', 'Close', {
             duration: 3000,
           });
 
           // Close dialog with the signed event
           const signedEvent = relayEvent.event;
-          this.dialogRef?.close({ published: true, event: signedEvent });
+
+          if (this.inlineMode()) {
+            // In inline mode: reset state and emit event
+            this.content.set('');
+            this.mentionMap.clear();
+            this.pubkeyToNameMap.clear();
+            this.mediaMetadata.set([]);
+            this.isExpanded.set(false);
+            this.replyPublished.emit(signedEvent);
+          } else {
+            // In dialog mode: close dialog
+            this.dialogRef?.close({ published: true, event: signedEvent });
+          }
 
           // Navigate to the published event
           const nevent = nip19.neventEncode({
@@ -1796,20 +1902,38 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       this.stopPow();
     }
 
-    // Check if there's meaningful content before closing
-    const content = this.content().trim();
-    if (content) {
-      // Keep the auto-draft - user might want to continue later
-      this.snackBar.open('Note draft saved automatically', 'Dismiss', {
-        duration: 3000,
-        panelClass: 'info-snackbar',
-      });
+    if (this.inlineMode()) {
+      // In inline mode: just collapse if empty, otherwise confirm discard
+      const content = this.content().trim();
+      if (content) {
+        if (confirm('Discard your reply?')) {
+          this.content.set('');
+          this.mentionMap.clear();
+          this.pubkeyToNameMap.clear();
+          this.mediaMetadata.set([]);
+          this.isExpanded.set(false);
+          this.cancelled.emit();
+        }
+      } else {
+        this.isExpanded.set(false);
+        this.cancelled.emit();
+      }
     } else {
-      // No content, clear any existing draft
-      this.clearAutoDraft();
-    }
+      // Check if there's meaningful content before closing
+      const content = this.content().trim();
+      if (content) {
+        // Keep the auto-draft - user might want to continue later
+        this.snackBar.open('Note draft saved automatically', 'Dismiss', {
+          duration: 3000,
+          panelClass: 'info-snackbar',
+        });
+      } else {
+        // No content, clear any existing draft
+        this.clearAutoDraft();
+      }
 
-    this.dialogRef?.close({ published: false });
+      this.dialogRef?.close({ published: false });
+    }
   }
 
   dismissError(): void {
