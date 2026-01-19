@@ -127,7 +127,6 @@ interface MessageGroup {
     RouterModule,
     LoadingOverlayComponent,
     UserProfileComponent,
-    NPubPipe,
     TimestampPipe,
     AgoPipe,
     LinkifyPipe,

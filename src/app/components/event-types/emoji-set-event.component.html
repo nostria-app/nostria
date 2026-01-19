@@ -10,14 +10,20 @@
     <button mat-stroked-button class="install-button" [disabled]="isInstalling() || isInstalled()"
       (click)="installEmojiSet()">
       @if (isInstalling()) {
-      <mat-icon>hourglass_empty</mat-icon>
-      Installing...
+      <ng-container>
+        <mat-icon>hourglass_empty</mat-icon>
+        Installing...
+      </ng-container>
       } @else if (isInstalled()) {
-      <mat-icon>check</mat-icon>
-      Installed
+      <ng-container>
+        <mat-icon>check</mat-icon>
+        Installed
+      </ng-container>
       } @else {
-      <mat-icon>download</mat-icon>
-      Install
+      <ng-container>
+        <mat-icon>download</mat-icon>
+        Install
+      </ng-container>
       }
     </button>
   </div>
