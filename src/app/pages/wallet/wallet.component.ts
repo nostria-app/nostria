@@ -39,7 +39,6 @@ import { SettingsService } from '../../services/settings.service';
     RouterModule,
     UserProfileComponent,
     DatePipe,
-    DecimalPipe,
   ],
   templateUrl: './wallet.component.html',
   styleUrl: './wallet.component.scss',

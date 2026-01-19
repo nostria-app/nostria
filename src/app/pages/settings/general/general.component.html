@@ -72,7 +72,7 @@
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label i18n="@@settings.media.display-mode">Media Display Mode</mat-label>
-      <mat-select [ngModel]="settings.settings()?.mediaPrivacy || 'show-always'"
+      <mat-select [ngModel]="settings.settings().mediaPrivacy || 'show-always'"
         (selectionChange)="setMediaPrivacy($event.value)">
         <mat-option value="show-always" i18n="@@settings.media.show-always">Always Show Media</mat-option>
         <mat-option value="blur-non-following" i18n="@@settings.media.blur-non-following">Blur Media from
@@ -99,7 +99,7 @@
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label i18n="@@settings.media.placeholder-algorithm">Placeholder Algorithm</mat-label>
-      <mat-select [ngModel]="settings.settings()?.placeholderAlgorithm || 'blurhash'"
+      <mat-select [ngModel]="settings.settings().placeholderAlgorithm || 'blurhash'"
         (selectionChange)="setPlaceholderAlgorithm($event.value)">
         <mat-option value="blurhash" i18n="@@settings.media.placeholder.blurhash">Blurhash (Legacy)</mat-option>
         <mat-option value="thumbhash" i18n="@@settings.media.placeholder.thumbhash">Thumbhash</mat-option>

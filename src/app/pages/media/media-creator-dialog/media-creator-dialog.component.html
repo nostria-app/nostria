@@ -98,7 +98,7 @@
     <div class="edit-layout">
       <!-- Large preview area -->
       <div class="preview-area"
-        [class.vertical]="currentMedia()?.dimensions && currentMedia()!.dimensions!.height > currentMedia()!.dimensions!.width"
+        [class.vertical]="currentMedia().dimensions && currentMedia()!.dimensions!.height > currentMedia()!.dimensions!.width"
         (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
 
         @if (isImage()) {
@@ -117,7 +117,7 @@
             }
           </div>
 
-          @if (currentMedia()?.dimensions) {
+          @if (currentMedia().dimensions) {
           <div class="dimensions-badge">
             {{ currentMedia()!.dimensions!.width }} × {{ currentMedia()!.dimensions!.height }}
           </div>
@@ -125,7 +125,7 @@
         </div>
 
         <!-- Video thumbnail indicator -->
-        @if (isVideo() && currentMedia()?.thumbnailUrl) {
+        @if (isVideo() && currentMedia().thumbnailUrl) {
         <div class="thumbnail-badge">
           <mat-icon>image</mat-icon>
           <span i18n="@@media.creator.thumbnail.label">Thumbnail ready</span>

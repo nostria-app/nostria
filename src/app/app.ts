@@ -146,7 +146,6 @@ interface NavItem {
     FormsModule,
     MatFormFieldModule,
     NPubPipe,
-    AgoPipe,
     MatBadgeModule,
     MatBottomSheetModule,
     WelcomeComponent,
