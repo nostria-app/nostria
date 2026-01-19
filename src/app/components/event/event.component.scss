@@ -35,26 +35,12 @@
   // Use lightest surface for content cards - maximum readability in both light and dark mode
   background-color: var(--mat-sys-surface-container-lowest);
   box-shadow: none !important;
-  transition:
-    background-color 0.2s ease-in-out,
-    transform 0.2s ease-in-out;
-
-  &.clickable:hover:not(.selected) {
-    background-color: var(--mat-sys-surface-container-low);
-  }
 
   &.plain {
     border: none;
-
-    &.clickable:hover:not(.selected) {
-      background-color: var(--mat-sys-surface-container-low);
-    }
   }
 
   &.selected {
-    // Disable hover effects for selected events
-    background-color: var(--mat-sys-surface-container-lowest);
-    transform: none;
     cursor: default;
   }
 }
