@@ -286,6 +286,12 @@ export class App implements OnInit {
     return this.preferLeftPanelCollapsed() && this.hasRightContent();
   });
 
+  // Track when toggle button should be hidden (during panel transitions)
+  toggleButtonAnimating = signal(false);
+  
+  // Track previous hasRightContent state to detect transitions
+  private previousHasRightContent = false;
+
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
 
@@ -678,6 +684,22 @@ export class App implements OnInit {
       const isHandset = this.layout.isHandset();
       // Update toolbar position when any of these change
       this.updateFloatingToolbarPosition();
+    });
+
+    // Detect when right panel appears/disappears to animate the toggle button
+    effect(() => {
+      const hasRight = this.hasRightContent();
+      
+      // When right panel first appears, hide button until panels settle
+      if (hasRight && !this.previousHasRightContent) {
+        this.toggleButtonAnimating.set(true);
+        // Show button after panels have animated into place
+        setTimeout(() => {
+          this.toggleButtonAnimating.set(false);
+        }, 450);
+      }
+      
+      this.previousHasRightContent = hasRight;
     });
 
     if (!this.app.isBrowser()) {
@@ -1799,11 +1821,21 @@ export class App implements OnInit {
   /**
    * Toggle left panel collapsed preference for focusing on right content.
    * The left panel slides behind the right panel with a smooth animation.
+   * The toggle button fades out during the animation and fades back in when complete.
    */
   toggleLeftPanelCollapse(): void {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
+      // Fade out the toggle button
+      this.toggleButtonAnimating.set(true);
+      
+      // Toggle the collapsed state
       this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
+      
+      // Fade button back in after animation completes
+      setTimeout(() => {
+        this.toggleButtonAnimating.set(false);
+      }, 450);
     }
   }
 

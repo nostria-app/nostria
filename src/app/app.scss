@@ -934,15 +934,15 @@ mat-sidenav-content {
   // Base transform for expanded state
   transform: scale(1) translateY(0);
   filter: blur(0);
-  // DEBUG: Long duration for debugging (change back to ~0.4s later)
+  // Smooth transitions for collapse animation
   transition:
-    width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    opacity 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    filter 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    z-index 0s linear 1.5s;
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    z-index 0s linear 0.2s;
 
   // When left panel has content, ensure proper layout for header + content
   &.has-content {
@@ -1030,10 +1030,14 @@ mat-sidenav-content {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  opacity: 1;
+  // Opacity fades out quickly, then back in with a delay after position settles
   transition:
     background-color 0.2s ease,
     transform 0.2s ease,
-    left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease-out;
 
   // Hide on tablet (below 1023px) - mobile mode takes over
   @media (max-width: 1023px) {
@@ -1043,6 +1047,19 @@ mat-sidenav-content {
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
     transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  // When animating, fade out the button
+  &.animating {
+    opacity: 0;
+    pointer-events: none;
+    // Quick fade out, no delay
+    transition:
+      background-color 0.2s ease,
+      transform 0.2s ease,
+      left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.2s ease-out;
   }
 
   mat-icon {
@@ -1083,14 +1100,14 @@ mat-sidenav-content {
   background-color: transparent;
   // Base transform
   transform: scale(1) translateY(0);
-  // DEBUG: Long duration for debugging (change back to ~0.4s later)
+  // Smooth transitions for layout changes
   transition:
-    width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 3s cubic-bezier(0.4, 0, 0.2, 1),
-    margin-left 3s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     z-index 0s linear;
 
   // Responsive: allow shrinking on smaller screens
@@ -1121,12 +1138,10 @@ mat-sidenav-content {
 
   // Ensure routed components fill the panel
   .right-panel-content {
+    // Routed components in right panel - just let them flow naturally
+    // No flex/overflow manipulation to ensure sticky works
     router-outlet+* {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      display: block;
     }
   }
 
@@ -1154,13 +1169,23 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   // Panel header is now inside the content, positioned sticky
   // So we don't need toolbar clearance here - the header handles it
   padding-top: 0;
+
+  // Left panel content needs flex for feeds layout
+  &.left-panel-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Right panel content - NO flex, just block layout
+  // This allows position: sticky to work properly in child components
+  &.right-panel-content {
+    display: block;
+  }
 }
 
 // ============================================
