@@ -46,6 +46,12 @@ import { SettingsService } from '../../services/settings.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WalletComponent {
+  // Toggle wallet balance hiding
+  toggleHideWalletAmounts() {
+    const current = this.settingsService.settings().hideWalletAmounts;
+    this.settingsService.updateSettings({ hideWalletAmounts: !current });
+  }
+
   snackBar = inject(MatSnackBar);
   nwcService = inject(NwcService);
   wallets = inject(Wallets);
