@@ -6,122 +6,113 @@
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
 
-    <!-- Header Section - inside scrollable container for sticky positioning -->
-    <header class="header-section" [class.header-hidden]="headerHidden()">
-      <div class="title-section">
-        <!-- Feed Selector -->
-        <div class="feed-selector">
-          <!-- Feed tabs - changes based on mobile/desktop view or overflow -->
-          <div class="feed-tabs" #feedTabsContainer>
-            <!-- Feed buttons wrapper - used to measure if tabs fit -->
-            <div class="feed-tabs-inner" #feedTabsInner>
-              @if (useDropdownSelector()) {
-              <!-- Dropdown menu for feeds (mobile or when tabs overflow) -->
-              <button mat-button [matMenuTriggerFor]="feedMenu">
-                <mat-icon>{{ feedIcon() }}</mat-icon>
-                {{ feedLabel() }}
-              </button>
+    <!-- Panel Header - matches right panel style -->
+    <div class="panel-header" [class.header-hidden]="headerHidden()">
+      <!-- Feed selector dropdown/tabs -->
+      <div class="feed-tabs" #feedTabsContainer>
+        <div class="feed-tabs-inner" #feedTabsInner>
+          @if (useDropdownSelector()) {
+          <button mat-button [matMenuTriggerFor]="feedMenu">
+            <mat-icon>{{ feedIcon() }}</mat-icon>
+            {{ feedLabel() }}
+          </button>
 
-              <mat-menu #feedMenu="matMenu">
-                @for (feed of feeds(); track feed.id) {
-                <button mat-menu-item (click)="selectFeed(feed.id)">
-                  <mat-icon>{{ feed.icon }}</mat-icon>
-                  <span>{{ feed.label }}</span>
-                </button>
-                }
-              </mat-menu>
-              } @else {
-              <!-- Desktop: Feed tabs -->
-              @for (feed of feeds(); track feed.id) {
-              <button class="feed-tab" mat-button
-                [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
-                (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
-                <mat-icon>{{ feed.icon }}</mat-icon>
-                <span>{{ feed.label }}</span>
-              </button>
-              }
-              }
-            </div>
-
-            <!-- Public Relay Feeds Menu -->
-            <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
-            </app-relay-feed-menu>
-
-            <!-- Spacer to push menu to the right -->
-            <span class="toolbar-spacer"></span>
-
-            <!-- Filter button with overlay panel -->
-            @if (activeFeed() && !showRelayFeed()) {
-            <button mat-icon-button
-              cdkOverlayOrigin
-              #filterTrigger="cdkOverlayOrigin"
-              (click)="toggleFilterPanel()"
-              matTooltip="Filter content">
-              <mat-icon>tune</mat-icon>
+          <mat-menu #feedMenu="matMenu">
+            @for (feed of feeds(); track feed.id) {
+            <button mat-menu-item (click)="selectFeed(feed.id)">
+              <mat-icon>{{ feed.icon }}</mat-icon>
+              <span>{{ feed.label }}</span>
             </button>
-
-            <ng-template
-              cdkConnectedOverlay
-              [cdkConnectedOverlayOrigin]="filterTrigger"
-              [cdkConnectedOverlayOpen]="filterPanelOpen()"
-              [cdkConnectedOverlayHasBackdrop]="true"
-              [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
-              (backdropClick)="closeFilterPanel()"
-              [cdkConnectedOverlayPositions]="filterPanelPositions">
-              <app-feed-filter-panel
-                [feed]="activeFeed()"
-                (kindsChanged)="onKindsChanged($event)"
-                (showRepliesChanged)="onShowRepliesChanged($event)"
-                (showRepostsChanged)="onShowRepostsChanged($event)">
-              </app-feed-filter-panel>
-            </ng-template>
             }
-
-            <!-- Feed menu with all actions -->
-            <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
-              <mat-icon>more_vert</mat-icon>
-            </button>
-
-            <mat-menu #feedManagementMenu="matMenu">
-              @let feed = activeFeed();
-              <!-- Refresh -->
-              @if (feed && !showRelayFeed()) {
-              <button mat-menu-item (click)="refreshFeed(feed)">
-                <mat-icon>refresh</mat-icon>
-                <span>Refresh Content</span>
-              </button>
-              <mat-divider></mat-divider>
-              }
-
-              <!-- Add Feed -->
-              <button mat-menu-item (click)="addNewFeed()">
-                <mat-icon>add</mat-icon>
-                <span>Add Feed</span>
-              </button>
-
-              <mat-divider></mat-divider>
-
-              <!-- Edit / Delete / Reset -->
-              <button mat-menu-item (click)="editCurrentFeed()"
-                [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
-                <mat-icon>edit</mat-icon>
-                <span>Edit Feed</span>
-              </button>
-              <button mat-menu-item (click)="deleteCurrentFeed()"
-                [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
-                <mat-icon>delete</mat-icon>
-                <span>Delete Feed</span>
-              </button>
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="resetFeeds()">
-                <mat-icon>restore</mat-icon>
-                <span>Reset Feeds</span>
-              </button>
-            </mat-menu>
-          </div>
+          </mat-menu>
+          } @else {
+          @for (feed of feeds(); track feed.id) {
+          <button class="feed-tab" mat-button
+            [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
+            (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
+            <mat-icon>{{ feed.icon }}</mat-icon>
+            <span>{{ feed.label }}</span>
+          </button>
+          }
+          }
         </div>
+
+        <!-- Public Relay Feeds Menu -->
+        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+        </app-relay-feed-menu>
       </div>
-    </header>
+
+      <span class="spacer"></span>
+
+      <!-- Filter button with overlay panel -->
+      @if (activeFeed() && !showRelayFeed()) {
+      <button mat-icon-button
+        cdkOverlayOrigin
+        #filterTrigger="cdkOverlayOrigin"
+        (click)="toggleFilterPanel()"
+        matTooltip="Filter content">
+        <mat-icon>tune</mat-icon>
+      </button>
+
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="filterTrigger"
+        [cdkConnectedOverlayOpen]="filterPanelOpen()"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
+        (backdropClick)="closeFilterPanel()"
+        [cdkConnectedOverlayPositions]="filterPanelPositions">
+        <app-feed-filter-panel
+          [feed]="activeFeed()"
+          (kindsChanged)="onKindsChanged($event)"
+          (showRepliesChanged)="onShowRepliesChanged($event)"
+          (showRepostsChanged)="onShowRepostsChanged($event)">
+        </app-feed-filter-panel>
+      </ng-template>
+      }
+
+      <!-- Feed menu with all actions -->
+      <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+
+      <mat-menu #feedManagementMenu="matMenu">
+        @let feed = activeFeed();
+        <!-- Refresh -->
+        @if (feed && !showRelayFeed()) {
+        <button mat-menu-item (click)="refreshFeed(feed)">
+          <mat-icon>refresh</mat-icon>
+          <span>Refresh Content</span>
+        </button>
+        <mat-divider></mat-divider>
+        }
+
+        <!-- Add Feed -->
+        <button mat-menu-item (click)="addNewFeed()">
+          <mat-icon>add</mat-icon>
+          <span>Add Feed</span>
+        </button>
+
+        <mat-divider></mat-divider>
+
+        <!-- Edit / Delete / Reset -->
+        <button mat-menu-item (click)="editCurrentFeed()"
+          [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
+          <mat-icon>edit</mat-icon>
+          <span>Edit Feed</span>
+        </button>
+        <button mat-menu-item (click)="deleteCurrentFeed()"
+          [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
+          <mat-icon>delete</mat-icon>
+          <span>Delete Feed</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="resetFeeds()">
+          <mat-icon>restore</mat-icon>
+          <span>Reset Feeds</span>
+        </button>
+      </mat-menu>
+    </div>
 
     <!-- Relay Feed View - shown when relay query param is present -->
     @if (showRelayFeed()) {

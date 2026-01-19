@@ -25,7 +25,8 @@
 
 .notes-list-container {
   width: 100%;
-  max-width: 680px; // Fixed width for the note container to match note-card
+  padding: 0;
+  // max-width: 680px; // Fixed width for the note container to match note-card
   // Ensure list container appears second on small screens
   order: 2;
 
@@ -206,7 +207,8 @@
     @media (max-width: 1100px) {
       order: 1; // Move options to first position
       width: 100%; // Full width
-      max-width: 680px; // Match the width of note-card
+      padding: 0;
+      // max-width: 680px; // Match the width of note-card
       margin-left: 0; // Remove the left margin
     }
   }
@@ -354,9 +356,14 @@
 }
 
 .note-card {
-  max-width: 680px;
+  padding: 0;
+  // max-width: 680px;
   width: 100%;
   margin: 0;
+
+  ::ng-deep .mat-mdc-card-content {
+    padding: 0 !important;
+  }
 }
 
 .note-items {
