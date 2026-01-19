@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,8 @@ import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { FollowSet, FollowSetsService } from '../../services/follow-sets.service';
+import { FollowingService } from '../../services/following.service';
+import { NostrRecord } from '../../interfaces';
 
 type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
 
@@ -46,15 +48,14 @@ export interface AddPersonDialogData {
           @case ('input') {
             <div class="input-section">
               <p class="description">
-                Enter a public key (npub or hex format) or a NIP-05 identifier to discover and follow
-                someone new.
+                Search for someone you follow, or enter a public key (npub or hex format) or a NIP-05 identifier.
               </p>
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Public Key or NIP-05</mat-label>
+                <mat-label>Search or enter Public Key / NIP-05</mat-label>
                 <input
                   matInput
                   [(ngModel)]="inputValue"
-                  placeholder="npub1..., hex, or name@domain.com"
+                  placeholder="Search name, npub1..., hex, or name@domain.com"
                   (keyup.enter)="onSearch()"
                 />
                 @if (inputValue()) {
@@ -67,6 +68,25 @@ export interface AddPersonDialogData {
                 <div class="error-message">
                   <mat-icon color="warn">error</mat-icon>
                   <span>{{ errorMessage() }}</span>
+                </div>
+              }
+              
+              <!-- Search results from cached profiles -->
+              @if (searchResults().length > 0 && !isSpecialInput()) {
+                <div class="search-results">
+                  <div class="results-header">
+                    <span>People you follow</span>
+                  </div>
+                  <div class="results-list">
+                    @for (profile of searchResults(); track profile.event.pubkey) {
+                      <div class="search-result-item" 
+                           tabindex="0" 
+                           (click)="selectProfile(profile)"
+                           (keydown.enter)="selectProfile(profile)">
+                        <app-user-profile [pubkey]="profile.event.pubkey" view="list"></app-user-profile>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
             </div>
@@ -85,10 +105,16 @@ export interface AddPersonDialogData {
                   [view]="'details'"
                   [hostWidthAuto]="false"
                 ></app-user-profile>
-                @if (alreadyFollowing()) {
+                @if (alreadyFollowing() && !isAddingToSet()) {
                   <div class="already-following-notice">
                     <mat-icon>check_circle</mat-icon>
                     <span>You are already following this person</span>
+                  </div>
+                }
+                @if (alreadyInSet()) {
+                  <div class="already-following-notice">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>This person is already in this list</span>
                   </div>
                 }
               }
@@ -97,7 +123,7 @@ export interface AddPersonDialogData {
           @case ('success') {
             <div class="success-section">
               <mat-icon color="primary">check_circle</mat-icon>
-              <p>Successfully followed!</p>
+              <p>{{ isAddingToSet() ? 'Successfully added to list!' : 'Successfully followed!' }}</p>
             </div>
           }
           @case ('error') {
@@ -123,7 +149,7 @@ export interface AddPersonDialogData {
               mat-flat-button
               color="primary"
               (click)="onFollow()"
-              [disabled]="alreadyFollowing() || alreadyInSet()"
+              [disabled]="(alreadyFollowing() && !isAddingToSet()) || alreadyInSet()"
             >
               {{ getActionButtonText() }}
             </button>
@@ -179,6 +205,40 @@ export interface AddPersonDialogData {
             font-size: 20px;
             width: 20px;
             height: 20px;
+          }
+        }
+
+        .search-results {
+          margin-top: 16px;
+          border: 1px solid var(--mat-sys-outline-variant);
+          border-radius: 8px;
+          overflow: hidden;
+
+          .results-header {
+            padding: 8px 12px;
+            background: var(--mat-sys-surface-container);
+            font-size: 12px;
+            color: var(--mat-sys-on-surface-variant);
+          }
+
+          .results-list {
+            max-height: 200px;
+            overflow-y: auto;
+          }
+
+          .search-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+
+            &:hover {
+              background: var(--mat-sys-surface-container-high);
+            }
+
+            &:focus {
+              background: var(--mat-sys-surface-container-high);
+              outline: none;
+            }
           }
         }
       }
@@ -255,6 +315,7 @@ export class AddPersonDialogComponent {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private followSetsService = inject(FollowSetsService);
+  private followingService = inject(FollowingService);
 
   state = signal<DialogState>('input');
   inputValue = signal<string>('');
@@ -262,6 +323,33 @@ export class AddPersonDialogComponent {
   discoveredPubkey = signal<string | null>(null);
   alreadyFollowing = signal<boolean>(false);
   alreadyInSet = signal<boolean>(false);
+
+  // Whether we're adding to a custom follow set (vs main following list)
+  isAddingToSet = computed(() => !!this.data?.followSet);
+
+  // Computed: Check if input looks like an npub, hex, or NIP-05
+  isSpecialInput = computed(() => {
+    const input = this.inputValue().trim();
+    if (!input) return false;
+    return input.startsWith('npub') || 
+           input.startsWith('nprofile') || 
+           input.includes('@') || 
+           /^[0-9a-f]{64}$/i.test(input);
+  });
+
+  // Computed: Search results from cached profiles
+  searchResults = computed(() => {
+    const input = this.inputValue().trim().toLowerCase();
+    
+    // Don't show search results if input looks like npub/hex/NIP-05
+    if (!input || this.isSpecialInput()) {
+      return [];
+    }
+
+    // Search in following profiles
+    const followingResults = this.followingService.searchProfiles(input);
+    return this.followingService.toNostrRecords(followingResults).slice(0, 10);
+  });
 
   onCancel(): void {
     this.dialogRef.close();
@@ -274,6 +362,24 @@ export class AddPersonDialogComponent {
   onBack(): void {
     this.state.set('input');
     this.errorMessage.set('');
+  }
+
+  // Select a profile from search results
+  selectProfile(profile: NostrRecord): void {
+    const pubkey = profile.event.pubkey;
+    this.inputValue.set('');
+    this.discoveredPubkey.set(pubkey);
+    
+    // Check if already following
+    const isFollowing = this.accountState.isFollowing();
+    this.alreadyFollowing.set(isFollowing(pubkey));
+    
+    // Check if already in the target set (if adding to a set)
+    if (this.data?.followSet) {
+      this.alreadyInSet.set(this.data.followSet.pubkeys.includes(pubkey));
+    }
+    
+    this.state.set('preview');
   }
 
   async onSearch(): Promise<void> {

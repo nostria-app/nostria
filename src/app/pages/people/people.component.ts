@@ -682,10 +682,14 @@ export class PeopleComponent implements OnDestroy {
       if (result) {
         this.logger.info('Person added:', result);
         // FollowingService will automatically reload when following list changes
-        // If a follow set was selected, reload it
+        // If a follow set was selected, reload it with fresh data from the service
         const selectedSet = this.selectedFollowSet();
         if (selectedSet) {
-          this.selectFollowSet(selectedSet);
+          // Get the updated follow set from the service (with new pubkeys)
+          const updatedSet = this.followSetsService.getFollowSetByDTag(selectedSet.dTag);
+          if (updatedSet) {
+            this.selectFollowSet(updatedSet);
+          }
         }
       }
     });
