@@ -61,8 +61,10 @@
     <app-notifications-filter-panel
       [filters]="notificationFilters()"
       [showSystemNotifications]="showSystemNotifications()"
+      [showUnreadOnly]="showUnreadOnly()"
       (filtersChanged)="onFiltersChanged($event)"
-      (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)">
+      (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
+      (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)">
     </app-notifications-filter-panel>
   </ng-template>
 
@@ -131,10 +133,6 @@
             <mat-icon>check</mat-icon>
           </button>
           }
-          <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove"
-            class="action-icon-button">
-            <mat-icon>close</mat-icon>
-          </button>
           <button mat-icon-button [matMenuTriggerFor]="systemNotificationMenu" matTooltip="More options"
             class="action-icon-button">
             <mat-icon>more_vert</mat-icon>
@@ -146,6 +144,10 @@
               <span>Mark as Read</span>
             </button>
             }
+            <button mat-menu-item (click)="removeNotification(notification.id)">
+              <mat-icon>close</mat-icon>
+              <span>Remove</span>
+            </button>
             <button mat-menu-item (click)="copyNotificationData(notification)">
               <mat-icon>content_copy</mat-icon>
               <span>Copy event data</span>
@@ -175,10 +177,10 @@
       </button>
     </div>
     } @else {
-    <cdk-virtual-scroll-viewport [itemSize]="94" [minBufferPx]="800" [maxBufferPx]="1400" class="notification-viewport"
+    <cdk-virtual-scroll-viewport [itemSize]="102" [minBufferPx]="800" [maxBufferPx]="1400" class="notification-viewport"
       (scrolledIndexChange)="onScrolledIndexChange($event)">
       <div *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
-        class="notification-item" [class.unread]="!notification.read" [class.clickable]="getEventId(notification)"
+        class="notification-item" [class.read]="notification.read" [class.clickable]="getEventId(notification)"
         [attr.data-notification-type]="notification.type">
         <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()"
           style="cursor: pointer">
@@ -206,9 +208,6 @@
             </a>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
-            @if (!notification.read) {
-            <span class="new-indicator">NEW</span>
-            }
           </div>
 
           @if (notification.message && notification.type !== 'zap') {
@@ -237,10 +236,6 @@
             <mat-icon>check</mat-icon>
           </button>
           }
-          <button mat-icon-button (click)="removeNotification(notification.id); $event.stopPropagation()"
-            matTooltip="Remove" class="action-icon-button remove-btn">
-            <mat-icon>close</mat-icon>
-          </button>
           <button mat-icon-button [matMenuTriggerFor]="notificationMenu" (click)="$event.stopPropagation()"
             matTooltip="More options" class="action-icon-button">
             <mat-icon>more_vert</mat-icon>
@@ -252,7 +247,7 @@
               <span>Mark as Read</span>
             </button>
             }
-            <button mat-menu-item class="menu-remove-btn" (click)="removeNotification(notification.id)">
+            <button mat-menu-item (click)="removeNotification(notification.id)">
               <mat-icon>close</mat-icon>
               <span>Remove</span>
             </button>

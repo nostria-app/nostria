@@ -68,9 +68,17 @@ const FILTER_OPTIONS: FilterOption[] = [
 
       <mat-divider></mat-divider>
 
-      <!-- System Notifications Toggle -->
+      <!-- View Options -->
       <div class="section-label">View</div>
       <div class="filter-options">
+        <mat-checkbox
+          [checked]="showUnreadOnly()"
+          (change)="onUnreadOnlyChange($event.checked)">
+          <div class="filter-option-content">
+            <mat-icon class="filter-icon">mark_email_unread</mat-icon>
+            <span>Unread only</span>
+          </div>
+        </mat-checkbox>
         <mat-checkbox
           [checked]="showSystemNotifications()"
           (change)="onSystemNotificationsChange($event.checked)">
@@ -152,10 +160,12 @@ const FILTER_OPTIONS: FilterOption[] = [
 export class NotificationsFilterPanelComponent {
   filters = input.required<Record<NotificationType, boolean>>();
   showSystemNotifications = input<boolean>(false);
+  showUnreadOnly = input<boolean>(false);
 
   // Output events for changes
   filtersChanged = output<Partial<Record<NotificationType, boolean>>>();
   showSystemNotificationsChanged = output<boolean>();
+  showUnreadOnlyChanged = output<boolean>();
 
   // Expose filter options
   filterOptions = FILTER_OPTIONS;
@@ -175,6 +185,13 @@ export class NotificationsFilterPanelComponent {
   }
 
   /**
+   * Handle unread only toggle
+   */
+  onUnreadOnlyChange(checked: boolean): void {
+    this.showUnreadOnlyChanged.emit(checked);
+  }
+
+  /**
    * Reset all filters to defaults (all enabled)
    */
   reset(): void {
@@ -187,5 +204,6 @@ export class NotificationsFilterPanelComponent {
       [NotificationType.ZAP]: true,
     });
     this.showSystemNotificationsChanged.emit(false);
+    this.showUnreadOnlyChanged.emit(false);
   }
 }
