@@ -29,6 +29,7 @@ import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../service
 import { Title } from '@angular/platform-browser';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
+import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
 
 /** Description of the EventPageComponent
  *
@@ -51,7 +52,7 @@ import { RightPanelService } from '../../services/right-panel.service';
 
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, NoteEditorDialogComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {
@@ -135,16 +136,6 @@ export class EventPageComponent {
       this.rightPanel.goBack();
     } else {
       this.location.back();
-    }
-  }
-
-  /**
-   * Open reply dialog for the current event
-   */
-  openReplyDialog(): void {
-    const currentEvent = this.event();
-    if (currentEvent) {
-      this.eventService.createNote({ replyTo: currentEvent });
     }
   }
 

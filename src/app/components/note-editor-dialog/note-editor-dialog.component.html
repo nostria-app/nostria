@@ -1,5 +1,24 @@
+<!-- Inline Mode: Collapsed State -->
+@if (inlineMode() && !isExpanded()) {
+<div class="inline-collapsed-state" (click)="expandEditor()">
+  <div class="avatar-wrapper">
+    @if (currentAccountPubkey()) {
+    <app-user-profile [pubkey]="currentAccountPubkey()!" view="icon" [disableLink]="true"></app-user-profile>
+    } @else {
+    <mat-icon class="default-avatar">account_circle</mat-icon>
+    }
+  </div>
+  <span class="placeholder-text">Post your reply</span>
+  <button mat-flat-button class="reply-button" [disabled]="!isLoggedIn()">
+    Reply
+  </button>
+</div>
+}
+
+<!-- Main Editor Content (Dialog mode always, Inline mode when expanded) -->
+@if (!inlineMode() || isExpanded()) {
 <!-- Content Area -->
-<div dialog-content class="note-editor-dialog">
+<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
   <div class="dialog-content-wrapper" [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
@@ -22,11 +41,17 @@
       <span class="upload-text">{{ uploadStatus() || 'Uploading...' }}</span>
     </div>
     }
-    <!-- Reply context -->
+
+    <!-- Reply context (inline mode shows who we're replying to) -->
     @if (isReply()) {
     <div class="reply-context">
+      @if (inlineMode() && replyToEvent()) {
+      <span class="reply-label">Replying to</span>
+      <app-user-profile [pubkey]="replyToEvent()!.pubkey" view="tiny" class="reply-author"></app-user-profile>
+      } @else {
       <mat-icon class="reply-icon">reply</mat-icon>
       <span class="reply-text">Replying to note</span>
+      }
     </div>
     }
 
@@ -43,8 +68,8 @@
     @if (!showPreview() && !showAdvancedOptions()) {
     <div class="content-editor-section">
 
-      <!-- Media Mode Toggle Banner -->
-      @if (isMediaModeAvailable()) {
+      <!-- Media Mode Toggle Banner (not in inline mode) -->
+      @if (isMediaModeAvailable() && !inlineMode()) {
       <div class="media-mode-banner" [class.active]="isMediaMode()">
         <div class="media-mode-info">
           <mat-icon class="media-icon">perm_media</mat-icon>
@@ -90,10 +115,11 @@
 
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
-          <mat-label>{{ isMediaModeEnabled() ? 'Description' : "What's on your mind?" }}</mat-label>
+          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your mind?") }}</mat-label>
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
             (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
-            placeholder="Write your note... Use @ to mention someone" rows="4" class="content-textarea"
+            [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
+            [rows]="inlineMode() ? 3 : 4" class="content-textarea"
             #contentTextarea>
           </textarea>
           <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
@@ -113,8 +139,8 @@
     </div>
     }
 
-    <!-- Advanced Options -->
-    @if (showAdvancedOptions()) {
+    <!-- Advanced Options (not in inline mode) -->
+    @if (showAdvancedOptions() && !inlineMode()) {
     <div class="advanced-options-section">
       <div class="advanced-options-header">
         <mat-icon class="options-icon">settings</mat-icon>
@@ -275,8 +301,8 @@
     </div>
     }
 
-    <!-- Preview section -->
-    @if (showPreview() && !showAdvancedOptions()) {
+    <!-- Preview section (not in inline mode) -->
+    @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
     <div class="preview-section">
       <div class="preview-header">
         <mat-icon class="preview-icon">visibility</mat-icon>
@@ -338,13 +364,14 @@
     } -->
   </div>
 
-  <div dialog-actions class="action-container"
+  <div dialog-actions class="action-container" [class.inline-actions]="inlineMode()"
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
     (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
     <!-- Left side: Action buttons -->
     <div class="left-actions">
+      @if (!inlineMode()) {
       <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -372,9 +399,12 @@
           <span>Sentiment Analysis</span>
         </button>
       </mat-menu>
+      }
+
+      <!-- Dictation button (shown in both dialog and inline modes) -->
       <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [matTooltip]="isRecording() ? 'Stop listening' : 'Dictate note'">
+        [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
         @if (isTranscribing()) {
         <mat-icon class="spinning">sync</mat-icon>
         } @else if (isRecording()) {
@@ -390,6 +420,8 @@
         <mat-icon>undo</mat-icon>
       </button>
       }
+
+      <!-- Media button (shown in both dialog and inline modes) -->
       <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add media">
@@ -405,10 +437,13 @@
           <span>Choose from library</span>
         </button>
       </mat-menu>
+
+      @if (!inlineMode()) {
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
         [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
         <mat-icon>settings</mat-icon>
       </button>
+      }
     </div>
 
     <!-- Right side: PoW indicator and primary actions -->
@@ -420,21 +455,24 @@
       </div>
       }
 
+      @if (!inlineMode()) {
       <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
+      }
 
-      <button mat-flat-button color="primary" (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
-        class="publish-button" matTooltip="Alt+Enter">
+      <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
+        class="publish-button" [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
         @if (isPublishing()) {
         <ng-container>
           <mat-icon class="spinning">hourglass_empty</mat-icon>
-          Publishing...
+          {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
         </ng-container>
         } @else {
         <ng-container>
-          Publish Note
+          {{ inlineMode() ? 'Reply' : 'Publish Note' }}
         </ng-container>
         }
       </button>
     </div>
   </div>
 </div>
+}

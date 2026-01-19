@@ -31,7 +31,7 @@
 }
 
 .note-card {
-  margin-bottom: 0.4rem;
+  margin-bottom: 12px;
   // Use lightest surface for content cards - maximum readability in both light and dark mode
   background-color: var(--mat-sys-surface-container-lowest);
   box-shadow: none !important;
@@ -63,12 +63,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0px 16px 8px 16px;
-  // Subtle background to differentiate from content area
-  background-color: var(--mat-sys-surface-container-low);
-  border-radius: 0 0 12px 12px;
-  margin: 0 -16px -16px -16px;
   padding: 8px 16px;
+  // Match note content background for cohesive look
+  background-color: transparent;
+  border-radius: 0 0 12px 12px;
 
   // When there are no reactions (photo/video events), push footer-right to the end
   &:has(.footer-right-group:first-child) {
@@ -449,7 +447,6 @@
 @media screen and (max-width: 600px) {
   .note-footer {
     padding: 6px 12px;
-    margin: 0 -12px -12px -12px;
   }
 
   .reactions-row {
@@ -479,7 +476,6 @@
 @media screen and (max-width: 420px) {
   .note-footer {
     padding: 4px 8px;
-    margin: 0 -8px -8px -8px;
   }
 
   .reactions-row {
