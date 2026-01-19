@@ -16,8 +16,8 @@ export class ThemeService {
   private readonly logger = inject(LoggerService);
   private localStorage = inject(LocalStorageService);
 
-  // Theme colors for PWA
-  private readonly LIGHT_THEME_COLOR = '#FEF7FA';
+  // Theme colors for PWA - clean neutral colors
+  private readonly LIGHT_THEME_COLOR = '#fafafa';
   private readonly DARK_THEME_COLOR = '#303030';
 
   darkMode = signal<boolean>(this.getInitialThemePreference());

@@ -84,7 +84,7 @@ export interface PanelAction {
     }
     
     :host-context(.dark) .panel-header {
-      background-color: rgba(24, 17, 27, 0.85);
+      background-color: rgba(18, 18, 18, 0.85);
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       
       &.transparent {
