@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,6 +36,7 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { SearchActionService, SearchHandler } from '../../services/search-action.service';
+import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
 
 /**
  * Local storage key for notification filter preferences
@@ -60,7 +62,9 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     UserProfileComponent,
     ProfileDisplayNameComponent,
     MatSnackBarModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    OverlayModule,
+    NotificationsFilterPanelComponent
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -94,6 +98,29 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   // Search handler reference for cleanup
   private searchHandler: SearchHandler;
+
+  // Filter panel state
+  filterPanelOpen = signal(false);
+  filterPanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
+
+  // Check if any filters are active (not all enabled)
+  hasActiveFilters = computed(() => {
+    const filters = this.notificationFilters();
+    const contentTypes = [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ];
+    // Return true if any content filter is disabled OR if showing system notifications
+    return contentTypes.some(type => !filters[type]) || this.showSystemNotifications();
+  });
 
   // State for loading older notifications
   isLoadingMore = signal(false);
@@ -733,5 +760,33 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoadingMore.set(false);
     }
+  }
+
+  /**
+   * Toggle the filter panel visibility
+   */
+  toggleFilterPanel(): void {
+    this.filterPanelOpen.update(v => !v);
+  }
+
+  /**
+   * Close the filter panel
+   */
+  closeFilterPanel(): void {
+    this.filterPanelOpen.set(false);
+  }
+
+  /**
+   * Handle filter changes from the filter panel
+   */
+  onFiltersChanged(changes: Partial<Record<NotificationType, boolean>>): void {
+    this.notificationFilters.update(current => ({ ...current, ...changes }));
+  }
+
+  /**
+   * Handle system notifications toggle from the filter panel
+   */
+  onSystemNotificationsChanged(show: boolean): void {
+    this.showSystemNotifications.set(show);
   }
 }
