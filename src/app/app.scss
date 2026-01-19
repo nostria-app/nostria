@@ -32,19 +32,17 @@ nav {
   --toolbar-height: 64px;
 }
 
-// Glass toolbar styles - full-width toolbar
+// Glass toolbar styles - positioned beside sidenav (not fixed)
 .app-toolbar {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000; // Above sidenavs and backdrops
+  position: relative !important;
+  z-index: 10;
   height: var(--toolbar-height);
   padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
 
   // Glass effect background - clean, neutral white
   background-color: rgba(250, 250, 250, 0.85);
@@ -315,8 +313,7 @@ nav {
   overflow: hidden;
   /* Prevent scrolling on the container itself - only content-wrapper should scroll */
 
-  // Account for fixed toolbar - sidenav-container takes full height
-  // The sidenav will start from top and the content-wrapper handles the toolbar offset
+  // Sidenav container now takes full height
   margin-top: 0;
   height: 100%;
   box-sizing: border-box;
@@ -331,8 +328,7 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  // Content starts below the fixed toolbar
-  padding-top: var(--toolbar-height, 64px);
+  // Content no longer needs padding-top since toolbar is inside
   box-sizing: border-box;
 
   // Add margin when following sidebar is docked (this is a real sidebar, not centering compensation)
@@ -347,9 +343,9 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
-  // Sidenav renders below toolbar - use margin-top instead of padding
-  margin-top: var(--toolbar-height, 64px) !important;
-  height: calc(100% - var(--toolbar-height, 64px)) !important;
+  // Sidenav now spans full height from top to bottom
+  margin-top: 0 !important;
+  height: 100% !important;
   box-sizing: border-box;
 
   // Glass effect - clean neutral
@@ -809,7 +805,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: var(--toolbar-height, 64px);
+        top: 0;
         left: 0;
         right: 0;
         bottom: 0;
@@ -880,7 +876,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: var(--toolbar-height, 64px);
+        top: 0;
         left: 0;
         right: 0;
         bottom: 0;
