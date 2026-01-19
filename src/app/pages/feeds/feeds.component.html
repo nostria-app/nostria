@@ -46,27 +46,17 @@
 
       <!-- Filter button with overlay panel -->
       @if (activeFeed() && !showRelayFeed()) {
-      <button mat-icon-button
-        cdkOverlayOrigin
-        #filterTrigger="cdkOverlayOrigin"
-        (click)="toggleFilterPanel()"
+      <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
         matTooltip="Filter content">
         <mat-icon>tune</mat-icon>
       </button>
 
-      <ng-template
-        cdkConnectedOverlay
-        [cdkConnectedOverlayOrigin]="filterTrigger"
-        [cdkConnectedOverlayOpen]="filterPanelOpen()"
-        [cdkConnectedOverlayHasBackdrop]="true"
-        [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
-        (backdropClick)="closeFilterPanel()"
+      <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
+        [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
+        [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
         [cdkConnectedOverlayPositions]="filterPanelPositions">
-        <app-feed-filter-panel
-          [feed]="activeFeed()"
-          (kindsChanged)="onKindsChanged($event)"
-          (showRepliesChanged)="onShowRepliesChanged($event)"
-          (showRepostsChanged)="onShowRepostsChanged($event)">
+        <app-feed-filter-panel [feed]="activeFeed()" (kindsChanged)="onKindsChanged($event)"
+          (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
         </app-feed-filter-panel>
       </ng-template>
       }
