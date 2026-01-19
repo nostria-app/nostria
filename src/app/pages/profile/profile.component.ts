@@ -55,6 +55,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { ReportingService } from '../../services/reporting.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ProfileViewOptionsInlineComponent } from './profile-view-options/profile-view-options-inline.component';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 
 @Component({
   selector: 'app-profile',
@@ -112,6 +113,7 @@ export class ProfileComponent {
   private readonly metrics = inject(Metrics);
   private readonly reportingService = inject(ReportingService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly panelNav = inject(PanelNavigationService);
 
   pubkey = signal<string>('');
 
@@ -417,7 +419,13 @@ export class ProfileComponent {
   }
 
   goBack(): void {
-    this.location.back();
+    if (this.isInRightPanel()) {
+      // Use panel navigation for right panel back navigation
+      this.panelNav.goBackRight();
+    } else {
+      // Use browser history for primary outlet
+      this.location.back();
+    }
   }
 
   /**

@@ -61,13 +61,10 @@ export class TwoColumnLayoutService {
   // Preference (legacy, kept for backwards compatibility)
   private preferredLeftWidth = signal(this.LEFT_PANEL_WIDTH);
 
-  // Dynamic column widths - automatically shrinks to narrow when right panel has content
+  // Dynamic column widths
+  // The actual visible width is controlled by CSS based on .wide-left and .has-right-content classes
+  // This computed just provides the preferred width for the CSS variable
   leftColumnWidth = computed(() => {
-    // If right panel has content, always use narrow width for split view
-    if (this.panelNav.hasRightContent()) {
-      return this.NARROW_WIDTH;
-    }
-    // Otherwise use the width mode setting
     return this._leftWidthMode() === 'wide' ? this.WIDE_WIDTH : this.NARROW_WIDTH;
   });
 
@@ -314,8 +311,12 @@ export class TwoColumnLayoutService {
    * Handle route changes to update panel states
    */
   private handleRouteChange(url: string): void {
-    // Check if on home route (empty path or just query params)
-    const cleanUrl = url.replace(/^\//, '').split('?')[0];
+    // Extract the primary route (before any auxiliary outlets or query params)
+    // URL format: /primary-route(right:auxiliary-route)?query=params
+    const cleanUrl = url
+      .replace(/^\//, '')      // Remove leading slash
+      .split('(')[0]           // Remove auxiliary outlets like (right:...)
+      .split('?')[0];          // Remove query params
     const isHome = cleanUrl === '' || cleanUrl === 'home';
     this.isHomeRoute.set(isHome);
 
@@ -363,7 +364,11 @@ export class TwoColumnLayoutService {
    * Get route category from URL
    */
   private getRouteCategory(url: string): RouteCategory | null {
-    const cleanUrl = url.replace(/^\//, '').split('?')[0];
+    // Extract the primary route (before any auxiliary outlets or query params)
+    const cleanUrl = url
+      .replace(/^\//, '')      // Remove leading slash
+      .split('(')[0]           // Remove auxiliary outlets like (right:...)
+      .split('?')[0];          // Remove query params
 
     // Check exact match
     if (this.routeCategories[cleanUrl]) {

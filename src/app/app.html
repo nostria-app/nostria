@@ -389,6 +389,7 @@
         <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
         @if (hasRightContent() && !panelNav.isMobile()) {
         <button mat-icon-button class="left-panel-toggle" (click)="toggleLeftPanelCollapse()"
+          [class.animating]="toggleButtonAnimating()"
           [matTooltip]="leftPanelCollapsed() ? 'Show left panel' : 'Hide left panel'">
           <mat-icon>{{ leftPanelCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
         </button>

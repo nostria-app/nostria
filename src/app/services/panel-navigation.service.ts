@@ -486,16 +486,11 @@ export class PanelNavigationService {
   goBackRight(): void {
     const stack = this._rightStack();
     if (stack.length <= 1) {
-      // Clear right panel
+      // Clear right panel - just close it, don't navigate away from current left route
       this._rightStack.set([]);
-      // Navigate to left route or home
-      const left = this.leftRoute();
       this._isBackNavigation = true;
-      if (left) {
-        this.router.navigate([left.path]);
-      } else {
-        this.router.navigate(['/']);
-      }
+      // Clear the right outlet
+      this.router.navigate([{ outlets: { right: null } }]);
       return;
     }
 
@@ -504,7 +499,8 @@ export class PanelNavigationService {
     const prev = newStack[newStack.length - 1];
     this._rightStack.set(newStack);
     this._isBackNavigation = true;
-    this.router.navigate([prev.path]);
+    // Navigate to previous right panel route
+    this.router.navigate([{ outlets: { right: prev.path.split('/') } }]);
   }
 
   /**
