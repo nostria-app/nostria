@@ -728,7 +728,8 @@ mat-sidenav-content {
 .dual-panel-layout {
   display: flex;
   flex-direction: row;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
   justify-content: center;

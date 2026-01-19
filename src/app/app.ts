@@ -470,12 +470,11 @@ export class App implements OnInit {
 
       // For the People item, add follow sets as children
       if (item.label === 'People') {
-        // Limit to top 5 most recent follow sets for the sidebar
-        const topFollowSets = [...followSets]
-          .sort((a, b) => b.createdAt - a.createdAt)
-          .slice(0, 5);
+        // Sort follow sets alphabetically by title for user control (users can prefix with numbers)
+        const sortedFollowSets = [...followSets]
+          .sort((a, b) => a.title.localeCompare(b.title));
 
-        const followSetChildren: NavItem[] = topFollowSets.map(set => ({
+        const followSetChildren: NavItem[] = sortedFollowSets.map(set => ({
           path: `/people?set=${set.dTag}`,
           label: set.title,
           icon: set.dTag === 'nostria-favorites' ? 'star' : 'group',
