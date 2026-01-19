@@ -238,11 +238,15 @@
 
         <!-- Wallet Balance Section (only if user has wallets) -->
         @if (wallets.hasWallets()) {
-        <div class="sidenav-wallet-section" routerLink="/wallet" (click)="closeSidenavOnMobile()">
-          <mat-icon class="wallet-icon">account_balance_wallet</mat-icon>
+        <div class="sidenav-wallet-section">
+          <mat-icon class="wallet-icon" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer">account_balance_wallet</mat-icon>
           <div class="wallet-info">
-            <span class="wallet-label" i18n="@@app.sidenav.wallet">Wallet</span>
-            <span class="wallet-balance">{{ getTotalWalletBalance() }}</span>
+            <span class="wallet-label" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer" i18n="@@app.sidenav.wallet">Wallet</span>
+            <span class="wallet-balance" style="cursor:pointer" tabindex="0" role="button"
+              matTooltip="Click to show/hide balance" i18n-matTooltip="@@app.sidenav.wallet.toggle-balance"
+              (click)="toggleHideWalletAmounts(); $event.stopPropagation()"
+              (keydown.enter)="toggleHideWalletAmounts(); $event.stopPropagation()"
+              (keydown.space)="toggleHideWalletAmounts(); $event.stopPropagation()">{{ getTotalWalletBalance() }}</span>
           </div>
         </div>
         }

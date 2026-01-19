@@ -377,7 +377,7 @@ export class App implements OnInit {
 
   /**
    * Get total wallet balance across all wallets
-   * Returns formatted string with total sats
+   * Returns formatted string with total sats, or masked if hideWalletAmounts is enabled
    */
   getTotalWalletBalance(): string {
     const walletEntries = Object.entries(this.wallets.wallets());
@@ -396,8 +396,21 @@ export class App implements OnInit {
       return '...';
     }
 
+    // Check if amounts should be hidden
+    if (this.settings.settings().hideWalletAmounts) {
+      return '**** sats';
+    }
+
     const sats = Math.floor(totalMsats / 1000);
     return `${sats.toLocaleString()} sats`;
+  }
+
+  /**
+   * Toggle wallet balance hiding setting
+   */
+  toggleHideWalletAmounts(): void {
+    const current = this.settings.settings().hideWalletAmounts;
+    this.settings.updateSettings({ hideWalletAmounts: !current });
   }
 
   navigationItems = computed(() => {

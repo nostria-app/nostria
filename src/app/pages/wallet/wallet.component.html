@@ -7,7 +7,12 @@
     </div>
     @if (wallets.hasWallets()) {
       <div class="toolbar-balance">
-        <span class="balance-value">{{ getTotalBalance() }}</span>
+        <span class="balance-value" style="cursor:pointer" tabindex="0" role="button" matTooltip="Click to show/hide balance"
+      (click)="toggleHideWalletAmounts()"
+      (keydown.enter)="toggleHideWalletAmounts()"
+      (keydown.space)="toggleHideWalletAmounts()">
+  {{ getTotalBalance() }}
+</span>
         <span class="balance-label" i18n="@@wallet.sats">sats</span>
       </div>
     }
@@ -49,7 +54,12 @@
                   @if (walletData?.loading && !walletData?.balance) {
                     <mat-spinner diameter="20"></mat-spinner>
                   } @else if (walletData?.balance) {
-                    <span class="balance-value">{{ getDisplayBalance(walletData!.balance!.balance) }}</span>
+                    <span class="balance-value" style="cursor:pointer" tabindex="0" role="button" matTooltip="Click to show/hide balance"
+      (click)="toggleHideWalletAmounts()"
+      (keydown.enter)="toggleHideWalletAmounts()"
+      (keydown.space)="toggleHideWalletAmounts()">
+  {{ getDisplayBalance(walletData!.balance!.balance) }}
+</span>
                     <span class="balance-label" i18n="@@wallet.sats">sats</span>
                     <button mat-icon-button matTooltip="Refresh balance" i18n-matTooltip="@@wallet.refresh-balance"
                       (click)="refreshBalance(wallet[0]); $event.stopPropagation()" [disabled]="walletData?.loading"
