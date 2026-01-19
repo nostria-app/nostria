@@ -5,13 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { SearchService, SearchResultProfile } from '../../services/search.service';
+import { SearchService, SearchResultProfile, SearchTab, SearchResultEvent } from '../../services/search.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
+import { Event } from 'nostr-tools';
 
 @Component({
   selector: 'app-search-results',
-  standalone: true,
   imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
     @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0 || searchService.isSearchingRemote() || hasSearchInput()) {
@@ -22,6 +22,53 @@ import { LayoutService } from '../../services/layout.service';
         (focus)="onContainerFocus()"
         #searchResultsContainer
       >
+        <!-- Minimalist Tab Control -->
+        @if (hasSearchInput() && !hasActionsOnly()) {
+          <div class="search-tabs">
+            <button 
+              class="search-tab" 
+              [class.active]="searchService.activeTab() === 'all'"
+              (click)="setActiveTab('all')"
+            >All</button>
+            <button 
+              class="search-tab" 
+              [class.active]="searchService.activeTab() === 'profiles'"
+              (click)="setActiveTab('profiles')"
+            >
+              Profiles
+              @if (searchService.searchResults().length > 0) {
+                <span class="tab-count">{{ searchService.searchResults().length }}</span>
+              }
+            </button>
+            <button 
+              class="search-tab" 
+              [class.active]="searchService.activeTab() === 'notes'"
+              (click)="setActiveTab('notes')"
+            >
+              Notes
+              @if (searchService.noteResults().length > 0) {
+                <span class="tab-count">{{ searchService.noteResults().length }}</span>
+              }
+              @if (searchService.isSearchingNotes()) {
+                <mat-spinner diameter="12" class="tab-spinner"></mat-spinner>
+              }
+            </button>
+            <button 
+              class="search-tab" 
+              [class.active]="searchService.activeTab() === 'articles'"
+              (click)="setActiveTab('articles')"
+            >
+              Articles
+              @if (searchService.articleResults().length > 0) {
+                <span class="tab-count">{{ searchService.articleResults().length }}</span>
+              }
+              @if (searchService.isSearchingArticles()) {
+                <mat-spinner diameter="12" class="tab-spinner"></mat-spinner>
+              }
+            </button>
+          </div>
+        }
+
         @if (searchService.searchActions().length > 0) {
           <div class="search-results-header">
             <span>Actions</span>
@@ -47,9 +94,10 @@ import { LayoutService } from '../../services/layout.service';
           </div>
         }
 
-        @if (searchService.searchResults().length > 0) {
+        <!-- Profiles Section (show in 'all' or 'profiles' tab) -->
+        @if ((searchService.activeTab() === 'all' || searchService.activeTab() === 'profiles') && searchService.searchResults().length > 0) {
           <div class="search-results-header">
-            <span>Found Profiles ({{ searchService.searchResults().length }})</span>
+            <span>Profiles ({{ searchService.searchResults().length }})</span>
             <div class="header-actions">
               @if (searchService.isSearchingRemote()) {
                 <mat-spinner diameter="16"></mat-spinner>
@@ -66,7 +114,7 @@ import { LayoutService } from '../../services/layout.service';
           </div>
           <div class="search-results-list">
             @for (
-              profile of searchService.searchResults();
+              profile of getVisibleProfiles();
               track profile.event.pubkey + '-' + profile.source;
               let i = $index
             ) {
@@ -113,14 +161,80 @@ import { LayoutService } from '../../services/layout.service';
               </div>
             }
           </div>
-        } @else if (searchService.isSearchingRemote()) {
+        }
+
+        <!-- Notes Section (show in 'all' or 'notes' tab) -->
+        @if ((searchService.activeTab() === 'all' || searchService.activeTab() === 'notes') && searchService.noteResults().length > 0) {
+          <div class="search-results-header">
+            <span>Notes ({{ searchService.noteResults().length }})</span>
+            <div class="header-actions">
+              @if (searchService.isSearchingNotes()) {
+                <mat-spinner diameter="16"></mat-spinner>
+              }
+            </div>
+          </div>
+          <div class="search-results-list">
+            @for (note of getVisibleNotes(); track note.event.id; let i = $index) {
+              <div
+                class="search-result-item note-result"
+                (click)="openNote(note)"
+                (keydown.enter)="openNote(note)"
+                tabindex="0"
+              >
+                <mat-icon class="search-result-avatar-icon">article</mat-icon>
+                <div class="search-result-info">
+                  <div class="search-result-content">{{ truncateContent(note.event.content, 100) }}</div>
+                  <div class="search-result-meta">
+                    {{ getNpubShort(note.event.pubkey) }} · {{ formatTime(note.event.created_at) }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Articles Section (show in 'all' or 'articles' tab) -->
+        @if ((searchService.activeTab() === 'all' || searchService.activeTab() === 'articles') && searchService.articleResults().length > 0) {
+          <div class="search-results-header">
+            <span>Articles ({{ searchService.articleResults().length }})</span>
+            <div class="header-actions">
+              @if (searchService.isSearchingArticles()) {
+                <mat-spinner diameter="16"></mat-spinner>
+              }
+            </div>
+          </div>
+          <div class="search-results-list">
+            @for (article of getVisibleArticles(); track article.event.id; let i = $index) {
+              <div
+                class="search-result-item article-result"
+                (click)="openArticle(article)"
+                (keydown.enter)="openArticle(article)"
+                tabindex="0"
+              >
+                <mat-icon class="search-result-avatar-icon">description</mat-icon>
+                <div class="search-result-info">
+                  <div class="search-result-name">{{ getArticleTitle(article.event) }}</div>
+                  <div class="search-result-meta">
+                    {{ getNpubShort(article.event.pubkey) }} · {{ formatTime(article.event.created_at) }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Loading state when searching -->
+        @if (searchService.isSearchingRemote() && searchService.searchResults().length === 0 && searchService.searchActions().length === 0) {
           <div class="search-results-header">
             <span>Searching...</span>
             <mat-spinner diameter="16"></mat-spinner>
           </div>
-        } @else if (hasSearchInput()) {
+        }
+
+        <!-- No results message -->
+        @if (hasSearchInput() && !hasAnyResults() && !isSearching()) {
           <div class="search-results-header">
-            <span>Found Profiles (0)</span>
+            <span>No results found</span>
             <div class="header-actions">
               <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
                 <mat-icon>manage_search</mat-icon>
@@ -131,7 +245,7 @@ import { LayoutService } from '../../services/layout.service';
             </div>
           </div>
           <div class="no-results-message">
-            No profiles found. Try Advanced Search for more options.
+            No results found. Try Advanced Search for more options.
           </div>
         }
       </div>
@@ -176,6 +290,65 @@ import { LayoutService } from '../../services/layout.service';
         }
       }
 
+      /* Minimalist Tab Control - Outlook-inspired */
+      .search-tabs {
+        display: flex;
+        gap: 0;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+        background: var(--mat-sys-surface-container);
+      }
+
+      .search-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        border: none;
+        background: transparent;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 13px;
+        cursor: pointer;
+        position: relative;
+        transition: color 0.15s ease;
+      }
+
+      .search-tab:hover {
+        color: var(--mat-sys-on-surface);
+      }
+
+      .search-tab.active {
+        color: var(--mat-sys-primary);
+      }
+
+      .search-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 8px;
+        right: 8px;
+        height: 2px;
+        background: var(--mat-sys-primary);
+        border-radius: 2px 2px 0 0;
+      }
+
+      .tab-count {
+        font-size: 11px;
+        color: var(--mat-sys-on-surface-variant);
+        background: var(--mat-sys-surface-container-high);
+        padding: 1px 6px;
+        border-radius: 10px;
+      }
+
+      .search-tab.active .tab-count {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+
+      .tab-spinner {
+        margin-left: 4px;
+      }
+
       .search-results-header {
         display: flex;
         justify-content: space-between;
@@ -183,8 +356,8 @@ import { LayoutService } from '../../services/layout.service';
         padding: 8px 16px;
         border-bottom: 1px solid var(--mat-sys-outline-variant);
         background: var(--mat-sys-surface-container-high);
-        font-weight: 500;
-        font-size: 14px;
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .header-actions {
@@ -243,6 +416,14 @@ import { LayoutService } from '../../services/layout.service';
         color: var(--mat-sys-on-surface-variant);
         flex-shrink: 0;
       }
+
+      .note-result .search-result-avatar-icon,
+      .article-result .search-result-avatar-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 32px;
+      }
+
       .search-result-info {
         flex: 1;
         min-width: 0;
@@ -250,13 +431,28 @@ import { LayoutService } from '../../services/layout.service';
       }
 
       .search-result-name {
-        font-weight: 500;
         font-size: 14px;
         color: var(--mat-sys-on-surface);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         width: 100%;
+      }
+
+      .search-result-content {
+        font-size: 13px;
+        color: var(--mat-sys-on-surface);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+        line-height: 1.4;
+      }
+
+      .search-result-meta {
+        font-size: 11px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-top: 2px;
       }
 
       .search-result-nip05 {
@@ -327,6 +523,25 @@ export class SearchResultsComponent {
   // Check if there's active search input
   hasSearchInput = () => this.layout.searchInput && this.layout.searchInput.trim().length > 0;
 
+  // Check if we only have actions (URLs) and no search results
+  hasActionsOnly = () => 
+    this.searchService.searchActions().length > 0 && 
+    this.searchService.searchResults().length === 0 &&
+    !this.searchService.isSearchingRemote();
+
+  // Check if any search is in progress
+  isSearching = () => 
+    this.searchService.isSearchingRemote() || 
+    this.searchService.isSearchingNotes() || 
+    this.searchService.isSearchingArticles();
+
+  // Check if we have any results
+  hasAnyResults = () =>
+    this.searchService.searchResults().length > 0 ||
+    this.searchService.noteResults().length > 0 ||
+    this.searchService.articleResults().length > 0 ||
+    this.searchService.searchActions().length > 0;
+
   constructor() {
     // Reset focused index when search results change
     effect(() => {
@@ -336,6 +551,93 @@ export class SearchResultsComponent {
         this.focusedIndex.set(-1);
       }
     });
+  }
+
+  setActiveTab(tab: SearchTab): void {
+    this.searchService.setActiveTab(tab);
+  }
+
+  // Get visible profiles based on active tab (limit for 'all' tab)
+  getVisibleProfiles(): SearchResultProfile[] {
+    const profiles = this.searchService.searchResults();
+    if (this.searchService.activeTab() === 'all') {
+      return profiles.slice(0, 5); // Show max 5 in 'all' view
+    }
+    return profiles;
+  }
+
+  // Get visible notes based on active tab
+  getVisibleNotes(): SearchResultEvent[] {
+    const notes = this.searchService.noteResults();
+    if (this.searchService.activeTab() === 'all') {
+      return notes.slice(0, 3); // Show max 3 in 'all' view
+    }
+    return notes;
+  }
+
+  // Get visible articles based on active tab
+  getVisibleArticles(): SearchResultEvent[] {
+    const articles = this.searchService.articleResults();
+    if (this.searchService.activeTab() === 'all') {
+      return articles.slice(0, 3); // Show max 3 in 'all' view
+    }
+    return articles;
+  }
+
+  // Truncate content for display
+  truncateContent(content: string, maxLength: number): string {
+    if (!content) return '';
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  }
+
+  // Format timestamp to relative time
+  formatTime(timestamp: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+    
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString();
+  }
+
+  // Get shortened npub for display
+  getNpubShort(pubkey: string): string {
+    try {
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      return npub.slice(0, 12) + '...';
+    } catch {
+      return pubkey.slice(0, 8) + '...';
+    }
+  }
+
+  // Get article title from tags or content
+  getArticleTitle(event: Event): string {
+    const titleTag = event.tags.find(t => t[0] === 'title');
+    if (titleTag && titleTag[1]) {
+      return titleTag[1];
+    }
+    // Fallback to first line of content
+    const firstLine = event.content.split('\n')[0];
+    return this.truncateContent(firstLine, 60) || 'Untitled Article';
+  }
+
+  // Open a note
+  openNote(note: SearchResultEvent): void {
+    this.layout.openEvent(note.event.id, note.event);
+    this.searchService.clearResults();
+    this.layout.toggleSearch();
+  }
+
+  // Open an article
+  openArticle(article: SearchResultEvent): void {
+    this.layout.openEvent(article.event.id, article.event);
+    this.searchService.clearResults();
+    this.layout.toggleSearch();
   }
 
   openAdvancedSearch() {

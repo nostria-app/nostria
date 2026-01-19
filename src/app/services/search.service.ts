@@ -29,6 +29,13 @@ export interface SearchResultProfile extends NostrRecord {
   wotRank?: number; // Web of Trust rank score
 }
 
+export interface SearchResultEvent {
+  event: import('nostr-tools').Event;
+  authorProfile?: SearchResultProfile;
+}
+
+export type SearchTab = 'all' | 'profiles' | 'notes' | 'articles' | 'messages';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -52,8 +59,19 @@ export class SearchService {
   searchResults = signal<SearchResultProfile[]>([]);
   searchActions = signal<SearchAction[]>([]);
 
+  // Search results for different content types
+  noteResults = signal<SearchResultEvent[]>([]);
+  articleResults = signal<SearchResultEvent[]>([]);
+  messageResults = signal<SearchResultEvent[]>([]);
+
+  // Active search tab
+  activeTab = signal<SearchTab>('all');
+
   // Track if we're currently searching remote relays
   isSearchingRemote = signal(false);
+  isSearchingNotes = signal(false);
+  isSearchingArticles = signal(false);
+  isSearchingMessages = signal(false);
 
   // Track last processed query to prevent redundant searches
   #lastQuery = '';
@@ -379,7 +397,119 @@ export class SearchService {
     untracked(() => {
       this.searchResults.set([]);
       this.searchActions.set([]);
+      this.noteResults.set([]);
+      this.articleResults.set([]);
+      this.messageResults.set([]);
+      this.activeTab.set('all');
     });
+  }
+
+  // Method to set active tab and trigger search for that content type
+  setActiveTab(tab: SearchTab): void {
+    this.activeTab.set(tab);
+    const query = this.layout.query();
+    if (query && query.trim().length >= 2) {
+      this.searchByTab(tab, query.trim());
+    }
+  }
+
+  // Search for content based on the selected tab
+  private async searchByTab(tab: SearchTab, query: string): Promise<void> {
+    switch (tab) {
+      case 'notes':
+        if (this.noteResults().length === 0) {
+          await this.searchNotes(query);
+        }
+        break;
+      case 'articles':
+        if (this.articleResults().length === 0) {
+          await this.searchArticles(query);
+        }
+        break;
+      case 'messages':
+        if (this.messageResults().length === 0) {
+          await this.searchMessages(query);
+        }
+        break;
+      case 'all':
+        // Search all types if not already loaded
+        if (this.noteResults().length === 0) {
+          this.searchNotes(query);
+        }
+        break;
+    }
+  }
+
+  // Search for notes (kind 1) on search relays
+  private async searchNotes(query: string): Promise<void> {
+    if (this.isSearchingNotes()) return;
+    
+    this.isSearchingNotes.set(true);
+    try {
+      const events = await this.searchRelay.search(query, [1], 20);
+      
+      // Only update if query is still current
+      if (this.#lastQuery === query || this.layout.query() === query) {
+        const results: SearchResultEvent[] = events.map(event => ({ event }));
+        this.noteResults.set(results);
+        this.logger.debug(`Found ${results.length} notes for "${query}"`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to search notes', error);
+    } finally {
+      this.isSearchingNotes.set(false);
+    }
+  }
+
+  // Search for articles (kind 30023) on search relays
+  private async searchArticles(query: string): Promise<void> {
+    if (this.isSearchingArticles()) return;
+    
+    this.isSearchingArticles.set(true);
+    try {
+      const events = await this.searchRelay.search(query, [30023], 20);
+      
+      // Only update if query is still current
+      if (this.#lastQuery === query || this.layout.query() === query) {
+        const results: SearchResultEvent[] = events.map(event => ({ event }));
+        this.articleResults.set(results);
+        this.logger.debug(`Found ${results.length} articles for "${query}"`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to search articles', error);
+    } finally {
+      this.isSearchingArticles.set(false);
+    }
+  }
+
+  // Search for messages (kind 4 - encrypted DMs, kind 1059 - gift wrapped) on search relays
+  // Note: This will only return public metadata, not content
+  private async searchMessages(query: string): Promise<void> {
+    if (this.isSearchingMessages()) return;
+    
+    this.isSearchingMessages.set(true);
+    try {
+      // Search kind 1 notes that look like messages (contain @ mentions, are replies, etc.)
+      // Since actual DMs are encrypted, we search for public notes that are reply chains
+      const events = await this.searchRelay.search(query, [1], 20, {
+        // We can't really search encrypted messages, so this searches public conversations
+      });
+      
+      // Only update if query is still current
+      if (this.#lastQuery === query || this.layout.query() === query) {
+        // Filter to find notes that are replies (have 'e' tags)
+        const replyEvents = events.filter(event => 
+          event.tags.some(tag => tag[0] === 'e')
+        );
+        const results: SearchResultEvent[] = replyEvents.map(event => ({ event }));
+        this.messageResults.set(results);
+        this.logger.debug(`Found ${results.length} message-like notes for "${query}"`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to search messages', error);
+    } finally {
+      this.isSearchingMessages.set(false);
+    }
   }
 
   /**

@@ -111,6 +111,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   mediaEventIndex = input<number | undefined>(undefined);
   // Optional: pubkey of a trusted user who shared this (for blur bypass on media)
   trustedByPubkey = input<string | undefined>(undefined);
+  // Optional: relay hints for fetching the event (e.g., for trending feeds)
+  relayHints = input<string[] | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions
@@ -670,11 +672,32 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.isLoadingEvent.set(true);
             this.loadingError.set(null);
             try {
-              // Use cache and save options to:
-              // 1. Check in-memory cache first
-              // 2. Check database before hitting relays
-              // 3. Persist fetched events for future loads
-              const eventData = await this.data.getEventById(eventId, { cache: true, save: true });
+              let eventData = null;
+              const hints = this.relayHints();
+
+              // If relay hints are provided (e.g., for trending feeds), try those first
+              if (hints && hints.length > 0) {
+                // First check cache/database
+                eventData = await this.data.getEventById(eventId, { cache: true, save: false });
+
+                // If not found locally, try the hinted relays
+                if (!eventData) {
+                  const event = await this.relayPool.getEventById(hints, eventId, 10000);
+                  if (event) {
+                    eventData = this.data.toRecord(event);
+                  }
+                }
+              }
+
+              // Fall back to normal loading if relay hints didn't work
+              if (!eventData) {
+                // Use cache and save options to:
+                // 1. Check in-memory cache first
+                // 2. Check database before hitting relays
+                // 3. Persist fetched events for future loads
+                eventData = await this.data.getEventById(eventId, { cache: true, save: true });
+              }
+
               this.record.set(eventData);
 
               // After loading the event by ID, check if we need to load interactions

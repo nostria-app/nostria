@@ -34,6 +34,12 @@ interface TrendingApiResponse {
 
 const PAGE_SIZE = 5;
 
+// Relays that aggregate trending content - used to fetch events from the trending API
+const TRENDING_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://relay.primal.net',
+];
+
 @Component({
   selector: 'app-trending-column',
   imports: [
@@ -100,6 +106,9 @@ export class TrendingColumnComponent implements OnDestroy {
   displayedEventIds = computed(() => this.allEventIds().slice(0, this.displayCount()));
   hasEvents = computed(() => this.displayedEventIds().length > 0);
   hasMore = computed(() => this.displayCount() < this.allEventIds().length);
+
+  // Expose trending relays for the template to pass to EventComponent
+  readonly trendingRelays = TRENDING_RELAYS;
 
   private abortController: AbortController | null = null;
   private intersectionObserver?: IntersectionObserver;
