@@ -38,7 +38,7 @@ export class FeedsCollectionService {
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly activeFeed = computed(() => {
     const feedId = this._activeFeedId();
-    return feedId ? this.feeds().find(f => f.id === feedId) : null;
+    return feedId ? this.feeds().find(f => f.id === feedId) ?? null : null;
   });
   constructor() {
     this.loadActiveFeed();
@@ -190,6 +190,7 @@ export class FeedsCollectionService {
     if (updates.icon !== undefined) feedConfig.icon = updates.icon;
     if (updates.showReplies !== undefined) feedConfig.showReplies = updates.showReplies;
     if (updates.showReposts !== undefined) feedConfig.showReposts = updates.showReposts;
+    if (updates.kinds !== undefined) feedConfig.kinds = updates.kinds;
     if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
 
     return await this.feedService.updateFeed(id, feedConfig);

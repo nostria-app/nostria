@@ -1206,11 +1206,14 @@ export class FeedService {
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
 
-      // Get the since timestamp (from last retrieved or 24 hours ago)
-      const oneDayAgo = Math.floor(Date.now() / 1000) - (24 * 60 * 60);
-      const since = feed.lastRetrieved ? feed.lastRetrieved : oneDayAgo;
+      // For NIP-50 search feeds:
+      // - Initial load: Don't use 'since' filter - let search relays return most relevant results
+      // - Refresh: Use 'since' filter from lastRetrieved to get new content only
+      // This is different from regular feeds because NIP-50 search is based on relevance,
+      // not chronological order, and we want the best results on first load.
+      const since = feed.lastRetrieved ? feed.lastRetrieved : undefined;
 
-      this.logger.info(`🔍 Loading SEARCH feed for query "${searchQuery}" with kinds: ${kinds.join(', ')}`);
+      this.logger.info(`🔍 Loading SEARCH feed for query "${searchQuery}" with kinds: ${kinds.join(', ')}${since ? `, since: ${since}` : ' (no time filter)'}`);
 
       // Use SearchRelayService to perform the search
       const events = await this.searchRelay.searchForFeed(

@@ -101,6 +101,14 @@ nav {
 .toolbar-left {
   flex-shrink: 0;
   gap: 4px;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+
+  // Hidden state when sidenav is open (desktop only - side mode)
+  &.toolbar-left-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 
 // Center section - always-visible search
@@ -369,6 +377,32 @@ mat-sidenav-content {
 
 :host-context(.dark) .sidenav {
   background-color: rgba(18, 18, 18, 0.85) !important;
+}
+
+// Close button row at top of sidenav
+.sidenav-close-row {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+
+  .sidenav-close-button {
+    color: var(--mat-sys-on-surface-variant);
+    
+    &:hover {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .sidenav-title {
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+// In small mode, center the close button
+.sidenav-small .sidenav-close-row {
+  justify-content: center;
 }
 
 // Menu profile button in toolbar (replaces hamburger)

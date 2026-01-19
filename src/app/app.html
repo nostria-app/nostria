@@ -1,6 +1,6 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()" [class.has-right-content]="hasRightContent()"
   [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
-  [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">>
+  [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">
@@ -33,7 +33,7 @@
   <mat-toolbar class="app-toolbar no-print no-select">
     
     <!-- Left section: hamburger menu/avatar and app icon -->
-    <div class="toolbar-section toolbar-left">
+    <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()">
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
         [class.profile-button-picture]="accountState.profile()?.data?.picture">
         @if (accountState.profile()?.data?.picture) {
@@ -167,6 +167,17 @@
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
+
+      <!-- Close button row at top of sidenav -->
+      <div class="sidenav-close-row">
+        <button mat-icon-button class="sidenav-close-button" (click)="toggleSidenav()" 
+          matTooltip="Close menu" i18n-matTooltip="@@app.sidenav.close">
+          <mat-icon>close</mat-icon>
+        </button>
+        @if (displayLabels()) {
+        <span class="sidenav-title">Menu</span>
+        }
+      </div>
 
       <!-- User Profile Section at Top -->
       @if (displayLabels()) {

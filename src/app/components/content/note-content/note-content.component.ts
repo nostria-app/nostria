@@ -109,7 +109,7 @@ export class NoteContentComponent implements OnDestroy {
       const isImage = token.type === 'image' || token.type === 'base64-image';
       const isLinebreak = token.type === 'linebreak';
       // Check if it's a whitespace-only text token (spaces between images)
-      const isWhitespaceOnly = token.type === 'text' && token.content.trim() === '';
+      const isWhitespaceOnly = token.type === 'text' && typeof token.content === 'string' && token.content.trim() === '';
 
       if (isImage) {
         // Add to current image group, discard any pending linebreaks/whitespace between images

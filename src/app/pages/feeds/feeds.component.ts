@@ -57,6 +57,8 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
 import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
+import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 
 // NavLink interface removed because it was unused.
 
@@ -83,6 +85,8 @@ import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.compon
     TrendingColumnComponent,
     RelayColumnComponent,
     RelayFeedMenuComponent,
+    FeedFilterPanelComponent,
+    OverlayModule,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -197,6 +201,14 @@ export class FeedsComponent implements OnDestroy {
   });
   @ViewChild('relayFeedMenu') relayFeedMenu?: RelayFeedMenuComponent;
   private queryParamsSubscription: import('rxjs').Subscription | null = null;
+
+  // Filter panel state
+  filterPanelOpen = signal(false);
+  filterPanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
 
   // Horizontal scrollbar tracking
   hasHorizontalOverflow = signal(false);
@@ -1226,6 +1238,50 @@ export class FeedsComponent implements OnDestroy {
   // scrollToColumn method removed - no longer needed without column navigation
 
   /**
+   * Toggle filter panel visibility
+   */
+  toggleFilterPanel(): void {
+    this.filterPanelOpen.update(v => !v);
+  }
+
+  /**
+   * Close filter panel
+   */
+  closeFilterPanel(): void {
+    this.filterPanelOpen.set(false);
+  }
+
+  /**
+   * Handle kinds changed from filter panel
+   */
+  onKindsChanged(kinds: number[]): void {
+    const feed = this.activeFeed();
+    if (feed) {
+      this.feedService.updateFeed(feed.id, { kinds });
+    }
+  }
+
+  /**
+   * Handle show replies changed from filter panel
+   */
+  onShowRepliesChanged(showReplies: boolean): void {
+    const feed = this.activeFeed();
+    if (feed) {
+      this.feedsCollectionService.updateFeed(feed.id, { showReplies });
+    }
+  }
+
+  /**
+   * Handle show reposts changed from filter panel
+   */
+  onShowRepostsChanged(showReposts: boolean): void {
+    const feed = this.activeFeed();
+    if (feed) {
+      this.feedsCollectionService.updateFeed(feed.id, { showReposts });
+    }
+  }
+
+  /**
    * Toggle whether replies are shown in a feed
    */
   toggleShowReplies(feed: FeedConfig): void {
@@ -1255,11 +1311,11 @@ export class FeedsComponent implements OnDestroy {
       [feedId]: this.INITIAL_RENDER_COUNT
     }));
 
-    // Scroll the feed to the top to show the new posts
+    // Scroll to the top to show the new posts
+    // The scroll container is .columns-container (referenced by columnsContainer ViewChild)
     setTimeout(() => {
-      const feedElement = document.querySelector(`[data-column-id="${feedId}"] .column-content`) as HTMLElement;
-      if (feedElement) {
-        feedElement.scrollTo({ top: 0, behavior: 'smooth' });
+      if (this.columnsContainer?.nativeElement) {
+        this.columnsContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }, 0);
 

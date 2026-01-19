@@ -71,7 +71,7 @@
     } @else if (hasEvents()) {
     <!-- Events list - EventComponent loads each event lazily by ID -->
     @for (eventId of displayedEventIds(); track eventId) {
-    <app-event [id]="eventId"></app-event>
+    <app-event [id]="eventId" [relayHints]="trendingRelays"></app-event>
     }
 
     <!-- Load more trigger -->
