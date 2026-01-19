@@ -182,6 +182,8 @@ export class FeedsComponent implements OnDestroy {
   screenWidth = signal(window.innerWidth);
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
+  // Show scroll-to-top button when scrolled down
+  showScrollToTop = signal(false);
   // Feed expanded state - use layoutService signal for cross-component communication
   feedsExpanded = computed(() => this.layoutService.feedsExpanded());
   private lastScrollTop = 0;
@@ -728,14 +730,17 @@ export class FeedsComponent implements OnDestroy {
     const checkScrollPosition = () => {
       const now = Date.now();
 
-      // Check cooldown
-      if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
-        return;
-      }
-
       const scrollTop = contentWrapper.scrollTop;
       const scrollHeight = contentWrapper.scrollHeight;
       const clientHeight = contentWrapper.clientHeight;
+
+      // Show scroll-to-top button when scrolled down past 500px
+      this.showScrollToTop.set(scrollTop > 500);
+
+      // Check cooldown for load more
+      if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
+        return;
+      }
 
       // Trigger when within 500px of bottom
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
@@ -849,7 +854,20 @@ export class FeedsComponent implements OnDestroy {
       this.headerHidden.set(false);
     }
 
+    // Show scroll-to-top button when scrolled down past 500px
+    this.showScrollToTop.set(scrollTop > 500);
+
     this.lastScrollTop = scrollTop;
+  }
+
+  /**
+   * Scroll the feed to the top
+   */
+  scrollToTop(): void {
+    const container = this.columnsContainer?.nativeElement;
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   /**
@@ -860,6 +878,10 @@ export class FeedsComponent implements OnDestroy {
 
     const container = event.target as HTMLElement | null;
     if (!container) return;
+
+    // Track vertical scroll position for scroll-to-top button
+    const scrollTop = container.scrollTop;
+    this.showScrollToTop.set(scrollTop > 300);
 
     // Update scroll position for syncing
     this.columnsScrollLeft.set(container.scrollLeft);

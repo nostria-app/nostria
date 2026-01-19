@@ -8,14 +8,15 @@
       gap: 12px;
       padding: 16px;
       border-radius: 8px;
-      background-color: var(--mat-sys-surface-container);
+      // Clean, plain background for readability
+      background-color: var(--mat-sys-surface);
       transition: all 0.2s ease;
 
       &.clickable {
         cursor: pointer;
 
         &:hover {
-          background-color: var(--mat-sys-surface-container-high);
+          background-color: var(--mat-sys-surface-container-lowest);
           transform: translateY(-1px);
           box-shadow: var(--mat-sys-level1);
         }
@@ -65,6 +66,8 @@
       transition: all 0.2s ease;
       padding: 0;
       overflow: hidden;
+      // Clean card background
+      background-color: var(--mat-sys-surface);
 
       &.clickable {
         cursor: pointer;
@@ -87,7 +90,7 @@
         width: 140px;
         min-height: 140px;
         overflow: hidden;
-        background: var(--mat-sys-surface-container-high);
+        background: var(--mat-sys-surface-container);
 
         img {
           width: 100%;

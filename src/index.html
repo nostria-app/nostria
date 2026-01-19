@@ -31,7 +31,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#FEF7FA" />
+  <meta name="theme-color" content="#fafafa" />
 </head>
 
 <body class="mat-typography">
@@ -40,7 +40,7 @@
     (function () {
       var theme = localStorage.getItem('nostria-theme');
       var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.body.style.backgroundColor = isDark ? '#18111b' : '#FEF7FA';
+      document.body.style.backgroundColor = isDark ? '#121212' : '#fafafa';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
       // Detect Android and set platform attribute for CSS targeting
@@ -67,7 +67,7 @@
             loadingEl.innerHTML = '<div style="text-align:center;padding:20px;">' +
               '<h2>Failed to Load</h2>' +
               '<p style="opacity:0.8;margin:16px 0;">Please try clearing your browser cache and refreshing.</p>' +
-              '<button onclick="clearCachesAndReload()" style="padding:12px 24px;font-size:16px;cursor:pointer;border:none;border-radius:8px;background:#5953a9;color:white;">Clear Cache & Reload</button>' +
+              '<button onclick="clearCachesAndReload()" style="padding:12px 24px;font-size:16px;cursor:pointer;border:none;border-radius:8px;background:#FDA100;color:#1a1a1a;">Clear Cache & Reload</button>' +
               '</div>';
           }
           return;
@@ -167,11 +167,11 @@
         }
 
         #app-loading {
-          color: #201923;
+          color: #1a1a1a;
         }
 
         body[data-theme="dark"] #app-loading {
-          color: #ecdeed;
+          color: #e4e4e4;
         }
 
         @keyframes app-spinner {
@@ -187,15 +187,15 @@
         .app-loading-spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid rgba(89, 83, 169, 0.2);
-          border-top-color: #5953a9;
+          border: 4px solid rgba(253, 161, 0, 0.2);
+          border-top-color: #FDA100;
           border-radius: 50%;
           animation: app-spinner 1s linear infinite;
         }
 
         body[data-theme="dark"] .app-loading-spinner {
-          border-color: rgba(197, 192, 255, 0.2);
-          border-top-color: #c5c0ff;
+          border-color: rgba(255, 185, 97, 0.2);
+          border-top-color: #ffb961;
         }
 
         .app-loading-text {
@@ -240,22 +240,22 @@
           cursor: pointer;
           border: none;
           border-radius: 8px;
-          background: #5953a9;
-          color: white;
+          background: #FDA100;
+          color: #1a1a1a;
           transition: background 0.2s ease;
         }
 
         .app-loading-reload-btn:hover {
-          background: #413b8f;
+          background: #cb8000;
         }
 
         body[data-theme="dark"] .app-loading-reload-btn {
-          background: #c5c0ff;
-          color: #2a2278;
+          background: #ffb961;
+          color: #1a1a1a;
         }
 
         body[data-theme="dark"] .app-loading-reload-btn:hover {
-          background: #e3dfff;
+          background: #ffddb8;
         }
       </style>
       <div class="app-loading-spinner"></div>

@@ -308,6 +308,13 @@
     </div>
     }
   </div>
+
+  <!-- Scroll to top button - fixed position -->
+  @if (showScrollToTop()) {
+  <button mat-mini-fab class="scroll-to-top-btn" (click)="scrollToTop()" matTooltip="Scroll to top">
+    <mat-icon>arrow_upward</mat-icon>
+  </button>
+  }
 </div>
 }
 
