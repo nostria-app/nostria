@@ -367,7 +367,7 @@ export class FollowSetsService {
   }
 
   /**
-   * Delete a follow set
+   * Delete a follow set by publishing a kind 5 deletion event (NIP-09)
    */
   async deleteFollowSet(dTag: string): Promise<boolean> {
     const currentPubkey = this.accountState.pubkey();
@@ -382,21 +382,20 @@ export class FollowSetsService {
     }
 
     try {
-      // To delete a replaceable event, publish an empty version
-      const tags: string[][] = [
-        ['d', dTag],
-      ];
-
-      const unsignedEvent: UnsignedEvent = {
-        kind: 30000,
-        created_at: Math.floor(Date.now() / 1000),
-        tags,
-        content: '',
+      // Create a deletion event (kind 5) - NIP-09
+      // For addressable events (kind 30000), use 'a' tag with format: kind:pubkey:d-tag
+      const deletionEvent: UnsignedEvent = {
+        kind: 5,
         pubkey: currentPubkey,
+        created_at: Math.floor(Date.now() / 1000),
+        content: 'Deleted follow set',
+        tags: [
+          ['a', `30000:${currentPubkey}:${dTag}`]
+        ],
       };
 
       // Sign and publish
-      await this.publishService.signAndPublishAuto(unsignedEvent, this.signFunction);
+      await this.publishService.signAndPublishAuto(deletionEvent, this.signFunction);
 
       // Remove from local state
       this.followSets.update(sets => sets.filter(set => set.dTag !== dTag));
