@@ -10,6 +10,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule, ActivatedRoute } from '@angular/router';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { PeopleFilterPanelComponent } from './people-filter-panel/people-filter-panel.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
@@ -44,9 +46,12 @@ type FilterOptions = PeopleFilters;
 // Define sorting options
 type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc' | 'name-asc' | 'name-desc';
 
+// View modes in cycling order
+const VIEW_MODES = ['comfortable', 'medium', 'small', 'details'] as const;
+type ViewModeType = typeof VIEW_MODES[number];
+
 @Component({
   selector: 'app-people',
-  standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,
@@ -60,7 +65,8 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
     MatRadioModule,
     RouterModule,
     UserProfileComponent,
-    MatMenuModule
+    OverlayModule,
+    PeopleFilterPanelComponent,
   ],
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
@@ -133,7 +139,15 @@ export class PeopleComponent implements OnDestroy {
   private scrollObserver?: IntersectionObserver;
 
   // View mode
-  viewMode = signal<string>('medium');
+  viewMode = signal<ViewModeType>('medium');
+
+  // Filter panel state
+  filterPanelOpen = signal(false);
+  filterPanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
 
   // Filter options
   filters = signal<FilterOptions>({
@@ -243,7 +257,7 @@ export class PeopleComponent implements OnDestroy {
   // Computed item size based on view mode
   itemSize = computed(() => {
     switch (this.viewMode()) {
-      case 'large':
+      case 'comfortable':
         return 200;
       case 'medium':
         return 150;
@@ -304,8 +318,8 @@ export class PeopleComponent implements OnDestroy {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
         const savedViewMode = this.accountLocalState.getPeopleViewMode(pubkey);
-        if (savedViewMode) {
-          this.viewMode.set(savedViewMode);
+        if (savedViewMode && VIEW_MODES.includes(savedViewMode as ViewModeType)) {
+          this.viewMode.set(savedViewMode as ViewModeType);
         }
       }
     });
@@ -422,12 +436,72 @@ export class PeopleComponent implements OnDestroy {
     }
   }
 
-  changeViewMode(mode: string) {
+  changeViewMode(mode: ViewModeType) {
     this.viewMode.set(mode);
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setPeopleViewMode(pubkey, mode);
     }
+  }
+
+  /**
+   * Cycle through view modes on button click
+   */
+  cycleViewMode() {
+    const currentIndex = VIEW_MODES.indexOf(this.viewMode());
+    const nextIndex = (currentIndex + 1) % VIEW_MODES.length;
+    this.changeViewMode(VIEW_MODES[nextIndex]);
+  }
+
+  /**
+   * Get icon for current view mode
+   */
+  getViewModeIcon(): string {
+    switch (this.viewMode()) {
+      case 'comfortable':
+        return 'view_agenda';
+      case 'medium':
+        return 'view_module';
+      case 'small':
+        return 'apps';
+      case 'details':
+        return 'view_list';
+      default:
+        return 'view_module';
+    }
+  }
+
+  /**
+   * Toggle filter panel visibility
+   */
+  toggleFilterPanel(): void {
+    this.filterPanelOpen.update(v => !v);
+  }
+
+  /**
+   * Close filter panel
+   */
+  closeFilterPanel(): void {
+    this.filterPanelOpen.set(false);
+  }
+
+  /**
+   * Handle filter changes from filter panel
+   */
+  onFiltersChanged(changes: Partial<FilterOptions>): void {
+    this.filters.update(current => ({
+      ...current,
+      ...changes,
+    }));
+    // Reset display limit when filters change
+    this.displayLimit.set(this.PAGE_SIZE);
+  }
+
+  /**
+   * Handle sort option changes from filter panel
+   */
+  onSortOptionChanged(option: SortOption): void {
+    this.changeSortOption(option);
   }
 
   changeSortOption(option: SortOption) {
