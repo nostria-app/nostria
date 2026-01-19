@@ -29,155 +29,13 @@
   </div>
   }
   @if (app.initialized()) {
-  <!-- Top toolbar - full-width -->
-  <mat-toolbar class="app-toolbar no-print no-select">
-    
-    <!-- Left section: hamburger menu/avatar and app icon -->
-    <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()">
-      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
-        [class.profile-button-picture]="accountState.profile()?.data?.picture">
-        @if (accountState.profile()?.data?.picture) {
-        @if (settings.settings().imageCacheEnabled) {
-        <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
-          alt="Menu" />
-        } @else {
-        <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
-        }
-        } @else {
-        @if (app.authenticated()) {
-        <mat-icon>account_circle</mat-icon>
-        } @else {
-        <mat-icon>menu</mat-icon>
-        }
-        }
-      </button>
-      <app-navigation></app-navigation>
-    </div>
-
-    <!-- Center section: Always-visible search -->
-    <div class="toolbar-center">
-      <div class="search-container toolbar-section" [class.search-active]="layout.search()">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
-          (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
-          (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
-          placeholder="Search..." />
-        @if (layout.search()) {
-        <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
-          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
-          @if (isSearchListening()) {
-          <mat-icon class="pulse-icon">mic</mat-icon>
-          } @else if (isSearchTranscribing()) {
-          <mat-icon class="spinning-icon">sync</mat-icon>
-          } @else {
-          <mat-icon>mic</mat-icon>
-          }
-        </button>
-        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
-          <mat-icon>qr_code_scanner</mat-icon>
-        </button>
-        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
-          <mat-icon>close</mat-icon>
-        </button>
-        }
-        <app-search-results></app-search-results>
-      </div>
-    </div>
-
-    <!-- Right section: action buttons and notifications -->
-    <div class="toolbar-section toolbar-right">
-      <!-- Right panel actions (when right panel has content) -->
-      @if (hasRightContent()) {
-      @for (action of panelActions.rightPanelActions(); track action.id) {
-      @if (action.menu) {
-      <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu" [matTooltip]="action.tooltip || action.label"
-        [disabled]="action.disabled" class="action-button">
-        <mat-icon>{{ action.icon }}</mat-icon>
-      </button>
-      } @else {
-      <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-        [disabled]="action.disabled" class="action-button">
-        <mat-icon>{{ action.icon }}</mat-icon>
-      </button>
-      }
-      }
-      }
-
-      @if (pwaUpdateService.updateAvailable()) {
-      <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-        i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
-        aria-label="Update application">
-        <mat-icon class="update-icon">system_update</mat-icon>
-      </button>
-      }
-
-      @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
-      <button mat-icon-button class="profile-cache-button" [matTooltip]="cachingTooltip()"
-        i18n-aria-label="@@app.tooltip.caching-aria" aria-label="Profile caching progress">
-        <mat-icon class="spinning-icon">cached</mat-icon>
-        <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
-      </button>
-      }
-      @if (app.authenticated()) {
-      <!-- Create new content button -->
-      <button mat-icon-button class="create-button" (click)="openCreateMenu($event)"
-        i18n-matTooltip="@@app.create.tooltip" matTooltip="Create"
-        i18n-aria-label="@@app.create.aria" aria-label="Create new content">
-        <mat-icon>add</mat-icon>
-      </button>
-      @if (appState.isPublishing() || ai.processingState().isProcessing) {
-      <button mat-icon-button class="profile-cache-button" routerLink="/notifications"
-        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
-        i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
-        <mat-icon class="spinning-icon">sync</mat-icon>
-      </button>
-      }
-      @else {
-      <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
-        i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
-        <mat-icon
-          [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
-      </button>
-      }
-      }
-    </div>
-  </mat-toolbar>
-  }
-
-  <!-- Floating Offline Indicator -->
-  @if (appState.showOfflineWarning()) {
-  <div class="floating-offline-indicator">
-    <div class="offline-content">
-      <mat-icon class="offline-icon">wifi_off</mat-icon>
-      <span i18n="@@app.offline.message">You are currently offline</span>
-      <button mat-icon-button class="dismiss-button" (click)="app.reload()">
-        <mat-icon>refresh</mat-icon>
-      </button>
-      <button mat-icon-button class="dismiss-button" (click)="appState.dismissOffline()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  </div>
-  }
-  @if (app.initialized()) {
-  <!-- Sidenav container now below the toolbar -->
+  <!-- Sidenav container spans full height -->
   <mat-sidenav-container class="sidenav-container" [autosize]="true">
     <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
-
-      <!-- Close button row at top of sidenav -->
-      <div class="sidenav-close-row">
-        <button mat-icon-button class="sidenav-close-button" (click)="toggleSidenav()" 
-          matTooltip="Close menu" i18n-matTooltip="@@app.sidenav.close">
-          <mat-icon>close</mat-icon>
-        </button>
-        @if (displayLabels()) {
-        <span class="sidenav-title">Menu</span>
-        }
-      </div>
 
       <!-- User Profile Section at Top -->
       @if (displayLabels()) {
@@ -359,6 +217,137 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
+      
+      <!-- Top toolbar - beside sidenav -->
+      <mat-toolbar class="app-toolbar no-print no-select">
+        
+        <!-- Left section: hamburger menu/avatar and app icon -->
+        <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()">
+          <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
+            [class.profile-button-picture]="accountState.profile()?.data?.picture">
+            @if (accountState.profile()?.data?.picture) {
+            @if (settings.settings().imageCacheEnabled) {
+            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
+              alt="Menu" />
+            } @else {
+            <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
+            }
+            } @else {
+            @if (app.authenticated()) {
+            <mat-icon>account_circle</mat-icon>
+            } @else {
+            <mat-icon>menu</mat-icon>
+            }
+            }
+          </button>
+          <app-navigation></app-navigation>
+        </div>
+
+        <!-- Center section: Always-visible search -->
+        <div class="toolbar-center">
+          <div class="search-container toolbar-section" [class.search-active]="layout.search()">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
+              (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
+              (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
+              placeholder="Search..." />
+            @if (layout.search()) {
+            <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
+              [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
+              @if (isSearchListening()) {
+              <mat-icon class="pulse-icon">mic</mat-icon>
+              } @else if (isSearchTranscribing()) {
+              <mat-icon class="spinning-icon">sync</mat-icon>
+              } @else {
+              <mat-icon>mic</mat-icon>
+              }
+            </button>
+            <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
+              <mat-icon>qr_code_scanner</mat-icon>
+            </button>
+            <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+            }
+            <app-search-results></app-search-results>
+          </div>
+        </div>
+
+        <!-- Right section: action buttons and notifications -->
+        <div class="toolbar-section toolbar-right">
+          <!-- Right panel actions (when right panel has content) -->
+          @if (hasRightContent()) {
+          @for (action of panelActions.rightPanelActions(); track action.id) {
+          @if (action.menu) {
+          <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu" [matTooltip]="action.tooltip || action.label"
+            [disabled]="action.disabled" class="action-button">
+            <mat-icon>{{ action.icon }}</mat-icon>
+          </button>
+          } @else {
+          <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
+            [disabled]="action.disabled" class="action-button">
+            <mat-icon>{{ action.icon }}</mat-icon>
+          </button>
+          }
+          }
+          }
+
+          @if (pwaUpdateService.updateAvailable()) {
+          <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
+            i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
+            aria-label="Update application">
+            <mat-icon class="update-icon">system_update</mat-icon>
+          </button>
+          }
+
+          @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
+          <button mat-icon-button class="profile-cache-button" [matTooltip]="cachingTooltip()"
+            i18n-aria-label="@@app.tooltip.caching-aria" aria-label="Profile caching progress">
+            <mat-icon class="spinning-icon">cached</mat-icon>
+            <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
+          </button>
+          }
+          @if (app.authenticated()) {
+          <!-- Create new content button -->
+          <button mat-icon-button class="create-button" (click)="openCreateMenu($event)"
+            i18n-matTooltip="@@app.create.tooltip" matTooltip="Create"
+            i18n-aria-label="@@app.create.aria" aria-label="Create new content">
+            <mat-icon>add</mat-icon>
+          </button>
+          @if (appState.isPublishing() || ai.processingState().isProcessing) {
+          <button mat-icon-button class="profile-cache-button" routerLink="/notifications"
+            [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
+            i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
+            <mat-icon class="spinning-icon">sync</mat-icon>
+          </button>
+          }
+          @else {
+          <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
+            i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
+            <mat-icon
+              [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
+          </button>
+          }
+          }
+        </div>
+      </mat-toolbar>
+
+      <!-- Floating Offline Indicator -->
+      @if (appState.showOfflineWarning()) {
+      <div class="floating-offline-indicator">
+        <div class="offline-content">
+          <mat-icon class="offline-icon">wifi_off</mat-icon>
+          <span i18n="@@app.offline.message">You are currently offline</span>
+          <button mat-icon-button class="dismiss-button" (click)="app.reload()">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          <button mat-icon-button class="dismiss-button" (click)="appState.dismissOffline()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+      }
+      
       <!-- Two-Column Layout Container -->
       <div class="two-column-layout" [class.feeds-visible]="panelNav.showFeeds()"
         [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
