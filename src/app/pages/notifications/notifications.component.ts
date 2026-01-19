@@ -94,6 +94,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   showSearch = signal(false);
   // Whether to show system notifications view
   showSystemNotifications = signal(false);
+  // Whether to show only unread notifications
+  showUnreadOnly = signal(false);
   notificationType = NotificationType;
 
   // Search handler reference for cleanup
@@ -118,8 +120,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.REACTION,
       NotificationType.ZAP,
     ];
-    // Return true if any content filter is disabled OR if showing system notifications
-    return contentTypes.some(type => !filters[type]) || this.showSystemNotifications();
+    // Return true if any content filter is disabled OR if showing system notifications OR if showing unread only
+    return contentTypes.some(type => !filters[type]) || this.showSystemNotifications() || this.showUnreadOnly();
   });
 
   // State for loading older notifications
@@ -215,11 +217,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const filters = this.notificationFilters();
     const mutedAccounts = this.accountState.mutedAccounts();
     const query = this.searchQuery().toLowerCase().trim();
+    const unreadOnly = this.showUnreadOnly();
 
     return this.notifications()
       .filter(n => {
         // Filter by notification type
         if (!this.isContentNotification(n.type) || !filters[n.type]) {
+          return false;
+        }
+
+        // Filter by read status if unread only is enabled
+        if (unreadOnly && n.read) {
           return false;
         }
 
@@ -788,5 +796,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    */
   onSystemNotificationsChanged(show: boolean): void {
     this.showSystemNotifications.set(show);
+  }
+
+  /**
+   * Handle unread only toggle from the filter panel
+   */
+  onUnreadOnlyChanged(show: boolean): void {
+    this.showUnreadOnly.set(show);
   }
 }

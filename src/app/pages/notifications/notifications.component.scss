@@ -167,7 +167,7 @@
     padding-top: 16px;
   }
 
-  // Fixed height for virtual scrolling items only
+  // Fixed height for virtual scrolling items only (94px content + 8px margin-bottom)
   .notification-item {
     height: 94px;
     min-height: 94px;
@@ -403,12 +403,43 @@
   padding: 10px 10px;
   gap: 16px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, opacity 0.2s;
   min-width: 0; // Enable proper flex shrinking
   overflow-x: hidden; // Prevent horizontal overflow only
   position: relative;
   padding-left: 16px; // Space for left accent border
+  margin: 0 12px 8px 12px; // Add margin between items
+  border-radius: 12px; // Rounded corners for card-like appearance
+  border: 1px solid var(--mat-sys-outline-variant);
 
+  // Unread notifications - white/bright background with emphasis
+  &:not(.read) {
+    background: var(--mat-sys-surface);
+    border-color: var(--mat-sys-primary);
+    border-left-width: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  // Read notifications - significantly muted
+  &.read {
+    background: var(--mat-sys-surface-container);
+    opacity: 0.6;
+    border-color: transparent;
+
+    .notification-content {
+      .notification-header .notification-author-name {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .notification-message {
+        opacity: 0.7;
+      }
+    }
+
+    .notification-avatar-wrapper {
+      opacity: 0.7;
+    }
+  }
 
   // Left accent border based on notification type
   &::before {
@@ -420,10 +451,12 @@
     width: 4px;
     opacity: 0;
     transition: opacity 0.3s ease;
+    border-radius: 12px 0 0 12px; // Match container border radius
   }
 
   &:hover {
     background: var(--mat-sys-surface-container-high);
+    opacity: 1;
 
     &::before {
       opacity: 1;
@@ -468,10 +501,6 @@
       outline-offset: 2px;
       border-radius: 4px;
     }
-  }
-
-  &:last-child {
-    border-bottom: none;
   }
 
   // Avatar wrapper with notification type badge overlay
@@ -805,8 +834,7 @@
   }
 }
 
-// Hide the menu remove button and mark-read button on larger screens (shown via ::ng-deep for mat-menu)
-::ng-deep .menu-remove-btn,
+// Hide the menu mark-read button on larger screens (shown via ::ng-deep for mat-menu)
 ::ng-deep .menu-mark-read-btn {
   display: none !important;
 }
@@ -834,8 +862,7 @@
 
 @media (max-width: 600px) {
 
-  // Show the menu remove button and mark-read button on small screens
-  ::ng-deep .menu-remove-btn,
+  // Show the menu mark-read button on small screens
   ::ng-deep .menu-mark-read-btn {
     display: flex !important;
   }
@@ -918,11 +945,6 @@
           height: 12px;
         }
       }
-    }
-
-    // Hide the standalone remove button on small screens (it's in the menu)
-    .notification-actions .remove-btn {
-      display: none;
     }
   }
 
@@ -1032,6 +1054,22 @@
 
 // Dark mode adjustments
 :host-context(.dark) {
+  .notification-item {
+    // Unread notifications in dark mode - brighter surface with emphasis
+    &:not(.read) {
+      background: var(--mat-sys-surface-container-high);
+      border-color: var(--mat-sys-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    // Read notifications in dark mode - much darker/more muted
+    &.read {
+      background: var(--mat-sys-surface-container-lowest);
+      opacity: 0.5;
+      border-color: transparent;
+    }
+  }
+
   .notification-type-badge {
 
     // Adjust gradients for better contrast in dark mode
