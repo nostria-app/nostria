@@ -1,4 +1,16 @@
 <div class="articles-container">
+  <!-- Panel Header -->
+  <div class="panel-header">
+    <h2 class="panel-title title-font">Articles</h2>
+    <span class="panel-header-spacer"></span>
+    <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button mat-icon-button (click)="createNewArticle()" matTooltip="Create new article">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+
   <div class="articles-header">
     <mat-tab-group [selectedIndex]="selectedTab()" (selectedIndexChange)="onTabChange($event)" animationDuration="0ms">
       <mat-tab label="Drafts"></mat-tab>

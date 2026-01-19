@@ -36,6 +36,12 @@ const profileChildren: Routes = [
           import('./pages/profile/profile-media/profile-media.component').then(m => m.ProfileMediaComponent),
         title: 'Media',
       },
+      {
+        path: 'connection',
+        loadComponent: () =>
+          import('./pages/profile/profile-connection/profile-connection.component').then(m => m.ProfileConnectionComponent),
+        title: 'Connection',
+      },
     ],
   },
   {
@@ -443,6 +449,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./components/zap-history/zap-history.component').then(m => m.ZapHistoryComponent),
     title: 'Zap History',
+  },
+  {
+    path: 'wallet',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/wallet/wallet.component').then(m => m.WalletComponent),
+    title: 'Wallet',
   },
   {
     path: 'article/create',

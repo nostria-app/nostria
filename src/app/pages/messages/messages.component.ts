@@ -10,7 +10,6 @@ import {
   computed,
   effect,
   untracked,
-  TemplateRef,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -62,7 +61,6 @@ import { EncryptionPermissionService } from '../../services/encryption-permissio
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
@@ -157,7 +155,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
-  private panelActions = inject(PanelActionsService);
   private searchAction = inject(SearchActionService);
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
@@ -165,7 +162,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly settings = inject(SettingsService);
   readonly localSettings = inject(LocalSettingsService);
 
-  @ViewChild('menuTemplate') menuTemplate!: TemplateRef<unknown>;
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
   // Search handler reference for cleanup
@@ -593,9 +589,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    // Setup panel actions
-    this.setupPanelActions();
-
     // Register search handler to intercept global search
     this.searchAction.registerHandler(this.searchHandler);
 
@@ -689,29 +682,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private setupPanelActions(): void {
-    // Set the page title for the toolbar
-    this.panelActions.setPageTitle('Messages');
-
-    this.panelActions.setLeftPanelActions([
-      {
-        id: 'new-chat',
-        icon: 'edit',
-        label: 'New chat',
-        tooltip: 'New chat',
-        action: () => this.startNewChat(),
-      },
-      {
-        id: 'more',
-        icon: 'more_vert',
-        label: 'More options',
-        tooltip: 'More options',
-        action: () => { },
-        menu: true,
-      },
-    ]);
-  }
-
   toggleSearch(): void {
     this.showSearch.update(v => !v);
     if (!this.showSearch()) {
@@ -720,9 +690,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Set up the menu template for panel actions
-    this.panelActions.setLeftPanelMenuTemplate(this.menuTemplate);
-
     // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
     setTimeout(() => {
       this.setupScrollListener();
@@ -905,9 +872,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    // Clear panel actions
-    this.panelActions.clearLeftPanelActions();
-
     // Unregister search handler
     this.searchAction.unregisterHandler(this.searchHandler);
 

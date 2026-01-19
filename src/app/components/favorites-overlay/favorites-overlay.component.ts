@@ -44,6 +44,9 @@ export class FavoritesOverlayComponent implements OnDestroy {
   // Signal to track if overlay is docked/pinned
   isDocked = signal(false);
 
+  // Signal to track if overlay is collapsed (minimized)
+  isCollapsed = signal(false);
+
   // Signal to track if currently dragging
   isDragging = signal(false);
 
@@ -325,6 +328,10 @@ export class FavoritesOverlayComponent implements OnDestroy {
     }
   }
 
+  toggleCollapse(): void {
+    this.isCollapsed.update(v => !v);
+  }
+
   onAvatarMouseEnter(event: MouseEvent, pubkey: string): void {
     // Don't show hover card while dragging
     if (this.isDragging()) {
@@ -340,7 +347,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
 
   navigateToProfile(pubkey: string): void {
     this.hideOverlay();
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+    this.router.navigate(['/p', pubkey]);
   }
 
   navigateToPeople(): void {

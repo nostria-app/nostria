@@ -37,7 +37,7 @@ export interface ProfileUpdateOptions {
   /** Whether to skip media server validation and allow profile creation without file uploads */
   skipMediaServerCheck?: boolean;
   /** External identities (NIP-39) - array of [platform, identity, proof?] */
-  externalIdentities?: Array<{ platform: string; identity: string; proof?: string }>;
+  externalIdentities?: { platform: string; identity: string; proof?: string }[];
 }
 
 /**

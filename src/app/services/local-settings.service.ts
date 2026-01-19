@@ -8,6 +8,17 @@ import { Subject, debounceTime } from 'rxjs';
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
 
+/**
+ * Represents a menu item configuration for the main navigation.
+ * The id corresponds to the path of the navigation item.
+ */
+export interface MenuItemConfig {
+  /** Unique identifier matching the nav item path */
+  id: string;
+  /** Whether this item is visible in the menu */
+  visible: boolean;
+}
+
 export interface LocalSettings {
   menuOpen: boolean;
   menuExpanded: boolean;
@@ -25,6 +36,8 @@ export interface LocalSettings {
   removeTrackingParameters: boolean;
   calendarType: CalendarType;
   timeFormat: TimeFormat;
+  /** Custom menu item order and visibility. Array order determines display order. */
+  menuItems: MenuItemConfig[];
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -44,6 +57,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   removeTrackingParameters: true,
   calendarType: 'gregorian',
   timeFormat: '24h',
+  menuItems: [], // Empty means use default order
 };
 
 /**
@@ -96,6 +110,7 @@ export class LocalSettingsService {
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
   readonly calendarType = computed(() => this.settings().calendarType);
   readonly timeFormat = computed(() => this.settings().timeFormat);
+  readonly menuItems = computed(() => this.settings().menuItems);
 
   constructor() {
     // Set up debounced save - waits 300ms after last change before saving
@@ -368,6 +383,20 @@ export class LocalSettingsService {
    */
   setTimeFormat(timeFormat: TimeFormat): void {
     this.updateSettings({ timeFormat });
+  }
+
+  /**
+   * Set menu items configuration (order and visibility)
+   */
+  setMenuItems(menuItems: MenuItemConfig[]): void {
+    this.updateSettings({ menuItems });
+  }
+
+  /**
+   * Reset menu items to default
+   */
+  resetMenuItems(): void {
+    this.updateSettings({ menuItems: [] });
   }
 
   /**

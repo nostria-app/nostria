@@ -1,17 +1,27 @@
 <div class="streams-container">
-  <!-- Template for header actions menu -->
-  <ng-template #headerActionsMenuTemplate>
-    <button mat-menu-item (click)="openStreamingAppsDialog()">
-      <mat-icon>videocam</mat-icon>
-      <span i18n="@@streams.wantToStream">Want to stream?</span>
+  <!-- Panel Header -->
+  <div class="panel-header">
+    <h2 class="panel-title title-font">Streams</h2>
+    <span class="panel-header-spacer"></span>
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">
+      <mat-icon>refresh</mat-icon>
     </button>
-    @if (isAuthenticated()) {
-    <button mat-menu-item (click)="openSettings()">
-      <mat-icon>settings</mat-icon>
-      <span i18n="@@streams.settings.label">Settings</span>
+    <button mat-icon-button [matMenuTriggerFor]="headerActionsMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
     </button>
-    }
-  </ng-template>
+    <mat-menu #headerActionsMenu="matMenu">
+      <button mat-menu-item (click)="openStreamingAppsDialog()">
+        <mat-icon>videocam</mat-icon>
+        <span i18n="@@streams.wantToStream">Want to stream?</span>
+      </button>
+      @if (isAuthenticated()) {
+      <button mat-menu-item (click)="openSettings()">
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@streams.settings.label">Settings</span>
+      </button>
+      }
+    </mat-menu>
+  </div>
 
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
     <mat-tab>

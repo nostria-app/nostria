@@ -75,7 +75,7 @@ app-user-profile {
     }
   }
 
-  // Header styles - sticky toolbar that auto-hides on scroll
+  // Header styles - fixed panel header at top
   .header-section {
     display: flex;
     flex-wrap: wrap;
@@ -83,32 +83,34 @@ app-user-profile {
     align-items: center;
     gap: 0.5rem;
     flex-shrink: 0; // Don't shrink header
-    // Transparent background - glass containers handle the styling
-    background: transparent;
-    // Position absolutely within the feeds container
-    position: absolute;
-    top: var(--toolbar-height, 64px);
+    min-height: 56px;
+
+    // Sticky position at top of panel (panel already accounts for toolbar offset)
+    position: sticky;
+    top: 0;
     left: 0;
     right: 0;
-    // Width constrained to feeds panel
-    width: auto;
-    max-width: 100%;
+    z-index: 50;
+
+    // Glass effect for translucent fixed header
+    background-color: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 8px 12px;
 
     // Reduce padding on smaller screens to match toolbar
     @media (max-width: 1023px) {
-      padding: 0.25rem 8px;
+      padding: 8px;
     }
 
-    transition: transform 0.3s ease;
-    // Ensure it's above other content including reveal screens
-    z-index: 200;
-    // Allow clicks to pass through transparent areas between glass containers
-    pointer-events: none;
+    // Hidden state class (applied via JS when scrolling down) - smooth transition
+    transition: opacity 0.3s ease,
+    transform 0.3s ease;
 
-    // Hidden state class (applied via JS when scrolling down)
-    // Move up to hide
     &.header-hidden {
-      transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
+      opacity: 0;
+      transform: translateY(-10px);
       pointer-events: none;
     }
 
@@ -134,19 +136,20 @@ app-user-profile {
         overflow: hidden;
 
         .feed-tabs {
-          // Glass container styling
+          // Clean styling for feed tabs inside fixed header
           display: flex;
           align-items: center;
-          height: 48px;
-          padding: 0 8px;
-          border-radius: 24px;
+          height: 40px;
+          padding: 0 4px;
+          border-radius: 20px;
           gap: 4px;
-          // Re-enable clicks on the glass container
-          pointer-events: auto;
           // Allow tabs to shrink and track overflow
           flex: 1;
           min-width: 0;
           overflow: hidden;
+
+          // Light background for tab container
+          background-color: rgba(0, 0, 0, 0.04);
 
           // Inner wrapper for feed tabs - used for overflow measurement
           .feed-tabs-inner {
@@ -161,19 +164,6 @@ app-user-profile {
             flex-shrink: 0;
           }
 
-          // Glass effect - light mode
-          background-color: rgba(255, 255, 255, 0.7);
-          -webkit-backdrop-filter: blur(20px) saturate(1.8);
-          backdrop-filter: blur(20px) saturate(1.8);
-
-          box-shadow: // Inner white highlight
-          inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-          // Inner glow
-          inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-          // Drop shadows
-          0px 2px 8px rgba(17, 17, 26, 0.08),
-          0px 4px 16px rgba(17, 17, 26, 0.06);
-
           .feed-tab {
             display: flex;
             align-items: center;
@@ -183,6 +173,8 @@ app-user-profile {
             transition: all 0.2s ease;
             text-decoration: none;
             flex-shrink: 0; // Don't shrink - trigger dropdown instead
+            padding: 6px 12px;
+            border-radius: 16px;
 
             mat-icon {
               font-size: 1.1rem;
@@ -191,12 +183,11 @@ app-user-profile {
             }
 
             span {
-              font-weight: 500;
-              font-size: 0.95rem;
+              font-size: 0.9rem;
             }
 
             &:hover:not(.active) {
-              background-color: var(--mat-sys-surface-container-high);
+              background-color: rgba(0, 0, 0, 0.06);
             }
 
             &.active {
@@ -205,10 +196,6 @@ app-user-profile {
 
               mat-icon {
                 color: var(--mat-sys-primary);
-              }
-
-              span {
-                font-weight: 600;
               }
             }
 
@@ -239,6 +226,22 @@ app-user-profile {
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+  }
+
+  // Dark mode for header section
+  :host-context(.dark) & .header-section {
+    background-color: rgba(24, 17, 27, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    .feed-tabs {
+      background-color: rgba(255, 255, 255, 0.06);
+
+      .feed-tab {
+        &:hover:not(.active) {
+          background-color: rgba(255, 255, 255, 0.08);
+        }
+      }
     }
   }
 
@@ -307,12 +310,13 @@ app-user-profile {
     }
   }
 
-  // Columns container - main content area
+  // Columns container - main content area and scroll container
   .columns-container {
     display: flex;
     flex-direction: column;
     flex: 1;
-    overflow: hidden; // Don't scroll here - content scrolls
+    overflow-y: auto; // Enable vertical scrolling for sticky header to work
+    overflow-x: hidden;
     position: relative;
     max-width: 100%;
 
@@ -345,10 +349,10 @@ app-user-profile {
 
     .columns-wrapper {
       display: flex;
-      flex: 0 0 auto;
+      flex: 1 0 auto; // Grow to fill space, don't shrink, auto basis
       gap: 12px;
       // padding: 12px;
-      height: 100%;
+      min-height: 0; // Allow flex items to shrink below content size
 
       // When in global feeds panel, remove top padding so content goes to top
       :host-context(.global-feeds-panel) & {
@@ -386,7 +390,7 @@ app-user-profile {
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
-        overflow: hidden;
+        overflow: visible; // Content flows in parent scroll container
         position: relative;
 
         // When in global feeds panel, remove visual borders for seamless look
@@ -427,20 +431,17 @@ app-user-profile {
           z-index: 2;
         }
 
-        // Column content - scrollable area for feed items
+        // Column content - contains feed items
         .column-content {
           scroll-behavior: smooth;
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow-y: auto; // Enable scrolling here
+          overflow-y: visible; // Content flows in parent scroll container
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
-          // Add padding for the toolbar and floating header
-          padding-top: calc(var(--toolbar-height, 64px) + 60px);
-
-          // No padding-top - content scrolls behind transparent toolbar
-          // The floating header is positioned absolutely
+          // Content starts below the fixed header (header is ~56px)
+          // No extra padding needed as content naturally flows below sticky header
 
           // Column header - inside scrollable content
           .column-header {
@@ -471,7 +472,6 @@ app-user-profile {
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                font-weight: 500;
               }
 
               .column-header-actions {

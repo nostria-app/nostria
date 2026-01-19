@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -14,7 +15,6 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MusicDataService } from '../../../services/music-data.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
-import { PanelActionsService } from '../../../services/panel-actions.service';
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -28,21 +28,29 @@ const PAGE_SIZE = 24;
     MatButtonToggleModule,
     MatIconModule,
     MatSelectModule,
+    MatTooltipModule,
     MusicPlaylistCardComponent,
   ],
   template: `
+    <div class="panel-header">
+      <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2 class="panel-title title-font" i18n="@@music.playlists.title">Playlists</h2>
+      <span class="panel-header-spacer"></span>
+      <mat-select class="sort-select" [(value)]="sortBy" aria-label="Sort playlists">
+        <mat-option value="recents">Recents</mat-option>
+        <mat-option value="alphabetical">Alphabetical</mat-option>
+        <mat-option value="artist">Artist</mat-option>
+      </mat-select>
+    </div>
+
     <div class="music-playlists-container">
       <div class="page-header">
         <div class="header-info">
-          <h1 i18n="@@music.playlists.title">All Playlists</h1>
           <p class="subtitle">{{ playlistsCount() }} <span i18n="@@music.playlists.count">playlists</span></p>
         </div>
         <div class="header-actions">
-          <mat-select class="sort-select" [(value)]="sortBy" aria-label="Sort playlists">
-            <mat-option value="recents">Recents</mat-option>
-            <mat-option value="alphabetical">Alphabetical</mat-option>
-            <mat-option value="artist">Artist</mat-option>
-          </mat-select>
           @if (isAuthenticated()) {
             <mat-button-toggle-group [value]="source()" (change)="onSourceChange($event.value)" class="source-toggle">
               <mat-button-toggle value="following">
@@ -107,6 +115,41 @@ const PAGE_SIZE = 24;
     :host {
       display: block;
     }
+
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+      .panel-title {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      .panel-header-spacer {
+        flex: 1;
+      }
+
+      .sort-select {
+        font-size: 0.875rem;
+        min-width: 130px;
+      }
+    }
+
+    :host-context(.dark) .panel-header {
+      background-color: rgba(24, 17, 27, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
     
     .music-playlists-container {
       display: flex;
@@ -130,12 +173,6 @@ const PAGE_SIZE = 24;
       gap: 0.25rem;
       flex: 1;
 
-      h1 {
-        margin: 0;
-        font-size: 1.5rem;
-        color: var(--mat-sys-on-surface);
-      }
-
       .subtitle {
         margin: 0;
         font-size: 0.875rem;
@@ -148,11 +185,6 @@ const PAGE_SIZE = 24;
       align-items: center;
       gap: 0.5rem;
       flex-wrap: wrap;
-    }
-
-    .sort-select {
-      font-size: 0.875rem;
-      min-width: 130px;
     }
 
     .source-toggle {
@@ -257,7 +289,6 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
-  private panelActions = inject(PanelActionsService);
 
   // Input kept for potential future use with RightPanelService
   sourceInput = input<'following' | 'public' | undefined>(undefined);
@@ -331,12 +362,6 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private intersectionObserver: IntersectionObserver | null = null;
 
   ngOnInit(): void {
-    // Set breadcrumbs for navigation
-    this.panelActions.setBreadcrumbs([
-      { label: $localize`:@@nav.music:Music`, action: () => this.router.navigate(['/music']) },
-      { label: $localize`:@@music.playlists.title:Playlists` }
-    ]);
-
     // Check for input first (when opened via RightPanelService)
     const sourceFromInput = this.sourceInput();
     if (sourceFromInput) {
@@ -388,7 +413,6 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   ngOnDestroy(): void {
     this.playlistSubscription?.close();
     this.intersectionObserver?.disconnect();
-    this.panelActions.clearBreadcrumbs();
   }
 
   private setupIntersectionObserver(): void {

@@ -8,6 +8,7 @@ import { Type } from '@angular/core';
  */
 export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<unknown>>> = {
   'general': () => import('./general/general.component').then(m => m.GeneralSettingsComponent),
+  'layout': () => import('./layout/layout.component').then(m => m.LayoutSettingsComponent),
   'algorithm': () => import('./algorithm/algorithm').then(m => m.AlgorithmComponent),
   'relays': () => import('./relays/relays.component').then(m => m.RelaysComponent),
   'search': () => import('./search/search.component').then(m => m.SearchSettingsComponent),

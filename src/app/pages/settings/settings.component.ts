@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
@@ -7,9 +8,9 @@ import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter } from 'rxjs/operators';
 import { LayoutService } from '../../services/layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { SettingsRegistryService, SettingsItem, SettingsSection } from '../../services/settings-registry.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
@@ -27,14 +28,16 @@ import { RightPanelService } from '../../services/right-panel.service';
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatTooltipModule,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
+  host: { 'class': 'panel-with-sticky-header' },
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly layout = inject(LayoutService);
-  private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
   readonly registry = inject(SettingsRegistryService);
   private readonly accountState = inject(AccountStateService);
@@ -86,8 +89,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
-    this.panelActions.clearPageTitle();
+    // Component cleanup - no panel actions to clear anymore
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   navigateToSection(section: SettingsSection): void {

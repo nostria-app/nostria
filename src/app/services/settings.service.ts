@@ -38,6 +38,7 @@ export interface UserSettings {
   zapQuickAmounts?: number[]; // Array of amounts enabled for quick zapping (legacy, for menu)
   quickZapEnabled?: boolean; // Enable the quick zap button
   quickZapAmount?: number; // Amount for instant quick zap button
+  hideWalletAmounts?: boolean; // Hide sat amounts in wallet UI
   // Add more settings as needed
 }
 
@@ -69,6 +70,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   zapQuickAmounts: [21, 210, 420, 1000, 5000, 10000],
   quickZapEnabled: false, // Off by default
   quickZapAmount: 21, // Default quick zap amount
+  hideWalletAmounts: false, // Show amounts by default
 };
 
 @Injectable({

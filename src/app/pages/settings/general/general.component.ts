@@ -23,8 +23,6 @@ import { ExternalLinkHandlerService } from '../../../services/external-link-hand
 import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
-import { PanelActionsService } from '../../../services/panel-actions.service';
-import { RightPanelService } from '../../../services/right-panel.service';
 
 interface Language {
   code: string;
@@ -63,20 +61,13 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   accountLocalState = inject(AccountLocalStateService);
   emojiSetService = inject(EmojiSetService);
   snackBar = inject(MatSnackBar);
-  private panelActions = inject(PanelActionsService);
-  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
-    // Only set page title if not in right panel (right panel has its own title)
-    if (!this.rightPanel.hasContent()) {
-      this.panelActions.setPageTitle($localize`:@@settings.general.title:General`);
-    }
+    // Parent settings component handles the page title
   }
 
   ngOnDestroy(): void {
-    if (!this.rightPanel.hasContent()) {
-      this.panelActions.clearPageTitle();
-    }
+    // No cleanup needed
   }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
@@ -138,22 +129,6 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   toggleShowClientTag(): void {
     this.localSettings.setShowClientTag(!this.localSettings.showClientTag());
-  }
-
-  toggleStartOnLastRoute(): void {
-    this.localSettings.setStartOnLastRoute(!this.localSettings.startOnLastRoute());
-  }
-
-  toggleStartFeedsOnLastEvent(): void {
-    this.localSettings.setStartFeedsOnLastEvent(!this.localSettings.startFeedsOnLastEvent());
-  }
-
-  toggleShowThreadLines(): void {
-    this.localSettings.setShowThreadLines(!this.localSettings.showThreadLines());
-  }
-
-  toggleOpenThreadsExpanded(): void {
-    this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
   }
 
   setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {

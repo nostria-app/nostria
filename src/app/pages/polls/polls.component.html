@@ -1,4 +1,16 @@
 <div class="polls-container">
+  <!-- Panel Header -->
+  <div class="panel-header">
+    <h2 class="panel-title title-font">Polls</h2>
+    <span class="panel-header-spacer"></span>
+    <button mat-icon-button (click)="toggleView()" [matTooltip]="selectedView() === 'grid' ? 'List view' : 'Grid view'">
+      <mat-icon>{{ selectedView() === 'grid' ? 'view_list' : 'view_module' }}</mat-icon>
+    </button>
+    <button mat-icon-button (click)="createNewPoll()" matTooltip="Create new poll">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+
   <main class="polls-content">
     <!-- Loading indicator -->
     @if (isLoading()) {

@@ -1,0 +1,416 @@
+<div class="connection-container">
+  <!-- Overview Section -->
+  <mat-expansion-panel [expanded]="true" class="section-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>connect_without_contact</mat-icon>
+        Connection Overview
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    @if (isLoadingOverview()) {
+    <div class="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading connection data...</p>
+    </div>
+    } @else {
+    <!-- Relationship Status -->
+    <mat-card class="stats-card">
+      <mat-card-content>
+        <div class="relationship-status">
+          <mat-icon [class]="'status-icon ' + (stats().isFollowing && stats().followsUs ? 'mutual' : '')">
+            {{ getRelationshipIcon() }}
+          </mat-icon>
+          <div class="status-text">
+            <h3>{{ getRelationshipStatus() }}</h3>
+            @if (stats().firstInteraction) {
+            <p class="first-interaction">
+              First interaction was {{ stats().daysSinceFirstInteraction }}
+              {{ stats().daysSinceFirstInteraction === 1 ? 'day' : 'days' }} ago
+            </p>
+            } @else {
+            <p class="first-interaction">No interactions yet</p>
+            }
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <mat-icon>swap_horiz</mat-icon>
+          <div class="stat-value">{{ stats().totalInteractions }}</div>
+          <div class="stat-label">Total Interactions</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <mat-icon>favorite</mat-icon>
+          <div class="stat-breakdown">
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().ourLikes }}</span>
+              <span class="stat-sublabel">Given</span>
+            </div>
+            <mat-divider [vertical]="true"></mat-divider>
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().theirLikes }}</span>
+              <span class="stat-sublabel">Received</span>
+            </div>
+          </div>
+          <div class="stat-label">Likes</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <mat-icon>reply</mat-icon>
+          <div class="stat-breakdown">
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().ourReplies }}</span>
+              <span class="stat-sublabel">Given</span>
+            </div>
+            <mat-divider [vertical]="true"></mat-divider>
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().theirReplies }}</span>
+              <span class="stat-sublabel">Received</span>
+            </div>
+          </div>
+          <div class="stat-label">Replies</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <mat-icon>repeat</mat-icon>
+          <div class="stat-breakdown">
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().ourReposts }}</span>
+              <span class="stat-sublabel">Given</span>
+            </div>
+            <mat-divider [vertical]="true"></mat-divider>
+            <div class="stat-item">
+              <span class="stat-value">{{ stats().theirReposts }}</span>
+              <span class="stat-sublabel">Received</span>
+            </div>
+          </div>
+          <div class="stat-label">Reposts</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Contact Information -->
+    <mat-card class="contact-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>contact_page</mat-icon>
+          Contact Information
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          @if (getAbout()) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>info</mat-icon>
+            <div matListItemTitle>About</div>
+            <div matListItemLine class="about-text">{{ getAbout() }}</div>
+          </mat-list-item>
+          <mat-divider></mat-divider>
+          }
+
+          <mat-list-item>
+            <mat-icon matListItemIcon>fingerprint</mat-icon>
+            <div matListItemTitle>Public Key</div>
+            <div matListItemLine class="monospace-text">{{ getNpub() }}</div>
+            <div matListItemMeta>
+              <button mat-icon-button (click)="copyToClipboard(getNpub(), 'Public key')" matTooltip="Copy to clipboard">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+          <mat-divider></mat-divider>
+
+          @if (getNip05()) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>verified</mat-icon>
+            <div matListItemTitle>NIP-05 Identifier</div>
+            <div matListItemLine>{{ getNip05() }}</div>
+            <div matListItemMeta>
+              <button mat-icon-button (click)="copyToClipboard(getNip05()!, 'NIP-05 identifier')"
+                matTooltip="Copy to clipboard">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+          <mat-divider></mat-divider>
+          }
+
+          @if (getWebsite()) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>link</mat-icon>
+            <div matListItemTitle>Website</div>
+            <div matListItemLine><a [href]="getWebsite()!" target="_blank" rel="noopener noreferrer">{{ getWebsite()
+                }}</a></div>
+          </mat-list-item>
+          <mat-divider></mat-divider>
+          }
+
+          @if (getLud16()) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>bolt</mat-icon>
+            <div matListItemTitle>Lightning Address</div>
+            <div matListItemLine>{{ getLud16() }}</div>
+            <div matListItemMeta>
+              <button mat-icon-button (click)="copyToClipboard(getLud16()!, 'Lightning address')"
+                matTooltip="Copy to clipboard">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- External Identities (NIP-39) -->
+    @if (externalIdentities().length > 0) {
+    <mat-card class="contact-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>public</mat-icon>
+          External Identities
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          @for (identity of externalIdentities(); track identity.platform + identity.identity; let last = $last) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>{{ identity.icon }}</mat-icon>
+            <div matListItemTitle class="identity-title">
+              <span>{{ identity.platform }}</span>
+              @if (identity.verified) {
+              <mat-icon class="verified-badge" matTooltip="Verified">verified</mat-icon>
+              }
+            </div>
+            <div matListItemLine>
+              @if (identity.profileUrl) {
+              <a [href]="identity.profileUrl" target="_blank" rel="noopener noreferrer" class="profile-link">
+                {{ identity.displayName }}
+              </a>
+              } @else {
+              <span class="profile-text">{{ identity.displayName }}</span>
+              }
+            </div>
+            @if (identity.proofUrl) {
+            <div matListItemMeta>
+              <a mat-stroked-button [href]="identity.proofUrl" target="_blank" rel="noopener noreferrer"
+                class="proof-button">
+                <mat-icon>fact_check</mat-icon>
+                View Proof
+              </a>
+            </div>
+            }
+          </mat-list-item>
+          @if (!last) {
+          <mat-divider></mat-divider>
+          }
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+    }
+    }
+  </mat-expansion-panel>
+
+  <!-- Interactions Section -->
+  <mat-expansion-panel class="section-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>timeline</mat-icon>
+        Interaction Timeline
+      </mat-panel-title>
+      <mat-panel-description>
+        {{ interactions().length }} interactions
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    @if (isLoadingInteractions()) {
+    <div class="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading interactions...</p>
+    </div>
+    } @else if (interactions().length === 0) {
+    <div class="empty-state">
+      <mat-icon>timeline</mat-icon>
+      <p>No interactions found</p>
+    </div>
+    } @else {
+    <div class="timeline">
+      @for (interaction of interactions(); track interaction.event.id) {
+      <div class="timeline-item" (click)="navigateToEvent(interaction)" (keydown.enter)="navigateToEvent(interaction)"
+        (keydown.space)="navigateToEvent(interaction); $event.preventDefault()" tabindex="0" role="button"
+        [attr.aria-label]="'Navigate to ' + interaction.description">
+        <div class="timeline-marker">
+          <mat-icon [style.color]="interaction.iconColor">{{ interaction.icon }}</mat-icon>
+        </div>
+        <div class="timeline-content">
+          <div class="interaction-header">
+            <span class="interaction-description">{{ interaction.description }}</span>
+            <span class="interaction-time">{{ interaction.timestamp | ago }}</span>
+          </div>
+          @if (getInteractionContent(interaction)) {
+          <div class="interaction-details">
+            @if (interaction.type === 'reply-given' || interaction.type === 'reply-received') {
+            <div class="reply-content">
+              <mat-icon class="quote-icon">format_quote</mat-icon>
+              <span>{{ getInteractionContent(interaction) }}</span>
+            </div>
+            } @else if (interaction.type === 'like-given' || interaction.type === 'like-received') {
+            <div class="reaction-emoji">
+              @if (getCustomEmojiUrl(interaction); as emojiUrl) {
+              <img [src]="emojiUrl" alt="Custom emoji" class="custom-emoji" loading="lazy" />
+              } @else {
+              {{ getInteractionContent(interaction) }}
+              }
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </mat-expansion-panel>
+
+  <!-- Monetary Section -->
+  <mat-expansion-panel class="section-panel">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>bolt</mat-icon>
+        Payment History
+      </mat-panel-title>
+      <mat-panel-description>
+        {{ allZaps().length }} zaps
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    @if (isLoadingZaps()) {
+    <div class="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading payment history...</p>
+    </div>
+    } @else {
+    <!-- Summary Stats -->
+    <div class="stats-section">
+      <div class="stat-card-small sent">
+        <div class="stat-header">
+          <mat-icon>trending_up</mat-icon>
+          <span class="stat-label">You Sent</span>
+        </div>
+        <div class="stat-value-row">
+          <mat-icon class="bolt-icon">bolt</mat-icon>
+          <span>{{ formatAmount(totalSent()) }} sats</span>
+        </div>
+      </div>
+
+      <div class="stat-card-small received">
+        <div class="stat-header">
+          <mat-icon>trending_down</mat-icon>
+          <span class="stat-label">You Received</span>
+        </div>
+        <div class="stat-value-row">
+          <mat-icon class="bolt-icon">bolt</mat-icon>
+          <span>{{ formatAmount(totalReceived()) }} sats</span>
+        </div>
+      </div>
+
+      <div class="stat-card-small balance" [class.positive]="balance() > 0" [class.negative]="balance() < 0">
+        <div class="stat-header">
+          <mat-icon>account_balance</mat-icon>
+          <span class="stat-label">Balance</span>
+        </div>
+        <div class="stat-value-row">
+          <mat-icon class="bolt-icon">bolt</mat-icon>
+          <span>{{ balance() > 0 ? '+' : '' }}{{ formatAmount(balance()) }} sats</span>
+        </div>
+        <div class="balance-description">
+          @if (balance() > 0) {
+          <span>You're owed</span>
+          } @else if (balance() < 0) { <span>They're owed</span>
+            } @else {
+            <span>Balanced</span>
+            }
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment History List -->
+    <h3 class="section-title">
+      <mat-icon>history</mat-icon>
+      Payment History
+    </h3>
+
+    @if (allZaps().length > 0) {
+    <div class="zaps-list">
+      @for (zap of allZaps(); track zap.zapReceipt.id) {
+      <div class="zap-entry" [class.sent]="zap.type === 'sent'" [class.received]="zap.type === 'received'">
+        <div class="zap-header">
+          <div class="zap-type">
+            <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
+            <span class="type-label">{{ zap.type === 'sent' ? 'Sent' : 'Received' }}</span>
+          </div>
+          <div class="zap-info">
+            <div class="zap-amount">
+              <mat-icon class="bolt-icon">bolt</mat-icon>
+              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+            </div>
+            <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+              {{ zap.timestamp | ago }}
+            </div>
+            <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #zapMenu="matMenu">
+              <button mat-menu-item (click)="copyEventData(zap)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy Event Data</span>
+              </button>
+              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                <mat-icon>publish</mat-icon>
+                <span>Publish Event</span>
+              </button>
+            </mat-menu>
+          </div>
+        </div>
+
+        @if (zap.comment) {
+        <div class="zap-comment">
+          <mat-icon class="comment-icon">format_quote</mat-icon>
+          <span class="comment-text">{{ zap.comment }}</span>
+        </div>
+        }
+
+        @if (zap.eventId) {
+        <div class="zap-context">
+          <mat-icon class="context-icon">note</mat-icon>
+          <a [routerLink]="[{ outlets: { right: ['e', zap.eventId] } }]" class="context-link">
+            For event {{ zap.eventId.substring(0, 8) }}...
+          </a>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">bolt_off</mat-icon>
+      <h3>No payment history</h3>
+      <p>You haven't exchanged any zaps with this contact yet.</p>
+    </div>
+    }
+    }
+  </mat-expansion-panel>
+</div>

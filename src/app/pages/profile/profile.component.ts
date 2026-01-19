@@ -11,7 +11,7 @@ import {
   OnInit,
   OnDestroy,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, Location } from '@angular/common';
 import {
   ActivatedRoute,
   ParamMap,
@@ -55,8 +55,8 @@ import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { ReportingService } from '../../services/reporting.service';
-import { PanelActionsService, PanelAction } from '../../services/panel-actions.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { ProfileViewOptionsInlineComponent } from './profile-view-options/profile-view-options-inline.component';
 
 @Component({
   selector: 'app-profile',
@@ -80,11 +80,13 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
     FormsModule,
     MatFormFieldModule,
     ProfileHeaderComponent,
+    ProfileViewOptionsInlineComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
   host: {
     '[class.in-right-panel]': 'isInRightPanel()',
+    'class': 'panel-with-sticky-header',
   },
 })
 export class ProfileComponent implements OnInit, OnDestroy {
@@ -94,6 +96,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private data = inject(DataService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
   nostrService = inject(NostrService);
   private app = inject(ApplicationService);
   private logger = inject(LoggerService);
@@ -110,7 +113,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private readonly profileTracking = inject(ProfileTrackingService);
   private readonly metrics = inject(Metrics);
   private readonly reportingService = inject(ReportingService);
-  private readonly panelActions = inject(PanelActionsService);
   private readonly customDialog = inject(CustomDialogService);
 
   pubkey = signal<string>('');
@@ -196,17 +198,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
           this.userMetadata.set(profile);
         });
       }
-    });
-
-    // Update page title and set up panel actions whenever user metadata changes
-    effect(() => {
-      const displayName = this.profileDisplayName();
-      const isRightPanel = this.isInRightPanel();
-      untracked(() => {
-        this.updatePageTitle();
-        // Re-setup view options action to ensure it's on the correct panel
-        this.setupViewOptionsAction(isRightPanel);
-      });
     });
 
     // Reset blocked profile reveal when block status changes from false to true
@@ -388,15 +379,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         const currentUrl = event.urlAfterRedirects;
         const isProfileRoute = currentUrl.match(/(?:\/|\(|:)(p|u)\//);
         if (isProfileRoute) {
-          // Update the page title based on the current sub-route
-          const isEditRoute = currentUrl.includes('/edit');
-          if (!isEditRoute) {
-            // Set title to profile name when not on edit page (only for left panel)
-            if (!this.isInRightPanel()) {
-              this.panelActions.setPageTitle(this.profileDisplayName());
-            }
-          }
-
           // Extract the profile ID from the URL
           const profileMatch = currentUrl.match(/(?:\/|\(|:)(?:p|u)\/([^/\)]+)/);
           const urlProfileId = profileMatch ? profileMatch[1] : null;
@@ -437,63 +419,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Set up panel actions for the toolbar
-    if (this.isInRightPanel()) {
-      // Profile is in right panel - only set up actions (no title for right panel)
-      this.setupViewOptionsAction(true);
-    } else {
-      // Profile is in left panel (shouldn't happen with new routing, but keep for compatibility)
-      this.panelActions.setPageTitle('Profile');
-      this.setupViewOptionsAction(false);
-    }
+    // Component initialized - panel header is now inline in template
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   /**
-   * Update the page title when metadata changes (only for left panel)
+   * Prevent menu from closing when clicking on toggle
    */
-  private updatePageTitle(): void {
-    if (!this.isInRightPanel()) {
-      this.panelActions.setPageTitle(this.profileDisplayName());
-    }
-  }
-
-  /**
-   * Set up the view options action button in the toolbar
-   */
-  private setupViewOptionsAction(isRightPanel: boolean): void {
-    const viewOptionsAction: PanelAction = {
-      id: 'view-options',
-      icon: 'tune',
-      label: 'View Options',
-      tooltip: 'Display options',
-      action: () => this.openViewOptionsDialog()
-    };
-    if (isRightPanel) {
-      this.panelActions.setRightPanelActions([viewOptionsAction]);
-    } else {
-      this.panelActions.setLeftPanelActions([viewOptionsAction]);
-    }
-  }
-
-  /**
-   * Open the view options dialog
-   */
-  async openViewOptionsDialog(): Promise<void> {
-    const { ProfileViewOptionsComponent } = await import('./profile-view-options/profile-view-options.component');
-    this.customDialog.open(ProfileViewOptionsComponent, {
-      title: 'Display Options',
-      width: '340px'
-    });
+  preventMenuClose(event: MouseEvent): void {
+    event.stopPropagation();
   }
 
   ngOnDestroy(): void {
-    // Clear panel actions when leaving the profile
-    if (this.isInRightPanel()) {
-      this.panelActions.clearRightPanelActions();
-    } else {
-      this.panelActions.clearLeftPanelActions();
-      this.panelActions.clearPageTitle();
-    }
+    // Component cleanup - no panel actions to clear anymore
   }
 
   /**

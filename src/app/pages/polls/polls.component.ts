@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -18,7 +18,6 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { Poll, PollResponse, PollResults } from '../../interfaces';
 import { PollCardComponent } from '../../components/poll-card/poll-card.component';
 import { PollDetailsDialogComponent } from '../../components/poll-details-dialog/poll-details-dialog.component';
-import { PanelActionsService } from '../../services/panel-actions.service';
 
 @Component({
   selector: 'app-polls',
@@ -37,14 +36,13 @@ import { PanelActionsService } from '../../services/panel-actions.service';
   styleUrl: './polls.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PollsComponent implements OnDestroy {
+export class PollsComponent {
   private pollService = inject(PollService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
-  private panelActions = inject(PanelActionsService);
 
   polls = this.pollService.polls;
   drafts = this.pollService.drafts;
@@ -55,9 +53,6 @@ export class PollsComponent implements OnDestroy {
   pollResults = signal<Map<string, { responses: PollResponse[], results: PollResults }>>(new Map());
 
   constructor() {
-    // Setup panel actions for toolbar
-    this.setupPanelActions();
-
     // Fetch polls from Nostr when pubkey becomes available
     effect(() => {
       const pubkey = this.app.accountState.pubkey();
@@ -65,40 +60,6 @@ export class PollsComponent implements OnDestroy {
         this.loadYourPolls(pubkey);
       }
     });
-  }
-
-  ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
-  }
-
-  private setupPanelActions(): void {
-    this.panelActions.setPageTitle('Polls');
-
-    this.updatePanelActions();
-  }
-
-  private updatePanelActions(): void {
-    const actions = [
-      {
-        id: 'toggle-view',
-        icon: this.selectedView() === 'grid' ? 'view_list' : 'view_module',
-        label: 'Toggle View',
-        tooltip: this.selectedView() === 'grid' ? 'List view' : 'Grid view',
-        action: () => {
-          this.toggleView();
-          this.updatePanelActions();
-        },
-      },
-      {
-        id: 'new-poll',
-        icon: 'add',
-        label: 'New Poll',
-        tooltip: 'Create new poll',
-        action: () => this.createNewPoll(),
-      },
-    ];
-
-    this.panelActions.setLeftPanelActions(actions);
   }
 
   private async loadPolls(pubkey: string): Promise<void> {
