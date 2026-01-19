@@ -1,6 +1,13 @@
-<div class="playlist-container">
-  <!-- Playlist menu template for panel header -->
-  <ng-template #playlistMenuTemplate>
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Playlist</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button [matMenuTriggerFor]="headerMenu" matTooltip="More options">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #headerMenu="matMenu">
     @if (isOwnPlaylist()) {
     <button mat-menu-item (click)="editPlaylist()">
       <mat-icon>edit</mat-icon>
@@ -23,8 +30,10 @@
       <mat-icon>publish</mat-icon>
       <span>Publish Event</span>
     </button>
-  </ng-template>
+  </mat-menu>
+</div>
 
+<div class="playlist-container">
   <!-- Submenus (kept outside template for proper nesting) -->
   <mat-menu #copyMenu="matMenu">
     <button mat-menu-item (click)="copyEventLink()">

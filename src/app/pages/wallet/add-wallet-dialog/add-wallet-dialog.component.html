@@ -1,0 +1,32 @@
+<div class="add-wallet-dialog">
+  <p class="dialog-description" i18n="@@wallet.add.description">
+    Connect your wallet using Nostr Wallet Connect (NWC). Paste your connection string below.
+  </p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label i18n="@@wallet.connection-string">Connection String</mat-label>
+    <input matInput [formControl]="connectionStringControl" placeholder="nostr+walletconnect://..."
+      type="text" (keydown.enter)="addWallet()" />
+    <mat-hint i18n="@@wallet.connection-string.hint">Paste your Nostr Wallet Connect connection string here</mat-hint>
+    @if (connectionStringControl.hasError('required')) {
+    <mat-error i18n="@@wallet.error.required">Connection string is required</mat-error>
+    }
+    @if (connectionStringControl.hasError('pattern')) {
+    <mat-error i18n="@@wallet.error.pattern">Invalid connection string format. Must start with nostr+walletconnect://</mat-error>
+    }
+  </mat-form-field>
+
+  <div class="dialog-actions">
+    <button mat-button type="button" (click)="cancel()" i18n="@@common.cancel">
+      Cancel
+    </button>
+    <button mat-flat-button type="button" (click)="addWallet()"
+      [disabled]="connectionStringControl.invalid || isAddingWallet()">
+      @if (isAddingWallet()) {
+      <span i18n="@@wallet.adding">Adding...</span>
+      } @else {
+      <span i18n="@@wallet.add-button">Add Wallet</span>
+      }
+    </button>
+  </div>
+</div>

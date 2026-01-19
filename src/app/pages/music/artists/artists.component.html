@@ -1,23 +1,18 @@
-<div class="artists-container">
-  <div class="artists-header">
-    <button mat-icon-button (click)="goBack()" aria-label="Go back">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <h1>
-      <mat-icon>person</mat-icon>
-      <span i18n="@@music.artists.title">Artists</span>
-    </h1>
-    <div class="header-actions">
-      <mat-select [(value)]="sortBy" class="sort-select" aria-label="Sort artists">
-        <mat-option value="name-asc" i18n="@@music.artists.sort.nameAsc">Name (A-Z)</mat-option>
-        <mat-option value="name-desc" i18n="@@music.artists.sort.nameDesc">Name (Z-A)</mat-option>
-        <mat-option value="tracks-desc" i18n="@@music.artists.sort.tracksDesc">Tracks (Most)</mat-option>
-        <mat-option value="tracks-asc" i18n="@@music.artists.sort.tracksAsc">Tracks (Least)</mat-option>
-      </mat-select>
-    </div>
-  </div>
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font" i18n="@@music.artists.title">Artists</h2>
+  <span class="panel-header-spacer"></span>
+  <mat-select [(value)]="sortBy" class="sort-select" aria-label="Sort artists">
+    <mat-option value="name-asc" i18n="@@music.artists.sort.nameAsc">Name (A-Z)</mat-option>
+    <mat-option value="name-desc" i18n="@@music.artists.sort.nameDesc">Name (Z-A)</mat-option>
+    <mat-option value="tracks-desc" i18n="@@music.artists.sort.tracksDesc">Tracks (Most)</mat-option>
+    <mat-option value="tracks-asc" i18n="@@music.artists.sort.tracksAsc">Tracks (Least)</mat-option>
+  </mat-select>
+</div>
 
-  <div class="artists-content">
+<div class="artists-container">
     @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
@@ -72,5 +67,4 @@
     </div>
     }
     }
-  </div>
 </div>

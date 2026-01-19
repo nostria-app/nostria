@@ -29,74 +29,42 @@
   </div>
   }
   @if (app.initialized()) {
-  <!-- Top toolbar - now outside and above the sidenav container -->
+  <!-- Top toolbar - full-width -->
   <mat-toolbar class="app-toolbar no-print no-select">
-    <!-- Left section: hamburger menu, navigation, and breadcrumbs -->
-    @if (!layout.search()) {
+    
+    <!-- Left section: hamburger menu/avatar and app icon -->
     <div class="toolbar-section toolbar-left">
-      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
+      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
+        [class.profile-button-picture]="accountState.profile()?.data?.picture">
+        @if (accountState.profile()?.data?.picture) {
+        @if (settings.settings().imageCacheEnabled) {
+        <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
+          alt="Menu" />
+        } @else {
+        <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
+        }
+        } @else {
+        @if (app.authenticated()) {
+        <mat-icon>account_circle</mat-icon>
+        } @else {
         <mat-icon>menu</mat-icon>
+        }
+        }
       </button>
       <app-navigation></app-navigation>
-
-      <!-- Breadcrumb navigation for left panel content - hide on mobile when right panel is active -->
-      @if (panelActions.breadcrumbs().length > 0 && !showRightPanelInMainToolbar()) {
-      <nav class="breadcrumb-nav" aria-label="Breadcrumb">
-        @for (crumb of panelActions.breadcrumbs(); track $index; let last = $last) {
-        @if (!last && crumb.action) {
-        <button type="button" class="breadcrumb-link title-font" (click)="crumb.action()">
-          {{ crumb.label }}
-        </button>
-        <span class="breadcrumb-separator">/</span>
-        } @else {
-        <span class="breadcrumb-current title-font">{{ crumb.label }}</span>
-        }
-        }
-      </nav>
-      } @else if (!showRightPanelInMainToolbar()) {
-      <!-- No breadcrumbs - show app title (hide on mobile when right panel is active) -->
-      <span class="app-title title-font hide-small">
-        <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
-      </span>
-      }
-
-      <!-- Left panel actions (next to breadcrumbs/title) - hide on mobile when right panel is active -->
-      @if (panelActions.leftPanelActions().length > 0 && !showRightPanelInMainToolbar()) {
-      <!-- Collapsed menu for small screens -->
-      <button mat-icon-button [matMenuTriggerFor]="leftPanelActionsCollapsedMenu" matTooltip="Actions"
-        class="action-button collapsed-actions-button">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <!-- Individual buttons for larger screens -->
-      <div class="expanded-actions">
-        @for (action of panelActions.leftPanelActions(); track action.id) {
-        @if (action.menu) {
-        <button mat-icon-button [matMenuTriggerFor]="globalLeftPanelActionsMenu"
-          [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        } @else {
-        <button mat-icon-button (click)="action.action()" [matTooltip]="action.tooltip || action.label"
-          [disabled]="action.disabled" class="action-button">
-          <mat-icon>{{ action.icon }}</mat-icon>
-        </button>
-        }
-        }
-      </div>
-      }
     </div>
-    }
 
-    <span class="toolbar-spacer">
-      <!-- Search container is always rendered but hidden via CSS for iOS Safari focus compatibility -->
-      <div class="search-container toolbar-section" [class.search-hidden]="!layout.search()">
+    <!-- Center section: Always-visible search -->
+    <div class="toolbar-center">
+      <div class="search-container toolbar-section" [class.search-active]="layout.search()">
+        <mat-icon class="search-icon">search</mat-icon>
         <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
-          (paste)="onSearchInputPaste($event)" i18n-placeholder="@@app.search.placeholder"
-          placeholder="Search for profiles or paste identifiers..." [attr.tabindex]="layout.search() ? 0 : -1" />
+          (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
+          placeholder="Search..." />
+        @if (layout.search()) {
         <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
-          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
           @if (isSearchListening()) {
           <mat-icon class="pulse-icon">mic</mat-icon>
           } @else if (isSearchTranscribing()) {
@@ -105,31 +73,21 @@
           <mat-icon>mic</mat-icon>
           }
         </button>
-        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
         </button>
-        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()"
-          [attr.tabindex]="layout.search() ? 0 : -1">
+        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
           <mat-icon>close</mat-icon>
         </button>
+        }
         <app-search-results></app-search-results>
       </div>
-    </span>
+    </div>
 
-    <!-- Right section: action buttons and profile -->
-    @if (!layout.search()) {
+    <!-- Right section: action buttons and notifications -->
     <div class="toolbar-section toolbar-right">
-      <!-- Right panel back button and actions (when right panel has content) -->
+      <!-- Right panel actions (when right panel has content) -->
       @if (hasRightContent()) {
-      <!-- Back button for right panel -->
-      @if (canGoBackRight()) {
-      <button mat-icon-button (click)="goBackRight()" class="nav-button back-button" matTooltip="Go back"
-        i18n-matTooltip="@@app.nav.back">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      }
-      <!-- Right panel actions -->
       @for (action of panelActions.rightPanelActions(); track action.id) {
       @if (action.menu) {
       <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu" [matTooltip]="action.tooltip || action.label"
@@ -151,10 +109,6 @@
         aria-label="Update application">
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
-      } @else {
-      <button mat-icon-button (click)="openSearch()" class="hide-small">
-        <mat-icon>search</mat-icon>
-      </button>
       }
 
       @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
@@ -165,6 +119,12 @@
       </button>
       }
       @if (app.authenticated()) {
+      <!-- Create new content button -->
+      <button mat-icon-button class="create-button" (click)="openCreateMenu($event)"
+        i18n-matTooltip="@@app.create.tooltip" matTooltip="Create"
+        i18n-aria-label="@@app.create.aria" aria-label="Create new content">
+        <mat-icon>add</mat-icon>
+      </button>
       @if (appState.isPublishing() || ai.processingState().isProcessing) {
       <button mat-icon-button class="profile-cache-button" routerLink="/notifications"
         [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
@@ -173,33 +133,14 @@
       </button>
       }
       @else {
-      <button class="notification-toolbar hide-small" mat-icon-button routerLink="/notifications"
+      <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
         i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
         <mat-icon
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
       </button>
       }
       }
-
-      <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
-        (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
-        @if (accountState.profile()?.data?.picture) {
-        @if (settings.settings().imageCacheEnabled) {
-        <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="profile-button-avatar"
-          alt="Profile picture" />
-        } @else {
-        <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture" />
-        }
-        } @else {
-        @if (app.authenticated()) {
-        <mat-icon>account_circle</mat-icon>
-        } @else {
-        <mat-icon>account_circle_off</mat-icon>
-        }
-        }
-      </button>
     </div>
-    }
   </mat-toolbar>
   }
 
@@ -226,6 +167,119 @@
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
+
+      <!-- User Profile Section at Top -->
+      @if (displayLabels()) {
+      <div class="sidenav-profile-section">
+        <div class="sidenav-profile-header" (click)="toggleAccountsExpanded()">
+          <div class="sidenav-profile-avatar">
+            @if (accountState.profile()?.data?.picture) {
+            @if (settings.settings().imageCacheEnabled) {
+            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
+              class="avatar-image" />
+            } @else {
+            <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
+            }
+            } @else {
+            @if (app.authenticated()) {
+            <mat-icon class="avatar-icon">account_circle</mat-icon>
+            } @else {
+            <mat-icon class="avatar-icon">account_circle_off</mat-icon>
+            }
+            }
+          </div>
+          <div class="sidenav-profile-info">
+            @if (accountState.profile()?.data; as profile) {
+            <span class="sidenav-profile-name">{{ profile.display_name || profile.name || (accountState.pubkey() | npub)
+              }}</span>
+            } @else if (app.authenticated()) {
+            <span class="sidenav-profile-name">{{ accountState.account()?.name || (accountState.pubkey() | npub)
+              }}</span>
+            } @else {
+            <span class="sidenav-profile-name" i18n="@@app.profile.not-logged-in">Not logged in</span>
+            }
+            @if (accountState.hasActiveSubscription()) {
+            <span class="sidenav-premium-badge" i18n="@@app.profile.premium">Premium</span>
+            }
+          </div>
+          @if (accountState.hasAccounts()) {
+          <mat-icon class="expand-accounts-icon">{{ accountsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          }
+        </div>
+
+        <!-- Expandable Accounts List -->
+        @if (accountsExpanded() && accountState.hasAccounts()) {
+        <div class="sidenav-accounts-list">
+          @for (item of accountsWithProfiles(); track item.account.pubkey) {
+          <button class="sidenav-account-item" (click)="switchAccount(item.account.pubkey); closeSidenavOnMobile()">
+            <div class="sidenav-account-avatar">
+              @if (item.profile?.data?.picture) {
+              @if (settings.settings().imageCacheEnabled) {
+              <img [src]="getOptimizedImageUrl(item.profile!.data!.picture)" alt="Profile" class="avatar-image" />
+              } @else {
+              <img [src]="item.profile!.data!.picture" alt="Profile" class="avatar-image" />
+              }
+              } @else {
+              <mat-icon>account_circle</mat-icon>
+              }
+            </div>
+            <span class="sidenav-account-name">
+              {{ item.profile?.data?.display_name || item.profile?.data?.name || item.account.name ||
+              (item.account.pubkey | npub) }}
+            </span>
+          </button>
+          }
+          <button class="sidenav-account-item sidenav-add-account" (click)="addAccount(); closeSidenavOnMobile()">
+            <mat-icon>person_add</mat-icon>
+            <span i18n="@@app.profile.add-account">Add account</span>
+          </button>
+        </div>
+        }
+
+        <!-- Wallet Balance Section (only if user has wallets) -->
+        @if (wallets.hasWallets()) {
+        <div class="sidenav-wallet-section">
+          <mat-icon class="wallet-icon" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer">account_balance_wallet</mat-icon>
+          <div class="wallet-info">
+            <span class="wallet-label" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer" i18n="@@app.sidenav.wallet">Wallet</span>
+            <span class="wallet-balance" style="cursor:pointer" tabindex="0" role="button"
+              matTooltip="Click to show/hide balance" i18n-matTooltip="@@app.sidenav.wallet.toggle-balance"
+              (click)="toggleHideWalletAmounts(); $event.stopPropagation()"
+              (keydown.enter)="toggleHideWalletAmounts(); $event.stopPropagation()"
+              (keydown.space)="toggleHideWalletAmounts(); $event.stopPropagation()">{{ getTotalWalletBalance() }}</span>
+          </div>
+        </div>
+        }
+
+        <!-- Quick Actions Row -->
+        <div class="sidenav-profile-actions">
+          @if (app.authenticated()) {
+          <button mat-icon-button [routerLink]="accountState.profilePath()" (click)="closeSidenavOnMobile()"
+            matTooltip="My Profile" i18n-matTooltip="@@app.profile.my-profile">
+            <mat-icon>person</mat-icon>
+          </button>
+          <button mat-icon-button routerLink="/credentials" (click)="closeSidenavOnMobile()" matTooltip="Credentials"
+            i18n-matTooltip="@@app.profile.credentials">
+            <mat-icon>key</mat-icon>
+          </button>
+          }
+          <button mat-icon-button routerLink="/settings" (click)="closeSidenavOnMobile()" matTooltip="Settings"
+            i18n-matTooltip="@@app.profile.settings">
+            <mat-icon>settings</mat-icon>
+          </button>
+          <button mat-icon-button (click)="themeService.toggleDarkMode()"
+            [matTooltip]="themeService.darkMode() ? 'Light mode' : 'Dark mode'">
+            @if (themeService.darkMode()) {
+            <mat-icon>light_mode</mat-icon>
+            } @else {
+            <mat-icon>dark_mode</mat-icon>
+            }
+          </button>
+        </div>
+      </div>
+      <mat-divider></mat-divider>
+      }
+
       <mat-nav-list>
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
@@ -282,17 +336,6 @@
         }
         }
 
-        <!-- Create FAB at bottom of sidenav -->
-        @if (app.authenticated()) {
-        <div class="sidenav-fab-container-bottom">
-          <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateMenu($event)"
-            i18n-aria-label="@@app.create.aria" aria-label="Create new content"
-            [matTooltip]="displayLabels() ? '' : createLabel">
-            <mat-icon>add</mat-icon>
-          </button>
-        </div>
-        }
-
         <a mat-list-item (click)="toggleMenuSize()">
           @if (displayLabels()) {
           <mat-icon matListItemIcon>chevron_left</mat-icon>
@@ -301,151 +344,6 @@
           }
         </a>
       </mat-nav-list>
-    </mat-sidenav>
-
-    <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over" [fixedInViewport]="true"
-      [fixedTopGap]="0" [fixedBottomGap]="0" [disableClose]="false">
-      <div class="profile-content">
-        <button class="theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
-          @if (themeService.darkMode()) {
-          <mat-icon>dark_mode</mat-icon>
-          } @else {
-          <mat-icon>light_mode</mat-icon>
-          }
-        </button>
-        <button class="close-button-right" mat-icon-button (click)="toggleProfileSidenav()">
-          <mat-icon>close</mat-icon>
-        </button>
-        <div class="profile-header">
-          @if (accountState.profile(); as metadata) {
-          @if (metadata?.data?.picture) {
-          <div class="profile-avatar">
-            @if (settings.settings().imageCacheEnabled) {
-            <img [src]="getOptimizedImageUrl(metadata.data.picture)" alt="Profile picture" class="avatar-image" />
-            } @else {
-            <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image" />
-            }
-          </div>
-          } @else {
-          <div class="profile-avatar">
-            <mat-icon class="avatar-icon">account_circle</mat-icon>
-          </div>
-          }
-          @if (metadata.data.display_name) {
-          <h2>{{ metadata.data.display_name }}</h2>
-          } @else if (metadata.data.name) {
-          <h2>{{ metadata.data.name }}</h2>
-          } @else {
-          <h2>{{ metadata.event.pubkey | npub }}</h2>
-          }
-          } @else {
-          <div class="profile-avatar">
-            @if (app.authenticated()) {
-            <mat-icon class="avatar-icon">account_circle</mat-icon>
-            } @else {
-            <mat-icon class="avatar-icon">account_circle_off</mat-icon>
-            }
-          </div>
-
-          @if (app.authenticated()) {
-          <h2>
-            {{ accountState.account()?.name || (accountState.pubkey() | npub) }}
-          </h2>
-          } @else {
-          <h2 i18n="@@app.profile.not-logged-in">Not logged in</h2>
-          }
-          }
-
-          @if (accountState.hasActiveSubscription()) {
-          <span class="premium-label" i18n="@@app.profile.premium">Premium</span>
-          <div class="premium-expires">
-            Expires {{ accountState.expiresWhen() | date: 'MMM d yyyy' }}
-          </div>
-          } @else {
-          <span class="premium-label" i18n="@@app.profile.free">Free</span>
-          }
-        </div>
-
-        <mat-nav-list>
-          @if (app.authenticated()) {
-          <div class="profile-nav-item-container">
-            <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
-              <mat-icon matListItemIcon>person</mat-icon>
-              <span i18n="@@app.profile.my-profile">My Profile</span>
-            </a>
-            <button mat-icon-button class="profile-edit-button"
-              (click)="$event.stopPropagation(); toggleProfileSidenav()"
-              [routerLink]="accountState.profilePath() + '/edit'" i18n-matTooltip="@@app.profile.edit"
-              matTooltip="Edit profile" tabindex="0">
-              <mat-icon>edit</mat-icon>
-            </button>
-          </div>
-          <a mat-list-item routerLink="/credentials" (click)="navigateAndClearRightPanel('/credentials')">
-            <mat-icon matListItemIcon>key</mat-icon>
-            <span i18n="@@app.profile.credentials">Credentials</span>
-          </a>
-          }
-
-          <a mat-list-item (click)="addAccount(); toggleProfileSidenav()">
-            <mat-icon matListItemIcon>person_add</mat-icon>
-            <span i18n="@@app.profile.add-account">Add account</span>
-          </a>
-          <a mat-list-item routerLink="/accounts" (click)="navigateAndClearRightPanel('/accounts')">
-            <mat-icon matListItemIcon>manage_accounts</mat-icon>
-            <span i18n="@@app.profile.manage-accounts">Manage accounts</span>
-          </a>
-          <a mat-list-item routerLink="/settings" (click)="navigateAndClearRightPanel('/settings')">
-            <mat-icon matListItemIcon>settings</mat-icon>
-            <span i18n="@@app.profile.settings">Settings</span>
-          </a>
-        </mat-nav-list>
-        <mat-divider></mat-divider>
-        <!-- Account selection menu -->
-        @if (accountState.hasAccounts()) {
-        <mat-nav-list class="accounts-list">
-          @for (item of accountsWithProfiles(); track item.account.pubkey) {
-          @if (item.profile; as metadata) {
-          <a mat-list-item (click)="switchAccount(item.account.pubkey); toggleProfileSidenav()" class="account-item">
-            @if (metadata.data?.picture) {
-            <div class="account-avatar" matListItemIcon>
-              @if (settings.settings().imageCacheEnabled) {
-              <img [src]="getOptimizedImageUrl(metadata.data.picture)" alt="Profile picture" class="avatar-image" />
-              } @else {
-              <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image" />
-              }
-            </div>
-            } @else {
-            <div class="account-avatar" matListItemIcon>
-              <mat-icon>account_circle</mat-icon>
-            </div>
-            }
-            <span matListItemTitle>
-              {{
-              metadata.data?.display_name ||
-              metadata.data?.name ||
-              item.account.name ||
-              (item.account.pubkey | npub)
-              }}
-            </span>
-            <span matListItemLine class="account-source">
-              {{ item.account.source }} - used {{ (item.account.lastUsed! / 1000) | ago }}
-            </span>
-          </a>
-          } @else {
-          <a mat-list-item (click)="switchAccount(item.account.pubkey); toggleProfileSidenav()" class="account-item">
-            <div class="account-avatar" matListItemIcon>
-              <mat-icon>account_circle</mat-icon>
-            </div>
-            <span matListItemTitle> {{ item.account.name || (item.account.pubkey | npub) }} </span>
-            <span matListItemLine class="account-source">
-              {{ item.account.source }} - used {{ (item.account.lastUsed! / 1000) | ago }}
-            </span>
-          </a>
-          }
-          }
-        </mat-nav-list>
-        }
-      </div>
     </mat-sidenav>
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"

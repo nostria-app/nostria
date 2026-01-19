@@ -1,19 +1,3 @@
-<ng-template #menuTemplate>
-  <button mat-menu-item (click)="toggleShowHiddenChats()">
-    <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
-    <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
-  </button>
-  <mat-divider></mat-divider>
-  <button mat-menu-item (click)="markAllChatsAsRead()">
-    <mat-icon>done_all</mat-icon>
-    <span>Mark All as Read</span>
-  </button>
-  <button mat-menu-item (click)="resetLocalMessagesCache()">
-    <mat-icon>delete_sweep</mat-icon>
-    <span>Reset Messages Cache</span>
-  </button>
-</ng-template>
-
 <div class="messages">
   @if (isLoading() && !selectedChat()) {
   <div class="loading-container">
@@ -39,11 +23,41 @@
     <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
   </div>
   } @else {
-  <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
+<div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <h2 class="panel-title title-font">Messages</h2>
+      <span class="panel-header-spacer"></span>
+      <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
+        <mat-icon>search</mat-icon>
+      </button>
+      <button mat-icon-button (click)="startNewChat()" matTooltip="New chat">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button [matMenuTriggerFor]="messagesMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #messagesMenu="matMenu">
+        <button mat-menu-item (click)="toggleShowHiddenChats()">
+          <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="markAllChatsAsRead()">
+          <mat-icon>done_all</mat-icon>
+          <span>Mark All as Read</span>
+        </button>
+        <button mat-menu-item (click)="resetLocalMessagesCache()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Reset Messages Cache</span>
+        </button>
+      </mat-menu>
+    </div>
+
     @if (showSearch()) {
     <div class="message-threads-header">
       <input #chatSearchInput class="chat-search-input" type="text" placeholder="Search chats..."
-        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)" autofocus />
+        [ngModel]="chatSearchQuery()" (ngModelChange)="chatSearchQuery.set($event)" />
       <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
         <mat-icon>close</mat-icon>
       </button>

@@ -13,7 +13,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
 import { Event, nip19 } from 'nostr-tools';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { EventComponent } from '../../components/event/event.component';
@@ -21,12 +21,14 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../services/event';
 import { Title } from '@angular/platform-browser';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { RightPanelService } from '../../services/right-panel.service';
 
 /** Description of the EventPageComponent
  *
@@ -49,8 +51,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 
 @Component({
   selector: 'app-event-page',
-  standalone: true,
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {
@@ -81,6 +82,8 @@ export class EventPageComponent {
   eventService = inject(EventService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
+  private rightPanel = inject(RightPanelService);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -123,6 +126,28 @@ export class EventPageComponent {
     }
     return count;
   }
+
+  /**
+   * Navigate back - either close right panel or go to browser history
+   */
+  goBack(): void {
+    if (this.rightPanel.canGoBack()) {
+      this.rightPanel.goBack();
+    } else {
+      this.location.back();
+    }
+  }
+
+  /**
+   * Open reply dialog for the current event
+   */
+  openReplyDialog(): void {
+    const currentEvent = this.event();
+    if (currentEvent) {
+      this.eventService.createNote({ replyTo: currentEvent });
+    }
+  }
+
   transferState = inject(TransferState);
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);

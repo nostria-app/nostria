@@ -21,8 +21,6 @@ import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
-import { PanelActionsService } from '../../../services/panel-actions.service';
-import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -55,8 +53,6 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly favoritesService = inject(FavoritesService);
   private readonly accountState = inject(AccountStateService);
-  private readonly panelActions = inject(PanelActionsService);
-  private readonly rightPanel = inject(RightPanelService);
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);
@@ -156,17 +152,12 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    // Only set page title if not in right panel (right panel has its own title)
-    if (!this.rightPanel.hasContent()) {
-      this.panelActions.setPageTitle($localize`:@@settings.algorithm.title:Algorithm Settings`);
-    }
+    // Parent settings component handles the page title
     await this.loadData();
   }
 
   ngOnDestroy() {
-    if (!this.rightPanel.hasContent()) {
-      this.panelActions.clearPageTitle();
-    }
+    // No cleanup needed
   }
 
   async loadData() {

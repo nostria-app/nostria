@@ -32,7 +32,7 @@ nav {
   --toolbar-height: 64px;
 }
 
-// Glass toolbar styles - transparent container
+// Glass toolbar styles - full-width toolbar
 .app-toolbar {
   position: fixed !important;
   top: 0;
@@ -43,20 +43,29 @@ nav {
   padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
 
-  // Transparent background - no glass effect on the toolbar itself
-  background: transparent !important;
-  box-shadow: none;
-  border: none;
+  // Glass effect background for the entire toolbar
+  background-color: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-  // Allow clicks to pass through transparent areas
-  pointer-events: none;
+  // Enable pointer events on toolbar
+  pointer-events: auto;
 
-  // Reduce padding on smaller screens to match feeds selection menu
+  // Reduce padding on smaller screens
   @media (max-width: 1023px) {
     padding: 8px 8px;
+    gap: 8px;
   }
+}
+
+// Dark mode toolbar
+:host-context(.dark) .app-toolbar {
+  background-color: rgba(24, 17, 27, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 // Glass section mixin for toolbar sections
@@ -70,47 +79,116 @@ nav {
   // Re-enable pointer events on glass sections
   pointer-events: auto;
 
-  // Glass effect
-  background-color: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-
-  box-shadow:
-    // Inner white highlight
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    // Inner glow
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-    // Drop shadows
-    0px 2px 8px rgba(17, 17, 26, 0.08),
-    0px 4px 16px rgba(17, 17, 26, 0.06);
+  // Subtle background for sections within the glass toolbar
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 @mixin glass-section-dark {
-  background-color: rgba(0, 0, 0, 0.4);
-
-  box-shadow:
-    // Inner highlight (subtler in dark mode)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    // Inner glow
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-    // Drop shadows
-    0px 2px 8px rgba(0, 0, 0, 0.3),
-    0px 4px 16px rgba(0, 0, 0, 0.25);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
-// Toolbar sections with glass effect
+// Toolbar sections
 .toolbar-section {
   @include glass-section;
 }
 
-// Dark mode for toolbar sections - use :host-context since .dark is on html element
+// Dark mode for toolbar sections
 :host-context(.dark) .toolbar-section {
   @include glass-section-dark;
 }
 
-// Left section - hamburger, navigation, breadcrumbs
+// Left section - hamburger/avatar and app icon
 .toolbar-left {
   flex-shrink: 0;
+  gap: 4px;
+}
+
+// Center section - always-visible search
+.toolbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  min-width: 0;
+
+  // On mobile, allow search to take more space
+  @media (max-width: 599px) {
+    max-width: none;
+  }
+
+  .search-container {
+    flex: 1;
+    max-width: 100%;
+    height: 48px;
+    padding: 0 12px;
+    gap: 8px;
+    position: relative;
+
+    // Smooth transition for collapse animation
+    transition: 
+      height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
+      padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+
+    .search-icon {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      transition: font-size var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface);
+      outline: none;
+      min-width: 0;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
+      }
+
+      // Hide default search clear button
+      &::-webkit-search-cancel-button {
+        display: none;
+      }
+    }
+
+    // Search action buttons (voice, qr, close) - shown when search is active
+    .search-action-button {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    // When search is active, show additional action buttons
+    &.search-active {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+  }
+}
+
+:host-context(.dark) .toolbar-center .search-container {
+  &.search-active {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+// Right section - action buttons and notifications
+.toolbar-right {
+  flex-shrink: 0;
+  gap: 4px;
+
+  // Create button - clean and simple
+  .create-button {
+    mat-icon {
+      font-size: 24px;
+    }
+  }
 }
 
 // Breadcrumb navigation styles
@@ -199,28 +277,19 @@ nav {
   transform: translateY(-50%);
   z-index: 100;
 
-  // Hide on mobile when there's not much space
+  // On mobile, don't center vertically - position at top for full-height overlay
   @media (max-width: 599px) {
-    display: none;
+    top: 0;
+    transform: none;
   }
 }
 
-// Right section - action buttons, profile
-.toolbar-right {
-  flex-shrink: 0;
-}
+// Right section (already defined in toolbar-right above)
 
-// Search container also gets glass styling
-.search-container.toolbar-section {
-  flex: 1;
-  max-width: 600px;
-  position: relative;
-}
-
-// Dark mode - transparent toolbar maintained
+// Dark mode - glass toolbar background maintained
 :host-context(.dark) .app-toolbar {
-  background: transparent !important;
-  box-shadow: none;
+  background-color: rgba(24, 17, 27, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .premium-label {
@@ -254,8 +323,9 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  // Content flows to top - scrolls behind transparent toolbar
-  margin-top: 0;
+  // Content starts below the fixed toolbar
+  padding-top: var(--toolbar-height, 64px);
+  box-sizing: border-box;
 
   // Add margin when following sidebar is docked (this is a real sidebar, not centering compensation)
   &.following-sidebar-docked {
@@ -299,6 +369,254 @@ mat-sidenav-content {
 
 :host-context(.dark) .sidenav {
   background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+// Menu profile button in toolbar (replaces hamburger)
+.menu-profile-button {
+  padding: 0 !important;
+  overflow: hidden;
+
+  &.profile-button-picture {
+    .menu-profile-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  }
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+// Sidenav Profile Section styles
+.sidenav-profile-section {
+  padding: 0 8px 8px;
+}
+
+.sidenav-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+:host-context(.dark) .sidenav-profile-header {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sidenav-profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mat-sys-surface-container);
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.sidenav-profile-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidenav-profile-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--mat-sys-on-surface);
+}
+
+.sidenav-premium-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.expand-accounts-icon {
+  color: var(--mat-sys-on-surface-variant);
+  transition: transform 0.2s ease;
+}
+
+// Expandable accounts list in sidenav
+.sidenav-accounts-list {
+  padding-left: 8px;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+  margin-left: 28px;
+}
+
+.sidenav-account-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  color: var(--mat-sys-on-surface);
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &.sidenav-add-account {
+    color: var(--mat-sys-primary);
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+:host-context(.dark) .sidenav-account-item {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sidenav-account-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mat-sys-surface-container);
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.sidenav-account-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Profile quick actions row
+.sidenav-profile-actions {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 0;
+
+  button {
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// Sidenav Wallet Section
+.sidenav-wallet-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--mat-sys-surface-container);
+  transition: background-color 0.2s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+    transform: translateX(2px);
+  }
+
+  &:active {
+    transform: translateX(0);
+  }
+
+  .wallet-icon {
+    color: var(--mat-sys-primary);
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .wallet-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .wallet-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .wallet-balance {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+:host-context(.dark) .sidenav-wallet-section {
+  &:hover {
+    background: var(--mat-sys-surface-container-highest);
+  }
 }
 
 // Override Angular Material's hover state to use lighter colors
@@ -353,45 +671,7 @@ mat-sidenav-content {
   align-items: center;
 }
 
-.close-button-right {
-  position: absolute;
-  right: 16px;
-}
 
-.theme-button {
-  position: absolute;
-}
-
-.app-title {
-  margin-left: 4px;
-  margin-right: 8px;
-  font-size: 1.2em;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-
-  .title-button {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-    outline: none;
-
-    &:hover {
-      opacity: 0.8;
-    }
-
-    &:focus-visible {
-      outline: 2px solid currentColor;
-      outline-offset: 2px;
-      border-radius: 2px;
-    }
-  }
-}
 
 // ============================================
 // Dual-Panel Layout System
@@ -495,7 +775,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: 0;
+        top: var(--toolbar-height, 64px);
         left: 0;
         right: 0;
         bottom: 0;
@@ -503,7 +783,6 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
-        // Note: padding-top removed - content handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -567,7 +846,7 @@ mat-sidenav-content {
 
       .right-panel {
         position: fixed;
-        top: 0;
+        top: var(--toolbar-height, 64px);
         left: 0;
         right: 0;
         bottom: 0;
@@ -575,9 +854,6 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
-
-        // Note: padding-top removed from overlay-mode
-        // Content inside handles its own top spacing so scrollbar goes to top
       }
     }
   }
@@ -806,47 +1082,111 @@ mat-sidenav-content {
 }
 
 // Panel Content Area (used by both panels)
-// Now that panel headers are removed, content only needs toolbar clearance
+// Content scrolls below the fixed panel header
 .panel-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Content scrolls from top (behind transparent toolbar)
-  padding-top: var(--toolbar-height, 64px);
+  display: flex;
+  flex-direction: column;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  // Panel header is now inside the content, positioned sticky
+  // So we don't need toolbar clearance here - the header handles it
+  padding-top: 0;
+}
+
+// ============================================
+// Panel Header Styles (Fixed headers for each panel)
+// ============================================
+// Panel headers are sticky-positioned within each panel's scroll container
+// They stay fixed while scrolling
+
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+
+  // Glass effect - light mode
+  background-color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  // Subtle bottom border
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  &.transparent {
+    background-color: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
+  }
+
+  .panel-title {
+    margin: 0;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+
+  .panel-header-spacer {
+    flex: 1;
+  }
+
+  .panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(24, 17, 27, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &.transparent {
+    background-color: transparent;
+    border-bottom: none;
+  }
 }
 
 // Left panel content
 .left-panel .panel-content {
-
-  // Special case for profile component - no top padding needed
-  // Profile has its own banner that should extend to the top
-  &:has(app-profile) {
-    padding-top: 0px;
-  }
+  // Content now starts below toolbar (mat-sidenav-content has padding-top)
+  // No additional padding needed here
 
   // Special case for notifications - uses virtual scroll that manages its own scrolling
   &:has(app-notifications) {
-    padding-top: 0px;
     overflow: hidden; // Virtual scroll handles scrolling
   }
 }
 
 // Right panel content
 .right-panel-content {
-  // Remove default padding - content will add its own padding to scroll to top
-  padding-top: 0px;
+  // No top padding - components handle their own positioning via sticky panel headers
+  // The panel headers stick below the main toolbar using top: var(--toolbar-height)
+  padding-top: 0;
 
-  // Special case for profile component - no top padding needed
-  // Profile has its own banner that should extend to the top
-  &:has(app-profile) {
-    padding-top: 0px;
-  }
-
-  // Add padding inside the content wrapper for components that need it
+  // Routed components - they manage their own padding
   >router-outlet+*:not(app-profile):not(app-right-panel-container) {
-    padding-top: var(--toolbar-height, 64px);
+
+    // Only add padding if the component doesn't have its own panel header
+    &:not(:has(app-panel-header)):not(:has(.panel-header)) {
+      // padding-top handled by component itself or parent
+    }
   }
 
   // Right panel container also needs padding
@@ -854,7 +1194,7 @@ mat-sidenav-content {
     display: block;
 
     >* {
-      padding-top: var(--toolbar-height, 64px);
+      // Removed default padding - components handle their own via panel-header
     }
 
     // Profile handles its own spacing
@@ -1044,160 +1384,7 @@ mat-sidenav-content {
   scale: 1.1;
 }
 
-// Sidenav FAB styles - bottom position
-.sidenav-fab-container-bottom {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  margin-top: 8px;
-}
 
-.sidenav-create-fab {
-  box-shadow: var(--mat-sys-level3);
-}
-
-.profile-sidenav {
-  width: 300px;
-  max-width: 90vw;
-  z-index: 100 !important;
-  position: fixed !important;
-  // Sidenav renders below toolbar - use margin-top and adjusted height
-  margin-top: var(--toolbar-height, 64px) !important;
-  height: calc(100% - var(--toolbar-height, 64px)) !important;
-  box-sizing: border-box;
-
-  // Glass effect - similar to favorites overlay (light mode)
-  background-color: rgba(255, 255, 255, 0.7) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-
-  box-shadow:
-    // Inner white highlight (sharp edge)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.1),
-    // Drop shadows
-    -4px 0 16px rgba(17, 17, 26, 0.1),
-    -8px 0 24px rgba(17, 17, 26, 0.1);
-}
-
-// Dark mode glass effect - use :host-context to access parent .dark class
-:host-context(.dark) .profile-sidenav {
-  background-color: rgba(0, 0, 0, 0.6) !important;
-
-  box-shadow:
-    // Inner highlight (subtler in dark mode)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.03),
-    // Drop shadows (darker)
-    -4px 0 16px rgba(0, 0, 0, 0.5),
-    -8px 0 24px rgba(0, 0, 0, 0.5);
-}
-
-// Animation for the profile sidenav
-.profile-sidenav.mat-drawer {
-  transition: transform 0.3s ease-in-out;
-  z-index: 100 !important;
-}
-
-// Ensure the sidenav container doesn't resize when right-side sidenavs open
-.sidenav-container.mat-sidenav-container {
-  // Don't prevent transforms on the container - let left sidenav work normally
-
-  // Only prevent right sidenav from pushing content
-  mat-sidenav[position="end"] {
-
-    // Right sidenavs should overlay, not push
-    &.mat-drawer-over {
-      z-index: 120 !important;
-    }
-  }
-
-  // Ensure backdrop appears correctly and above toolbar but below sidenav
-  .mat-sidenav-backdrop {
-    position: fixed !important;
-    z-index: 110 !important; // Above toolbar (100), below sidenav (120)
-  }
-}
-
-.profile-button {
-  margin-left: 8px;
-
-  .profile-button-avatar {
-    margin: 4px;
-  }
-}
-
-.profile-button-picture {
-  padding: 0 !important;
-}
-
-.profile-content {
-  padding: 16px;
-
-  @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-.profile-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 16px;
-  text-align: center; // Center all text content
-}
-
-.profile-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: var(--mat-primary-300);
-  margin-bottom: 16px;
-  overflow: hidden; // Add this to ensure image doesn't overflow
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; // Ensures image covers the area properly
-}
-
-.avatar-icon {
-  font-size: 64px;
-  height: 64px;
-  width: 64px;
-  color: var(--mat-card-title-text-color); // Changed from fixed white color to theme-dependent variable
-}
-
-.profile-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 500;
-  margin-bottom: 4px; // Add space below name
-}
-
-.nip05-identifier {
-  font-size: 14px;
-  color: var(--mat-sys-primary);
-  margin-bottom: 8px; // Add space below NIP-05
-}
-
-.user-about {
-  font-size: 14px;
-  color: var(--mat-subtitle-text-color);
-  margin-top: 8px;
-  margin-bottom: 0;
-  max-height: 80px;
-  overflow-y: auto;
-  text-align: center;
-  line-height: 1.4;
-}
 
 .sidenav-labels {
   width: 220px;
@@ -1465,93 +1652,8 @@ mat-sidenav-content {
   object-fit: cover;
 }
 
-.search-container {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-
-  // Hidden state for iOS Safari focus compatibility
-  // We keep the element in DOM but visually hidden so focus works
-  &.search-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-    pointer-events: none;
-  }
-
-  // When used in toolbar with glass effect
-  &.toolbar-section {
-    padding: 0 4px 0 12px;
-
-    .search-input {
-      border: none;
-      background: transparent;
-      box-shadow: none;
-
-      &:focus {
-        outline: none;
-        border: none;
-        box-shadow: none;
-      }
-    }
-  }
-}
-
-.search-input {
-  width: 100%;
-  padding: 9px 138px 9px 13px; // Increased padding for 3 action buttons
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 24px;
-  background: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface);
-  font-size: 16px; // Must be 16px or larger to prevent iOS Safari zoom on focus
-  height: 40px; // Slightly taller than original
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: var(--mat-sys-primary);
-    box-shadow: 0 0 0 2px rgba(var(--mat-sys-primary-rgb), 0.1);
-  }
-
-  &::placeholder {
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.search-action-button {
-  position: absolute;
-  right: 4px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  min-width: 40px;
-
-  .mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &.voice-search-button {
-    right: 88px;
-  }
-
-  &.qr-button {
-    right: 48px;
-  }
-
-  &.close-button {
-    right: 4px;
-  }
-}
+// Legacy search styles removed - search is now in .toolbar-center
+// See lines ~164-236 for new toolbar search styles
 
 /* Floating offline indicator styles */
 .floating-offline-indicator {
@@ -1666,12 +1768,6 @@ mat-sidenav-content {
   100% {
     transform: rotate(360deg);
   }
-}
-
-// Additional z-index fixes for Material sidenav
-.profile-sidenav .mat-drawer-inner-container {
-  z-index: 1001;
-  background: transparent !important; // Ensure inner container doesn't override glass effect
 }
 
 // Ensure backdrop appears above toolbar and mobile nav but below sidenav

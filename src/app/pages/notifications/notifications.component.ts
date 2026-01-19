@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ViewChild, TemplateRef, ElementRef } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatCardModule } from '@angular/material/card';
@@ -34,7 +34,6 @@ import { ProfileDisplayNameComponent } from '../../components/user-profile/displ
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 
 /**
@@ -79,12 +78,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private panelActions = inject(PanelActionsService);
   private searchAction = inject(SearchActionService);
 
-  // Template refs for panel header content
-  @ViewChild('headerLeftContent') headerLeftContent!: TemplateRef<unknown>;
-  @ViewChild('headerActionsMenuTemplate') headerActionsMenuTemplate!: TemplateRef<unknown>;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
   notifications = this.notificationService.notifications;
@@ -228,48 +223,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
-    // Setup panel header actions
-    this.setupPanelActions();
     // Register search handler to intercept global search
     this.searchAction.registerHandler(this.searchHandler);
   }
 
   ngOnDestroy(): void {
-    // Clear panel actions when component is destroyed
-    this.panelActions.clearLeftPanelActions();
     // Unregister search handler
     this.searchAction.unregisterHandler(this.searchHandler);
-  }
-
-  /**
-   * Setup panel header actions for the column toolbar
-   */
-  private setupPanelActions(): void {
-    // Set the page title for the toolbar
-    this.panelActions.setPageTitle('Notifications');
-    
-    const actions = [
-      {
-        id: 'more',
-        icon: 'more_vert',
-        label: 'More options',
-        tooltip: 'More options',
-        action: () => { }, // Menu trigger handled by template
-        menu: true,
-      },
-    ];
-
-    this.panelActions.setLeftPanelActions(actions);
-
-    // Set up templates after view init
-    setTimeout(() => {
-      if (this.headerLeftContent) {
-        this.panelActions.setLeftPanelHeaderLeftContent(this.headerLeftContent);
-      }
-      if (this.headerActionsMenuTemplate) {
-        this.panelActions.setLeftPanelMenuTemplate(this.headerActionsMenuTemplate);
-      }
-    });
   }
 
   /**

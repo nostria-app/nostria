@@ -1,48 +1,54 @@
 <div class="notifications-page">
-  <!-- Template for left side of panel header (notification count badge) -->
-  <ng-template #headerLeftContent>
+  <!-- Panel Header -->
+  <div class="panel-header">
+    <h2 class="panel-title title-font">Notifications</h2>
     @if (newNotificationCount() > 0) {
     <span class="notification-badge">{{ newNotificationCount() }}</span>
     }
-  </ng-template>
-
-  <!-- Template for header actions menu (more options) -->
-  <ng-template #headerActionsMenuTemplate>
-    <!-- Filter submenu items -->
-    <button mat-menu-item [matMenuTriggerFor]="filterSubMenu">
-      <mat-icon>filter_list</mat-icon>
-      <span>Filter</span>
+    <span class="panel-header-spacer"></span>
+    <button mat-icon-button (click)="toggleSearch()" matTooltip="Search notifications">
+      <mat-icon>search</mat-icon>
     </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="refreshNotifications()" [disabled]="isRefreshing()">
-      @if (isRefreshing()) {
-      <mat-spinner diameter="18"></mat-spinner>
-      } @else {
-      <mat-icon>refresh</mat-icon>
+    <button mat-icon-button [matMenuTriggerFor]="notificationsMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #notificationsMenu="matMenu">
+      <!-- Filter submenu items -->
+      <button mat-menu-item [matMenuTriggerFor]="filterSubMenu">
+        <mat-icon>filter_list</mat-icon>
+        <span>Filter</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="refreshNotifications()" [disabled]="isRefreshing()">
+        @if (isRefreshing()) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <mat-icon>refresh</mat-icon>
+        }
+        <span>Refresh</span>
+      </button>
+      @if (notifications().length > 0) {
+      <button mat-menu-item (click)="markAllAsRead()">
+        <mat-icon>done_all</mat-icon>
+        <span>Mark All Read</span>
+      </button>
+      <button mat-menu-item (click)="clearNotifications()">
+        <mat-icon>close</mat-icon>
+        <span>Clear All</span>
+      </button>
       }
-      <span>Refresh</span>
-    </button>
-    @if (notifications().length > 0) {
-    <button mat-menu-item (click)="markAllAsRead()">
-      <mat-icon>done_all</mat-icon>
-      <span>Mark All Read</span>
-    </button>
-    <button mat-menu-item (click)="clearNotifications()">
-      <mat-icon>close</mat-icon>
-      <span>Clear All</span>
-    </button>
-    }
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="showSystemNotifications.set(!showSystemNotifications())">
-      <mat-icon>{{ showSystemNotifications() ? 'people' : 'priority' }}</mat-icon>
-      <span>{{ showSystemNotifications() ? 'Activity' : 'System Notifications' }}</span>
-    </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item routerLink="/notifications/settings">
-      <mat-icon>settings</mat-icon>
-      <span i18n="@@notifications.settings.label">Settings</span>
-    </button>
-  </ng-template>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="showSystemNotifications.set(!showSystemNotifications())">
+        <mat-icon>{{ showSystemNotifications() ? 'people' : 'priority' }}</mat-icon>
+        <span>{{ showSystemNotifications() ? 'Activity' : 'System Notifications' }}</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item routerLink="/notifications/settings">
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@notifications.settings.label">Settings</span>
+      </button>
+    </mat-menu>
+  </div>
 
   <!-- Filter submenu -->
   <mat-menu #filterSubMenu="matMenu">

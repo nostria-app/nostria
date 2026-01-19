@@ -62,31 +62,31 @@ Nostria is a decentralized social media client built on the Nostr protocol. It p
 
 ### Frontend
 
-| Technology | Purpose |
-|------------|---------|
-| **Angular 21+** | Core framework with standalone components |
-| **Angular Material 3** | UI component library |
-| **TypeScript** | Type-safe development |
-| **Signals** | Reactive state management |
-| **nostr-tools** | Nostr protocol implementation |
-| **@getalby/sdk** | Lightning/NWC wallet integration |
+| Technology             | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| **Angular 21+**        | Core framework with standalone components |
+| **Angular Material 3** | UI component library                      |
+| **TypeScript**         | Type-safe development                     |
+| **Signals**            | Reactive state management                 |
+| **nostr-tools**        | Nostr protocol implementation             |
+| **@getalby/sdk**       | Lightning/NWC wallet integration          |
 
 ### Backend Services (Nostria-Provided)
 
-| Service | URL Pattern | Purpose |
-|---------|-------------|---------|
-| **Image Proxy** | `proxy.{region}.nostria.app` | Optimized image delivery and caching |
-| **Metadata Service** | `metadata.nostria.app` | OpenGraph/social preview fetching |
-| **Discovery Relay** | `discovery.{region}.nostria.app` | Relay discovery and bootstrapping |
-| **CORS Proxy** | `proxy.{region}.nostria.app/api/cors-proxy` | Cross-origin resource fetching |
+| Service              | URL Pattern                                 | Purpose                              |
+| -------------------- | ------------------------------------------- | ------------------------------------ |
+| **Image Proxy**      | `proxy.{region}.nostria.app`                | Optimized image delivery and caching |
+| **Metadata Service** | `metadata.nostria.app`                      | OpenGraph/social preview fetching    |
+| **Discovery Relay**  | `discovery.{region}.nostria.app`            | Relay discovery and bootstrapping    |
+| **CORS Proxy**       | `proxy.{region}.nostria.app/api/cors-proxy` | Cross-origin resource fetching       |
 
 ### Desktop/Mobile
 
-| Technology | Purpose |
-|------------|---------|
-| **Tauri** | Desktop application packaging |
-| **Bubblewrap** | Android TWA packaging |
-| **PWA** | Progressive Web App support |
+| Technology     | Purpose                       |
+| -------------- | ----------------------------- |
+| **Tauri**      | Desktop application packaging |
+| **Bubblewrap** | Android TWA packaging         |
+| **PWA**        | Progressive Web App support   |
 
 ---
 
@@ -124,29 +124,27 @@ All components follow these patterns:
 
 ```typescript
 @Component({
-  selector: 'app-example',
-  templateUrl: './example.component.html',
+  selector: "app-example",
+  templateUrl: "./example.component.html",
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExampleComponent {
   // Inputs using signal-based input()
   data = input.required<DataType>();
   optional = input<string>();
-  
+
   // Outputs using output()
   selected = output<Item>();
-  
+
   // Services using inject()
   private readonly service = inject(ExampleService);
-  
+
   // Local state with signals
   items = signal<Item[]>([]);
   loading = signal(false);
-  
+
   // Derived state with computed
-  filteredItems = computed(() => 
-    this.items().filter(item => item.active)
-  );
+  filteredItems = computed(() => this.items().filter((item) => item.active));
 }
 ```
 
@@ -167,43 +165,43 @@ Services follow single-responsibility principle:
 
 Nostria implements the following Nostr Implementation Possibilities (NIPs):
 
-| NIP | Name | Status |
-|-----|------|--------|
-| NIP-01 | Basic protocol flow | ✅ Implemented |
-| NIP-02 | Contact List and Petnames | ✅ Implemented |
-| NIP-04 | Encrypted Direct Message (Legacy) | ✅ Implemented |
-| NIP-05 | DNS-based identifiers | ✅ Implemented |
-| NIP-07 | Browser extension signing | ✅ Implemented |
-| NIP-09 | Event Deletion | ✅ Implemented |
-| NIP-10 | Text Notes and Threads | ✅ Implemented |
-| NIP-11 | Relay Information | ✅ Implemented |
-| NIP-17 | Private Direct Messages | ✅ Implemented |
-| NIP-18 | Reposts | ✅ Implemented |
-| NIP-19 | bech32-encoded entities | ✅ Implemented |
-| NIP-21 | `nostr:` URL scheme | ✅ Implemented |
-| NIP-22 | Comments | ✅ Implemented |
-| NIP-23 | Long-form Content (Articles) | ✅ Implemented |
-| NIP-25 | Reactions | ✅ Implemented |
-| NIP-27 | Text Note References | ✅ Implemented |
-| NIP-30 | Custom Emoji | ✅ Implemented |
-| NIP-36 | Sensitive Content | ✅ Implemented |
-| NIP-42 | Relay Authentication | ✅ Implemented |
-| NIP-44 | Encrypted Payloads (Gift Wrap) | ✅ Implemented |
-| NIP-46 | Nostr Remote Signing | ✅ Implemented |
-| NIP-47 | Nostr Wallet Connect | ✅ Implemented |
-| NIP-50 | Keywords filter (Search) | ✅ Implemented |
-| NIP-51 | Lists (Bookmarks, Mutes) | ✅ Implemented |
-| NIP-52 | Calendar Events | ✅ Implemented |
-| NIP-55 | Android Signer | ✅ Implemented |
-| NIP-57 | Lightning Zaps | ✅ Implemented |
-| NIP-58 | Badges | ✅ Implemented |
-| NIP-65 | Relay List Metadata | ✅ Implemented |
-| NIP-68 | Picture-first feeds | ✅ Implemented |
-| NIP-71 | Video Events | ✅ Implemented |
-| NIP-75 | Zap Goals | ✅ Implemented |
-| NIP-98 | HTTP Auth | ✅ Implemented |
-| NIP-A0 | Voice Messages | ✅ Implemented |
-| BUD-01/02/03 | Blossom file storage | ✅ Implemented |
+| NIP          | Name                              | Status         |
+| ------------ | --------------------------------- | -------------- |
+| NIP-01       | Basic protocol flow               | ✅ Implemented |
+| NIP-02       | Contact List and Petnames         | ✅ Implemented |
+| NIP-04       | Encrypted Direct Message (Legacy) | ✅ Implemented |
+| NIP-05       | DNS-based identifiers             | ✅ Implemented |
+| NIP-07       | Browser extension signing         | ✅ Implemented |
+| NIP-09       | Event Deletion                    | ✅ Implemented |
+| NIP-10       | Text Notes and Threads            | ✅ Implemented |
+| NIP-11       | Relay Information                 | ✅ Implemented |
+| NIP-17       | Private Direct Messages           | ✅ Implemented |
+| NIP-18       | Reposts                           | ✅ Implemented |
+| NIP-19       | bech32-encoded entities           | ✅ Implemented |
+| NIP-21       | `nostr:` URL scheme               | ✅ Implemented |
+| NIP-22       | Comments                          | ✅ Implemented |
+| NIP-23       | Long-form Content (Articles)      | ✅ Implemented |
+| NIP-25       | Reactions                         | ✅ Implemented |
+| NIP-27       | Text Note References              | ✅ Implemented |
+| NIP-30       | Custom Emoji                      | ✅ Implemented |
+| NIP-36       | Sensitive Content                 | ✅ Implemented |
+| NIP-42       | Relay Authentication              | ✅ Implemented |
+| NIP-44       | Encrypted Payloads (Gift Wrap)    | ✅ Implemented |
+| NIP-46       | Nostr Remote Signing              | ✅ Implemented |
+| NIP-47       | Nostr Wallet Connect              | ✅ Implemented |
+| NIP-50       | Keywords filter (Search)          | ✅ Implemented |
+| NIP-51       | Lists (Bookmarks, Mutes)          | ✅ Implemented |
+| NIP-52       | Calendar Events                   | ✅ Implemented |
+| NIP-55       | Android Signer                    | ✅ Implemented |
+| NIP-57       | Lightning Zaps                    | ✅ Implemented |
+| NIP-58       | Badges                            | ✅ Implemented |
+| NIP-65       | Relay List Metadata               | ✅ Implemented |
+| NIP-68       | Picture-first feeds               | ✅ Implemented |
+| NIP-71       | Video Events                      | ✅ Implemented |
+| NIP-75       | Zap Goals                         | ✅ Implemented |
+| NIP-98       | HTTP Auth                         | ✅ Implemented |
+| NIP-A0       | Voice Messages                    | ✅ Implemented |
+| BUD-01/02/03 | Blossom file storage              | ✅ Implemented |
 
 ### Opinionated Decisions
 
@@ -240,6 +238,7 @@ const optimizedUrl = imageCacheService.getOptimizedImageUrl(originalUrl);
 ```
 
 **Features:**
+
 - Region-based routing (EU, US, etc.)
 - Size optimization (default 96x96 for profiles)
 - Caching headers for performance
@@ -322,14 +321,17 @@ Nostria uses `CustomDialogComponent` instead of Angular Material dialogs for bet
 ```typescript
 // CustomDialogService usage
 const ref = customDialog.open(MyDialogComponent, {
-  title: 'Dialog Title',
-  data: { /* ... */ }
+  title: "Dialog Title",
+  data: {
+    /* ... */
+  },
 });
 
 const result = await ref.closed.toPromise();
 ```
 
 **Features:**
+
 - Responsive: floating on desktop, full-screen on mobile
 - Keyboard-aware: adjusts for mobile keyboard
 - Enter key support for primary action
@@ -342,19 +344,17 @@ const result = await ref.closed.toPromise();
 ### Signal-Based Architecture
 
 ```typescript
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class StateService {
   // Writable signals for state
   private readonly _items = signal<Item[]>([]);
-  
+
   // Read-only public access
   readonly items = this._items.asReadonly();
-  
+
   // Computed derived state
-  readonly activeItems = computed(() => 
-    this._items().filter(i => i.active)
-  );
-  
+  readonly activeItems = computed(() => this._items().filter((i) => i.active));
+
   // Effects for side effects
   constructor() {
     effect(() => {
@@ -367,15 +367,15 @@ export class StateService {
 
 ### Key State Services
 
-| Service | Purpose |
-|---------|---------|
-| `AccountStateService` | Current user account state |
+| Service                    | Purpose                       |
+| -------------------------- | ----------------------------- |
+| `AccountStateService`      | Current user account state    |
 | `AccountLocalStateService` | Per-account local preferences |
-| `ApplicationStateService` | Global app state |
-| `ProfileStateService` | Profile data management |
-| `FeedService` | Feed configuration and data |
-| `SettingsService` | User settings |
-| `LocalSettingsService` | Device-local settings |
+| `ApplicationStateService`  | Global app state              |
+| `ProfileStateService`      | Profile data management       |
+| `FeedService`              | Feed configuration and data   |
+| `SettingsService`          | User settings                 |
+| `LocalSettingsService`     | Device-local settings         |
 
 ### AccountLocalStateService vs LocalSettingsService
 
@@ -390,6 +390,7 @@ These two services serve different purposes for local storage:
 **Storage key**: `nostria-account-states` (stores a map keyed by pubkey)
 
 **Examples**:
+
 - `notificationLastCheck`: Timestamp of last notification check (per-account)
 - `messagesLastCheck`: Timestamp of last messages check (per-account)
 - `zapHistoryLastTimestamp`: Most recent zap timestamp for incremental fetching
@@ -418,6 +419,7 @@ this.accountLocalState.setZapHistoryLastTimestamp(pubkey, timestamp);
 **Storage key**: `nostria-local-settings`
 
 **Examples**:
+
 - `useProxy`: Whether to use the image proxy (network optimization)
 - `proxyRegion`: Which regional proxy server to use
 - `mediaServer`: Preferred media upload server
@@ -437,14 +439,14 @@ this.localSettings.update({ useProxy: true });
 
 #### Decision Guide
 
-| Scenario | Service to Use |
-|----------|----------------|
-| "Remember my last feed selection" | `AccountLocalStateService` |
-| "Remember the proxy region for this device" | `LocalSettingsService` |
-| "Track when I last checked notifications" | `AccountLocalStateService` |
-| "Enable AI features on this device" | `LocalSettingsService` |
-| "Cache timestamp for incremental fetching" | `AccountLocalStateService` |
-| "Store mobile keyboard height" | `LocalSettingsService` |
+| Scenario                                    | Service to Use             |
+| ------------------------------------------- | -------------------------- |
+| "Remember my last feed selection"           | `AccountLocalStateService` |
+| "Remember the proxy region for this device" | `LocalSettingsService`     |
+| "Track when I last checked notifications"   | `AccountLocalStateService` |
+| "Enable AI features on this device"         | `LocalSettingsService`     |
+| "Cache timestamp for incremental fetching"  | `AccountLocalStateService` |
+| "Store mobile keyboard height"              | `LocalSettingsService`     |
 
 ### Data Flow
 
@@ -468,12 +470,22 @@ Component Template (re-renders via OnPush)
 
 ## Navigation & Layout System
 
-There are 4 main toolbars in the app, so understand and don't confuse between them.
+### Unified Menu System
 
-- Left Main Toolbar (contains the main hamburger menu).
-- Right Main Toolbar (contains the profile menu).
-- Left Panel Toolbar (dynamic based on left panel content).
-- Right Panel Toolbar (dynamic based on right panel content).
+The app uses a single unified menu that slides out from the left side. The menu button in the toolbar displays the user's profile image (or a generic icon if not authenticated).
+
+**Key elements:**
+
+- **Profile Button** (top-left toolbar): Shows user's profile picture, opens the unified left sidenav
+- **Left Sidenav**: Contains user profile section with account switcher, navigation items, and settings
+- **Right Toolbar Section**: Contains search, notifications, and right panel actions
+
+The profile section at the top of the sidenav includes:
+
+- User avatar and name
+- Premium badge (if subscribed)
+- Expandable account list for switching between accounts
+- Quick action buttons (profile, credentials, settings, theme toggle)
 
 ### Two-Column Layout
 
@@ -495,19 +507,20 @@ The app uses a sophisticated two-column layout system:
 ```
 
 **Responsive Behavior:**
+
 - **Desktop (>1440px)**: Full two-column (700px + 700px)
 - **Tablet (1024-1440px)**: Narrower columns (600px + 600px)
 - **Mobile (<1024px)**: Right panel overlays left panel
 
 ### Key Navigation Services
 
-| Service | Purpose |
-|---------|---------|
-| `RightPanelService` | Manages right panel content stack |
-| `PanelNavigationService` | Coordinates left/right panel navigation |
+| Service                  | Purpose                                  |
+| ------------------------ | ---------------------------------------- |
+| `RightPanelService`      | Manages right panel content stack        |
+| `PanelNavigationService` | Coordinates left/right panel navigation  |
 | `NavigationStackService` | Manages navigation history within panels |
-| `TwoColumnLayoutService` | Column width and visibility |
-| `LayoutService` | Screen size detection, dialog management |
+| `TwoColumnLayoutService` | Column width and visibility              |
+| `LayoutService`          | Screen size detection, dialog management |
 
 ### Right Panel Navigation
 
@@ -515,11 +528,14 @@ The right panel uses a component-based approach (not routing):
 
 ```typescript
 // Open detail in right panel
-rightPanelService.open({
-  component: EventPageComponent,
-  inputs: { dialogEventId: eventId },
-  title: 'Thread'
-}, `/e/${eventId}`);
+rightPanelService.open(
+  {
+    component: EventPageComponent,
+    inputs: { dialogEventId: eventId },
+    title: "Thread",
+  },
+  `/e/${eventId}`,
+);
 
 // Navigate back
 rightPanelService.goBack();
@@ -529,6 +545,7 @@ rightPanelService.close();
 ```
 
 **Benefits:**
+
 - Left panel state is preserved
 - Clean URLs for sharing
 - Independent navigation history
@@ -537,6 +554,7 @@ rightPanelService.close();
 ### Customizable Navigation Menu
 
 The hamburger menu supports:
+
 - Adding/removing items
 - Drag-and-drop reordering
 - Works on both desktop and mobile
@@ -556,13 +574,14 @@ interface MediaItem {
   title: string;
   artist: string;
   source: string;
-  type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit' | 'External';
+  type: "Music" | "Podcast" | "YouTube" | "Video" | "HLS" | "LiveKit" | "External";
   isLiveStream?: boolean;
   lyrics?: string;
 }
 ```
 
 **Features:**
+
 - Shuffle and repeat modes
 - Queue management with drag-and-drop
 - Podcast progress tracking
@@ -589,23 +608,23 @@ Users can manage multiple Nostr identities:
 ```typescript
 interface NostrUser {
   pubkey: string;
-  privkey?: string;           // Plain hex or encrypted
-  mnemonic?: string;          // BIP39 phrase (encrypted)
-  source: 'extension' | 'nsec' | 'preview' | 'remote' | 'external';
-  bunker?: BunkerPointer;     // For NIP-46 remote signing
-  isEncrypted?: boolean;      // PIN protection flag
-  preferredSigningMethod?: 'local' | 'remote';
+  privkey?: string; // Plain hex or encrypted
+  mnemonic?: string; // BIP39 phrase (encrypted)
+  source: "extension" | "nsec" | "preview" | "remote" | "external";
+  bunker?: BunkerPointer; // For NIP-46 remote signing
+  isEncrypted?: boolean; // PIN protection flag
+  preferredSigningMethod?: "local" | "remote";
 }
 ```
 
 ### Authentication Methods
 
-| Method | NIP | Description |
-|--------|-----|-------------|
-| **nsec** | - | Direct private key (can be PIN-encrypted) |
-| **Browser Extension** | NIP-07 | window.nostr interface |
-| **Remote Signer** | NIP-46 | Bunker/NIP-46 protocol |
-| **Android Signer** | NIP-55 | Android intent-based signing |
+| Method                | NIP    | Description                               |
+| --------------------- | ------ | ----------------------------------------- |
+| **nsec**              | -      | Direct private key (can be PIN-encrypted) |
+| **Browser Extension** | NIP-07 | window.nostr interface                    |
+| **Remote Signer**     | NIP-46 | Bunker/NIP-46 protocol                    |
+| **Android Signer**    | NIP-55 | Android intent-based signing              |
 
 ### PIN Protection
 
@@ -672,11 +691,11 @@ const profile = await sharedRelay.getUserProfile(pubkey);
 
 Supports both legacy and modern encryption:
 
-| Protocol | NIP | Use Case |
-|----------|-----|----------|
-| NIP-04 | Legacy | Old DM compatibility |
-| NIP-44 | Modern | New encrypted messages |
-| NIP-17 | Gift Wrap | Private DMs |
+| Protocol | NIP       | Use Case               |
+| -------- | --------- | ---------------------- |
+| NIP-04   | Legacy    | Old DM compatibility   |
+| NIP-44   | Modern    | New encrypted messages |
+| NIP-17   | Gift Wrap | Private DMs            |
 
 ```typescript
 // EncryptionService usage
@@ -704,7 +723,7 @@ isBunkerConnecting = signal(false);
 
 ```typescript
 // Feed rendering with virtual scrolling
-displayedItems = computed(() => 
+displayedItems = computed(() =>
   this.allItems().slice(0, this.visibleCount())
 );
 
@@ -728,9 +747,9 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 @Component({
   imports: [ScrollingModule],
   template: `
-    <cdk-virtual-scroll-viewport 
-      [itemSize]="72" 
-      [minBufferPx]="400" 
+    <cdk-virtual-scroll-viewport
+      [itemSize]="72"
+      [minBufferPx]="400"
       [maxBufferPx]="800"
       class="virtual-viewport">
       @for (item of items(); track item.id) {
@@ -751,11 +770,13 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 ```
 
 **When to use CDK Virtual Scrolling:**
+
 - Lists with **fixed-height items** (notifications, zap history, following lists)
 - Data sets with 100+ items
 - Items that don't need dynamic resizing
 
 **When NOT to use CDK Virtual Scrolling:**
+
 - **Feeds with variable content** (notes with images, articles, reposts)
 - Lists where items need to expand/collapse
 - Content with unknown height until rendered
@@ -811,13 +832,13 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
 ```typescript
 // app.routes.server.ts
 export const serverRoutes: ServerRoute[] = [
-  { path: 'e/**', renderMode: RenderMode.Server },    // Events
-  { path: 'p/**', renderMode: RenderMode.Server },    // Profiles
-  { path: 'u/**', renderMode: RenderMode.Server },    // Usernames
-  { path: 'a/**', renderMode: RenderMode.Server },    // Articles
-  { path: 'stream/**', renderMode: RenderMode.Server },
-  { path: 'music/**', renderMode: RenderMode.Server },
-  { path: '**', renderMode: RenderMode.Client },      // Everything else
+  { path: "e/**", renderMode: RenderMode.Server }, // Events
+  { path: "p/**", renderMode: RenderMode.Server }, // Profiles
+  { path: "u/**", renderMode: RenderMode.Server }, // Usernames
+  { path: "a/**", renderMode: RenderMode.Server }, // Articles
+  { path: "stream/**", renderMode: RenderMode.Server },
+  { path: "music/**", renderMode: RenderMode.Server },
+  { path: "**", renderMode: RenderMode.Client }, // Everything else
 ];
 ```
 
@@ -841,6 +862,7 @@ if (this.isBrowser) {
 ```
 
 **Forbidden in SSR context:**
+
 - `window`, `document`, `localStorage`
 - `navigator`, `location`
 - Any DOM manipulation
@@ -852,11 +874,11 @@ For social sharing previews:
 ```typescript
 // MetaService usage for SSR
 metaService.updateSocialMetadata({
-  title: 'Event Title',
-  description: 'Event content...',
-  image: 'https://...',
-  url: 'https://nostria.app/e/...',
-  twitterCard: 'summary_large_image'
+  title: "Event Title",
+  description: "Event content...",
+  image: "https://...",
+  url: "https://nostria.app/e/...",
+  twitterCard: "summary_large_image",
 });
 ```
 
@@ -878,6 +900,7 @@ npm run tauri build    # Production build
 ```
 
 **Features:**
+
 - Native window management
 - System tray integration
 - Auto-updates
@@ -885,12 +908,14 @@ npm run tauri build    # Production build
 ### Mobile
 
 **Android TWA (Bubblewrap):**
+
 ```bash
 bubblewrap init --manifest https://nostria.app/manifest.webmanifest
 bubblewrap build
 ```
 
 **Android Tauri:**
+
 ```bash
 npm run tauri android init
 npm run tauri android dev
@@ -902,13 +927,13 @@ npm run tauri android dev
 
 ### Editors
 
-| Type | Component | Event Kind |
-|------|-----------|------------|
-| **Note** | `NoteEditorDialogComponent` | 1 |
-| **Article** | `ArticleEditorDialogComponent` | 30023 |
-| **Media** | `MediaCreatorDialogComponent` | Varies |
-| **Video Clip** | `VideoRecordDialogComponent` | 1063 |
-| **Audio Clip** | `AudioRecordDialogComponent` | 1222 (root), 1244 (replies) |
+| Type           | Component                      | Event Kind                  |
+| -------------- | ------------------------------ | --------------------------- |
+| **Note**       | `NoteEditorDialogComponent`    | 1                           |
+| **Article**    | `ArticleEditorDialogComponent` | 30023                       |
+| **Media**      | `MediaCreatorDialogComponent`  | Varies                      |
+| **Video Clip** | `VideoRecordDialogComponent`   | 1063                        |
+| **Audio Clip** | `AudioRecordDialogComponent`   | 1222 (root), 1244 (replies) |
 
 ### Publishing Flow
 
@@ -959,11 +984,11 @@ The Command Palette provides quick keyboard-driven access to all app features. I
 
 ```typescript
 interface Command {
-  id: string;           // Unique identifier (e.g., 'nav-music')
-  label: string;        // Display label (e.g., 'Open Music')
-  icon: string;         // Material icon name
-  action: () => void;   // Action to execute
-  keywords?: string[];  // Search keywords for fuzzy matching
+  id: string; // Unique identifier (e.g., 'nav-music')
+  label: string; // Display label (e.g., 'Open Music')
+  icon: string; // Material icon name
+  action: () => void; // Action to execute
+  keywords?: string[]; // Search keywords for fuzzy matching
   description?: string; // Optional description
 }
 ```
@@ -988,14 +1013,14 @@ commands: Command[] = [
 
 ### Command Categories
 
-| Category | ID Prefix | Purpose |
-|----------|-----------|---------|
-| Navigation - Core | `nav-` | Home, Feeds, Messages, Notifications |
-| Navigation - Content | `nav-` | Articles, Music, Streams, Media |
-| Navigation - Collections | `nav-` | Collections, Bookmarks, People, Lists |
-| Navigation - Tools | `nav-` | Memos, Calendar, Polls, Analytics |
-| Navigation - Account | `nav-` | Profile, Settings, Accounts, Backup |
-| Actions | `act-` | Create Note, Create Article, etc. |
+| Category                 | ID Prefix | Purpose                               |
+| ------------------------ | --------- | ------------------------------------- |
+| Navigation - Core        | `nav-`    | Home, Feeds, Messages, Notifications  |
+| Navigation - Content     | `nav-`    | Articles, Music, Streams, Media       |
+| Navigation - Collections | `nav-`    | Collections, Bookmarks, People, Lists |
+| Navigation - Tools       | `nav-`    | Memos, Calendar, Polls, Analytics     |
+| Navigation - Account     | `nav-`    | Profile, Settings, Accounts, Backup   |
+| Actions                  | `act-`    | Create Note, Create Article, etc.     |
 
 ### Voice Commands
 
@@ -1031,14 +1056,14 @@ Local ML Models (cached in browser)
 
 ### Supported Tasks
 
-| Task | Model | Use Case |
-|------|-------|----------|
-| **Summarization** | distilbart-cnn-6-6 | Summarize long articles/threads |
-| **Translation** | opus-mt-* | Translate content between languages |
-| **Transcription** | whisper-tiny | Voice-to-text for command palette |
-| **Text-to-Speech** | speecht5_tts | Read content aloud |
-| **Sentiment Analysis** | distilbert-sst-2 | Analyze content sentiment |
-| **Text Generation** | LaMini-Flan-T5-783M | Generate text responses |
+| Task                   | Model               | Use Case                            |
+| ---------------------- | ------------------- | ----------------------------------- |
+| **Summarization**      | distilbart-cnn-6-6  | Summarize long articles/threads     |
+| **Translation**        | opus-mt-\*          | Translate content between languages |
+| **Transcription**      | whisper-tiny        | Voice-to-text for command palette   |
+| **Text-to-Speech**     | speecht5_tts        | Read content aloud                  |
+| **Sentiment Analysis** | distilbert-sst-2    | Analyze content sentiment           |
+| **Text Generation**    | LaMini-Flan-T5-783M | Generate text responses             |
 
 ### Privacy Model
 
@@ -1059,13 +1084,13 @@ private ai = inject(AiService);
 if (this.settings.settings().aiEnabled) {
   // Summarize text
   const summary = await this.ai.summarizeText(longText);
-  
+
   // Translate content
   const translated = await this.ai.translateText(
-    text, 
+    text,
     'Xenova/opus-mt-es-en'  // Spanish to English
   );
-  
+
   // Transcribe audio
   const transcript = await this.ai.transcribeAudio(audioData);
 }
@@ -1077,12 +1102,12 @@ Models are managed through the AI Settings page (`/ai/settings`):
 
 ```typescript
 // Load a model (downloads if not cached)
-await ai.loadModel('summarization', ai.summarizationModelId, (progress) => {
-  console.log('Download progress:', progress);
+await ai.loadModel("summarization", ai.summarizationModelId, (progress) => {
+  console.log("Download progress:", progress);
 });
 
 // Check if model is loaded/cached
-const status = await ai.checkModel('summarization', modelId);
+const status = await ai.checkModel("summarization", modelId);
 // { loaded: boolean, cached: boolean }
 
 // Delete model from cache
@@ -1096,14 +1121,14 @@ await ai.clearAllCache();
 
 AI features are controlled via user settings:
 
-| Setting | Purpose |
-|---------|---------|
-| `aiEnabled` | Master toggle for all AI features |
-| `aiSummarizationEnabled` | Enable content summarization |
-| `aiTranslationEnabled` | Enable translation |
-| `aiTranscriptionEnabled` | Enable voice transcription |
-| `aiSpeechEnabled` | Enable text-to-speech |
-| `aiSentimentEnabled` | Enable sentiment analysis |
+| Setting                  | Purpose                           |
+| ------------------------ | --------------------------------- |
+| `aiEnabled`              | Master toggle for all AI features |
+| `aiSummarizationEnabled` | Enable content summarization      |
+| `aiTranslationEnabled`   | Enable translation                |
+| `aiTranscriptionEnabled` | Enable voice transcription        |
+| `aiSpeechEnabled`        | Enable text-to-speech             |
+| `aiSentimentEnabled`     | Enable sentiment analysis         |
 
 ### Web Worker Implementation
 
@@ -1124,6 +1149,7 @@ AI processing runs in a Web Worker to prevent UI blocking:
 ### Available Translation Models
 
 The app includes 50+ translation model pairs supporting languages including:
+
 - European: English, Spanish, French, German, Italian, Portuguese, etc.
 - Asian: Chinese, Japanese, Korean, Vietnamese, Thai, Hindi, etc.
 - Other: Arabic, Russian, Ukrainian, Turkish, etc.
@@ -1135,6 +1161,7 @@ The app includes 50+ translation model pairs supporting languages including:
 ### 1. Standalone Components Over Modules
 
 Every component is standalone to enable:
+
 - Tree-shaking
 - Faster compilation
 - Clearer dependencies
@@ -1142,6 +1169,7 @@ Every component is standalone to enable:
 ### 2. Signals Over RxJS for State
 
 Signals provide:
+
 - Simpler mental model
 - Automatic dependency tracking
 - Better Angular integration
@@ -1150,6 +1178,7 @@ Signals provide:
 ### 3. Custom Dialog Over Material Dialog
 
 `CustomDialogComponent` provides:
+
 - Better mobile keyboard handling
 - Full-screen mobile mode
 - Consistent styling
@@ -1158,6 +1187,7 @@ Signals provide:
 ### 4. Component-Based Right Panel
 
 Instead of named router outlets:
+
 - Preserves left panel state
 - Simpler URL management
 - Independent navigation stack
@@ -1166,6 +1196,7 @@ Instead of named router outlets:
 ### 5. Region-Based Proxy Services
 
 All backend services use regional routing:
+
 - Lower latency
 - Better reliability
 - User proximity optimization
@@ -1191,7 +1222,7 @@ All backend services use regional routing:
 
 ```typescript
 @Component({
-  selector: 'app-example',
+  selector: "app-example",
   changeDetection: ChangeDetectionStrategy.OnPush,
   // No standalone: true needed (it's the default)
 })
@@ -1199,16 +1230,16 @@ export class ExampleComponent {
   // ✅ Use input() and output()
   data = input.required<Data>();
   selected = output<Item>();
-  
+
   // ✅ Use inject() for DI
   private service = inject(MyService);
-  
+
   // ✅ Use signals for state
   items = signal<Item[]>([]);
-  
+
   // ✅ Use computed for derived state
-  activeCount = computed(() => this.items().filter(i => i.active).length);
-  
+  activeCount = computed(() => this.items().filter((i) => i.active).length);
+
   // ❌ Don't use @HostBinding/@HostListener
   // ✅ Use host: {} in decorator instead
 }
@@ -1219,11 +1250,9 @@ export class ExampleComponent {
 ```html
 <!-- ✅ Use native control flow -->
 @if (condition()) {
-  <div>Content</div>
-}
-
-@for (item of items(); track item.id) {
-  <app-item [data]="item" />
+<div>Content</div>
+} @for (item of items(); track item.id) {
+<app-item [data]="item" />
 }
 
 <!-- ❌ Don't use structural directives -->
@@ -1255,11 +1284,13 @@ this.http.get(url).subscribe(data => ...);
 Nostria uses a comprehensive testing strategy with both unit tests (Karma/Jasmine) and end-to-end tests (Playwright).
 
 **Unit Tests (Karma/Jasmine)**:
+
 ```bash
 npm run test          # Run unit tests
 ```
 
 **E2E Tests (Playwright)**:
+
 ```bash
 npm run test:e2e          # Run all e2e tests
 npm run test:e2e:ui       # Run with Playwright UI
@@ -1271,6 +1302,7 @@ npm run test:e2e:codegen  # Generate tests via recording
 ```
 
 **Other Tools**:
+
 ```bash
 npm run lint          # Run linter
 npm run format:check  # Check formatting
@@ -1285,6 +1317,7 @@ For complete E2E testing documentation, see [TESTING.md](TESTING.md).
 ### Overview
 
 The E2E testing setup is designed for **AI/LLM-driven test automation**, with emphasis on:
+
 - Structured output formats (JSON) for programmatic analysis
 - Automatic screenshot and video capture
 - Console log collection for debugging
@@ -1311,14 +1344,14 @@ e2e/
 
 All test artifacts are stored in `test-results/`:
 
-| Directory | Contents |
-|-----------|----------|
-| `screenshots/` | Named screenshots from tests |
-| `videos/` | Video recordings (on failure by default) |
-| `traces/` | Playwright traces for debugging |
-| `logs/` | Console log captures |
-| `ai-states/` | Page state snapshots for AI analysis |
-| `artifacts/` | General test artifacts |
+| Directory      | Contents                                 |
+| -------------- | ---------------------------------------- |
+| `screenshots/` | Named screenshots from tests             |
+| `videos/`      | Video recordings (on failure by default) |
+| `traces/`      | Playwright traces for debugging          |
+| `logs/`        | Console log captures                     |
+| `ai-states/`   | Page state snapshots for AI analysis     |
+| `artifacts/`   | General test artifacts                   |
 
 ### AI Automation Features
 
@@ -1333,15 +1366,15 @@ The testing setup includes special utilities for AI-driven testing:
 
 ## Terminology
 
-| Term | Definition |
-|------|------------|
+| Term        | Definition                                         |
+| ----------- | -------------------------------------------------- |
 | **Account** | User's identity within Nostria (can have multiple) |
-| **User** | Any Nostr user (not necessarily the current user) |
-| **Feed** | Configured content stream with filters |
-| **Event** | A Nostr protocol event (note, article, etc.) |
-| **Zap** | Bitcoin Lightning payment via Nostr |
-| **Relay** | WebSocket server for Nostr events |
-| **Kind** | Nostr event type number |
+| **User**    | Any Nostr user (not necessarily the current user)  |
+| **Feed**    | Configured content stream with filters             |
+| **Event**   | A Nostr protocol event (note, article, etc.)       |
+| **Zap**     | Bitcoin Lightning payment via Nostr                |
+| **Relay**   | WebSocket server for Nostr events                  |
+| **Kind**    | Nostr event type number                            |
 
 ---
 
@@ -1355,4 +1388,4 @@ The testing setup includes special utilities for AI-driven testing:
 
 ---
 
-*This document is the authoritative source for Nostria's architecture. AI assistants and developers should reference this when making changes to the codebase.*
+_This document is the authoritative source for Nostria's architecture. AI assistants and developers should reference this when making changes to the codebase._

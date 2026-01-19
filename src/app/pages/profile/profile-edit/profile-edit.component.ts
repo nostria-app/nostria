@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -20,7 +21,6 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayService } from '../../../services/relays/account-relay';
-import { PanelActionsService } from '../../../services/panel-actions.service';
 
 interface ExternalIdentity {
   platform: string;
@@ -30,6 +30,7 @@ interface ExternalIdentity {
 
 @Component({
   selector: 'app-profile-edit',
+  host: { 'class': 'panel-with-sticky-header' },
   imports: [
     MatIconModule,
     MatButtonModule,
@@ -54,9 +55,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   accountRelay = inject(AccountRelayService);
   router = inject(Router);
   media = inject(MediaService);
+  private location = inject(Location);
   private snackBar = inject(MatSnackBar);
   private profileService = inject(Profile);
-  private panelActions = inject(PanelActionsService);
   profile = signal<ProfileData | null>(null);
   pubkey = '';
   loading = signal<boolean>(false);
@@ -96,9 +97,6 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Set the page title for the floating toolbar
-    this.panelActions.setPageTitle('Editing profile');
-
     const metadata = this.accountState.profile();
 
     // Keep a reference to the pubkey for the profile being edited, used for navigation and updates
@@ -146,6 +144,10 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     // Note: Profile component will handle setting the title back to "Profile"
     // via its router events subscription when navigating away from edit
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   cancelEdit() {

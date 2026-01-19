@@ -2483,27 +2483,32 @@ export class LayoutService implements OnDestroy {
         const lastScrollTop = this.mobileNavScrollState.get(target) ?? scrollTop;
         const scrollDelta = scrollTop - lastScrollTop;
 
-        // Update stored scroll position for this element
-        this.mobileNavScrollState.set(target, scrollTop);
-
         // Show nav when at top of page
         if (scrollTop <= 5) {
           if (this.mobileNavScrollHidden()) {
             this.ngZone.run(() => this.mobileNavScrollHidden.set(false));
           }
+          // Reset anchor point when at top
+          this.mobileNavScrollState.set(target, scrollTop);
         }
         // Hide when scrolling down past threshold
         else if (scrollDelta > this.scrollDirectionThreshold) {
           if (!this.mobileNavScrollHidden()) {
             this.ngZone.run(() => this.mobileNavScrollHidden.set(true));
           }
+          // Only update anchor when state changes or continuing in same direction
+          this.mobileNavScrollState.set(target, scrollTop);
         }
         // Show when scrolling up past threshold
         else if (scrollDelta < -this.scrollDirectionThreshold) {
           if (this.mobileNavScrollHidden()) {
             this.ngZone.run(() => this.mobileNavScrollHidden.set(false));
           }
+          // Only update anchor when state changes or continuing in same direction
+          this.mobileNavScrollState.set(target, scrollTop);
         }
+        // Don't update anchor for small movements - this allows delta to accumulate
+        // when changing scroll direction
       };
 
       // Use capturing phase to catch scroll events from all elements
