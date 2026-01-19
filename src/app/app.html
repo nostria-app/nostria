@@ -221,6 +221,14 @@
       <!-- Top toolbar - beside sidenav -->
       <mat-toolbar class="app-toolbar no-print no-select">
         
+        <!-- Collapse sidenav button (shown when sidenav is visible on desktop) -->
+        @if (opened() && !layout.isHandset()) {
+        <button mat-icon-button (click)="toggleSidenav()" aria-label="Collapse sidebar" class="collapse-sidenav-button"
+          i18n-matTooltip="@@app.toolbar.collapse-sidebar" matTooltip="Collapse sidebar">
+          <mat-icon>menu_open</mat-icon>
+        </button>
+        }
+        
         <!-- Left section: hamburger menu/avatar and app icon -->
         <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()">
           <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"

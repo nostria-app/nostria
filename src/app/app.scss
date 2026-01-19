@@ -95,6 +95,12 @@ nav {
   @include glass-section-dark;
 }
 
+// Collapse sidenav button (shown when sidenav is visible)
+.collapse-sidenav-button {
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
 // Left section - hamburger/avatar and app icon
 .toolbar-left {
   flex-shrink: 0;
