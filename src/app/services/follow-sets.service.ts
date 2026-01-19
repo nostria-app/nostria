@@ -93,17 +93,43 @@ export class FollowSetsService {
         // Ensure database is initialized before querying
         await this.database.init();
 
+        // Query for deletion events (kind 5) to filter out deleted follow sets
+        const deletionEvents = await this.dataService.getEventsByPubkeyAndKind(
+          pubkey,
+          5,
+          { cache: true, save: true }
+        );
+
+        // Build a set of deleted d-tags from deletion events
+        const deletedDTags = new Set<string>();
+        for (const record of deletionEvents) {
+          for (const tag of record.event.tags) {
+            // Check for 'a' tags that reference kind 30000 (follow sets)
+            if (tag[0] === 'a' && tag[1]) {
+              const parts = tag[1].split(':');
+              // Format: kind:pubkey:d-tag
+              if (parts[0] === '30000' && parts[1] === pubkey && parts[2]) {
+                deletedDTags.add(parts[2]);
+              }
+            }
+          }
+        }
+
+        if (deletedDTags.size > 0) {
+          this.logger.debug(`[FollowSets] Found ${deletedDTags.size} deleted follow sets:`, [...deletedDTags]);
+        }
+
         // First, try to load from database
         const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
 
         if (dbEvents.length > 0) {
-          // Parse database events and update UI immediately
+          // Parse database events and update UI immediately, filtering out deleted ones
           const dbSets = (await Promise.all(
             dbEvents.map(event => this.parseFollowSetEvent(event))
-          )).filter((set): set is FollowSet => set !== null);
+          )).filter((set): set is FollowSet => set !== null && !deletedDTags.has(set.dTag));
 
           this.followSets.set(dbSets);
-          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database`);
+          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database (after filtering deleted)`);
         }
 
         // Then fetch from relays to get any updates
@@ -116,13 +142,25 @@ export class FollowSetsService {
           }
         );
 
-        // Convert all events to FollowSet objects (no filtering)
+        // Convert all events to FollowSet objects, filtering out deleted ones
         const sets = (await Promise.all(
           events.map(record => this.parseFollowSetEvent(record.event))
-        )).filter((set): set is FollowSet => set !== null);
+        )).filter((set): set is FollowSet => set !== null && !deletedDTags.has(set.dTag));
 
         this.followSets.set(sets);
-        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets (including relay updates)`);
+        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets (after filtering deleted)`);
+
+        // Clean up deleted events from local database
+        for (const dTag of deletedDTags) {
+          const deletedEvent = dbEvents.find(e => {
+            const eventDTag = e.tags.find(t => t[0] === 'd')?.[1];
+            return eventDTag === dTag;
+          });
+          if (deletedEvent) {
+            await this.database.deleteEvent(deletedEvent.id);
+            this.logger.debug(`[FollowSets] Removed deleted follow set from database: ${dTag}`);
+          }
+        }
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');
@@ -381,21 +419,36 @@ export class FollowSetsService {
       return false;
     }
 
+    // Get the follow set to find its event ID
+    const followSet = this.getFollowSetByDTag(dTag);
+    if (!followSet) {
+      this.logger.warn(`[FollowSets] Follow set not found for deletion: ${dTag}`);
+      return false;
+    }
+
     try {
       // Create a deletion event (kind 5) - NIP-09
       // For addressable events (kind 30000), use 'a' tag with format: kind:pubkey:d-tag
+      // Include 'k' tag for the kind being deleted as per NIP-09
       const deletionEvent: UnsignedEvent = {
         kind: 5,
         pubkey: currentPubkey,
         created_at: Math.floor(Date.now() / 1000),
         content: 'Deleted follow set',
         tags: [
-          ['a', `30000:${currentPubkey}:${dTag}`]
+          ['a', `30000:${currentPubkey}:${dTag}`],
+          ['k', '30000']
         ],
       };
 
       // Sign and publish
       await this.publishService.signAndPublishAuto(deletionEvent, this.signFunction);
+
+      // Delete from local database to prevent it from coming back on reload
+      if (followSet.id) {
+        await this.database.deleteEvent(followSet.id);
+        this.logger.debug(`[FollowSets] Deleted event ${followSet.id} from local database`);
+      }
 
       // Remove from local state
       this.followSets.update(sets => sets.filter(set => set.dTag !== dTag));
