@@ -32,25 +32,22 @@
 
 .note-card {
   margin-bottom: 0.4rem;
-  // Solid card background similar to Facebook UI
-  background-color: var(--mat-sys-surface-container-low);
-  // border: none !important;
+  // Clean, plain background for readability - no colors on content
+  background-color: var(--mat-sys-surface);
   box-shadow: none !important;
   transition:
     background-color 0.2s ease-in-out,
     transform 0.2s ease-in-out;
 
   &.clickable:hover:not(.selected) {
-    background-color: var(--mat-sys-surface-container);
-    // transform: translateY(-1px);
+    background-color: var(--mat-sys-surface-container-lowest);
   }
 
   &.plain {
     border: none;
 
     &.clickable:hover:not(.selected) {
-      background-color: var(--mat-sys-surface-container);
-      // transform: translateY(-1px);
+      background-color: var(--mat-sys-surface-container-lowest);
     }
   }
 
@@ -320,7 +317,7 @@
   transition: background-color 0.2s ease-in-out;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container);
+    background-color: var(--mat-sys-surface-container-lowest);
   }
 
   mat-card-content {
@@ -340,7 +337,7 @@
         height: 2em;
         background: linear-gradient(to bottom,
             transparent,
-            var(--mat-sys-surface-container-low));
+            var(--mat-sys-surface));
         pointer-events: none;
       }
     }
@@ -365,7 +362,7 @@
   transition: background-color 0.2s ease-in-out;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container);
+    background-color: var(--mat-sys-surface-container-lowest);
   }
 
   mat-card-content {
@@ -385,7 +382,7 @@
         height: 2em;
         background: linear-gradient(to bottom,
             transparent,
-            var(--mat-sys-surface-container-low));
+            var(--mat-sys-surface));
         pointer-events: none;
       }
     }
@@ -530,14 +527,14 @@
     mat-card-content.collapsed::after {
       background: linear-gradient(to bottom,
           transparent,
-          var(--mat-sys-surface-container-low)) !important;
+          var(--mat-sys-surface)) !important;
     }
   }
 
   .main-content-wrapper.collapsed::after {
     background: linear-gradient(to bottom,
         transparent,
-        var(--mat-sys-surface-container-low)) !important;
+        var(--mat-sys-surface)) !important;
   }
 }
 
@@ -557,7 +554,7 @@
       height: 3em;
       background: linear-gradient(to bottom,
           transparent,
-          var(--mat-sys-surface-container-low));
+          var(--mat-sys-surface));
       pointer-events: none;
     }
   }

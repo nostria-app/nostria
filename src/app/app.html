@@ -1,6 +1,6 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()" [class.has-right-content]="hasRightContent()"
   [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
-  [style.background-color]="themeService.darkMode() ? '#18111b' : '#FEF7FA'">
+  [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">>
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">
@@ -18,12 +18,12 @@
   }
   @if (!app.initialized()) {
   <!-- Loading state while services initialize - inline styles ensure visibility before CSS loads -->
-  <div class="app-initializing" [style.background-color]="themeService.darkMode() ? '#18111b' : '#FEF7FA'">
+  <div class="app-initializing" [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">
     <div class="initializing-content">
       <div class="initializing-spinner"
-        [style.border-color]="themeService.darkMode() ? 'rgba(197, 192, 255, 0.2)' : 'rgba(89, 83, 169, 0.2)'"
-        [style.border-top-color]="themeService.darkMode() ? '#c5c0ff' : '#5953a9'"></div>
-      <div class="initializing-text" [style.color]="themeService.darkMode() ? '#ecdeed' : '#201923'"
+        [style.border-color]="themeService.darkMode() ? 'rgba(255, 185, 97, 0.2)' : 'rgba(253, 161, 0, 0.2)'"
+        [style.border-top-color]="themeService.darkMode() ? '#ffb961' : '#FDA100'"></div>
+      <div class="initializing-text" [style.color]="themeService.darkMode() ? '#e4e4e4' : '#1a1a1a'"
         i18n="@@app.loading">Loading Nostria...</div>
     </div>
   </div>

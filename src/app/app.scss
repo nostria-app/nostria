@@ -46,11 +46,11 @@ nav {
   justify-content: space-between;
   gap: 16px;
 
-  // Glass effect background for the entire toolbar
-  background-color: rgba(255, 255, 255, 0.85);
+  // Glass effect background - clean, neutral white
+  background-color: rgba(250, 250, 250, 0.85);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
   // Enable pointer events on toolbar
   pointer-events: auto;
@@ -64,8 +64,8 @@ nav {
 
 // Dark mode toolbar
 :host-context(.dark) .app-toolbar {
-  background-color: rgba(24, 17, 27, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(18, 18, 18, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 // Glass section mixin for toolbar sections
@@ -288,8 +288,8 @@ nav {
 
 // Dark mode - glass toolbar background maintained
 :host-context(.dark) .app-toolbar {
-  background-color: rgba(24, 17, 27, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(18, 18, 18, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .premium-label {
@@ -344,8 +344,8 @@ mat-sidenav-content {
   height: calc(100% - var(--toolbar-height, 64px)) !important;
   box-sizing: border-box;
 
-  // Glass effect
-  background-color: rgba(255, 255, 255, 0.7) !important;
+  // Glass effect - clean neutral
+  background-color: rgba(250, 250, 250, 0.85) !important;
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
@@ -368,7 +368,7 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .sidenav {
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: rgba(18, 18, 18, 0.85) !important;
 }
 
 // Menu profile button in toolbar (replaces hamburger)
@@ -1113,8 +1113,8 @@ mat-sidenav-content {
   padding: 0 16px;
   flex-shrink: 0;
 
-  // Glass effect - light mode
-  background-color: rgba(255, 255, 255, 0.92);
+  // Glass effect - clean neutral
+  background-color: rgba(250, 250, 250, 0.92);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
@@ -1154,8 +1154,8 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .panel-header {
-  background-color: rgba(24, 17, 27, 0.92);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
   &.transparent {
     background-color: transparent;
@@ -1240,18 +1240,16 @@ mat-sidenav-content {
 
   border-radius: 28px;
 
-  // Glass effect
-  background-color: rgba(255, 255, 255, 0.7);
+  // Glass effect - clean neutral
+  background-color: rgba(255, 255, 255, 0.85);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
   border: none;
 
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.2),
-    0px 4px 16px rgba(17, 17, 26, 0.1),
-    0px 8px 24px rgba(17, 17, 26, 0.1);
+    0px 4px 16px rgba(0, 0, 0, 0.08),
+    0px 8px 24px rgba(0, 0, 0, 0.08);
 
   /* Smooth transition for hide/show on scroll */
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1276,13 +1274,11 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-nav {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(26, 26, 26, 0.9);
 
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
-    0px 4px 16px rgba(0, 0, 0, 0.4),
-    0px 8px 24px rgba(0, 0, 0, 0.4);
+    0px 4px 16px rgba(0, 0, 0, 0.3),
+    0px 8px 24px rgba(0, 0, 0, 0.3);
 
   a,
   button {
