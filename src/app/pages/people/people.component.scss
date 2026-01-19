@@ -88,9 +88,14 @@
 
     .follow-set-selector {
       background-color: var(--mat-sys-surface-container);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
 
       .dropdown-icon {
         margin-left: 4px;
+        flex-shrink: 0;
       }
     }
 

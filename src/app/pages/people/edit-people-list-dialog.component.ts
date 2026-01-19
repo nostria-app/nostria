@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
@@ -11,6 +11,7 @@ import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
 import { SettingsService } from '../../services/settings.service';
 import { ImageCacheService } from '../../services/image-cache.service';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 
 export interface EditPeopleListDialogData {
   followSet: FollowSet;
@@ -19,6 +20,7 @@ export interface EditPeopleListDialogData {
 export interface EditPeopleListDialogResult {
   followSet: FollowSet;
   removedPubkeys: string[];
+  deleted?: boolean;
 }
 
 @Component({
@@ -86,6 +88,11 @@ export interface EditPeopleListDialogResult {
       </div>
 
       <div class="dialog-actions">
+        <button mat-button class="delete-button" (click)="deleteList()">
+          <mat-icon>delete</mat-icon>
+          Delete List
+        </button>
+        <span class="spacer"></span>
         <button mat-button (click)="cancel()">Cancel</button>
         <button mat-flat-button color="primary" (click)="save()" [disabled]="!hasChanges()">
           Save Changes
@@ -100,6 +107,7 @@ export interface EditPeopleListDialogResult {
       max-height: 80vh;
       width: 500px;
       max-width: 90vw;
+      overflow: hidden;
     }
 
     .dialog-header {
@@ -108,16 +116,22 @@ export interface EditPeopleListDialogResult {
       justify-content: space-between;
       padding: 16px 24px;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
+      min-width: 0;
     }
 
     .dialog-title {
       margin: 0;
       font-size: 20px;
-      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      flex: 1;
     }
 
     .close-button {
       margin-right: -12px;
+      flex-shrink: 0;
     }
 
     .dialog-content {
@@ -237,10 +251,22 @@ export interface EditPeopleListDialogResult {
 
     .dialog-actions {
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
       gap: 8px;
       padding: 16px 24px;
       border-top: 1px solid var(--mat-sys-outline-variant);
+
+      .delete-button {
+        color: var(--mat-sys-error);
+        
+        mat-icon {
+          margin-right: 4px;
+        }
+      }
+
+      .spacer {
+        flex: 1;
+      }
     }
   `]
 })
@@ -252,6 +278,7 @@ export class EditPeopleListDialogComponent {
   private readonly settings = inject(SettingsService);
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly dialogRef = inject(MatDialogRef<EditPeopleListDialogComponent>);
+  private readonly dialog = inject(MatDialog);
 
   // Injected data
   readonly data: EditPeopleListDialogData = inject(MAT_DIALOG_DATA);
@@ -324,6 +351,40 @@ export class EditPeopleListDialogComponent {
     } catch (error) {
       this.logger.error('Failed to save follow set changes:', error);
       this.notificationService.notify('Failed to save changes');
+    }
+  }
+
+  async deleteList(): Promise<void> {
+    const set = this.data.followSet;
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete List',
+      message: `Are you sure you want to delete "${set.title}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmColor: 'warn'
+    };
+
+    const confirmRef = this.dialog.open(ConfirmDialogComponent, {
+      data: dialogData,
+      width: '400px'
+    });
+
+    const confirmed = await confirmRef.afterClosed().toPromise();
+
+    if (confirmed) {
+      try {
+        const success = await this.followSetsService.deleteFollowSet(set.dTag);
+        if (success) {
+          this.notificationService.notify(`Deleted list "${set.title}"`);
+          this.dialogRef.close({ followSet: set, removedPubkeys: [], deleted: true });
+        } else {
+          this.notificationService.notify('Failed to delete list');
+        }
+      } catch (error) {
+        this.logger.error('Failed to delete follow set:', error);
+        this.notificationService.notify('Failed to delete list');
+      }
     }
   }
 

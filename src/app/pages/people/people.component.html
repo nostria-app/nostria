@@ -22,7 +22,7 @@
             <mat-divider></mat-divider>
             @for (set of allFollowSets(); track set.id) {
             <button mat-menu-item (click)="selectFollowSet(set)">
-              <mat-icon>{{ set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
+              <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
               <span>{{ set.title }}</span>
               <span class="set-count">({{ set.pubkeys.length }})</span>
             </button>

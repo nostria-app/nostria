@@ -476,7 +476,7 @@ export class App implements OnInit {
         const followSetChildren: NavItem[] = sortedFollowSets.map(set => ({
           path: `/people?set=${set.dTag}`,
           label: set.title,
-          icon: set.dTag === 'nostria-favorites' ? 'star' : 'group',
+          icon: set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group'),
           authenticated: false,
           followSetId: set.dTag,
         }));

@@ -742,10 +742,13 @@ export class PeopleComponent implements OnDestroy {
     const result: EditPeopleListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
 
     if (result) {
-      this.logger.info('List updated, removed pubkeys:', result.removedPubkeys);
-
-      // Reload the profiles for the updated follow set
-      if (result.removedPubkeys.length > 0) {
+      if (result.deleted) {
+        // List was deleted, clear selection and go back to "All Following"
+        this.logger.info('List deleted:', selectedSet.title);
+        this.selectFollowSet(null);
+      } else if (result.removedPubkeys.length > 0) {
+        this.logger.info('List updated, removed pubkeys:', result.removedPubkeys);
+        // Reload the profiles for the updated follow set
         await this.selectFollowSet(result.followSet);
       }
     }
