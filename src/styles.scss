@@ -29,6 +29,10 @@ html {
       typography: "Roboto",
       density: 0,
     ));
+
+  // Darker app background so content cards pop out more
+  --mat-app-background-color: #efefef;
+  --mat-sidenav-content-background-color: #efefef;
 }
 
 .dark {
@@ -45,6 +49,10 @@ html {
         primary: nostria-theme.$primary-palette,
       ),
     ));
+
+  // Darker app background so content cards pop out more
+  --mat-app-background-color: #0a0a0a;
+  --mat-sidenav-content-background-color: #0a0a0a;
 }
 
 // Global styles
