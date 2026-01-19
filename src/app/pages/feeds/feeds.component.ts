@@ -730,17 +730,14 @@ export class FeedsComponent implements OnDestroy {
     const checkScrollPosition = () => {
       const now = Date.now();
 
-      const scrollTop = contentWrapper.scrollTop;
-      const scrollHeight = contentWrapper.scrollHeight;
-      const clientHeight = contentWrapper.clientHeight;
-
-      // Show scroll-to-top button when scrolled down past 500px
-      this.showScrollToTop.set(scrollTop > 500);
-
       // Check cooldown for load more
       if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
         return;
       }
+
+      const scrollTop = contentWrapper.scrollTop;
+      const scrollHeight = contentWrapper.scrollHeight;
+      const clientHeight = contentWrapper.clientHeight;
 
       // Trigger when within 500px of bottom
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);

@@ -65,7 +65,7 @@ import { MatIconModule } from '@angular/material/icon';
 
     .volume-gesture-fill {
       height: 100%;
-      background: var(--mat-sys-primary, #c5c0ff);
+      background: var(--mat-sys-primary, #FDA100);
       border-radius: 4px;
       transition: width 0.05s ease-out;
     }
