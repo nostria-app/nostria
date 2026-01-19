@@ -150,6 +150,26 @@
       }
 
       <mat-nav-list>
+        <!-- Profile icon when sidenav is minimized -->
+        @if (!displayLabels()) {
+        <a mat-list-item [routerLink]="app.authenticated() ? accountState.profilePath() : undefined"
+          (click)="!app.authenticated() ? addAccount() : closeSidenavOnMobile()" class="nav-item profile-nav-item"
+          [matTooltip]="app.authenticated() ? 'My Profile' : 'Login'" matTooltipPosition="right"
+          i18n-matTooltip="@@app.profile.my-profile">
+          @if (accountState.profile()?.data?.picture) {
+          @if (settings.settings().imageCacheEnabled) {
+          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" matListItemIcon
+            class="sidenav-minimized-avatar" alt="Profile" />
+          } @else {
+          <img [src]="accountState.profile()?.data?.picture" matListItemIcon class="sidenav-minimized-avatar"
+            alt="Profile" />
+          }
+          } @else {
+          <mat-icon matListItemIcon>{{ app.authenticated() ? 'account_circle' : 'account_circle_off' }}</mat-icon>
+          }
+        </a>
+        }
+
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"

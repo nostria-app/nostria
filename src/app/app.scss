@@ -1439,6 +1439,16 @@ mat-sidenav-content {
   position: relative;
 }
 
+// Profile navigation item when sidenav is minimized
+.profile-nav-item {
+  .sidenav-minimized-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
 .expandable-nav-item {
   .nav-label {
     padding-right: 40px; // Make room for expand button
