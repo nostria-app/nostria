@@ -334,16 +334,27 @@
 }
 
 .profile-outlet {
-  height: calc(100vh - 164px);
 
-  &.mobile {
-    height: calc(100vh - 200px);
+  // Only use fixed height for full-page profile view (not in right panel)
+  // The right panel container handles its own scrolling
+  :host:not(.in-right-panel) & {
+    height: calc(100vh - 164px);
 
-    // Adjust height for tiny screens when toolbar is more compact
-    // Account for margin-top (1rem = ~16px) by subtracting less
-    @media screen and (max-width: 420px) {
-      height: calc(100vh - 164px); // Adjusted to fit without causing overflow
+    &.mobile {
+      height: calc(100vh - 200px);
+
+      // Adjust height for tiny screens when toolbar is more compact
+      // Account for margin-top (1rem = ~16px) by subtracting less
+      @media screen and (max-width: 420px) {
+        height: calc(100vh - 164px); // Adjusted to fit without causing overflow
+      }
     }
+  }
+
+  // In right panel, let content flow naturally
+  :host(.in-right-panel) & {
+    height: auto;
+    min-height: 0;
   }
 }
 
