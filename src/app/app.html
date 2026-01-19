@@ -71,7 +71,7 @@
             }
             @if (accountState.hasActiveSubscription()) {
             <span class="sidenav-premium-badge" i18n="@@app.profile.premium"
-              [matTooltip]="accountState.expiresWhen() ? ('Premium expires: ' + (accountState.expiresWhen() | date:'medium')) : ''">Premium</span>
+              [matTooltip]="accountState.expiresWhen() ? ('Premium expires: ' + (accountState.expiresWhen() | date:'mediumDate')) : ''">Premium</span>
             }
           </div>
           @if (accountState.hasAccounts()) {
