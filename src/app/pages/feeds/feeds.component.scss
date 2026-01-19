@@ -88,38 +88,26 @@ app-user-profile {
     }
   }
 
-  // Header styles - fixed panel header at top
-  .header-section {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0; // Don't shrink header
-    min-height: 56px;
-
-    // Sticky position at top of panel (panel already accounts for toolbar offset)
+  // Panel header styles - matches right panel style
+  .panel-header {
     position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 56px;
+    padding: 0 12px;
+    flex-shrink: 0;
 
-    // Glass effect for translucent fixed header - clean neutral
-    background-color: rgba(250, 250, 250, 0.92);
+    // Glass effect - light mode
+    background-color: rgba(255, 255, 255, 0.92);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
     backdrop-filter: blur(20px) saturate(1.8);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-    // Reduce padding on smaller screens to match toolbar
-    @media (max-width: 1023px) {
-      padding: 8px;
-    }
-
-    // Hidden state class (applied via JS when scrolling down) - smooth transition
-    transition: opacity 0.3s ease,
-    transform 0.3s ease;
+    // Hidden state for scroll behavior
+    transition: opacity 0.3s ease, transform 0.3s ease;
 
     &.header-hidden {
       opacity: 0;
@@ -127,135 +115,59 @@ app-user-profile {
       pointer-events: none;
     }
 
-    .title-section {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 0.5rem;
+    .spacer {
       flex: 1;
-      // Prevent title section from growing beyond available space
+    }
+
+    .feed-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
       min-width: 0;
       overflow: hidden;
 
-      .feed-selector {
+      .feed-tabs-inner {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-        flex-wrap: nowrap;
-        width: 100%;
-        // Allow feed selector to shrink
-        min-width: 0;
-        overflow: hidden;
+        gap: 4px;
+        flex-shrink: 0;
+      }
 
-        .feed-tabs {
-          // Clean styling for feed tabs inside fixed header
-          display: flex;
-          align-items: center;
-          height: 40px;
-          padding: 0 4px;
-          border-radius: 20px;
-          gap: 4px;
-          // Allow tabs to shrink and track overflow
-          flex: 1;
-          min-width: 0;
-          overflow: hidden;
+      .feed-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 6px 12px;
+        border-radius: 16px;
 
-          // Light background for tab container
-          background-color: rgba(0, 0, 0, 0.04);
-
-          // Inner wrapper for feed tabs - used for overflow measurement
-          .feed-tabs-inner {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0; // Don't shrink - we measure this to detect overflow
-          }
-
-          // Collapse button
-          .collapse-button {
-            flex-shrink: 0;
-          }
-
-          .feed-tab {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            flex-shrink: 0; // Don't shrink - trigger dropdown instead
-            padding: 6px 12px;
-            border-radius: 16px;
-
-            mat-icon {
-              font-size: 1.1rem;
-              width: 1.1rem;
-              height: 1.1rem;
-            }
-
-            span {
-              font-size: 0.9rem;
-            }
-
-            &:hover:not(.active) {
-              background-color: rgba(0, 0, 0, 0.06);
-            }
-
-            &.active {
-              background-color: var(--mat-sys-primary-container);
-              color: var(--mat-sys-on-primary-container);
-
-              mat-icon {
-                color: var(--mat-sys-primary);
-              }
-            }
-
-            // Summary tab special styling
-            &.summary-tab {
-              mat-icon {
-                color: var(--mat-sys-tertiary);
-              }
-
-              &:hover {
-                background-color: var(--mat-sys-tertiary-container);
-                color: var(--mat-sys-on-tertiary-container);
-              }
-            }
-          }
-
-          // Spacer to push relay menu to the right
-          .toolbar-spacer {
-            flex: 1;
-          }
+        mat-icon {
+          font-size: 1.1rem;
+          width: 1.1rem;
+          height: 1.1rem;
         }
 
+        span {
+          font-size: 0.9rem;
+        }
 
+        &.active {
+          background-color: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
+
+          mat-icon {
+            color: var(--mat-sys-primary);
+          }
+        }
       }
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
   }
 
-  // Dark mode for header section - clean neutral dark
-  :host-context(.dark) & .header-section {
+  // Dark mode for panel header
+  :host-context(.dark) & .panel-header {
     background-color: rgba(18, 18, 18, 0.92);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-
-    .feed-tabs {
-      background-color: rgba(255, 255, 255, 0.06);
-
-      .feed-tab {
-        &:hover:not(.active) {
-          background-color: rgba(255, 255, 255, 0.08);
-        }
-      }
-    }
   }
 
   // Filters section
@@ -559,7 +471,7 @@ app-user-profile {
           .column-items {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            // gap: 12px;
             width: 100%;
 
             // Remove padding on mobile for edge-to-edge content
@@ -572,7 +484,8 @@ app-user-profile {
             // Content card with max width
             .content-card {
               width: 100%;
-              max-width: 680px;
+              // max-width: 680px;
+              padding: 0;
               margin: 0 auto;
               box-shadow: var(--mat-sys-level1);
 
