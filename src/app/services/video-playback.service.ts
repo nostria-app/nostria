@@ -26,7 +26,8 @@ export class VideoPlaybackService {
   private currentlyPlayingVideo = signal<HTMLVideoElement | null>(null);
   
   // Mute state signal - reactive for components to subscribe to
-  private _isMuted = signal(false);
+  // Default to true (muted) because browser autoplay requires muted videos
+  private _isMuted = signal(true);
   
   // Computed signal that components can read
   readonly isMuted = this._isMuted.asReadonly();
