@@ -2,7 +2,7 @@ import { Injectable, signal, computed, effect, untracked } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { UserRelayService } from './relays/user-relay';
-import { kinds } from 'nostr-tools';
+import { kinds, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
@@ -19,6 +19,14 @@ export class ProfileStateService {
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
+  // Track the timestamp of the contacts event to prevent older data from overwriting newer
+  private followingListTimestamp = signal<number>(0);
+
+  // Signal to store the current profile's relay list (kind 10002)
+  relayList = signal<string[]>([]);
+  // Track the timestamp of the relay list event
+  private relayListTimestamp = signal<number>(0);
+
   notes = signal<NostrRecord[]>([]);
   reposts = signal<NostrRecord[]>([]);
   replies = signal<NostrRecord[]>([]);
@@ -52,6 +60,10 @@ export class ProfileStateService {
   isInitiallyLoading = signal<boolean>(false);
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
+
+  // Signal to indicate when cached events have been loaded from database
+  // This allows UI components to wait for cached data before loading from relays
+  cachedEventsLoaded = signal<boolean>(false);
 
   // Track the oldest timestamp from relay-loaded events for pagination
   // This is separate from cached events to ensure proper infinite scroll
@@ -88,7 +100,26 @@ export class ProfileStateService {
 
       if (pubkey) {
         untracked(async () => {
+          // Set loading pubkey immediately to track this request
+          this.currentlyLoadingPubkey.set(pubkey);
+          this.isInitiallyLoading.set(true);
+          this.cachedEventsLoaded.set(false);
+
+          // FIRST: Load cached events from database for INSTANT display
+          // This is done before ensureRelaysForPubkey to give immediate UI feedback
+          await this.loadCachedEvents(pubkey);
+
+          // Mark cached events as loaded so UI components can proceed
+          // Even if cache was empty, we've checked and the UI can now show content or loading state
+          if (this.currentlyLoadingPubkey() === pubkey) {
+            this.cachedEventsLoaded.set(true);
+            this.logger.debug(`Cached events loaded for ${pubkey}, UI can now display content`);
+          }
+
+          // THEN: Ensure relays are available for this user
           await this.ensureRelaysForPubkey(pubkey);
+
+          // FINALLY: Load fresh data from relays (will update only if newer)
           await this.loadUserData(pubkey);
         });
       }
@@ -134,7 +165,11 @@ export class ProfileStateService {
     // Reset the loading tracker first to immediately invalidate any in-flight requests
     this.currentlyLoadingPubkey.set('');
     this.isInitiallyLoading.set(false);
+    this.cachedEventsLoaded.set(false);
     this.followingList.set([]);
+    this.followingListTimestamp.set(0);
+    this.relayList.set([]);
+    this.relayListTimestamp.set(0);
     this.notes.set([]);
     this.reposts.set([]);
     this.replies.set([]);
@@ -440,10 +475,27 @@ export class ProfileStateService {
           });
         } else if (event.kind === kinds.Contacts) {
           // Load cached contacts/following list for initial display.
-          // Only set if following list is empty - fresh data from relays will update it later.
-          const followingList = this.utilities.getPTagsValuesFromEvent(event);
-          if (followingList.length > 0 && this.followingList().length === 0) {
-            this.followingList.set(followingList);
+          // Only set if this is newer than what we already have (based on event timestamp)
+          const currentTimestamp = this.followingListTimestamp();
+          if (event.created_at > currentTimestamp) {
+            const followingList = this.utilities.getPTagsValuesFromEvent(event);
+            if (followingList.length > 0) {
+              this.followingList.set(followingList);
+              this.followingListTimestamp.set(event.created_at);
+              this.logger.debug(`Loaded cached following list with ${followingList.length} entries (timestamp: ${event.created_at})`);
+            }
+          }
+        } else if (event.kind === kinds.RelayList) {
+          // Load cached relay list (kind 10002) for initial display
+          // Only set if this is newer than what we already have
+          const currentTimestamp = this.relayListTimestamp();
+          if (event.created_at > currentTimestamp) {
+            const relayUrls = this.utilities.getRelayUrls(event);
+            if (relayUrls.length > 0) {
+              this.relayList.set(relayUrls);
+              this.relayListTimestamp.set(event.created_at);
+              this.logger.debug(`Loaded cached relay list with ${relayUrls.length} relays (timestamp: ${event.created_at})`);
+            }
           }
         }
       }
@@ -455,25 +507,42 @@ export class ProfileStateService {
     }
   }
 
+  /**
+   * Cache events to database for future quick loading.
+   * This runs in the background and doesn't block the UI.
+   * 
+   * @param events - Array of events to cache
+   */
+  private async cacheEventsToDatabase(events: Event[]): Promise<void> {
+    if (!events || events.length === 0) {
+      return;
+    }
+
+    try {
+      // Save all events in a batch operation
+      await this.database.saveEvents(events);
+      this.logger.debug(`Cached ${events.length} events to database`);
+    } catch (error) {
+      this.logger.error('Error caching events to database:', error);
+      // Don't throw - caching failure shouldn't affect the user experience
+    }
+  }
+
   async loadUserData(pubkey: string) {
-    // Set the currently loading pubkey to track this request
-    this.currentlyLoadingPubkey.set(pubkey);
-    this.isInitiallyLoading.set(true);
-    this.logger.info(`Starting to load profile data for: ${pubkey}`);
+    // Note: currentlyLoadingPubkey, isInitiallyLoading, and loadCachedEvents 
+    // are now handled in the constructor effect for faster initial display
+    this.logger.info(`Loading fresh profile data from relays for: ${pubkey}`);
 
-    // First, load cached events from database for immediate display
-    await this.loadCachedEvents(pubkey);
-
-    // Check if profile was switched during cache loading
+    // Check if profile was switched before we start
     if (this.currentlyLoadingPubkey() !== pubkey) {
-      this.logger.info(`Profile switched during cache load. Stopping for: ${pubkey}`);
+      this.logger.info(`Profile switched before loadUserData. Stopping for: ${pubkey}`);
       this.isInitiallyLoading.set(false);
       return;
     }
 
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     // Try user-specific relays first
-    const event = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     // Check if we're still loading this profile (user didn't switch to another profile)
     if (this.currentlyLoadingPubkey() !== pubkey) {
@@ -489,9 +558,48 @@ export class ProfileStateService {
       return;
     }
 
-    if (event && event.kind === kinds.Contacts) {
-      const followingList = this.utilities.getPTagsValuesFromEvent(event);
-      this.followingList.set(followingList);
+    if (contactsEvent && contactsEvent.kind === kinds.Contacts) {
+      // Only update if the relay event is newer than what we have from cache
+      const currentTimestamp = this.followingListTimestamp();
+      if (contactsEvent.created_at > currentTimestamp) {
+        const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
+        this.followingList.set(followingList);
+        this.followingListTimestamp.set(contactsEvent.created_at);
+        this.logger.debug(`Updated following list from relay with ${followingList.length} entries (timestamp: ${contactsEvent.created_at})`);
+        // Save to database for future caching
+        this.database.saveReplaceableEvent(contactsEvent).catch(err => {
+          this.logger.error('Failed to cache contacts event:', err);
+        });
+      } else {
+        this.logger.debug(`Skipping relay following list - cached data is newer or same (cached: ${currentTimestamp}, relay: ${contactsEvent.created_at})`);
+      }
+    }
+
+    // Also fetch relay list (kind 10002) for display in profile
+    const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+    // Check if we're still loading this profile
+    if (this.currentlyLoadingPubkey() !== pubkey || this.pubkey() !== pubkey) {
+      this.logger.info(`Profile switched during relay list load. Stopping for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
+      return;
+    }
+
+    if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
+      // Only update if the relay event is newer than what we have from cache
+      const currentTimestamp = this.relayListTimestamp();
+      if (relayListEvent.created_at > currentTimestamp) {
+        const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+        this.relayList.set(relayUrls);
+        this.relayListTimestamp.set(relayListEvent.created_at);
+        this.logger.debug(`Updated relay list from relay with ${relayUrls.length} relays (timestamp: ${relayListEvent.created_at})`);
+        // Save to database for future caching
+        this.database.saveReplaceableEvent(relayListEvent).catch(err => {
+          this.logger.error('Failed to cache relay list event:', err);
+        });
+      } else {
+        this.logger.debug(`Skipping relay list update - cached data is newer or same (cached: ${currentTimestamp}, relay: ${relayListEvent.created_at})`);
+      }
     }
 
     // Also try to get contacts from global/discovery relays as fallback
@@ -529,10 +637,22 @@ export class ProfileStateService {
           }
 
           if (contactsEvents && contactsEvents.length > 0) {
-            const contactsEvent = contactsEvents[0]; // Get the most recent one
-            const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
-            console.log('Following list found via discovery search:', followingList);
-            this.followingList.set(followingList);
+            // Find the most recent contacts event
+            const newestContactsEvent = contactsEvents.reduce((newest, current) =>
+              current.created_at > newest.created_at ? current : newest
+            );
+            // Only update if newer than what we have
+            const currentTimestamp = this.followingListTimestamp();
+            if (newestContactsEvent.created_at > currentTimestamp) {
+              const followingList = this.utilities.getPTagsValuesFromEvent(newestContactsEvent);
+              console.log('Following list found via discovery search:', followingList);
+              this.followingList.set(followingList);
+              this.followingListTimestamp.set(newestContactsEvent.created_at);
+              // Save to database for future caching
+              this.database.saveReplaceableEvent(newestContactsEvent).catch(err => {
+                this.logger.error('Failed to cache fallback contacts event:', err);
+              });
+            }
           }
         } catch (error) {
           console.log('Fallback contacts search failed:', error);
@@ -694,6 +814,11 @@ export class ProfileStateService {
         this.oldestRelayTimestamp.set(oldestFromRelay);
         this.logger.debug(`Initial load oldest timestamp from relay: ${oldestFromRelay}`);
       }
+
+      // Save events to database for future caching (do this in background)
+      this.cacheEventsToDatabase(events).catch(err => {
+        this.logger.error('Failed to cache timeline events:', err);
+      });
     }
 
     // Load additional media items separately to ensure we have enough for the media tab
@@ -1089,6 +1214,11 @@ export class ProfileStateService {
         } else {
           this.logger.debug(`Batch oldest ${oldestFromBatch} is not older than current ${currentOldest}, keeping current`);
         }
+
+        // Cache new events to database for future quick loading (in background)
+        this.cacheEventsToDatabase(events).catch(err => {
+          this.logger.error('Failed to cache loadMoreNotes events:', err);
+        });
       }
 
       // Determine if there are more notes to load

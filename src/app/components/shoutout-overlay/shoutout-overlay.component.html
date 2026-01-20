@@ -16,6 +16,10 @@
     <div class="overlay-header">
       <h3>Shoutouts</h3>
       <div class="overlay-actions">
+        <button mat-icon-button (click)="toggleInfoCard(); $event.stopPropagation()" type="button"
+          [matTooltip]="showInfoCard() ? 'Hide info' : 'About shoutouts'" aria-label="About shoutouts">
+          <mat-icon>{{ showInfoCard() ? 'info' : 'info_outline' }}</mat-icon>
+        </button>
         <button mat-icon-button (click)="refresh(); $event.stopPropagation()" type="button" matTooltip="Refresh"
           aria-label="Refresh">
           <mat-icon>refresh</mat-icon>
@@ -26,6 +30,23 @@
         </button>
       </div>
     </div>
+
+    <!-- Info card -->
+    @if (showInfoCard()) {
+    <div class="info-card">
+      <mat-icon>info</mat-icon>
+      <div class="info-content">
+        <strong>About Shoutouts</strong>
+        <p>
+          Shoutouts are public messages sent directly to specific users. While anyone can read them,
+          they are addressed to the recipients you choose.
+        </p>
+        <p>
+          Shoutouts automatically disappear after <strong>24 hours</strong>, so they won't clutter your feed forever.
+        </p>
+      </div>
+    </div>
+    }
 
     <!-- Filter toggle -->
     <div class="filter-section">

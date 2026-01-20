@@ -14,7 +14,6 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
-import { UserRelayService } from '../../../services/relays/user-relay';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 
 @Component({
@@ -57,7 +56,6 @@ export class ProfileRelaysComponent {
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
-  private userRelayService = inject(UserRelayService);
   private relaysService = inject(RelaysService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
@@ -101,10 +99,14 @@ export class ProfileRelaysComponent {
     // this.scrollToTop();
   }
 
+  /**
+   * Get user relays using the profileState signal.
+   * This provides instant display from cache, with smart updates when relay data is newer.
+   */
   getUserRelays(): string[] {
-    const pubkey = this.profileState.pubkey();
-    if (!pubkey) return [];
-    return this.userRelayService.getRelaysForPubkey(pubkey) || [];
+    // Use the profileState.relayList() signal which is pre-loaded from cache
+    // and smartly updated from relays only when newer data is available
+    return this.profileState.relayList();
   }
 
   toggleRelayDetails(url: string): void {

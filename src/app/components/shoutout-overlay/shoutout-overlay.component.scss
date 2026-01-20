@@ -185,6 +185,57 @@
   }
 }
 
+.info-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  animation: fadeIn 0.2s ease-out;
+
+  :host-context(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  > mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+  }
+
+  .info-content {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    p {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface-variant);
+      line-height: 1.4;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      strong {
+        display: inline;
+        margin-bottom: 0;
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
+}
+
 .new-shoutout-section {
   display: flex;
   flex-direction: column;
