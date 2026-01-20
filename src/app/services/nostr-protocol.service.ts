@@ -223,7 +223,9 @@ export class NostrProtocolService {
             throw new Error('Invalid nprofile data: missing pubkey');
           }
 
-          await this.router.navigate([{ outlets: { right: ['p', data.pubkey] } }]);
+          // Convert hex pubkey to npub for URL consistency
+          const npub = nip19.npubEncode(data.pubkey);
+          await this.router.navigate([{ outlets: { right: ['p', npub] } }]);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page from nprofile');
           break;
 

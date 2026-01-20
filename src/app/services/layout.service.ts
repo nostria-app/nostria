@@ -1075,8 +1075,10 @@ export class LayoutService implements OnDestroy {
   }
 
   openProfile(pubkey: string): void {
+    // Always use npub in URLs for consistency and bookmarkability
+    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     // Profile always opens in the right panel using named outlet routing
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
