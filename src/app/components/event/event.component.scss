@@ -1,6 +1,8 @@
 :host {
   display: flex;
   justify-content: center;
+  width: 100%;
+  min-width: 0; // Allow shrinking in flex layouts
 }
 
 .loading-container {
@@ -35,6 +37,8 @@
   // Use lightest surface for content cards - maximum readability in both light and dark mode
   background-color: var(--mat-sys-surface-container-lowest);
   box-shadow: none !important;
+  min-width: 0; // Allow shrinking in flex layouts
+  width: 100%; // Ensure card fills the container
 
   &.plain {
     border: none;

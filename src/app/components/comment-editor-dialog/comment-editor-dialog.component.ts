@@ -72,8 +72,8 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    // Check for Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    // Check for Ctrl+Enter (Windows/Linux) or Option+Enter (Mac)
+    if (event.key === 'Enter' && (event.ctrlKey || event.altKey)) {
       event.preventDefault();
       this.onPublish();
     }

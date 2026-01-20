@@ -77,7 +77,7 @@
     <!-- Video wrapper for proper play button positioning -->
     <div class="video-wrapper">
       <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
-        [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
+        [loop]="shouldRepeat()" [muted]="shouldBeMuted()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
         (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()"
         (canplay)="onVideoCanPlay()" (click)="togglePlayPause()" (dblclick)="onVideoDoubleClick($event)">
         <source [src]="videoInfo.url" [type]="videoMimeType()" />

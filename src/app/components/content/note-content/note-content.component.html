@@ -148,10 +148,12 @@
 @let videoAspect = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
   [class.has-aspect-ratio]="videoAspect" [style.aspect-ratio]="videoAspect"
+  [class.has-placeholder]="videoPlaceholder"
+  [class.no-placeholder]="!videoPlaceholder"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.video-ready]="isVideoReady(token.content)" [class.needs-rotation]="needsRotationCorrection(token)">
-  <!-- Placeholder with fade transition -->
+  <!-- Placeholder with fade transition - only render if placeholder exists -->
   @if (videoPlaceholder) {
   <img [src]="videoPlaceholder" class="video-placeholder-bg" [class.fade-out]="isVideoReady(token.content)" alt=""
     aria-hidden="true" />

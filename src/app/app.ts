@@ -1543,13 +1543,13 @@ export class App implements OnInit {
       this.openCommandPalette();
     }
 
-    // Alt+V (Windows/Linux) or Cmd+V (Mac) to open command palette in listening mode (voice command)
+    // Alt+V (Windows/Linux) or Option+V (Mac) to open command palette in listening mode (voice command)
     if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'v') {
       event.preventDefault();
       this.openCommandPalette(true);
     }
 
-    // Alt+P (Windows/Linux) or Cmd+P (Mac) to show keyboard shortcuts dialog
+    // Alt+P (Windows/Linux) or Option+P (Mac) to show keyboard shortcuts dialog
     if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'p') {
       event.preventDefault();
       this.openShortcutsDialog();

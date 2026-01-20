@@ -278,6 +278,8 @@ app-user-profile {
       gap: 12px;
       // padding: 12px;
       min-height: 0; // Allow flex items to shrink below content size
+      min-width: 0; // Allow shrinking in flex layouts
+      width: 100%; // Ensure it fills the container
 
       // When in global feeds panel, remove top padding so content goes to top
       :host-context(.global-feeds-panel) & {
@@ -310,12 +312,12 @@ app-user-profile {
         flex-direction: column;
         width: 700px;
         max-width: 700px;
-        min-width: 300px; // Allow shrinking for responsive behavior
+        min-width: 0; // Allow shrinking in flex layouts
         flex: 1 1 700px; // Can grow and shrink from 700px base
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
-        overflow: visible; // Content flows in parent scroll container
+        overflow: hidden; // Clip content at card boundary
         position: relative;
 
         // Floating new posts button - sticky at column-unit level
@@ -378,8 +380,9 @@ app-user-profile {
           box-shadow: none;
           width: 100%;
           max-width: 100%;
-          min-width: 100%;
+          min-width: 0; // Allow shrinking
           flex: 1;
+          overflow: hidden; // Ensure content is clipped
         }
 
         // Set a preferred width but allow shrinking when necessary
@@ -419,6 +422,7 @@ app-user-profile {
           overflow-y: visible; // Content flows in parent scroll container
           overflow-x: hidden;
           position: relative;
+          min-width: 0; // Allow shrinking in flex layouts
           // Content starts below the fixed header (header is ~56px)
           // No extra padding needed as content naturally flows below sticky header
 
@@ -473,6 +477,8 @@ app-user-profile {
             flex-direction: column;
             // gap: 12px;
             width: 100%;
+            min-width: 0; // Allow shrinking in flex layouts
+            overflow-x: hidden; // Prevent horizontal overflow
 
             // Remove padding on mobile for edge-to-edge content
             @media (max-width: 599px) {

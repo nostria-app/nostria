@@ -8,7 +8,7 @@
         <textarea #contentTextarea matInput [(ngModel)]="content"
           placeholder="Write your comment... (plaintext only, no formatting)" rows="6" [disabled]="isPublishing()"
           (keydown)="onKeydown($event)"></textarea>
-        <mat-hint>Press Ctrl+Enter (Cmd+Enter on Mac) to publish</mat-hint>
+        <mat-hint>Press Ctrl+Enter (Option+Enter on Mac) to publish</mat-hint>
       </mat-form-field>
 
       <div class="actions-row">

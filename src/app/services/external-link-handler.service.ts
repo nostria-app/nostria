@@ -96,8 +96,8 @@ export class ExternalLinkHandlerService {
    * Returns true if handled internally, false if should open externally
    */
   handleLinkClick(url: string, event?: MouseEvent): boolean {
-    // If Ctrl/Cmd/Shift key is pressed, always open in new tab (browser default behavior)
-    if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+    // If Ctrl/Alt/Shift key is pressed, always open in new tab (browser default behavior)
+    if (event && (event.ctrlKey || event.altKey || event.shiftKey)) {
       return false;
     }
 

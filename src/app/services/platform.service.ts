@@ -39,29 +39,24 @@ export class PlatformService {
 
   /**
    * Check if a keyboard event uses the correct modifier key for the platform
-   * - On Mac: Cmd (Meta) key
+   * - On Mac: Alt/Option key (changed from Cmd to avoid conflict with macOS command center)
    * - On Windows/Linux: Alt key
    * 
    * @param event - The keyboard event
    * @returns true if the correct platform modifier key is pressed
    */
   hasModifierKey(event: KeyboardEvent): boolean {
-    if (this.isMac()) {
-      // On Mac, use Cmd (metaKey)
-      return event.metaKey && !event.ctrlKey;
-    } else {
-      // On Windows/Linux, use Alt
-      return event.altKey && !event.metaKey;
-    }
+    // All platforms now use Alt/Option key
+    return event.altKey && !event.metaKey && !event.ctrlKey;
   }
 
   /**
    * Get the display name for the modifier key used on this platform
-   * @returns The modifier key display name (e.g., "Cmd", "Alt", "⌘")
+   * @returns The modifier key display name (e.g., "Alt", "Option", "⌥")
    */
   getModifierKeyDisplay(useSymbol = false): string {
     if (this.isMac()) {
-      return useSymbol ? '⌘' : 'Cmd';
+      return useSymbol ? '⌥' : 'Option';
     } else {
       return 'Alt';
     }
@@ -70,8 +65,8 @@ export class PlatformService {
   /**
    * Format a keyboard shortcut for display based on platform
    * @param key - The key (e.g., "C", "S", "N")
-   * @param useSymbol - Whether to use symbol (⌘) or text (Cmd) for Mac
-   * @returns Formatted shortcut string (e.g., "⌘+C" or "Alt+C")
+   * @param useSymbol - Whether to use symbol (⌥) or text (Option/Alt) for modifier
+   * @returns Formatted shortcut string (e.g., "⌥+C" or "Alt+C")
    */
   formatShortcut(key: string, useSymbol = false): string {
     const modifier = this.getModifierKeyDisplay(useSymbol);

@@ -9,12 +9,17 @@ import {
   ElementRef,
   ChangeDetectionStrategy,
   OnDestroy,
+  AfterViewInit,
+  inject,
+  PLATFORM_ID,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { VideoPlaybackService } from '../../services/video-playback.service';
 
 @Component({
   selector: 'app-inline-video-player',
@@ -33,7 +38,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     '[class.fullscreen]': 'isFullscreen()',
   },
 })
-export class InlineVideoPlayerComponent implements OnDestroy {
+export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly hostElement = inject(ElementRef);
+  private readonly videoPlayback = inject(VideoPlaybackService);
   // Inputs
   src = input.required<string>();
   poster = input<string>();
@@ -67,8 +75,16 @@ export class InlineVideoPlayerComponent implements OnDestroy {
   volumeSliderVisible = signal(false);
   isReady = signal(false);
 
+  // Computed mute state - uses persisted state from service, falls back to input
+  shouldBeMuted = computed(() => {
+    // Always prefer the persisted mute state from the service
+    return this.videoPlayback.isMuted();
+  });
+
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private videoEventCleanup: (() => void) | null = null;
+  private intersectionObserver?: IntersectionObserver;
+  private isInViewport = signal(true);
 
   // Progress calculations
   progressPercent = computed(() => {
@@ -105,11 +121,56 @@ export class InlineVideoPlayerComponent implements OnDestroy {
         this.attachVideoListeners(this.videoElement.nativeElement);
       }
     });
+
+    // Auto-pause when scrolled out of viewport
+    effect(() => {
+      const inViewport = this.isInViewport();
+      const video = this.videoElement?.nativeElement;
+      
+      if (!inViewport && video && !video.paused) {
+        video.pause();
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    // Set up IntersectionObserver to detect when video enters/leaves viewport
+    if (isPlatformBrowser(this.platformId) && typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            // Consider video in viewport if at least 30% is visible
+            const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.3;
+            this.isInViewport.set(isVisible);
+          });
+        },
+        {
+          threshold: [0, 0.3, 0.5, 1],
+          rootMargin: '0px',
+        }
+      );
+
+      // Observe the component's host element
+      if (this.hostElement?.nativeElement) {
+        this.intersectionObserver.observe(this.hostElement.nativeElement);
+      }
+    }
   }
 
   ngOnDestroy(): void {
     this.cleanupVideoListeners();
     this.clearAutoHideTimer();
+    
+    // Clean up IntersectionObserver
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+    }
+    
+    // Unregister from video playback service
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      this.videoPlayback.unregisterPlaying(video);
+    }
   }
 
   onVideoElementReady(): void {
@@ -123,10 +184,14 @@ export class InlineVideoPlayerComponent implements OnDestroy {
       this.paused.set(false);
       this.hasPlayedOnce.set(true); // Mark that video has been played
       this.videoPlay.emit();
+      // Register with playback service to pause other videos
+      this.videoPlayback.registerPlaying(video);
     };
     const onPause = () => {
       this.paused.set(true);
       this.videoPause.emit();
+      // Unregister from playback service
+      this.videoPlayback.unregisterPlaying(video);
     };
     const onEnded = () => this.videoEnded.emit();
     const onTimeUpdate = () => {
@@ -144,9 +209,13 @@ export class InlineVideoPlayerComponent implements OnDestroy {
     const onLoadedMetadata = (e: Event) => {
       this.duration.set(video.duration || 0);
       this.volume.set(video.volume);
-      this.isMuted.set(video.muted);
       this.playbackRate.set(video.playbackRate);
       this.videoLoadedMetadata.emit(e);
+      
+      // Apply persisted mute state when video loads
+      const persistedMuted = this.videoPlayback.getMutedState();
+      video.muted = persistedMuted;
+      this.isMuted.set(persistedMuted);
     };
     const onCanPlay = () => {
       this.isReady.set(true);
@@ -242,7 +311,10 @@ export class InlineVideoPlayerComponent implements OnDestroy {
   toggleMute(): void {
     const video = this.videoElement?.nativeElement;
     if (video) {
-      video.muted = !video.muted;
+      const newMutedState = !video.muted;
+      video.muted = newMutedState;
+      // Persist mute state for all videos
+      this.videoPlayback.setMuted(newMutedState);
     }
   }
 
