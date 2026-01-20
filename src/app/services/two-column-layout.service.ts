@@ -6,7 +6,7 @@ import { PanelNavigationService } from './panel-navigation.service';
 import { PanelActionsService } from './panel-actions.service';
 import { RightPanelService } from './right-panel.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 
 /**
  * View mode for the two-column layout
@@ -503,8 +503,10 @@ export class TwoColumnLayoutService {
    * Open a profile (right panel - profiles are detail views)
    */
   openProfile(pubkey: string): void {
-    this.rightPanelRoute.set(`/p/${pubkey}`);
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+    // Always use npub in URLs for consistency and bookmarkability
+    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
+    this.rightPanelRoute.set(`/p/${npub}`);
+    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
   }
 
   /**

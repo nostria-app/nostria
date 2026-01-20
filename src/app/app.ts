@@ -1202,10 +1202,11 @@ export class App implements OnInit {
         if (entity.startsWith('npub')) {
           this.router.navigate([{ outlets: { right: ['p', entity] } }]);
         } else {
-          // nprofile - decode to get pubkey
+          // nprofile - decode to get pubkey, then encode as npub for URL
           const decoded = nip19.decode(entity);
           if (decoded.type === 'nprofile' && typeof decoded.data === 'object' && decoded.data && 'pubkey' in decoded.data) {
-            this.router.navigate([{ outlets: { right: ['p', decoded.data.pubkey] } }]);
+            const npub = nip19.npubEncode(decoded.data.pubkey);
+            this.router.navigate([{ outlets: { right: ['p', npub] } }]);
           } else {
             throw new Error('Invalid nprofile data');
           }
@@ -1927,7 +1928,9 @@ export class App implements OnInit {
    * Open profile in right panel using routing
    */
   openProfileInRightPanel(pubkey: string): void {
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+    // Always use npub in URLs for consistency and bookmarkability
+    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
+    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
   }
 
   /**

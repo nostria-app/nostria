@@ -294,27 +294,33 @@ export class ProfileComponent {
             // Preserve the original npub if present
             const originalNpub = id.startsWith('npub') ? id : null;
 
+            // Only update the URL when profile is NOT in the right panel (pane navigation)
+            // When in right panel, we want to preserve the main route (e.g., /people) for bookmarking
+            const shouldUpdateUrl = this.route.outlet !== 'right';
+
             if (id.startsWith('npub')) {
               id = this.utilities.getPubkeyFromNpub(id);
 
               // First update URL to have npub in URL.
-              if (username) {
-                this.url.updatePathSilently(['/u', username]);
-              } else {
-                // username = await this.username.getUsername(id);
-                const identifier: string = id;
-                this.username.getUsername(id).then(username => {
-                  if (username) {
-                    this.url.updatePathSilently(['/u', username]);
-                  } else {
-                    // If we already have npub in URL, keep it; otherwise encode the hex pubkey
-                    const encoded = originalNpub || nip19.npubEncode(identifier);
-                    this.url.updatePathSilently(['/p', encoded]);
-                  }
-                });
+              if (shouldUpdateUrl) {
+                if (username) {
+                  this.url.updatePathSilently(['/u', username]);
+                } else {
+                  // username = await this.username.getUsername(id);
+                  const identifier: string = id;
+                  this.username.getUsername(id).then(username => {
+                    if (username) {
+                      this.url.updatePathSilently(['/u', username]);
+                    } else {
+                      // If we already have npub in URL, keep it; otherwise encode the hex pubkey
+                      const encoded = originalNpub || nip19.npubEncode(identifier);
+                      this.url.updatePathSilently(['/p', encoded]);
+                    }
+                  });
+                }
               }
             } else {
-              if (!username) {
+              if (shouldUpdateUrl && !username) {
                 const identifier: string = id;
                 this.username.getUsername(id).then(username => {
                   if (username) {

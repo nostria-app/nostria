@@ -51,6 +51,7 @@ import {
   finalizeEvent,
   Event as NostrEvent,
   getEventHash,
+  nip19,
 } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { ApplicationService } from '../../services/application.service';
@@ -1424,7 +1425,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   viewProfile(): void {
     const pubkey = this.selectedChat()?.pubkey;
     if (pubkey) {
-      this.router.navigate([{ outlets: { right: ['p', pubkey] } }]);
+      // Always use npub in URLs for consistency and bookmarkability
+      const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
+      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
     }
   }
 

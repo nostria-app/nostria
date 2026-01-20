@@ -23,7 +23,7 @@ import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
-import { Event as NostrEvent } from 'nostr-tools';
+import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 
 // Type for grouped display items - either single token or image group
@@ -362,14 +362,21 @@ export class NoteContentComponent implements OnDestroy {
       const nostrUri = token.content;
 
       if (nostrUri.startsWith('nostr:npub') || nostrUri.startsWith('nostr:nprofile')) {
-        // Extract pubkey (supports both npub and nprofile)
+        // Extract the identifier and use it directly for npub, or convert nprofile to npub
         const identifier = nostrUri.replace('nostr:', '');
-        const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
-        if (hexPubkey) {
-          this.router.navigate([{ outlets: { right: ['p', hexPubkey] } }]);
-        } else {
-          // Fallback to raw identifier if conversion fails
+        if (identifier.startsWith('npub')) {
+          // Use npub directly
           this.router.navigate([{ outlets: { right: ['p', identifier] } }]);
+        } else {
+          // Convert nprofile to npub
+          const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
+          if (hexPubkey) {
+            const npub = nip19.npubEncode(hexPubkey);
+            this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+          } else {
+            // Fallback to raw identifier if conversion fails
+            this.router.navigate([{ outlets: { right: ['p', identifier] } }]);
+          }
         }
         return;
       } else if (nostrUri.startsWith('nostr:note') || nostrUri.startsWith('nostr:nevent')) {
