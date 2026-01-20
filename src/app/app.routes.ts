@@ -548,22 +548,19 @@ export const routes: Routes = [
       import('./pages/backup/backup.component').then(m => m.BackupComponent),
   },
   {
-    path: 'media',
+    path: 'collections/media',
     data: { isRoot: true },
-    children: [
-      {
-        path: '',
-        loadComponent: () =>
-          import('./pages/media/media.component').then(mod => mod.MediaComponent),
-      },
-      {
-        path: 'details/:id',
-        loadComponent: () =>
-          import('./pages/media/media-details/media-details.component').then(
-            mod => mod.MediaDetailsComponent
-          ),
-      },
-    ],
+    loadComponent: () =>
+      import('./pages/media/media.component').then(mod => mod.MediaComponent),
+    title: 'Media',
+  },
+  {
+    path: 'collections/media/details/:id',
+    loadComponent: () =>
+      import('./pages/media/media-details/media-details.component').then(
+        mod => mod.MediaDetailsComponent
+      ),
+    title: 'Media Details',
   },
   {
     path: 'people',
@@ -722,6 +719,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
     title: 'Liked Playlists',
+  },
+  {
+    path: 'collections/media/details/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent),
+    title: 'Media Details',
   },
 
   { path: '**', redirectTo: '/' },

@@ -33,7 +33,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'music', label: $localize`:@@app.nav.music:Music`, icon: 'music_note', authenticated: false },
   { id: 'streams', label: $localize`:@@app.nav.streams:Streams`, icon: 'live_tv', authenticated: false },
   { id: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },
-  { id: 'media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
+  { id: 'collections/media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
   { id: 'lists', label: $localize`:@@menu.lists:Lists`, icon: 'lists', authenticated: true },
   { id: 'polls', label: $localize`:@@menu.polls:Polls`, icon: 'poll', authenticated: false },
   { id: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },

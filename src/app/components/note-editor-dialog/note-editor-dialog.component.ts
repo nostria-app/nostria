@@ -2086,7 +2086,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Navigate to media library servers tab
-        this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+        this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
         // Close the note editor dialog
         this.dialogRef?.close({ published: false });
       }

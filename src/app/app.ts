@@ -500,7 +500,7 @@ export class App implements OnInit {
         const collectionChildren: NavItem[] = [
 
           {
-            path: '/media',
+            path: '/collections/media',
             label: $localize`:@@app.nav.media:Media`,
             icon: 'photo_library',
             authenticated: false,
@@ -613,7 +613,7 @@ export class App implements OnInit {
     },
     // Additional items available for menu customization
     { path: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },
-    { path: 'media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
+    { path: 'collections/media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
     { path: 'lists', label: $localize`:@@menu.lists:Lists`, icon: 'lists', authenticated: true },
     { path: 'polls', label: $localize`:@@menu.polls:Polls`, icon: 'poll', authenticated: false },
     { path: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
@@ -1722,7 +1722,7 @@ export class App implements OnInit {
 
   openMediaSettings(): void {
     // Navigate to media page with servers tab
-    this.router.navigate(['/media'], {
+    this.router.navigate(['/collections/media'], {
       queryParams: { tab: 'servers' }
     });
 

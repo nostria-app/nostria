@@ -263,7 +263,7 @@ export class BadgeEditorComponent {
 
   // Navigate to media settings to add servers - specifically to the Media Servers tab
   navigateToMediaSettings(): void {
-    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+    this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
   }
 
   // Form submission with file upload handling

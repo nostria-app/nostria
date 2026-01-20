@@ -31,7 +31,7 @@ export class CollectionsComponent {
       title: $localize`:@@collections.media.title:Media`,
       description: $localize`:@@collections.media.description:Video and photo collections`,
       icon: 'perm_media',
-      route: '/media',
+      route: '/collections/media',
       color: '#e91e63',
     },
     {

@@ -519,8 +519,8 @@ export class MediaComponent {
     // Save the current active tab before navigating
     this.localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
 
-    // Navigate to details page instead of opening dialog
-    this.router.navigate(['/media', 'details', item.sha256]);
+    // Navigate to details page in the right panel
+    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
   }
 
   openMediaPreview(event: Event, item: MediaItem): void {
@@ -549,8 +549,8 @@ export class MediaComponent {
     // Save the current active tab before navigating
     this.localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
 
-    // Navigate to details page with the item ID
-    this.router.navigate(['/media', 'details', item.sha256]);
+    // Navigate to details page in the right panel
+    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
   }
 
   toggleItemSelection(sha256: string): void {
