@@ -229,7 +229,9 @@ export class FeedsComponent implements OnDestroy {
   });
   @ViewChild('columnsContainer') columnsContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('fixedScrollbar') fixedScrollbar!: ElementRef<HTMLDivElement>;
+  @ViewChild('loadMoreTrigger') loadMoreTrigger?: ElementRef<HTMLDivElement>;
   private isSyncingScroll = false;
+  private intersectionObserver?: IntersectionObserver;
 
   columnLayout = computed(() => {
     const width = this.screenWidth();
@@ -718,6 +720,8 @@ export class FeedsComponent implements OnDestroy {
         // Wait for feed content to be rendered
         setTimeout(() => {
           this.setupFeedScrollListener(activeFeed);
+          // Set up IntersectionObserver for infinite scroll
+          this.setupIntersectionObserver();
         }, 500);
       }
     });
@@ -797,6 +801,46 @@ export class FeedsComponent implements OnDestroy {
     if (this.scrollCheckCleanup) {
       this.scrollCheckCleanup();
       this.scrollCheckCleanup = null;
+    }
+  }
+
+  /**
+   * Set up IntersectionObserver for infinite scroll functionality.
+   * This observes the loadMoreTrigger element and automatically loads more
+   * events when it becomes visible (user scrolled near the bottom).
+   */
+  private setupIntersectionObserver(): void {
+    // Clean up existing observer
+    this.intersectionObserver?.disconnect();
+
+    const options: IntersectionObserverInit = {
+      root: null, // Use viewport as root
+      rootMargin: '400px', // Trigger 400px before element comes into view
+      threshold: 0.01,
+    };
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const activeFeed = this.activeFeed();
+          if (activeFeed && this.hasMoreEventsToRender(activeFeed.id)) {
+            this.loadMoreRenderedEvents(activeFeed.id);
+          }
+        }
+      });
+    }, options);
+
+    // Start observing the trigger element if it exists
+    this.observeLoadMoreTrigger();
+  }
+
+  /**
+   * Start observing the load more trigger element.
+   * Called after view init and when feed changes.
+   */
+  private observeLoadMoreTrigger(): void {
+    if (this.intersectionObserver && this.loadMoreTrigger?.nativeElement) {
+      this.intersectionObserver.observe(this.loadMoreTrigger.nativeElement);
     }
   }
 
@@ -1379,6 +1423,9 @@ export class FeedsComponent implements OnDestroy {
 
     // Clean up scroll listeners
     this.cleanupScrollListener();
+
+    // Clean up IntersectionObserver
+    this.intersectionObserver?.disconnect();
 
     // Clean up ResizeObserver for feed tabs
     this.feedTabsResizeObserver?.disconnect();
