@@ -248,6 +248,9 @@
   color: var(--mat-sys-on-surface);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
@@ -265,6 +268,10 @@
 
     &.notifications-icon {
       color: #E91E63;
+    }
+
+    &.shoutouts-icon {
+      color: #FF9800;
     }
 
     &.people-icon {
