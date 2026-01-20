@@ -852,6 +852,30 @@ export class LayoutService implements OnDestroy {
   // Signal to hide the mobile navigation (e.g., when in chat view)
   hideMobileNav = signal(false);
 
+  // Signal to control shoutout overlay visibility
+  showShoutoutOverlay = signal(false);
+
+  /**
+   * Open the shoutout overlay
+   */
+  openShoutouts(): void {
+    this.showShoutoutOverlay.set(true);
+  }
+
+  /**
+   * Close the shoutout overlay
+   */
+  closeShoutouts(): void {
+    this.showShoutoutOverlay.set(false);
+  }
+
+  /**
+   * Toggle the shoutout overlay
+   */
+  toggleShoutouts(): void {
+    this.showShoutoutOverlay.update(v => !v);
+  }
+
   // Handle login dialog close
   handleLoginDialogClose(): void {
     this.logger.debug('Login dialog closed');

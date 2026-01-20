@@ -57,8 +57,8 @@ export class ShoutoutOverlayComponent {
   private followingService = inject(FollowingService);
   layout = inject(LayoutService);
 
-  // Signal to track if overlay is visible
-  isVisible = signal(false);
+  // Signal to track if overlay is visible - now uses LayoutService for global control
+  isVisible = this.layout.showShoutoutOverlay;
 
   // Signal to track if showing only favorites
   showFavoritesOnly = signal(false);
@@ -177,7 +177,7 @@ export class ShoutoutOverlayComponent {
 
   toggleOverlay(): void {
     const wasVisible = this.isVisible();
-    this.isVisible.update(v => !v);
+    this.layout.toggleShoutouts();
     // Refresh when opening
     if (!wasVisible) {
       this.shoutoutService.refresh();
@@ -185,12 +185,12 @@ export class ShoutoutOverlayComponent {
   }
 
   showOverlay(): void {
-    this.isVisible.set(true);
+    this.layout.openShoutouts();
     this.shoutoutService.refresh();
   }
 
   hideOverlay(): void {
-    this.isVisible.set(false);
+    this.layout.closeShoutouts();
   }
 
   toggleFavoritesFilter(): void {
