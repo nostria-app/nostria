@@ -8,7 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { SearchService, SearchResultProfile, SearchTab, SearchResultEvent } from '../../services/search.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
-import { Event } from 'nostr-tools';
+import { Event, nip19, kinds } from 'nostr-tools';
 
 @Component({
   selector: 'app-search-results',
@@ -626,16 +626,32 @@ export class SearchResultsComponent {
     return this.truncateContent(firstLine, 60) || 'Untitled Article';
   }
 
-  // Open a note
+  // Open a note - navigate to primary outlet and clear right pane
   openNote(note: SearchResultEvent): void {
-    this.layout.openEvent(note.event.id, note.event);
+    const nevent = nip19.neventEncode({
+      id: note.event.id,
+      author: note.event.pubkey,
+      kind: note.event.kind,
+    });
+    this.router.navigate([{ outlets: { primary: ['e', nevent], right: null } }], {
+      state: { event: note.event }
+    });
     this.searchService.clearResults();
     this.layout.toggleSearch();
   }
 
-  // Open an article
+  // Open an article - navigate to primary outlet and clear right pane
   openArticle(article: SearchResultEvent): void {
-    this.layout.openEvent(article.event.id, article.event);
+    // Articles use naddr encoding for long-form content
+    const dTag = article.event.tags.find((t: string[]) => t[0] === 'd')?.[1] || '';
+    const naddr = nip19.naddrEncode({
+      kind: kinds.LongFormArticle,
+      pubkey: article.event.pubkey,
+      identifier: dTag,
+    });
+    this.router.navigate([{ outlets: { primary: ['a', naddr], right: null } }], {
+      state: { event: article.event }
+    });
     this.searchService.clearResults();
     this.layout.toggleSearch();
   }
