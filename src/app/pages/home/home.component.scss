@@ -316,9 +316,10 @@
     cursor: pointer;
     border: none;
 
-    &:hover {
-      background-color: var(--mat-sys-surface-container);
-    }
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    transform: translateY(-2px);
+  }
 
     mat-icon {
       font-size: 22px;

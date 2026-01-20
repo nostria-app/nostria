@@ -75,9 +75,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   volumeSliderVisible = signal(false);
   isReady = signal(false);
 
-  // Computed mute state - uses persisted state from service, falls back to input
+  // Computed mute state - uses persisted state from service, or muted input for autoplay
   shouldBeMuted = computed(() => {
-    // Always prefer the persisted mute state from the service
+    // If muted input is set (e.g., for autoplay), use it
+    if (this.muted()) {
+      return true;
+    }
+    // Otherwise prefer the persisted mute state from the service
     return this.videoPlayback.isMuted();
   });
 
