@@ -40,13 +40,6 @@
     white-space: nowrap;
   }
 
-  .last-visit-badge {
-    font-size: 0.8rem;
-    color: var(--mat-sys-on-surface-variant);
-    white-space: nowrap;
-    opacity: 0.8;
-  }
-
   .panel-header-spacer {
     flex: 1;
   }
@@ -62,6 +55,33 @@
 :host-context(.dark) .panel-header {
   background-color: rgba(18, 18, 18, 0.92);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// Time badge button in header
+.time-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  font-size: 0.8rem;
+  border-radius: var(--mat-sys-corner-full);
+  border-color: var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: 8px;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-primary);
+  }
 }
 
 // Summary Tabs Styling
@@ -144,45 +164,95 @@
   }
 }
 
-.time-range-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin: 0 16px 16px 16px;
-  padding: 12px 16px;
+// Time Panel Overlay
+::ng-deep .time-panel-backdrop {
+  background-color: transparent;
+}
+
+.time-panel {
   background-color: var(--mat-sys-surface-container);
-  border-radius: var(--mat-sys-corner-medium);
+  border-radius: var(--mat-sys-corner-large);
+  box-shadow: var(--mat-sys-level3);
+  min-width: 220px;
+  max-width: 280px;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
 
-  .time-presets {
+  .time-panel-header {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: var(--mat-sys-surface-container-high);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
 
-    button {
-      font-size: 0.8rem;
-      min-width: auto;
-      padding: 0 12px;
-      height: 32px;
-      border-radius: var(--mat-sys-corner-full);
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-primary);
+    }
+
+    span {
+      font-size: 0.9rem;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .time-panel-content {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+
+    mat-divider {
+      margin: 8px 0;
+    }
+
+    .time-option {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 0;
+      text-align: left;
+      font-size: 0.875rem;
+      background: transparent;
+      color: var(--mat-sys-on-surface);
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-highest);
+      }
 
       &.active {
-        background-color: var(--mat-sys-primary);
-        color: var(--mat-sys-on-primary);
-        border-color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .check-icon {
+        margin-left: auto;
+        color: var(--mat-sys-primary);
+      }
+
+      span {
+        flex: 1;
       }
     }
   }
+}
 
-  @media (max-width: 599px) {
-    flex-direction: column;
-    align-items: stretch;
-    margin: 0 12px 12px 12px;
-
-    .time-presets {
-      justify-content: center;
-    }
-  }
+:host-context(.dark) .time-panel {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .loading-state {

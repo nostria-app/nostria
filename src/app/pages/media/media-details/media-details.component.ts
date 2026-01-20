@@ -1,4 +1,5 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +21,6 @@ import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-media-details',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -42,6 +42,7 @@ export class MediaDetailsComponent {
   private dialog = inject(MatDialog);
   private nostr = inject(NostrService);
   private publishService = inject(PublishService);
+  private destroyRef = inject(DestroyRef);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -56,16 +57,19 @@ export class MediaDetailsComponent {
   });
 
   constructor() {
-    effect(() => {
-      const id = this.route.snapshot.paramMap.get('id');
-      if (!id) {
-        this.error.set('No media ID provided');
-        this.loading.set(false);
-        return;
-      }
+    // Subscribe to route param changes to react when navigating to different media items
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const id = params.get('id');
+        if (!id) {
+          this.error.set('No media ID provided');
+          this.loading.set(false);
+          return;
+        }
 
-      this.fetchMediaItem(id);
-    });
+        this.fetchMediaItem(id);
+      });
   }
 
   private async fetchMediaItem(id: string): Promise<void> {

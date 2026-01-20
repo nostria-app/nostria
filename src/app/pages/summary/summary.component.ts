@@ -23,6 +23,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -84,6 +85,7 @@ imports: [
     MatCheckboxModule,
     MatTabsModule,
     MatMenuModule,
+    OverlayModule,
     UserProfileComponent,
     AgoPipe
   ],
@@ -117,6 +119,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Flag to prevent operations after component destruction
   private isDestroyed = false;
 
+  // Time panel state
+  timePanelOpen = signal(false);
+  timePanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
+
   // Time range presets
   readonly timePresets = [
     { label: '1 hour', hours: 1 },
@@ -129,6 +139,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Selected time range
   selectedPreset = signal<number | null>(null); // hours, null = since last visit
+
+  // Computed label for the selected time range
+  selectedTimeLabel = computed(() => {
+    const preset = this.selectedPreset();
+    if (preset === null) return 'Last visit';
+    const found = this.timePresets.find(p => p.hours === preset);
+    return found ? found.label : `${preset}h`;
+  });
 
   // State signals
   isLoading = signal(true);
@@ -582,6 +600,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.postersPage.set(1); // Reset pagination
   }
 
+  toggleTimePanel(): void {
+    this.timePanelOpen.update(v => !v);
+  }
+
+  closeTimePanel(): void {
+    this.timePanelOpen.set(false);
+  }
+
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
     // Reset timeline pagination when changing time range
@@ -595,6 +621,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (pubkey) {
       this.accountLocalState.setSummaryTimePreset(pubkey, hours);
     }
+    // Close the panel
+    this.closeTimePanel();
     this.loadSummaryData();
   }
 
@@ -609,6 +637,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (pubkey) {
       this.accountLocalState.setSummaryTimePreset(pubkey, null);
     }
+    // Close the panel
+    this.closeTimePanel();
     this.loadSummaryData();
   }
 

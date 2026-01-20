@@ -9,7 +9,16 @@
   <!-- Panel Header -->
   <div class="panel-header">
     <h2 class="panel-title title-font">Summary</h2>
-    <span class="last-visit-badge">Since {{ timeSinceLastCheck() }}</span>
+    <button
+      mat-stroked-button
+      cdkOverlayOrigin
+      #timeOrigin="cdkOverlayOrigin"
+      (click)="toggleTimePanel()"
+      class="time-badge-btn"
+      matTooltip="Change time range">
+      <mat-icon>schedule</mat-icon>
+      <span>{{ selectedTimeLabel() }}</span>
+    </button>
     <span class="panel-header-spacer"></span>
     <div class="panel-actions">
       @if (isFetching()) {
@@ -31,20 +40,48 @@
     </div>
   </div>
 
-  <!-- Time Range Selector -->
-  <div class="time-range-selector">
-    <div class="time-presets">
-      <button mat-stroked-button [class.active]="selectedPreset() === null" (click)="resetToLastVisit()">
-        Last visit
-      </button>
-      @for (preset of timePresets; track preset.hours) {
-      <button mat-stroked-button [class.active]="selectedPreset() === preset.hours"
-        (click)="selectPreset(preset.hours)">
-        {{ preset.label }}
-      </button>
-      }
+  <!-- Time Range Panel Overlay -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="timeOrigin"
+    [cdkConnectedOverlayOpen]="timePanelOpen()"
+    [cdkConnectedOverlayPositions]="timePanelPositions"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="time-panel-backdrop"
+    (backdropClick)="closeTimePanel()">
+    <div class="time-panel">
+      <div class="time-panel-header">
+        <mat-icon>schedule</mat-icon>
+        <span>Time Range</span>
+      </div>
+      <div class="time-panel-content">
+        <button
+          mat-stroked-button
+          class="time-option"
+          [class.active]="selectedPreset() === null"
+          (click)="resetToLastVisit()">
+          <mat-icon>history</mat-icon>
+          <span>Since last visit</span>
+          @if (selectedPreset() === null) {
+          <mat-icon class="check-icon">check</mat-icon>
+          }
+        </button>
+        <mat-divider></mat-divider>
+        @for (preset of timePresets; track preset.hours) {
+        <button
+          mat-stroked-button
+          class="time-option"
+          [class.active]="selectedPreset() === preset.hours"
+          (click)="selectPreset(preset.hours)">
+          <span>{{ preset.label }}</span>
+          @if (selectedPreset() === preset.hours) {
+          <mat-icon class="check-icon">check</mat-icon>
+          }
+        </button>
+        }
+      </div>
     </div>
-  </div>
+  </ng-template>
 
   <!-- Info Banner -->
   @if (isFetching()) {
