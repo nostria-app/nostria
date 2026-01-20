@@ -48,6 +48,13 @@
       <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
       } @else if (mediaItem()?.type?.startsWith('video')) {
       <video [src]="mediaItem()!.url" controls></video>
+      } @else if (mediaItem()?.type && isAudioFile(mediaItem()!.type)) {
+      <div class="audio-preview-container">
+        <div class="audio-icon">
+          <mat-icon>audiotrack</mat-icon>
+        </div>
+        <app-audio-player [src]="mediaItem()!.url"></app-audio-player>
+      </div>
       } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
       @if (textLoading()) {
       <div class="text-loading">

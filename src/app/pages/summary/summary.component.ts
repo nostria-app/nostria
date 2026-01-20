@@ -153,6 +153,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   isFetching = signal(false); // Whether we're fetching from relays
   fetchProgress = signal({ fetched: 0, total: 0 });
   lastCheckTimestamp = signal(0);
+  
+  // Captured "last visit" timestamp - frozen at component init, doesn't update during session
+  private frozenLastVisitTimestamp = 0;
 
   // Activity summary
   activitySummary = signal<ActivitySummary>({
@@ -271,8 +274,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
       return presetInfo ? presetInfo.label + ' ago' : `${preset} hours ago`;
     }
 
-    // Default: since last visit
-    const lastCheck = this.lastCheckTimestamp();
+    // Default: since last visit - use the frozen timestamp
+    const lastCheck = this.frozenLastVisitTimestamp;
     if (!lastCheck) return 'your first visit';
 
     const now = Date.now();
@@ -400,9 +403,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     this.isLoading.set(true);
 
-    // Get last check timestamp
+    // Get last check timestamp and freeze it if not already frozen
     const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
     this.lastCheckTimestamp.set(lastCheck);
+    
+    // Freeze the "last visit" timestamp on first load - this won't change during the session
+    if (this.frozenLastVisitTimestamp === 0) {
+      this.frozenLastVisitTimestamp = lastCheck;
+    }
 
     // Calculate the timestamp based on selected time range
     let sinceTimestamp: number;
@@ -412,8 +420,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (preset !== null) {
       sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
     } else {
-      sinceTimestamp = lastCheck
-        ? Math.floor(lastCheck / 1000)
+      // Use the frozen timestamp for "since last visit" queries
+      sinceTimestamp = this.frozenLastVisitTimestamp
+        ? Math.floor(this.frozenLastVisitTimestamp / 1000)
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
     }
 
@@ -823,9 +832,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (preset !== null) {
       sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
     } else {
-      const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
-      sinceTimestamp = lastCheck
-        ? Math.floor(lastCheck / 1000)
+      // Use the frozen timestamp for "since last visit" queries
+      sinceTimestamp = this.frozenLastVisitTimestamp
+        ? Math.floor(this.frozenLastVisitTimestamp / 1000)
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
     }
 

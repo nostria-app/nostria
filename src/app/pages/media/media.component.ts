@@ -37,7 +37,7 @@ import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 
 export type ViewMode = 'large' | 'medium' | 'details';
-export type MediaFilter = 'all' | 'images' | 'videos' | 'files';
+export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
 
 @Component({
   selector: 'app-media',
@@ -104,8 +104,11 @@ export class MediaComponent {
       case 'videos':
         filtered = allMedia.filter(item => item.type?.startsWith('video') || false);
         break;
+      case 'audio':
+        filtered = allMedia.filter(item => item.type?.startsWith('audio') || false);
+        break;
       case 'files':
-        filtered = allMedia.filter(item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video')));
+        filtered = allMedia.filter(item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video') && !item.type.startsWith('audio')));
         break;
       default:
         filtered = allMedia;
@@ -134,7 +137,7 @@ export class MediaComponent {
 
     // Restore filter from localStorage
     const savedFilter = this.localStorage.getItem(this.appState.MEDIA_FILTER);
-    if (savedFilter && ['all', 'images', 'videos', 'files'].includes(savedFilter)) {
+    if (savedFilter && ['all', 'images', 'videos', 'audio', 'files'].includes(savedFilter)) {
       this.mediaFilter.set(savedFilter as MediaFilter);
     }
 
@@ -156,7 +159,7 @@ export class MediaComponent {
       const uploadParam = params.get('upload');
       const filterParam = params.get('filter');
 
-      if (filterParam && ['all', 'images', 'videos', 'files'].includes(filterParam)) {
+      if (filterParam && ['all', 'images', 'videos', 'audio', 'files'].includes(filterParam)) {
         this.mediaFilter.set(filterParam as MediaFilter);
       }
 
@@ -218,6 +221,7 @@ export class MediaComponent {
       case 'all': return 'All Files';
       case 'images': return 'Images';
       case 'videos': return 'Videos';
+      case 'audio': return 'Audio';
       case 'files': return 'Other Files';
       default: return 'All Files';
     }
@@ -227,6 +231,7 @@ export class MediaComponent {
     switch (this.mediaFilter()) {
       case 'images': return 'image';
       case 'videos': return 'videocam';
+      case 'audio': return 'audiotrack';
       case 'files': return 'insert_drive_file';
       default: return 'filter_list';
     }
@@ -686,6 +691,7 @@ export class MediaComponent {
   getMediaTypeIcon(type: string): string {
     if (type?.startsWith('image')) return 'image';
     if (type?.startsWith('video')) return 'videocam';
+    if (type?.startsWith('audio')) return 'audiotrack';
     return 'insert_drive_file';
   }
 
