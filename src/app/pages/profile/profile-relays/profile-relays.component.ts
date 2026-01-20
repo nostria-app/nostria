@@ -106,7 +106,9 @@ export class ProfileRelaysComponent {
   getUserRelays(): string[] {
     // Use the profileState.relayList() signal which is pre-loaded from cache
     // and smartly updated from relays only when newer data is available
-    return this.profileState.relayList();
+    const relays = this.profileState.relayList();
+    this.logger.debug(`getUserRelays() called: ${relays.length} relays, cachedEventsLoaded: ${this.profileState.cachedEventsLoaded()}`);
+    return relays;
   }
 
   toggleRelayDetails(url: string): void {
