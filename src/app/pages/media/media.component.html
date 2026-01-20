@@ -303,16 +303,16 @@
           }
 
           <!-- Media preview -->
-          @if (item.type?.startsWith('video')) {
+          @if (item.type.startsWith('video')) {
           <div class="video-preview">
             <video [src]="item.url" preload="metadata"></video>
             <div class="play-button">
               <mat-icon>play_circle_filled</mat-icon>
             </div>
           </div>
-          } @else if (item.type?.startsWith('image')) {
+          } @else if (item.type.startsWith('image')) {
           <img [src]="item.url" [alt]="getFileName(item.url)" loading="lazy" />
-          } @else if (item.type?.startsWith('audio')) {
+          } @else if (item.type.startsWith('audio')) {
           <div class="audio-preview">
             <mat-icon>audiotrack</mat-icon>
           </div>
