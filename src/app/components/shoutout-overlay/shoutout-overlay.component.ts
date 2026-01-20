@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, untracked } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -78,6 +78,12 @@ export class ShoutoutOverlayComponent {
   // Signal to show/hide recipient picker
   showRecipientPicker = signal(false);
 
+  // Signal to track the shoutout whose receivers are being viewed
+  viewingReceiversFor = signal<Shoutout | null>(null);
+
+  // Signal to store loaded receiver profiles
+  receiverProfiles = signal<Map<string, NostrRecord | null>>(new Map());
+
   // Get shoutouts from the service
   allShoutouts = this.shoutoutService.shoutouts;
   shoutoutsFromFavorites = this.shoutoutService.shoutoutsFromFavorites;
@@ -86,6 +92,9 @@ export class ShoutoutOverlayComponent {
 
   // Get favorites for recipient options
   favorites = this.favoritesService.favorites;
+
+  // Get current user's pubkey to identify sent shoutouts
+  currentUserPubkey = this.accountState.pubkey;
 
   // Computed: all available recipients (favorites first, then following)
   availableRecipients = computed(() => {
@@ -307,5 +316,83 @@ export class ShoutoutOverlayComponent {
 
   refresh(): void {
     this.shoutoutService.refresh();
+  }
+
+  /**
+   * Check if a shoutout was sent by the current user
+   */
+  isSentByMe(shoutout: Shoutout): boolean {
+    return shoutout.pubkey === this.currentUserPubkey();
+  }
+
+  /**
+   * Get display names of receivers for a sent shoutout
+   */
+  getReceiverNames(shoutout: Shoutout): string {
+    if (shoutout.receivers.length === 0) {
+      return 'everyone';
+    }
+    // For now just show the count, could be enhanced to show actual names
+    return shoutout.receivers.length === 1
+      ? '1 person'
+      : `${shoutout.receivers.length} people`;
+  }
+
+  /**
+   * Show the receivers view for a shoutout
+   */
+  showReceivers(shoutout: Shoutout): void {
+    if (shoutout.receivers.length === 0) {
+      return; // No specific receivers to show
+    }
+    this.viewingReceiversFor.set(shoutout);
+    // Load profiles for receivers
+    this.loadReceiverProfiles(shoutout.receivers);
+  }
+
+  /**
+   * Hide the receivers view and go back to the shoutouts list
+   */
+  hideReceivers(): void {
+    this.viewingReceiversFor.set(null);
+  }
+
+  /**
+   * Load profiles for a list of pubkeys
+   */
+  private async loadReceiverProfiles(pubkeys: string[]): Promise<void> {
+    const profiles = new Map<string, NostrRecord | null>();
+
+    // Initialize with null for all pubkeys
+    for (const pubkey of pubkeys) {
+      profiles.set(pubkey, null);
+    }
+    this.receiverProfiles.set(profiles);
+
+    // Load profiles in parallel
+    const profilePromises = pubkeys.map(async (pubkey) => {
+      try {
+        const profile = await this.data.getProfile(pubkey);
+        return { pubkey, profile: profile || null };
+      } catch {
+        return { pubkey, profile: null };
+      }
+    });
+
+    const results = await Promise.all(profilePromises);
+
+    // Update the profiles map
+    const updatedProfiles = new Map(this.receiverProfiles());
+    for (const result of results) {
+      updatedProfiles.set(result.pubkey, result.profile);
+    }
+    this.receiverProfiles.set(updatedProfiles);
+  }
+
+  /**
+   * Get a receiver's profile from the loaded profiles
+   */
+  getReceiverProfile(pubkey: string): NostrRecord | undefined {
+    return this.receiverProfiles().get(pubkey) || undefined;
   }
 }
