@@ -136,7 +136,7 @@ nav {
     position: relative;
 
     // Smooth transition for collapse animation
-    transition: 
+    transition:
       height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
       padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -280,6 +280,19 @@ nav {
   }
 }
 
+// Shoutout sidebar - chat bubble above favorites on right side
+.shoutout-sidebar {
+  position: fixed;
+  right: 8px;
+  top: 80px; // Below toolbar
+  z-index: 100;
+
+  // Hide on mobile - use different UI there
+  @media (max-width: 599px) {
+    display: none;
+  }
+}
+
 // Favorites sidebar - vertical on right side of screen
 .favorites-sidebar {
   position: fixed;
@@ -389,7 +402,7 @@ mat-sidenav-content {
 
   .sidenav-close-button {
     color: var(--mat-sys-on-surface-variant);
-    
+
     &:hover {
       color: var(--mat-sys-on-surface);
     }
@@ -842,7 +855,7 @@ mat-sidenav-content {
   // transforming to appear to go behind the right panel
   &.left-collapsed {
     // Keep normal justify-content - don't force center, let the width animation handle it
-    
+
     .left-panel {
       // Shrink width to 0 to naturally push right panel to take over space
       width: 0;
@@ -1138,6 +1151,7 @@ mat-sidenav-content {
 
   // Ensure routed components fill the panel
   .right-panel-content {
+
     // Routed components in right panel - just let them flow naturally
     // No flex/overflow manipulation to ensure sticky works
     router-outlet+* {

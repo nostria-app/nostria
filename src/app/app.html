@@ -41,9 +41,9 @@
       @if (displayLabels()) {
       <div class="sidenav-profile-section">
         <div class="sidenav-profile-header">
-          <div class="sidenav-profile-avatar" (click)="toggleSidenav()" (keydown.enter)="toggleSidenav()" 
-            (keydown.space)="toggleSidenav(); $event.preventDefault()" tabindex="0" role="button"
-            title="Toggle sidebar" aria-label="Toggle sidebar">
+          <div class="sidenav-profile-avatar" (click)="toggleSidenav()" (keydown.enter)="toggleSidenav()"
+            (keydown.space)="toggleSidenav(); $event.preventDefault()" tabindex="0" role="button" title="Toggle sidebar"
+            aria-label="Toggle sidebar">
             @if (accountState.profile()?.data?.picture) {
             @if (settings.settings().imageCacheEnabled) {
             <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
@@ -75,9 +75,9 @@
             }
           </div>
           @if (accountState.hasAccounts()) {
-          <button mat-icon-button class="expand-accounts-button" (click)="toggleAccountsExpanded()" 
-            [attr.aria-label]="accountsExpanded() ? 'Collapse accounts' : 'Expand accounts'"
-            matTooltip="Switch account" i18n-matTooltip="@@app.profile.switch-account">
+          <button mat-icon-button class="expand-accounts-button" (click)="toggleAccountsExpanded()"
+            [attr.aria-label]="accountsExpanded() ? 'Collapse accounts' : 'Expand accounts'" matTooltip="Switch account"
+            i18n-matTooltip="@@app.profile.switch-account">
             <mat-icon>{{ accountsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           }
@@ -115,9 +115,11 @@
         <!-- Wallet Balance Section (only if user has wallets) -->
         @if (wallets.hasWallets()) {
         <div class="sidenav-wallet-section">
-          <mat-icon class="wallet-icon" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer">account_balance_wallet</mat-icon>
+          <mat-icon class="wallet-icon" routerLink="/wallet" (click)="closeSidenavOnMobile()"
+            style="cursor:pointer">account_balance_wallet</mat-icon>
           <div class="wallet-info">
-            <span class="wallet-label" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer" i18n="@@app.sidenav.wallet">Wallet</span>
+            <span class="wallet-label" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer"
+              i18n="@@app.sidenav.wallet">Wallet</span>
             <span class="wallet-balance" style="cursor:pointer" tabindex="0" role="button"
               matTooltip="Click to show/hide balance" i18n-matTooltip="@@app.sidenav.wallet.toggle-balance"
               (click)="toggleHideWalletAmounts(); $event.stopPropagation()"
@@ -244,12 +246,12 @@
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
-      
+
       <!-- Top toolbar - beside sidenav -->
       <mat-toolbar class="app-toolbar no-print no-select">
-        
 
-        
+
+
         <!-- Left section: hamburger menu/avatar and app icon -->
         <div class="toolbar-section toolbar-left" [class.toolbar-left-hidden]="opened() && !layout.isHandset()">
           <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
@@ -308,8 +310,8 @@
           @if (hasRightContent()) {
           @for (action of panelActions.rightPanelActions(); track action.id) {
           @if (action.menu) {
-          <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu" [matTooltip]="action.tooltip || action.label"
-            [disabled]="action.disabled" class="action-button">
+          <button mat-icon-button [matMenuTriggerFor]="rightPanelActionsMenu"
+            [matTooltip]="action.tooltip || action.label" [disabled]="action.disabled" class="action-button">
             <mat-icon>{{ action.icon }}</mat-icon>
           </button>
           } @else {
@@ -339,8 +341,8 @@
           @if (app.authenticated()) {
           <!-- Create new content button -->
           <button mat-icon-button class="create-button" (click)="openCreateMenu($event)"
-            i18n-matTooltip="@@app.create.tooltip" matTooltip="Create"
-            i18n-aria-label="@@app.create.aria" aria-label="Create new content">
+            i18n-matTooltip="@@app.create.tooltip" matTooltip="Create" i18n-aria-label="@@app.create.aria"
+            aria-label="Create new content">
             <mat-icon>add</mat-icon>
           </button>
           @if (appState.isPublishing() || ai.processingState().isProcessing) {
@@ -376,7 +378,7 @@
         </div>
       </div>
       }
-      
+
       <!-- Two-Column Layout Container -->
       <div class="two-column-layout" [class.feeds-visible]="panelNav.showFeeds()"
         [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
@@ -429,6 +431,11 @@
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
+
+  <!-- Shoutout overlay - chat bubble above favorites -->
+  @if (app.authenticated()) {
+  <app-shoutout-overlay class="shoutout-sidebar"></app-shoutout-overlay>
+  }
 
   <!-- Favorites sidebar - vertical on right side of screen -->
   @if (app.authenticated()) {
