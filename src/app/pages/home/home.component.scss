@@ -163,7 +163,7 @@
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 20px;
   text-decoration: none;
   color: inherit;
@@ -173,7 +173,7 @@
 
   &:hover {
     transform: translateY(-2px);
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     border-color: var(--mat-sys-outline-variant);
   }
@@ -242,7 +242,7 @@
   align-items: center;
   gap: 8px;
   padding: 20px 16px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 16px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -253,7 +253,7 @@
   font-size: inherit;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
     transform: translateY(-2px);
   }
 
@@ -308,7 +308,7 @@
     align-items: center;
     gap: 12px;
     padding: 14px 20px;
-    background-color: var(--mat-sys-surface-container);
+    background-color: var(--mat-sys-surface);
     border-radius: 12px;
     text-decoration: none;
     color: var(--mat-sys-on-surface);
@@ -317,7 +317,7 @@
     border: none;
 
     &:hover {
-      background-color: var(--mat-sys-surface-container-high);
+      background-color: var(--mat-sys-surface-container);
     }
 
     mat-icon {
@@ -338,7 +338,7 @@
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 16px;
   text-decoration: none;
   color: inherit;
@@ -346,7 +346,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
     transform: translateY(-2px);
   }
 
@@ -415,7 +415,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 12px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -423,7 +423,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
   }
 
   mat-icon {
@@ -452,7 +452,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 12px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -460,7 +460,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
   }
 
   mat-icon {
@@ -489,7 +489,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 12px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -500,7 +500,7 @@
   font-size: inherit;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
   }
 
   mat-icon {
@@ -520,7 +520,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface);
   border-radius: 12px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -528,7 +528,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container);
   }
 
   mat-icon {
