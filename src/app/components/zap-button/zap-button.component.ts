@@ -1,5 +1,5 @@
-import { Component, inject, input, output, signal, computed, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, input, output, signal, computed, ChangeDetectionStrategy, NgZone, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -17,9 +17,9 @@ import { SettingsService } from '../../services/settings.service';
  * Unified Zap Button - Supports both quick zap and custom zap.
  * 
  * When Quick Zap is ENABLED (in Settings > Wallet):
- * - Click: Sends instant zap with configured amount
+ * - Desktop: Single button with hover menu for custom zap option
+ * - Mobile: Long-press to open custom zap dialog, tap for quick zap
  * - Shows amount badge on button
- * - Menu arrow provides access to custom zap dialog
  * 
  * When Quick Zap is DISABLED:
  * - Click: Opens zap dialog for custom amount
@@ -30,9 +30,12 @@ import { SettingsService } from '../../services/settings.service';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="zap-button-container">
+    <div class="zap-button-container" 
+         [class.hover-active]="showHoverMenu()"
+         (mouseenter)="onMouseEnter()"
+         (mouseleave)="onMouseLeave()">
       @if (quickZapEnabled()) {
-        <!-- Quick Zap Mode: Button + settings button for custom zap -->
+        <!-- Quick Zap Mode -->
         <button
           mat-icon-button
           class="zap-button"
@@ -40,21 +43,29 @@ import { SettingsService } from '../../services/settings.service';
           [class.loading]="isLoading()"
           [disabled]="isLoading()"
           (click)="sendQuickZap($event)"
-          [matTooltip]="quickZapTooltip()"
+          (touchstart)="onTouchStart($event)"
+          (touchend)="onTouchEnd($event)"
+          (touchcancel)="onTouchCancel()"
+          [matTooltip]="isHandset() ? '' : quickZapTooltip()"
           matTooltipPosition="below"
         >
           <mat-icon>bolt</mat-icon>
           <span class="quick-zap-badge">{{ formatAmount(quickZapAmount()) }}</span>
         </button>
-        <button
-          mat-icon-button
-          class="zap-settings-trigger"
-          (click)="openZapDialog($event)"
-          matTooltip="Custom zap amount"
-          matTooltipPosition="below"
-        >
-          <mat-icon class="settings-icon">tune</mat-icon>
-        </button>
+        <!-- Desktop hover menu for custom zap -->
+        @if (showHoverMenu() && !isHandset()) {
+          <div class="hover-menu">
+            <button
+              mat-icon-button
+              class="custom-zap-button"
+              (click)="openZapDialog($event)"
+              matTooltip="Custom zap amount"
+              matTooltipPosition="below"
+            >
+              <mat-icon>tune</mat-icon>
+            </button>
+          </div>
+        }
       } @else {
         <!-- Standard Mode: Just opens dialog -->
         <button
@@ -110,34 +121,55 @@ import { SettingsService } from '../../services/settings.service';
 
     .quick-zap-badge {
       position: absolute;
-      bottom: 4px;
-      right: 4px;
+      bottom: 2px;
+      right: 2px;
       font-size: 9px;
       background-color: var(--nostria-bitcoin);
       color: white;
-      padding: 1px 4px;
+      padding: 1px 3px;
       border-radius: 4px;
       line-height: 1.2;
-      font-weight: 500;
+      pointer-events: none;
     }
 
-    .zap-settings-trigger {
-      width: 24px;
-      height: 24px;
-      min-width: 24px;
-      padding: 0;
-      margin-left: -8px;
+    /* Desktop hover menu */
+    .hover-menu {
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      margin-left: 2px;
+      animation: slideIn 0.15s ease-out;
+      z-index: 10;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+      }
+    }
+
+    .custom-zap-button {
       color: var(--mat-sys-on-surface-variant);
+      background-color: var(--mat-sys-surface);
     }
 
-    .zap-settings-trigger .settings-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
-
-    .zap-settings-trigger:hover {
+    .custom-zap-button:hover {
       color: var(--nostria-bitcoin);
+      background-color: var(--mat-sys-surface-container);
+    }
+
+    .custom-zap-button mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
   `],
 })
@@ -159,11 +191,22 @@ export class ZapButtonComponent {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private settings = inject(SettingsService);
+  private ngZone = inject(NgZone);
+  private platformId = inject(PLATFORM_ID);
 
   // State
   isLoading = signal(false);
   totalZaps = signal(0);
   hasZapped = signal(false);
+  showHoverMenu = signal(false);
+
+  // Long-press state for mobile
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressTriggered = false;
+  private readonly LONG_PRESS_DURATION = 500; // ms
+
+  // Check if we're on mobile
+  isHandset = computed(() => this.layout.isHandset());
 
   // Quick zap settings
   quickZapEnabled = computed(() => {
@@ -199,6 +242,59 @@ export class ZapButtonComponent {
 
     return `Send a Lightning zap to ${name}`;
   });
+
+  // Desktop hover handlers
+  onMouseEnter(): void {
+    if (!this.isHandset() && this.quickZapEnabled()) {
+      this.showHoverMenu.set(true);
+    }
+  }
+
+  onMouseLeave(): void {
+    this.showHoverMenu.set(false);
+  }
+
+  // Mobile long-press handlers
+  onTouchStart(event: TouchEvent): void {
+    if (!this.isHandset() || !isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.longPressTriggered = false;
+    this.longPressTimer = setTimeout(() => {
+      this.ngZone.run(() => {
+        this.longPressTriggered = true;
+        // Provide haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+        // Open the custom zap dialog
+        this.openZapDialog(event as unknown as MouseEvent);
+      });
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+
+    // If long press was triggered, prevent the click event
+    if (this.longPressTriggered) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.longPressTriggered = false;
+    }
+  }
+
+  onTouchCancel(): void {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressTriggered = false;
+  }
 
   formatAmount(amount: number): string {
     if (amount >= 1000000) {
