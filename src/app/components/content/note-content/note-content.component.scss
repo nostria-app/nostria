@@ -376,7 +376,7 @@
     // Always use relative positioning without aspect-ratio - video determines container size
     position: relative;
 
-    // Before video is loaded, hide but keep in flow
+    // For videos WITH placeholder: hide until loaded
     &:not(.loaded) {
       opacity: 0;
     }
@@ -389,6 +389,17 @@
     &.hidden {
       // Video is hidden due to blur - keep in flow but invisible
       // The blur reveal overlay will be shown instead
+    }
+  }
+
+  // Videos WITHOUT placeholder: show immediately and let native preview load
+  &.no-placeholder {
+    .main-video {
+      // Show video immediately - don't wait for loaded state
+      opacity: 1;
+      
+      // Video will show its native preview frame or first frame
+      // which is better than a gray placeholder
     }
   }
 
@@ -413,6 +424,13 @@
       inset: 0;
       height: 100%;
     }
+
+    // Even for no-placeholder, maintain absolute positioning when aspect-ratio is set
+    &.no-placeholder {
+      .main-video {
+        opacity: 1;
+      }
+    }
   }
 
   // When video is ready, hide the placeholder properly
@@ -423,21 +441,23 @@
   }
 
   &.blurred {
-    .video-placeholder-bg {
-      opacity: 1 !important;
-      // Cover entire container when blurred
-      object-fit: cover !important;
+    // When there's a placeholder, use it for the blur
+    &.has-placeholder {
+      .video-placeholder-bg {
+        opacity: 1 !important;
+        // Cover entire container when blurred
+        object-fit: cover !important;
+      }
     }
-  }
-
-  // Video containers without blurhash need a background when blurred
-  &.blurred:not(:has(.video-placeholder-bg)) {
-    background-color: var(--mat-sys-surface-container-highest);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    // Provide minimum height for blurred videos without placeholder
-    min-height: 200px;
+    
+    // When there's no placeholder, the reveal overlay provides the blur effect
+    // No need for gray background - overlay has its own backdrop-filter blur
+    &.no-placeholder {
+      .main-video {
+        // Still show the video but the reveal overlay covers it
+        opacity: 1;
+      }
+    }
   }
 
   &.revealing {
@@ -483,6 +503,9 @@
     display: block;
     max-width: 100%;
     height: auto;
+    // Constrain tall/vertical images to not exceed viewport height
+    max-height: 80vh;
+    object-fit: contain;
   }
 
   // Main image - starts hidden for progressive loading
@@ -655,11 +678,13 @@
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  max-height: 600px;
+  // Constrain tall/vertical images in carousels to not exceed viewport height
+  max-height: 80vh;
 
   img {
     max-width: 100%;
-    max-height: 600px;
+    // Constrain tall/vertical images to not exceed viewport height
+    max-height: 80vh;
     width: auto;
     height: auto;
     object-fit: contain;

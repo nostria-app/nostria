@@ -185,6 +185,19 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Content length threshold for showing "Show more" button (in characters)
   private readonly CONTENT_LENGTH_THRESHOLD = 500;
 
+  // Regex patterns for detecting media content
+  private readonly IMAGE_REGEX = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
+  private readonly VIDEO_REGEX = /(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s]*)?)/gi;
+
+  // Helper to check if content contains media (images or videos)
+  private contentHasMedia(content: string): boolean {
+    if (!content) return false;
+    // Reset regex lastIndex before testing
+    this.IMAGE_REGEX.lastIndex = 0;
+    this.VIDEO_REGEX.lastIndex = 0;
+    return this.IMAGE_REGEX.test(content) || this.VIDEO_REGEX.test(content);
+  }
+
   // Check if root event content should be collapsible (content is long enough)
   isRootContentLong = computed<boolean>(() => {
     // Don't show expander in dialogs or thread view - only in feed
@@ -194,6 +207,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1)
     if (rootRecordData.event.kind !== 1) return false;
     const content = rootRecordData.event.content || '';
+    // Don't collapse content with media - images/videos should always be visible
+    if (this.contentHasMedia(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 
@@ -206,6 +221,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1)
     if (parentRecordData.event.kind !== 1) return false;
     const content = parentRecordData.event.content || '';
+    // Don't collapse content with media - images/videos should always be visible
+    if (this.contentHasMedia(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 
@@ -218,6 +235,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1) - not photos, videos, articles, etc.
     if (targetItem.event.kind !== 1) return false;
     const content = targetItem.event.content || '';
+    // Don't collapse content with media - images/videos should always be visible
+    if (this.contentHasMedia(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 

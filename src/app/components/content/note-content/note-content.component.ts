@@ -754,15 +754,16 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get placeholder data URL for a video token using its imeta data
+   * Returns null if no blurhash/thumbhash exists - let video load its own preview
    * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
    */
   getVideoPlaceholderUrl(token: ContentToken): string | null {
     if (!token) {
-      console.warn('[NoteContent] getVideoPlaceholderUrl called with null/undefined token');
-      return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+      return null;
     }
 
     // First try thumbhash, then blurhash from the token
+    // If neither exists, return null to let video load its native preview
     if (token.thumbhash) {
       const url = this.imagePlaceholder.decodeThumbhash(token.thumbhash);
       if (url) return url;
@@ -772,8 +773,8 @@ export class NoteContentComponent implements OnDestroy {
       const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, 32, 32);
       if (url) return url;
     }
-    // Return default placeholder
-    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+    // No placeholder available - return null to let video show its native preview
+    return null;
   }
 
   /**

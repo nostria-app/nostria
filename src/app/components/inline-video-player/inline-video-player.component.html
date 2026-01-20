@@ -1,7 +1,7 @@
 <div class="inline-video-container" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()"
   (mousemove)="onMouseMove()" (touchstart)="onTouchStart()" (click)="$event.stopPropagation()">
-  <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="muted()"
-    [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
+  <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="shouldBeMuted()"
+    [loop]="loop()" playsinline preload="metadata" (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
     (click)="onVideoClick($event)" (dblclick)="onVideoDoubleClick($event)"></video>
 
   <!-- Center play button - only visible before first play -->

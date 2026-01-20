@@ -101,6 +101,11 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return this.isShortFormVideo() && repeatEnabled;
   });
 
+  // Computed mute state from service - persisted across all videos
+  shouldBeMuted = computed(() => {
+    return this.videoPlayback.isMuted();
+  });
+
   constructor() {
     effect(() => {
       const shouldPlay = this.shouldAutoPlay();
@@ -141,13 +146,13 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      // Pause/collapse video when leaving viewport (only for short form videos)
-      if (!shouldPlay && isCurrentlyExpanded && isShortForm) {
+      // Pause video when leaving viewport (for ALL video types, not just short form)
+      if (!inViewport && isCurrentlyExpanded && !videoElement.paused) {
         console.log('🎥 [Video AutoPlay] Pausing video (left viewport)');
         videoElement.pause();
       }
 
-      // Play/pause based on viewport visibility
+      // Play/pause based on viewport visibility (only for short form auto-play behavior)
       if (isCurrentlyExpanded && isShortForm) {
         if (shouldPlay) {
           console.log('🎥 [Video AutoPlay] Playing video');
@@ -266,15 +271,22 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return data !== null && !!data.url;
   });
 
-  // Computed placeholder data URL - uses default if none available (supports blurhash and thumbhash)
-  // Uses preserveAspectRatio to ensure placeholder matches video dimensions
+  // Computed placeholder data URL - returns null if no placeholder available
+  // Uses preserveAspectRatio to ensure placeholder matches video dimensions when available
   placeholderDataUrl = computed(() => {
     const event = this.event();
-    const defaultPlaceholder = this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
-    if (!event) return defaultPlaceholder;
+    if (!event) return null;
 
-    const placeholder = this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, true);
-    return placeholder || defaultPlaceholder;
+    // Check if event has actual placeholder data (blurhash or thumbhash)
+    const data = this.imagePlaceholder.getPlaceholderFromEvent(event, 0);
+    const hasPlaceholder = data.blurhash || data.thumbhash;
+    
+    if (!hasPlaceholder) {
+      // No placeholder available - return null to let video show its native preview
+      return null;
+    }
+
+    return this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, true);
   });
 
   // Legacy alias for backward compatibility
@@ -491,6 +503,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           height: video.videoHeight
         });
       }
+      
+      // Apply persisted mute state when video loads
+      const persistedMuted = this.videoPlayback.getMutedState();
+      video.muted = persistedMuted;
     }
   }
 
@@ -542,7 +558,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   onMuteToggle(): void {
     const video = this.videoPlayerRef?.nativeElement;
     if (video) {
-      video.muted = !video.muted;
+      const newMutedState = !video.muted;
+      video.muted = newMutedState;
+      // Persist mute state for all videos
+      this.videoPlayback.setMuted(newMutedState);
     }
   }
 
