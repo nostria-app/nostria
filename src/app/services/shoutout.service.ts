@@ -45,8 +45,9 @@ export class ShoutoutService {
   // Signal to track loading state
   readonly isLoading = signal(false);
 
-  // Signal to track subscription
-  private subscription: { close: () => void } | { unsubscribe: () => void } | null = null;
+  // Signal to track subscriptions (received and sent)
+  private receivedSubscription: { close: () => void } | { unsubscribe: () => void } | null = null;
+  private sentSubscription: { close: () => void } | { unsubscribe: () => void } | null = null;
 
   // Computed: shoutouts from favorites only
   readonly shoutoutsFromFavorites = computed(() => {
@@ -74,47 +75,82 @@ export class ShoutoutService {
     });
   }
 
+  // Track loading state for each subscription
+  private receivedLoaded = false;
+  private sentLoaded = false;
+
   /**
-   * Start subscription to receive kind 24 events
+   * Start subscription to receive kind 24 events (both received and sent)
    */
   private startSubscription(pubkey: string): void {
-    // Close existing subscription if any
+    // Close existing subscriptions if any
     this.stopSubscription();
 
     this.isLoading.set(true);
     this._shoutouts.set([]);
-
-    // Subscribe to kind 24 events where we are tagged
-    const filter = {
-      kinds: [SHOUTOUT_KIND],
-      '#p': [pubkey],
-      limit: 100,
-    };
+    this.receivedLoaded = false;
+    this.sentLoaded = false;
 
     const onEvent = (event: Event) => {
       this.processShoutoutEvent(event);
     };
 
-    const onEose = () => {
-      this.isLoading.set(false);
-      this.logger.info(`[ShoutoutService] Loaded ${this._shoutouts().length} shoutouts`);
+    const checkLoadingComplete = () => {
+      if (this.receivedLoaded && this.sentLoaded) {
+        this.isLoading.set(false);
+        this.logger.info(`[ShoutoutService] Loaded ${this._shoutouts().length} shoutouts`);
+      }
     };
 
-    this.subscription = this.accountRelay.subscribe(filter, onEvent, onEose);
+    // Subscribe to kind 24 events where we are tagged (received shoutouts)
+    const receivedFilter = {
+      kinds: [SHOUTOUT_KIND],
+      '#p': [pubkey],
+      limit: 100,
+    };
+
+    this.receivedSubscription = this.accountRelay.subscribe(receivedFilter, onEvent, () => {
+      this.receivedLoaded = true;
+      checkLoadingComplete();
+    });
+
+    // Subscribe to kind 24 events authored by us (sent shoutouts)
+    const sentFilter = {
+      kinds: [SHOUTOUT_KIND],
+      authors: [pubkey],
+      limit: 100,
+    };
+
+    this.sentSubscription = this.accountRelay.subscribe(sentFilter, onEvent, () => {
+      this.sentLoaded = true;
+      checkLoadingComplete();
+    });
   }
 
   /**
-   * Stop the current subscription
+   * Stop the current subscriptions
    */
   private stopSubscription(): void {
-    if (this.subscription) {
-      if ('close' in this.subscription && this.subscription.close) {
-        this.subscription.close();
-      } else if ('unsubscribe' in this.subscription && this.subscription.unsubscribe) {
-        this.subscription.unsubscribe();
+    // Close received subscription
+    if (this.receivedSubscription) {
+      if ('close' in this.receivedSubscription && this.receivedSubscription.close) {
+        this.receivedSubscription.close();
+      } else if ('unsubscribe' in this.receivedSubscription && this.receivedSubscription.unsubscribe) {
+        this.receivedSubscription.unsubscribe();
       }
-      this.subscription = null;
+      this.receivedSubscription = null;
     }
+
+    // Close sent subscription
+    if (this.sentSubscription) {
+      if ('close' in this.sentSubscription && this.sentSubscription.close) {
+        this.sentSubscription.close();
+      } else if ('unsubscribe' in this.sentSubscription && this.sentSubscription.unsubscribe) {
+        this.sentSubscription.unsubscribe();
+      }
+      this.sentSubscription = null;
+    }
+
     this._shoutouts.set([]);
   }
 

@@ -110,6 +110,43 @@
       </div>
     </div>
 
+    <!-- Shoutouts list or Receivers view -->
+    @if (viewingReceiversFor()) {
+    <!-- Receivers view -->
+    <div class="receivers-view">
+      <div class="receivers-header">
+        <button mat-icon-button (click)="hideReceivers()" type="button" matTooltip="Back to shoutouts"
+          aria-label="Back to shoutouts">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="receivers-title">Sent to</span>
+      </div>
+
+      <div class="receivers-message">
+        <p class="receiver-shoutout-text">{{ viewingReceiversFor()!.content }}</p>
+        <span class="receiver-shoutout-time">{{ formatTime(viewingReceiversFor()!.created_at) | date:'short' }}</span>
+      </div>
+
+      <div class="receivers-list">
+        @for (pubkey of viewingReceiversFor()!.receivers; track pubkey) {
+        <button class="receiver-item" (click)="navigateToProfile(pubkey)" type="button"
+          (mouseenter)="onAvatarMouseEnter($event, pubkey)" (mouseleave)="onAvatarMouseLeave()"
+          [attr.aria-label]="'View profile of ' + getDisplayName(getReceiverProfile(pubkey))">
+          <div class="receiver-avatar">
+            @if (getAvatarUrl(getReceiverProfile(pubkey))) {
+            <img [src]="getAvatarUrl(getReceiverProfile(pubkey))" [alt]="getDisplayName(getReceiverProfile(pubkey))"
+              draggable="false" />
+            } @else {
+            <span class="avatar-initials">{{ getInitials(getReceiverProfile(pubkey)) }}</span>
+            }
+          </div>
+          <span class="receiver-name">{{ getDisplayName(getReceiverProfile(pubkey)) }}</span>
+          <mat-icon class="receiver-arrow">chevron_right</mat-icon>
+        </button>
+        }
+      </div>
+    </div>
+    } @else {
     <!-- Shoutouts list -->
     <div class="shoutouts-list">
       @if (isLoading()) {
@@ -125,7 +162,7 @@
       </div>
       } @else {
       @for (shoutout of displayedShoutouts(); track shoutout.id) {
-      <div class="shoutout-item">
+      <div class="shoutout-item" [class.sent-by-me]="isSentByMe(shoutout)">
         <button class="shoutout-avatar" (click)="navigateToProfile(shoutout.pubkey); $event.stopPropagation()"
           (mouseenter)="onAvatarMouseEnter($event, shoutout.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
           [attr.aria-label]="'View profile of ' + getDisplayName(shoutout.profile)">
@@ -137,10 +174,23 @@
         </button>
         <div class="shoutout-content">
           <div class="shoutout-header">
+            @if (isSentByMe(shoutout)) {
+            <span class="shoutout-author sent-label">You sent to
+              @if (shoutout.receivers.length > 0) {
+              <button class="receivers-link" (click)="showReceivers(shoutout); $event.stopPropagation()" type="button">
+                {{ getReceiverNames(shoutout) }}
+              </button>
+              } @else {
+              {{ getReceiverNames(shoutout) }}
+              }
+            </span>
+            } @else {
             <span class="shoutout-author">{{ getDisplayName(shoutout.profile) }}</span>
+            }
             <span class="shoutout-time">{{ formatTime(shoutout.created_at) | date:'short' }}</span>
           </div>
           <p class="shoutout-text">{{ shoutout.content }}</p>
+          @if (!isSentByMe(shoutout)) {
           <div class="shoutout-actions">
             <button mat-stroked-button class="reply-button" (click)="replyToShoutout(shoutout)" type="button"
               matTooltip="Reply">
@@ -148,11 +198,13 @@
               Reply
             </button>
           </div>
+          }
         </div>
       </div>
       }
       }
     </div>
+    }
   </div>
   }
 </div>
