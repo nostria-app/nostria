@@ -81,6 +81,9 @@ export class ShoutoutOverlayComponent {
   // Signal to track the shoutout whose receivers are being viewed
   viewingReceiversFor = signal<Shoutout | null>(null);
 
+  // Signal to show/hide the info card
+  showInfoCard = signal(false);
+
   // Signal to store loaded receiver profiles
   receiverProfiles = signal<Map<string, NostrRecord | null>>(new Map());
 
@@ -211,6 +214,10 @@ export class ShoutoutOverlayComponent {
     if (!this.showRecipientPicker()) {
       this.recipientSearchInput.set('');
     }
+  }
+
+  toggleInfoCard(): void {
+    this.showInfoCard.update(v => !v);
   }
 
   addRecipient(recipient: RecipientOption): void {

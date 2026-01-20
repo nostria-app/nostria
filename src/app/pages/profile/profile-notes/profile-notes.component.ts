@@ -83,13 +83,21 @@ export class ProfileNotesComponent {
     });
 
     // Effect to load initial notes if none are present and profile is loaded
+    // IMPORTANT: Wait for cachedEventsLoaded to be true before loading from relays
+    // This ensures cached data is displayed first for instant feedback
     effect(() => {
       const currentPubkey = this.profileState.pubkey();
       const currentNotes = this.profileState.displayedTimeline();
+      const cachedEventsLoaded = this.profileState.cachedEventsLoaded();
+
+      // Wait for cached events to be loaded first - this gives instant UI feedback
+      if (!cachedEventsLoaded) {
+        return;
+      }
 
       // If we have a pubkey but no notes, and we're not already loading, load some notes
       if (currentPubkey && currentNotes.length === 0 && !this.profileState.isLoadingMoreNotes()) {
-        this.logger.debug('No notes found for profile, loading initial notes...');
+        this.logger.debug('No notes found for profile after cache check, loading from relays...');
         this.loadMoreNotes();
       }
     });
@@ -100,6 +108,12 @@ export class ProfileNotesComponent {
       const hasInsufficientContent = this.profileState.hasInsufficientFilteredContent();
       const isLoading = this.profileState.isLoadingMoreNotes();
       const isInitiallyLoading = this.profileState.isInitiallyLoading();
+      const cachedEventsLoaded = this.profileState.cachedEventsLoaded();
+
+      // Wait for cached events to be loaded first
+      if (!cachedEventsLoaded) {
+        return;
+      }
 
       // Only auto-load if we have insufficient filtered content and not already loading
       if (hasInsufficientContent && !isLoading && !isInitiallyLoading) {
