@@ -98,4 +98,8 @@ export class HomeComponent {
   isAiEnabled(): boolean {
     return this.settings.settings().aiEnabled ?? false;
   }
+
+  openShoutouts(): void {
+    this.layout.openShoutouts();
+  }
 }

@@ -72,6 +72,11 @@
         <span i18n="@@home.notifications">Notifications</span>
       </a>
 
+      <button class="compact-card" mat-ripple (click)="openShoutouts()">
+        <mat-icon class="compact-icon shoutouts-icon">chat_bubble</mat-icon>
+        <span i18n="@@home.shoutouts">Shoutouts</span>
+      </button>
+
       <a [routerLink]="['/p', account.pubkey()]" class="compact-card" mat-ripple>
         <mat-icon class="compact-icon profile-icon">account_circle</mat-icon>
         <span i18n="@@home.profile">Profile</span>
