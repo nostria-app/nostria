@@ -432,14 +432,12 @@
     </mat-sidenav-content>
   </mat-sidenav-container>
 
-  <!-- Shoutout overlay - chat bubble above favorites -->
+  <!-- Right sidebar container - shoutout and favorites together -->
   @if (app.authenticated()) {
-  <app-shoutout-overlay class="shoutout-sidebar"></app-shoutout-overlay>
-  }
-
-  <!-- Favorites sidebar - vertical on right side of screen -->
-  @if (app.authenticated()) {
-  <app-favorites-overlay class="favorites-sidebar"></app-favorites-overlay>
+  <div class="right-sidebar-container">
+    <app-shoutout-overlay></app-shoutout-overlay>
+    <app-favorites-overlay></app-favorites-overlay>
+  </div>
   }
 
   <!-- Media player - positioned in footer or fullscreen based on state -->

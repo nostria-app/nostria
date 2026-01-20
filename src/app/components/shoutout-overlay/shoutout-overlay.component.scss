@@ -1,8 +1,10 @@
 .shoutout-container {
   position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   pointer-events: auto;
+  padding-right: 8px;
 }
 
 // Chat bubble button
@@ -20,7 +22,7 @@
   justify-content: center;
   transition: all 0.2s ease;
   padding: 0;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
     inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
@@ -88,9 +90,10 @@
 
 // Overlay panel
 .shoutout-overlay {
-  position: fixed;
-  top: 64px;
-  right: 60px; // Position to the left of the favorites sidebar
+  position: absolute;
+  top: 0;
+  right: 100%; // Position to the left of the button
+  margin-right: 8px;
   bottom: auto;
   max-height: calc(100dvh - 128px);
   width: 380px;
@@ -126,6 +129,7 @@
   }
 
   @media (max-width: 599px) {
+    position: fixed;
     width: 100%;
     max-width: 100%;
     border-radius: 0;
@@ -133,6 +137,7 @@
     right: 0;
     bottom: 60px;
     max-height: none;
+    margin-right: 0;
   }
 }
 
@@ -488,15 +493,17 @@
 
 .shoutout-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
+  justify-content: flex-start;
+  margin-top: 8px;
 }
 
 .reply-button {
   font-size: 0.75rem;
-  padding: 2px 8px;
+  padding: 0 8px;
   min-width: auto;
-  line-height: 1.4;
+  min-height: 28px;
+  line-height: 28px;
+  border-radius: 14px;
 
   mat-icon {
     font-size: 14px;
