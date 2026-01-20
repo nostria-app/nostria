@@ -243,7 +243,8 @@
           }
         </div>
 
-        <!-- Relay Configuration -->
+        <!-- Relay Configuration (hidden for search feeds - they use search relays) -->
+        @if (feedForm.get('source')?.value !== 'search') {
         <div class="section relay-config-section">
           <h3>Relay Configuration</h3>
           <!-- <p class="section-description">Choose which relays to use for this feed</p> -->
@@ -307,6 +308,7 @@
           </div>
           }
         </div>
+        }
 
         <!-- Display Options -->
         <div class="section display-options-section">
