@@ -9,24 +9,26 @@
   <!-- Panel Header -->
   <div class="panel-header">
     <h2 class="panel-title title-font">Summary</h2>
-    <p class="last-visit-badge">Since {{ timeSinceLastCheck() }}</p>
+    <span class="last-visit-badge">Since {{ timeSinceLastCheck() }}</span>
     <span class="panel-header-spacer"></span>
-    @if (isFetching()) {
-    <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
-    } @else {
-    <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
-      <mat-icon>refresh</mat-icon>
-    </button>
-    }
-    <button mat-icon-button [matMenuTriggerFor]="summaryMenu" matTooltip="More options">
-      <mat-icon>more_vert</mat-icon>
-    </button>
-    <mat-menu #summaryMenu="matMenu">
-      <button mat-menu-item (click)="refresh()" [disabled]="isLoading() || isFetching()">
+    <div class="panel-actions">
+      @if (isFetching()) {
+      <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+      } @else {
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
         <mat-icon>refresh</mat-icon>
-        <span>Refresh</span>
       </button>
-    </mat-menu>
+      }
+      <button mat-icon-button [matMenuTriggerFor]="summaryMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #summaryMenu="matMenu">
+        <button mat-menu-item (click)="refresh()" [disabled]="isLoading() || isFetching()">
+          <mat-icon>refresh</mat-icon>
+          <span>Refresh</span>
+        </button>
+      </mat-menu>
+    </div>
   </div>
 
   <!-- Time Range Selector -->
