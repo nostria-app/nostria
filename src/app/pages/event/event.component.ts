@@ -29,6 +29,7 @@ import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../service
 import { Title } from '@angular/platform-browser';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
 
 /** Description of the EventPageComponent
@@ -85,6 +86,7 @@ export class EventPageComponent {
   private router = inject(Router);
   private location = inject(Location);
   private rightPanel = inject(RightPanelService);
+  private panelNav = inject(PanelNavigationService);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -129,13 +131,16 @@ export class EventPageComponent {
   }
 
   /**
-   * Navigate back - either close right panel or go to browser history
+   * Navigate back - use panel navigation service for proper back handling
    */
   goBack(): void {
+    // First check RightPanelService (for programmatic component-based panels)
     if (this.rightPanel.canGoBack()) {
       this.rightPanel.goBack();
     } else {
-      this.location.back();
+      // Use panel navigation service for router-based right panel
+      // This properly sets the back navigation flag to preserve left panel
+      this.panelNav.goBackRight();
     }
   }
 

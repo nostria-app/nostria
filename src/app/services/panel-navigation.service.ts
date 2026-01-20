@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Router, NavigationEnd, PRIMARY_OUTLET, UrlTree } from '@angular/router';
+import { Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { PanelActionsService } from './panel-actions.service';
@@ -222,6 +222,18 @@ export class PanelNavigationService {
     // Monitor mobile breakpoint
     this.breakpointObserver.observe('(max-width: 1023px)').subscribe(result => {
       this.isMobile.set(result.matches);
+    });
+
+    // Listen to NavigationStart to detect browser back/forward (popstate)
+    // This sets the _isBackNavigation flag BEFORE handleNavigation runs
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe((event) => {
+      const navStart = event as NavigationStart;
+      // navigationTrigger is 'popstate' for browser back/forward buttons
+      if (navStart.navigationTrigger === 'popstate') {
+        this._isBackNavigation = true;
+      }
     });
 
     // Listen to router navigation events
@@ -485,11 +497,12 @@ export class PanelNavigationService {
    */
   goBackRight(): void {
     const stack = this._rightStack();
+
     if (stack.length <= 1) {
       // Clear right panel - just close it, don't navigate away from current left route
       this._rightStack.set([]);
       this._isBackNavigation = true;
-      // Clear the right outlet
+      // Clear the right outlet - Angular Router preserves the primary outlet automatically
       this.router.navigate([{ outlets: { right: null } }]);
       return;
     }
@@ -526,13 +539,8 @@ export class PanelNavigationService {
     if (this._clearRightPanelCallback) {
       this._clearRightPanelCallback();
     }
-    // Navigate to left route or home
-    const left = this.leftRoute();
-    if (left) {
-      this.router.navigate([left.path]);
-    } else {
-      this.router.navigate(['/']);
-    }
+    // Clear the right outlet - Angular Router preserves the primary outlet automatically
+    this.router.navigate([{ outlets: { right: null } }]);
   }
 
   /**
