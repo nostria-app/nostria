@@ -65,7 +65,7 @@
     <div class="user-profile-content">
       <div class="user-profile-name-text" #nameElement (mouseenter)="onMouseEnter($event, nameElement)"
         (mouseleave)="onMouseLeave()">
-        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+        <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </div>
     </div>
     }
@@ -85,7 +85,7 @@
       <!-- Name section -->
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-name-link" #nameElement
         (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
-        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+        <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
@@ -140,7 +140,7 @@
           }
         </div>
         <span class="user-profile-name name-label">
-          <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+          <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
         </span>
       </a>
     </div>
@@ -170,7 +170,7 @@
         }
       </div>
       <span class="user-profile-name name-label">
-        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+        <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </span>
     </a>
     }

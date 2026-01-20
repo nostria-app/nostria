@@ -40,6 +40,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   publicKey = '';
   pubkey = input<string>('');
   event = input<Event | undefined>(undefined);
+  disableLink = input<boolean>(false);
   profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   isLoading = signal(false);
   error = signal<string>('');

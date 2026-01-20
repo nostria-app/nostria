@@ -1,3 +1,20 @@
+@if (disableLink()) {
+<span class="profile-link disabled" (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave()">
+  @if (isLoading() || profile() === null) {
+  ...
+  } @else if (profile() && !profile().isEmpty && profile().data) {
+  @if (profile().data.display_name) {
+  {{ profile().data.display_name }}
+  } @else if (profile().data.name) {
+  {{ profile().data.name }}
+  } @else {
+  {{ truncatedNpubValue() }}
+  }
+  } @else {
+  {{ truncatedNpubValue() }}
+  }
+</span>
+} @else {
 <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="profile-link" (mouseenter)="onMouseEnter($event)"
   (mouseleave)="onMouseLeave()">
   @if (isLoading() || profile() === null) {
@@ -14,3 +31,4 @@
   {{ truncatedNpubValue() }}
   }
 </a>
+}
