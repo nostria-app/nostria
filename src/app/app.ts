@@ -1879,7 +1879,8 @@ export class App implements OnInit {
       // Remove current entry and navigate to previous
       const previousPath = history[history.length - 2];
       this._rightPanelHistory.update(h => h.slice(0, -1));
-      this.router.navigate([{ outlets: { right: previousPath.split('/') } }]);
+      // Use panelNav.goBackRight() to properly handle back navigation flag
+      this.panelNav.goBackRight();
     } else {
       // Close right panel
       this.closeRightPanel();
@@ -1905,6 +1906,7 @@ export class App implements OnInit {
     this.panelActions.clearRightPanelActions();
     // Clear the panel navigation right stack
     this.panelNav.clearRightStack();
+    
     // Navigate to clear the right outlet
     this.router.navigate([{ outlets: { right: null } }]);
   }
