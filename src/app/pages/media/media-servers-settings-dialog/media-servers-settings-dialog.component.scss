@@ -58,6 +58,128 @@
   }
 }
 
+// Inline ping results section
+.ping-results-section {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 16px;
+  margin-bottom: 24px;
+
+  .ping-results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    h4 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .ping-results-description {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0 0 12px 0;
+  }
+}
+
+.ping-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ping-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--mat-sys-surface);
+  border-radius: var(--mat-sys-corner-small);
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-high);
+    box-shadow: var(--mat-sys-level1);
+  }
+
+  &.fastest {
+    border: 1px solid var(--mat-sys-primary);
+  }
+
+  &:disabled,
+  &.already-added {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .ping-result-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .ping-result-region {
+      color: var(--mat-sys-on-surface);
+    }
+
+    .fastest-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 8px;
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      border-radius: 12px;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+
+  .ping-result-latency {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    color: var(--mat-sys-on-surface-variant);
+
+    .latency-value {
+      font-size: 16px;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .latency-unit {
+      font-size: 12px;
+    }
+  }
+
+  .ping-result-action {
+    width: 48px;
+    display: flex;
+    justify-content: flex-end;
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+
+    .added-label {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
 .servers-section {
   margin-bottom: 24px;
 

@@ -1,4 +1,4 @@
-import { Component, inject, signal, output, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -10,13 +10,10 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
-import { MatDialog } from '@angular/material/dialog';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
-import { RelayPingResultsDialogComponent } from '../../settings/relays/relay-ping-results-dialog.component';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 // Suggested media servers
 const SUGGESTED_SERVERS = [
@@ -36,7 +33,6 @@ const NOSTRIA_MEDIA_REGIONS = [
 @Component({
   selector: 'app-media-servers-settings-dialog',
   imports: [
-    CustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -53,13 +49,12 @@ const NOSTRIA_MEDIA_REGIONS = [
   styleUrl: './media-servers-settings-dialog.component.scss',
 })
 export class MediaServersSettingsDialogComponent implements OnInit {
-  closed = output<{ saved: boolean } | null>();
+  private dialogRef = inject(CustomDialogRef<MediaServersSettingsDialogComponent, { saved: boolean } | null>);
 
   mediaService = inject(MediaService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private accountRelay = inject(AccountRelayService);
-  private dialog = inject(MatDialog);
 
   // State
   isLoading = signal(true);
@@ -67,6 +62,10 @@ export class MediaServersSettingsDialogComponent implements OnInit {
   isSettingUp = signal(false);
   testingServer = signal<string | null>(null);
   testResults = signal<Map<string, { success: boolean; message: string }>>(new Map());
+
+  // Inline ping results for quick setup (replaces nested dialog)
+  pingResults = signal<{ region: string; regionId: string; mediaServer: string; pingTime: number }[]>([]);
+  showPingResults = signal(false);
 
   // Editable server list (local copy)
   servers = signal<string[]>([]);
@@ -195,6 +194,8 @@ export class MediaServersSettingsDialogComponent implements OnInit {
    */
   async quickSetup(): Promise<void> {
     this.isSettingUp.set(true);
+    this.showPingResults.set(false);
+    this.pingResults.set([]);
 
     try {
       // Get user's account relays to detect region
@@ -214,30 +215,19 @@ export class MediaServersSettingsDialogComponent implements OnInit {
       }
 
       if (detectedRegion) {
-        // Region detected - confirm with user
-        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-          data: {
-            title: 'Add Nostria Media Server',
-            message: `We detected you're using the ${detectedRegion.name} region. Would you like to add the ${detectedRegion.name} Nostria media server?`,
-            confirmText: 'Add Server',
-            cancelText: 'Cancel',
-            confirmColor: 'primary',
-          },
-        });
-
-        const confirmed = await dialogRef.afterClosed().toPromise();
-        if (confirmed) {
-          const normalizedUrl = this.normalizeUrl(detectedRegion.mediaServer);
-          if (normalizedUrl && !this.servers().includes(normalizedUrl)) {
-            this.servers.update(servers => [...servers, normalizedUrl]);
-            this.snackBar.open(`Added ${detectedRegion.name} Nostria media server`, 'Close', { duration: 3000 });
-          }
+        // Region detected - add the server directly (quick setup should be quick!)
+        const normalizedUrl = this.normalizeUrl(detectedRegion.mediaServer);
+        if (normalizedUrl && !this.servers().includes(normalizedUrl)) {
+          this.servers.update(servers => [...servers, normalizedUrl]);
+          this.snackBar.open(`Added ${detectedRegion.name} Nostria media server`, 'Close', { duration: 3000 });
+        } else {
+          this.snackBar.open('Nostria media server already configured', 'Close', { duration: 3000 });
         }
       } else {
-        // No region detected - ping all and let user choose
+        // No region detected - ping all and show inline selection
         this.snackBar.open('Checking Nostria media server regions...', 'Close', { duration: 2000 });
 
-        const pingResults = await Promise.allSettled(
+        const results = await Promise.allSettled(
           NOSTRIA_MEDIA_REGIONS.map(async region => {
             const pingTime = await this.checkServerPing(region.mediaServer);
             return {
@@ -249,7 +239,7 @@ export class MediaServersSettingsDialogComponent implements OnInit {
           })
         );
 
-        const successfulPings = pingResults
+        const successfulPings = results
           .filter((result): result is PromiseFulfilledResult<{
             region: string;
             regionId: string;
@@ -264,33 +254,9 @@ export class MediaServersSettingsDialogComponent implements OnInit {
           return;
         }
 
-        // Show dialog with results
-        const dialogResults = successfulPings.map(result => ({
-          url: `${result.region} (${result.mediaServer})`,
-          pingTime: result.pingTime,
-          isAlreadyAdded: this.servers().includes(this.normalizeUrl(result.mediaServer) || ''),
-          regionData: result,
-        }));
-
-        const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
-          width: '500px',
-          data: { results: dialogResults },
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          if (result?.selected) {
-            const selectedRegion = result.selected.regionData;
-            const normalizedUrl = this.normalizeUrl(selectedRegion.mediaServer);
-            if (normalizedUrl && !this.servers().includes(normalizedUrl)) {
-              this.servers.update(servers => [...servers, normalizedUrl]);
-              this.snackBar.open(
-                `Added ${selectedRegion.region} Nostria media server (${selectedRegion.pingTime}ms latency)`,
-                'Close',
-                { duration: 3000 }
-              );
-            }
-          }
-        });
+        // Show inline ping results for selection
+        this.pingResults.set(successfulPings);
+        this.showPingResults.set(true);
       }
     } catch (error) {
       this.logger.error('Error during quick setup:', error);
@@ -298,6 +264,39 @@ export class MediaServersSettingsDialogComponent implements OnInit {
     } finally {
       this.isSettingUp.set(false);
     }
+  }
+
+  /**
+   * Select a server from the ping results
+   */
+  selectPingResult(result: { region: string; regionId: string; mediaServer: string; pingTime: number }): void {
+    const normalizedUrl = this.normalizeUrl(result.mediaServer);
+    if (normalizedUrl && !this.servers().includes(normalizedUrl)) {
+      this.servers.update(servers => [...servers, normalizedUrl]);
+      this.snackBar.open(
+        `Added ${result.region} Nostria media server (${result.pingTime}ms latency)`,
+        'Close',
+        { duration: 3000 }
+      );
+    }
+    this.showPingResults.set(false);
+    this.pingResults.set([]);
+  }
+
+  /**
+   * Dismiss the ping results selection
+   */
+  dismissPingResults(): void {
+    this.showPingResults.set(false);
+    this.pingResults.set([]);
+  }
+
+  /**
+   * Check if a server is already added
+   */
+  isServerAlreadyAdded(mediaServer: string): boolean {
+    const normalizedUrl = this.normalizeUrl(mediaServer);
+    return normalizedUrl ? this.servers().includes(normalizedUrl) : false;
   }
 
   private async checkServerPing(serverUrl: string): Promise<number> {
@@ -350,7 +349,7 @@ export class MediaServersSettingsDialogComponent implements OnInit {
       }
 
       this.snackBar.open('Media server settings saved!', 'Dismiss', { duration: 3000 });
-      this.closed.emit({ saved: true });
+      this.dialogRef.close({ saved: true });
     } catch (error) {
       this.logger.error('Error saving media servers:', error);
       this.snackBar.open('Failed to save settings. Please try again.', 'Dismiss', { duration: 3000 });
@@ -359,8 +358,8 @@ export class MediaServersSettingsDialogComponent implements OnInit {
     }
   }
 
-  onCancel(): void {
-    this.closed.emit(null);
+  cancel(): void {
+    this.dialogRef.close(null);
   }
 
   // Get suggested servers that aren't already added
