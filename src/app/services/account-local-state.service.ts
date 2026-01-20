@@ -889,10 +889,11 @@ export class AccountLocalStateService {
 
   /**
    * Get video muted state for an account
+   * Defaults to true (muted) because browser autoplay requires muted videos
    */
   getVolumeMuted(pubkey: string): boolean {
     const state = this.getAccountState(pubkey);
-    return state.volumeMuted ?? false;
+    return state.volumeMuted ?? true;
   }
 
   /**

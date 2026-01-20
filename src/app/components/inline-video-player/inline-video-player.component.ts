@@ -75,20 +75,19 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   volumeSliderVisible = signal(false);
   isReady = signal(false);
 
-  // Computed mute state - uses persisted state from service, or muted input for autoplay
+  // Computed mute state - uses persisted state from service
+  // The muted input is only used during initial load if no persisted state exists
   shouldBeMuted = computed(() => {
-    // If muted input is set (e.g., for autoplay), use it
-    if (this.muted()) {
-      return true;
-    }
-    // Otherwise prefer the persisted mute state from the service
+    // Always use the persisted mute state from the service
+    // This ensures user's mute preference carries across videos
     return this.videoPlayback.isMuted();
   });
 
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private videoEventCleanup: (() => void) | null = null;
   private intersectionObserver?: IntersectionObserver;
-  private isInViewport = signal(true);
+  // Start as false - IntersectionObserver will set to true when actually visible
+  private isInViewport = signal(false);
 
   // Progress calculations
   progressPercent = computed(() => {
@@ -126,13 +125,26 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // Auto-pause when scrolled out of viewport
+    // Handle viewport visibility changes for auto-play and auto-pause
     effect(() => {
       const inViewport = this.isInViewport();
       const video = this.videoElement?.nativeElement;
       
-      if (!inViewport && video && !video.paused) {
-        video.pause();
+      if (!video) return;
+      
+      if (inViewport) {
+        // Video entered viewport - auto-play if enabled and hasn't been played yet
+        if (this.autoplay() && !this.hasPlayedOnce() && video.paused) {
+          video.play().catch(() => {
+            // Autoplay failed - likely due to browser restrictions
+            // User will need to click to play
+          });
+        }
+      } else {
+        // Video left viewport - pause if playing
+        if (!video.paused) {
+          video.pause();
+        }
       }
     });
   }
