@@ -569,6 +569,12 @@ export const routes: Routes = [
     title: 'People',
   },
   {
+    path: 'people/list/:setId',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
+    title: 'People',
+  },
+  {
     path: 'people/discover',
     data: { isRoot: true },
     loadComponent: () =>

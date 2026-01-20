@@ -223,6 +223,19 @@
       color: var(--mat-sys-on-surface);
       transition: background-color 0.15s ease;
 
+      // Override Material button centering
+      ::ng-deep .mat-mdc-button-persistent-ripple,
+      ::ng-deep .mdc-button__label {
+        justify-content: flex-start;
+      }
+
+      ::ng-deep .mdc-button__label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
       &:hover {
         background-color: var(--mat-sys-surface-container-highest);
       }
@@ -237,6 +250,7 @@
         width: 18px;
         height: 18px;
         color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
       }
 
       .check-icon {
@@ -246,6 +260,7 @@
 
       span {
         flex: 1;
+        text-align: left;
       }
     }
   }

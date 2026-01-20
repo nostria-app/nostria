@@ -47,7 +47,22 @@
       @if (mediaItem()?.type?.startsWith('image')) {
       <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
       } @else if (mediaItem()?.type?.startsWith('video')) {
-      <video [src]="mediaItem()!.url" controls></video>
+      <div class="video-wrapper" 
+        (mouseenter)="onVideoMouseEnter()" 
+        (mouseleave)="onVideoMouseLeave()"
+        (mousemove)="onVideoMouseMove()">
+        <video #videoElement [src]="mediaItem()!.url" (click)="onVideoPlayPause()"></video>
+        <app-video-controls
+          [videoElement]="videoElement"
+          [config]="{ showQuality: false, showCast: false }"
+          (playPause)="onVideoPlayPause()"
+          (seek)="onVideoSeek($event)"
+          (volumeChange)="onVideoVolumeChange($event)"
+          (muteToggle)="onVideoMuteToggle()"
+          (playbackRateChange)="onVideoPlaybackRateChange($event)"
+          (fullscreenToggle)="onVideoFullscreenToggle()"
+          (pipToggle)="onVideoPipToggle()" />
+      </div>
       } @else if (mediaItem()?.type && isAudioFile(mediaItem()!.type)) {
       <div class="audio-preview-container">
         <div class="audio-icon">
@@ -83,7 +98,7 @@
       <div class="metadata-list">
         <div class="metadata-item">
           <span class="label">URL</span>
-          <span class="value url-value">{{ mediaItem()!.url }}</span>
+          <a class="value url-link" [href]="mediaItem()!.url" target="_blank" rel="noopener noreferrer">{{ mediaItem()!.url }}</a>
         </div>
 
         <mat-divider></mat-divider>
@@ -122,7 +137,7 @@
           <div class="mirror-servers-list">
             @for (mirror of mediaItem()!.mirrors; track $index) {
             <div class="mirror-server">
-              <span>{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</span>
+              <a class="url-link" [href]="getFullMirrorUrl(mirror, mediaItem()!.url)" target="_blank" rel="noopener noreferrer">{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</a>
             </div>
             }
           </div>

@@ -385,11 +385,11 @@
   }
 }
 
-// Library Features
+// Library/Collections Features
 .library-features {
   .library-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
   }
 }
@@ -533,6 +533,22 @@
 
   span {
     font-size: 0.9rem;
+  }
+
+  // Primary Collections button - distinct styling
+  &.library-item-primary {
+    background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-surface-container-high) 100%);
+    border: 1px solid var(--mat-sys-outline-variant);
+
+    &:hover {
+      border-color: var(--mat-sys-primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
   }
 }
 
