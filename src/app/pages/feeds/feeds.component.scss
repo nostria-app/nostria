@@ -423,8 +423,8 @@ app-user-profile {
           overflow-x: hidden;
           position: relative;
           min-width: 0; // Allow shrinking in flex layouts
+          padding-top: 12px; // Add spacing between header and first event
           // Content starts below the fixed header (header is ~56px)
-          // No extra padding needed as content naturally flows below sticky header
 
           // Column header - inside scrollable content
           .column-header {

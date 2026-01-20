@@ -1,3 +1,6 @@
+@if (!app.authenticated()) {
+<app-introduction></app-introduction>
+} @else {
 <div class="home-dashboard">
   <!-- Hero Section - Primary CTA -->
   <header class="hero-section">
@@ -329,3 +332,4 @@
     <span class="version">Nostria v{{ app.version }}</span>
   </footer>
 </div>
+}

@@ -311,7 +311,7 @@ export class ShoutoutOverlayComponent {
 
     // Clear existing and add sender
     this.selectedRecipients.set([recipient]);
-    this.showRecipientPicker.set(true);
+    // Don't open the picker - just pre-fill the recipient
   }
 
   onKeydown(event: KeyboardEvent): void {

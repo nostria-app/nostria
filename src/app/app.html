@@ -80,6 +80,12 @@
             i18n-matTooltip="@@app.profile.switch-account">
             <mat-icon>{{ accountsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
+          } @else {
+          <button mat-icon-button class="expand-accounts-button" (click)="addAccount()"
+            aria-label="Login or create account" matTooltip="Login or create account"
+            i18n-matTooltip="@@app.profile.login-or-create">
+            <mat-icon>login</mat-icon>
+          </button>
           }
         </div>
 
@@ -139,6 +145,15 @@
           <button mat-icon-button routerLink="/credentials" (click)="closeSidenavOnMobile()" matTooltip="Credentials"
             i18n-matTooltip="@@app.profile.credentials">
             <mat-icon>key</mat-icon>
+          </button>
+          } @else {
+          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()"
+            matTooltip="Login" i18n-matTooltip="@@app.profile.login">
+            <mat-icon>login</mat-icon>
+          </button>
+          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()"
+            matTooltip="Create account" i18n-matTooltip="@@app.profile.create-account">
+            <mat-icon>person_add</mat-icon>
           </button>
           }
           <button mat-icon-button routerLink="/settings" (click)="closeSidenavOnMobile()" matTooltip="Settings"

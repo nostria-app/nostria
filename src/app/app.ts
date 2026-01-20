@@ -457,6 +457,18 @@ export class App implements OnInit {
     }
 
     return baseItems.map(item => {
+      // For the Home item, change label to "Introduction" when not authenticated
+      if (item.path === '/') {
+        if (!this.app.authenticated()) {
+          return {
+            ...item,
+            label: $localize`:@@app.nav.introduction:Introduction`,
+            icon: 'waving_hand',
+          };
+        }
+        return item;
+      }
+
       // For the Feeds item, add feed boards as children
       if (item.label === 'Feeds') {
         const feedChildren: NavItem[] = feeds.map(feed => ({
@@ -577,7 +589,7 @@ export class App implements OnInit {
   });
 
   navItems: NavItem[] = [
-    { path: '/', label: $localize`:@@app.nav.home:Home`, icon: 'home', authenticated: true },
+    { path: '/', label: $localize`:@@app.nav.home:Home`, icon: 'home', authenticated: false },
     { path: '/f', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
     { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     {

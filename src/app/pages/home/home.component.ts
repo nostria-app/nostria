@@ -17,6 +17,7 @@ import { LayoutService } from '../../services/layout.service';
 import { SettingsService } from '../../services/settings.service';
 import { InstallService } from '../../services/install.service';
 import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats-new-dialog.component';
+import { Introduction } from '../../components/introduction/introduction';
 
 /**
  * Home component - Serves as the landing page and navigation hub.
@@ -37,7 +38,8 @@ import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats
     MatDividerModule,
     RouterLink,
     MatBottomSheetModule,
-    MatRippleModule
+    MatRippleModule,
+    Introduction,
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
