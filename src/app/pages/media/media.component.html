@@ -1,31 +1,4 @@
 <div class="media-container">
-  <!-- Header with title and storage info -->
-  <div class="media-header">
-    <div class="media-header-left">
-      <h1>Media Library</h1>
-      <div class="storage-info">
-        <mat-icon>storage</mat-icon>
-        <span>{{ formatFileSize(totalStorageBytes()) }} total</span>
-      </div>
-    </div>
-    <div class="media-header-actions">
-      @if (mediaService.uploading()) {
-      <div class="spinner-wrapper uploading">
-        <mat-spinner diameter="20"></mat-spinner>
-        <span>Uploading...</span>
-      </div>
-      }
-      <button mat-raised-button (click)="layout.openRecordVideoDialog()" [disabled]="mediaService.uploading()">
-        <mat-icon>videocam</mat-icon>
-        <span class="hide-small">Record Video</span>
-      </button>
-      <button mat-flat-button (click)="openUploadDialog()" [disabled]="mediaService.uploading()">
-        <mat-icon>upload</mat-icon>
-        <span class="hide-small">Upload</span>
-      </button>
-    </div>
-  </div>
-
   @if (mediaService.error()) {
   <div class="error-container">
     <mat-icon color="warn">error</mat-icon>
@@ -130,9 +103,27 @@
       </mat-menu>
 
       <span class="item-count">{{ filteredMedia().length }} items</span>
+      
+      <div class="storage-info">
+        <mat-icon>storage</mat-icon>
+        <span>{{ formatFileSize(totalStorageBytes()) }}</span>
+      </div>
     </div>
 
     <div class="toolbar-right">
+      <!-- Upload button -->
+      @if (mediaService.uploading()) {
+      <div class="spinner-wrapper uploading">
+        <mat-spinner diameter="20"></mat-spinner>
+        <span class="hide-small">Uploading...</span>
+      </div>
+      } @else {
+      <button mat-flat-button (click)="openUploadDialog()" class="upload-button">
+        <mat-icon>upload</mat-icon>
+        <span class="hide-small">Upload</span>
+      </button>
+      }
+
       <!-- Select all button -->
       <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All">
         <mat-icon>checklist</mat-icon>
