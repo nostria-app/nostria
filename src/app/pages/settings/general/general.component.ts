@@ -153,6 +153,11 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.settings.updateSettings({ repeatShortForm: !currentValue });
   }
 
+  toggleAutoPlayVideos(): void {
+    const currentValue = this.settings.settings()?.autoPlayVideos ?? false;
+    this.settings.updateSettings({ autoPlayVideos: !currentValue });
+  }
+
   setPlaceholderAlgorithm(value: PlaceholderAlgorithm): void {
     this.settings.updateSettings({ placeholderAlgorithm: value });
     // Clear the placeholder cache when algorithm changes

@@ -39,6 +39,8 @@ export interface UserSettings {
   quickZapEnabled?: boolean; // Enable the quick zap button
   quickZapAmount?: number; // Amount for instant quick zap button
   hideWalletAmounts?: boolean; // Hide sat amounts in wallet UI
+  // Video playback settings
+  autoPlayVideos?: boolean; // Auto-play all videos (muted)
   // Add more settings as needed
 }
 
@@ -71,6 +73,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   quickZapEnabled: false, // Off by default
   quickZapAmount: 21, // Default quick zap amount
   hideWalletAmounts: false, // Show amounts by default
+  // Video playback
+  autoPlayVideos: false, // Off by default - user must opt-in
 };
 
 @Injectable({
