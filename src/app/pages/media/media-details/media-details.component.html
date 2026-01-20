@@ -1,30 +1,28 @@
-<div class="media-details-container">
-  <!-- Header with back button and actions toolbar -->
-  <div class="media-details-header">
-    <div class="header-left">
-      <button mat-icon-button (click)="goBack()">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <h1>Media Details</h1>
-    </div>
-    @if (mediaItem()) {
-    <div class="header-actions">
-      <button mat-icon-button (click)="downloadMedia()" matTooltip="Download">
-        <mat-icon>download</mat-icon>
-      </button>
-      <button mat-icon-button (click)="mirrorMedia()" [disabled]="isFullyMirroredStatus()" matTooltip="Mirror">
-        <mat-icon>cloud_upload</mat-icon>
-      </button>
-      <button mat-icon-button (click)="publishMedia()" matTooltip="Publish">
-        <mat-icon>send</mat-icon>
-      </button>
-      <button mat-icon-button (click)="deleteMedia()" matTooltip="Delete">
-        <mat-icon>delete</mat-icon>
-      </button>
-    </div>
-    }
-  </div>
+<!-- Panel Header - Fixed at top -->
+<div class="panel-header">
+  <button mat-icon-button class="back-button" (click)="goBack()" matTooltip="Go back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Media Details</h2>
+  <span class="panel-header-spacer"></span>
+  @if (mediaItem()) {
+  <button mat-icon-button (click)="downloadMedia()" matTooltip="Download">
+    <mat-icon>download</mat-icon>
+  </button>
+  <button mat-icon-button (click)="mirrorMedia()" [disabled]="isFullyMirroredStatus()" matTooltip="Mirror">
+    <mat-icon>cloud_upload</mat-icon>
+  </button>
+  <button mat-icon-button (click)="publishMedia()" matTooltip="Publish">
+    <mat-icon>send</mat-icon>
+  </button>
+  <button mat-icon-button (click)="deleteMedia()" matTooltip="Delete">
+    <mat-icon>delete</mat-icon>
+  </button>
+  }
+</div>
 
+<!-- Scrollable Content -->
+<div class="media-details-content">
   @if (loading()) {
   <div class="loading-container">
     <mat-spinner diameter="40"></mat-spinner>
@@ -43,97 +41,95 @@
     <button mat-button color="primary" (click)="goBack()">Return to Media Library</button>
   </div>
   } @else {
-  <div class="media-details-content">
-    <!-- Media Preview -->
-    <div class="media-preview-card">
-      <div class="media-preview">
-        @if (mediaItem()?.type?.startsWith('image')) {
-        <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
-        } @else if (mediaItem()?.type?.startsWith('video')) {
-        <video [src]="mediaItem()!.url" controls></video>
-        } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
-        @if (textLoading()) {
-        <div class="text-loading">
-          <mat-spinner diameter="30"></mat-spinner>
-          <span>Loading text content...</span>
-        </div>
-        } @else {
-        <pre class="text-preview">{{ textContent() }}</pre>
-        }
-        } @else {
-        <div class="generic-preview">
-          <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
-        </div>
-        }
+  <!-- Media Preview -->
+  <div class="media-preview-card">
+    <div class="media-preview">
+      @if (mediaItem()?.type?.startsWith('image')) {
+      <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
+      } @else if (mediaItem()?.type?.startsWith('video')) {
+      <video [src]="mediaItem()!.url" controls></video>
+      } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
+      @if (textLoading()) {
+      <div class="text-loading">
+        <mat-spinner diameter="30"></mat-spinner>
+        <span>Loading text content...</span>
       </div>
+      } @else {
+      <pre class="text-preview">{{ textContent() }}</pre>
+      }
+      } @else {
+      <div class="generic-preview">
+        <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
+      </div>
+      }
     </div>
+  </div>
 
-    <!-- File Information Card (below preview) -->
-    <mat-card class="metadata-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
-        <mat-card-title>File Information</mat-card-title>
-      </mat-card-header>
+  <!-- File Information Card (below preview) -->
+  <mat-card class="metadata-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
+      <mat-card-title>File Information</mat-card-title>
+    </mat-card-header>
 
-      <mat-card-content>
-        <div class="metadata-list">
-          <div class="metadata-item">
-            <span class="label">URL</span>
-            <span class="value url-value">{{ mediaItem()!.url }}</span>
-          </div>
+    <mat-card-content>
+      <div class="metadata-list">
+        <div class="metadata-item">
+          <span class="label">URL</span>
+          <span class="value url-value">{{ mediaItem()!.url }}</span>
+        </div>
 
-          <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
 
-          <div class="metadata-item">
-            <span class="label">File Type</span>
-            <span class="value">{{ mediaItem()!.type || 'Unknown' }}</span>
-          </div>
+        <div class="metadata-item">
+          <span class="label">File Type</span>
+          <span class="value">{{ mediaItem()!.type || 'Unknown' }}</span>
+        </div>
 
-          <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
 
-          <div class="metadata-item">
-            <span class="label">File Size</span>
-            <span class="value">{{ formatFileSize(mediaItem()!.size) }}</span>
-          </div>
+        <div class="metadata-item">
+          <span class="label">File Size</span>
+          <span class="value">{{ formatFileSize(mediaItem()!.size) }}</span>
+        </div>
 
-          <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
 
-          <div class="metadata-item">
-            <span class="label">Upload Date</span>
-            <span class="value">{{ mediaItem()!.uploaded | timestamp: 'full' }}</span>
-          </div>
+        <div class="metadata-item">
+          <span class="label">Upload Date</span>
+          <span class="value">{{ mediaItem()!.uploaded | timestamp: 'full' }}</span>
+        </div>
 
-          <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
 
-          <div class="metadata-item">
-            <span class="label">Hosting Server</span>
-            <span class="value">{{ getServerFromUrl(mediaItem()!.url) }}</span>
-          </div>
+        <div class="metadata-item">
+          <span class="label">Hosting Server</span>
+          <span class="value">{{ getServerFromUrl(mediaItem()!.url) }}</span>
+        </div>
 
-          @if (mediaItem()!.mirrors && mediaItem()!.mirrors!.length > 0) {
-          <mat-divider></mat-divider>
+        @if (mediaItem()!.mirrors && mediaItem()!.mirrors!.length > 0) {
+        <mat-divider></mat-divider>
 
-          <div class="metadata-item">
-            <span class="label">Mirror Servers</span>
-            <div class="mirror-servers-list">
-              @for (mirror of mediaItem()!.mirrors; track $index) {
-              <div class="mirror-server">
-                <span>{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</span>
-              </div>
-              }
+        <div class="metadata-item">
+          <span class="label">Mirror Servers</span>
+          <div class="mirror-servers-list">
+            @for (mirror of mediaItem()!.mirrors; track $index) {
+            <div class="mirror-server">
+              <span>{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</span>
             </div>
-          </div>
-          }
-
-          <mat-divider></mat-divider>
-
-          <div class="metadata-item">
-            <span class="label">SHA-256 Hash</span>
-            <span class="value code-value">{{ mediaItem()!.sha256 }}</span>
+            }
           </div>
         </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
+        }
+
+        <mat-divider></mat-divider>
+
+        <div class="metadata-item">
+          <span class="label">SHA-256 Hash</span>
+          <span class="value code-value">{{ mediaItem()!.sha256 }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
   }
 </div>

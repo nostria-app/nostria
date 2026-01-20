@@ -2,9 +2,8 @@ import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetection
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -22,47 +21,59 @@ const PAGE_SIZE = 24;
 @Component({
   selector: 'app-music-playlists',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
-    MatButtonToggleModule,
     MatIconModule,
-    MatSelectModule,
+    MatMenuModule,
     MatTooltipModule,
     MusicPlaylistCardComponent,
   ],
-  template: `
+template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="panel-title title-font" i18n="@@music.playlists.title">Playlists</h2>
       <span class="panel-header-spacer"></span>
-      <mat-select class="sort-select" [(value)]="sortBy" aria-label="Sort playlists">
-        <mat-option value="recents">Recents</mat-option>
-        <mat-option value="alphabetical">Alphabetical</mat-option>
-        <mat-option value="artist">Artist</mat-option>
-      </mat-select>
+      @if (isAuthenticated()) {
+        <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter">
+          <mat-icon>{{ source() === 'following' ? 'people' : 'public' }}</mat-icon>
+        </button>
+        <mat-menu #filterMenu="matMenu">
+          <button mat-menu-item (click)="onSourceChange('following')">
+            <mat-icon>{{ source() === 'following' ? 'check' : '' }}</mat-icon>
+            <span i18n="@@music.toggle.following">Following</span>
+          </button>
+          <button mat-menu-item (click)="onSourceChange('public')">
+            <mat-icon>{{ source() === 'public' ? 'check' : '' }}</mat-icon>
+            <span i18n="@@music.toggle.public">Public</span>
+          </button>
+        </mat-menu>
+      }
+      <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort">
+        <mat-icon>sort</mat-icon>
+      </button>
+      <mat-menu #sortMenu="matMenu">
+        <button mat-menu-item (click)="sortBy.set('recents')">
+          <mat-icon>{{ sortBy() === 'recents' ? 'check' : '' }}</mat-icon>
+          <span>Recents</span>
+        </button>
+        <button mat-menu-item (click)="sortBy.set('alphabetical')">
+          <mat-icon>{{ sortBy() === 'alphabetical' ? 'check' : '' }}</mat-icon>
+          <span>Alphabetical</span>
+        </button>
+        <button mat-menu-item (click)="sortBy.set('artist')">
+          <mat-icon>{{ sortBy() === 'artist' ? 'check' : '' }}</mat-icon>
+          <span>Artist</span>
+        </button>
+      </mat-menu>
     </div>
 
     <div class="music-playlists-container">
       <div class="page-header">
         <div class="header-info">
           <p class="subtitle">{{ playlistsCount() }} <span i18n="@@music.playlists.count">playlists</span></p>
-        </div>
-        <div class="header-actions">
-          @if (isAuthenticated()) {
-            <mat-button-toggle-group [value]="source()" (change)="onSourceChange($event.value)" class="source-toggle">
-              <mat-button-toggle value="following">
-                <mat-icon>people</mat-icon>
-                <span i18n="@@music.toggle.following">Following</span>
-              </mat-button-toggle>
-              <mat-button-toggle value="public">
-                <mat-icon>public</mat-icon>
-                <span i18n="@@music.toggle.public">Public</span>
-              </mat-button-toggle>
-            </mat-button-toggle-group>
-          }
         </div>
       </div>
 
@@ -111,7 +122,7 @@ const PAGE_SIZE = 24;
       </div>
     </div>
   `,
-  styles: [`
+styles: [`
     :host {
       display: block;
     }
@@ -138,11 +149,6 @@ const PAGE_SIZE = 24;
 
       .panel-header-spacer {
         flex: 1;
-      }
-
-      .sort-select {
-        font-size: 0.875rem;
-        min-width: 130px;
       }
     }
 
@@ -177,24 +183,6 @@ const PAGE_SIZE = 24;
         margin: 0;
         font-size: 0.875rem;
         color: var(--mat-sys-on-surface-variant);
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .source-toggle {
-      mat-button-toggle {
-        mat-icon {
-          margin-right: 0.25rem;
-          font-size: 1rem;
-          width: 1rem;
-          height: 1rem;
-        }
       }
     }
 
