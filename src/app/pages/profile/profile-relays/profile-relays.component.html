@@ -24,7 +24,12 @@
   </div>
 
   <div class="following-content">
-    @if (getUserRelays().length === 0) {
+    @if (!profileState.cachedEventsLoaded()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate" [diameter]="40"></mat-progress-spinner>
+      <p>Loading relays...</p>
+    </div>
+    } @else if (getUserRelays().length === 0) {
     <div class="empty-list">
       <mat-icon>dns</mat-icon>
       <p>This user does not have any relays.</p>
