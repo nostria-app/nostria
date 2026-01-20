@@ -753,6 +753,18 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
+   * Determine if a video should auto-play based on its duration
+   * Videos 15 seconds or less will auto-play (muted, as required by browsers)
+   */
+  shouldAutoPlayVideo(token: ContentToken): boolean {
+    // Only auto-play if duration is known and <= 15 seconds
+    if (token.duration !== undefined && token.duration <= 15) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Get placeholder data URL for a video token using its imeta data
    * Returns null if no blurhash/thumbhash exists - let video load its own preview
    * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
