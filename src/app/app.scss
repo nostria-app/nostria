@@ -873,8 +873,8 @@ mat-sidenav-content {
       max-width: min(700px, 100%);
       z-index: 10;
       position: relative;
-      // Subtle scale up to emphasize "coming forward"
-      transform: scale(1.01);
+      // NOTE: Do NOT use transform here as it breaks position: sticky in child components
+      // Use box-shadow alone for the "coming forward" effect
       // Add shadow to emphasize being on top
       box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
     }
@@ -1102,8 +1102,8 @@ mat-sidenav-content {
   z-index: 5;
   // Transparent background - content renders behind main toolbar
   background-color: transparent;
-  // Base transform
-  transform: scale(1) translateY(0);
+  // NOTE: Do NOT use transform here as it breaks position: sticky in child components
+  // The transform was causing .panel-header sticky positioning to fail
   // Smooth transitions for layout changes
   transition:
     width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1111,7 +1111,6 @@ mat-sidenav-content {
     max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     z-index 0s linear;
 
   // Responsive: allow shrinking on smaller screens
@@ -1190,6 +1189,15 @@ mat-sidenav-content {
   // This allows position: sticky to work properly in child components
   &.right-panel-content {
     display: block;
+
+    // Components with sticky headers need special handling
+    // The host element must not create a new containing block that breaks sticky
+    .panel-with-sticky-header,
+    router-outlet + .panel-with-sticky-header {
+      display: block;
+      // Do NOT set overflow, height constraints, or transforms on the host
+      // as these break position: sticky on child elements
+    }
   }
 }
 
