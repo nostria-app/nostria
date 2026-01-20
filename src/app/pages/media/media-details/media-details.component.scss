@@ -157,6 +157,41 @@
   gap: 1rem;
 }
 
+// Audio preview styling
+.audio-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 32px 16px;
+  gap: 24px;
+  background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-surface-container-highest) 100%);
+
+  .audio-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: var(--mat-sys-surface);
+    box-shadow: var(--mat-sys-level2);
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  app-audio-player {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
 .metadata-card {
   box-shadow: var(--mat-sys-level1);
 }

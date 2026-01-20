@@ -390,7 +390,8 @@
 }
 
 // File preview (for non-image/video files)
-.file-preview {
+.file-preview,
+.audio-preview {
   position: absolute;
   top: 0;
   left: 0;
@@ -407,6 +408,15 @@
     height: 64px;
     color: var(--mat-sys-on-surface-variant);
     opacity: 0.5;
+  }
+}
+
+.audio-preview {
+  background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-surface-container) 100%);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    opacity: 0.7;
   }
 }
 

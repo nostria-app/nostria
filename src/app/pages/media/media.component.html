@@ -87,6 +87,10 @@
           <mat-icon>videocam</mat-icon>
           <span>Videos</span>
         </button>
+        <button mat-menu-item (click)="setMediaFilter('audio')" [class.selected-option]="mediaFilter() === 'audio'">
+          <mat-icon>audiotrack</mat-icon>
+          <span>Audio</span>
+        </button>
         <button mat-menu-item (click)="setMediaFilter('files')" [class.selected-option]="mediaFilter() === 'files'">
           <mat-icon>insert_drive_file</mat-icon>
           <span>Other Files</span>
@@ -317,6 +321,10 @@
           </div>
           } @else if (item.type?.startsWith('image')) {
           <img [src]="item.url" [alt]="getFileName(item.url)" loading="lazy" />
+          } @else if (item.type?.startsWith('audio')) {
+          <div class="audio-preview">
+            <mat-icon>audiotrack</mat-icon>
+          </div>
           } @else {
           <div class="file-preview">
             <mat-icon>insert_drive_file</mat-icon>

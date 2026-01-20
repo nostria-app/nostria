@@ -18,6 +18,7 @@ import { MediaPublishDialogComponent, MediaPublishOptions } from '../media-publi
 import { NostrService } from '../../../services/nostr.service';
 import { PublishService } from '../../../services/publish.service';
 import { nip19 } from 'nostr-tools';
+import { AudioPlayerComponent } from '../../../components/audio-player/audio-player.component';
 
 @Component({
   selector: 'app-media-details',
@@ -30,6 +31,7 @@ import { nip19 } from 'nostr-tools';
     MatSnackBarModule,
     TimestampPipe,
     MatTooltipModule,
+    AudioPlayerComponent,
   ],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss'],
@@ -497,8 +499,14 @@ export class MediaDetailsComponent {
     if (!type) return 'insert_drive_file'; // Default icon for unknown types
     if (type.startsWith('image')) return 'image';
     if (type.startsWith('video')) return 'videocam';
+    if (type.startsWith('audio')) return 'audiotrack';
     if (this.isTextFile(type)) return 'description';
     return 'insert_drive_file';
+  }
+
+  isAudioFile(mimeType: string | null | undefined): boolean {
+    if (!mimeType) return false;
+    return mimeType.startsWith('audio');
   }
 
   getFileName(item: MediaItem): string {

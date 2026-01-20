@@ -83,14 +83,6 @@
     </div>
   </ng-template>
 
-  <!-- Info Banner -->
-  @if (isFetching()) {
-  <div class="info-banner fetching">
-    <mat-icon>cloud_download</mat-icon>
-    <p>Fetching latest events from relays... ({{ fetchProgress().fetched }} events)</p>
-  </div>
-  }
-
   @if (isLoading()) {
   <div class="loading-state">
     <mat-spinner diameter="48"></mat-spinner>
