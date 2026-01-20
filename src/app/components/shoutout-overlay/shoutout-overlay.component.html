@@ -1,0 +1,154 @@
+<div class="shoutout-container">
+  <!-- Chat bubble button -->
+  <button class="shoutout-bubble" (click)="toggleOverlay()" type="button" matTooltip="Shoutouts"
+    aria-label="Show shoutouts" [matBadge]="badgeCount()" matBadgeSize="small" matBadgeColor="accent">
+    <mat-icon>chat_bubble</mat-icon>
+  </button>
+
+  <!-- Full overlay (shown on click) -->
+  @if (isVisible()) {
+  <!-- Backdrop to allow clicking outside to dismiss -->
+  <div class="overlay-backdrop" (click)="hideOverlay()" (keydown.escape)="hideOverlay()" role="button" tabindex="0"
+    aria-label="Close shoutouts overlay">
+  </div>
+
+  <div class="shoutout-overlay" role="dialog" tabindex="0" (keydown.escape)="hideOverlay()">
+    <div class="overlay-header">
+      <h3>Shoutouts</h3>
+      <div class="overlay-actions">
+        <button mat-icon-button (click)="refresh(); $event.stopPropagation()" type="button" matTooltip="Refresh"
+          aria-label="Refresh">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        <button mat-icon-button (click)="hideOverlay(); $event.stopPropagation()" type="button" matTooltip="Close"
+          aria-label="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter toggle -->
+    <div class="filter-section">
+      <mat-slide-toggle [checked]="showFavoritesOnly()" (change)="toggleFavoritesFilter()">
+        Show favorites only
+      </mat-slide-toggle>
+    </div>
+
+    <!-- New shoutout section -->
+    <div class="new-shoutout-section">
+      <!-- Recipient selector -->
+      <div class="recipient-section">
+        <div class="recipient-header">
+          <span class="recipient-label">To:</span>
+          @if (selectedRecipients().length > 0) {
+          <div class="selected-recipients">
+            @for (recipient of selectedRecipients(); track recipient.pubkey) {
+            <div class="recipient-chip">
+              <span class="recipient-name">{{ recipient.displayName }}</span>
+              <button class="remove-recipient" (click)="removeRecipient(recipient.pubkey)" type="button"
+                aria-label="Remove recipient">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            }
+          </div>
+          }
+          <button mat-icon-button class="add-recipient-btn" (click)="toggleRecipientPicker()" type="button"
+            [matTooltip]="showRecipientPicker() ? 'Close' : 'Add recipient'" aria-label="Add recipient">
+            <mat-icon>{{ showRecipientPicker() ? 'expand_less' : 'person_add' }}</mat-icon>
+          </button>
+        </div>
+
+        <!-- Recipient picker dropdown -->
+        @if (showRecipientPicker()) {
+        <div class="recipient-picker">
+          <mat-form-field appearance="outline" class="recipient-search">
+            <mat-label>Search people...</mat-label>
+            <input matInput [value]="recipientSearchInput()"
+              (input)="recipientSearchInput.set($any($event.target).value)" autocomplete="off" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <div class="recipient-list">
+            @if (filteredRecipients().length === 0) {
+            <div class="no-recipients">No matching people found</div>
+            } @else {
+            @for (recipient of filteredRecipients(); track recipient.pubkey) {
+            <button class="recipient-option" (click)="addRecipient(recipient)" type="button">
+              <div class="recipient-avatar">
+                @if (getAvatarUrl(recipient.profile)) {
+                <img [src]="getAvatarUrl(recipient.profile)" [alt]="recipient.displayName" />
+                } @else {
+                <span class="avatar-initials">{{ getInitials(recipient.profile) }}</span>
+                }
+              </div>
+              <span class="recipient-display-name">{{ recipient.displayName }}</span>
+              @if (recipient.isFavorite) {
+              <mat-icon class="favorite-indicator">star</mat-icon>
+              }
+            </button>
+            }
+            }
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Message input -->
+      <div class="message-input-row">
+        <mat-form-field appearance="outline" class="shoutout-input">
+          <mat-label>Write a shoutout...</mat-label>
+          <input matInput [value]="newShoutoutContent()" (input)="newShoutoutContent.set($any($event.target).value)"
+            (keydown)="onKeydown($event)" [disabled]="isSending()" maxlength="280" />
+          <mat-hint align="end">{{ newShoutoutContent().length }}/280</mat-hint>
+        </mat-form-field>
+        <button mat-icon-button color="primary" (click)="sendShoutout()"
+          [disabled]="!newShoutoutContent().trim() || isSending()" matTooltip="Send shoutout"
+          aria-label="Send shoutout">
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Shoutouts list -->
+    <div class="shoutouts-list">
+      @if (isLoading()) {
+      <div class="loading-state">
+        <mat-icon>hourglass_empty</mat-icon>
+        <span>Loading shoutouts...</span>
+      </div>
+      } @else if (displayedShoutouts().length === 0) {
+      <div class="empty-state">
+        <mat-icon>chat_bubble_outline</mat-icon>
+        <span>No shoutouts yet</span>
+        <p class="empty-hint">Shoutouts are public messages sent directly to you</p>
+      </div>
+      } @else {
+      @for (shoutout of displayedShoutouts(); track shoutout.id) {
+      <div class="shoutout-item">
+        <button class="shoutout-avatar" (click)="navigateToProfile(shoutout.pubkey); $event.stopPropagation()"
+          (mouseenter)="onAvatarMouseEnter($event, shoutout.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
+          [attr.aria-label]="'View profile of ' + getDisplayName(shoutout.profile)">
+          @if (getAvatarUrl(shoutout.profile)) {
+          <img [src]="getAvatarUrl(shoutout.profile)" [alt]="getDisplayName(shoutout.profile)" draggable="false" />
+          } @else {
+          <span class="avatar-initials">{{ getInitials(shoutout.profile) }}</span>
+          }
+        </button>
+        <div class="shoutout-content">
+          <div class="shoutout-header">
+            <span class="shoutout-author">{{ getDisplayName(shoutout.profile) }}</span>
+            <span class="shoutout-time">{{ formatTime(shoutout.created_at) | date:'short' }}</span>
+          </div>
+          <p class="shoutout-text">{{ shoutout.content }}</p>
+          <button class="reply-button" (click)="replyToShoutout(shoutout)" type="button" matTooltip="Reply">
+            <mat-icon>reply</mat-icon>
+          </button>
+        </div>
+      </div>
+      }
+      }
+    </div>
+  </div>
+  }
+</div>

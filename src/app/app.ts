@@ -71,6 +71,7 @@ import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-d
 import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './pages/people/edit-people-list-dialog.component';
 import { FeedConfig } from './services/feed.service';
 import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
+import { ShoutoutOverlayComponent } from './components/shoutout-overlay/shoutout-overlay.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
@@ -155,6 +156,7 @@ interface NavItem {
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
     FavoritesOverlayComponent,
+    ShoutoutOverlayComponent,
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
     NewFeedDialogComponent,
@@ -288,7 +290,7 @@ export class App implements OnInit {
 
   // Track when toggle button should be hidden (during panel transitions)
   toggleButtonAnimating = signal(false);
-  
+
   // Track previous hasRightContent state to detect transitions
   private previousHasRightContent = false;
 
@@ -689,7 +691,7 @@ export class App implements OnInit {
     // Detect when right panel appears/disappears to animate the toggle button
     effect(() => {
       const hasRight = this.hasRightContent();
-      
+
       // When right panel first appears, hide button until panels settle
       if (hasRight && !this.previousHasRightContent) {
         this.toggleButtonAnimating.set(true);
@@ -698,7 +700,7 @@ export class App implements OnInit {
           this.toggleButtonAnimating.set(false);
         }, 450);
       }
-      
+
       this.previousHasRightContent = hasRight;
     });
 
@@ -1827,10 +1829,10 @@ export class App implements OnInit {
     if (pubkey) {
       // Fade out the toggle button
       this.toggleButtonAnimating.set(true);
-      
+
       // Toggle the collapsed state
       this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
-      
+
       // Fade button back in after animation completes
       setTimeout(() => {
         this.toggleButtonAnimating.set(false);
@@ -1905,7 +1907,7 @@ export class App implements OnInit {
     this.panelActions.clearRightPanelActions();
     // Clear the panel navigation right stack
     this.panelNav.clearRightStack();
-    
+
     // Navigate to clear the right outlet
     this.router.navigate([{ outlets: { right: null } }]);
   }
