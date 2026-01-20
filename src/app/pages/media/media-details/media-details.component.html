@@ -1,9 +1,28 @@
 <div class="media-details-container">
+  <!-- Header with back button and actions toolbar -->
   <div class="media-details-header">
-    <button mat-icon-button (click)="goBack()">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <h1>Media Details</h1>
+    <div class="header-left">
+      <button mat-icon-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h1>Media Details</h1>
+    </div>
+    @if (mediaItem()) {
+    <div class="header-actions">
+      <button mat-icon-button (click)="downloadMedia()" matTooltip="Download">
+        <mat-icon>download</mat-icon>
+      </button>
+      <button mat-icon-button (click)="mirrorMedia()" [disabled]="isFullyMirroredStatus()" matTooltip="Mirror">
+        <mat-icon>cloud_upload</mat-icon>
+      </button>
+      <button mat-icon-button (click)="publishMedia()" matTooltip="Publish">
+        <mat-icon>send</mat-icon>
+      </button>
+      <button mat-icon-button (click)="deleteMedia()" matTooltip="Delete">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+    }
   </div>
 
   @if (loading()) {
@@ -25,6 +44,7 @@
   </div>
   } @else {
   <div class="media-details-content">
+    <!-- Media Preview -->
     <div class="media-preview-card">
       <div class="media-preview">
         @if (mediaItem()?.type?.startsWith('image')) {
@@ -46,27 +66,9 @@
         </div>
         }
       </div>
-
-      <div class="media-actions">
-        <button mat-raised-button (click)="downloadMedia()">
-          <mat-icon>download</mat-icon>
-          Download
-        </button>
-        <button mat-raised-button color="accent" (click)="mirrorMedia()" [disabled]="isFullyMirroredStatus()">
-          <mat-icon>cloud_upload</mat-icon>
-          Mirror
-        </button>
-        <button mat-raised-button color="primary" (click)="publishMedia()">
-          <mat-icon>send</mat-icon>
-          Publish
-        </button>
-        <button mat-raised-button (click)="deleteMedia()">
-          <mat-icon>delete</mat-icon>
-          Delete
-        </button>
-      </div>
     </div>
 
+    <!-- File Information Card (below preview) -->
     <mat-card class="metadata-card">
       <mat-card-header>
         <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>

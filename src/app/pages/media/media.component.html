@@ -134,24 +134,10 @@
         <mat-icon>checklist</mat-icon>
       </button>
 
-      <!-- View mode button -->
-      <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View">
+      <!-- View mode button (toggle) -->
+      <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + getViewModeLabel()">
         <mat-icon>{{ getViewModeIcon() }}</mat-icon>
       </button>
-      <mat-menu #viewMenu="matMenu">
-        <button mat-menu-item (click)="setViewMode('large')" [class.selected-option]="viewMode() === 'large'">
-          <mat-icon>view_module</mat-icon>
-          <span>Large</span>
-        </button>
-        <button mat-menu-item (click)="setViewMode('medium')" [class.selected-option]="viewMode() === 'medium'">
-          <mat-icon>grid_view</mat-icon>
-          <span>Medium</span>
-        </button>
-        <button mat-menu-item (click)="setViewMode('details')" [class.selected-option]="viewMode() === 'details'">
-          <mat-icon>view_list</mat-icon>
-          <span>Details</span>
-        </button>
-      </mat-menu>
 
       <!-- Refresh button -->
       @if (mediaService.loading()) {
@@ -300,12 +286,13 @@
       @for (item of filteredMedia(); track item.sha256) {
       <div class="media-card" [class.selected]="isSelected(item.sha256)"
         (pointerdown)="onItemPointerDown($event, item.sha256)"
-        (pointerup)="onItemPointerUp($event, item.sha256)"
-        (pointerleave)="onItemPointerLeave()">
+        (pointerup)="onItemPointerUp($event)"
+        (pointerleave)="onItemPointerLeave()"
+        (click)="onCardClick($event, item)">
         <div class="media-thumbnail">
           <!-- Checkbox (shown on hover or in selection mode) -->
           <button type="button" class="checkbox-container" [class.visible]="selectionMode()"
-            (click)="$event.stopPropagation(); onCheckboxClick($event, item.sha256)"
+            (click)="onCheckboxClick($event, item.sha256)"
             [attr.aria-label]="isSelected(item.sha256) ? 'Deselect item' : 'Select item'">
             <mat-icon>
               {{ isSelected(item.sha256) ? 'check_circle' : 'radio_button_unchecked' }}
@@ -322,16 +309,16 @@
 
           <!-- Media preview -->
           @if (item.type?.startsWith('video')) {
-          <div class="video-preview" (click)="navigateToDetails($event, item)">
+          <div class="video-preview">
             <video [src]="item.url" preload="metadata"></video>
             <div class="play-button">
               <mat-icon>play_circle_filled</mat-icon>
             </div>
           </div>
           } @else if (item.type?.startsWith('image')) {
-          <img [src]="item.url" [alt]="getFileName(item.url)" loading="lazy" (click)="navigateToDetails($event, item)" />
+          <img [src]="item.url" [alt]="getFileName(item.url)" loading="lazy" />
           } @else {
-          <div class="file-preview" (click)="navigateToDetails($event, item)">
+          <div class="file-preview">
             <mat-icon>insert_drive_file</mat-icon>
           </div>
           }

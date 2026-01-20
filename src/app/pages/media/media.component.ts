@@ -182,12 +182,28 @@ export class MediaComponent {
     this.localStorage.setItem(this.appState.MEDIA_VIEW_MODE, mode);
   }
 
+  cycleViewMode(): void {
+    const modes: ViewMode[] = ['large', 'medium', 'details'];
+    const currentIndex = modes.indexOf(this.viewMode());
+    const nextIndex = (currentIndex + 1) % modes.length;
+    this.setViewMode(modes[nextIndex]);
+  }
+
   getViewModeIcon(): string {
     switch (this.viewMode()) {
       case 'large': return 'view_module';
       case 'medium': return 'grid_view';
       case 'details': return 'view_list';
       default: return 'grid_view';
+    }
+  }
+
+  getViewModeLabel(): string {
+    switch (this.viewMode()) {
+      case 'large': return 'Large';
+      case 'medium': return 'Medium';
+      case 'details': return 'Details';
+      default: return 'View';
     }
   }
 
@@ -230,26 +246,19 @@ export class MediaComponent {
     }, 500); // 500ms for long press
   }
 
-  onItemPointerUp(event: PointerEvent, sha256: string): void {
+  onItemPointerUp(event: PointerEvent): void {
     // Clear long press timer
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
 
-    // If long press was triggered, don't do normal click action
+    // If long press was triggered, prevent the click event from firing
     if (this.longPressTriggered) {
       event.preventDefault();
       event.stopPropagation();
-      return;
     }
-
-    // If in selection mode, toggle selection
-    if (this.selectionMode()) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.toggleItemSelection(sha256);
-    }
+    // Selection is now handled by onCardClick, not here
   }
 
   onItemPointerLeave(): void {
@@ -280,13 +289,48 @@ export class MediaComponent {
     });
   }
 
+  // Track if checkbox was just clicked to prevent double handling
+  private checkboxClicked = false;
+
   onCheckboxClick(event: Event, sha256: string): void {
     event.stopPropagation();
+    event.preventDefault();
+    this.checkboxClicked = true;
+
     if (!this.selectionMode()) {
       this.enterSelectionMode(sha256);
     } else {
       this.toggleItemSelection(sha256);
     }
+
+    // Reset after a short delay
+    setTimeout(() => {
+      this.checkboxClicked = false;
+    }, 100);
+  }
+
+  onCardClick(event: Event, item: MediaItem): void {
+    // If checkbox was just clicked, ignore this click
+    if (this.checkboxClicked) {
+      return;
+    }
+
+    // If long press was triggered, ignore the click
+    if (this.longPressTriggered) {
+      return;
+    }
+
+    // If in selection mode, toggle selection
+    if (this.selectionMode()) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleItemSelection(item.sha256);
+      return;
+    }
+
+    // Otherwise, navigate to details
+    this.localStorage.setItem(this.appState.MEDIA_FILTER, this.mediaFilter());
+    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
   }
 
   selectAll(): void {

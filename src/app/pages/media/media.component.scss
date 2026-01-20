@@ -312,13 +312,17 @@
   }
 }
 
-// Mirror badge
-.mirror-badge {
+// Mirror badge - positioned overlay on thumbnail
+.media-thumbnail .mirror-badge {
   position: absolute;
   top: 8px;
   right: 40px;
+  bottom: auto;
+  left: auto;
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 4px 8px;
   background-color: rgba(0, 0, 0, 0.6);
@@ -326,11 +330,20 @@
   border-radius: 12px;
   font-size: 12px;
   z-index: 5;
+  height: 22px;
+  width: auto;
+  box-sizing: border-box;
 
   mat-icon {
     font-size: 14px;
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
+  }
+
+  .mirror-count {
+    flex-shrink: 0;
+    line-height: 14px;
   }
 }
 
