@@ -35,6 +35,7 @@ import { PublishService } from '../../services/publish.service';
 import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 
 export type ViewMode = 'large' | 'medium' | 'details';
 export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
@@ -77,6 +78,7 @@ export class MediaComponent {
   private readonly twoColumnLayout = inject(TwoColumnLayoutService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly customDialog = inject(CustomDialogService);
 
   // View state
   viewMode = signal<ViewMode>('medium');
@@ -394,10 +396,10 @@ export class MediaComponent {
   }
 
   openServersDialog(): void {
-    this.dialog.open(MediaServersSettingsDialogComponent, {
+    this.customDialog.open(MediaServersSettingsDialogComponent, {
+      title: 'Media Servers',
       width: '550px',
       maxWidth: '95vw',
-      panelClass: 'responsive-dialog',
     });
   }
 
