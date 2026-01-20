@@ -65,6 +65,11 @@ export class ProfileStateService {
   isLoadingMoreMedia = signal<boolean>(false);
   hasMoreMedia = signal<boolean>(true);
 
+  // Display limit for media - only render this many items initially
+  private readonly INITIAL_MEDIA_DISPLAY_LIMIT = 12;
+  private readonly MEDIA_DISPLAY_INCREMENT = 12;
+  mediaDisplayLimit = signal<number>(this.INITIAL_MEDIA_DISPLAY_LIMIT);
+
   // Timeline filter options
   timelineFilter = signal<TimelineFilterOptions>({ ...DEFAULT_TIMELINE_FILTER });
 
@@ -141,8 +146,9 @@ export class ProfileStateService {
     this.hasMoreNotes.set(true);
     this.hasMoreArticles.set(true);
     this.hasMoreMedia.set(true);
-    // Reset display limit to initial value for new profile
+    // Reset display limits to initial values for new profile
     this.displayLimit.set(this.INITIAL_DISPLAY_LIMIT);
+    this.mediaDisplayLimit.set(this.INITIAL_MEDIA_DISPLAY_LIMIT);
   }
 
   // Computed signals for sorted data
@@ -222,6 +228,18 @@ export class ProfileStateService {
     [...this.media()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
+  // Displayed media - only shows items up to mediaDisplayLimit for performance
+  displayedMedia = computed(() => {
+    const sorted = this.sortedMedia();
+    const limit = this.mediaDisplayLimit();
+    return sorted.slice(0, limit);
+  });
+
+  // Check if there are more media items to display (beyond current mediaDisplayLimit)
+  hasMoreMediaToDisplay = computed(() => {
+    return this.sortedMedia().length > this.mediaDisplayLimit();
+  });
+
   // Update timeline filter options
   updateTimelineFilter(filter: Partial<TimelineFilterOptions>): void {
     this.timelineFilter.update(current => ({ ...current, ...filter }));
@@ -258,6 +276,26 @@ export class ProfileStateService {
     // Increase the limit
     this.displayLimit.update(limit => limit + this.DISPLAY_INCREMENT);
     this.logger.debug(`Increased display limit to ${this.displayLimit()}, total items: ${totalItems}`);
+    return true;
+  }
+
+  /**
+   * Increase the media display limit to show more items in the media grid.
+   * Call this when user scrolls near the bottom of the visible content.
+   * Returns true if limit was increased, false if already at max.
+   */
+  increaseMediaDisplayLimit(): boolean {
+    const currentLimit = this.mediaDisplayLimit();
+    const totalItems = this.sortedMedia().length;
+
+    // If we're already showing all items, no need to increase
+    if (currentLimit >= totalItems) {
+      return false;
+    }
+
+    // Increase the limit
+    this.mediaDisplayLimit.update(limit => limit + this.MEDIA_DISPLAY_INCREMENT);
+    this.logger.debug(`Increased media display limit to ${this.mediaDisplayLimit()}, total items: ${totalItems}`);
     return true;
   }
 
