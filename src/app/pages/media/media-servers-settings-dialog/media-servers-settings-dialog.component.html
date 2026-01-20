@@ -1,0 +1,142 @@
+<app-custom-dialog [title]="'Media Servers'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'550px'"
+  [maxWidth]="'95vw'" (closed)="onCancel()">
+
+  <div dialog-content>
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading settings...</p>
+    </div>
+    } @else {
+    <p class="dialog-subtitle">Configure media servers to store and distribute your media files.</p>
+
+    <!-- Info banner for new users -->
+    @if (servers().length === 0) {
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <div class="info-content">
+        <span class="info-title">No media servers configured</span>
+        <span class="info-description">Add servers to start uploading media. We recommend using Nostria servers for the best experience.</span>
+      </div>
+    </div>
+
+    <div class="quick-setup-section">
+      <button mat-flat-button (click)="quickSetup()" [disabled]="isSettingUp()">
+        @if (isSettingUp()) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <mat-icon>auto_awesome</mat-icon>
+        }
+        Quick Setup with Nostria
+      </button>
+    </div>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Server list -->
+    <div class="servers-section">
+      <h3>Media Servers</h3>
+      <p class="section-description">
+        Your primary server (first in list) is used for uploads.
+        @if (servers().length > 1) {
+        <span class="drag-hint">Drag to reorder.</span>
+        }
+      </p>
+
+      @if (servers().length > 0) {
+      <div cdkDropList class="servers-list" (cdkDropListDropped)="reorderServers($event)">
+        @for (server of servers(); track server; let i = $index) {
+        <div class="server-item" cdkDrag>
+          <div class="drag-handle" cdkDragHandle>
+            <mat-icon>drag_indicator</mat-icon>
+          </div>
+          <div class="server-info">
+            <div class="server-url">
+              <mat-icon>storage</mat-icon>
+              <span>{{ getServerDomain(server) }}</span>
+              @if (i === 0) {
+              <span class="primary-badge">Primary</span>
+              }
+            </div>
+            <span class="server-full-url">{{ server }}</span>
+          </div>
+          <div class="server-actions">
+            @if (testingServer() === server) {
+            <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+            @if (getTestResult(server); as result) {
+            <mat-icon [class.success]="result.success" [class.error]="!result.success"
+              [matTooltip]="result.message">
+              {{ result.success ? 'check_circle' : 'error' }}
+            </mat-icon>
+            }
+            <button mat-icon-button (click)="testServer(server)" matTooltip="Test connection">
+              <mat-icon>sync</mat-icon>
+            </button>
+            }
+            <button mat-icon-button (click)="removeServer(server)" matTooltip="Remove">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="empty-servers">
+        <mat-icon>cloud_off</mat-icon>
+        <span>No servers configured. Add a server to start uploading media.</span>
+      </div>
+      }
+
+      <!-- Add new server -->
+      <div class="add-server-form">
+        <mat-form-field appearance="outline" class="server-input">
+          <mat-label>Server URL</mat-label>
+          <input matInput [(ngModel)]="newServerUrl" placeholder="blossom.example.com" (keyup.enter)="addServer()" />
+          <mat-hint>Enter domain name (https:// added automatically)</mat-hint>
+        </mat-form-field>
+        <button mat-icon-button (click)="addServer()" [disabled]="!newServerUrl()" aria-label="Add server">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <!-- Suggested servers -->
+      @if (availableSuggestedServers.length > 0) {
+      <div class="suggested-servers">
+        <span class="suggested-label">Suggested servers:</span>
+        <div class="suggested-chips">
+          @for (server of availableSuggestedServers; track server.url) {
+          <button mat-stroked-button class="suggested-chip" (click)="addSuggestedServer(server.url)">
+            <mat-icon>add</mat-icon>
+            <span>{{ server.name }}</span>
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Info section -->
+    <div class="info-section">
+      <h4>About Media Servers</h4>
+      <p>Media servers store your images, videos, and files using the Blossom protocol. Your primary server is used for uploads, while additional servers can be used for mirroring content.</p>
+      <p class="nip-reference">Uses <a href="https://github.com/hzrd149/blossom" target="_blank" rel="noopener">Blossom</a> (Blobs Stored Simply on Media Servers).</p>
+    </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    <button mat-button (click)="onCancel()" [disabled]="isSaving()">Cancel</button>
+    <button mat-flat-button (click)="saveServers()" [disabled]="isSaving() || isLoading()">
+      @if (isSaving()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>save</mat-icon>
+      }
+      <span>Save Changes</span>
+    </button>
+  </div>
+</app-custom-dialog>
