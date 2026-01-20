@@ -315,9 +315,9 @@
 // Mirror badge - positioned overlay on thumbnail
 .media-thumbnail .mirror-badge {
   position: absolute;
-  top: 8px;
-  right: 40px;
-  bottom: auto;
+  bottom: 8px;
+  right: 8px;
+  top: auto;
   left: auto;
   display: flex;
   flex-direction: row;
