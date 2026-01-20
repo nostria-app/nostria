@@ -280,26 +280,17 @@ nav {
   }
 }
 
-// Shoutout sidebar - chat bubble above favorites on right side
-.shoutout-sidebar {
-  position: fixed;
-  right: 8px;
-  top: 80px; // Below toolbar
-  z-index: 100;
-
-  // Hide on mobile - use different UI there
-  @media (max-width: 599px) {
-    display: none;
-  }
-}
-
-// Favorites sidebar - vertical on right side of screen
-.favorites-sidebar {
+// Right sidebar container - holds shoutout and favorites together
+.right-sidebar-container {
   position: fixed;
   right: 0;
   top: 50%;
   transform: translateY(-50%);
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
 
   // On mobile, don't center vertically - position at top for full-height overlay
   @media (max-width: 599px) {

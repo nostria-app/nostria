@@ -176,11 +176,17 @@ export class ShoutoutOverlayComponent {
   }
 
   toggleOverlay(): void {
+    const wasVisible = this.isVisible();
     this.isVisible.update(v => !v);
+    // Refresh when opening
+    if (!wasVisible) {
+      this.shoutoutService.refresh();
+    }
   }
 
   showOverlay(): void {
     this.isVisible.set(true);
+    this.shoutoutService.refresh();
   }
 
   hideOverlay(): void {

@@ -141,9 +141,13 @@
             <span class="shoutout-time">{{ formatTime(shoutout.created_at) | date:'short' }}</span>
           </div>
           <p class="shoutout-text">{{ shoutout.content }}</p>
-          <button class="reply-button" (click)="replyToShoutout(shoutout)" type="button" matTooltip="Reply">
-            <mat-icon>reply</mat-icon>
-          </button>
+          <div class="shoutout-actions">
+            <button mat-stroked-button class="reply-button" (click)="replyToShoutout(shoutout)" type="button"
+              matTooltip="Reply">
+              <mat-icon>reply</mat-icon>
+              Reply
+            </button>
+          </div>
         </div>
       </div>
       }
