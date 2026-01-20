@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, ParamMap } from '@angular/router';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { PeopleFilterPanelComponent } from './people-filter-panel/people-filter-panel.component';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -172,8 +172,8 @@ export class PeopleComponent implements OnDestroy {
     return [...sets].sort((a, b) => a.title.localeCompare(b.title));
   });
 
-  // Read query parameters
-  private queryParams = toSignal(this.route.queryParams);
+  // Read route parameters for setId
+  private routeParams = toSignal(this.route.paramMap);
 
   // Computed signal for filtered and sorted people using FollowingService
   filteredAndSortedProfiles = computed(() => {
@@ -363,11 +363,18 @@ export class PeopleComponent implements OnDestroy {
       }
     });
 
-    // Watch for 'set' query parameter and select the corresponding follow set
+    // Watch for 'setId' route parameter and select the corresponding follow set
     effect(() => {
-      const params = this.queryParams();
-      const setDTag = params?.['set'];
+      const params = this.routeParams();
+      const setDTag = params?.get('setId');
       const followSets = this.allFollowSets();
+
+      // Only proceed if params have been initialized (not undefined)
+      // This prevents race condition where route reuse strategy restores component
+      // with a selectedFollowSet but routeParams hasn't emitted yet
+      if (params === undefined) {
+        return;
+      }
 
       if (setDTag && followSets.length > 0) {
         const matchingSet = followSets.find(s => s.dTag === setDTag);
@@ -375,7 +382,7 @@ export class PeopleComponent implements OnDestroy {
           this.selectFollowSet(matchingSet);
         }
       } else if (!setDTag && this.selectedFollowSet()) {
-        // Clear selection when no set parameter
+        // Clear selection when no set parameter (navigated to /people)
         this.selectFollowSet(null);
       }
     });
@@ -540,10 +547,8 @@ export class PeopleComponent implements OnDestroy {
   selectContact(pubkey: string) {
     // Close any open hover card to prevent interference
     this.hoverCardService.closeHoverCard();
-    // Navigate to profile in right panel, preserving query params (like ?set=xxx)
-    this.router.navigate([{ outlets: { right: ['p', pubkey] } }], {
-      queryParamsHandling: 'preserve'
-    });
+    // Use two-column layout service to open profile in right panel
+    this.twoColumnLayout.openProfile(pubkey);
   }
 
   /**
@@ -624,23 +629,15 @@ export class PeopleComponent implements OnDestroy {
         this.loadingFollowSetProfiles.set(false);
       }
 
-      // Update URL query parameter to maintain selection
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { set: followSet.dTag },
-        queryParamsHandling: 'merge'
-      });
+      // Update URL to the clean path format
+      this.router.navigate(['/people/list', followSet.dTag]);
     } else {
       // When clearing selection, update immediately
       this.selectedFollowSet.set(null);
       this.followSetProfiles.set([]);
 
-      // Clear the query parameter when deselecting
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { set: null },
-        queryParamsHandling: 'merge'
-      });
+      // Navigate back to the main people page
+      this.router.navigate(['/people']);
     }
   }
 

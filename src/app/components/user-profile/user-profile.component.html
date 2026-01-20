@@ -23,7 +23,7 @@
     <!-- Avatar section - single image element -->
     @if (view() !== 'name' && view() !== 'tiny' && view() !== 'avatar') {
     <div class="user-profile-avatar-container">
-      <a [href]="disableLink() ? null : profileUrl()" class="user-profile-avatar"
+      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
         [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
         (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
@@ -83,14 +83,14 @@
     ) {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [href]="disableLink() ? null : profileUrl()" class="user-profile-name-link" #nameElement
+      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-name-link" #nameElement
         (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
-      <a [href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link" #npubElement
+      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link" #npubElement
         (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
@@ -176,7 +176,7 @@
     }
 
     @if (view() === 'avatar') {
-    <a [href]="disableLink() ? null : profileUrl()" class="user-profile-avatar avatar-only"
+    <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-avatar avatar-only"
       [matTooltip]="getTooltipContent()" (click)="onProfileClick($event)">
       @if (isLoading()) {
       <mat-spinner [diameter]="48" color="primary"></mat-spinner>

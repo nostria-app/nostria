@@ -193,13 +193,18 @@
   </section>
   }
 
-  <!-- Library Section -->
+  <!-- Collections Section -->
   <section class="library-features">
-    <h2 class="section-label" i18n="@@home.section.library">Your Library</h2>
+    <h2 class="section-label" i18n="@@home.section.collections">Your Collections</h2>
     <div class="library-grid">
-      <a routerLink="/collections" class="library-item" mat-ripple>
+      <a routerLink="/collections" class="library-item library-item-primary" mat-ripple>
         <mat-icon>collections_bookmark</mat-icon>
         <span i18n="@@home.collections">Collections</span>
+      </a>
+
+      <a routerLink="/collections/media" class="library-item" mat-ripple>
+        <mat-icon>photo_library</mat-icon>
+        <span i18n="@@home.collections.media">Media</span>
       </a>
 
       <a routerLink="/collections/bookmarks" class="library-item" mat-ripple>
@@ -212,9 +217,14 @@
         <span i18n="@@home.relays">Relays</span>
       </a>
 
-      <a [routerLink]="['/p', account.pubkey(), 'badges']" class="library-item" mat-ripple>
-        <mat-icon>badge</mat-icon>
-        <span i18n="@@home.badges">Badges</span>
+      <a routerLink="/collections/emojis" class="library-item" mat-ripple>
+        <mat-icon>emoji_emotions</mat-icon>
+        <span i18n="@@home.collections.emojis">Emojis</span>
+      </a>
+
+      <a routerLink="/collections/interests" class="library-item" mat-ripple>
+        <mat-icon>interests</mat-icon>
+        <span i18n="@@home.collections.interests">Interests</span>
       </a>
     </div>
   </section>

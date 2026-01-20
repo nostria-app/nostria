@@ -480,7 +480,7 @@ export class App implements OnInit {
           .sort((a, b) => a.title.localeCompare(b.title));
 
         const followSetChildren: NavItem[] = sortedFollowSets.map(set => ({
-          path: `/people?set=${set.dTag}`,
+          path: `/people/list/${set.dTag}`,
           label: set.title,
           icon: set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group'),
           authenticated: false,
@@ -1425,10 +1425,8 @@ export class App implements OnInit {
       const feedId = child.path.split('=')[1];
       this.navigateToFeed(feedId);
     } else if (child.followSetId) {
-      // Navigate to people page with follow set filter
-      this.router.navigate([child.path.split('?')[0]], {
-        queryParams: { set: child.followSetId }
-      });
+      // Navigate to people page with follow set using clean URL
+      this.router.navigate(['/people/list', child.followSetId]);
     } else {
       // Default navigation
       this.router.navigate([child.path]);

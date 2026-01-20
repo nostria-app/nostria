@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef, viewChild, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,6 +19,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { PublishService } from '../../../services/publish.service';
 import { nip19 } from 'nostr-tools';
 import { AudioPlayerComponent } from '../../../components/audio-player/audio-player.component';
+import { VideoControlsComponent } from '../../../components/video-controls/video-controls.component';
 
 @Component({
   selector: 'app-media-details',
@@ -32,6 +33,7 @@ import { AudioPlayerComponent } from '../../../components/audio-player/audio-pla
     TimestampPipe,
     MatTooltipModule,
     AudioPlayerComponent,
+    VideoControlsComponent,
   ],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss'],
@@ -45,6 +47,11 @@ export class MediaDetailsComponent {
   private nostr = inject(NostrService);
   private publishService = inject(PublishService);
   private destroyRef = inject(DestroyRef);
+
+  // Video element reference for video controls
+  videoElement = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
+  // Video controls reference for showing/hiding controls on mouse events
+  videoControls = viewChild(VideoControlsComponent);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -161,6 +168,92 @@ export class MediaDetailsComponent {
     ];
 
     return textExtensions.some(ext => url.endsWith(ext));
+  }
+
+  // Video control handlers
+  onVideoPlayPause(): void {
+    const video = this.videoElement()?.nativeElement;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play();
+    } else {
+      video.pause();
+    }
+  }
+
+  onVideoSeek(time: number): void {
+    const video = this.videoElement()?.nativeElement;
+    if (video) {
+      video.currentTime = time;
+    }
+  }
+
+  onVideoVolumeChange(volume: number): void {
+    const video = this.videoElement()?.nativeElement;
+    if (video) {
+      video.volume = volume;
+      if (video.muted && volume > 0) {
+        video.muted = false;
+      }
+    }
+  }
+
+  onVideoMuteToggle(): void {
+    const video = this.videoElement()?.nativeElement;
+    if (video) {
+      video.muted = !video.muted;
+    }
+  }
+
+  onVideoPlaybackRateChange(rate: number): void {
+    const video = this.videoElement()?.nativeElement;
+    if (video) {
+      video.playbackRate = rate;
+    }
+  }
+
+  async onVideoFullscreenToggle(): Promise<void> {
+    const videoWrapper = document.querySelector('.video-wrapper');
+    if (!videoWrapper) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await videoWrapper.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen not supported
+    }
+  }
+
+  async onVideoPipToggle(): Promise<void> {
+    const video = this.videoElement()?.nativeElement;
+    if (!video) return;
+
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await video.requestPictureInPicture();
+      }
+    } catch {
+      // PiP not supported
+    }
+  }
+
+  // Mouse event handlers for video controls visibility
+  onVideoMouseEnter(): void {
+    this.videoControls()?.showControlsAndStartTimer();
+  }
+
+  onVideoMouseLeave(): void {
+    // Let the controls auto-hide via their internal timer
+  }
+
+  onVideoMouseMove(): void {
+    this.videoControls()?.showControlsAndStartTimer();
   }
 
   async downloadMedia(): Promise<void> {

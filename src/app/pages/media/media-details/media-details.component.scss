@@ -192,6 +192,28 @@
   }
 }
 
+// Video wrapper for custom controls
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  max-height: 400px;
+  background-color: #000;
+
+  video {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    cursor: pointer;
+  }
+
+  app-video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+}
+
 .metadata-card {
   box-shadow: var(--mat-sys-level1);
 }
@@ -215,6 +237,21 @@
 
   .value {
     word-break: break-word;
+  }
+
+  .url-link {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+    
+    &:visited {
+      color: var(--mat-sys-primary);
+    }
   }
 
   .code-value {
