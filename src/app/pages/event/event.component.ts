@@ -147,6 +147,31 @@ export class EventPageComponent {
   transferState = inject(TransferState);
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);
+
+  /**
+   * Converts flat parent events array into a nested ThreadedEvent structure
+   * so parents display with the same indentation as thread replies.
+   * The structure nests from root -> child, with the last parent wrapping the main event's position.
+   */
+  threadedParents = computed<ThreadedEvent | null>(() => {
+    const parents = this.parentEvents();
+    if (parents.length === 0) return null;
+
+    // Build nested structure from root (first) to immediate parent (last)
+    // Each parent contains the next one as its single reply
+    let result: ThreadedEvent | null = null;
+
+    // Iterate in reverse to build from innermost to outermost
+    for (let i = parents.length - 1; i >= 0; i--) {
+      result = {
+        event: parents[i],
+        replies: result ? [result] : [],
+        level: i,
+      };
+    }
+
+    return result;
+  });
   private titleService = inject(Title);
   localSettings = inject(LocalSettingsService);
 

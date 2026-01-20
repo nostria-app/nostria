@@ -230,7 +230,9 @@
   margin-bottom: 0; // No gap - inline reply attaches directly below
   // Account for fixed toolbar and favorites bar when scrolling into view
   scroll-margin-top: calc(var(--toolbar-height, 64px) + 80px);
+}
 
+.main-event-wrapper {
   // Ensure main event has no left border
   ::ng-deep app-event .note-card {
     border-left: none !important;
@@ -265,7 +267,7 @@
 }
 
 .parent-events {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 
   h3 {
     color: var(--mat-sys-on-surface-variant);
@@ -276,37 +278,14 @@
     letter-spacing: 0.5px;
   }
 
-  .parent-event {
-    // margin-bottom: 0.5rem;
-    border-left: 2px solid var(--mat-sys-primary);
-    padding-left: 8px;
-
-    &:first-child {
-      border-left: none;
-      padding-left: 0;
+  // Parent threads: extend lines to connect with content below
+  .threaded-parent {
+    // All parent thread lines should extend to connect with next level
+    > .thread-line-clickable::before {
+      // Extend line past the container
+      bottom: -16px;
     }
   }
-
-  // .thread-indicator {
-  //   display: flex;
-  //   align-items: center;
-  //   margin: 1.5rem 0;
-
-  //   hr {
-  //     flex: 1;
-  //     border: none;
-  //     height: 1px;
-  //     background-color: var(--mat-sys-outline-variant);
-  //   }
-
-  //   span {
-  //     margin: 0 1rem;
-  //     font-size: 0.75rem;
-  //     color: var(--mat-sys-on-surface-variant);
-  //     text-transform: uppercase;
-  //     letter-spacing: 0.5px;
-  //   }
-  // }
 }
 
 .reactions {
