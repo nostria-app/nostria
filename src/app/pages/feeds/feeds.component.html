@@ -45,7 +45,7 @@
       <span class="spacer"></span>
 
       <!-- Filter button with overlay panel -->
-      @if (activeFeed() && !showRelayFeed()) {
+      @if (feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
       <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
         matTooltip="Filter content">
         <mat-icon>tune</mat-icon>
