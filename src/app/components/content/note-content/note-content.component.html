@@ -147,7 +147,7 @@
 @let videoPlaceholder = getVideoPlaceholderUrl(token);
 @let videoAspect = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
-  [class.has-aspect-ratio]="videoAspect" [style.aspect-ratio]="videoAspect"
+  [class.has-aspect-ratio]="videoAspect"
   [class.has-placeholder]="videoPlaceholder"
   [class.no-placeholder]="!videoPlaceholder"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
@@ -156,7 +156,7 @@
   <!-- Placeholder with fade transition - only render if placeholder exists -->
   @if (videoPlaceholder) {
   <img [src]="videoPlaceholder" class="video-placeholder-bg" [class.fade-out]="isVideoReady(token.content)" alt=""
-    aria-hidden="true" />
+    aria-hidden="true" [style.aspect-ratio]="videoAspect" />
   }
   @if (isVideoFormatSupported(token.content)) {
   <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined"

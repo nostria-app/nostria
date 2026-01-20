@@ -307,20 +307,19 @@
 }
 
 // Video container - needs different handling for proper sizing
-// When aspect-ratio is set (from imeta dim tag), use absolute positioning
-// When no aspect-ratio, let video determine container size via relative positioning
+// Don't use aspect-ratio on container as it conflicts with max-height constraints
+// Let the video element itself handle aspect ratio naturally
 .video-container {
   position: relative;
   overflow: hidden;
   display: block;
   width: 100%;
   max-width: 100%;
-  max-height: 70vh;
   border-radius: 12px;
   background: var(--mat-sys-surface-container);
 
   // Ensure any direct <video> (e.g., base64-video) stays proportional and responsive.
-  // Native video keeps its intrinsic ratio; we also allow an explicit aspect-ratio style binding.
+  // Native video keeps its intrinsic ratio
   >video {
     display: block;
     width: 100%;
@@ -331,17 +330,7 @@
     flex-shrink: 0;
   }
 
-  // When aspect-ratio is set on container, use absolute positioning
-  &.has-aspect-ratio {
-    >video {
-      position: absolute;
-      inset: 0;
-      height: 100%;
-    }
-  }
-
-  // Placeholder - positioned behind video, doesn't force aspect ratio
-  // Video rotation metadata can cause different display dimensions than file metadata
+  // Placeholder - positioned behind video
   .video-placeholder-bg {
     display: block;
     width: 100%;
@@ -358,22 +347,17 @@
       position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
       height: 100%;
     }
   }
 
-  // Video player wrapper
-  // By default, use relative positioning so video's natural dimensions determine container size
-  // This is critical for videos without imeta dim tags
+  // Video player wrapper (app-inline-video-player)
   .main-video {
     display: block;
     width: 100%;
-    height: auto;
-    max-height: 70vh;
     border-radius: 12px;
-    object-fit: contain;
     transition: opacity 0.4s ease-out;
-    // Always use relative positioning without aspect-ratio - video determines container size
     position: relative;
 
     // For videos WITH placeholder: hide until loaded
@@ -384,52 +368,25 @@
     &.loaded {
       opacity: 1;
     }
-
-    // Hidden class controls blur visibility, not positioning
-    &.hidden {
-      // Video is hidden due to blur - keep in flow but invisible
-      // The blur reveal overlay will be shown instead
-    }
   }
 
   // Videos WITHOUT placeholder: show immediately and let native preview load
   &.no-placeholder {
     .main-video {
-      // Show video immediately - don't wait for loaded state
       opacity: 1;
-      
-      // Video will show its native preview frame or first frame
-      // which is better than a gray placeholder
     }
   }
 
-  // When aspect-ratio is set, use absolute positioning for video
+  // When we have aspect ratio info from metadata, use it for the placeholder only
+  // The video element will handle its own sizing
   &.has-aspect-ratio {
-    .main-video {
-      position: absolute;
-      inset: 0;
-      height: 100%;
-
-      &:not(.loaded) {
-        opacity: 0;
-      }
-
-      &.loaded {
-        opacity: 1;
-      }
-    }
-
     .video-placeholder-bg {
+      // Use absolute positioning when video is loading
       position: absolute;
       inset: 0;
+      width: 100%;
       height: 100%;
-    }
-
-    // Even for no-placeholder, maintain absolute positioning when aspect-ratio is set
-    &.no-placeholder {
-      .main-video {
-        opacity: 1;
-      }
+      max-height: none;
     }
   }
 
@@ -441,20 +398,15 @@
   }
 
   &.blurred {
-    // When there's a placeholder, use it for the blur
     &.has-placeholder {
       .video-placeholder-bg {
         opacity: 1 !important;
-        // Cover entire container when blurred
         object-fit: cover !important;
       }
     }
     
-    // When there's no placeholder, the reveal overlay provides the blur effect
-    // No need for gray background - overlay has its own backdrop-filter blur
     &.no-placeholder {
       .main-video {
-        // Still show the video but the reveal overlay covers it
         opacity: 1;
       }
     }
@@ -474,18 +426,13 @@
   }
 
   // Rotation correction for videos where Blossom stripped EXIF without rotating pixels
-  // The video file dimensions don't match the intended display dimensions (from dim tag)
   &.needs-rotation {
     .main-video {
-      // Rotate 90 degrees clockwise and swap width/height to fit container
       transform: rotate(90deg);
-      // After rotation, width becomes height and vice versa
-      // Scale to fit within the container's aspect ratio
       width: auto;
       height: 100%;
       max-width: none;
       max-height: none;
-      // Use object-fit to contain the rotated video
       object-fit: contain;
     }
   }
