@@ -30,7 +30,7 @@
   </div>
   }
 
-  @if (!hasMore() && media().length > 0) {
+  @if (!hasMore() && !hasMoreToDisplay() && media().length > 0) {
   <div class="end-message">
     <p>No more media to load</p>
   </div>

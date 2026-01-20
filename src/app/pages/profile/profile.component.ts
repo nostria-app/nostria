@@ -37,7 +37,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { nip19 } from 'nostr-tools';
+import { nip19, kinds } from 'nostr-tools';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { ProfileTrackingService } from '../../services/profile-tracking.service';
 import { LayoutService } from '../../services/layout.service';
@@ -52,10 +52,22 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { ReportingService } from '../../services/reporting.service';
+import { ReportingService, ReportTarget } from '../../services/reporting.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ProfileViewOptionsInlineComponent } from './profile-view-options/profile-view-options-inline.component';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
+import { ZapService } from '../../services/zap.service';
+import { ZapDialogComponent, ZapDialogData } from '../../components/zap-dialog/zap-dialog.component';
+import { FavoritesService } from '../../services/favorites.service';
+import { FollowSetsService } from '../../services/follow-sets.service';
+import { CreateListDialogComponent, CreateListDialogResult } from '../../components/create-list-dialog/create-list-dialog.component';
+import { PublishDialogComponent, PublishDialogData } from '../../components/publish-dialog/publish-dialog.component';
+import { DatabaseService } from '../../services/database.service';
+import { UserRelayService } from '../../services/relays/user-relay';
+import { AccountService } from '../../api/services';
+import { PublicAccount } from '../../api/models';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-profile',
@@ -80,6 +92,7 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
     MatFormFieldModule,
     ProfileHeaderComponent,
     ProfileViewOptionsInlineComponent,
+    ZapButtonComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -114,6 +127,13 @@ export class ProfileComponent {
   private readonly reportingService = inject(ReportingService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly panelNav = inject(PanelNavigationService);
+  private readonly zapService = inject(ZapService);
+  private readonly favoritesService = inject(FavoritesService);
+  private readonly followSetsService = inject(FollowSetsService);
+  private readonly database = inject(DatabaseService);
+  private readonly userRelayService = inject(UserRelayService);
+  private readonly accountService = inject(AccountService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   pubkey = signal<string>('');
 
@@ -161,6 +181,55 @@ export class ProfileComponent {
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
   followingList = signal<string[]>([]); // This would be dynamically updated with real data
+
+  // Signal to track the premium status
+  premiumTier = signal<string | null>(null);
+
+  // Signal to track the username of the profile being viewed
+  profileUsername = signal<string | null>(null);
+
+  // Computed to check if user has premium subscription
+  isPremium = computed(() => {
+    const tier = this.premiumTier();
+    return tier === 'premium' || tier === 'premium_plus';
+  });
+
+  // Computed to check if the profile has a Lightning Address configured
+  hasLightningAddress = computed(() => {
+    const profileData = this.userMetadata()?.data;
+    if (!profileData) return false;
+    return this.zapService.getLightningAddress(profileData) !== null;
+  });
+
+  // Computed for following status
+  isFollowing = computed(() => {
+    const followingList = this.accountState.followingList();
+    return followingList.includes(this.pubkey());
+  });
+
+  // Check if the profile being viewed is following the logged-in user
+  isFollowingMe = computed(() => {
+    const myPubkey = this.accountState.pubkey();
+    const theirFollowingList = this.profileState.followingList();
+    return myPubkey ? theirFollowingList.includes(myPubkey) : false;
+  });
+
+  // Computed for favorite status
+  isFavorite = computed(() => {
+    return this.favoritesService.isFavorite(this.pubkey());
+  });
+
+  // Check if the current user is blocked
+  isUserBlocked = computed(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey || this.isOwnProfile()) return false;
+    return this.reportingService.isUserBlocked(pubkey);
+  });
+
+  // Computed to get available follow sets
+  availableFollowSets = computed(() => {
+    return this.followSetsService.followSets();
+  });
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -223,6 +292,16 @@ export class ProfileComponent {
         untracked(() => {
           this.logger.debug('User newly blocked, showing overlay for:', currentPubkey);
           this.isBlockedProfileRevealed.set(false);
+        });
+      }
+    });
+
+    // Fetch premium status when pubkey changes
+    effect(async () => {
+      const currentPubkey = this.pubkey();
+      if (currentPubkey && this.app.isBrowser()) {
+        untracked(() => {
+          this.fetchPremiumStatus(currentPubkey);
         });
       }
     });
@@ -692,19 +771,410 @@ export class ProfileComponent {
     this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
   }
 
-  isFollowing = computed(() => {
-    const followingList = this.accountState.followingList();
-    return followingList.includes(this.pubkey());
-  });
-
   muteUser(): void {
     this.logger.debug('Mute requested for:', this.pubkey());
     // TODO: Implement actual mute functionality
   }
 
-  blockUser(): void {
-    this.logger.debug('Block requested for:', this.pubkey());
-    // TODO: Implement actual block functionality
+  async blockUser(): Promise<void> {
+    const pubkey = this.pubkey();
+    if (!pubkey) return;
+
+    if (this.isUserBlocked()) {
+      // User is already blocked, so unblock them
+      this.reportingService.unblockUser(pubkey);
+    } else {
+      // Check if we're currently following this user
+      const isFollowing = this.isFollowing();
+
+      if (isFollowing) {
+        // Import ConfirmDialogComponent dynamically to show confirmation dialog
+        const { ConfirmDialogComponent } = await import('../../components/confirm-dialog/confirm-dialog.component');
+
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            title: 'Unfollow and Block User?',
+            message: 'You are currently following this user. Would you like to unfollow them before blocking?',
+            confirmText: 'Unfollow and Block',
+            cancelText: 'Just Block',
+            confirmColor: 'warn'
+          },
+          width: '400px',
+        });
+
+        const shouldUnfollow = await firstValueFrom(dialogRef.afterClosed());
+
+        if (shouldUnfollow) {
+          // Unfollow first, then block
+          await this.accountState.unfollow(pubkey);
+        }
+      }
+
+      // User is not blocked, so block them
+      await this.reportingService.muteUser(pubkey);
+    }
+  }
+
+  reportUser(): void {
+    const pubkey = this.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const displayName = this.userMetadata()?.data.display_name || this.userMetadata()?.data.name || '';
+
+    const reportTarget: ReportTarget = {
+      type: 'user',
+      pubkey: pubkey,
+    };
+
+    this.layoutService.showReportDialog(reportTarget, displayName);
+  }
+
+  /**
+   * Follows the user
+   */
+  async followUser(): Promise<void> {
+    this.logger.debug('Follow requested for:', this.pubkey());
+    await this.accountState.follow(this.pubkey());
+  }
+
+  async unfollowUser(): Promise<void> {
+    this.logger.debug('Unfollow requested for:', this.pubkey());
+    await this.accountState.unfollow(this.pubkey());
+  }
+
+  /**
+   * Opens the zap dialog for the user
+   */
+  zapUser(): void {
+    const pubkey = this.pubkey();
+    const profileData = this.userMetadata()?.data;
+
+    if (!pubkey) {
+      this.snackBar.open('Unable to determine user for zap', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    if (!profileData || !this.hasLightningAddress()) {
+      this.snackBar.open('This user has no lightning address configured for zaps', 'Dismiss', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const dialogData: ZapDialogData = {
+      recipientPubkey: pubkey,
+      recipientName: this.getFormattedName(),
+      recipientMetadata: profileData,
+      eventId: undefined, // This is for zapping a user, not a specific event
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+  }
+
+  giftPremium(): void {
+    const pubkey = this.pubkey();
+    const profileData = this.userMetadata()?.event?.content
+      ? JSON.parse(this.userMetadata()!.event!.content)
+      : null;
+
+    this.layoutService.openGiftPremiumDialog(
+      pubkey,
+      this.getFormattedName(),
+      profileData
+    ).then(dialogRef => {
+      dialogRef.afterClosed$.subscribe(result => {
+        if (result?.result && (result.result as { success?: boolean }).success) {
+          // Wait 2 seconds for backend to process the gift, then refresh premium status
+          setTimeout(() => {
+            this.fetchPremiumStatus(pubkey);
+          }, 2000);
+        }
+      });
+    });
+  }
+
+  openSendMessage(): void {
+    this.layoutService.openSendMessage(this.pubkey());
+  }
+
+  toggleFavorite(): void {
+    const currentPubkey = this.pubkey();
+    if (!currentPubkey) return;
+
+    const success = this.favoritesService.toggleFavorite(currentPubkey);
+    if (success) {
+      const isFavorite = this.favoritesService.isFavorite(currentPubkey);
+      if (isFavorite) {
+        this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+      }
+    }
+  }
+
+  isInFollowSet(dTag: string): boolean {
+    const set = this.followSetsService.getFollowSetByDTag(dTag);
+    return set ? set.pubkeys.includes(this.pubkey()) : false;
+  }
+
+  async addToFollowSet(dTag: string): Promise<void> {
+    const pubkey = this.pubkey();
+    const isCurrentlyInSet = this.isInFollowSet(dTag);
+
+    try {
+      if (isCurrentlyInSet) {
+        // Remove from set
+        await this.followSetsService.removeFromFollowSet(dTag, pubkey);
+        this.layoutService.toast('Removed from list');
+      } else {
+        // Add to set
+        await this.followSetsService.addToFollowSet(dTag, pubkey);
+        this.layoutService.toast('Added to list');
+      }
+    } catch (error) {
+      this.layoutService.toast('Failed to update list');
+    }
+  }
+
+  async createNewFollowSet(): Promise<void> {
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      data: {
+        initialPrivate: false,
+      },
+      width: '450px',
+    });
+
+    const result: CreateListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+
+    if (!result || !result.title.trim()) {
+      return;
+    }
+
+    try {
+      const pubkey = this.pubkey();
+      const newSet = await this.followSetsService.createFollowSet(
+        result.title.trim(),
+        [pubkey],
+        result.isPrivate
+      );
+
+      if (newSet) {
+        const privacyLabel = result.isPrivate ? 'private list' : 'list';
+        this.layoutService.toast(`Created ${privacyLabel} "${result.title}" and added user`);
+      } else {
+        this.layoutService.toast('Failed to create list');
+      }
+    } catch (error) {
+      this.layoutService.toast('Failed to create list');
+    }
+  }
+
+  copyHex(): void {
+    this.copyToClipboard(this.pubkey(), 'hex');
+  }
+
+  copyProfileUrl(): void {
+    this.layoutService.copyProfileUrl(this.getFormattedNpub(), this.profileUsername());
+  }
+
+  /**
+   * Generate and share an invite link to Nostria
+   */
+  shareInviteLink(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Unable to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      // Get the logged-in user's account relays (not the profile being viewed)
+      const relays = this.accountRelay.getRelayUrls();
+
+      // Encode nprofile with pubkey and relays
+      const nprofile = nip19.nprofileEncode({
+        pubkey: pubkey,
+        relays: relays.slice(0, 5), // Include up to 5 relays
+      });
+
+      // Generate the invite URL
+      const inviteUrl = `${this.getWindow()?.location?.origin}/invite/${nprofile}`;
+
+      // Use Web Share API if available
+      const window = this.getWindow();
+      if (window?.navigator?.share) {
+        window.navigator
+          .share({
+            title: `Join me on Nostria!`,
+            text: `${this.getFormattedName()} invited you to join Nostria - Your Social Media, Your Control`,
+            url: inviteUrl,
+          })
+          .then(() => {
+            this.logger.debug('Invite link shared successfully');
+          })
+          .catch(err => {
+            this.logger.error('Error sharing invite link:', err);
+            // Fallback to copying
+            this.copyToClipboard(inviteUrl, 'invite link');
+          });
+      } else {
+        // Fallback to copying
+        this.copyToClipboard(inviteUrl, 'invite link');
+      }
+    } catch (err) {
+      this.logger.error('Failed to generate invite link', err);
+      this.snackBar.open('Failed to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  async publishProfileEvent(): Promise<void> {
+    const currentProfile = this.userMetadata();
+    if (!currentProfile) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    const dialogData: PublishDialogData = {
+      event: currentProfile.event,
+    };
+
+    this.dialog.open(PublishDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      disableClose: false,
+    });
+  }
+
+  async publishRelayListEvent(): Promise<void> {
+    const currentPubkey = this.pubkey();
+    if (!currentPubkey) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    try {
+      // Get the relay list event (kind 10002)
+      const relayListEvent = await this.database.getEventByPubkeyAndKind(
+        currentPubkey,
+        kinds.RelayList
+      );
+
+      if (!relayListEvent) {
+        this.snackBar.open('Relay list not found', 'Close', {
+          duration: 2000,
+        });
+        return;
+      }
+
+      const dialogData: PublishDialogData = {
+        event: relayListEvent,
+      };
+
+      this.dialog.open(PublishDialogComponent, {
+        data: dialogData,
+        width: '600px',
+        disableClose: false,
+      });
+    } catch (error) {
+      this.logger.error('Error getting relay list event:', error);
+      this.snackBar.open('Error loading relay list', 'Close', {
+        duration: 2000,
+      });
+    }
+  }
+
+  async publishFollowingListEvent(): Promise<void> {
+    const currentPubkey = this.pubkey();
+    if (!currentPubkey) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    try {
+      // Get the following list event (kind 3) from user relay service
+      const followingListEvent = await this.userRelayService.getEventByPubkeyAndKind(
+        currentPubkey,
+        kinds.Contacts
+      );
+
+      if (!followingListEvent) {
+        this.snackBar.open('Following list not found', 'Close', {
+          duration: 2000,
+        });
+        return;
+      }
+
+      const dialogData: PublishDialogData = {
+        event: followingListEvent,
+      };
+
+      this.dialog.open(PublishDialogComponent, {
+        data: dialogData,
+        width: '600px',
+        disableClose: false,
+      });
+    } catch (error) {
+      this.logger.error('Error getting following list event:', error);
+      this.snackBar.open('Error loading following list', 'Close', {
+        duration: 2000,
+      });
+    }
+  }
+
+  /**
+   * Fetches the premium status for a given pubkey
+   */
+  private async fetchPremiumStatus(pubkey: string): Promise<void> {
+    try {
+      // Check if this is the current user
+      if (this.isOwnProfile()) {
+        // For current user, get tier from account state
+        const subscription = this.accountState.subscription();
+        this.premiumTier.set(subscription?.tier || null);
+        this.profileUsername.set(subscription?.username || null);
+      } else {
+        // For other users, fetch public account information
+        const result = await firstValueFrom(
+          this.accountService.getPublicAccount({
+            pubkeyOrUsername: pubkey,
+          })
+        );
+
+        if (result?.result) {
+          const publicAccount: PublicAccount = result.result;
+          this.premiumTier.set(publicAccount?.tier || null);
+          this.profileUsername.set(publicAccount?.username || null);
+        } else {
+          this.premiumTier.set(null);
+          this.profileUsername.set(null);
+        }
+      }
+    } catch (error) {
+      this.logger.debug('Error fetching premium status:', error);
+      this.premiumTier.set(null);
+      this.profileUsername.set(null);
+    }
   }
 
   /**
