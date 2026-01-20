@@ -188,7 +188,7 @@
 
   <!-- Submenu for Lists -->
   <mat-menu #followSetsMenu="matMenu">
-    @for (set of availableFollowSets(); track set.dTag) {
+    @for (set of availableFollowSets(); track set.id) {
       <button mat-menu-item (click)="addToFollowSet(set.dTag)">
         <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
         <span>{{ set.title }}</span>
