@@ -63,17 +63,10 @@
     <!-- Comfortable view - show name only -->
     @if (view() === 'comfortable') {
     <div class="user-profile-content">
-      @if (disableLink()) {
       <div class="user-profile-name-text" #nameElement (mouseenter)="onMouseEnter($event, nameElement)"
         (mouseleave)="onMouseLeave()">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </div>
-      } @else {
-      <a [href]="profileUrl()" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
-        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
-      </a>
-      }
     </div>
     }
 

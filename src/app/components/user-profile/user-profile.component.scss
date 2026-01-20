@@ -255,7 +255,6 @@
     color: inherit;
     display: inline-block;
     max-width: 100%;
-    cursor: pointer;
   }
 
   .user-profile-npub-link {
@@ -530,12 +529,8 @@
     box-sizing: border-box;
     max-width: 100%; // Prevent container from exceeding parent width
 
-    :hover {
-      background-color: var(--mat-sys-secondary-container);
-    }
-
     .user-profile-container {
-      padding: 16px;
+      padding: 12px;
       flex-direction: row;
       align-items: flex-start;
       min-width: 0; // Allow flex item to shrink below its content size
