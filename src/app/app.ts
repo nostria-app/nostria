@@ -591,7 +591,6 @@ export class App implements OnInit {
   navItems: NavItem[] = [
     { path: '/', label: $localize`:@@app.nav.home:Home`, icon: 'home', authenticated: false },
     { path: '/f', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
-    { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     {
       path: 'messages',
       label: $localize`:@@app.nav.messages:Messages`,
@@ -604,6 +603,7 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.articles:Articles`,
       icon: 'article',
     },
+    { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
     { path: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
@@ -645,9 +645,12 @@ export class App implements OnInit {
     '/',
     '/f',
     'articles',
+    'summary',
     'messages',
     'people',
     'collections',
+    'music',
+    'streams',
   ];
 
   constructor() {

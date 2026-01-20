@@ -54,9 +54,12 @@ const DEFAULT_MENU_IDS = [
   '/',
   '/f',
   'articles',
+  'summary',
   'messages',
   'people',
   'collections',
+  'music',
+  'streams',
 ];
 
 @Component({
