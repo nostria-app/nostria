@@ -1,6 +1,7 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { LayoutService } from './layout.service';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
+import { nip19 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { NostrRecord } from '../interfaces';
 import { UserDataService } from './user-data.service';
@@ -384,8 +385,12 @@ export class SearchService {
   }
 
   // Method to select a search result
+  // Navigate to primary outlet and clear right pane so search result is the main focus
   selectSearchResult(profile: NostrRecord): void {
-    this.layout.openProfile(profile.event.pubkey);
+    const pubkey = profile.event.pubkey;
+    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
+    // Navigate to profile in primary outlet and clear right panel
+    this.layout.router.navigate([{ outlets: { primary: ['p', npub], right: null } }]);
     this.layout.toggleSearch();
     untracked(() => {
       this.searchResults.set([]);
