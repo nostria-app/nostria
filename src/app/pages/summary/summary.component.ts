@@ -21,6 +21,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -70,7 +72,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
   selector: 'app-summary',
-  imports: [
+imports: [
     RouterModule,
     MatButtonModule,
     MatIconModule,
@@ -80,6 +82,8 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatChipsModule,
     MatExpansionModule,
     MatCheckboxModule,
+    MatTabsModule,
+    MatMenuModule,
     UserProfileComponent,
     AgoPipe
   ],

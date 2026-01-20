@@ -131,7 +131,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-media',
       label: 'Open Media',
       icon: 'photo_library',
-      action: () => this.router.navigate(['/media']),
+      action: () => this.router.navigate(['/collections/media']),
       keywords: ['media', 'photos', 'images', 'gallery', 'videos']
     },
 

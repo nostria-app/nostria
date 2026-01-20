@@ -93,43 +93,17 @@ export class FollowSetsService {
         // Ensure database is initialized before querying
         await this.database.init();
 
-        // Query for deletion events (kind 5) to filter out deleted follow sets
-        const deletionEvents = await this.dataService.getEventsByPubkeyAndKind(
-          pubkey,
-          5,
-          { cache: true, save: true }
-        );
-
-        // Build a set of deleted d-tags from deletion events
-        const deletedDTags = new Set<string>();
-        for (const record of deletionEvents) {
-          for (const tag of record.event.tags) {
-            // Check for 'a' tags that reference kind 30000 (follow sets)
-            if (tag[0] === 'a' && tag[1]) {
-              const parts = tag[1].split(':');
-              // Format: kind:pubkey:d-tag
-              if (parts[0] === '30000' && parts[1] === pubkey && parts[2]) {
-                deletedDTags.add(parts[2]);
-              }
-            }
-          }
-        }
-
-        if (deletedDTags.size > 0) {
-          this.logger.debug(`[FollowSets] Found ${deletedDTags.size} deleted follow sets:`, [...deletedDTags]);
-        }
-
         // First, try to load from database
         const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
 
         if (dbEvents.length > 0) {
-          // Parse database events and update UI immediately, filtering out deleted ones
+          // Parse database events and update UI immediately
           const dbSets = (await Promise.all(
             dbEvents.map(event => this.parseFollowSetEvent(event))
-          )).filter((set): set is FollowSet => set !== null && !deletedDTags.has(set.dTag));
+          )).filter((set): set is FollowSet => set !== null);
 
           this.followSets.set(dbSets);
-          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database (after filtering deleted)`);
+          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database`);
         }
 
         // Then fetch from relays to get any updates
@@ -142,25 +116,13 @@ export class FollowSetsService {
           }
         );
 
-        // Convert all events to FollowSet objects, filtering out deleted ones
+        // Convert all events to FollowSet objects
         const sets = (await Promise.all(
           events.map(record => this.parseFollowSetEvent(record.event))
-        )).filter((set): set is FollowSet => set !== null && !deletedDTags.has(set.dTag));
+        )).filter((set): set is FollowSet => set !== null);
 
         this.followSets.set(sets);
-        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets (after filtering deleted)`);
-
-        // Clean up deleted events from local database
-        for (const dTag of deletedDTags) {
-          const deletedEvent = dbEvents.find(e => {
-            const eventDTag = e.tags.find(t => t[0] === 'd')?.[1];
-            return eventDTag === dTag;
-          });
-          if (deletedEvent) {
-            await this.database.deleteEvent(deletedEvent.id);
-            this.logger.debug(`[FollowSets] Removed deleted follow set from database: ${dTag}`);
-          }
-        }
+        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');

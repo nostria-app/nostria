@@ -1325,7 +1325,7 @@ export class LayoutService implements OnDestroy {
 
   async uploadMedia(): Promise<void> {
     // Navigate to media page with upload parameter
-    await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
+    await this.router.navigate(['/collections/media'], { queryParams: { upload: 'true' } });
   }
 
   private nostrService = inject(NostrService);

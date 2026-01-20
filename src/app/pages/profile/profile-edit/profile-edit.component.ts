@@ -416,7 +416,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   // Navigate to media settings - specifically to the Media Servers tab
   navigateToMediaSettings(): void {
-    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+    this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
   }
 
   removeImage(type: 'profile' | 'banner'): void {

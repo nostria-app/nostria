@@ -207,7 +207,7 @@ export class TwoColumnLayoutService {
     'notifications/settings': { type: 'list', preserveOnNavigation: true },
     'notifications/manage': { type: 'list', preserveOnNavigation: true },
     'lists': { type: 'list', preserveOnNavigation: true },
-    'media': { type: 'list', preserveOnNavigation: true },
+    'collections/media': { type: 'list', preserveOnNavigation: true },
     'relays': { type: 'list', preserveOnNavigation: true },
     'settings': { type: 'list', preserveOnNavigation: true },
     'credentials': { type: 'list', preserveOnNavigation: true },
@@ -244,6 +244,7 @@ export class TwoColumnLayoutService {
     'badges/details': { type: 'detail' },
     'badges/create': { type: 'detail' },
     'badges/edit': { type: 'detail' },
+    'collections/media/details': { type: 'detail' },
     'playlists/edit': { type: 'detail' },
     'polls/edit': { type: 'detail' },
 
@@ -330,7 +331,7 @@ export class TwoColumnLayoutService {
     // - Home, music, streams, messages, bookmarks, articles, discover, and people get wide mode (1400px)
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
-    const wideRoutes = ['streams', 'music', 'messages', 'collections/bookmarks', 'articles', 'discover', 'people'];
+    const wideRoutes = ['streams', 'music', 'messages', 'collections/bookmarks', 'collections/media', 'articles', 'discover', 'people'];
     const isWideRoute = isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/'));
     if (isWideRoute) {
       this._leftWidthMode.set('wide');

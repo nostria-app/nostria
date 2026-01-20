@@ -232,7 +232,8 @@ export class MediaDetailsComponent {
         this.snackBar.open('Media deleted successfully', 'Close', {
           duration: 3000,
         });
-        this.router.navigate(['/media']);
+        // Close the right panel after deletion
+        this.router.navigate([{ outlets: { right: null } }]);
       } catch (error) {
         this.snackBar.open('Failed to delete media', 'Close', {
           duration: 3000,
@@ -484,9 +485,8 @@ export class MediaDetailsComponent {
   }
 
   goBack(): void {
-    // Simply navigate back to the media list
-    // The active tab will be restored from localStorage by the MediaComponent
-    this.router.navigate(['/media']);
+    // Close the right panel
+    this.router.navigate([{ outlets: { right: null } }]);
   }
 
   getMediaIcon(type: string | null | undefined): string {

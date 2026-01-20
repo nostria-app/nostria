@@ -167,7 +167,7 @@ export class PanelNavigationService {
     'messages': { type: 'list', title: 'Messages' },
     'notifications': { type: 'list', title: 'Notifications' },
     'lists': { type: 'list', title: 'Lists' },
-    'media': { type: 'list', title: 'Media' },
+    'collections/media': { type: 'list', title: 'Media' },
     'relays': { type: 'list', title: 'Relays' },
     'settings': { type: 'list', title: 'Settings' },
     'credentials': { type: 'list', title: 'Credentials' },
@@ -203,6 +203,7 @@ export class PanelNavigationService {
     'badges/details': { type: 'detail', title: 'Badge Details' },
     'badges/create': { type: 'detail', title: 'Create Badge' },
     'badges/edit': { type: 'detail', title: 'Edit Badge' },
+    'collections/media/details': { type: 'detail', title: 'Media Details' },
     'playlists/edit': { type: 'detail', title: 'Edit Playlist' },
     'polls/edit': { type: 'detail', title: 'Edit Poll' },
     'discover/content': { type: 'detail', title: 'Discover Content' },
@@ -380,7 +381,7 @@ export class PanelNavigationService {
         // Switching sections (e.g. Music -> Notifications)
 
         // Special seeding for Collections
-        if ((entry.path.startsWith('collections/') || entry.path.startsWith('media')) && entry.path !== 'collections') {
+        if (entry.path.startsWith('collections/') && entry.path !== 'collections') {
           const parentWithTitle: NavigationEntry = { path: 'collections', title: 'Collections', type: 'list' };
           this._leftStack.set([parentWithTitle, entry]);
         } else {
