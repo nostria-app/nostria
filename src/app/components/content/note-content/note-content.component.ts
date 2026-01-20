@@ -753,11 +753,30 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
-   * Determine if a video should auto-play based on its duration
-   * Videos 15 seconds or less will auto-play (muted, as required by browsers)
+   * Determine if a video should auto-play based on settings and duration
+   * - If autoPlayVideos setting is enabled, all videos auto-play (muted)
+   * - Otherwise, only videos 15 seconds or less will auto-play
    */
   shouldAutoPlayVideo(token: ContentToken): boolean {
-    // Only auto-play if duration is known and <= 15 seconds
+    // Check if user has enabled auto-play for all videos
+    const autoPlayAll = this.settings.settings().autoPlayVideos ?? false;
+    if (autoPlayAll) {
+      return true;
+    }
+    
+    // Default behavior: auto-play short videos (15 seconds or less)
+    if (token.duration !== undefined && token.duration <= 15) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Determine if a video should loop
+   * Short videos (15 seconds or less) loop automatically
+   */
+  shouldLoopVideo(token: ContentToken): boolean {
+    // Loop short videos regardless of auto-play setting
     if (token.duration !== undefined && token.duration <= 15) {
       return true;
     }
