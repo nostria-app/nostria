@@ -85,6 +85,9 @@ export class MusicTrackDialogComponent {
   isEditMode = computed(() => !!this.data()?.track);
   dialogTitle = computed(() => this.isEditMode() ? 'Edit Track' : 'Upload Music Track');
 
+  // Show full form when in edit mode OR audio has been uploaded
+  showFullForm = computed(() => this.isEditMode() || !!this.audioUrl());
+
   // Media server availability
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
