@@ -15,15 +15,23 @@
     </div>
     }
 
-    @if (!isEditMode()) {
+    <!-- @if (!isEditMode() && !showFullForm()) {
     <p class="dialog-subtitle">Share your music with the Nostr community and earn zaps</p>
-    }
+    } -->
 
     <form [formGroup]="trackForm">
       <!-- Audio File Section -->
-      <div class="audio-section">
+      <div class="audio-section" [class.audio-section-centered]="!showFullForm()">
+        @if (!showFullForm()) {
+        <div class="initial-upload-header">
+          <mat-icon>music_note</mat-icon>
+          <h3>Select an Audio File</h3>
+          <p>Choose or drag & drop your music file to get started</p>
+        </div>
+        } @else {
         <label class="field-label">Audio File @if (!isEditMode()) { * }</label>
-        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" (dragover)="onAudioDragOver($event)"
+        }
+        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" [class.audio-upload-large]="!showFullForm()" (dragover)="onAudioDragOver($event)"
           (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
           @if (isUploadingAudio()) {
           <div class="uploading-indicator">
@@ -48,17 +56,23 @@
             </button>
           </div>
           } @else {
-          <div class="drop-zone" (click)="selectAudioFile()">
+          <div class="drop-zone" [class.drop-zone-large]="!showFullForm()" (click)="selectAudioFile()">
             <mat-icon>cloud_upload</mat-icon>
             <span class="drop-text">Drag & drop audio file here</span>
             <span class="or-text">or</span>
             <button mat-stroked-button type="button">
               Browse Files
             </button>
+            @if (!showFullForm()) {
+            <span class="supported-formats">Supported: MP3, WAV, FLAC, AAC, OGG</span>
+            }
           </div>
           }
         </div>
       </div>
+
+      <!-- Rest of the form - only shown after audio is loaded -->
+      @if (showFullForm()) {
 
       <!-- Track Title -->
       <mat-form-field appearance="outline" class="full-width">
@@ -309,6 +323,7 @@
         <strong>Note:</strong> Please do not close this window while uploading. Upload time may vary depending on file
         size, typically taking up to a minute for larger files.
       </div>
+      }
       }
     </form>
   </div>
