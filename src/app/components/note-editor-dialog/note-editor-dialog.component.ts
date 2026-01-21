@@ -12,6 +12,7 @@ import {
   input,
   output,
   ChangeDetectionStrategy,
+  effect,
 } from '@angular/core';
 import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -673,10 +674,45 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Set up auto-save effects
     this.setupAutoSave();
+
+    // CRITICAL: In inline mode, reactively update data when replyToEvent changes
+    // This ensures the reply is always sent to the correct event, even when the user
+    // navigates to a different event while the same component instance stays alive
+    effect(() => {
+      if (this.inlineMode()) {
+        const event = this.replyToEvent();
+        if (event) {
+          // Check if the event ID has changed (navigated to different event)
+          const currentReplyToId = this.data?.replyTo?.id;
+          if (currentReplyToId !== event.id) {
+            // Update data to point to the new event
+            this.data = {
+              replyTo: {
+                id: event.id,
+                pubkey: event.pubkey,
+                event: event,
+              }
+            };
+
+            // Reset editor state for the new event
+            this.content.set('');
+            this.mentions.set([event.pubkey]); // Start with the event author mentioned
+            this.mentionMap.clear();
+            this.pubkeyToNameMap.clear();
+            this.mediaMetadata.set([]);
+            this.isExpanded.set(false);
+
+            // Fetch the profile name for the new reply target
+            this.loadMentionProfileName(event.pubkey);
+          }
+        }
+      }
+    });
   }
 
   ngOnInit() {
-    // In inline mode, set up data from the replyToEvent input
+    // In inline mode, initial setup is handled by the effect in constructor
+    // This ensures reactivity when replyToEvent changes
     if (this.inlineMode() && this.replyToEvent()) {
       const event = this.replyToEvent()!;
       this.data = {
