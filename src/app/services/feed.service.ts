@@ -32,6 +32,7 @@ import { RegionService } from './region.service';
 import { EncryptionService } from './encryption.service';
 import { LocalSettingsService } from './local-settings.service';
 import { FollowingDataService } from './following-data.service';
+import { SettingsService, SyncedFeedConfig } from './settings.service';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -191,6 +192,7 @@ export class FeedService {
   private readonly encryption = inject(EncryptionService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly followingData = inject(FollowingDataService);
+  private readonly settingsService = inject(SettingsService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -198,6 +200,9 @@ export class FeedService {
   private readonly _feeds = signal<FeedConfig[]>([]);
   private readonly _feedsLoaded = signal<boolean>(false);
   private readonly _hasInitialContent = signal<boolean>(false); // Track when first feed content is ready
+
+  // Track if sync is in progress to prevent loops
+  private syncInProgress = false;
 
   // Active feed subscription management
   private readonly _activeFeedId = signal<string | null>(null);
@@ -3126,19 +3131,57 @@ export class FeedService {
     try {
       const storedFeeds = this.getFeedsFromStorage(pubkey);
 
-      // If storedFeeds is null, this user has never had feeds before - initialize defaults
+      // Check if we have synced feeds from kind 30078 settings
+      // This takes priority for cross-device sync scenarios
+      const syncedFeeds = this.settingsService.getSyncedFeeds();
+      const hasSyncedFeeds = syncedFeeds && syncedFeeds.length > 0;
+
+      // If storedFeeds is null, this user has never had feeds before on this device
       if (storedFeeds === null) {
-        this.logger.info('No feeds found for pubkey, initializing default feeds for pubkey', pubkey);
-        const defaultFeeds = await this.initializeDefaultFeeds();
-        this._feeds.set(defaultFeeds);
-        this._feedsLoaded.set(true);
-        this.saveFeeds();
+        // Check if there are synced feeds from another device
+        if (hasSyncedFeeds) {
+          this.logger.info(`Found ${syncedFeeds.length} synced feeds from settings, using those`);
+          const feedsFromSync = this.convertSyncedFeedsToFeedConfig(syncedFeeds);
+          this._feeds.set(feedsFromSync);
+          this._feedsLoaded.set(true);
+          // Save to local storage for faster loading next time
+          this.saveFeeds();
+        } else {
+          this.logger.info('No feeds found for pubkey, initializing default feeds for pubkey', pubkey);
+          const defaultFeeds = await this.initializeDefaultFeeds();
+          this._feeds.set(defaultFeeds);
+          this._feedsLoaded.set(true);
+          this.saveFeeds();
+        }
       } else {
         // storedFeeds exists (could be empty array if user deleted all feeds)
         // Use whatever is stored, even if it's an empty array
         // Filter out any Trending feed that may have been stored previously
         // (Trending is now always appended dynamically via the feeds computed signal)
         const filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
+
+        // Check if synced feeds are newer than local feeds
+        // Compare by checking if synced has feeds that local doesn't, or vice versa
+        if (hasSyncedFeeds) {
+          const syncedFeedsUpdatedAt = Math.max(...syncedFeeds.map(f => f.updatedAt || 0));
+          const localFeedsUpdatedAt = Math.max(...filteredFeeds.map(f => f.updatedAt || 0), 0);
+
+          if (syncedFeedsUpdatedAt > localFeedsUpdatedAt) {
+            this.logger.info(`Synced feeds are newer (${syncedFeedsUpdatedAt} > ${localFeedsUpdatedAt}), using synced feeds`);
+            const feedsFromSync = this.convertSyncedFeedsToFeedConfig(syncedFeeds);
+            this._feeds.set(feedsFromSync);
+            this._feedsLoaded.set(true);
+            // Save to local storage for faster loading next time
+            this.saveFeeds();
+            this.logger.debug('Loaded feeds from synced settings for pubkey', pubkey, feedsFromSync);
+
+            // Only subscribe if there's an active account
+            if (this.accountState.account()) {
+              await this.subscribe();
+            }
+            return;
+          }
+        }
 
         // Migrate any legacy column-based feeds
         const feedsBeforeMigration = filteredFeeds.length;
@@ -3180,6 +3223,45 @@ export class FeedService {
     if (this.accountState.account()) {
       await this.subscribe();
     }
+  }
+
+  /**
+   * Convert synced feed configs to full FeedConfig objects.
+   * Adds runtime properties that aren't synced (lastRetrieved, etc.)
+   */
+  private convertSyncedFeedsToFeedConfig(syncedFeeds: SyncedFeedConfig[]): FeedConfig[] {
+    return syncedFeeds.map(synced => ({
+      ...synced,
+      // Runtime properties not stored in sync
+      lastRetrieved: undefined,
+    }));
+  }
+
+  /**
+   * Convert FeedConfig to SyncedFeedConfig for storage.
+   * Strips runtime/cache properties that shouldn't be synced.
+   */
+  private convertFeedConfigToSynced(feed: FeedConfig): SyncedFeedConfig {
+    return {
+      id: feed.id,
+      label: feed.label,
+      icon: feed.icon,
+      type: feed.type,
+      kinds: feed.kinds,
+      source: feed.source,
+      customUsers: feed.customUsers,
+      customStarterPacks: feed.customStarterPacks,
+      customFollowSets: feed.customFollowSets,
+      searchQuery: feed.searchQuery,
+      relayConfig: feed.relayConfig,
+      customRelays: feed.customRelays,
+      filters: feed.filters,
+      showReplies: feed.showReplies,
+      showReposts: feed.showReposts,
+      createdAt: feed.createdAt,
+      updatedAt: feed.updatedAt,
+      isSystem: feed.isSystem,
+    };
   }
 
   /**
@@ -3267,10 +3349,69 @@ export class FeedService {
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
 
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, feedsToSave);
+
+      // Also sync to kind 30078 settings for cross-device sync
+      this.syncFeedsToSettings(feedsToSave);
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
       // Note: Don't set feedsInitialized flag on error to allow retry
     }
+  }
+
+  /**
+   * Sync feeds to kind 30078 settings event for cross-device synchronization.
+   * This is called automatically when feeds are saved locally.
+   * Uses debouncing to prevent excessive relay publishes.
+   */
+  private syncFeedsToSettingsTimeout: ReturnType<typeof setTimeout> | null = null;
+  private syncFeedsToSettings(feeds: FeedConfig[]): void {
+    // Debounce sync to prevent excessive publishes during rapid changes
+    if (this.syncFeedsToSettingsTimeout) {
+      clearTimeout(this.syncFeedsToSettingsTimeout);
+    }
+
+    this.syncFeedsToSettingsTimeout = setTimeout(async () => {
+      // Prevent sync loops
+      if (this.syncInProgress) {
+        this.logger.debug('Sync already in progress, skipping');
+        return;
+      }
+
+      try {
+        this.syncInProgress = true;
+
+        // Convert to synced format (strip runtime properties)
+        const syncedFeeds = feeds.map(feed => this.convertFeedConfigToSynced(feed));
+
+        this.logger.info(`Syncing ${syncedFeeds.length} feeds to kind 30078 settings`);
+        await this.settingsService.updateSyncedFeeds(syncedFeeds);
+        this.logger.info('Feeds synced successfully to settings');
+      } catch (error) {
+        this.logger.error('Failed to sync feeds to settings:', error);
+        // Non-critical - feeds are still saved locally
+      } finally {
+        this.syncInProgress = false;
+      }
+    }, 2000); // 2 second debounce
+  }
+
+  /**
+   * Force sync feeds to settings immediately (without debounce).
+   * Useful for explicit user actions like "Sync Now" button.
+   */
+  async forceSyncFeeds(): Promise<void> {
+    // Clear any pending debounced sync
+    if (this.syncFeedsToSettingsTimeout) {
+      clearTimeout(this.syncFeedsToSettingsTimeout);
+      this.syncFeedsToSettingsTimeout = null;
+    }
+
+    const feeds = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
+    const syncedFeeds = feeds.map(feed => this.convertFeedConfigToSynced(feed));
+
+    this.logger.info(`Force syncing ${syncedFeeds.length} feeds to kind 30078 settings`);
+    await this.settingsService.updateSyncedFeeds(syncedFeeds);
+    this.logger.info('Feeds force synced successfully');
   }
 
   /**

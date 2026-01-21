@@ -272,7 +272,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isAiGenerated = computed(() => {
     const event = this.song();
     if (!event) return false;
-    const aiTag = event.tags.find(t => t[0] === 'ai-generated');
+    const aiTag = event.tags.find(t => t[0] === 'ai_generated');
     return aiTag?.[1] === 'true';
   });
 
