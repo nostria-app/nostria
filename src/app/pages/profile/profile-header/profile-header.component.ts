@@ -12,7 +12,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { ProfileState } from '../../../services/profile-state';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { nip19, kinds } from 'nostr-tools';
@@ -75,7 +76,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   nostr = inject(NostrService);
   npub = signal<string | undefined>(undefined);
   logger = inject(LoggerService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
   accountState = inject(AccountStateService);
   utilities = inject(UtilitiesService);
   layoutService = inject(LayoutService);

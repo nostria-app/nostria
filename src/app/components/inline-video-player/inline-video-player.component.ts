@@ -129,9 +129,15 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       const inViewport = this.isInViewport();
       const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
+      const isBlurred = this.blurred();
       const video = this.videoElement?.nativeElement;
       
       if (!video) return;
+      
+      // Never auto-play if video is blurred (behind reveal overlay)
+      if (isBlurred) {
+        return;
+      }
       
       if (inViewport && autoPlayAllowed) {
         // Video entered viewport and auto-play is allowed - play if enabled and hasn't been played yet

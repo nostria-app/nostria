@@ -3,7 +3,7 @@ import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { LoggerService } from '../../../services/logger.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,7 +31,7 @@ import { UserRelayService } from '../../../services/relays/user-relay';
 })
 export class ProfileNotesComponent {
   private logger = inject(LoggerService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
   bookmark = inject(BookmarkService);
   layout = inject(LayoutService);
   pinned = inject(PinnedService);
