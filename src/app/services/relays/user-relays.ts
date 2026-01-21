@@ -21,6 +21,9 @@ export class UserRelaysService {
   // In-flight requests to prevent duplicate discovery calls
   private readonly inflightRequests = new Map<string, Promise<string[]>>();
 
+  // Signal to track which pubkeys are currently loading relays
+  private readonly loadingPubkeys = signal<Set<string>>(new Set());
+
   /**
    * Check if the cache is still valid for a given pubkey
    */
@@ -49,6 +52,13 @@ export class UserRelaysService {
       return;
     }
 
+    // Mark this pubkey as loading
+    this.loadingPubkeys.update(set => {
+      const newSet = new Set(set);
+      newSet.add(pubkey);
+      return newSet;
+    });
+
     // Start a new discovery request
     const discoveryPromise = this.discoverAndCacheRelays(pubkey);
     this.inflightRequests.set(pubkey, discoveryPromise);
@@ -58,6 +68,12 @@ export class UserRelaysService {
     } finally {
       // Clean up the in-flight request
       this.inflightRequests.delete(pubkey);
+      // Remove from loading set
+      this.loadingPubkeys.update(set => {
+        const newSet = new Set(set);
+        newSet.delete(pubkey);
+        return newSet;
+      });
     }
   }
 
@@ -295,6 +311,15 @@ export class UserRelaysService {
   hasRelaysCached(pubkey: string): boolean {
     const cached = this.cachedRelays().get(pubkey);
     return cached !== undefined && cached.length > 0;
+  }
+
+  /**
+   * Check if relay discovery is currently in progress for a pubkey
+   * @param pubkey - The user's public key
+   * @returns boolean - Whether relay discovery is loading
+   */
+  isLoadingRelaysForPubkey(pubkey: string): boolean {
+    return this.loadingPubkeys().has(pubkey);
   }
 
   /**
