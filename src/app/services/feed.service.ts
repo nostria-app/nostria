@@ -248,6 +248,8 @@ export class FeedService {
       // Watch for pubkey changes to reload feeds when account switches
       const pubkey = this.accountState.pubkey();
       const initialized = this.accountState.initialized();
+      // Wait for settings to be loaded so we can check for synced feeds from kind 30078
+      const settingsLoaded = this.settingsService.settingsLoaded();
 
       // Skip if already loading for this pubkey
       if (pubkey === loadingForPubkey) {
@@ -260,19 +262,37 @@ export class FeedService {
           const storedFeeds = this.getFeedsFromStorage(pubkey);
           const isFirstTimeUser = storedFeeds === null;
 
-          console.log(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} isFirstTimeUser=${isFirstTimeUser}`);
+          console.log(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} settingsLoaded=${settingsLoaded} isFirstTimeUser=${isFirstTimeUser}`);
 
-          // For first-time users: Load immediately without waiting for EOSE
-          // For returning users: Wait for initialized to ensure relay data is ready
-          if (isFirstTimeUser || initialized) {
-            console.log(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
-            loadingForPubkey = pubkey;
-            // Reset signals before loading new feeds
-            this._feedsLoaded.set(false);
-            this._hasInitialContent.set(false);
-            this.appState.feedHasInitialContent.set(false);
-            await this.loadFeeds(pubkey);
+          // For first-time users with local feeds: Can load immediately
+          // For users with synced feeds or returning users: Wait for settings to be loaded
+          // This ensures cross-device sync works by waiting for kind 30078 settings event
+          if (isFirstTimeUser && !settingsLoaded) {
+            // First-time user but settings not loaded yet - wait for settings
+            // to check if there are synced feeds from another device
+            console.log(`⏳ [FeedService] First-time user, waiting for settings to load to check for synced feeds`);
+            return;
           }
+
+          if (!isFirstTimeUser && !initialized) {
+            // Returning user but not initialized yet - wait for relay data
+            console.log(`⏳ [FeedService] Returning user, waiting for initialization`);
+            return;
+          }
+
+          // Settings must be loaded to properly check for synced feeds
+          if (!settingsLoaded) {
+            console.log(`⏳ [FeedService] Waiting for settings to load before loading feeds`);
+            return;
+          }
+
+          console.log(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
+          loadingForPubkey = pubkey;
+          // Reset signals before loading new feeds
+          this._feedsLoaded.set(false);
+          this._hasInitialContent.set(false);
+          this.appState.feedHasInitialContent.set(false);
+          await this.loadFeeds(pubkey);
         });
 
       }
