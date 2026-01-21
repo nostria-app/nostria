@@ -118,23 +118,6 @@
         </div>
         }
 
-        <!-- Wallet Balance Section (only if user has wallets) -->
-        @if (wallets.hasWallets()) {
-        <div class="sidenav-wallet-section">
-          <mat-icon class="wallet-icon" routerLink="/wallet" (click)="closeSidenavOnMobile()"
-            style="cursor:pointer">account_balance_wallet</mat-icon>
-          <div class="wallet-info">
-            <span class="wallet-label" routerLink="/wallet" (click)="closeSidenavOnMobile()" style="cursor:pointer"
-              i18n="@@app.sidenav.wallet">Wallet</span>
-            <span class="wallet-balance" style="cursor:pointer" tabindex="0" role="button"
-              matTooltip="Click to show/hide balance" i18n-matTooltip="@@app.sidenav.wallet.toggle-balance"
-              (click)="toggleHideWalletAmounts(); $event.stopPropagation()"
-              (keydown.enter)="toggleHideWalletAmounts(); $event.stopPropagation()"
-              (keydown.space)="toggleHideWalletAmounts(); $event.stopPropagation()">{{ getTotalWalletBalance() }}</span>
-          </div>
-        </div>
-        }
-
         <!-- Quick Actions Row -->
         <div class="sidenav-profile-actions">
           @if (app.authenticated()) {
@@ -145,6 +128,10 @@
           <button mat-icon-button routerLink="/credentials" (click)="closeSidenavOnMobile()" matTooltip="Credentials"
             i18n-matTooltip="@@app.profile.credentials">
             <mat-icon>key</mat-icon>
+          </button>
+          <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage accounts"
+            i18n-matTooltip="@@app.profile.manage-accounts">
+            <mat-icon>manage_accounts</mat-icon>
           </button>
           } @else {
           <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()" matTooltip="Login"
