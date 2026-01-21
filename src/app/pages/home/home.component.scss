@@ -2,27 +2,13 @@
 .home-dashboard {
   height: 100%;
   width: 100%;
-  overflow-y: auto;
+  overflow-y: visible;
   padding: 32px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 32px;
   animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
-
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
 }
 
 // Hero Section

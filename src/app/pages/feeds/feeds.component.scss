@@ -235,12 +235,13 @@ app-user-profile {
     }
   }
 
-  // Columns container - main content area and scroll container
+  // Columns container - main content area
+  // Note: scrolling is handled by parent dual-panel-layout for full-width scrollbars
   .columns-container {
     display: flex;
     flex-direction: column;
     flex: 1;
-    overflow-y: auto; // Enable vertical scrolling for sticky header to work
+    overflow-y: visible; // Let parent handle scrolling
     overflow-x: hidden;
     position: relative;
     max-width: 100%;
@@ -1104,15 +1105,15 @@ app-user-profile {
     .column-content {
       scroll-behavior: smooth;
       flex: 1;
-      overflow-y: auto;
+      overflow-y: visible; // Let parent dual-panel-layout handle scrolling
+      overflow-x: hidden;
       padding: 8px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       position: relative;
 
-      // Enable native overscroll/rubber-band effect on iOS/Safari
-      -webkit-overflow-scrolling: touch;
+      // Note: -webkit-overflow-scrolling removed since scrolling is handled by parent
     }
 
     .feed-item {

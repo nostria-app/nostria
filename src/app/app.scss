@@ -730,12 +730,13 @@ mat-sidenav-content {
 // Dual-Panel Layout System
 // ============================================
 // Layout rules:
-// - Left panel: Feeds (when empty) or list components (Profile, Music, etc.) - 700px or 1400px
-// - Right panel: Detail views (Events, Articles, Playlists, etc.) - 700px or full-width
+// - Each panel is its own SCROLL CONTAINER with scrollbar at panel edge
+// - Left panel takes 50% or 100% width (scrollbar at panel edge)
+// - Right panel takes 50% width when visible (scrollbar at panel edge)
+// - Content inside panels is constrained to max 700px/1400px (visual constraint)
 // - Feeds centered when both panels empty
 // - Each panel has independent Back/Close navigation
 // - On mobile, panels overlay each other
-// - Dynamic width: Some components (Music) use 1400px wide left, shrink to 700px when detail opens
 
 .dual-panel-layout {
   display: flex;
@@ -743,6 +744,7 @@ mat-sidenav-content {
   flex: 1;
   min-height: 0;
   width: 100%;
+  // Parent is NOT the scroll container - each panel scrolls independently
   overflow: hidden;
   justify-content: center;
   position: relative;
@@ -755,10 +757,15 @@ mat-sidenav-content {
     justify-content: center;
 
     .left-panel {
-      // Use CSS variable for dynamic width, clamped to available space
-      width: min(var(--left-column-width, 700px), 100%);
-      min-width: 0; // Allow shrinking
-      max-width: min(var(--left-column-width, 700px), 100%);
+      // Take 100% width for scrollbar positioning, content will be centered inside
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+
+      .panel-content-wrapper {
+        // Constrain content to configured width
+        max-width: var(--left-column-width, 700px);
+      }
     }
 
     .right-panel {
@@ -769,10 +776,14 @@ mat-sidenav-content {
   // Wide left mode (e.g., Music without detail open)
   &.wide-left:not(.has-right-content) {
     .left-panel {
-      // Use min() to clamp to available space while preferring the configured width
-      width: min(var(--left-column-width, 1400px), 100%);
-      min-width: 0; // Allow shrinking
-      max-width: min(var(--left-column-width, 1400px), 100%);
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+
+      .panel-content-wrapper {
+        // Constrain content to configured wide width
+        max-width: var(--left-column-width, 1400px);
+      }
     }
   }
 
@@ -791,36 +802,56 @@ mat-sidenav-content {
     }
   }
 
-  // When right panel has content
+  // When right panel has content - two panes side by side
   &.has-right-content {
-    justify-content: center;
+    justify-content: flex-start;
 
     .right-panel {
       display: flex;
       flex-direction: column;
     }
 
-    // Ensure left panel shrinks to 700px when right has content, or smaller if space is tight
+    // Both panels take 50% width for proper scrollbar positioning
     .left-panel {
-      width: min(700px, 50%);
+      width: 50%;
       min-width: 0;
-      max-width: min(700px, 50%);
+      max-width: 50%;
+      display: flex;
+      flex-direction: column;
+
+      .panel-content-wrapper {
+        // Constrain content to 700px, aligned to the right (towards center)
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: 0;
+      }
     }
 
-    // Scale right panel similarly
     .right-panel {
-      width: min(700px, 50%);
+      width: 50%;
       min-width: 0;
-      max-width: min(700px, 50%);
+      max-width: 50%;
+
+      .panel-content-wrapper {
+        // Constrain content to 700px, aligned to the left (towards center)
+        max-width: 700px;
+        margin-left: 0;
+        margin-right: auto;
+      }
     }
 
-    // At tablet breakpoint (below 1024px), switch to overlay mode even if mobile-layout class hasn't been applied yet
-    // This prevents the squished side-by-side layout during the JS/CSS transition
+    // At tablet breakpoint (below 1024px), switch to overlay mode
     @media (max-width: 1023px) {
       .left-panel {
         width: 100%;
         min-width: 100%;
         max-width: 100%;
+
+        .panel-content-wrapper {
+          max-width: 700px;
+          margin-left: auto;
+          margin-right: auto;
+        }
       }
 
       .left-panel.hidden-mobile {
@@ -837,46 +868,44 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
+        overflow-y: auto;
+
+        .panel-content-wrapper {
+          max-width: 700px;
+          margin-left: auto;
+          margin-right: auto;
+        }
       }
     }
   }
 
-  // When left panel is collapsed, left panel scales down and slides behind right panel
-  // The left panel stays in layout flow but shrinks its width to 0, while visually
-  // transforming to appear to go behind the right panel
+  // When left panel is collapsed
   &.left-collapsed {
-    // Keep normal justify-content - don't force center, let the width animation handle it
-
     .left-panel {
-      // Shrink width to 0 to naturally push right panel to take over space
       width: 0;
       min-width: 0;
       max-width: 0;
-      // Scale down and slide down/back to go "behind" the right panel
       transform: scale(0.88) translateY(30px);
       opacity: 0;
       pointer-events: none;
-      // Keep z-index low so it appears behind
       z-index: 0;
-      // Stay in layout flow - NO position: absolute
-      // Filter to make it appear further back
       filter: blur(2px);
-      // Hide overflow during collapse
       overflow: hidden;
     }
 
-    // Right panel expands to fill available space naturally
     .right-panel {
-      // Let it grow to fill the space left by the collapsing left panel
-      width: min(700px, 100%);
+      width: 100%;
       min-width: 0;
-      max-width: min(700px, 100%);
+      max-width: 100%;
       z-index: 10;
       position: relative;
-      // NOTE: Do NOT use transform here as it breaks position: sticky in child components
-      // Use box-shadow alone for the "coming forward" effect
-      // Add shadow to emphasize being on top
       box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
+
+      .panel-content-wrapper {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
     }
   }
 
@@ -891,6 +920,10 @@ mat-sidenav-content {
     .right-panel {
       flex: 1;
       max-width: none;
+
+      .panel-content-wrapper {
+        max-width: none;
+      }
     }
   }
 
@@ -900,6 +933,12 @@ mat-sidenav-content {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
+
+      .panel-content-wrapper {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
     }
 
     &.has-right-content {
@@ -917,24 +956,39 @@ mat-sidenav-content {
         max-width: 100%;
         z-index: 500;
         background-color: var(--mat-app-background-color);
+        overflow-y: auto;
       }
     }
   }
 }
 
-// Left Panel
+// Panel content wrapper - constrains content width while panel takes full space
+.panel-content-wrapper {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+// Left Panel - takes 50% or 100% of viewport, content constrained inside
+// Each panel is its own scroll container with scrollbar at panel edge
 .left-panel {
-  // Use min() to allow shrinking when container is smaller than preferred width
-  width: min(var(--left-column-width, 700px), 100%);
-  min-width: 0; // Allow shrinking below preferred width
-  max-width: min(var(--left-column-width, 700px), 100%);
-  height: 100%;
-  overflow: hidden;
-  flex-shrink: 1; // Allow flexbox to shrink this panel
+  // Default width - will be overridden by dual-panel-layout context
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  flex-shrink: 1;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
+  // This panel is its own scroll container
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   // Base transform for expanded state
   transform: scale(1) translateY(0);
   filter: blur(0);
@@ -967,7 +1021,6 @@ mat-sidenav-content {
       router-outlet+* {
         flex: 1;
         min-height: 0;
-        overflow-y: auto;
       }
     }
   }
@@ -1075,12 +1128,10 @@ mat-sidenav-content {
 }
 
 // When left panel is collapsed, move toggle to left edge of centered right panel
-.two-column-layout.left-collapsed .left-panel-toggle {
-  // Right panel is centered and takes min(700px, 100%)
-  // Position toggle at the left edge of the right panel
-  // The right panel's left edge is at: 50% - min(350px, 50%)
-  // Use calc with min() to be responsive
-  left: calc(50% - min(350px, 50%));
+.dual-panel-layout.left-collapsed .left-panel-toggle {
+  // Right panel takes 100% but content is centered at max 700px
+  // Position toggle at the left edge of the content
+  left: calc(50% - 350px);
   margin-left: -12px; // Offset for toggle width
   transform: translateY(-50%);
 
@@ -1089,21 +1140,25 @@ mat-sidenav-content {
   }
 }
 
-// Right Panel
+// Right Panel - takes 50% of viewport, content constrained inside
+// Each panel is its own scroll container with scrollbar at panel edge
 .right-panel {
-  width: var(--right-column-width, 700px);
-  min-width: var(--right-column-width, 700px);
-  max-width: var(--right-column-width, 700px);
-  height: 100%;
+  // Default width - will be overridden by dual-panel-layout context
+  width: 50%;
+  min-width: 0;
+  max-width: 50%;
+  min-height: 0;
   display: none;
   flex-direction: column;
-  overflow: hidden;
   position: relative;
   z-index: 5;
   // Transparent background - content renders behind main toolbar
   background-color: transparent;
-  // NOTE: Do NOT use transform here as it breaks position: sticky in child components
-  // The transform was causing .panel-header sticky positioning to fail
+  // This panel is its own scroll container
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   // Smooth transitions for layout changes
   transition:
     width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1112,13 +1167,6 @@ mat-sidenav-content {
     margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     z-index 0s linear;
-
-  // Responsive: allow shrinking on smaller screens
-  @media (max-width: 740px) {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-  }
 
   &.active {
     display: flex;
@@ -1136,47 +1184,24 @@ mat-sidenav-content {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
   }
 
   // Ensure routed components fill the panel
   .right-panel-content {
-
     // Routed components in right panel - just let them flow naturally
-    // No flex/overflow manipulation to ensure sticky works
     router-outlet+* {
       display: block;
     }
   }
-
-  // Responsive - tablets
-  @media (max-width: 1440px) and (min-width: 1024px) {
-    width: 600px;
-    max-width: 600px;
-
-    &.full-width {
-      max-width: none;
-    }
-  }
-
-  // Responsive - smaller tablets and large phones
-  @media (max-width: 1023px) and (min-width: 600px) {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-  }
 }
 
 // Panel Content Area (used by both panels)
-// Content scrolls below the fixed panel header
+// Content flows naturally - scrolling happens at panel level (.left-panel, .right-panel)
 .panel-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  // Panel header is now inside the content, positioned sticky
-  // So we don't need toolbar clearance here - the header handles it
+  min-height: 0;
+  // NO overflow here - scrolling happens at panel level
+  overflow: visible;
   padding-top: 0;
 
   // Left panel content needs flex for feeds layout

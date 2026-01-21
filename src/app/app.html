@@ -381,8 +381,8 @@
       </div>
       }
 
-      <!-- Two-Column Layout Container -->
-      <div class="two-column-layout" [class.feeds-visible]="panelNav.showFeeds()"
+      <!-- Two-Column Layout Container - Main scroll container for full-width scrollbars -->
+      <div class="dual-panel-layout" [class.feeds-visible]="panelNav.showFeeds()"
         [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
         [style.--left-column-width.px]="twoColumnLayout.leftColumnWidth()"
         [style.--right-column-width.px]="twoColumnLayout.rightColumnWidth()"
@@ -399,35 +399,42 @@
         </button>
         }
 
-        <!-- Left Panel: Feeds or list/root views -->
+        <!-- Left Panel: Feeds or list/root views - takes 50% or 100% width, scrollbar at panel edge -->
         <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
-          [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()">
+          [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()"
+          (scroll)="onLeftPanelScroll($event)">
 
-          <!-- Feeds - Persistent (uses visibility for state preservation) -->
-          @if (app.authenticated()) {
-          <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
-            [class.feeds-hidden]="!panelNav.showFeeds()">
-            <app-feeds></app-feeds>
-          </div>
-          }
+          <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
+          <div class="panel-content-wrapper">
+            <!-- Feeds - Persistent (uses visibility for state preservation) -->
+            @if (app.authenticated()) {
+            <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
+              [class.feeds-hidden]="!panelNav.showFeeds()">
+              <app-feeds></app-feeds>
+            </div>
+            }
 
-          <!-- Left panel content - router outlet renders here for list routes -->
-          <div class="panel-content left-panel-content" (scroll)="onLeftPanelScroll($event)">
-            <router-outlet></router-outlet>
+            <!-- Left panel content - router outlet renders here for list routes -->
+            <div class="panel-content left-panel-content">
+              <router-outlet></router-outlet>
+            </div>
           </div>
         </div>
 
-        <!-- Right Panel: Detail views (routed) -->
+        <!-- Right Panel: Detail views (routed) - takes 50% width, scrollbar at panel edge -->
         <div class="right-panel" [class.active]="hasRightContent()"
           [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
-          [class.expanded]="leftPanelCollapsed() && hasRightContent()">
+          [class.expanded]="leftPanelCollapsed() && hasRightContent()"
+          (scroll)="onRightPanelScroll($event)">
 
-          <!-- Right panel content - named router outlet for detail views -->
-          <div class="panel-content right-panel-content" (scroll)="onRightPanelScroll($event)">
-            <!-- Router-based right panel content -->
-            <router-outlet name="right"></router-outlet>
-            <!-- Dynamic component-based right panel content (e.g., from RightPanelService) -->
-            <app-right-panel-container></app-right-panel-container>
+          <!-- Right panel inner content wrapper - constrains content to max 700px -->
+          <div class="panel-content-wrapper">
+            <div class="panel-content right-panel-content">
+              <!-- Router-based right panel content -->
+              <router-outlet name="right"></router-outlet>
+              <!-- Dynamic component-based right panel content (e.g., from RightPanelService) -->
+              <app-right-panel-container></app-right-panel-container>
+            </div>
           </div>
         </div>
       </div>

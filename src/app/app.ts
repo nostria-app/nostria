@@ -1966,18 +1966,26 @@ export class App implements OnInit {
 
   /**
    * Handle scroll events on the left panel
-   * Updates LayoutService scroll signals for infinite scroll and other features
+   * Each panel has its own scroll container with scrollbar at the panel edge
    */
   onLeftPanelScroll(event: Event): void {
-    this.layout.handleLeftPanelScroll(event);
+    this.layout.handlePanelScroll(event, 'left');
   }
 
   /**
    * Handle scroll events on the right panel
-   * Updates LayoutService scroll signals for infinite scroll and other features
+   * Each panel has its own scroll container with scrollbar at the panel edge
    */
   onRightPanelScroll(event: Event): void {
-    this.layout.handleRightPanelScroll(event);
+    this.layout.handlePanelScroll(event, 'right');
+  }
+
+  /**
+   * @deprecated Use onLeftPanelScroll or onRightPanelScroll instead
+   * Handle scroll events on the main layout container (kept for backward compatibility)
+   */
+  onLayoutScroll(event: Event): void {
+    this.layout.handleLayoutScroll(event);
   }
 
   exitFullscreen(): void {
