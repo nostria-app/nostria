@@ -203,13 +203,11 @@
         </a>
 
         <!-- @if (profileState.relay?.userRelaysFound()) { -->
-        @if (
-        getUserRelays() && getUserRelays().length > 0
-        ) {
+        @if (getUserRelays() && getUserRelays().length > 0) {
         <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
           Relays {{ getUserRelays().length }}
         </a>
-        } @else {
+        } @else if (!isLoadingRelays()) {
         <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
         }
 

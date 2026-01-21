@@ -43,6 +43,15 @@ export class UserRelayService {
   }
 
   /**
+   * Check if relay discovery is currently in progress for a pubkey
+   * @param pubkey - The user's public key
+   * @returns boolean - Whether relay discovery is loading
+   */
+  isLoadingRelaysForPubkey(pubkey: string): boolean {
+    return this.userRelaysService.isLoadingRelaysForPubkey(pubkey);
+  }
+
+  /**
    * Get effective relay URLs with optimization if enabled
    */
   private getEffectiveRelayUrls(relayUrls: string[]): string[] {
