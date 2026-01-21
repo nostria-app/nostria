@@ -1,6 +1,6 @@
 import { inject, signal, Signal, Injector } from '@angular/core';
 import { LoggerService } from '../logger.service';
-import { Event, SimplePool } from 'nostr-tools';
+import { Event, SimplePool, Filter } from 'nostr-tools';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
@@ -666,20 +666,12 @@ export abstract class RelayServiceBase {
 
   /**
    * Generic function to fetch Nostr events (one-time query) with concurrency control
-   * @param filter Filter for the query
+   * @param filter Filter for the query (supports all nostr-tools filter properties including tag filters like #t, #e, #p)
    * @param options Optional options for the query
    * @returns Promise that resolves to an array of events
    */
   async getMany<T extends Event = Event>(
-    filter: {
-      kinds?: number[];
-      authors?: string[];
-      '#e'?: string[];
-      '#p'?: string[];
-      since?: number;
-      until?: number;
-      limit?: number;
-    },
+    filter: Filter,
     options: { timeout?: number } = {},
   ): Promise<T[]> {
     const urls = this.getEffectiveRelayUrls();
@@ -691,21 +683,13 @@ export abstract class RelayServiceBase {
 
   /**
    * Generic function to fetch Nostr events with explicit relay URLs
-   * @param filter Filter for the query
+   * @param filter Filter for the query (supports all nostr-tools filter properties including tag filters like #t, #e, #p)
    * @param relayUrls Explicit relay URLs to use
    * @param options Optional options for the query
    * @returns Promise that resolves to an array of events
    */
   async getManyWithRelays<T extends Event = Event>(
-    filter: {
-      kinds?: number[];
-      authors?: string[];
-      '#e'?: string[];
-      '#p'?: string[];
-      since?: number;
-      until?: number;
-      limit?: number;
-    },
+    filter: Filter,
     relayUrls: string[],
     options: { timeout?: number } = {},
   ): Promise<T[]> {

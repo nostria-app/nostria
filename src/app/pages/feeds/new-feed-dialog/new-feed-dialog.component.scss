@@ -257,6 +257,48 @@
   }
 }
 
+// Interests source configuration
+.interests-source-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-primary);
+
+  h4 {
+    margin-top: 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .section-description {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 16px;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px;
+    background-color: var(--mat-sys-surface-container-high);
+    border-radius: 8px;
+    border: 1px dashed var(--mat-sys-outline-variant);
+
+    mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    span {
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
 .relay-toggle {
   width: 100%;
   display: flex;

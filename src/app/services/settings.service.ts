@@ -17,10 +17,11 @@ export interface SyncedFeedConfig {
   icon: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending' | 'interests';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
+  customInterestHashtags?: string[]; // Array of hashtags from interest list for filtering (without # prefix)
   searchQuery?: string; // Search query for search-based feeds (NIP-50)
   relayConfig: 'account' | 'custom' | 'search';
   customRelays?: string[];

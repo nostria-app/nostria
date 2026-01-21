@@ -64,10 +64,11 @@ export interface FeedConfig {
   // Feed content configuration
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending' | 'interests';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
+  customInterestHashtags?: string[]; // Array of hashtags from interest list for filtering (without # prefix)
   searchQuery?: string; // Search query for search-based feeds (NIP-50)
   relayConfig: 'account' | 'custom' | 'search';
   customRelays?: string[];
@@ -666,6 +667,11 @@ export class FeedService {
       this.loadSearchFeed(item).catch((err) =>
         this.logger.error(`Error loading search feed for ${feed.id}:`, err)
       );
+    } else if (feed.source === 'interests') {
+      console.log(`📍 Loading INTERESTS feed for ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
+      this.loadInterestsFeed(item).catch((err) =>
+        this.logger.error(`Error loading interests feed for ${feed.id}:`, err)
+      );
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for ${feed.id}, source:`, feed.source);
 
@@ -896,6 +902,11 @@ export class FeedService {
       console.log(`📍 Loading SEARCH feed for feed ${feed.id} with query: ${feed.searchQuery}`);
       this.loadSearchFeed(item).catch(err =>
         this.logger.error(`Error loading search feed for ${feed.id}:`, err)
+      );
+    } else if (feed.source === 'interests') {
+      console.log(`📍 Loading INTERESTS feed for feed ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
+      this.loadInterestsFeed(item).catch(err =>
+        this.logger.error(`Error loading interests feed for ${feed.id}:`, err)
       );
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for feed ${feed.id}, source:`, feed.source);
@@ -1297,6 +1308,106 @@ export class FeedService {
 
     } catch (error) {
       this.logger.error('Error loading search feed:', error);
+      // Always mark as complete even on error to stop loading spinner
+      feedData.isRefreshing?.set(false);
+      feedData.initialLoadComplete = true;
+    }
+  }
+
+  /**
+   * Load interests-based feed - fetches events filtered by hashtags from user's interest list.
+   * 
+   * This method uses the "t" tag filter to fetch notes matching selected hashtags:
+   * 1. Gets the selected hashtags from customInterestHashtags
+   * 2. Creates a filter with "#t": ["hashtag1", "hashtag2", ...]
+   * 3. Fetches events from account relays matching these hashtags
+   * 4. Combines and deduplicates results
+   */
+  private async loadInterestsFeed(feedData: FeedItem) {
+    try {
+      const feed = feedData.feed;
+      const hashtags = feed.customInterestHashtags;
+
+      if (!hashtags || hashtags.length === 0) {
+        this.logger.warn('No interest hashtags specified for interests feed');
+        feedData.isRefreshing?.set(false);
+        feedData.initialLoadComplete = true;
+        return;
+      }
+
+      const kinds = feedData.filter?.kinds || [1]; // Default to text notes
+      const since = feed.lastRetrieved ? feed.lastRetrieved : undefined;
+
+      this.logger.info(`🏷️ Loading INTERESTS feed for hashtags: ${hashtags.join(', ')} with kinds: ${kinds.join(', ')}${since ? `, since: ${since}` : ' (no time filter)'}`);
+
+      // Build filter with "t" tag for hashtags
+      // The Nostr protocol uses "#t" in the filter to match events with "t" tags
+      // According to NIP-01, tag filters use OR logic - events matching ANY of the hashtags will be returned
+      const filter: { kinds: number[]; '#t': string[]; limit: number; since?: number } = {
+        kinds,
+        '#t': hashtags,
+        limit: 100,
+      };
+      
+      // Only add since if it's defined to avoid issues with undefined in the filter
+      if (since) {
+        filter.since = since;
+      }
+
+      this.logger.debug(`🏷️ Interests feed filter:`, JSON.stringify(filter, null, 2));
+
+      // Fetch events from account relays using the hashtag filter
+      const events = await this.accountRelay.getMany(filter);
+
+      if (events.length === 0) {
+        this.logger.info(`🏷️ No events found for interest hashtags: ${hashtags.join(', ')}`);
+        feedData.isRefreshing?.set(false);
+        feedData.initialLoadComplete = true;
+        return;
+      }
+
+      this.logger.info(`🏷️ Found ${events.length} events for interest hashtags: ${hashtags.join(', ')}`);
+
+      // Add events to the feed
+      const currentEvents = feedData.events();
+      const existingIds = new Set(currentEvents.map(e => e.id));
+
+      // Filter out duplicates and muted events
+      const newEvents = events.filter(event => {
+        if (existingIds.has(event.id)) return false;
+        if (this.accountState.muted(event)) return false;
+        return true;
+      });
+
+      if (newEvents.length > 0) {
+        // Sort by created_at descending
+        const allEvents = [...currentEvents, ...newEvents].sort(
+          (a, b) => (b.created_at || 0) - (a.created_at || 0)
+        );
+
+        feedData.events.set(allEvents);
+
+        // Save to cache
+        this.saveCachedEvents(feed.id, allEvents);
+
+        // Save events to database for offline access
+        for (const event of newEvents) {
+          this.saveEventToDatabase(event);
+        }
+
+        this.logger.debug(`Added ${newEvents.length} new events from interests, total: ${allEvents.length}`);
+      }
+
+      // Update lastRetrieved timestamp
+      this.updateColumnLastRetrieved(feed.id);
+
+      // Mark initial load as complete and stop showing loading spinner
+      feedData.isRefreshing?.set(false);
+      feedData.initialLoadComplete = true;
+      this.logger.info(`✅ Interests feed load complete for ${feed.id} - found ${events.length} events`);
+
+    } catch (error) {
+      this.logger.error('Error loading interests feed:', error);
       // Always mark as complete even on error to stop loading spinner
       feedData.isRefreshing?.set(false);
       feedData.initialLoadComplete = true;
@@ -3272,6 +3383,7 @@ export class FeedService {
       customUsers: feed.customUsers,
       customStarterPacks: feed.customStarterPacks,
       customFollowSets: feed.customFollowSets,
+      customInterestHashtags: feed.customInterestHashtags,
       searchQuery: feed.searchQuery,
       relayConfig: feed.relayConfig,
       customRelays: feed.customRelays,
