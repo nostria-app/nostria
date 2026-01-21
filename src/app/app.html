@@ -147,12 +147,12 @@
             <mat-icon>key</mat-icon>
           </button>
           } @else {
-          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()"
-            matTooltip="Login" i18n-matTooltip="@@app.profile.login">
+          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()" matTooltip="Login"
+            i18n-matTooltip="@@app.profile.login">
             <mat-icon>login</mat-icon>
           </button>
-          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()"
-            matTooltip="Create account" i18n-matTooltip="@@app.profile.create-account">
+          <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()" matTooltip="Create account"
+            i18n-matTooltip="@@app.profile.create-account">
             <mat-icon>person_add</mat-icon>
           </button>
           }
@@ -485,12 +485,11 @@
       </button>
     </div>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/notifications']"
-      (click)="$event.preventDefault(); onMobileNavClick('/notifications')" routerLinkActive="active-link"
+    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']"
+      (click)="$event.preventDefault(); onMobileNavClick('/messages')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
-      <mat-icon [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null"
-        matBadgeSize="small">notifications</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.notifications">Notifications</div>
+      <mat-icon>mail</mat-icon>
+      <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
     </a>
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/people']"
