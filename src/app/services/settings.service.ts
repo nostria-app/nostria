@@ -7,6 +7,31 @@ import { AccountRelayService } from './relays/account-relay';
 
 export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
 
+/**
+ * Synced feed configuration stored in kind 30078 settings event.
+ * This is a subset of FeedConfig that excludes runtime/cache properties.
+ */
+export interface SyncedFeedConfig {
+  id: string;
+  label: string;
+  icon: string;
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
+  kinds: number[];
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
+  customUsers?: string[]; // Array of pubkeys for custom user selection
+  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
+  customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
+  searchQuery?: string; // Search query for search-based feeds (NIP-50)
+  relayConfig: 'account' | 'custom' | 'search';
+  customRelays?: string[];
+  filters?: Record<string, unknown>;
+  showReplies?: boolean;
+  showReposts?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  isSystem?: boolean;
+}
+
 export interface UserSettings {
   socialSharingPreview: boolean;
   imageCacheEnabled?: boolean; // Optional setting for image cache
@@ -41,6 +66,8 @@ export interface UserSettings {
   hideWalletAmounts?: boolean; // Hide sat amounts in wallet UI
   // Video playback settings
   autoPlayVideos?: boolean; // Auto-play all videos (muted)
+  // Custom feeds - synced across devices via kind 30078
+  customFeeds?: SyncedFeedConfig[];
   // Add more settings as needed
 }
 
@@ -75,6 +102,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideWalletAmounts: false, // Show amounts by default
   // Video playback
   autoPlayVideos: false, // Off by default - user must opt-in
+  // Custom feeds - empty by default, will be populated from FeedService
+  customFeeds: undefined,
 };
 
 @Injectable({
@@ -220,5 +249,33 @@ export class SettingsService {
     console.log('New settings to update:', newSettings);
 
     await this.updateSettings(newSettings);
+  }
+
+  /**
+   * Get synced custom feeds from settings.
+   * Returns undefined if no feeds have been synced yet.
+   */
+  getSyncedFeeds(): SyncedFeedConfig[] | undefined {
+    return this.settings().customFeeds;
+  }
+
+  /**
+   * Update synced custom feeds in settings.
+   * This will publish the updated settings to relays for cross-device sync.
+   *
+   * @param feeds - Array of feed configurations to sync
+   */
+  async updateSyncedFeeds(feeds: SyncedFeedConfig[]): Promise<void> {
+    this.logger.info(`Syncing ${feeds.length} custom feeds to settings`);
+    await this.updateSettings({ customFeeds: feeds });
+  }
+
+  /**
+   * Check if there are any synced feeds available.
+   * Useful to determine if this is a first-time user or if feeds should be loaded from sync.
+   */
+  hasSyncedFeeds(): boolean {
+    const feeds = this.settings().customFeeds;
+    return feeds !== undefined && feeds.length > 0;
   }
 }
