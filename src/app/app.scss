@@ -792,10 +792,27 @@ mat-sidenav-content {
     justify-content: center;
   }
 
-  // When left panel has routed content
-  &.has-left-content {
+  // When left panel has routed content (without right panel)
+  &.has-left-content:not(.has-right-content) {
     justify-content: center;
 
+    .left-panel {
+      // Take 100% width for scrollbar at edge, content centered inside
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+
+      .panel-content-wrapper {
+        // Default to 700px, can be overridden by wide-left
+        max-width: var(--left-column-width, 700px);
+      }
+    }
+  }
+
+  // When left panel has routed content (with right panel)
+  &.has-left-content.has-right-content {
     .left-panel {
       display: flex;
       flex-direction: column;
@@ -969,6 +986,9 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   flex: 1;
+  // Center the content wrapper within the panel when max-width is set
+  margin-left: auto;
+  margin-right: auto;
 }
 
 // Left Panel - takes 50% or 100% of viewport, content constrained inside
