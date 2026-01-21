@@ -2,6 +2,7 @@ import { Injectable, signal, inject, computed, effect } from '@angular/core';
 import { WakeLockService } from './wake-lock.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
+import { PanelNavigationService } from './panel-navigation.service';
 
 /**
  * Service to manage inline video playback across the application.
@@ -21,6 +22,7 @@ export class VideoPlaybackService {
   private wakeLockService = inject(WakeLockService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
+  private panelNav = inject(PanelNavigationService);
 
   // The currently playing video element
   private currentlyPlayingVideo = signal<HTMLVideoElement | null>(null);
@@ -31,6 +33,16 @@ export class VideoPlaybackService {
   
   // Computed signal that components can read
   readonly isMuted = this._isMuted.asReadonly();
+  
+  /**
+   * Whether auto-play is allowed based on current app state.
+   * Videos in the Feeds panel should only auto-play when the panel is visible.
+   */
+  readonly autoPlayAllowed = computed(() => {
+    // For now, auto-play is only allowed when feeds panel is visible
+    // This prevents videos from auto-playing in the background
+    return this.panelNav.showFeeds();
+  });
 
   constructor() {
     // Initialize mute state from persisted value

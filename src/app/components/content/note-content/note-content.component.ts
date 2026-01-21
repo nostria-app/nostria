@@ -868,29 +868,8 @@ export class NoteContentComponent implements OnDestroy {
     return metadataIsPortrait !== videoIsPortrait;
   }
 
-  // Track loaded videos for progressive loading
-  private loadedVideos = signal<Set<string>>(new Set());
-
   // Track actual video dimensions after metadata loads (accounts for rotation)
   private videoActualDimensions = signal<Map<string, { width: number; height: number }>>(new Map());
-
-  /**
-   * Check if a video is ready to play (for progressive loading)
-   */
-  isVideoReady(videoUrl: string): boolean {
-    return this.loadedVideos().has(videoUrl);
-  }
-
-  /**
-   * Mark a video as ready to play (for progressive loading transition)
-   */
-  onVideoReady(videoUrl: string): void {
-    this.loadedVideos.update(set => {
-      const newSet = new Set(set);
-      newSet.add(videoUrl);
-      return newSet;
-    });
-  }
 
   /**
    * Handle video metadata loaded event to get actual dimensions after rotation is applied
