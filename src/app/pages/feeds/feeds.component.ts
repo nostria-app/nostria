@@ -224,6 +224,10 @@ export class FeedsComponent implements OnDestroy {
   @ViewChild('feedTabsContainer') feedTabsContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('feedTabsInner') feedTabsInner?: ElementRef<HTMLDivElement>;
   private feedTabsResizeObserver?: ResizeObserver;
+  // Debounce and stabilization for overflow detection to prevent flickering
+  private overflowCheckTimeout?: ReturnType<typeof setTimeout>;
+  private lastOverflowState: boolean | null = null;
+  private overflowStabilized = false;
   canScrollLeft = computed(() => this.columnsScrollLeft() > 0);
   canScrollRight = computed(() => {
     const scrollLeft = this.columnsScrollLeft();
@@ -704,6 +708,10 @@ export class FeedsComponent implements OnDestroy {
       // Track feeds changes to re-check overflow when feeds are added/removed
       const feeds = this.feeds();
 
+      // Reset stabilization when feeds change to allow re-evaluation
+      this.overflowStabilized = false;
+      this.lastOverflowState = null;
+
       // Delay check to allow DOM to update after feeds change
       setTimeout(() => {
         this.setupFeedTabsResizeObserver();
@@ -999,14 +1007,22 @@ export class FeedsComponent implements OnDestroy {
     if (!container) return;
 
     this.feedTabsResizeObserver = new ResizeObserver(() => {
-      this.checkFeedTabsOverflow();
+      // Debounce the overflow check to prevent rapid successive calls
+      // during mode transitions (tabs <-> dropdown)
+      if (this.overflowCheckTimeout) {
+        clearTimeout(this.overflowCheckTimeout);
+      }
+      this.overflowCheckTimeout = setTimeout(() => {
+        this.checkFeedTabsOverflow();
+      }, 150);
     });
 
     this.feedTabsResizeObserver.observe(container);
   }
 
   /**
-   * Check if feed tabs overflow their container and need dropdown mode
+   * Check if feed tabs overflow their container and need dropdown mode.
+   * Uses stabilization to prevent flickering loops when switching modes.
    */
   private checkFeedTabsOverflow(): void {
     // If already in mobile view, no need to check - always use dropdown
@@ -1025,6 +1041,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Get the feed tab buttons (excluding dropdown button if shown)
     const feedTabs = inner.querySelectorAll('.feed-tab');
+    let hasOverflow: boolean;
 
     // If no feed tabs visible (dropdown is showing), check if we should switch back
     if (feedTabs.length === 0) {
@@ -1036,31 +1053,45 @@ export class FeedsComponent implements OnDestroy {
       // Available width: container minus relay menu (~50px) and options button (~50px)
       const availableWidth = container.clientWidth - 100;
 
-      // Switch back to tabs only if there's clearly enough room (20% buffer)
-      const hasOverflow = estimatedTabsWidth > availableWidth * 0.8;
-      this.feedTabsOverflow.set(hasOverflow);
+      // Switch back to tabs only if there's clearly enough room (40% buffer to prevent flickering)
+      // Once in dropdown mode, be more conservative about switching back
+      hasOverflow = estimatedTabsWidth > availableWidth * 0.6;
+    } else {
+      // Calculate actual width of feed tabs inner container
+      const innerWidth = inner.scrollWidth;
+
+      // Available width: container minus relay menu (~50px), spacer, and options button (~50px)
+      // But we need to account for the spacer which takes flex: 1
+      // So we measure the actual remaining space after other fixed elements
+      const relayMenu = container.querySelector('app-relay-feed-menu');
+      const optionsButton = container.querySelector('[matMenuTriggerFor="feedManagementMenu"]');
+
+      const relayMenuWidth = relayMenu ? (relayMenu as HTMLElement).offsetWidth : 50;
+      const optionsButtonWidth = optionsButton ? (optionsButton as HTMLElement).offsetWidth : 50;
+      const containerPadding = 16; // 8px on each side
+      const gap = 8; // gaps between elements
+
+      const fixedElementsWidth = relayMenuWidth + optionsButtonWidth + containerPadding + gap;
+      const availableWidth = container.clientWidth - fixedElementsWidth;
+
+      // Check if inner content overflows available width
+      hasOverflow = innerWidth > availableWidth;
+    }
+
+    // Stabilization: Once we've determined a stable state, only change if
+    // the new state is consistently different. This prevents rapid back-and-forth switching.
+    if (this.overflowStabilized && this.lastOverflowState === hasOverflow) {
+      // Same state as before, no change needed
       return;
     }
 
-    // Calculate actual width of feed tabs inner container
-    const innerWidth = inner.scrollWidth;
+    if (this.lastOverflowState !== null && this.lastOverflowState !== hasOverflow) {
+      // State is changing - mark as stabilized to prevent further rapid changes
+      // This essentially "locks in" the first stable state after initial render
+      this.overflowStabilized = true;
+    }
 
-    // Available width: container minus relay menu (~50px), spacer, and options button (~50px)
-    // But we need to account for the spacer which takes flex: 1
-    // So we measure the actual remaining space after other fixed elements
-    const relayMenu = container.querySelector('app-relay-feed-menu');
-    const optionsButton = container.querySelector('[matMenuTriggerFor="feedManagementMenu"]');
-
-    const relayMenuWidth = relayMenu ? (relayMenu as HTMLElement).offsetWidth : 50;
-    const optionsButtonWidth = optionsButton ? (optionsButton as HTMLElement).offsetWidth : 50;
-    const containerPadding = 16; // 8px on each side
-    const gap = 8; // gaps between elements
-
-    const fixedElementsWidth = relayMenuWidth + optionsButtonWidth + containerPadding + gap;
-    const availableWidth = container.clientWidth - fixedElementsWidth;
-
-    // Check if inner content overflows available width
-    const hasOverflow = innerWidth > availableWidth;
+    this.lastOverflowState = hasOverflow;
     this.feedTabsOverflow.set(hasOverflow);
   }
 
@@ -1443,6 +1474,11 @@ export class FeedsComponent implements OnDestroy {
 
     // Clean up ResizeObserver for feed tabs
     this.feedTabsResizeObserver?.disconnect();
+
+    // Clean up overflow check timeout
+    if (this.overflowCheckTimeout) {
+      clearTimeout(this.overflowCheckTimeout);
+    }
 
     // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
     this.feedService.setFeedsPageActive(false);

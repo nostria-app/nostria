@@ -91,6 +91,30 @@
   margin-top: 1rem;
 }
 
+// Proxy link (bridged content from ActivityPub/Mastodon etc.)
+.proxy-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-primary);
+  }
+}
+
 .nostr-reference {
   color: var(--mat-sys-primary);
   cursor: pointer;

@@ -155,13 +155,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Emoji set mentions (naddr with kind 30030) - separate for specialized rendering
   emojiSetMentions = signal<ArticleMention[]>([]);
 
-  // Proxy URL from the event's proxy tag (e.g., ActivityPub bridged content)
-  proxyUrl = computed<string | null>(() => {
+  // Proxy web URL from bridged content (e.g., ActivityPub/Mastodon via momostr)
+  proxyWebUrl = computed<string | null>(() => {
     const currentEvent = this.event();
     if (!currentEvent?.tags) return null;
-
-    // Find the proxy tag: ["proxy", "url", "protocol"]
-    const proxyTag = currentEvent.tags.find(tag => tag[0] === 'proxy' && tag[1]);
+    const proxyTag = currentEvent.tags.find(tag => tag[0] === 'proxy' && tag[1] && tag[2] === 'web');
     return proxyTag ? proxyTag[1] : null;
   });
 
@@ -208,13 +206,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
 
-      // Collect URLs from content tokens using a Set to ensure uniqueness
+      // Collect URLs from content tokens, excluding proxy web URL (shown as globe icon instead)
       const urlSet = new Set<string>(urlTokens.map(token => token.content));
-
-      // Also include proxy URL from event tags (e.g., ActivityPub bridged content)
-      const proxyUrlValue = this.proxyUrl();
-      if (proxyUrlValue) {
-        urlSet.add(proxyUrlValue);
+      const proxyUrl = this.proxyWebUrl();
+      if (proxyUrl) {
+        urlSet.delete(proxyUrl);
       }
 
       const uniqueUrls = [...urlSet];

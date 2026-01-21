@@ -133,6 +133,12 @@
   }
   }
 
+  @if (proxyWebUrl(); as url) {
+  <a [href]="url" target="_blank" rel="noopener noreferrer" class="proxy-link" matTooltip="View original post">
+    <mat-icon>language</mat-icon>
+  </a>
+  }
+
   <!-- Tagged references (mentions and articles) - hidden when in comment context -->
   @if (event() && !hideTaggedReferences()) {
   <app-tagged-references [event]="event()!"></app-tagged-references>
