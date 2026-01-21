@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, effect, untracked } from '@angular
 import { MatIconModule } from '@angular/material/icon';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { EventComponent } from '../../../components/event/event.component';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -15,7 +15,7 @@ import { LoggerService } from '../../../services/logger.service';
 })
 export class ProfileMediaComponent {
   private logger = inject(LoggerService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
   layout = inject(LayoutService);
 
   error = signal<string | null>(null);

@@ -16,7 +16,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -80,7 +80,7 @@ export class FollowingComponent {
   private location = inject(Location);
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
 

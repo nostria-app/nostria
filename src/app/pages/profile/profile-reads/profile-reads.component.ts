@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
@@ -55,7 +55,7 @@ export class ProfileReadsComponent implements OnChanges {
   private router = inject(Router);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
   bookmark = inject(BookmarkService);
   utilities = inject(UtilitiesService);
   private layoutService = inject(LayoutService);

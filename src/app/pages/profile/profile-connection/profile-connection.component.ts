@@ -18,7 +18,7 @@ import { UserDataService } from '../../../services/user-data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { ZapService } from '../../../services/zap.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
@@ -98,7 +98,7 @@ export class ProfileConnectionComponent {
   private accountState = inject(AccountStateService);
   private logger = inject(LoggerService);
   private utilities = inject(UtilitiesService);
-  private profileState = inject(ProfileStateService);
+  private profileState = inject(PROFILE_STATE);
   private zapService = inject(ZapService);
   private snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);

@@ -7,7 +7,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { filter } from 'rxjs';
 
 interface NavLink {
@@ -30,7 +30,7 @@ export class ProfileHomeComponent {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
-  profileState = inject(ProfileStateService);
+  profileState = inject(PROFILE_STATE);
 
   // Computed label for articles tab with count
   articlesLabel = computed(() => {

@@ -1,7 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { ProfileStateService } from '../../../services/profile-state.service';
+import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
 
 @Component({
@@ -154,7 +154,7 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
   `]
 })
 export class ProfileViewOptionsComponent {
-  private profileState = inject(ProfileStateService);
+  private profileState = inject(PROFILE_STATE);
 
   get timelineFilter(): TimelineFilterOptions {
     return this.profileState.timelineFilter();
