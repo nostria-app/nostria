@@ -50,6 +50,14 @@
         </mat-card>
       }
     </div>
+
+    <div class="purplepages-toggle">
+      <mat-slide-toggle [checked]="includePurplepages()" (change)="includePurplepages.set($event.checked)"
+        matTooltip="Include purplepag.es as a secondary discovery relay for better lookup performance">
+        Include purplepag.es
+      </mat-slide-toggle>
+      <p class="toggle-description">Adding purplepag.es improves user lookup performance</p>
+    </div>
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end">

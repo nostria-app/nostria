@@ -115,3 +115,16 @@
 ::ng-deep .mat-mdc-card {
   width: 100%;
 }
+
+.purplepages-toggle {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  .toggle-description {
+    margin: 8px 0 0 0;
+    font-size: 0.85em;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

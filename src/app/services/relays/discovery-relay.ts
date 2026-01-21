@@ -15,7 +15,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private database = inject(DatabaseService);
   private initialized = false;
 
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://purplepag.es/'];
 
   constructor() {
     super(new SimplePool());

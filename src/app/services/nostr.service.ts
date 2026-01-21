@@ -1839,13 +1839,15 @@ export class NostrService implements NostriaService {
     // If region is not provided, try to get it from the user or use a default
     const accountRegion = region || user.region || 'us';
 
-    // Configure the discovery relay based on the user's region
-    const discoveryRelay = this.region.getDiscoveryRelay(accountRegion);
-    this.logger.info('Setting discovery relay for new user based on region', {
+    // Configure the discovery relays based on the user's region
+    // Use both regional Nostria relay and purplepag.es for better lookup performance
+    const regionalDiscoveryRelay = this.region.getDiscoveryRelay(accountRegion);
+    const discoveryRelays = [regionalDiscoveryRelay, 'wss://purplepag.es/'];
+    this.logger.info('Setting discovery relays for new user based on region', {
       region: accountRegion,
-      discoveryRelay,
+      discoveryRelays,
     });
-    this.discoveryRelay.setDiscoveryRelays([discoveryRelay]);
+    this.discoveryRelay.setDiscoveryRelays(discoveryRelays);
 
     const relayServerUrl = this.region.getRelayServer(accountRegion, 0);
     const relayTags = this.createTags('r', [relayServerUrl!]);
