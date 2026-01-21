@@ -122,8 +122,8 @@
   }
 
   .bookmarks-list {
-    max-height: calc(100vh - 350px);
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
     padding-right: 4px;
 
     &[data-view='content'] {
