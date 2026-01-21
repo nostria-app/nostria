@@ -148,22 +148,15 @@
 @let videoAspect = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
   [class.has-aspect-ratio]="videoAspect"
-  [class.has-placeholder]="videoPlaceholder"
-  [class.no-placeholder]="!videoPlaceholder"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
-  [class.video-ready]="isVideoReady(token.content)" [class.needs-rotation]="needsRotationCorrection(token)">
-  <!-- Placeholder with fade transition - only render if placeholder exists -->
-  @if (videoPlaceholder) {
-  <img [src]="videoPlaceholder" class="video-placeholder-bg" [class.fade-out]="isVideoReady(token.content)" alt=""
-    aria-hidden="true" [style.aspect-ratio]="videoAspect" />
-  }
+  [class.needs-rotation]="needsRotationCorrection(token)">
   @if (isVideoFormatSupported(token.content)) {
   <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined"
     [blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
     [autoplay]="shouldAutoPlayVideo(token)" [loop]="shouldLoopVideo(token)"
-    (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)" (videoCanPlay)="onVideoReady(token.content)"
-    class="main-video" [class.loaded]="isVideoReady(token.content)"
+    (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)"
+    class="main-video"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
   }
   @if (!isVideoFormatSupported(token.content)) {

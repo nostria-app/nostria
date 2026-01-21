@@ -128,12 +128,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     // Handle viewport visibility changes for auto-play and auto-pause
     effect(() => {
       const inViewport = this.isInViewport();
+      const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
       const video = this.videoElement?.nativeElement;
       
       if (!video) return;
       
-      if (inViewport) {
-        // Video entered viewport - auto-play if enabled and hasn't been played yet
+      if (inViewport && autoPlayAllowed) {
+        // Video entered viewport and auto-play is allowed - play if enabled and hasn't been played yet
         if (this.autoplay() && !this.hasPlayedOnce() && video.paused) {
           video.play().catch(() => {
             // Autoplay failed - likely due to browser restrictions
@@ -141,7 +142,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
           });
         }
       } else {
-        // Video left viewport - pause if playing
+        // Video left viewport or auto-play not allowed - pause if playing
         if (!video.paused) {
           video.pause();
         }

@@ -59,6 +59,8 @@ import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
 import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { VideoPlaybackService } from '../../services/video-playback.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 
 // NavLink interface removed because it was unused.
 
@@ -113,6 +115,8 @@ export class FeedsComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private relayFeedsService = inject(RelayFeedsService);
+  private videoPlayback = inject(VideoPlaybackService);
+  private panelNav = inject(PanelNavigationService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -592,6 +596,16 @@ export class FeedsComponent implements OnDestroy {
   constructor() {
     // Mark the feeds page as active when component is constructed
     this.feedService.setFeedsPageActive(true);
+
+    // Pause video playback when feeds panel becomes hidden
+    // This prevents videos from auto-playing in the background when user navigates away
+    effect(() => {
+      const feedsVisible = this.panelNav.showFeeds();
+      if (!feedsVisible) {
+        // Feeds panel is hidden, pause any playing video
+        this.videoPlayback.pauseCurrentVideo();
+      }
+    });
 
     // Pre-load relay feeds when the component is initialized
     effect(() => {
