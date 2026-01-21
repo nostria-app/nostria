@@ -1644,10 +1644,22 @@ export class FeedsComponent implements OnDestroy {
       const editingFeedData = this.editingFeed();
 
       if (editingFeedData) {
-        // Update existing feed
+        // Update existing feed with all editable properties
         await this.feedsCollectionService.updateFeed(editingFeedData.id, {
           label: result.label,
           icon: result.icon,
+          type: result.type,
+          kinds: result.kinds,
+          source: result.source,
+          relayConfig: result.relayConfig,
+          customRelays: result.customRelays,
+          customUsers: result.customUsers,
+          customStarterPacks: result.customStarterPacks,
+          customFollowSets: result.customFollowSets,
+          customInterestHashtags: result.customInterestHashtags,
+          searchQuery: result.searchQuery,
+          showReplies: result.showReplies,
+          showReposts: result.showReposts,
         });
       } else {
         // Add new feed
@@ -1662,6 +1674,7 @@ export class FeedsComponent implements OnDestroy {
           customUsers: result.customUsers,
           customStarterPacks: result.customStarterPacks,
           customFollowSets: result.customFollowSets,
+          customInterestHashtags: result.customInterestHashtags,
           searchQuery: result.searchQuery,
           showReplies: result.showReplies,
           showReposts: result.showReposts,

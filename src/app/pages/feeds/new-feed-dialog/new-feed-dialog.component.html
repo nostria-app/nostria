@@ -103,6 +103,10 @@
                   <mat-icon>public</mat-icon>
                   <span>Public</span>
                 </mat-option>
+                <mat-option value="interests">
+                  <mat-icon>tag</mat-icon>
+                  <span>Interests</span>
+                </mat-option>
                 <mat-option value="search">
                   <mat-icon>search</mat-icon>
                   <span>Search</span>
@@ -130,6 +134,13 @@
                 Enter hashtags or keywords to find relevant content.</span>
             </div>
             }
+            @if (feedForm.get('source')?.value === 'interests') {
+            <div class="source-description">
+              <mat-icon>info</mat-icon>
+              <span>Fetches notes tagged with hashtags from your interest list.
+                Select which hashtags to include from your configured interests.</span>
+            </div>
+            }
           </div>
 
           <!-- Search Configuration -->
@@ -144,6 +155,44 @@
               <mat-icon matSuffix>search</mat-icon>
               <mat-hint>Enter hashtags (e.g., #nostr) or keywords to search for</mat-hint>
             </mat-form-field>
+          </div>
+          }
+
+          <!-- Interests Source Configuration -->
+          @if (feedForm.get('source')?.value === 'interests') {
+          <div class="form-group interests-source-panel">
+            <h4>Interest Hashtags</h4>
+            <p class="section-description">Select hashtags from your interest list to filter this feed</p>
+
+            <button mat-flat-button type="button" class="select-button" (click)="openInterestSelectDialog()">
+              <mat-icon>tag</mat-icon>
+              Select Hashtags
+              @if (selectedInterestHashtags().length > 0) {
+              <span class="badge">{{ selectedInterestHashtags().length }}</span>
+              }
+            </button>
+
+            <!-- Selected Hashtags Display -->
+            @if (selectedInterestHashtags().length > 0) {
+            <div class="selected-items">
+              <h6>Selected Hashtags ({{ selectedInterestHashtags().length }})</h6>
+              <div class="selected-chips">
+                @for (hashtag of selectedInterestHashtags(); track hashtag) {
+                <mat-chip-row removable (removed)="removeInterestHashtag(hashtag)">
+                  #{{ hashtag }}
+                  <mat-icon matChipRemove>cancel</mat-icon>
+                </mat-chip-row>
+                }
+              </div>
+            </div>
+            }
+
+            @if (availableInterestHashtags().length === 0) {
+            <div class="empty-state">
+              <mat-icon>info</mat-icon>
+              <span>No interests configured. Add hashtags in your interest list first.</span>
+            </div>
+            }
           </div>
           }
 
@@ -366,5 +415,12 @@
   [searchPlaceholder]="'Search follow sets...'" [emptyMessage]="'No follow sets available'" [showEditOption]="true"
   [showDeleteOption]="true" (closed)="onFollowSetSelectionConfirmed($event)" (itemEdit)="onFollowSetEdit($event)"
   (itemDelete)="onFollowSetDelete($event)">
+</app-multi-select-dialog>
+}
+
+@if (showInterestSelectDialog()) {
+<app-multi-select-dialog [title]="'Select Interest Hashtags'" [items]="interestSelectableItems()"
+  [searchPlaceholder]="'Search hashtags...'" [emptyMessage]="'No interest hashtags available'"
+  (closed)="onInterestSelectionConfirmed($event)">
 </app-multi-select-dialog>
 }

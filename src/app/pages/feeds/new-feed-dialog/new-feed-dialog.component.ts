@@ -30,7 +30,7 @@ import { FollowingService } from '../../../services/following.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MultiSelectDialogComponent, SelectableItem } from '../../../components/multi-select-dialog/multi-select-dialog.component';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { CollectionSetsService } from '../../../services/collection-sets.service';
 
 export interface FollowSet {
   id: string;
@@ -116,6 +116,7 @@ export class NewFeedDialogComponent {
   private logger = inject(LoggerService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private collectionSetsService = inject(CollectionSetsService);
 
   // Inputs
   icons = input<string[]>([]);
@@ -152,6 +153,11 @@ export class NewFeedDialogComponent {
   availableStarterPacks = signal<StarterPack[]>([]);
   selectedFollowSets = signal<FollowSet[]>([]);
   availableFollowSets = signal<FollowSet[]>([]);
+
+  // Interest set signals
+  availableInterestHashtags = signal<string[]>([]);
+  selectedInterestHashtags = signal<string[]>([]);
+  showInterestSelectDialog = signal(false);
 
   // Multi-select dialog visibility signals
   showUserSelectDialog = signal(false);
@@ -234,6 +240,18 @@ export class NewFeedDialogComponent {
     }));
   });
 
+  interestSelectableItems = computed((): SelectableItem[] => {
+    const hashtags = this.availableInterestHashtags();
+    const selectedHashtags = this.selectedInterestHashtags();
+
+    return hashtags.map(hashtag => ({
+      id: hashtag,
+      title: `#${hashtag}`,
+      subtitle: undefined,
+      selected: selectedHashtags.includes(hashtag)
+    }));
+  });
+
   private initialized = false;
 
   constructor() {
@@ -277,7 +295,8 @@ export class NewFeedDialogComponent {
   private async initializeData(): Promise<void> {
     await Promise.all([
       this.loadStarterPacks(),
-      this.loadFollowSets()
+      this.loadFollowSets(),
+      this.loadInterestSet()
     ]);
 
     const feedData = this.feed();
@@ -482,6 +501,30 @@ export class NewFeedDialogComponent {
     }
   }
 
+  async loadInterestSet(): Promise<void> {
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey available for loading interest set');
+        return;
+      }
+
+      const interestSet = await this.collectionSetsService.getInterestSet(pubkey);
+      if (interestSet && interestSet.hashtags.length > 0) {
+        this.availableInterestHashtags.set(interestSet.hashtags);
+        this.logger.debug(`Loaded ${interestSet.hashtags.length} interest hashtags`);
+      } else {
+        // Use default hashtags if none exist
+        this.availableInterestHashtags.set(this.collectionSetsService.getDefaultHashtags());
+        this.logger.debug('Using default hashtags for interest set');
+      }
+    } catch (error) {
+      this.logger.error('Failed to load interest set:', error);
+      // Fallback to defaults on error
+      this.availableInterestHashtags.set(this.collectionSetsService.getDefaultHashtags());
+    }
+  }
+
   initializeSelectedItems(): void {
     const feedData = this.feed();
     if (!feedData) return;
@@ -511,6 +554,11 @@ export class NewFeedDialogComponent {
       );
       this.selectedFollowSets.set(sets);
     }
+
+    // Initialize selected interest hashtags for interests source
+    if (feedData.customInterestHashtags && feedData.customInterestHashtags.length > 0) {
+      this.selectedInterestHashtags.set(feedData.customInterestHashtags);
+    }
   }
 
   // Methods to open multi-select dialogs
@@ -524,6 +572,10 @@ export class NewFeedDialogComponent {
 
   openFollowSetSelectDialog(): void {
     this.showFollowSetSelectDialog.set(true);
+  }
+
+  openInterestSelectDialog(): void {
+    this.showInterestSelectDialog.set(true);
   }
 
   // Methods to handle dialog results
@@ -572,6 +624,18 @@ export class NewFeedDialogComponent {
     this.selectedFollowSets.set(selected);
   }
 
+  onInterestSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
+    this.showInterestSelectDialog.set(false);
+
+    if (selectedItems === null) {
+      return; // User cancelled
+    }
+
+    // Extract hashtag IDs from selected items
+    const selected = selectedItems.map(item => item.id);
+    this.selectedInterestHashtags.set(selected);
+  }
+
   removeUser(user: NostrRecord): void {
     this.selectedUsers.update(users => users.filter(u => u.event.pubkey !== user.event.pubkey));
   }
@@ -584,8 +648,13 @@ export class NewFeedDialogComponent {
     this.selectedFollowSets.update(sets => sets.filter(s => s.id !== followSet.id));
   }
 
+  removeInterestHashtag(hashtag: string): void {
+    this.selectedInterestHashtags.update(hashtags => hashtags.filter(h => h !== hashtag));
+  }
+
   // Handlers for starter pack actions
-  onStarterPackEdit(item: SelectableItem): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onStarterPackEdit(_item: SelectableItem): void {
     // Navigate to lists page for editing the starter pack
     this.router.navigate(['/lists']);
     // Close the dialog
@@ -606,7 +675,8 @@ export class NewFeedDialogComponent {
   }
 
   // Handlers for follow set actions
-  onFollowSetEdit(item: SelectableItem): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onFollowSetEdit(_item: SelectableItem): void {
     // Navigate to lists page for editing the follow set
     this.router.navigate(['/lists']);
     // Close the dialog
@@ -646,12 +716,13 @@ export class NewFeedDialogComponent {
         icon: formValue.icon!,
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         kinds: this.selectedKinds(),
-        source: (formValue.source || 'following') as 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending',
+        source: (formValue.source || 'following') as 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending' | 'interests',
         relayConfig: relayConfig,
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.event.pubkey) : undefined,
         customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
         customFollowSets: formValue.source === 'custom' ? this.selectedFollowSets().map(s => s.dTag) : undefined,
+        customInterestHashtags: formValue.source === 'interests' ? this.selectedInterestHashtags() : undefined,
         searchQuery: formValue.source === 'search' ? (formValue.searchQuery || '').trim() : undefined,
         showReplies: formValue.showReplies || false,
         showReposts: formValue.showReposts ?? true,
