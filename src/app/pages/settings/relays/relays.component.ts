@@ -25,7 +25,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
-import { RelayPingResultsDialogComponent, PingResult } from './relay-ping-results-dialog.component';
+import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -154,6 +154,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
     'wss://discovery.us.nostria.app/',
     // 'wss://discovery.af.nostria.app/',
   ];
+
+  // Secondary discovery relay - purplepag.es is a popular discovery relay
+  // that can be included alongside the regional Nostria relay for better lookup performance
+  readonly PURPLEPAGES_RELAY = 'wss://purplepag.es/';
 
   // Nostria relay regions for setup
   nostriaRelayRegions = [
@@ -672,9 +676,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.logger.info('Starting latency check to find closest discovery relay');
 
     // Combine user's discovery relays with known ones, removing duplicates
+    // Filter out purplepag.es since it's handled separately via the toggle
     const relaysToCheck = [
       ...new Set([...this.discoveryRelay.getRelayUrls(), ...this.knownDiscoveryRelays]),
-    ];
+    ].filter(url => url !== this.PURPLEPAGES_RELAY);
 
     this.logger.debug('Checking relays for latency', {
       count: relaysToCheck.length,
@@ -720,15 +725,28 @@ export class RelaysComponent implements OnInit, OnDestroy {
         },
       });
 
-      dialogRef.afterClosed().subscribe(result => {
+      dialogRef.afterClosed().subscribe((result: RelayPingDialogResult | undefined) => {
         if (result?.selected) {
-          const selectedRelay = result.selected as PingResult;
+          const selectedRelay = result.selected;
+          const includePurplepages = result.includePurplepages;
 
           // Run in setTimeout to avoid the ExpressionChangedAfterItHasBeenCheckedError
           setTimeout(() => {
+            // Add the selected fastest relay
             this.discoveryRelay.addRelay(selectedRelay.url);
+
+            // If purplepag.es toggle is enabled, add it as a secondary relay
+            if (includePurplepages) {
+              this.discoveryRelay.addRelay(this.PURPLEPAGES_RELAY);
+            }
+
             this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
-            this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+
+            if (includePurplepages) {
+              this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} and purplepag.es to discovery relays`);
+            } else {
+              this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+            }
           }, 0);
         }
       });

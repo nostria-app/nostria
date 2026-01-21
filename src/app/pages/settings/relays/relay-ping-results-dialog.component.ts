@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export interface PingResult {
   url: string;
@@ -17,9 +19,13 @@ export interface RelayPingDialogData {
   results: PingResult[];
 }
 
+export interface RelayPingDialogResult {
+  selected: PingResult;
+  includePurplepages: boolean;
+}
+
 @Component({
   selector: 'app-relay-ping-results-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,
@@ -27,6 +33,8 @@ export interface RelayPingDialogData {
     MatIconModule,
     MatCardModule,
     MatDividerModule,
+    MatSlideToggleModule,
+    MatTooltipModule,
   ],
   templateUrl: './relay-ping-results-dialog.component.html',
   styleUrl: './relay-ping-results-dialog.component.scss',
@@ -37,13 +45,19 @@ export class RelayPingResultsDialogComponent {
 
   results = this.data.results;
 
+  // Toggle for including purplepag.es as a secondary discovery relay (enabled by default)
+  includePurplepages = signal(true);
+
   selectRelay(result: PingResult): void {
     if (result.isAlreadyAdded) {
       return; // Don't allow re-selecting already added relays
     }
 
-    // Close the dialog immediately to avoid expression changed errors
-    this.dialogRef.close({ selected: result });
+    // Close the dialog with both the selected relay and the purplepages preference
+    this.dialogRef.close({
+      selected: result,
+      includePurplepages: this.includePurplepages(),
+    } as RelayPingDialogResult);
   }
 
   formatRelayUrl(url: string): string {
