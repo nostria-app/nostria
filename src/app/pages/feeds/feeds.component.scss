@@ -480,11 +480,10 @@ app-user-profile {
             min-width: 0; // Allow shrinking in flex layouts
             overflow-x: hidden; // Prevent horizontal overflow
 
-            // Remove padding on mobile for edge-to-edge content
-            @media (max-width: 599px) {
+            // Reduce separation on smaller screens for tighter content
+            @media (max-width: 1023px) {
               padding: 0;
-              gap: 1px;
-              background-color: var(--mat-sys-outline-variant);
+              gap: 2px;
             }
 
             // Content card with max width
