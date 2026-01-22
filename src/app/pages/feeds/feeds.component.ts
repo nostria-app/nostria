@@ -27,7 +27,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 
-import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule, NavigationEnd } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import {
   ConfirmDialogComponent,
@@ -227,6 +227,8 @@ export class FeedsComponent implements OnDestroy {
 
   // Feed tabs overflow detection - triggers dropdown mode when tabs don't fit
   feedTabsOverflow = signal(false);
+  // Track whether initial overflow check is complete to prevent flickering
+  feedTabsOverflowCheckComplete = signal(false);
   @ViewChild('feedTabsContainer') feedTabsContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('feedTabsInner') feedTabsInner?: ElementRef<HTMLDivElement>;
   private feedTabsResizeObserver?: ResizeObserver;
@@ -263,9 +265,19 @@ export class FeedsComponent implements OnDestroy {
     return isMobile;
   });
 
-  // Use dropdown selector when on mobile OR when tabs overflow
+  // Use dropdown selector when on mobile OR when tabs overflow OR when initial check hasn't completed
+  // Default to dropdown to prevent flickering - only show tabs once we've confirmed they fit
   useDropdownSelector = computed(() => {
-    return this.isMobileView() || this.feedTabsOverflow();
+    // Always use dropdown on mobile
+    if (this.isMobileView()) {
+      return true;
+    }
+    // Use dropdown until initial overflow check completes (prevents flickering)
+    if (!this.feedTabsOverflowCheckComplete()) {
+      return true;
+    }
+    // After initial check, use the actual overflow state
+    return this.feedTabsOverflow();
   });
 
   // Calculate sidenav offset for fixed header positioning
@@ -450,9 +462,13 @@ export class FeedsComponent implements OnDestroy {
 
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
-    const feed = this.activeFeed();
+    const activeFeed = this.activeFeed();
+    const dynFeed = this.dynamicFeed();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
+
+    // Use dynamic feed if active, otherwise use the regular active feed
+    const feed = dynFeed || activeFeed;
 
     if (!feed) {
       console.log('[allColumnEvents] No active feed');
@@ -489,7 +505,8 @@ export class FeedsComponent implements OnDestroy {
       filteredEvents: events.length,
       showReplies: feed.showReplies,
       showReposts: feed.showReposts,
-      isDragging
+      isDragging,
+      isDynamic: !!dynFeed
     });
 
     eventsMap.set(feed.id, events);
@@ -674,10 +691,14 @@ export class FeedsComponent implements OnDestroy {
       });
     });
 
-    // Handle query parameters for relay feed (e.g., /?r=trending.relays.land) and dynamic hashtag feed (e.g., /?t=bitcoin,nostr)
-    this.queryParamsSubscription = this.route.queryParams.subscribe(async params => {
-      const relayParam = params['r'];
-      const hashtagParam = params['t'];
+    // Handle query parameters for relay feed (e.g., /f?r=trending.relays.land) and dynamic hashtag feed (e.g., /f?t=bitcoin,nostr)
+    // Since FeedsComponent is embedded directly in app.html (not through router-outlet),
+    // we need to use Router events to get query params from the URL
+    const handleQueryParams = async (url: string) => {
+      const urlTree = this.router.parseUrl(url);
+      const queryParams = urlTree.queryParams;
+      const relayParam = queryParams['r'];
+      const hashtagParam = queryParams['t'];
 
       if (hashtagParam) {
         // Handle dynamic hashtag feed from Interests page
@@ -717,6 +738,16 @@ export class FeedsComponent implements OnDestroy {
         // Clear relay feed and dynamic feed when no query params
         this.activeRelayDomain.set('');
         this.cleanupDynamicFeed();
+      }
+    };
+
+    // Handle initial URL on component load
+    handleQueryParams(this.router.url);
+
+    // Subscribe to navigation events to handle URL changes
+    this.queryParamsSubscription = this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        handleQueryParams(event.urlAfterRedirects);
       }
     });
 
@@ -1059,6 +1090,7 @@ export class FeedsComponent implements OnDestroy {
     // If already in mobile view, no need to check - always use dropdown
     if (this.isMobileView()) {
       this.feedTabsOverflow.set(false);
+      this.feedTabsOverflowCheckComplete.set(true);
       return;
     }
 
@@ -1067,6 +1099,7 @@ export class FeedsComponent implements OnDestroy {
 
     if (!container || !inner) {
       this.feedTabsOverflow.set(false);
+      this.feedTabsOverflowCheckComplete.set(true);
       return;
     }
 
@@ -1113,6 +1146,8 @@ export class FeedsComponent implements OnDestroy {
     // the new state is consistently different. This prevents rapid back-and-forth switching.
     if (this.overflowStabilized && this.lastOverflowState === hasOverflow) {
       // Same state as before, no change needed
+      // But still mark check as complete
+      this.feedTabsOverflowCheckComplete.set(true);
       return;
     }
 
@@ -1124,6 +1159,7 @@ export class FeedsComponent implements OnDestroy {
 
     this.lastOverflowState = hasOverflow;
     this.feedTabsOverflow.set(hasOverflow);
+    this.feedTabsOverflowCheckComplete.set(true);
   }
 
   /**

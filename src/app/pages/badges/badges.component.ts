@@ -194,11 +194,11 @@ constructor() {
     return '';
   }
 
-  goBack(): void {
+goBack(): void {
     const pubkey = this.viewingPubkey();
     if (pubkey) {
       const npub = this.utilities.getNpubFromPubkey(pubkey);
-      this.router.navigate([{ outlets: { right: ['p', npub || pubkey] } }]);
+      this.layout.navigateToProfile(npub || pubkey);
     } else {
       // Fallback to home if no pubkey
       this.router.navigate(['/']);

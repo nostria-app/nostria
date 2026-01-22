@@ -17,6 +17,7 @@ import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { LayoutService } from '../../../services/layout.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -60,6 +61,7 @@ export class BadgeDetailsComponent {
   private readonly badgeService = inject(BadgeService);
   private readonly accountState = inject(AccountStateService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly layout = inject(LayoutService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -243,11 +245,10 @@ goBack(): void {
 
       // Include tab index if available
       if (this.returnTabIndex() !== null) {
-        this.router.navigate([{ outlets: { right: ['badges', identifier] } }], {
-          queryParams: { tab: this.returnTabIndex() },
-        });
+        this.layout.openBadgesPage(identifier);
+        // Note: query params for tab not supported in openBadgesPage yet
       } else {
-        this.router.navigate([{ outlets: { right: ['badges', identifier] } }]);
+        this.layout.openBadgesPage(identifier);
       }
     } else {
       // Fallback to generic badges page if no creator info

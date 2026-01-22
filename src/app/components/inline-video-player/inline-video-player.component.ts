@@ -147,8 +147,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
             // User will need to click to play
           });
         }
-      } else {
-        // Video left viewport or auto-play not allowed - pause if playing
+      } else if (!inViewport) {
+        // Video left viewport - pause if playing
+        // Note: We only pause when leaving viewport, NOT when autoPlayAllowed changes to false
+        // This allows manually started videos to keep playing even if autoplay conditions change
         if (!video.paused) {
           video.pause();
         }
