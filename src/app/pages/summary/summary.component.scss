@@ -748,6 +748,93 @@
   }
 }
 
+// Who Posted Expansion Panel (at top of Timeline)
+.who-posted-panel {
+  margin-bottom: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-large);
+
+  &.mat-expansion-panel {
+    box-shadow: none;
+    border: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  ::ng-deep {
+    .mat-expansion-panel-header {
+      padding: 0 16px;
+      height: 48px;
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high) !important;
+      }
+    }
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .mat-expansion-panel-header-description {
+      justify-content: flex-end;
+      margin-right: 8px;
+    }
+
+    .mat-expansion-panel-body {
+      padding: 0 16px 16px 16px;
+    }
+  }
+
+  .poster-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 4px;
+    font-size: 0.75rem;
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-radius: var(--mat-sys-corner-full);
+  }
+
+  .filter-hint-inline {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
+  }
+
+  .filter-active-hint {
+    font-size: 0.75rem;
+    color: var(--mat-sys-primary);
+    padding: 2px 8px;
+    background-color: var(--mat-sys-primary-container);
+    border-radius: var(--mat-sys-corner-full);
+  }
+
+  .who-posted-content {
+    padding-top: 8px;
+
+    .load-more-container.compact {
+      margin-top: 0.75rem;
+
+      button {
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
 // Poster Grid
 .poster-grid {
   display: flex;

@@ -1,14 +1,12 @@
-<div class="meetings-container">
-  <div class="meetings-header">
-    <h1>
-      <mat-icon>groups</mat-icon>
-      Meeting Spaces
-    </h1>
-    <button mat-icon-button (click)="refresh()" [disabled]="loading()">
-      <mat-icon>refresh</mat-icon>
-    </button>
-  </div>
+<div class="panel-header">
+  <h2 class="panel-title title-font">Meeting Spaces</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
 
+<div class="meetings-container">
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
     <mat-tab>
       <ng-template mat-tab-label>

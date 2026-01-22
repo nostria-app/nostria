@@ -3792,6 +3792,74 @@ export class FeedService {
       return false;
     }
   }
+
+  // Dynamic feed ID constant
+  private readonly DYNAMIC_FEED_ID = 'dynamic-hashtag-feed';
+
+  /**
+   * Create and subscribe to a dynamic feed based on hashtags.
+   * This feed is temporary and not saved to storage.
+   * Used when navigating from Interests page with ?t= query parameter.
+   * 
+   * @param hashtags Array of hashtags (without # prefix)
+   * @returns The dynamic feed config
+   */
+  async createDynamicHashtagFeed(hashtags: string[]): Promise<FeedConfig> {
+    // First, clean up any existing dynamic feed
+    this.cleanupDynamicFeed();
+
+    // Create a label based on hashtags
+    const label = hashtags.length === 1
+      ? `#${hashtags[0]}`
+      : `${hashtags.length} hashtags`;
+
+    // Create the dynamic feed config
+    const dynamicFeed: FeedConfig = {
+      id: this.DYNAMIC_FEED_ID,
+      label,
+      icon: 'tag',
+      type: 'notes',
+      kinds: [1, 6], // Text notes and reposts
+      source: 'interests',
+      customInterestHashtags: hashtags,
+      relayConfig: 'account',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isSystem: true, // Prevent deletion through normal UI
+    };
+
+    this.logger.info(`Creating dynamic hashtag feed with tags: ${hashtags.join(', ')}`);
+
+    // Subscribe to the dynamic feed (this will load events)
+    await this.subscribeToFeedDirect(dynamicFeed);
+
+    return dynamicFeed;
+  }
+
+  /**
+   * Clean up the dynamic feed subscription and data.
+   * Called when navigating away from dynamic feed or creating a new one.
+   */
+  cleanupDynamicFeed(): void {
+    if (this.data.has(this.DYNAMIC_FEED_ID)) {
+      this.unsubscribeFromColumn(this.DYNAMIC_FEED_ID);
+      this.logger.debug('Cleaned up dynamic hashtag feed');
+    }
+  }
+
+  /**
+   * Check if a dynamic feed is currently active
+   */
+  isDynamicFeedActive(): boolean {
+    return this._activeFeedId() === this.DYNAMIC_FEED_ID;
+  }
+
+  /**
+   * Get the dynamic feed ID constant
+   */
+  getDynamicFeedId(): string {
+    return this.DYNAMIC_FEED_ID;
+  }
 }
 
 

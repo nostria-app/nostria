@@ -120,6 +120,71 @@
         }
       </ng-template>
       <div class="tab-content">
+        <!-- Who Posted Expander - at top of Timeline -->
+        @if (activePosters().length > 0) {
+        <mat-expansion-panel class="who-posted-panel" [expanded]="!postersCollapsed()" (expandedChange)="postersCollapsed.set(!$event)">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>group</mat-icon>
+              <span>Who Posted</span>
+              <span class="poster-count-badge">{{ totalPostersCount() }}</span>
+            </mat-panel-title>
+            <mat-panel-description>
+              @if (selectedPosters().size > 0) {
+              <span class="filter-active-hint">{{ selectedPosters().size }} selected</span>
+              } @else {
+              <span class="filter-hint-inline">Click to filter</span>
+              }
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="who-posted-content">
+            <div class="poster-grid">
+              @for (poster of activePosters(); track poster.pubkey) {
+              <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
+                (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
+                (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
+                [attr.aria-checked]="isPosterSelected(poster.pubkey)">
+                <div class="poster-avatar">
+                  <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"></app-user-profile>
+                  @if (isPosterSelected(poster.pubkey)) {
+                  <div class="selection-indicator">
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
+                  }
+                </div>
+                <div class="poster-stats-badge">
+                  <span class="stat-item" matTooltip="Notes">
+                    <mat-icon>chat</mat-icon>
+                    {{ poster.notesCount }}
+                  </span>
+                  @if (poster.articlesCount > 0) {
+                  <span class="stat-item" matTooltip="Articles">
+                    <mat-icon>article</mat-icon>
+                    {{ poster.articlesCount }}
+                  </span>
+                  }
+                  @if (poster.mediaCount > 0) {
+                  <span class="stat-item" matTooltip="Media">
+                    <mat-icon>perm_media</mat-icon>
+                    {{ poster.mediaCount }}
+                  </span>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            @if (hasMorePosters()) {
+            <div class="load-more-container compact">
+              <button mat-stroked-button (click)="loadMorePosters(); $event.stopPropagation()">
+                <mat-icon>expand_more</mat-icon>
+                Load More
+              </button>
+            </div>
+            }
+          </div>
+        </mat-expansion-panel>
+        }
+
         @if (timelineEvents().length > 0 || isFilterMode()) {
         <div class="section-header-with-actions">
           <div class="timeline-filter-actions">
@@ -176,76 +241,6 @@
         }
       </div>
     </mat-tab>
-
-    <!-- Who Posted Tab -->
-    @if (activePosters().length > 0) {
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">group</mat-icon>
-        <span class="tab-label">Who Posted</span>
-        @if (totalPostersCount() > 0) {
-        <span class="tab-badge">{{ totalPostersCount() }}</span>
-        }
-      </ng-template>
-      <div class="tab-content">
-        <div class="section-header-with-actions">
-          <div class="filter-actions">
-            @if (isFilterMode()) {
-            <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false)"
-              class="filter-action-btn">
-              <mat-icon>clear</mat-icon>
-              Clear Filter
-            </button>
-            }
-            <span class="filter-hint">Click to filter timeline</span>
-          </div>
-        </div>
-        <div class="poster-grid">
-          @for (poster of activePosters(); track poster.pubkey) {
-          <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
-            (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
-            (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
-            [attr.aria-checked]="isPosterSelected(poster.pubkey)">
-            <div class="poster-avatar">
-              <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"></app-user-profile>
-              @if (isPosterSelected(poster.pubkey)) {
-              <div class="selection-indicator">
-                <mat-icon>check_circle</mat-icon>
-              </div>
-              }
-            </div>
-            <div class="poster-stats-badge">
-              <span class="stat-item" matTooltip="Notes">
-                <mat-icon>chat</mat-icon>
-                {{ poster.notesCount }}
-              </span>
-              @if (poster.articlesCount > 0) {
-              <span class="stat-item" matTooltip="Articles">
-                <mat-icon>article</mat-icon>
-                {{ poster.articlesCount }}
-              </span>
-              }
-              @if (poster.mediaCount > 0) {
-              <span class="stat-item" matTooltip="Media">
-                <mat-icon>perm_media</mat-icon>
-                {{ poster.mediaCount }}
-              </span>
-              }
-            </div>
-          </div>
-          }
-        </div>
-        @if (hasMorePosters()) {
-        <div class="load-more-container">
-          <button mat-stroked-button (click)="loadMorePosters()">
-            <mat-icon>expand_more</mat-icon>
-            Load More
-          </button>
-        </div>
-        }
-      </div>
-    </mat-tab>
-    }
 
     <!-- Articles Tab -->
     @if (articleEvents().length > 0) {

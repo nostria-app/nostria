@@ -1,50 +1,55 @@
-<div class="bookmarks-container">
-  <div class="bookmarks-header">
-    <h1>Bookmarks</h1>
-    <div class="header-actions">
-      <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="Change View">
-        <mat-icon>{{ getViewIcon() }}</mat-icon>
-      </button>
-      <mat-menu #viewMenu="matMenu">
-        <button mat-menu-item (click)="setViewMode('content')">
-          <mat-icon>view_agenda</mat-icon>
-          <span>Content View</span>
-        </button>
-        <button mat-menu-item (click)="setViewMode('tiles')">
-          <mat-icon>grid_view</mat-icon>
-          <span>Tiles View</span>
-        </button>
-      </mat-menu>
-      <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Lists">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <mat-menu #listMenu="matMenu">
-        <button mat-menu-item (click)="createNewList()">
-          <mat-icon>add</mat-icon>
-          <span>Create New List</span>
-        </button>
-        @if (bookmarkService.selectedListId() !== 'default') {
-        <button mat-menu-item (click)="renameCurrentList()">
-          <mat-icon>edit</mat-icon>
-          <span>Rename List</span>
-        </button>
-        }
-        <button mat-menu-item (click)="toggleListPrivacy()">
-          <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
-          <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
-        </button>
-        <button mat-menu-item (click)="deleteCurrentList()">
-          <mat-icon>delete</mat-icon>
-          <span>Delete List</span>
-        </button>
-      </mat-menu>
-      <button mat-flat-button (click)="addBookmark()" [disabled]="loading()">
-        <mat-icon>add</mat-icon>
-        Add Bookmark
-      </button>
-    </div>
-  </div>
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font">Bookmarks</h2>
+  <span class="panel-header-spacer"></span>
 
+  <!-- View mode button -->
+  <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="Change View">
+    <mat-icon>{{ getViewIcon() }}</mat-icon>
+  </button>
+  <mat-menu #viewMenu="matMenu">
+    <button mat-menu-item (click)="setViewMode('content')">
+      <mat-icon>view_agenda</mat-icon>
+      <span>Content View</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('tiles')">
+      <mat-icon>grid_view</mat-icon>
+      <span>Tiles View</span>
+    </button>
+  </mat-menu>
+
+  <!-- Add bookmark button -->
+  <button mat-icon-button (click)="addBookmark()" [disabled]="loading()" matTooltip="Add Bookmark">
+    <mat-icon>add</mat-icon>
+  </button>
+
+  <!-- Manage lists menu -->
+  <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Lists">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #listMenu="matMenu">
+    <button mat-menu-item (click)="createNewList()">
+      <mat-icon>add</mat-icon>
+      <span>Create New List</span>
+    </button>
+    @if (bookmarkService.selectedListId() !== 'default') {
+    <button mat-menu-item (click)="renameCurrentList()">
+      <mat-icon>edit</mat-icon>
+      <span>Rename List</span>
+    </button>
+    }
+    <button mat-menu-item (click)="toggleListPrivacy()">
+      <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
+      <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
+    </button>
+    <button mat-menu-item (click)="deleteCurrentList()">
+      <mat-icon>delete</mat-icon>
+      <span>Delete List</span>
+    </button>
+  </mat-menu>
+</div>
+
+<div class="bookmarks-container">
   @if (loading()) {
   <div class="loading-container">
     <mat-spinner diameter="40"></mat-spinner>

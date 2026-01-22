@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -31,6 +32,7 @@ interface MeetingSpace {
     MatTabsModule,
     MatCardModule,
     MatExpansionModule,
+    MatTooltipModule,
     ProfileDisplayNameComponent,
     TimestampPipe,
   ],

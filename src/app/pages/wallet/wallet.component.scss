@@ -1,62 +1,55 @@
-.wallet-page {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-// Toolbar styles
-.wallet-toolbar {
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  flex-wrap: wrap;
-
-  .toolbar-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
-      color: var(--mat-sys-primary);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 24px;
-      color: var(--mat-sys-on-surface);
-    }
-  }
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
   .toolbar-balance {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: var(--mat-sys-primary-container);
-    border-radius: 20px;
+    border-radius: 16px;
 
     .balance-value {
-      font-size: 20px;
+      font-size: 16px;
       color: var(--mat-sys-on-primary-container);
     }
 
     .balance-label {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--mat-sys-on-primary-container);
       opacity: 0.8;
     }
   }
+}
 
-  .toolbar-spacer {
-    flex: 1;
-  }
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
 
-  .add-wallet-btn {
-    flex-shrink: 0;
-  }
+.panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel-header-spacer {
+  flex: 1;
+}
+
+.wallet-page {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 // Tabs styles
@@ -504,29 +497,10 @@
 
 // Mobile responsive adjustments
 @media (max-width: 600px) {
-  .wallet-toolbar {
-    .toolbar-title {
-      h1 {
-        font-size: 20px;
-      }
-    }
-
+  .panel-header {
     .toolbar-balance {
       .balance-value {
-        font-size: 16px;
-      }
-    }
-
-    .add-wallet-btn {
-      // Shrink to icon-only on mobile
-      ::ng-deep {
-        .mat-mdc-extended-fab > .mat-icon {
-          margin-right: 0;
-        }
-
-        .mdc-fab__label {
-          display: none;
-        }
+        font-size: 14px;
       }
     }
   }

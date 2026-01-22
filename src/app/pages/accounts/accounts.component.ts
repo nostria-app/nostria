@@ -19,7 +19,6 @@ import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-accounts',
-  standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,

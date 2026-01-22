@@ -81,60 +81,50 @@
   </div>
 </div>
 } @else {
-<div class="calendar-container">
-  <!-- Header with navigation and view controls -->
-  <div class="calendar-header">
-    <div class="header-left">
-      <button mat-icon-button (click)="goToToday()" matTooltip="Go to today" class="today-button">
-        <mat-icon>today</mat-icon>
-      </button>
+<div class="panel-header">
+  <h2 class="panel-title title-font">Calendar</h2>
+  <span class="panel-header-spacer"></span>
 
-      <div class="month-navigation">
-        <button mat-icon-button (click)="previousMonth()" matTooltip="Previous month">
-          <mat-icon>chevron_left</mat-icon>
-        </button>
+  <button mat-icon-button (click)="goToToday()" matTooltip="Go to today">
+    <mat-icon>today</mat-icon>
+  </button>
 
-        <h2 class="current-month">{{ currentMonth().name }}</h2>
-
-        <button mat-icon-button (click)="nextMonth()" matTooltip="Next month">
-          <mat-icon>chevron_right</mat-icon>
-        </button>
-      </div>
-
-      <!-- Date picker -->
-      <mat-form-field appearance="outline" class="date-picker-field">
-        <mat-label>Select date</mat-label>
-        <input matInput [matDatepicker]="picker" [formControl]="selectedDateControl" placeholder="Select a date" />
-        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
-      </mat-form-field>
-    </div>
-
-    <div class="header-right">
-      <!-- View mode toggles -->
-      <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
-        appearance="standard">
-        <mat-button-toggle value="month" matTooltip="Month view">
-          <mat-icon>view_module</mat-icon>
-          Month
-        </mat-button-toggle>
-        <mat-button-toggle value="week" matTooltip="Week view">
-          <mat-icon>view_week</mat-icon>
-          Week
-        </mat-button-toggle>
-        <mat-button-toggle value="agenda" matTooltip="Agenda view">
-          <mat-icon>view_agenda</mat-icon>
-          Agenda
-        </mat-button-toggle>
-      </mat-button-toggle-group>
-
-      <!-- Create event button -->
-      <button mat-fab extended (click)="createEvent()" class="create-event-fab">
-        <mat-icon>add</mat-icon>
-        New Event
-      </button>
-    </div>
+  <div class="month-navigation">
+    <button mat-icon-button (click)="previousMonth()" matTooltip="Previous month">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <span class="current-month">{{ currentMonth().name }}</span>
+    <button mat-icon-button (click)="nextMonth()" matTooltip="Next month">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
   </div>
+
+  <mat-form-field appearance="outline" class="date-picker-field" subscriptSizing="dynamic">
+    <mat-label>Select date</mat-label>
+    <input matInput [matDatepicker]="picker" [formControl]="selectedDateControl" placeholder="Select a date" />
+    <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+    <mat-datepicker #picker></mat-datepicker>
+  </mat-form-field>
+
+  <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
+    appearance="standard">
+    <mat-button-toggle value="month" matTooltip="Month view">
+      <mat-icon>view_module</mat-icon>
+    </mat-button-toggle>
+    <mat-button-toggle value="week" matTooltip="Week view">
+      <mat-icon>view_week</mat-icon>
+    </mat-button-toggle>
+    <mat-button-toggle value="agenda" matTooltip="Agenda view">
+      <mat-icon>view_agenda</mat-icon>
+    </mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <button mat-icon-button (click)="createEvent()" matTooltip="New Event">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
+
+<div class="calendar-container">
 
   <!-- Loading indicator -->
   @if (isLoading()) {

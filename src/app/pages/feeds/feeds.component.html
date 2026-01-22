@@ -111,6 +111,99 @@
         <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
       </div>
     </div>
+    } @else if (showDynamicFeed()) {
+    <!-- Dynamic Hashtag Feed View - shown when hashtag query param is present -->
+    @let dynFeed = dynamicFeed();
+    @if (dynFeed) {
+    <div class="columns-wrapper" #columnsWrapper>
+      <div class="column-unit dynamic-feed-unit" [attr.data-column-id]="dynFeed.id" [class.visible]="true">
+        <!-- Dynamic feed header with close button -->
+        <div class="dynamic-feed-header">
+          <div class="dynamic-feed-info">
+            <mat-icon>tag</mat-icon>
+            <span class="dynamic-feed-label">{{ dynFeed.label }}</span>
+            @if (dynFeed.customInterestHashtags && dynFeed.customInterestHashtags.length > 1) {
+            <span class="dynamic-feed-count">({{ dynFeed.customInterestHashtags.length }} hashtags)</span>
+            }
+          </div>
+          <button mat-icon-button (click)="closeDynamicFeed()" matTooltip="Close dynamic feed">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Feed Content -->
+        <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
+          @let dynamicEvents = columnEvents().get(dynFeed.id);
+          @let dynamicFeedHasEvents = dynamicEvents && dynamicEvents.length > 0;
+          @let dynamicInitialLoadComplete = feedService.getColumnInitialLoadComplete(dynFeed.id);
+
+          @if (dynamicInitialLoadComplete && !dynamicFeedHasEvents) {
+          <!-- No results for hashtag search -->
+          <div class="no-results-state">
+            <div class="no-results-content">
+              <mat-icon class="no-results-icon">search_off</mat-icon>
+              <h3>No posts found</h3>
+              <p>
+                No posts found for {{ dynFeed.label }}. Try checking back later.
+              </p>
+            </div>
+          </div>
+          } @else if (!dynamicFeedHasEvents) {
+          <!-- Loading skeleton -->
+          <div class="column-skeleton-items">
+            @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
+            <div class="feed-item-skeleton">
+              <div class="item-header-skeleton">
+                <div class="avatar-skeleton"></div>
+                <div class="user-info-skeleton">
+                  <div class="username-skeleton"></div>
+                  <div class="timestamp-skeleton"></div>
+                </div>
+              </div>
+              <div class="item-content-skeleton">
+                <div class="content-line-skeleton"></div>
+                <div class="content-line-skeleton"></div>
+                <div class="content-line-skeleton short"></div>
+              </div>
+              <div class="item-actions-skeleton">
+                <div class="action-skeleton"></div>
+                <div class="action-skeleton"></div>
+                <div class="action-skeleton"></div>
+                <div class="action-skeleton"></div>
+              </div>
+            </div>
+            }
+            <div class="skeleton-loading-indicator">
+              <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span class="loading-text">Loading posts...</span>
+            </div>
+          </div>
+          } @else {
+          <div class="column-items">
+            @for (event of dynamicEvents; track event.id) {
+            <app-event [event]="event"></app-event>
+            }
+
+            @if (hasMoreEventsToRender(dynFeed.id)) {
+            <div class="load-more-rendered-events">
+              <button mat-stroked-button (click)="loadMoreRenderedEvents(dynFeed.id)" class="load-more-button">
+                <mat-icon>expand_more</mat-icon>
+                Show more
+              </button>
+            </div>
+            }
+
+            <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
     } @else {
     <div class="columns-wrapper" #columnsWrapper>
       <!-- Normal Feeds with connected headers and content - only show when initialized -->

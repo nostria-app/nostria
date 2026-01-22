@@ -208,6 +208,10 @@ export class FeedsComponent implements OnDestroy {
   @ViewChild('relayFeedMenu') relayFeedMenu?: RelayFeedMenuComponent;
   private queryParamsSubscription: import('rxjs').Subscription | null = null;
 
+  // Dynamic hashtag feed state - for viewing hashtags from Interests page
+  dynamicFeed = signal<FeedConfig | null>(null);
+  showDynamicFeed = computed(() => !!this.dynamicFeed());
+
   // Filter panel state
   filterPanelOpen = signal(false);
   filterPanelPositions: ConnectedPosition[] = [
@@ -670,22 +674,49 @@ export class FeedsComponent implements OnDestroy {
       });
     });
 
-    // Handle query parameters for relay feed (e.g., /?r=trending.relays.land)
-    this.queryParamsSubscription = this.route.queryParams.subscribe(params => {
+    // Handle query parameters for relay feed (e.g., /?r=trending.relays.land) and dynamic hashtag feed (e.g., /?t=bitcoin,nostr)
+    this.queryParamsSubscription = this.route.queryParams.subscribe(async params => {
       const relayParam = params['r'];
-      if (relayParam) {
+      const hashtagParam = params['t'];
+
+      if (hashtagParam) {
+        // Handle dynamic hashtag feed from Interests page
+        // Parse hashtags - can be comma-separated
+        const hashtags = hashtagParam
+          .split(',')
+          .map((h: string) => h.trim().replace(/^#/, ''))
+          .filter((h: string) => h.length > 0);
+
+        if (hashtags.length > 0) {
+          this.logger.debug(`Creating dynamic hashtag feed for: ${hashtags.join(', ')}`);
+
+          // Clear relay feed if active
+          this.activeRelayDomain.set('');
+
+          // Clear the active feed selection to show dynamic feed
+          this.feedsCollectionService.clearActiveFeed();
+
+          // Create and show dynamic feed
+          this.dynamicFeed.set(await this.feedService.createDynamicHashtagFeed(hashtags));
+        }
+      } else if (relayParam) {
+        // Handle relay feed
         // Normalize the relay domain (remove wss:// if present)
         const domain = relayParam.replace(/^wss?:\/\//, '').replace(/\/$/, '');
         this.activeRelayDomain.set(domain);
         this.logger.debug(`Activated relay feed from URL: ${domain}`);
+
+        // Clean up any dynamic feed
+        this.cleanupDynamicFeed();
 
         // Update the relay feed menu selection if it's available
         if (this.relayFeedMenu) {
           this.relayFeedMenu.setSelectedRelay(domain);
         }
       } else {
-        // Clear relay feed when no query param
+        // Clear relay feed and dynamic feed when no query params
         this.activeRelayDomain.set('');
+        this.cleanupDynamicFeed();
       }
     });
 
@@ -1611,6 +1642,29 @@ export class FeedsComponent implements OnDestroy {
       }
     }
   }
+
+  /**
+   * Clean up dynamic hashtag feed when navigating away
+   */
+  private cleanupDynamicFeed(): void {
+    if (this.dynamicFeed()) {
+      this.feedService.cleanupDynamicFeed();
+      this.dynamicFeed.set(null);
+    }
+  }
+
+  /**
+   * Close the dynamic feed and navigate back to normal feeds
+   */
+  closeDynamicFeed(): void {
+    this.cleanupDynamicFeed();
+    // Clear the hashtag query param from URL
+    this.router.navigate([], {
+      queryParams: { t: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   /**
    * Select a feed
    */
@@ -1621,6 +1675,16 @@ export class FeedsComponent implements OnDestroy {
       // Clear the relay query param from URL
       this.router.navigate([], {
         queryParams: { r: null },
+        queryParamsHandling: 'merge',
+      });
+    }
+
+    // Clear dynamic feed state if active
+    if (this.showDynamicFeed()) {
+      this.cleanupDynamicFeed();
+      // Clear the hashtag query param from URL
+      this.router.navigate([], {
+        queryParams: { t: null },
         queryParamsHandling: 'merge',
       });
     }

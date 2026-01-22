@@ -73,15 +73,25 @@ export class BadgesComponent {
     return this.viewingPubkey() === this.accountState.pubkey();
   });
 
-  constructor() {
+constructor() {
     // Get the active tab from query params if available
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     if (tabParam) {
       this.activeTabIndex.set(parseInt(tabParam, 10));
     }
 
-    // Get pubkey from route params (new: /p/:id/badges) or query params (legacy: /badges?pubkey=xxx)
-    let pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
+    // Get pubkey from multiple possible sources:
+    // 1. Route param :pubkey (new: /badges/:pubkey in right panel)
+    // 2. Parent route param :id (profile nested: /p/:id/badges)
+    // 3. Query param (legacy: /badges?pubkey=xxx)
+    let pubkeyParam = this.route.snapshot.paramMap.get('pubkey');
+    if (pubkeyParam) {
+      // Convert npub to hex if needed
+      pubkeyParam = this.utilities.safeGetHexPubkey(pubkeyParam) || pubkeyParam;
+    }
+    if (!pubkeyParam) {
+      pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
+    }
     if (!pubkeyParam) {
       // Check if we're under a profile route (parent :id param)
       const parentId = this.route.parent?.snapshot.paramMap.get('id');
