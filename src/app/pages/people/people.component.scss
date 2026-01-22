@@ -1,7 +1,47 @@
+// Panel header styles (extends global .panel-header)
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .panel-title {
+    margin: 0;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel-header-spacer {
+    flex: 1;
+  }
+
+  .set-count {
+    margin-left: auto;
+    opacity: 0.6;
+    font-size: 0.85em;
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .people-page {
   display: flex;
   flex-direction: row;
-  height: calc(100vh - var(--toolbar-height));
+  height: calc(100vh - var(--toolbar-height) - 56px); // Account for panel-header
   background-color: var(--mat-sys-surface);
   position: relative;
 
@@ -29,144 +69,46 @@
   }
 }
 
+// Search bar below panel header
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  mat-icon {
+    opacity: 0.5;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  input {
+    border: none;
+    background: transparent;
+    outline: none;
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface);
+
+    &::placeholder {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  button {
+    flex-shrink: 0;
+  }
+}
+
 .people-container {
   padding: 1rem;
 
   // Add extra bottom padding on mobile for navigation menu
   @media (max-width: 599px) {
     padding-bottom: 120px;
-  }
-}
-
-.people-header {
-  padding: 0.75rem 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-
-  .title-section {
-    h1 {
-      margin: 0;
-    }
-
-    p {
-      margin: 0;
-      color: rgba(var(--mat-sys-primary-text), 0.6);
-      font-size: 0.9rem;
-    }
-  }
-
-  .controls-section {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-
-    .controls-left {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex-shrink: 0;
-    }
-
-    .controls-center {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      min-width: 0;
-    }
-
-    .controls-right {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex-shrink: 0;
-    }
-
-    .follow-set-selector {
-      background-color: var(--mat-sys-surface-container);
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-
-      .dropdown-icon {
-        margin-left: 4px;
-        flex-shrink: 0;
-      }
-    }
-
-    .set-count {
-      margin-left: auto;
-      opacity: 0.6;
-      font-size: 0.85em;
-      margin-right: 0;
-    }
-
-    button[mat-flat-button] {
-      mat-icon {
-        margin-right: 0.5rem;
-      }
-    }
-
-    .search-container {
-      display: flex;
-      align-items: center;
-      border-radius: 24px;
-      padding: 0.25rem 0.75rem;
-      background-color: var(--mat-sys-surface-container);
-      max-width: 400px;
-      width: 100%;
-
-      mat-icon {
-        opacity: 0.5;
-        margin-right: 0.5rem;
-      }
-
-      input {
-        border: none;
-        background: transparent;
-        outline: none;
-        flex: 1;
-        min-width: 0;
-        padding: 0.5rem 0;
-        color: var(--mat-sys-on-surface);
-      }
-    }
-
-    .active-filters {
-      color: var(--mat-sys-primary);
-    }
-  }
-
-  @media (max-width: 600px) {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0.5rem;
-
-    .controls-section {
-      width: 100%;
-      flex-direction: column;
-      gap: 0.5rem;
-
-      .controls-left,
-      .controls-right {
-        width: 100%;
-        justify-content: flex-start;
-      }
-
-      .controls-center {
-        width: 100%;
-        order: -1;
-
-        .search-container {
-          max-width: none;
-        }
-      }
-    }
   }
 }
 
