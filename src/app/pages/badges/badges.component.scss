@@ -1,64 +1,43 @@
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel-header-spacer {
+  flex: 1;
+}
+
 .badges-container {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.badges-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-
-  h1 {
-    margin: 0;
-  }
-
-  .badges-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-}
-
-.back-button {
-  margin-right: 16px;
-}
-
-.profile-mini {
-  display: flex;
-  align-items: center;
-  flex: 1;
-
-  &-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: var(--mat-caption-text-color, #757575);
-    }
-  }
-
-  &-name {
-    margin: 0;
-    font-size: 18px;
-  }
 }
 
 .minimal-profile {

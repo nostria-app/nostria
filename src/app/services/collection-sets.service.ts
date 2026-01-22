@@ -56,6 +56,8 @@ export interface EmojiSet {
 }
 
 export interface InterestSet {
+  identifier: string; // d-tag - unique identifier for this interest list
+  title: string; // Human-readable name for the list
   hashtags: string[];
   eventId: string;
   created_at: number;
@@ -336,10 +338,10 @@ export class CollectionSetsService {
   }
 
   /**
-   * Get interest set for the current user (kind 30015)
-   * Returns default hashtags if no event exists
+   * Get all interest sets for the current user (kind 30015)
+   * Returns all interest lists with different d-tags
    */
-  async getInterestSet(pubkey: string): Promise<InterestSet | null> {
+  async getInterestSets(pubkey: string): Promise<InterestSet[]> {
     try {
       // First check local database for faster loading
       await this.database.init();
@@ -354,46 +356,103 @@ export class CollectionSetsService {
         }
       }
 
-      // Find the "interests" identifier event
-      const event = events.find(e => {
-        const dTag = e.tags.find(tag => tag[0] === 'd')?.[1];
-        return dTag === 'interests';
-      });
+      // Group events by d-tag and keep only the most recent for each
+      const eventsByDTag = new Map<string, typeof events[0]>();
+      for (const event of events) {
+        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+        if (!dTag) continue;
 
-      if (event) {
-        this.logger.debug('Found kind 30015 interest set event');
+        const existing = eventsByDTag.get(dTag);
+        if (!existing || event.created_at > existing.created_at) {
+          eventsByDTag.set(dTag, event);
+        }
+      }
+
+      // Convert to InterestSet objects
+      const interestSets: InterestSet[] = [];
+      for (const [dTag, event] of eventsByDTag) {
         const hashtags = event.tags
           .filter(tag => tag[0] === 't' && tag[1])
           .map(tag => tag[1]);
 
-        return {
+        // Get title from title tag, or use d-tag as fallback
+        const titleTag = event.tags.find(tag => tag[0] === 'title')?.[1];
+        const title = titleTag || this.formatDTagAsTitle(dTag);
+
+        interestSets.push({
+          identifier: dTag,
+          title,
           hashtags,
           eventId: event.id,
           created_at: event.created_at,
-        };
+        });
       }
 
-      // No event exists, return defaults
-      this.logger.debug('No interest set found, using defaults');
-      return {
-        hashtags: [...DEFAULT_HASHTAGS],
-        eventId: '',
-        created_at: Math.floor(Date.now() / 1000),
-      };
+      // Sort by created_at descending
+      interestSets.sort((a, b) => b.created_at - a.created_at);
+
+      // If no interest sets exist, return a default one
+      if (interestSets.length === 0) {
+        this.logger.debug('No interest sets found, returning default');
+        return [{
+          identifier: 'interests',
+          title: 'My Interests',
+          hashtags: [...DEFAULT_HASHTAGS],
+          eventId: '',
+          created_at: Math.floor(Date.now() / 1000),
+        }];
+      }
+
+      this.logger.debug(`Found ${interestSets.length} interest sets`);
+      return interestSets;
     } catch (error) {
-      this.logger.error('Error loading interest set:', error);
-      return {
+      this.logger.error('Error loading interest sets:', error);
+      return [{
+        identifier: 'interests',
+        title: 'My Interests',
         hashtags: [...DEFAULT_HASHTAGS],
         eventId: '',
         created_at: Math.floor(Date.now() / 1000),
-      };
+      }];
     }
   }
 
   /**
-   * Save interest set (kind 30015)
+   * Get interest set for the current user (kind 30015) by d-tag
+   * Returns default hashtags if no event exists
    */
-  async saveInterestSet(hashtags: string[]): Promise<boolean> {
+  async getInterestSet(pubkey: string, identifier = 'interests'): Promise<InterestSet | null> {
+    try {
+      const allSets = await this.getInterestSets(pubkey);
+      const set = allSets.find(s => s.identifier === identifier);
+
+      if (set) {
+        return set;
+      }
+
+      // No event exists with this identifier
+      this.logger.debug(`No interest set found with identifier: ${identifier}`);
+      return null;
+    } catch (error) {
+      this.logger.error('Error loading interest set:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get a specific interest set by d-tag
+   */
+  async getInterestSetByDTag(pubkey: string, dTag: string): Promise<InterestSet | null> {
+    return this.getInterestSet(pubkey, dTag);
+  }
+
+  /**
+   * Save interest set (kind 30015) with custom identifier
+   * @param identifier - d-tag identifier for the list
+   * @param title - Human-readable title for the list
+   * @param hashtags - Array of hashtags (without # prefix)
+   */
+  async saveInterestSet(hashtags: string[], identifier = 'interests', title?: string): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('No authenticated user');
@@ -403,8 +462,13 @@ export class CollectionSetsService {
     try {
       // Build tags
       const tags: string[][] = [
-        ['d', 'interests'],
+        ['d', identifier],
       ];
+
+      // Add title tag if provided
+      if (title) {
+        tags.push(['title', title]);
+      }
 
       // Add hashtag tags (without # prefix)
       for (const hashtag of hashtags) {
@@ -428,6 +492,8 @@ export class CollectionSetsService {
 
       this.logger.debug('Interest set published:', {
         success: result.success,
+        identifier,
+        title,
         hashtagCount: hashtags.length,
       });
 
@@ -439,10 +505,87 @@ export class CollectionSetsService {
   }
 
   /**
+   * Create a new interest set with a unique identifier
+   */
+  async createInterestSet(title: string, hashtags: string[]): Promise<InterestSet | null> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.error('No authenticated user');
+      return null;
+    }
+
+    // Generate a unique d-tag based on timestamp
+    const identifier = `interests-${Date.now()}`;
+
+    const success = await this.saveInterestSet(hashtags, identifier, title);
+    if (success) {
+      return {
+        identifier,
+        title,
+        hashtags,
+        eventId: '', // Will be populated on next fetch
+        created_at: Math.floor(Date.now() / 1000),
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Delete an interest set (publishes kind 5 deletion event)
+   */
+  async deleteInterestSet(identifier: string): Promise<boolean> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.error('No authenticated user');
+      return false;
+    }
+
+    try {
+      // Find the event to delete
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+      const eventToDelete = events.find(e => {
+        const dTag = e.tags.find(tag => tag[0] === 'd')?.[1];
+        return dTag === identifier;
+      });
+
+      if (!eventToDelete) {
+        this.logger.error('Interest set not found:', identifier);
+        return false;
+      }
+
+      // Create deletion event (kind 5)
+      const event = this.nostrService.createEvent(kinds.EventDeletion, 'Deleted interest set', [
+        ['e', eventToDelete.id],
+        ['a', `${INTEREST_SET_KIND}:${pubkey}:${identifier}`],
+      ]);
+      const signedEvent = await this.nostrService.signEvent(event);
+
+      // Save deletion event to database
+      await this.database.saveEvent(signedEvent);
+
+      // Publish deletion event
+      const result = await this.publishService.publish(signedEvent, {
+        useOptimizedRelays: false, // Publish to all account relays
+      });
+
+      this.logger.debug('Interest set deletion published:', {
+        success: result.success,
+        identifier,
+      });
+
+      return result.success;
+    } catch (error) {
+      this.logger.error('Error deleting interest set:', error);
+      return false;
+    }
+  }
+
+  /**
    * Reset interest set to default hashtags
    */
   async resetInterestSetToDefaults(): Promise<boolean> {
-    return this.saveInterestSet([...DEFAULT_HASHTAGS]);
+    return this.saveInterestSet([...DEFAULT_HASHTAGS], 'interests', 'My Interests');
   }
 
   /**
@@ -450,5 +593,23 @@ export class CollectionSetsService {
    */
   getDefaultHashtags(): string[] {
     return [...DEFAULT_HASHTAGS];
+  }
+
+  /**
+   * Format a d-tag as a human-readable title
+   * e.g., "interests-1234567890" -> "Interest List"
+   * e.g., "interests" -> "My Interests"
+   */
+  private formatDTagAsTitle(dTag: string): string {
+    if (dTag === 'interests') {
+      return 'My Interests';
+    }
+    if (dTag.startsWith('interests-')) {
+      return 'Interest List';
+    }
+    // Replace hyphens with spaces and capitalize
+    return dTag
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 }

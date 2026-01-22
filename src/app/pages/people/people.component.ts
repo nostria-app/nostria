@@ -368,11 +368,18 @@ export class PeopleComponent implements OnDestroy {
       const params = this.routeParams();
       const setDTag = params?.get('setId');
       const followSets = this.allFollowSets();
+      const hasInitiallyLoaded = this.followSetsService.hasInitiallyLoaded();
 
       // Only proceed if params have been initialized (not undefined)
       // This prevents race condition where route reuse strategy restores component
       // with a selectedFollowSet but routeParams hasn't emitted yet
       if (params === undefined) {
+        return;
+      }
+
+      // Wait for follow sets to be initially loaded before making decisions
+      // This fixes the race condition where route params emit before follow sets load
+      if (!hasInitiallyLoaded) {
         return;
       }
 
@@ -612,25 +619,25 @@ export class PeopleComponent implements OnDestroy {
     if (followSet) {
       this.updateSearch('');
 
+      // Set the selected follow set immediately to prevent the route effect
+      // from re-triggering selectFollowSet when the URL changes
+      this.selectedFollowSet.set(followSet);
+
+      // Update URL to the clean path format (do this early so URL reflects selection)
+      this.router.navigate(['/people/list', followSet.dTag]);
+
       // Load profiles for all pubkeys in the follow set
       this.loadingFollowSetProfiles.set(true);
       try {
         const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
-        // Only update the selected set and profiles after loading is complete
-        // This prevents the flicker where "All Following" shows during loading
-        this.selectedFollowSet.set(followSet);
         this.followSetProfiles.set(profiles);
       } catch (error) {
         console.error('Failed to load follow set profiles:', error);
-        // On error, still set the follow set but with empty profiles
-        this.selectedFollowSet.set(followSet);
+        // On error, set empty profiles
         this.followSetProfiles.set([]);
       } finally {
         this.loadingFollowSetProfiles.set(false);
       }
-
-      // Update URL to the clean path format
-      this.router.navigate(['/people/list', followSet.dTag]);
     } else {
       // When clearing selection, update immediately
       this.selectedFollowSet.set(null);

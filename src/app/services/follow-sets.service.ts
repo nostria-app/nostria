@@ -35,6 +35,7 @@ export class FollowSetsService {
   followSets = signal<FollowSet[]>([]);
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
+  hasInitiallyLoaded = signal<boolean>(false);
 
   // Track ongoing load to prevent concurrent loads
   private loadingPromise: Promise<void> | null = null;
@@ -65,9 +66,11 @@ export class FollowSetsService {
       this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8));
 
       if (pubkey) {
+        this.hasInitiallyLoaded.set(false);
         this.loadFollowSets(pubkey);
       } else {
         this.followSets.set([]);
+        this.hasInitiallyLoaded.set(false);
       }
     }, { allowSignalWrites: true });
   }
@@ -128,6 +131,7 @@ export class FollowSetsService {
         this.error.set('Failed to load follow sets');
       } finally {
         this.isLoading.set(false);
+        this.hasInitiallyLoaded.set(true);
         this.loadingPromise = null;
       }
     })();

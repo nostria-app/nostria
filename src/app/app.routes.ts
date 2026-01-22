@@ -69,17 +69,11 @@ const profileChildren: Routes = [
       import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
     title: 'Relays',
   },
-  {
+{
     path: 'details',
     loadComponent: () =>
       import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
     title: 'Details',
-  },
-  {
-    path: 'badges',
-    loadComponent: () =>
-      import('./pages/badges/badges.component').then(m => m.BadgesComponent),
-    title: 'Badges',
   },
 ];
 
@@ -732,6 +726,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent),
     title: 'Media Details',
+  },
+  {
+    path: 'badges/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/badges/badges.component').then(m => m.BadgesComponent),
+    title: 'Badges',
   },
 
   { path: '**', redirectTo: '/' },

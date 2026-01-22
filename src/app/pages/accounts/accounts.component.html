@@ -1,5 +1,12 @@
+<div class="panel-header">
+  <h2 class="panel-title title-font">Manage Accounts</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="layout.showLoginDialog()" matTooltip="Add account">
+    <mat-icon>person_add</mat-icon>
+  </button>
+</div>
+
 <div class="accounts-container">
-  <h1 class="title">Manage Accounts</h1>
 
   @let currentAccount = accountState.account();
   @let currentMetadata = accountState.profile()?.data;
@@ -107,7 +114,6 @@
     <button
       (click)="nostrService.logout()"
       mat-raised-button
-      color="primary"
       class="add-account-button"
     >
       <mat-icon>account_circle_off</mat-icon> Set no active account
@@ -115,13 +121,4 @@
   } @else {
     <p class="no-accounts">No accounts available</p>
   }
-
-  <button
-    (click)="layout.showLoginDialog()"
-    mat-raised-button
-    color="primary"
-    class="add-account-button"
-  >
-    <mat-icon>person_add</mat-icon> Add account
-  </button>
 </div>

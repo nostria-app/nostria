@@ -2487,3 +2487,45 @@ h1 {
     background-color: var(--mat-sys-surface-container);
   }
 }
+
+// Dynamic Hashtag Feed Styles
+.dynamic-feed-unit {
+  .dynamic-feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--mat-sys-surface-container);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0;
+
+    .dynamic-feed-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .dynamic-feed-label {
+        font-size: 16px;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .dynamic-feed-count {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+:host-context(.dark) .dynamic-feed-unit {
+  .dynamic-feed-header {
+    background-color: var(--mat-sys-surface-container);
+  }
+}

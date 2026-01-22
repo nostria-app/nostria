@@ -1,27 +1,23 @@
-<div class="wallet-page">
-  <!-- Toolbar -->
-  <div class="wallet-toolbar">
-    <div class="toolbar-title">
-      <mat-icon>account_balance_wallet</mat-icon>
-      <h1 i18n="@@wallet.title">Wallet</h1>
-    </div>
-    @if (wallets.hasWallets()) {
-      <div class="toolbar-balance">
-        <span class="balance-value" style="cursor:pointer" tabindex="0" role="button" matTooltip="Click to show/hide balance"
-      (click)="toggleHideWalletAmounts()"
-      (keydown.enter)="toggleHideWalletAmounts()"
-      (keydown.space)="toggleHideWalletAmounts()">
-  {{ getTotalBalance() }}
+<div class="panel-header">
+  <h2 class="panel-title title-font">Wallet</h2>
+  @if (wallets.hasWallets()) {
+    <div class="toolbar-balance">
+      <span class="balance-value" style="cursor:pointer" tabindex="0" role="button" matTooltip="Click to show/hide balance"
+    (click)="toggleHideWalletAmounts()"
+    (keydown.enter)="toggleHideWalletAmounts()"
+    (keydown.space)="toggleHideWalletAmounts()">
+{{ getTotalBalance() }}
 </span>
-        <span class="balance-label" i18n="@@wallet.sats">sats</span>
-      </div>
-    }
-    <div class="toolbar-spacer"></div>
-    <button mat-fab extended (click)="openAddWalletDialog()" class="add-wallet-btn">
-      <mat-icon>add</mat-icon>
-      <span i18n="@@wallet.add-wallet">Add Wallet</span>
-    </button>
-  </div>
+      <span class="balance-label" i18n="@@wallet.sats">sats</span>
+    </div>
+  }
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="openAddWalletDialog()" matTooltip="Add Wallet">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
+
+<div class="wallet-page">
 
   <!-- Tabs -->
   <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="onTabChange($event)" class="wallet-tabs">

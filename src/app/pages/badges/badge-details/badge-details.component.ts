@@ -234,7 +234,7 @@ export class BadgeDetailsComponent {
     }
   }
 
-  goBack(): void {
+goBack(): void {
     const badge = this.badge();
     if (badge && badge.creator) {
       // Navigate to the badge creator's badges page
@@ -243,11 +243,11 @@ export class BadgeDetailsComponent {
 
       // Include tab index if available
       if (this.returnTabIndex() !== null) {
-        this.router.navigate([{ outlets: { right: ['p', identifier, 'badges'] } }], {
+        this.router.navigate([{ outlets: { right: ['badges', identifier] } }], {
           queryParams: { tab: this.returnTabIndex() },
         });
       } else {
-        this.router.navigate([{ outlets: { right: ['p', identifier, 'badges'] } }]);
+        this.router.navigate([{ outlets: { right: ['badges', identifier] } }]);
       }
     } else {
       // Fallback to generic badges page if no creator info
