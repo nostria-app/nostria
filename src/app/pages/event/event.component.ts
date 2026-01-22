@@ -22,6 +22,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
@@ -31,6 +33,9 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 
 /** Description of the EventPageComponent
  *
@@ -51,9 +56,13 @@ import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/n
 //   deepestReplyId?: string;
 // }
 
+// Constants for follow set filter types
+export const REPLY_FILTER_EVERYONE = 'everyone';
+export const REPLY_FILTER_FOLLOWING = 'following';
+
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, NoteEditorDialogComponent],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, NoteEditorDialogComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {
@@ -87,12 +96,123 @@ export class EventPageComponent {
   private location = inject(Location);
   private rightPanel = inject(RightPanelService);
   private panelNav = inject(PanelNavigationService);
+  followSetsService = inject(FollowSetsService);
+  accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
+
+  // Reply filter state
+  // 'everyone' = no filter, 'following' = main contact list, or d-tag of a custom follow set
+  selectedReplyFilter = signal<string>(REPLY_FILTER_EVERYONE);
+
+  // Available follow sets for the filter menu
+  availableFollowSets = computed<FollowSet[]>(() => this.followSetsService.followSets());
+
+  // Get the currently selected follow set (for display)
+  selectedFollowSetName = computed<string>(() => {
+    const filter = this.selectedReplyFilter();
+    if (filter === REPLY_FILTER_EVERYONE) return 'Everyone';
+    if (filter === REPLY_FILTER_FOLLOWING) return 'Following';
+    const set = this.availableFollowSets().find(s => s.dTag === filter);
+    return set?.title || 'Custom List';
+  });
+
+  // Check if a reply filter is active
+  isReplyFilterActive = computed<boolean>(() => this.selectedReplyFilter() !== REPLY_FILTER_EVERYONE);
+
+  // Filtered threaded replies based on selected follow set
+  filteredThreadedReplies = computed<ThreadedEvent[]>(() => {
+    const filter = this.selectedReplyFilter();
+    const replies = this.threadedReplies();
+
+    // No filter - show all replies
+    if (filter === REPLY_FILTER_EVERYONE) {
+      return replies;
+    }
+
+    // Get the set of pubkeys to filter by
+    let allowedPubkeys: Set<string>;
+
+    if (filter === REPLY_FILTER_FOLLOWING) {
+      // Use main following list
+      allowedPubkeys = new Set(this.accountState.followingList());
+    } else {
+      // Use custom follow set
+      const followSet = this.availableFollowSets().find(s => s.dTag === filter);
+      if (!followSet) {
+        // Follow set not found, show all
+        return replies;
+      }
+      allowedPubkeys = new Set(followSet.pubkeys);
+    }
+
+    // Also include the main event author so their replies are always shown
+    const mainEventPubkey = this.event()?.pubkey;
+    if (mainEventPubkey) {
+      allowedPubkeys.add(mainEventPubkey);
+    }
+
+    // Filter the threaded replies recursively
+    return this.filterThreadedReplies(replies, allowedPubkeys);
+  });
+
+  /**
+   * Recursively filter threaded replies to only include those from allowed pubkeys
+   */
+  private filterThreadedReplies(replies: ThreadedEvent[], allowedPubkeys: Set<string>): ThreadedEvent[] {
+    const result: ThreadedEvent[] = [];
+
+    for (const reply of replies) {
+      // Check if this reply's author is in the allowed set
+      const isAllowed = allowedPubkeys.has(reply.event.pubkey);
+
+      // Recursively filter child replies
+      const filteredChildren = this.filterThreadedReplies(reply.replies, allowedPubkeys);
+
+      if (isAllowed) {
+        // Include this reply with filtered children
+        result.push({
+          ...reply,
+          replies: filteredChildren,
+        });
+      } else if (filteredChildren.length > 0) {
+        // This reply is filtered out, but it has children that match
+        // Include the children directly (they become top-level in this branch)
+        result.push(...filteredChildren);
+      }
+      // If not allowed and no matching children, skip entirely
+    }
+
+    return result;
+  }
+
+  /**
+   * Set the reply filter and persist it
+   */
+  setReplyFilter(filter: string): void {
+    this.selectedReplyFilter.set(filter);
+    // Persist to local storage
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setThreadReplyFilter(pubkey, filter);
+    }
+  }
+
+  /**
+   * Load saved reply filter from storage
+   */
+  private loadSavedReplyFilter(): void {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const savedFilter = this.accountLocalState.getThreadReplyFilter(pubkey);
+      this.selectedReplyFilter.set(savedFilter);
+    }
+  }
 
   // Track collapsed thread IDs
   collapsedThreads = signal<Set<string>>(new Set());
@@ -193,6 +313,9 @@ export class EventPageComponent {
   constructor() {
     // this.item = this.route.snapshot.data['data'];
     console.log('EventPageComponent initialized with data:', this.item);
+
+    // Load saved reply filter from local storage
+    this.loadSavedReplyFilter();
 
     if (this.transferState.hasKey(EVENT_STATE_KEY)) {
       const data = this.transferState.get<EventData | null>(EVENT_STATE_KEY, null);

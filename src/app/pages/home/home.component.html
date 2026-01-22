@@ -2,7 +2,7 @@
 <app-introduction></app-introduction>
 } @else {
 <div class="home-dashboard">
-  <!-- Hero Section - Primary CTA -->
+  <!-- Hero Section -->
   <header class="hero-section">
     <div class="hero-content">
       <h1 class="greeting">
@@ -14,219 +14,204 @@
     </div>
   </header>
 
-  <!-- Primary Features - Large Cards -->
-  <section class="primary-features">
-    <!-- Feeds - Hero Card -->
-    <a routerLink="/f" class="hero-card feeds-hero" mat-ripple>
-      <div class="card-icon">
-        <mat-icon>dynamic_feed</mat-icon>
+  <!-- Bento Grid Layout -->
+  <div class="bento-grid">
+    <!-- Featured: Feeds - Large tile spanning 2 columns -->
+    <a routerLink="/f" class="bento-tile tile-feeds tile-large" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <div class="tile-icon-wrapper">
+          <mat-icon>dynamic_feed</mat-icon>
+        </div>
+        <div class="tile-text">
+          <h2 i18n="@@home.feeds.title">Your Feeds</h2>
+          <p i18n="@@home.feeds.description">Stay updated with posts from people you follow</p>
+        </div>
+        <mat-icon class="tile-arrow">arrow_forward</mat-icon>
       </div>
-      <div class="card-content">
-        <h2 i18n="@@home.feeds.title">Your Feeds</h2>
-        <p i18n="@@home.feeds.description">Stay updated with posts from people you follow</p>
-      </div>
-      <mat-icon class="card-arrow">arrow_forward</mat-icon>
     </a>
 
-    <!-- Messages, Articles & Summary Row -->
-    <div class="triple-cards">
-      <a routerLink="/messages" class="feature-card primary-card messages-card" mat-ripple>
-        <div class="card-icon">
-          <mat-icon>mail</mat-icon>
+    <!-- Messages - Medium tile -->
+    <a routerLink="/messages" class="bento-tile tile-messages tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">mail</mat-icon>
+        <h3 i18n="@@home.messages.title">Messages</h3>
+        <p i18n="@@home.messages.description">Private conversations</p>
+      </div>
+    </a>
+
+    <!-- Articles - Medium tile -->
+    <a routerLink="/articles" class="bento-tile tile-articles tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">article</mat-icon>
+        <h3 i18n="@@home.articles.title">Articles</h3>
+        <p i18n="@@home.articles.description">Long-form content</p>
+      </div>
+    </a>
+
+    <!-- Summary - Small tile -->
+    <a routerLink="/summary" class="bento-tile tile-summary tile-small" mat-ripple>
+      <mat-icon class="tile-icon">auto_awesome</mat-icon>
+      <span i18n="@@home.summary.title">Summary</span>
+    </a>
+
+    <!-- Notifications - Small tile -->
+    <a routerLink="/notifications" class="bento-tile tile-notifications tile-small" mat-ripple>
+      <mat-icon class="tile-icon">notifications</mat-icon>
+      <span i18n="@@home.notifications">Notifications</span>
+    </a>
+
+    <!-- Profile - Small tile -->
+    <a [routerLink]="['/p', account.pubkey()]" class="bento-tile tile-profile tile-small" mat-ripple>
+      <mat-icon class="tile-icon">account_circle</mat-icon>
+      <span i18n="@@home.profile">Profile</span>
+    </a>
+
+    <!-- Discover - Wide horizontal tile -->
+    <a routerLink="/discover" class="bento-tile tile-discover tile-wide" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">explore</mat-icon>
+        <div class="tile-text">
+          <h3 i18n="@@home.discover">Discover</h3>
+          <p>Explore new content and trends</p>
         </div>
-        <div class="card-content">
-          <h3 i18n="@@home.messages.title">Messages</h3>
-          <p i18n="@@home.messages.description">Private conversations</p>
-        </div>
-      </a>
+      </div>
+    </a>
 
-      <a routerLink="/articles" class="feature-card primary-card articles-card" mat-ripple>
-        <div class="card-icon">
-          <mat-icon>article</mat-icon>
-        </div>
-        <div class="card-content">
-          <h3 i18n="@@home.articles.title">Articles</h3>
-          <p i18n="@@home.articles.description">Long-form content</p>
-        </div>
-      </a>
+    <!-- People - Medium tile -->
+    <a routerLink="/people" class="bento-tile tile-people tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">people</mat-icon>
+        <h3 i18n="@@home.people">People</h3>
+        <p>Your network</p>
+      </div>
+    </a>
 
-      <a routerLink="/summary" class="feature-card primary-card summary-card" mat-ripple>
-        <div class="card-icon">
-          <mat-icon>auto_awesome</mat-icon>
-        </div>
-        <div class="card-content">
-          <h3 i18n="@@home.summary.title">Summary</h3>
-          <p i18n="@@home.summary.description">Quick insight</p>
-        </div>
-      </a>
-    </div>
-  </section>
+    <!-- Music - Tall tile -->
+    <a routerLink="/music" class="bento-tile tile-music tile-tall" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">music_note</mat-icon>
+        <h3 i18n="@@home.music.title">Music</h3>
+        <p i18n="@@home.music.description">Listen & discover</p>
+      </div>
+    </a>
 
-  <!-- Secondary Features - Compact Grid -->
-  <section class="secondary-features">
-    <h2 class="section-label" i18n="@@home.section.connect">Connect</h2>
-    <div class="compact-grid">
-      <a routerLink="/notifications" class="compact-card" mat-ripple>
-        <mat-icon class="compact-icon notifications-icon">notifications</mat-icon>
-        <span i18n="@@home.notifications">Notifications</span>
-      </a>
+    <!-- Media - Medium tile -->
+    <a routerLink="/media" class="bento-tile tile-media tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">photo_library</mat-icon>
+        <h3 i18n="@@home.media">Media</h3>
+        <p>Photos & videos</p>
+      </div>
+    </a>
 
-      <button class="compact-card" mat-ripple (click)="openShoutouts()">
-        <mat-icon class="compact-icon shoutouts-icon">chat_bubble</mat-icon>
-        <span i18n="@@home.shoutouts">Shoutouts</span>
-      </button>
+    <!-- Streams - Medium tile -->
+    <a routerLink="/streams" class="bento-tile tile-streams tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">live_tv</mat-icon>
+        <h3 i18n="@@home.streams.title">Streams</h3>
+        <p i18n="@@home.streams.description">Live broadcasts</p>
+      </div>
+    </a>
 
-      <a [routerLink]="['/p', account.pubkey()]" class="compact-card" mat-ripple>
-        <mat-icon class="compact-icon profile-icon">account_circle</mat-icon>
-        <span i18n="@@home.profile">Profile</span>
-      </a>
+    <!-- Collections - Medium tile -->
+    <a routerLink="/collections" class="bento-tile tile-collections tile-medium" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <mat-icon class="tile-icon">collections_bookmark</mat-icon>
+        <h3 i18n="@@home.collections">Collections</h3>
+        <p>Your saved items</p>
+      </div>
+    </a>
 
-      <a routerLink="/people" class="compact-card" mat-ripple>
-        <mat-icon class="compact-icon people-icon">people</mat-icon>
-        <span i18n="@@home.people">People</span>
-      </a>
+    <!-- Quick Actions Row -->
+    <button class="bento-tile tile-shoutouts tile-tiny" mat-ripple (click)="openShoutouts()">
+      <mat-icon>chat_bubble</mat-icon>
+      <span i18n="@@home.shoutouts">Shoutouts</span>
+    </button>
 
-      <a routerLink="/discover" class="compact-card" mat-ripple>
-        <mat-icon class="compact-icon discover-icon">explore</mat-icon>
-        <span i18n="@@home.discover">Discover</span>
-      </a>
+    <a routerLink="/people/discover" class="bento-tile tile-find-people tile-tiny" mat-ripple>
+      <mat-icon>person_search</mat-icon>
+      <span i18n="@@home.find-people">Find People</span>
+    </a>
 
-      <a routerLink="/people/discover" class="compact-card" mat-ripple>
-        <mat-icon class="compact-icon find-people-icon">person_search</mat-icon>
-        <span i18n="@@home.find-people">Find People</span>
-      </a>
-    </div>
-  </section>
+    <a routerLink="/lists" class="bento-tile tile-lists tile-tiny" mat-ripple>
+      <mat-icon>lists</mat-icon>
+      <span i18n="@@home.lists">Lists</span>
+    </a>
 
-  <!-- Content Section -->
-  <section class="content-features">
-    <h2 class="section-label" i18n="@@home.section.content">Content</h2>
-    <div class="content-grid">
-      <a routerLink="/media" class="content-item" mat-ripple>
-        <mat-icon>photo_library</mat-icon>
-        <span i18n="@@home.media">Media</span>
-      </a>
+    <a routerLink="/polls" class="bento-tile tile-polls tile-tiny" mat-ripple>
+      <mat-icon>poll</mat-icon>
+      <span i18n="@@home.polls">Polls</span>
+    </a>
 
-      <a routerLink="/lists" class="content-item" mat-ripple>
-        <mat-icon>lists</mat-icon>
-        <span i18n="@@home.lists">Lists</span>
-      </a>
+    <!-- Playlists & Queue Row -->
+    <a routerLink="/playlists" class="bento-tile tile-playlists tile-small" mat-ripple>
+      <mat-icon class="tile-icon">playlist_play</mat-icon>
+      <span i18n="@@home.playlists.title">Playlists</span>
+    </a>
 
-      <a routerLink="/polls" class="content-item" mat-ripple>
-        <mat-icon>poll</mat-icon>
-        <span i18n="@@home.polls">Polls</span>
-      </a>
+    <a routerLink="/queue" class="bento-tile tile-queue tile-small" mat-ripple>
+      <mat-icon class="tile-icon">queue_music</mat-icon>
+      <span i18n="@@home.queue.title">Queue</span>
+    </a>
 
-      <a routerLink="/articles/edit" class="content-item" mat-ripple>
-        <mat-icon>edit_document</mat-icon>
-        <span i18n="@@home.my-articles">My Articles</span>
-      </a>
-    </div>
-  </section>
+    <a routerLink="/articles/edit" class="bento-tile tile-my-articles tile-small" mat-ripple>
+      <mat-icon class="tile-icon">edit_document</mat-icon>
+      <span i18n="@@home.my-articles">My Articles</span>
+    </a>
 
-  <!-- Media Section -->
-  <section class="media-features">
-    <h2 class="section-label" i18n="@@home.section.media">Media & Entertainment</h2>
-    <div class="media-grid">
-      <a routerLink="/music" class="media-card music-card" mat-ripple>
-        <mat-icon>music_note</mat-icon>
-        <div class="media-content">
-          <h3 i18n="@@home.music.title">Music</h3>
-          <p i18n="@@home.music.description">Listen & discover</p>
-        </div>
-      </a>
-
-      <a routerLink="/streams" class="media-card streams-card" mat-ripple>
-        <mat-icon>live_tv</mat-icon>
-        <div class="media-content">
-          <h3 i18n="@@home.streams.title">Streams</h3>
-          <p i18n="@@home.streams.description">Live broadcasts</p>
-        </div>
-      </a>
-
-      <a routerLink="/playlists" class="media-card playlists-card" mat-ripple>
-        <mat-icon>playlist_play</mat-icon>
-        <div class="media-content">
-          <h3 i18n="@@home.playlists.title">Playlists</h3>
-          <p i18n="@@home.playlists.description">Your collections</p>
-        </div>
-      </a>
-
-      <a routerLink="/queue" class="media-card queue-card" mat-ripple>
-        <mat-icon>queue_music</mat-icon>
-        <div class="media-content">
-          <h3 i18n="@@home.queue.title">Queue</h3>
-          <p i18n="@@home.queue.description">Media queue</p>
-        </div>
-      </a>
-    </div>
-
-    <div class="media-secondary">
-      <a routerLink="/meetings" class="media-secondary-item" mat-ripple>
-        <mat-icon>adaptive_audio_mic</mat-icon>
-        <span i18n="@@home.meetings">Live Meetings</span>
-      </a>
-    </div>
-  </section>
+    <a routerLink="/meetings" class="bento-tile tile-meetings tile-small" mat-ripple>
+      <mat-icon class="tile-icon">adaptive_audio_mic</mat-icon>
+      <span i18n="@@home.meetings">Live Meetings</span>
+    </a>
+  </div>
 
   <!-- AI Section -->
-  @if (isAiEnabled()) {
-  <section class="ai-features">
+  <section class="section-block">
     <h2 class="section-label" i18n="@@home.section.ai">AI</h2>
-    <div class="ai-grid">
-      <a routerLink="/ai" class="ai-item" mat-ripple>
+    <div class="section-row">
+      @if (isAiEnabled()) {
+      <a routerLink="/ai" class="mini-tile" mat-ripple>
         <mat-icon>psychology</mat-icon>
         <span i18n="@@home.ai.models">AI Models</span>
       </a>
-
-      <a routerLink="/ai/settings" class="ai-item" mat-ripple>
+      }
+      <a routerLink="/ai/settings" class="mini-tile" mat-ripple>
         <mat-icon>settings_suggest</mat-icon>
         <span i18n="@@home.ai.settings">AI Settings</span>
       </a>
     </div>
   </section>
-  } @else {
-  <section class="ai-features">
-    <h2 class="section-label" i18n="@@home.section.ai">AI</h2>
-    <div class="ai-grid">
-      <a routerLink="/ai/settings" class="ai-item" mat-ripple>
-        <mat-icon>settings_suggest</mat-icon>
-        <span i18n="@@home.ai.settings">AI Settings</span>
-      </a>
-    </div>
-  </section>
-  }
 
   <!-- Collections Section -->
-  <section class="library-features">
+  <section class="section-block">
     <h2 class="section-label" i18n="@@home.section.collections">Your Collections</h2>
-    <div class="library-grid">
-      <a routerLink="/collections" class="library-item library-item-primary" mat-ripple>
-        <mat-icon>collections_bookmark</mat-icon>
-        <span i18n="@@home.collections">Collections</span>
-      </a>
-
-      <a routerLink="/collections/media" class="library-item" mat-ripple>
+    <div class="section-row">
+      <a routerLink="/collections/media" class="mini-tile" mat-ripple>
         <mat-icon>photo_library</mat-icon>
         <span i18n="@@home.collections.media">Media</span>
       </a>
-
-      <a routerLink="/collections/bookmarks" class="library-item" mat-ripple>
+      <a routerLink="/collections/bookmarks" class="mini-tile" mat-ripple>
         <mat-icon>bookmarks</mat-icon>
         <span i18n="@@home.bookmarks">Bookmarks</span>
       </a>
-
-      <a routerLink="/collections/relays" class="library-item" mat-ripple>
+      <a routerLink="/collections/relays" class="mini-tile" mat-ripple>
         <mat-icon>hub</mat-icon>
         <span i18n="@@home.relays">Relays</span>
       </a>
-
-      <a routerLink="/collections/emojis" class="library-item" mat-ripple>
+      <a routerLink="/collections/emojis" class="mini-tile" mat-ripple>
         <mat-icon>emoji_emotions</mat-icon>
         <span i18n="@@home.collections.emojis">Emojis</span>
       </a>
-
-      <a routerLink="/collections/interests" class="library-item" mat-ripple>
+      <a routerLink="/collections/interests" class="mini-tile" mat-ripple>
         <mat-icon>interests</mat-icon>
         <span i18n="@@home.collections.interests">Interests</span>
       </a>
@@ -235,40 +220,40 @@
 
   <!-- Premium Section -->
   @if (account.hasActiveSubscription()) {
-  <section class="premium-features active">
+  <section class="premium-section active">
     <div class="premium-header">
       <mat-icon class="star-icon">star</mat-icon>
       <h2 i18n="@@home.section.premium">Premium Tools</h2>
     </div>
     <div class="premium-grid">
-      <a routerLink="/stats" class="premium-item" mat-ripple>
+      <a routerLink="/stats" class="premium-tile" mat-ripple>
         <mat-icon>bar_chart</mat-icon>
         <span i18n="@@home.analytics">Analytics</span>
       </a>
-      <a routerLink="/settings/backup" class="premium-item" mat-ripple>
+      <a routerLink="/settings/backup" class="premium-tile" mat-ripple>
         <mat-icon>cloud_upload</mat-icon>
         <span i18n="@@home.backup">Backup</span>
       </a>
-      <a routerLink="/memos" class="premium-item" mat-ripple>
+      <a routerLink="/memos" class="premium-tile" mat-ripple>
         <mat-icon>sticky_note_2</mat-icon>
         <span i18n="@@home.memos">Memos</span>
       </a>
-      <a routerLink="/calendar" class="premium-item" mat-ripple>
+      <a routerLink="/calendar" class="premium-tile" mat-ripple>
         <mat-icon>calendar_month</mat-icon>
         <span i18n="@@home.calendar">Calendar</span>
       </a>
-      <a routerLink="/youtube" class="premium-item" mat-ripple>
+      <a routerLink="/youtube" class="premium-tile" mat-ripple>
         <mat-icon>video_library</mat-icon>
         <span i18n="@@home.youtube">YouTube</span>
       </a>
-      <a routerLink="/premium" class="premium-item" mat-ripple>
+      <a routerLink="/premium" class="premium-tile" mat-ripple>
         <mat-icon>card_membership</mat-icon>
         <span i18n="@@home.subscription">Subscription</span>
       </a>
     </div>
   </section>
   } @else {
-  <section class="premium-features upsell">
+  <section class="premium-section upsell">
     <a routerLink="/premium" class="premium-upsell-card" mat-ripple>
       <div class="upsell-content">
         <mat-icon class="star-icon">star</mat-icon>
@@ -283,32 +268,28 @@
   }
 
   <!-- More Section -->
-  <section class="more-features">
+  <section class="section-block">
     <h2 class="section-label" i18n="@@home.section.more">More</h2>
-    <div class="more-grid">
-      <button class="more-item" mat-ripple (click)="openCommandPalette()">
+    <div class="section-row">
+      <button class="mini-tile" mat-ripple (click)="openCommandPalette()">
         <mat-icon>terminal</mat-icon>
         <span i18n="@@home.commands">Commands</span>
       </button>
-
-      <button class="more-item" mat-ripple (click)="openPublishCustomEvent()">
+      <button class="mini-tile" mat-ripple (click)="openPublishCustomEvent()">
         <mat-icon>publish</mat-icon>
         <span i18n="@@home.publish-event">Publish Event</span>
       </button>
-
       @if (shouldShowInstallOption()) {
-      <button class="more-item" mat-ripple (click)="openInstallDialog()">
+      <button class="mini-tile" mat-ripple (click)="openInstallDialog()">
         <mat-icon>download</mat-icon>
         <span i18n="@@home.install-app">Install App</span>
       </button>
       }
-
-      <a routerLink="/settings" class="more-item" mat-ripple>
+      <a routerLink="/settings" class="mini-tile" mat-ripple>
         <mat-icon>settings</mat-icon>
         <span i18n="@@home.settings">Settings</span>
       </a>
-
-      <button class="more-item" mat-ripple (click)="openWhatsNewDialog()">
+      <button class="mini-tile" mat-ripple (click)="openWhatsNewDialog()">
         <mat-icon>campaign</mat-icon>
         <span i18n="@@home.whats-new">What's New</span>
       </button>

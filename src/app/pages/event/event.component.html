@@ -7,7 +7,38 @@
   }
   <h2 class="panel-title title-font">Thread</h2>
   <span class="panel-header-spacer"></span>
+
+  <!-- Reply Filter Button -->
+  <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu"
+    [matTooltip]="'Filter replies: ' + selectedFollowSetName()"
+    [class.filter-active]="isReplyFilterActive()">
+    <mat-icon>{{ isReplyFilterActive() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
+  </button>
 </div>
+
+<!-- Reply Filter Menu -->
+<mat-menu #replyFilterMenu="matMenu">
+  <button mat-menu-item (click)="setReplyFilter('everyone')"
+    [class.selected]="selectedReplyFilter() === 'everyone'">
+    <mat-icon>public</mat-icon>
+    <span>Everyone</span>
+  </button>
+  <button mat-menu-item (click)="setReplyFilter('following')"
+    [class.selected]="selectedReplyFilter() === 'following'">
+    <mat-icon>people</mat-icon>
+    <span>Following</span>
+  </button>
+  @if (availableFollowSets().length > 0) {
+  <mat-divider></mat-divider>
+  @for (followSet of availableFollowSets(); track followSet.dTag) {
+  <button mat-menu-item (click)="setReplyFilter(followSet.dTag)"
+    [class.selected]="selectedReplyFilter() === followSet.dTag">
+    <mat-icon>{{ followSet.isPrivate ? 'lock' : 'group' }}</mat-icon>
+    <span>{{ followSet.title }}</span>
+  </button>
+  }
+  }
+</mat-menu>
 
 <!-- Scrollable Content -->
 <div class="event-content">
@@ -114,8 +145,19 @@
     </div>
     }
 
-    <!-- Show replies if available -->
-    @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
+    <!-- Filter indicator when filter is active -->
+    @if (isReplyFilterActive() && !isLoadingReplies()) {
+    <div class="filter-indicator">
+      <mat-icon>filter_alt</mat-icon>
+      <span>Showing replies from: {{ selectedFollowSetName() }}</span>
+      <button mat-icon-button (click)="setReplyFilter('everyone')" matTooltip="Clear filter">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    }
+
+    <!-- Show filtered replies -->
+    @for (threadedEvent of filteredThreadedReplies(); track threadedEvent.event.id) {
     <ng-container [ngTemplateOutlet]="replyTemplate"
       [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
     }
@@ -125,6 +167,15 @@
     <div class="no-replies">
       <mat-icon>chat_bubble_outline</mat-icon>
       <p>No replies yet</p>
+    </div>
+    }
+
+    <!-- Show "No matching replies" when filter is active but no results -->
+    @if (isReplyFilterActive() && threadedReplies().length > 0 && filteredThreadedReplies().length === 0 && !isLoadingReplies()) {
+    <div class="no-replies">
+      <mat-icon>filter_alt_off</mat-icon>
+      <p>No replies from {{ selectedFollowSetName() }}</p>
+      <button mat-stroked-button (click)="setReplyFilter('everyone')">Show all replies</button>
     </div>
     }
   </div>

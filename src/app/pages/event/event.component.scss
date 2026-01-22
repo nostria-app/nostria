@@ -540,3 +540,50 @@
   border-radius: 8px;
   color: var(--mat-sys-on-surface);
 }
+
+// Reply filter styles
+.filter-active {
+  color: var(--mat-sys-primary) !important;
+}
+
+.filter-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 0 12px 0;
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  border-radius: 8px;
+  font-size: 0.875rem;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+  }
+
+  span {
+    flex: 1;
+  }
+
+  button {
+    margin: -4px -8px -4px 0;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+// Menu item selected state
+::ng-deep .mat-mdc-menu-item.selected {
+  background-color: var(--mat-sys-primary-container);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+}
