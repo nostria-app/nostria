@@ -714,6 +714,10 @@ export class FeedsComponent implements OnDestroy {
           // Clear relay feed if active
           this.activeRelayDomain.set('');
 
+          // Mark dynamic feed as active BEFORE clearing the active feed
+          // This prevents the auto-selection effect from overriding
+          this.feedsCollectionService.setDynamicFeedActive(true);
+
           // Clear the active feed selection to show dynamic feed
           this.feedsCollectionService.clearActiveFeed();
 
@@ -1686,6 +1690,8 @@ export class FeedsComponent implements OnDestroy {
     if (this.dynamicFeed()) {
       this.feedService.cleanupDynamicFeed();
       this.dynamicFeed.set(null);
+      // Clear the dynamic feed active flag so auto-selection can work again
+      this.feedsCollectionService.setDynamicFeedActive(false);
     }
   }
 

@@ -181,20 +181,6 @@
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-.queue-header {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: 8px;
-  padding: 8px 16px 0;
-
-  .queue-header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-}
-
 .empty-queue {
   display: flex;
   flex-direction: column;
@@ -263,17 +249,5 @@
 
   mat-list {
     width: 100%;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .queue-header {
-    padding: 8px 8px 0;
-
-    .queue-header-actions {
-      button:not([mat-icon-button]) {
-        flex: 1;
-      }
-    }
   }
 }

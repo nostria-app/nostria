@@ -26,6 +26,9 @@ export class FeedsCollectionService {
   // Signal for active feed ID
   private readonly _activeFeedId = signal<string | null>(null);
 
+  // Flag to track if a dynamic feed is active (prevents auto-restore from overriding)
+  private readonly _dynamicFeedActive = signal<boolean>(false);
+
   // Flag to track if user has manually changed the feed (prevents auto-restore from overriding)
   private userChangedFeed = false;
 
@@ -99,12 +102,19 @@ export class FeedsCollectionService {
       const feeds = this.feeds();
       const activeFeedId = this._activeFeedId();
       const hasAccount = this.accountState.account() !== null;
+      const dynamicFeedActive = this._dynamicFeedActive();
 
       // Use untracked to prevent reactive loops when updating signals
       untracked(() => {
         // Only set active feed if there's an account
         if (!hasAccount) {
           this.logger.debug('No active account - skipping feed sync');
+          return;
+        }
+
+        // Don't auto-select a feed if a dynamic feed is active
+        if (dynamicFeedActive) {
+          this.logger.debug('Dynamic feed active - skipping auto-selection');
           return;
         }
 
@@ -275,6 +285,22 @@ export class FeedsCollectionService {
   clearActiveFeed(): void {
     this._activeFeedId.set(null);
     this.logger.debug('Cleared active feed');
+  }
+
+  /**
+   * Set the dynamic feed active flag.
+   * When true, prevents auto-selection of regular feeds.
+   */
+  setDynamicFeedActive(active: boolean): void {
+    this._dynamicFeedActive.set(active);
+    this.logger.debug(`Dynamic feed active: ${active}`);
+  }
+
+  /**
+   * Check if a dynamic feed is currently active
+   */
+  isDynamicFeedActive(): boolean {
+    return this._dynamicFeedActive();
   }
 
 

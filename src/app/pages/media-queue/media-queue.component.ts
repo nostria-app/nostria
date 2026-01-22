@@ -18,6 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { PanelHeaderComponent, PanelAction } from '../../components/panel-header/panel-header.component';
 import { nip19 } from 'nostr-tools';
 
 @Component({
@@ -33,6 +34,7 @@ import { nip19 } from 'nostr-tools';
     DragDropModule,
     PlaylistsTabComponent,
     UserProfileComponent,
+    PanelHeaderComponent,
   ],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
@@ -49,6 +51,16 @@ export class MediaQueueComponent implements OnInit {
   private ngZone = inject(NgZone);
 
   selectedTabIndex = signal(0);
+
+  // Queue header actions
+  queueActions = signal<PanelAction[]>([
+    {
+      id: 'add-to-playlist',
+      icon: 'playlist_add',
+      label: 'Add to Playlist',
+      tooltip: 'Add entire queue to playlist',
+    },
+  ]);
 
   ngOnInit(): void {
     // Set initial tab based on route
@@ -292,6 +304,17 @@ export class MediaQueueComponent implements OnInit {
 
   clearQueue() {
     this.media.clearQueue();
+  }
+
+  /**
+   * Handle queue header action clicks
+   */
+  onQueueActionClick(action: PanelAction): void {
+    switch (action.id) {
+      case 'add-to-playlist':
+        this.addQueueToPlaylist();
+        break;
+    }
   }
 
   isCurrentPlaying(item: MediaItem, index: number): boolean {
