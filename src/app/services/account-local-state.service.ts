@@ -81,6 +81,7 @@ interface AccountLocalState {
   favoritesMigrated?: boolean; // Whether favorites have been migrated to Nostr (kind 30000)
   leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
   zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
+  threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', or follow set d-tag
 }
 
 /**
@@ -236,6 +237,24 @@ export class AccountLocalStateService {
    */
   setActiveFeed(pubkey: string, feedId: string | null | undefined): void {
     this.updateAccountState(pubkey, { activeFeed: feedId || undefined });
+  }
+
+  /**
+   * Get thread reply filter for an account
+   * Returns 'everyone' if not set
+   */
+  getThreadReplyFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.threadReplyFilter || 'everyone';
+  }
+
+  /**
+   * Set thread reply filter for an account
+   */
+  setThreadReplyFilter(pubkey: string, filter: string): void {
+    // Only store non-default values
+    const value = filter === 'everyone' ? undefined : filter;
+    this.updateAccountState(pubkey, { threadReplyFilter: value });
   }
 
   /**
