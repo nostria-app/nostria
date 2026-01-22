@@ -1368,8 +1368,12 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
+openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
     this.router.navigate(['/b', badge], { ...extra, state: { event } });
+  }
+
+  openBadgesPage(pubkeyOrNpub: string): void {
+    this.router.navigate([{ outlets: { right: ['user-badges', pubkeyOrNpub] } }]);
   }
 
   scrollToOptimalProfilePosition() {

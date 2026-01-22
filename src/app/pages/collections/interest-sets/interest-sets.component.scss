@@ -5,7 +5,7 @@
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 
   h1 {
     font-size: 32px;
@@ -27,8 +27,26 @@
   padding: 48px;
 }
 
+// Create new list button
+.create-list-button {
+  margin-bottom: 24px;
+
+  mat-icon {
+    margin-right: 8px;
+  }
+}
+
 .section-card {
   margin-bottom: 24px;
+
+  &.new-list-card {
+    border: 2px dashed var(--mat-sys-outline-variant);
+    background-color: var(--mat-sys-surface-container-lowest);
+  }
+
+  &.interest-list-card {
+    // Normal card styling
+  }
 }
 
 .section-header {
@@ -55,6 +73,7 @@
 
   .section-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
   }
 }
@@ -72,11 +91,12 @@
 
   .full-width {
     width: 100%;
+    margin-bottom: 16px;
 
     textarea {
       field-sizing: content;
-      min-height: 120px;
-      max-height: 400px;
+      min-height: 100px;
+      max-height: 300px;
     }
 
     ::ng-deep .mat-mdc-form-field-infix {
@@ -98,18 +118,19 @@
 }
 
 .hashtags-container {
-  padding: 16px;
+  padding: 0;
 }
 
 .hashtag-chip {
   background-color: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 
   &:hover {
     background-color: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
+    transform: scale(1.02);
   }
 
   .hashtag-text {
@@ -120,9 +141,49 @@
 .empty-state {
   text-align: center;
   color: var(--mat-sys-on-surface-variant);
-  padding: 48px 24px;
+  padding: 32px 24px;
   margin: 0;
   font-size: 14px;
+}
+
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    max-width: 400px;
+  }
+}
+
+// Menu item styles
+.delete-menu-item {
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
 }
 
 @media (max-width: 768px) {
@@ -138,13 +199,19 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    padding: 16px;
 
     .section-actions {
       width: 100%;
-
-      button {
-        flex: 1;
-      }
+      justify-content: flex-end;
     }
+  }
+
+  .section-content {
+    padding: 16px;
+  }
+
+  .create-list-button {
+    width: 100%;
   }
 }

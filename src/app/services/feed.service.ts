@@ -614,14 +614,19 @@ export class FeedService {
       return newMap;
     });
 
-    // Load cached events
-    const cachedEvents = await this.loadCachedEvents(feed.id);
+    // Load cached events (skip for dynamic feeds - they should always fetch fresh data)
+    const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
+    let cachedEvents: Event[] = [];
+    
+    if (!isDynamicFeed) {
+      cachedEvents = await this.loadCachedEvents(feed.id);
 
-    if (cachedEvents.length > 0) {
-      item.events.set(cachedEvents);
-      const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
-      item.lastCheckTimestamp = mostRecentTimestamp;
-      this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+      if (cachedEvents.length > 0) {
+        item.events.set(cachedEvents);
+        const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+        item.lastCheckTimestamp = mostRecentTimestamp;
+        this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+      }
     }
 
     // Build filter based on feed configuration
@@ -1317,11 +1322,15 @@ export class FeedService {
   /**
    * Load interests-based feed - fetches events filtered by hashtags from user's interest list.
    * 
-   * This method uses the "t" tag filter to fetch notes matching selected hashtags:
+   * This method uses the SearchRelayService for hashtag queries:
    * 1. Gets the selected hashtags from customInterestHashtags
-   * 2. Creates a filter with "#t": ["hashtag1", "hashtag2", ...]
-   * 3. Fetches events from account relays matching these hashtags
-   * 4. Combines and deduplicates results
+   * 2. Uses NIP-50 search relays which have indexed hashtags
+   * 3. Builds a search query with hashtags (e.g., "#bitcoin #nostr")
+   * 4. Returns events matching any of the hashtags
+   * 
+   * NOTE: Using SearchRelayService instead of accountRelay because most standard relays
+   * don't properly support or index hashtag filters (#t). Search relays like relay.nostr.band
+   * are specifically designed for this purpose.
    */
   private async loadInterestsFeed(feedData: FeedItem) {
     try {
@@ -1340,24 +1349,20 @@ export class FeedService {
 
       this.logger.info(`🏷️ Loading INTERESTS feed for hashtags: ${hashtags.join(', ')} with kinds: ${kinds.join(', ')}${since ? `, since: ${since}` : ' (no time filter)'}`);
 
-      // Build filter with "t" tag for hashtags
-      // The Nostr protocol uses "#t" in the filter to match events with "t" tags
-      // According to NIP-01, tag filters use OR logic - events matching ANY of the hashtags will be returned
-      const filter: { kinds: number[]; '#t': string[]; limit: number; since?: number } = {
+      // Build search query with hashtags for NIP-50 search relays
+      // Search relays understand "#hashtag" syntax and have indexed hashtag data
+      const searchQuery = hashtags.map(tag => `#${tag}`).join(' ');
+
+      this.logger.debug(`🏷️ Interests feed search query: "${searchQuery}"`);
+
+      // Use SearchRelayService to perform the hashtag search
+      // This is the same approach used by loadSearchFeed and works reliably
+      const events = await this.searchRelay.searchForFeed(
+        searchQuery,
         kinds,
-        '#t': hashtags,
-        limit: 100,
-      };
-      
-      // Only add since if it's defined to avoid issues with undefined in the filter
-      if (since) {
-        filter.since = since;
-      }
-
-      this.logger.debug(`🏷️ Interests feed filter:`, JSON.stringify(filter, null, 2));
-
-      // Fetch events from account relays using the hashtag filter
-      const events = await this.accountRelay.getMany(filter);
+        100, // limit
+        since
+      );
 
       if (events.length === 0) {
         this.logger.info(`🏷️ No events found for interest hashtags: ${hashtags.join(', ')}`);
@@ -1387,8 +1392,10 @@ export class FeedService {
 
         feedData.events.set(allEvents);
 
-        // Save to cache
-        this.saveCachedEvents(feed.id, allEvents);
+        // Save to cache (skip for dynamic feeds - they change frequently)
+        if (feed.id !== this.DYNAMIC_FEED_ID) {
+          this.saveCachedEvents(feed.id, allEvents);
+        }
 
         // Save events to database for offline access
         for (const event of newEvents) {

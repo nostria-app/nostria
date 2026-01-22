@@ -728,7 +728,7 @@ export const routes: Routes = [
     title: 'Media Details',
   },
   {
-    path: 'badges/:pubkey',
+    path: 'user-badges/:pubkey',
     outlet: 'right',
     loadComponent: () =>
       import('./pages/badges/badges.component').then(m => m.BadgesComponent),

@@ -2,7 +2,7 @@
   <div class="page-header">
     <h1 i18n="@@interest-sets.title">Interests</h1>
     <p class="page-description" i18n="@@interest-sets.description">
-      Manage your hashtag interests. Your interests are stored in a kind 30015 event and help discover relevant content.
+      Manage your hashtag interests. Click a hashtag to open it as a feed, or view all hashtags from a list together.
     </p>
   </div>
 
@@ -12,56 +12,126 @@
   </div>
   }
 
-  <mat-card class="section-card">
+  <!-- Create New List Button -->
+  @if (!isCreatingNew()) {
+  <button mat-flat-button class="create-list-button" (click)="startCreatingNew()">
+    <mat-icon>add</mat-icon>
+    Create New Interest List
+  </button>
+  }
+
+  <!-- Create New List Form -->
+  @if (isCreatingNew()) {
+  <mat-card class="section-card new-list-card">
     <div class="section-header">
       <div class="section-title">
-        <mat-icon>tag</mat-icon>
-        <h2 i18n="@@interest-sets.interests.title">My Interests</h2>
+        <mat-icon>add_circle</mat-icon>
+        <h2>Create New Interest List</h2>
       </div>
-      @if (!isEditing()) {
-      <div class="section-actions">
-        <button mat-button (click)="resetToDefaults()" i18n="@@interest-sets.reset">
-          <mat-icon>restore</mat-icon>
-          Reset to Defaults
-        </button>
-        <button mat-flat-button color="primary" (click)="startEditing()" i18n="@@interest-sets.edit">
-          <mat-icon>edit</mat-icon>
-          Edit
-        </button>
-      </div>
-      }
     </div>
 
     <mat-divider></mat-divider>
 
     <div class="section-content">
-      @if (isEditing()) {
       <div class="edit-form">
-        <p class="help-text" i18n="@@interest-sets.edit-help">
-          Enter hashtags separated by commas or one per line. The # symbol is optional.
-        </p>
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@interest-sets.hashtags-label">Hashtags</mat-label>
-          <textarea matInput [(ngModel)]="editingHashtags"
-            placeholder="catstr&#10;birdstr&#10;asknostr&#10;homesteading&#10;growstr&#10;farmstr"></textarea>
-          <mat-hint i18n="@@interest-sets.hashtags-hint">One hashtag per line or comma-separated</mat-hint>
+          <mat-label>List Title</mat-label>
+          <input matInput [(ngModel)]="newListTitle" placeholder="e.g., Tech Topics, Nature, Music">
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Hashtags</mat-label>
+          <textarea matInput [(ngModel)]="newListHashtags" rows="4"
+            placeholder="bitcoin&#10;nostr&#10;programming"></textarea>
+          <mat-hint>One hashtag per line or comma-separated</mat-hint>
+        </mat-form-field>
+
         <div class="form-actions">
-          <button mat-button (click)="cancelEditing()" i18n="@@interest-sets.cancel">Cancel</button>
-          <button mat-flat-button color="primary" (click)="saveEdit()" [disabled]="isLoading()"
-            i18n="@@interest-sets.save">Save</button>
+          <button mat-button (click)="cancelCreatingNew()">Cancel</button>
+          <button mat-flat-button (click)="saveNewList()" [disabled]="isLoading()">
+            Create List
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+  }
+
+  <!-- Interest Lists -->
+  @for (set of interestSets(); track set.identifier) {
+  <mat-card class="section-card interest-list-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>tag</mat-icon>
+        <h2>{{ set.title }}</h2>
+      </div>
+      <div class="section-actions">
+        @if (editingListId() !== set.identifier) {
+        <!-- View as Feed button -->
+        <button mat-button (click)="openListFeed(set)" matTooltip="View all hashtags as feed">
+          <mat-icon>dynamic_feed</mat-icon>
+          View as Feed
+        </button>
+
+        <!-- Menu for edit/delete -->
+        <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="List options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #listMenu="matMenu">
+          <button mat-menu-item (click)="startEditing(set)">
+            <mat-icon>edit</mat-icon>
+            <span>Edit</span>
+          </button>
+          @if (set.identifier === 'interests') {
+          <button mat-menu-item (click)="resetToDefaults()">
+            <mat-icon>restore</mat-icon>
+            <span>Reset to Defaults</span>
+          </button>
+          }
+          <button mat-menu-item (click)="deleteList(set)" class="delete-menu-item">
+            <mat-icon>delete</mat-icon>
+            <span>Delete</span>
+          </button>
+        </mat-menu>
+        }
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (editingListId() === set.identifier) {
+      <!-- Editing mode -->
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>List Title</mat-label>
+          <input matInput [(ngModel)]="editingTitle" placeholder="List title">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Hashtags</mat-label>
+          <textarea matInput [(ngModel)]="editingHashtags" rows="4"></textarea>
+          <mat-hint>One hashtag per line or comma-separated</mat-hint>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditing()">Cancel</button>
+          <button mat-flat-button (click)="saveEdit()" [disabled]="isLoading()">
+            Save
+          </button>
         </div>
       </div>
       } @else {
-      @if (!interestSet() || interestSet()!.hashtags.length === 0) {
-      <p class="empty-state" i18n="@@interest-sets.empty">
-        No interests configured yet. Click "Edit" to add your hashtag interests.
+      <!-- Display mode -->
+      @if (set.hashtags.length === 0) {
+      <p class="empty-state">
+        No hashtags in this list. Click the menu to edit.
       </p>
       } @else {
       <div class="hashtags-container">
         <mat-chip-set aria-label="Hashtags">
-          @for (hashtag of interestSet()!.hashtags; track hashtag) {
-          <mat-chip class="hashtag-chip" (click)="searchHashtag(hashtag)">
+          @for (hashtag of set.hashtags; track hashtag) {
+          <mat-chip class="hashtag-chip" (click)="openHashtagFeed(hashtag)">
             <span class="hashtag-text">#{{ hashtag }}</span>
           </mat-chip>
           }
@@ -71,4 +141,14 @@
       }
     </div>
   </mat-card>
+  }
+
+  <!-- Empty state if no lists -->
+  @if (interestSets().length === 0 && !isLoading()) {
+  <div class="empty-state-container">
+    <mat-icon class="empty-icon">tag</mat-icon>
+    <h3>No Interest Lists</h3>
+    <p>Create your first interest list to start tracking hashtags you care about.</p>
+  </div>
+  }
 </div>
