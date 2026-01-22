@@ -12,20 +12,17 @@
       </ng-template>
 
       <div class="tab-content">
-        <div class="queue-header">
-          <div class="queue-header-actions">
-            <button matTooltip="Add entire queue to playlist" (click)="addQueueToPlaylist()" mat-icon-button>
-              <mat-icon>playlist_add</mat-icon>
-            </button>
-
-            @if (media.media().length > 0) {
-            <button mat-stroked-button (click)="clearQueue()" matTooltip="Clear entire queue">
-              <mat-icon>clear_all</mat-icon>
-              Clear Queue
-            </button>
-            }
-          </div>
-        </div>
+        <app-panel-header 
+          title="Queue" 
+          [actions]="queueActions()"
+          (actionClick)="onQueueActionClick($event)">
+          @if (media.media().length > 0) {
+          <button mat-stroked-button (click)="clearQueue()" matTooltip="Clear entire queue">
+            <mat-icon>clear_all</mat-icon>
+            Clear Queue
+          </button>
+          }
+        </app-panel-header>
 
         @if (media.media().length === 0) {
         <div class="empty-queue">
