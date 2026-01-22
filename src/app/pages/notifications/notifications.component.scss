@@ -1,9 +1,10 @@
 // Host element styles - fill the full height of the container
 :host {
   display: block;
-  height: 100%;
+  width: 100%;
+  // Don't set fixed height - let content flow naturally in new layout
   // Override parent's overflow-y: auto so virtual scroll can manage its own scroll
-  overflow: hidden !important;
+  overflow: visible;
   // Remove any generic padding added by parent
   padding-top: 0 !important;
 }
@@ -53,8 +54,9 @@
 .notifications-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-width: 900px;
+  // Use viewport height to fill available space
+  min-height: calc(100vh - 64px); // Subtract toolbar height
+  max-width: 700px;
   margin: 0 auto;
   width: 100%;
   // Remove any inherited padding
@@ -67,7 +69,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  position: relative; // For absolute positioned viewport
+  position: relative;
   border-radius: 12px;
 }
 
@@ -153,16 +155,16 @@
 
 // Notification list - CDK virtual scroll requires explicit height
 .notification-viewport {
-  // Use absolute positioning to fill container
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  // Use viewport-based height calculation for new layout
+  // The viewport renders inline in the scrollable container, not absolutely positioned
+  height: calc(100vh - 120px); // Subtract toolbar and header height
+  width: 100%;
   padding-bottom: 80px; // Space for mobile navigation menu
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
     // Add padding at top for spacing
     padding-top: 16px;
   }

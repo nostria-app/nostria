@@ -185,7 +185,8 @@ export class ArticleComponent implements OnDestroy {
   }
 
   async loadArticle(naddr: string, params?: ParamMap): Promise<void> {
-    const receivedData = history.state.event as Event | undefined;
+    // Check for event passed via router state (supports both 'articleEvent' and legacy 'event' keys)
+    const receivedData = (history.state?.articleEvent || history.state?.event) as Event | undefined;
 
     let pubkey = '';
     let slug = '';

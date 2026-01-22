@@ -397,35 +397,84 @@ export class LayoutService implements OnDestroy {
   }
 
   /**
+   * @deprecated Use handlePanelScroll instead
    * Handle scroll events from the left panel (called by app.ts)
    * @param event - The scroll event from left panel
    */
   handleLeftPanelScroll(event: globalThis.Event): void {
-    const target = (event as any).target as Element;
-    if (!target) return;
-
-    // Mark left panel scroll as ready on first scroll event
-    if (!this.leftPanelScrollReady()) {
-      this.leftPanelScrollReady.set(true);
-    }
-
-    this.checkPanelScrollPosition(target, 'left');
+    this.handlePanelScroll(event, 'left');
   }
 
   /**
+   * @deprecated Use handlePanelScroll instead
    * Handle scroll events from the right panel (called by app.ts)
    * @param event - The scroll event from right panel
    */
   handleRightPanelScroll(event: globalThis.Event): void {
+    this.handlePanelScroll(event, 'right');
+  }
+
+  /**
+   * Handle scroll events from a panel container (left-panel or right-panel)
+   * Each panel is its own scroll container with scrollbar at the panel edge
+   * @param event - The scroll event from the panel container
+   * @param panel - Which panel is scrolling ('left' or 'right')
+   */
+  handlePanelScroll(event: globalThis.Event, panel: 'left' | 'right'): void {
     const target = (event as any).target as Element;
     if (!target) return;
 
-    // Mark right panel scroll as ready on first scroll event
-    if (!this.rightPanelScrollReady()) {
+    // Mark panel as ready
+    if (panel === 'left' && !this.leftPanelScrollReady()) {
+      this.leftPanelScrollReady.set(true);
+    }
+    if (panel === 'right' && !this.rightPanelScrollReady()) {
       this.rightPanelScrollReady.set(true);
     }
 
-    this.checkPanelScrollPosition(target, 'right');
+    // Update scroll position for the specific panel
+    const scrollTop = target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+    const threshold = 100; // Larger threshold for infinite scroll trigger
+
+    const isAtTop = scrollTop <= 5;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+
+    if (panel === 'left') {
+      // Update left panel signals
+      if (isAtTop !== this.leftPanelScrolledToTop()) {
+        this.leftPanelScrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.leftPanelScrolledToBottom()) {
+        this.leftPanelScrolledToBottom.set(isAtBottom);
+      }
+      // Update legacy signals for backward compatibility
+      if (isAtTop !== this.scrolledToTop()) {
+        this.scrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.scrolledToBottom()) {
+        this.scrolledToBottom.set(isAtBottom);
+      }
+    } else {
+      // Update right panel signals
+      if (isAtTop !== this.rightPanelScrolledToTop()) {
+        this.rightPanelScrolledToTop.set(isAtTop);
+      }
+      if (isAtBottom !== this.rightPanelScrolledToBottom()) {
+        this.rightPanelScrolledToBottom.set(isAtBottom);
+      }
+    }
+  }
+
+  /**
+   * @deprecated Use handlePanelScroll instead. This method is kept for backward compatibility.
+   * Handle scroll events from the main layout container (dual-panel-layout)
+   * @param event - The scroll event from the layout container
+   */
+  handleLayoutScroll(event: globalThis.Event): void {
+    // For backward compatibility, treat as left panel scroll
+    this.handlePanelScroll(event, 'left');
   }
 
   /**
@@ -2463,6 +2512,22 @@ export class LayoutService implements OnDestroy {
   clearAllFeedScrollPositions(): void {
     this.feedScrollPositions.clear();
     this.logger.debug('Cleared all feed scroll positions');
+  }
+
+  /**
+   * Scroll the main layout container to the top
+   * Used by components that need to scroll to top when content changes or user clicks "scroll to top"
+   * @param smooth - Whether to use smooth scrolling (default: true)
+   * @param panel - Which panel to scroll ('left' or 'right', default: 'left')
+   */
+  scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
+    const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
+    const panelContainer = document.querySelector(panelSelector);
+    if (panelContainer) {
+      panelContainer.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'instant' });
+    }
   }
 
   private setupGlobalScrollDetection(): void {

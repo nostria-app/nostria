@@ -761,7 +761,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
         pubkey: event.pubkey,
         identifier: dTag,
       });
-      this.layout.openArticle(naddr);
+      // Pass the event to avoid re-fetching
+      this.layout.openArticle(naddr, event as Event);
     } catch (err) {
       console.error('[Summary] Failed to encode article naddr:', err);
       // Fallback to event dialog

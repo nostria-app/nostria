@@ -190,8 +190,10 @@ export class FeedsComponent implements OnDestroy {
   screenWidth = signal(window.innerWidth);
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
-  // Show scroll-to-top button when scrolled down
-  showScrollToTop = signal(false);
+  // Show scroll-to-top button when scrolled down - derived from layout service
+  showScrollToTop = computed(() => 
+    this.layoutService.leftPanelScrollReady() && !this.layoutService.leftPanelScrolledToTop()
+  );
   // Feed expanded state - use layoutService signal for cross-component communication
   feedsExpanded = computed(() => this.layoutService.feedsExpanded());
   private lastScrollTop = 0;
@@ -929,24 +931,24 @@ export class FeedsComponent implements OnDestroy {
       this.headerHidden.set(false);
     }
 
-    // Show scroll-to-top button when scrolled down past 500px
-    this.showScrollToTop.set(scrollTop > 500);
+    // Note: showScrollToTop is now a computed signal derived from layoutService
 
     this.lastScrollTop = scrollTop;
   }
 
   /**
    * Scroll the feed to the top
+   * Uses the layout service to scroll the main layout container
    */
   scrollToTop(): void {
-    const container = this.columnsContainer?.nativeElement;
-    if (container) {
-      container.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    // Use layout service to scroll the parent layout container
+    this.layoutService.scrollLayoutToTop();
   }
 
   /**
    * Handle scroll on columns container and sync fixed scrollbar
+   * Note: With the new layout, vertical scrolling is handled by the parent dual-panel-layout
+   * This method now only handles horizontal scroll syncing for multi-column layouts
    */
   onColumnsScroll(event: globalThis.Event): void {
     if (this.isSyncingScroll) return;
@@ -954,11 +956,9 @@ export class FeedsComponent implements OnDestroy {
     const container = event.target as HTMLElement | null;
     if (!container) return;
 
-    // Track vertical scroll position for scroll-to-top button
-    const scrollTop = container.scrollTop;
-    this.showScrollToTop.set(scrollTop > 300);
+    // Note: showScrollToTop is now derived from layoutService.leftPanelScrolledToTop()
 
-    // Update scroll position for syncing
+    // Update scroll position for horizontal scrollbar syncing
     this.columnsScrollLeft.set(container.scrollLeft);
 
     // Sync the fixed scrollbar
