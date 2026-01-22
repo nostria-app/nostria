@@ -1,29 +1,81 @@
+// Panel header styles (extends global .panel-header)
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .panel-title {
+    margin: 0;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel-header-spacer {
+    flex: 1;
+  }
+
+  &.selection-header {
+    background-color: var(--mat-sys-primary-container);
+    border-bottom-color: var(--mat-sys-outline-variant);
+
+    .selection-count {
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  &.selection-header {
+    background-color: var(--mat-sys-primary-container);
+  }
+}
+
 .media-container {
-  padding: 24px;
+  padding: 16px 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.spinner-wrapper {
+// Stats bar (item count and storage info)
+.media-stats {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
-  height: 36px;
-  border-radius: 4px;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
 
-  &.loading {
-    background-color: var(--mat-sys-surface-container-highest);
-  }
-
-  &.uploading {
-    background-color: var(--mat-sys-secondary-container);
-    color: var(--mat-sys-on-secondary-container);
-  }
-
-  span {
-    font-size: 13px;
+  .item-count {
     white-space: nowrap;
+  }
+
+  .storage-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 16px;
+    border-left: 1px solid var(--mat-sys-outline-variant);
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   }
 }
 
@@ -54,93 +106,6 @@
   .error-actions {
     display: flex;
     gap: 8px;
-  }
-}
-
-// Toolbar
-.media-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  gap: 8px;
-  flex-wrap: wrap;
-
-  &.selection-active {
-    background-color: var(--mat-sys-primary-container);
-
-    .selection-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .selection-count {
-        color: var(--mat-sys-on-primary-container);
-      }
-    }
-
-    .selection-actions {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-
-      button {
-        color: var(--mat-sys-on-primary-container);
-      }
-
-      .delete-text {
-        color: var(--mat-sys-error);
-      }
-    }
-  }
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .filter-button,
-    .sort-button {
-      mat-icon:last-child {
-        margin-left: -4px;
-      }
-    }
-
-    .item-count {
-      font-size: 13px;
-      color: var(--mat-sys-on-surface-variant);
-      margin-left: 8px;
-    }
-
-    .storage-info {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--mat-sys-on-surface-variant);
-      font-size: 13px;
-      margin-left: 8px;
-      padding-left: 8px;
-      border-left: 1px solid var(--mat-sys-outline-variant);
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-    }
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-
-    .upload-button {
-      margin-right: 4px;
-    }
   }
 }
 
@@ -525,18 +490,13 @@
 // Responsive adjustments
 @media (max-width: 768px) {
   .media-container {
-    padding: 16px;
+    padding: 12px 16px 16px;
   }
 
-  .media-toolbar {
-    .toolbar-left {
-      flex-wrap: wrap;
-
-      .storage-info {
-        border-left: none;
-        padding-left: 0;
-        margin-left: 0;
-      }
+  .media-stats {
+    .storage-info {
+      border-left: none;
+      padding-left: 0;
     }
   }
 
@@ -552,10 +512,6 @@
 }
 
 @media (max-width: 480px) {
-  .hide-small {
-    display: none;
-  }
-
   .media-grid {
     &.large {
       grid-template-columns: repeat(2, 1fr);

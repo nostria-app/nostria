@@ -1,3 +1,124 @@
+<!-- Panel Header -->
+@if (selectionMode()) {
+<!-- Selection mode header -->
+<div class="panel-header selection-header">
+  <button mat-icon-button (click)="clearSelection()" matTooltip="Clear selection">
+    <mat-icon>close</mat-icon>
+  </button>
+  <span class="selection-count">{{ selectedItems().length }} selected</span>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="publishSelected()" [disabled]="selectedItems().length === 0" matTooltip="Publish">
+    <mat-icon>send</mat-icon>
+  </button>
+  <button mat-icon-button (click)="downloadSelected()" [disabled]="selectedItems().length === 0" matTooltip="Download">
+    <mat-icon>download</mat-icon>
+  </button>
+  <button mat-icon-button (click)="mirrorSelected()" [disabled]="selectedItems().length === 0" matTooltip="Mirror">
+    <mat-icon>cloud_upload</mat-icon>
+  </button>
+  <button mat-icon-button (click)="deleteSelected()" [disabled]="selectedItems().length === 0" matTooltip="Delete">
+    <mat-icon color="warn">delete</mat-icon>
+  </button>
+</div>
+} @else {
+<!-- Normal header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font">Media Library</h2>
+  <span class="panel-header-spacer"></span>
+
+  <!-- Filter button -->
+  <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter: {{ getFilterLabel() }}">
+    <mat-icon>{{ getFilterIcon() }}</mat-icon>
+  </button>
+  <mat-menu #filterMenu="matMenu">
+    <button mat-menu-item (click)="setMediaFilter('all')" [class.selected-option]="mediaFilter() === 'all'">
+      <mat-icon>filter_list</mat-icon>
+      <span>All Files</span>
+    </button>
+    <button mat-menu-item (click)="setMediaFilter('images')" [class.selected-option]="mediaFilter() === 'images'">
+      <mat-icon>image</mat-icon>
+      <span>Images</span>
+    </button>
+    <button mat-menu-item (click)="setMediaFilter('videos')" [class.selected-option]="mediaFilter() === 'videos'">
+      <mat-icon>videocam</mat-icon>
+      <span>Videos</span>
+    </button>
+    <button mat-menu-item (click)="setMediaFilter('audio')" [class.selected-option]="mediaFilter() === 'audio'">
+      <mat-icon>audiotrack</mat-icon>
+      <span>Audio</span>
+    </button>
+    <button mat-menu-item (click)="setMediaFilter('files')" [class.selected-option]="mediaFilter() === 'files'">
+      <mat-icon>insert_drive_file</mat-icon>
+      <span>Other Files</span>
+    </button>
+  </mat-menu>
+
+  <!-- Sort button -->
+  <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort: {{ getSortLabel() }}">
+    <mat-icon>sort</mat-icon>
+  </button>
+  <mat-menu #sortMenu="matMenu">
+    <button mat-menu-item (click)="setSortOption('newest')" [class.selected-option]="sortOption() === 'newest'">
+      <mat-icon>arrow_downward</mat-icon>
+      <span>Newest First</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-option]="sortOption() === 'oldest'">
+      <mat-icon>arrow_upward</mat-icon>
+      <span>Oldest First</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-option]="sortOption() === 'name-asc'">
+      <mat-icon>sort_by_alpha</mat-icon>
+      <span>Name (A-Z)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-option]="sortOption() === 'name-desc'">
+      <mat-icon>sort_by_alpha</mat-icon>
+      <span>Name (Z-A)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-option]="sortOption() === 'size-desc'">
+      <mat-icon>expand_more</mat-icon>
+      <span>Size (Large-Small)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-option]="sortOption() === 'size-asc'">
+      <mat-icon>expand_less</mat-icon>
+      <span>Size (Small-Large)</span>
+    </button>
+  </mat-menu>
+
+  <!-- Select all button -->
+  <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All">
+    <mat-icon>checklist</mat-icon>
+  </button>
+
+  <!-- View mode button (toggle) -->
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + getViewModeLabel()">
+    <mat-icon>{{ getViewModeIcon() }}</mat-icon>
+  </button>
+
+  <!-- Upload button -->
+  @if (mediaService.uploading()) {
+  <mat-spinner diameter="20"></mat-spinner>
+  } @else {
+  <button mat-icon-button (click)="openUploadDialog()" matTooltip="Upload">
+    <mat-icon>upload</mat-icon>
+  </button>
+  }
+
+  <!-- Refresh button -->
+  @if (mediaService.loading()) {
+  <mat-spinner diameter="20"></mat-spinner>
+  } @else {
+  <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  }
+
+  <!-- Settings button -->
+  <button mat-icon-button (click)="openServersDialog()" matTooltip="Media Servers">
+    <mat-icon>settings</mat-icon>
+  </button>
+</div>
+}
+
 <div class="media-container">
   @if (mediaService.error()) {
   <div class="error-container">
@@ -10,147 +131,13 @@
   </div>
   }
 
-  <!-- Toolbar -->
-  <div class="media-toolbar" [class.selection-active]="selectionMode()">
-    @if (selectionMode()) {
-    <!-- Selection mode toolbar -->
-    <div class="selection-info">
-      <button mat-icon-button (click)="clearSelection()">
-        <mat-icon>close</mat-icon>
-      </button>
-      <span class="selection-count">{{ selectedItems().length }} selected</span>
+  <!-- Stats bar -->
+  <div class="media-stats">
+    <span class="item-count">{{ filteredMedia().length }} items</span>
+    <div class="storage-info">
+      <mat-icon>storage</mat-icon>
+      <span>{{ formatFileSize(totalStorageBytes()) }}</span>
     </div>
-    <div class="selection-actions">
-      <button mat-button (click)="publishSelected()" [disabled]="selectedItems().length === 0">
-        <mat-icon>send</mat-icon>
-        <span class="hide-small">Publish</span>
-      </button>
-      <button mat-button (click)="downloadSelected()" [disabled]="selectedItems().length === 0">
-        <mat-icon>download</mat-icon>
-        <span class="hide-small">Download</span>
-      </button>
-      <button mat-button (click)="mirrorSelected()" [disabled]="selectedItems().length === 0">
-        <mat-icon>cloud_upload</mat-icon>
-        <span class="hide-small">Mirror</span>
-      </button>
-      <button mat-button (click)="deleteSelected()" [disabled]="selectedItems().length === 0">
-        <mat-icon color="warn">delete</mat-icon>
-        <span class="hide-small delete-text">Delete</span>
-      </button>
-    </div>
-    } @else {
-    <!-- Normal toolbar -->
-    <div class="toolbar-left">
-      <!-- Filter button -->
-      <button mat-button [matMenuTriggerFor]="filterMenu" class="filter-button">
-        <mat-icon>{{ getFilterIcon() }}</mat-icon>
-        <span>{{ getFilterLabel() }}</span>
-        <mat-icon>arrow_drop_down</mat-icon>
-      </button>
-      <mat-menu #filterMenu="matMenu">
-        <button mat-menu-item (click)="setMediaFilter('all')" [class.selected-option]="mediaFilter() === 'all'">
-          <mat-icon>filter_list</mat-icon>
-          <span>All Files</span>
-        </button>
-        <button mat-menu-item (click)="setMediaFilter('images')" [class.selected-option]="mediaFilter() === 'images'">
-          <mat-icon>image</mat-icon>
-          <span>Images</span>
-        </button>
-        <button mat-menu-item (click)="setMediaFilter('videos')" [class.selected-option]="mediaFilter() === 'videos'">
-          <mat-icon>videocam</mat-icon>
-          <span>Videos</span>
-        </button>
-        <button mat-menu-item (click)="setMediaFilter('audio')" [class.selected-option]="mediaFilter() === 'audio'">
-          <mat-icon>audiotrack</mat-icon>
-          <span>Audio</span>
-        </button>
-        <button mat-menu-item (click)="setMediaFilter('files')" [class.selected-option]="mediaFilter() === 'files'">
-          <mat-icon>insert_drive_file</mat-icon>
-          <span>Other Files</span>
-        </button>
-      </mat-menu>
-
-      <!-- Sort button -->
-      <button mat-button [matMenuTriggerFor]="sortMenu" class="sort-button">
-        <mat-icon>sort</mat-icon>
-        <span class="hide-small">{{ getSortLabel() }}</span>
-      </button>
-      <mat-menu #sortMenu="matMenu">
-        <button mat-menu-item (click)="setSortOption('newest')" [class.selected-option]="sortOption() === 'newest'">
-          <mat-icon>arrow_downward</mat-icon>
-          <span>Newest First</span>
-        </button>
-        <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-option]="sortOption() === 'oldest'">
-          <mat-icon>arrow_upward</mat-icon>
-          <span>Oldest First</span>
-        </button>
-        <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-option]="sortOption() === 'name-asc'">
-          <mat-icon>sort_by_alpha</mat-icon>
-          <span>Name (A-Z)</span>
-        </button>
-        <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-option]="sortOption() === 'name-desc'">
-          <mat-icon>sort_by_alpha</mat-icon>
-          <span>Name (Z-A)</span>
-        </button>
-        <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-option]="sortOption() === 'size-desc'">
-          <mat-icon>expand_more</mat-icon>
-          <span>Size (Large-Small)</span>
-        </button>
-        <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-option]="sortOption() === 'size-asc'">
-          <mat-icon>expand_less</mat-icon>
-          <span>Size (Small-Large)</span>
-        </button>
-      </mat-menu>
-
-      <span class="item-count">{{ filteredMedia().length }} items</span>
-      
-      <div class="storage-info">
-        <mat-icon>storage</mat-icon>
-        <span>{{ formatFileSize(totalStorageBytes()) }}</span>
-      </div>
-    </div>
-
-    <div class="toolbar-right">
-      <!-- Upload button -->
-      @if (mediaService.uploading()) {
-      <div class="spinner-wrapper uploading">
-        <mat-spinner diameter="20"></mat-spinner>
-        <span class="hide-small">Uploading...</span>
-      </div>
-      } @else {
-      <button mat-flat-button (click)="openUploadDialog()" class="upload-button">
-        <mat-icon>upload</mat-icon>
-        <span class="hide-small">Upload</span>
-      </button>
-      }
-
-      <!-- Select all button -->
-      <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All">
-        <mat-icon>checklist</mat-icon>
-      </button>
-
-      <!-- View mode button (toggle) -->
-      <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + getViewModeLabel()">
-        <mat-icon>{{ getViewModeIcon() }}</mat-icon>
-      </button>
-
-      <!-- Refresh button -->
-      @if (mediaService.loading()) {
-      <div class="spinner-wrapper loading">
-        <mat-spinner diameter="20"></mat-spinner>
-      </div>
-      } @else {
-      <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh">
-        <mat-icon>refresh</mat-icon>
-      </button>
-      }
-
-      <!-- Settings button -->
-      <button mat-icon-button (click)="openServersDialog()" matTooltip="Media Servers">
-        <mat-icon>settings</mat-icon>
-      </button>
-    </div>
-    }
   </div>
 
   <!-- Content area -->
