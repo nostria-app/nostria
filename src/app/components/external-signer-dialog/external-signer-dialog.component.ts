@@ -101,43 +101,19 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
 
   /**
    * Safely opens the external signer URL without navigating away from or closing the main app.
-   * Uses an iframe approach first, falling back to anchor with target="_blank".
+   * Uses window.location.href for Android intent URLs which is more reliable than iframe.
    */
   private safeOpenExternalSigner(url: string): void {
-    // Store current location to verify we're still in the app
-    const currentOrigin = window.location.origin;
-    const currentHref = window.location.href;
-
-    // Try using an invisible iframe first - this works on Android for intent URLs
-    // and prevents any navigation in the main window
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.position = 'absolute';
-    document.body.appendChild(iframe);
-
-    // Set the iframe src to trigger the intent
+    // For Android intent URLs (nostrsigner:), we need to use window.location.href
+    // as iframe src doesn't reliably trigger the Android intent system.
+    // The nostrsigner: protocol handler will open the signer app while keeping
+    // the browser app in the background.
     try {
-      iframe.src = url;
+      window.location.href = url;
     } catch {
-      // If iframe approach fails, fall back to anchor
+      // Fallback: try opening in a new window
+      window.open(url, '_blank');
     }
-
-    // Remove the iframe after a short delay
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
-      }
-
-      // Verify we're still on our app - if not, something went wrong
-      // This is a safety check but the iframe approach should prevent navigation
-      if (window.location.origin !== currentOrigin || window.location.href !== currentHref) {
-        // Try to navigate back if we somehow left the app
-        window.location.href = currentHref;
-      }
-    }, 500);
   }
 
   private startClipboardPolling() {
