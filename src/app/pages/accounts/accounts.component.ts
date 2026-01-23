@@ -91,6 +91,7 @@ export class AccountsComponent {
     });
   }
 
+
   /**
    * Switch to a different account
    * @param pubkey The public key to switch to

@@ -42,6 +42,40 @@ export class UtilitiesService {
   constructor() { }
 
   /**
+   * Wait for window.nostr to become available (browser extensions inject it asynchronously).
+   * This is useful because NIP-07 extensions like Alby or nos2x inject window.nostr after page load.
+   * Returns true if window.nostr becomes available, false if timeout or running in SSR.
+   * 
+   * @param timeoutMs Maximum time to wait in milliseconds (default: 5000ms)
+   * @returns Promise<boolean> - true if extension is available, false otherwise
+   */
+  async waitForNostrExtension(timeoutMs = 5000): Promise<boolean> {
+    // Skip in SSR - extensions only exist in browser
+    if (!this.isBrowser()) {
+      return false;
+    }
+
+    if (window.nostr) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (window.nostr) {
+          clearInterval(checkInterval);
+          clearTimeout(timeout);
+          resolve(true);
+        }
+      }, 100); // Check every 100ms
+
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(false);
+      }, timeoutMs);
+    });
+  }
+
+  /**
    * Validate if a string is a valid hex pubkey (64 character hex string)
    */
   isValidHexPubkey(pubkey: string): boolean {

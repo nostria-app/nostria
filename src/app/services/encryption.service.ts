@@ -243,8 +243,15 @@ export class EncryptionService {
       const account = this.accountState.account();
 
       // Check if we can use the browser extension
-      if (account?.source === 'extension' && window.nostr?.nip04) {
-        return await window.nostr.nip04.encrypt(recipientPubkey, plaintext);
+      if (account?.source === 'extension') {
+        // Wait for extension to be available (it's injected asynchronously)
+        await this.utilities.waitForNostrExtension();
+
+        if (window.nostr?.nip04) {
+          return await window.nostr.nip04.encrypt(recipientPubkey, plaintext);
+        }
+        // Extension doesn't support NIP-04, fall through to error
+        throw new Error('Browser extension NIP-04 not available');
       }
 
       // Check if we have a remote signer account
@@ -281,9 +288,16 @@ export class EncryptionService {
       const account = this.accountState.account();
 
       // Check if we can use the browser extension
-      if (account?.source === 'extension' && window.nostr?.nip04) {
-        // Use the permission service to handle the decryption request
-        return await this.encryptionPermission.queueDecryptionRequest('nip04', ciphertext, pubkey);
+      if (account?.source === 'extension') {
+        // Wait for extension to be available (it's injected asynchronously)
+        await this.utilities.waitForNostrExtension();
+
+        if (window.nostr?.nip04) {
+          // Use the permission service to handle the decryption request
+          return await this.encryptionPermission.queueDecryptionRequest('nip04', ciphertext, pubkey);
+        }
+        // Extension doesn't support NIP-04, fall through to error
+        throw new Error('Browser extension NIP-04 not available');
       }
 
       // Check if we have a remote signer account
@@ -320,8 +334,15 @@ export class EncryptionService {
       const account = this.accountState.account();
 
       // Check if we can use the browser extension
-      if (account?.source === 'extension' && window.nostr?.nip44) {
-        return await window.nostr.nip44.encrypt(recipientPubkey, plaintext);
+      if (account?.source === 'extension') {
+        // Wait for extension to be available (it's injected asynchronously)
+        await this.utilities.waitForNostrExtension();
+
+        if (window.nostr?.nip44) {
+          return await window.nostr.nip44.encrypt(recipientPubkey, plaintext);
+        }
+        // Extension doesn't support NIP-44, fall through to error
+        throw new Error('Browser extension NIP-44 not available');
       }
 
       // Check if we have a remote signer account
@@ -360,9 +381,16 @@ export class EncryptionService {
       const account = this.accountState.account();
 
       // Check if we can use the browser extension
-      if (account?.source === 'extension' && window.nostr?.nip44) {
-        // Use the permission service to handle the decryption request
-        return await this.encryptionPermission.queueDecryptionRequest('nip44', ciphertext, senderPubkey);
+      if (account?.source === 'extension') {
+        // Wait for extension to be available (it's injected asynchronously)
+        await this.utilities.waitForNostrExtension();
+
+        if (window.nostr?.nip44) {
+          // Use the permission service to handle the decryption request
+          return await this.encryptionPermission.queueDecryptionRequest('nip44', ciphertext, senderPubkey);
+        }
+        // Extension doesn't support NIP-44, fall through to error
+        throw new Error('Browser extension NIP-44 not available');
       }
 
       // Check if we have a remote signer account

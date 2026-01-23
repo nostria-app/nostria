@@ -6,6 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
 import { PublishService } from './publish.service';
 import { EncryptionService } from './encryption.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface FollowSet {
   id: string; // Event ID
@@ -30,6 +31,7 @@ export class FollowSetsService {
   private readonly database = inject(DatabaseService);
   private readonly publishService = inject(PublishService);
   private readonly encryption = inject(EncryptionService);
+  private readonly utilities = inject(UtilitiesService);
 
   // Signals for reactive state
   followSets = signal<FollowSet[]>([]);
@@ -56,6 +58,7 @@ export class FollowSetsService {
     // Load follow sets when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      const account = this.accountState.account();
 
       // Only load if pubkey actually changed
       if (pubkey === this.lastEffectPubkey) {
@@ -67,7 +70,22 @@ export class FollowSetsService {
 
       if (pubkey) {
         this.hasInitiallyLoaded.set(false);
-        this.loadFollowSets(pubkey);
+
+        // For extension accounts, wait for the extension to be available before loading
+        // since decryption of private follow sets requires the extension
+        if (account?.source === 'extension') {
+          this.utilities.waitForNostrExtension().then(available => {
+            if (available) {
+              this.logger.debug('[FollowSets] Extension available, loading follow sets');
+              this.loadFollowSets(pubkey);
+            } else {
+              this.logger.warn('[FollowSets] Extension not available, loading follow sets anyway (private sets may fail to decrypt)');
+              this.loadFollowSets(pubkey);
+            }
+          });
+        } else {
+          this.loadFollowSets(pubkey);
+        }
       } else {
         this.followSets.set([]);
         this.hasInitiallyLoaded.set(false);

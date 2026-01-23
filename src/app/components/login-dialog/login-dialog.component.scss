@@ -1290,6 +1290,20 @@
     color: var(--mat-text-secondary-color);
     white-space: nowrap;
   }
+
+  .extension-hint {
+    margin-top: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    text-align: center;
+    padding: 0 16px;
+    max-width: 350px;
+    line-height: 1.5;
+  }
+
+  .cancel-extension-button {
+    margin-top: 16px;
+  }
 }
 
 .button-row {

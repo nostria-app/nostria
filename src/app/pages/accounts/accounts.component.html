@@ -15,110 +15,99 @@
     <h2>Current Account</h2>
     <mat-card class="account-card">
       @if (currentAccount && currentMetadata) {
-        <div class="account-content">
-          <div class="account-avatar">
-            @if (currentMetadata.picture) {
-              <img [src]="currentMetadata.picture" alt="Profile picture" class="avatar-image" />
-            } @else {
-              <mat-icon class="avatar-placeholder">account_circle</mat-icon>
-            }
-          </div>
-          <div class="account-details">
-            <h3>
-              {{ currentMetadata.display_name || currentMetadata.name || 'Unnamed Account' }}
-            </h3>
-            <p class="pubkey">{{ currentAccount.pubkey | npub }}</p>
-            <p class="account-source">
-              Type: {{ currentAccount.source }} • Last used:
-              {{ currentAccount.lastUsed | date: 'medium' }}
-            </p>
-          </div>
+      <div class="account-content">
+        <div class="account-avatar">
+          @if (currentMetadata.picture) {
+          <img [src]="currentMetadata.picture" alt="Profile picture" class="avatar-image" />
+          } @else {
+          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+          }
         </div>
+        <div class="account-details">
+          <h3>
+            {{ currentMetadata.display_name || currentMetadata.name || 'Unnamed Account' }}
+          </h3>
+          <p class="pubkey">{{ currentAccount.pubkey | npub }}</p>
+          <p class="account-source">
+            Type: {{ currentAccount.source }} • Last used:
+            {{ currentAccount.lastUsed | date: 'medium' }}
+          </p>
+        </div>
+      </div>
       } @else if (currentAccount) {
-        <div class="account-content">
-          <div class="account-avatar">
-            <mat-icon class="avatar-placeholder">account_circle</mat-icon>
-          </div>
-          <div class="account-details">
-            <h3>Unnamed Account</h3>
-            <p class="account-source">
-              Type: {{ currentAccount.source }} • Last used:
-              {{ currentAccount.lastUsed | date: 'medium' }}
-            </p>
-          </div>
+      <div class="account-content">
+        <div class="account-avatar">
+          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
         </div>
+        <div class="account-details">
+          <h3>Unnamed Account</h3>
+          <p class="account-source">
+            Type: {{ currentAccount.source }} • Last used:
+            {{ currentAccount.lastUsed | date: 'medium' }}
+          </p>
+        </div>
+      </div>
       } @else {
-        <div class="account-content">
-          <p>No active account</p>
-        </div>
+      <div class="account-content">
+        <p>No active account</p>
+      </div>
       }
     </mat-card>
   </div>
 
   @if (accountState.accounts().length > 0) {
-    <div class="all-accounts">
-      <h2>Account List</h2>
-      <mat-list class="accounts-list">
-        @for (accountItem of accountState.accounts(); track accountItem.pubkey) {
-          @let accountItemProfile = accountState.getAccountProfileSync(accountItem.pubkey);
+  <div class="all-accounts">
+    <h2>Account List</h2>
+    <mat-list class="accounts-list">
+      @for (accountItem of accountState.accounts(); track accountItem.pubkey) {
+      @let accountItemProfile = accountState.getAccountProfileSync(accountItem.pubkey);
 
-          <mat-list-item
-            class="account-item"
-            [class.current-account-item]="accountItem.pubkey === accountState.account()?.pubkey"
-            (click)="
+      <mat-list-item class="account-item"
+        [class.current-account-item]="accountItem.pubkey === accountState.account()?.pubkey" (click)="
               accountItem.pubkey !== accountState.account()?.pubkey
                 ? switchAccount(accountItem.pubkey)
                 : null
-            "
-          >
-            <div class="account-item-content">
-              <div class="account-avatar list-avatar">
-                @if (accountItemProfile?.data?.picture; as profilePicture) {
-                  <img [src]="profilePicture" alt="Profile picture" class="avatar-image" />
-                } @else {
-                  <mat-icon>account_circle</mat-icon>
-                }
-              </div>
-              <div class="account-list-content">
-                <div class="account-name">
-                  @if (accountItemProfile?.data; as profileData) {
-                    {{ profileData.display_name || profileData.name || 'Unnamed Account' }}
-                  } @else {
-                    Unnamed Account
-                  }
-                </div>
-
-                <div class="account-details-container">
-                  <div class="account-npub">{{ accountItem.pubkey | npub }}</div>
-                  <div class="account-source">
-                    Type: {{ accountItem.source }} • Last used:
-                    {{ accountItem.lastUsed | date: 'medium' }}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                mat-icon-button
-                class="delete-button"
-                (click)="removeAccount($event, accountItem.pubkey)"
-                matTooltip="Remove account"
-              >
-                <mat-icon color="warn">delete</mat-icon>
-              </button>
+            ">
+        <div class="account-item-content">
+          <div class="account-avatar list-avatar">
+            @if (accountItemProfile?.data?.picture; as profilePicture) {
+            <img [src]="profilePicture" alt="Profile picture" class="avatar-image" />
+            } @else {
+            <mat-icon>account_circle</mat-icon>
+            }
+          </div>
+          <div class="account-list-content">
+            <div class="account-name">
+              @if (accountItemProfile?.data; as profileData) {
+              {{ profileData.display_name || profileData.name || 'Unnamed Account' }}
+              } @else {
+              Unnamed Account
+              }
             </div>
-          </mat-list-item>
-        }
-      </mat-list>
-    </div>
 
-    <button
-      (click)="nostrService.logout()"
-      mat-raised-button
-      class="add-account-button"
-    >
-      <mat-icon>account_circle_off</mat-icon> Set no active account
-    </button>
+            <div class="account-details-container">
+              <div class="account-npub">{{ accountItem.pubkey | npub }}</div>
+              <div class="account-source">
+                Type: {{ accountItem.source }} • Last used:
+                {{ accountItem.lastUsed | date: 'medium' }}
+              </div>
+            </div>
+          </div>
+
+          <button mat-icon-button class="delete-button" (click)="removeAccount($event, accountItem.pubkey)"
+            matTooltip="Remove account">
+            <mat-icon color="warn">delete</mat-icon>
+          </button>
+        </div>
+      </mat-list-item>
+      }
+    </mat-list>
+  </div>
+
+  <button (click)="nostrService.logout()" mat-raised-button class="add-account-button">
+    <mat-icon>account_circle_off</mat-icon> Set no active account
+  </button>
   } @else {
-    <p class="no-accounts">No accounts available</p>
+  <p class="no-accounts">No accounts available</p>
   }
 </div>
