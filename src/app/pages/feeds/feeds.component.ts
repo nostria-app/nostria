@@ -191,7 +191,7 @@ export class FeedsComponent implements OnDestroy {
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
   // Show scroll-to-top button when scrolled down - derived from layout service
-  showScrollToTop = computed(() => 
+  showScrollToTop = computed(() =>
     this.layoutService.leftPanelScrollReady() && !this.layoutService.leftPanelScrolledToTop()
   );
   // Feed expanded state - use layoutService signal for cross-component communication
@@ -297,13 +297,32 @@ export class FeedsComponent implements OnDestroy {
   });
 
   feedIcon = computed(() => {
+    // Show dynamic feed icon when active
+    const dynFeed = this.dynamicFeed();
+    if (dynFeed) {
+      return dynFeed.icon || 'tag';
+    }
+    // Show relay icon when relay feed is active
+    if (this.showRelayFeed()) {
+      return 'dns';
+    }
     const activeFeed = this.activeFeed();
-    return activeFeed ? activeFeed.icon : '';
+    return activeFeed ? activeFeed.icon : 'dynamic_feed';
   });
 
   feedLabel = computed(() => {
+    // Show dynamic feed label when active
+    const dynFeed = this.dynamicFeed();
+    if (dynFeed) {
+      return dynFeed.label || 'Hashtag Feed';
+    }
+    // Show relay domain when relay feed is active
+    const relayDomain = this.activeRelayDomain();
+    if (relayDomain) {
+      return relayDomain;
+    }
     const activeFeed = this.activeFeed();
-    return activeFeed ? activeFeed.label : '';
+    return activeFeed ? activeFeed.label : 'Select Feed';
   });
 
   // Track which feeds have loaded content
@@ -695,6 +714,13 @@ export class FeedsComponent implements OnDestroy {
     // Since FeedsComponent is embedded directly in app.html (not through router-outlet),
     // we need to use Router events to get query params from the URL
     const handleQueryParams = async (url: string) => {
+      // Wait for account to be available before processing query params
+      // This ensures the feed service is ready to create subscriptions
+      if (!this.accountState.account()) {
+        this.logger.debug('Skipping query params - no account loaded yet');
+        return;
+      }
+
       const urlTree = this.router.parseUrl(url);
       const queryParams = urlTree.queryParams;
       const relayParam = queryParams['r'];
@@ -745,8 +771,21 @@ export class FeedsComponent implements OnDestroy {
       }
     };
 
-    // Handle initial URL on component load
-    handleQueryParams(this.router.url);
+    // Track if we've handled the initial URL query params
+    let initialQueryParamsHandled = false;
+
+    // Use effect to handle initial URL when account and feed service are ready
+    // This ensures dynamic feeds work on page reload
+    effect(() => {
+      const account = this.accountState.account();
+      const feedsLoaded = this.feedService.feedsLoaded();
+
+      if (account && feedsLoaded && !initialQueryParamsHandled) {
+        initialQueryParamsHandled = true;
+        // Handle query params now that feeds are ready
+        handleQueryParams(this.router.url);
+      }
+    });
 
     // Subscribe to navigation events to handle URL changes
     this.queryParamsSubscription = this.router.events.subscribe(event => {
