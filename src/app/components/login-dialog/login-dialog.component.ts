@@ -171,6 +171,8 @@ export class LoginDialogComponent implements OnDestroy {
       const text = (await navigator.clipboard.readText()).trim();
       if (text && (text.startsWith('npub') || /^[0-9a-fA-F]{64}$/.test(text))) {
         this.externalSignerPubkey = text;
+        // Auto-login when a valid public key is received from the signer
+        this.loginWithExternalSigner();
       }
     } catch {
       // Ignore clipboard read errors
