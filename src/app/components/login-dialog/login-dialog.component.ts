@@ -127,10 +127,7 @@ export class LoginDialogComponent implements OnDestroy {
     effect(() => {
       if (this.currentStep() === LoginStep.EXTERNAL_SIGNER) {
         window.addEventListener('focus', this.onWindowFocusExternalSigner);
-        // Focus input after a short delay to allow rendering
-        setTimeout(() => {
-          this.externalSignerInput?.nativeElement?.focus();
-        }, 100);
+        // Don't auto-focus input - it brings up keyboard and hides the login button on mobile
       } else {
         window.removeEventListener('focus', this.onWindowFocusExternalSigner);
       }
@@ -166,7 +163,7 @@ export class LoginDialogComponent implements OnDestroy {
   }
 
   onWindowFocusExternalSigner = async () => {
-    this.externalSignerInput?.nativeElement?.focus();
+    // Don't auto-focus input - it brings up keyboard and hides the login button on mobile
     try {
       const text = (await navigator.clipboard.readText()).trim();
       if (text && (text.startsWith('npub') || /^[0-9a-fA-F]{64}$/.test(text))) {
