@@ -1,8 +1,6 @@
-// Host element styles - fill the full height of the container
+// Host element styles - let parent handle scrolling
 :host {
   display: block;
-  height: 100%;
-  overflow: hidden;
   padding-top: 0 !important;
 }
 
@@ -10,12 +8,8 @@
 .summary-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-width: 900px;
-  margin: 0 auto;
   width: 100%;
   padding-top: 0;
-  overflow-y: visible;
 }
 
 // Panel header styles - fixed at top (standard pattern)
@@ -84,66 +78,101 @@
   }
 }
 
-// Summary Tabs Styling
-.summary-tabs {
-  flex: 1;
+// Summary Content - scrollable area
+.summary-content {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  gap: 1rem;
+  padding: 16px;
+  padding-bottom: 80px; // Space for mobile navigation
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+// Common Summary Panel Styles (expansion panels)
+.summary-panel {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-large);
+
+  &.mat-expansion-panel {
+    box-shadow: none;
+    border: 1px solid var(--mat-sys-outline-variant);
+  }
 
   ::ng-deep {
-    .mat-mdc-tab-header {
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-    }
-
-    .mat-mdc-tab {
-      min-width: auto;
+    .mat-expansion-panel-header {
       padding: 0 16px;
+      height: 48px;
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high) !important;
+      }
     }
 
-    .mat-mdc-tab-body-wrapper {
-      flex: 1;
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
     }
 
-    .mat-mdc-tab-body-content {
-      overflow-y: auto;
+    .mat-expansion-panel-header-description {
+      justify-content: flex-end;
+      margin-right: 8px;
+    }
+
+    .mat-expansion-panel-body {
+      padding: 0 16px 16px 16px;
     }
   }
 
-  .tab-icon {
-    margin-right: 8px;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  .tab-label {
-    font-size: 0.9rem;
-  }
-
-  .tab-badge {
+  .panel-count-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 20px;
     height: 20px;
     padding: 0 6px;
-    margin-left: 8px;
+    margin-left: 4px;
     font-size: 0.75rem;
     background-color: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     border-radius: var(--mat-sys-corner-full);
   }
-}
 
-.tab-content {
-  padding: 16px;
-  padding-bottom: 80px; // Space for mobile navigation
-
-  .section-description {
-    margin: 0 0 16px 0;
-    font-size: 0.875rem;
+  .filter-hint-inline {
+    font-size: 0.75rem;
     color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
+  }
+
+  .filter-active-hint {
+    font-size: 0.75rem;
+    color: var(--mat-sys-primary);
+    padding: 2px 8px;
+    background-color: var(--mat-sys-primary-container);
+    border-radius: var(--mat-sys-corner-full);
+  }
+
+  .panel-content {
+    padding-top: 8px;
+
+    .load-more-container.compact {
+      margin-top: 0.75rem;
+
+      button {
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
   }
 }
 
@@ -278,17 +307,14 @@
   min-height: 300px;
   gap: 1rem;
   padding: 2rem;
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
 
   p {
     color: var(--mat-sys-on-surface-variant);
     margin: 0;
   }
-}
-
-.summary-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
 }
 
 .section-title {
@@ -748,93 +774,6 @@
   }
 }
 
-// Who Posted Expansion Panel (at top of Timeline)
-.who-posted-panel {
-  margin-bottom: 1rem;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: var(--mat-sys-corner-large);
-
-  &.mat-expansion-panel {
-    box-shadow: none;
-    border: 1px solid var(--mat-sys-outline-variant);
-  }
-
-  ::ng-deep {
-    .mat-expansion-panel-header {
-      padding: 0 16px;
-      height: 48px;
-
-      &:hover {
-        background-color: var(--mat-sys-surface-container-high) !important;
-      }
-    }
-
-    .mat-expansion-panel-header-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--mat-sys-on-surface);
-
-      mat-icon {
-        color: var(--mat-sys-primary);
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .mat-expansion-panel-header-description {
-      justify-content: flex-end;
-      margin-right: 8px;
-    }
-
-    .mat-expansion-panel-body {
-      padding: 0 16px 16px 16px;
-    }
-  }
-
-  .poster-count-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    margin-left: 4px;
-    font-size: 0.75rem;
-    background-color: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
-    border-radius: var(--mat-sys-corner-full);
-  }
-
-  .filter-hint-inline {
-    font-size: 0.75rem;
-    color: var(--mat-sys-on-surface-variant);
-    opacity: 0.8;
-  }
-
-  .filter-active-hint {
-    font-size: 0.75rem;
-    color: var(--mat-sys-primary);
-    padding: 2px 8px;
-    background-color: var(--mat-sys-primary-container);
-    border-radius: var(--mat-sys-corner-full);
-  }
-
-  .who-posted-content {
-    padding-top: 8px;
-
-    .load-more-container.compact {
-      margin-top: 0.75rem;
-
-      button {
-        height: 28px;
-        font-size: 0.8rem;
-      }
-    }
-  }
-}
-
 // Poster Grid
 .poster-grid {
   display: flex;
@@ -1012,6 +951,9 @@
   text-align: center;
   padding: 4rem 2rem;
   min-height: 300px;
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
 
   mat-icon {
     font-size: 4rem;
@@ -1369,6 +1311,7 @@ mat-divider {
     flex-shrink: 0;
 
     ::ng-deep {
+
       app-user-profile,
       .user-profile,
       .user-profile-container,
@@ -1469,6 +1412,7 @@ mat-divider {
       height: 40px;
 
       ::ng-deep {
+
         app-user-profile,
         .user-profile,
         .user-profile-container,

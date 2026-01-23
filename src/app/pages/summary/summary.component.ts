@@ -21,7 +21,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { AccountStateService } from '../../services/account-state.service';
@@ -73,7 +72,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
   selector: 'app-summary',
-imports: [
+  imports: [
     RouterModule,
     MatButtonModule,
     MatIconModule,
@@ -83,7 +82,6 @@ imports: [
     MatChipsModule,
     MatExpansionModule,
     MatCheckboxModule,
-    MatTabsModule,
     MatMenuModule,
     OverlayModule,
     UserProfileComponent,
@@ -153,7 +151,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   isFetching = signal(false); // Whether we're fetching from relays
   fetchProgress = signal({ fetched: 0, total: 0 });
   lastCheckTimestamp = signal(0);
-  
+
   // Captured "last visit" timestamp - frozen at component init, doesn't update during session
   private frozenLastVisitTimestamp = 0;
 
@@ -173,8 +171,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Section collapse states
   postersCollapsed = signal(false);
-  mediaCollapsed = signal(false);
-  articlesCollapsed = signal(false);
+  timelineCollapsed = signal(false); // Expanded by default
+  mediaCollapsed = signal(true); // Collapsed by default
+  articlesCollapsed = signal(true); // Collapsed by default
+  profilesCollapsed = signal(true); // Collapsed by default
 
   // Selected posters for filtering the timeline (empty means show all)
   selectedPosters = signal<Set<string>>(new Set());
@@ -406,7 +406,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     // Get last check timestamp and freeze it if not already frozen
     const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
     this.lastCheckTimestamp.set(lastCheck);
-    
+
     // Freeze the "last visit" timestamp on first load - this won't change during the session
     if (this.frozenLastVisitTimestamp === 0) {
       this.frozenLastVisitTimestamp = lastCheck;
