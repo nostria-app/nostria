@@ -1347,7 +1347,7 @@ export class FeedService {
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
       const since = feed.lastRetrieved ? feed.lastRetrieved : undefined;
 
-      this.logger.info(`🏷️ Loading INTERESTS feed for hashtags: ${hashtags.join(', ')} with kinds: ${kinds.join(', ')}${since ? `, since: ${since}` : ' (no time filter)'}`);
+      this.logger.debug(`🏷️ Loading interests feed for ${hashtags.length} hashtags`);
 
       // Use account relay with #t tag filter - Nostr filters with #t: [tag1, tag2] 
       // already do OR matching (events with ANY of those tags)
@@ -1361,20 +1361,16 @@ export class FeedService {
         filter.since = since;
       }
 
-      this.logger.debug(`🏷️ Querying account relays with filter: ${JSON.stringify(filter)}`);
-
       const allEvents = await this.accountRelay.getMany<Event>(filter);
 
-      this.logger.debug(`🏷️ Account relay returned ${allEvents.length} events for hashtags: ${hashtags.join(', ')}`);
-
       if (allEvents.length === 0) {
-        this.logger.info(`🏷️ No events found for interest hashtags: ${hashtags.join(', ')}`);
+        this.logger.debug(`🏷️ No events found for interest hashtags`);
         feedData.isRefreshing?.set(false);
         feedData.initialLoadComplete = true;
         return;
       }
 
-      this.logger.info(`🏷️ Found ${allEvents.length} events for interest hashtags: ${hashtags.join(', ')}`);
+      this.logger.debug(`🏷️ Found ${allEvents.length} events for interest hashtags`);;
 
       // Add events to the feed
       const currentEvents = feedData.events();
@@ -1405,7 +1401,7 @@ export class FeedService {
           this.saveEventToDatabase(event);
         }
 
-        this.logger.debug(`Added ${newEvents.length} new events from interests, total: ${allEvents.length}`);
+        this.logger.debug(`Added ${newEvents.length} new events from interests`);
       }
 
       // Update lastRetrieved timestamp
@@ -1414,7 +1410,6 @@ export class FeedService {
       // Mark initial load as complete and stop showing loading spinner
       feedData.isRefreshing?.set(false);
       feedData.initialLoadComplete = true;
-      this.logger.info(`✅ Interests feed load complete for ${feed.id} - found ${allEvents.length} events`);
 
     } catch (error) {
       this.logger.error('Error loading interests feed:', error);
