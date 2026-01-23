@@ -29,7 +29,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
 import { ExternalSignerDialogComponent } from '../components/external-signer-dialog/external-signer-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
@@ -132,6 +132,15 @@ export class NostrService implements NostriaService {
   MAX_WAIT_TIME = 2000;
   MAX_WAIT_TIME_METADATA = 2500;
   dataLoaded = false;
+
+  // Extension signing queue to prevent concurrent signing dialogs
+  private extensionSigningQueue: {
+    event: EventTemplate | Event | UnsignedEvent;
+    resolve: (event: Event) => void;
+    reject: (error: Error) => void;
+  }[] = [];
+  private isExtensionSigning = false;
+  private currentSigningDialogRef: MatDialogRef<SigningDialogComponent> | null = null;
 
   // Default relays for new user accounts
   private readonly DEFAULT_RELAYS = [
@@ -732,28 +741,125 @@ export class NostrService implements NostriaService {
   }
 
   /**
-   * Wait for window.nostr to become available (browser extensions inject it asynchronously)
-   * Returns true if window.nostr becomes available, false if timeout
+   * Queue extension signing requests to prevent concurrent signing dialogs.
+   * This serializes signing operations so only one dialog is shown at a time.
    */
-  private async waitForNostrExtension(timeoutMs = 5000): Promise<boolean> {
-    if (window.nostr) {
-      return true;
+  private queueExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
+    return new Promise((resolve, reject) => {
+      this.extensionSigningQueue.push({ event, resolve, reject });
+      this.logger.debug(`[Extension Signing] Queued signing request, queue length: ${this.extensionSigningQueue.length}`);
+
+      // Start processing if not already processing
+      if (!this.isExtensionSigning) {
+        this.processExtensionSigningQueue();
+      }
+    });
+  }
+
+  /**
+   * Process the extension signing queue one request at a time.
+   * Shows only one signing dialog at a time to prevent multiple concurrent dialogs.
+   */
+  private async processExtensionSigningQueue(): Promise<void> {
+    if (this.isExtensionSigning || this.extensionSigningQueue.length === 0) {
+      return;
     }
 
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (window.nostr) {
-          clearInterval(checkInterval);
-          clearTimeout(timeout);
-          resolve(true);
-        }
-      }, 100); // Check every 100ms
+    this.isExtensionSigning = true;
 
-      const timeout = setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(false);
-      }, timeoutMs);
+    while (this.extensionSigningQueue.length > 0) {
+      const request = this.extensionSigningQueue.shift()!;
+
+      try {
+        const signedEvent = await this.performExtensionSigning(request.event);
+        request.resolve(signedEvent);
+      } catch (error) {
+        request.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
+
+    this.isExtensionSigning = false;
+  }
+
+  /**
+   * Perform the actual extension signing with dialog management.
+   */
+  private async performExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
+    // Wait for window.nostr to be available (extensions inject it asynchronously)
+    if (!window.nostr) {
+      await this.utilities.waitForNostrExtension();
+    }
+
+    if (!window.nostr) {
+      throw new Error(
+        'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.'
+      );
+    }
+
+    // Close any existing signing dialog (shouldn't happen, but safety check)
+    if (this.currentSigningDialogRef) {
+      this.logger.warn('[Extension Signing] Closing stale signing dialog');
+      this.currentSigningDialogRef.close();
+      this.currentSigningDialogRef = null;
+    }
+
+    // Open signing dialog
+    this.currentSigningDialogRef = this.dialog.open(SigningDialogComponent, {
+      disableClose: false, // Allow user to close the dialog to cancel
+      hasBackdrop: true,
+      panelClass: 'signing-dialog',
+      backdropClass: 'signing-dialog-backdrop',
     });
+
+    // Create a promise that rejects if the user closes the dialog
+    const dialogClosedPromise = new Promise<never>((_, reject) => {
+      this.currentSigningDialogRef?.afterClosed().subscribe(() => {
+        // Only reject if the dialog was closed by user action, not by our code
+        // We set currentSigningDialogRef to null before closing programmatically
+        if (this.currentSigningDialogRef) {
+          this.currentSigningDialogRef = null;
+          reject(new Error('Signing cancelled by user'));
+        }
+      });
+    });
+
+    try {
+      // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
+      // Extensions will add the pubkey themselves
+      // Preserve created_at if already set (important for PoW)
+      // For PoW events, we need to include the pre-calculated ID
+      const eventTemplate: any = {
+        kind: event.kind,
+        created_at: event.created_at ?? this.currentDate(),
+        tags: event.tags,
+        content: event.content,
+      };
+
+      // If this is a mined PoW event (has nonce tag and pubkey), include the ID
+      const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
+      if (hasNonceTag && 'pubkey' in event) {
+        // Calculate and include the event ID for PoW events
+        const { getEventHash } = await import('nostr-tools');
+        eventTemplate.id = getEventHash(event as UnsignedEvent);
+        eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
+      }
+
+      // Pass event template to extension, race against dialog close
+      this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
+      const extensionResult = await Promise.race([
+        window.nostr.signEvent(eventTemplate),
+        dialogClosedPromise,
+      ]);
+      this.logger.debug('[Extension Signing] Extension signing completed');
+      return extensionResult as Event;
+    } finally {
+      // Always close the dialog when signing completes (success or error)
+      if (this.currentSigningDialogRef) {
+        const dialogRef = this.currentSigningDialogRef;
+        this.currentSigningDialogRef = null; // Clear before closing to prevent rejection
+        dialogRef.close();
+      }
+    }
   }
 
   async signEvent(event: EventTemplate | UnsignedEvent) {
@@ -861,54 +967,8 @@ export class NostrService implements NostriaService {
         break;
       }
       case 'extension': {
-        // Wait for window.nostr to be available (extensions inject it asynchronously)
-        if (!window.nostr) {
-          await this.waitForNostrExtension();
-        }
-
-        if (!window.nostr) {
-          throw new Error(
-            'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.'
-          );
-        }
-
-        // Open signing dialog
-        const dialogRef = this.dialog.open(SigningDialogComponent, {
-          disableClose: true,
-          hasBackdrop: true,
-          panelClass: 'signing-dialog',
-          backdropClass: 'signing-dialog-backdrop',
-        });
-
-        try {
-          // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
-          // Extensions will add the pubkey themselves
-          // Preserve created_at if already set (important for PoW)
-          // For PoW events, we need to include the pre-calculated ID
-          const eventTemplate: any = {
-            kind: event.kind,
-            created_at: event.created_at ?? this.currentDate(),
-            tags: event.tags,
-            content: event.content,
-          };
-
-          // If this is a mined PoW event (has nonce tag and pubkey), include the ID
-          const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
-          if (hasNonceTag && 'pubkey' in event) {
-            // Calculate and include the event ID for PoW events
-            const { getEventHash } = await import('nostr-tools');
-            eventTemplate.id = getEventHash(event as UnsignedEvent);
-            eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
-          }
-
-          // Pass event template to extension
-          const extensionResult = await window.nostr.signEvent(eventTemplate);
-          signedEvent = extensionResult as Event;
-        } finally {
-          // Always close the dialog when signing completes (success or error)
-          dialogRef.close();
-        }
-
+        // Queue extension signing requests to prevent concurrent dialogs
+        signedEvent = await this.queueExtensionSigning(event);
         break;
       }
       case 'remote': {
@@ -1973,17 +2033,38 @@ export class NostrService implements NostriaService {
   async loginWithExtension(): Promise<void> {
     this.logger.info('Attempting to login with Nostr extension');
     try {
-      // Check if NIP-07 extension is available
+      // Wait for extension to be available (it's injected asynchronously)
       if (!window.nostr) {
-        const error =
-          'No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.';
-        this.logger.error(error);
-        throw new Error(error);
+        this.logger.info('Extension not immediately available, waiting...');
+        const extensionAvailable = await this.utilities.waitForNostrExtension();
+        if (!extensionAvailable) {
+          const error =
+            'No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.';
+          this.logger.error(error);
+          throw new Error(error);
+        }
+        this.logger.info('Extension became available');
       }
 
-      // Get the public key from the extension
+      // Double-check extension is available (for TypeScript)
+      if (!window.nostr) {
+        throw new Error('No Nostr extension found after waiting');
+      }
+
+      // Get the public key from the extension with a timeout
+      // The extension may show a popup for user approval which takes time
       this.logger.debug('Requesting public key from extension');
-      const pubkey = await window.nostr.getPublicKey();
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Extension did not respond in time. Please check if your browser extension popup is visible and approve the request.'));
+        }, 60000); // 60 second timeout - extensions can take time if user needs to approve
+      });
+
+      const pubkey = await Promise.race([
+        window.nostr.getPublicKey(),
+        timeoutPromise,
+      ]);
 
       if (!pubkey) {
         const error = 'Failed to get public key from extension';

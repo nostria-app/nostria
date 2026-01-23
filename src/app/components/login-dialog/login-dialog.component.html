@@ -191,6 +191,11 @@
     <div class="loading-content">
       <mat-spinner diameter="48"></mat-spinner>
       <p class="loading-text">Connecting to your Nostr extension...</p>
+      <p class="extension-hint">Look for a popup from your browser extension (Alby, nos2x, etc.) and approve the
+        connection request.</p>
+      <button mat-stroked-button (click)="goToStep(LoginStep.LOGIN_OPTIONS)" class="cancel-extension-button">
+        Cancel
+      </button>
     </div>
     }
 

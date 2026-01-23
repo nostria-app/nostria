@@ -13,6 +13,8 @@ import { AccountRelayService } from './relays/account-relay';
 import { ReportingService } from './reporting.service';
 import { FollowingService } from './following.service';
 import { MetricsTrackingService } from './metrics-tracking.service';
+import { LoggerService } from './logger.service';
+import { UtilitiesService } from './utilities.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -21,6 +23,8 @@ import { MetricsTrackingService } from './metrics-tracking.service';
 export class StateService implements NostriaService {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private utilities = inject(UtilitiesService);
+  private logger = inject(LoggerService);
   accountState = inject(AccountStateService);
   media = inject(MediaService);
   badge = inject(BadgeService);
@@ -39,6 +43,19 @@ export class StateService implements NostriaService {
       const account = this.accountState.account();
       if (account) {
         try {
+          // For extension-based accounts, wait for the browser extension to be available
+          // before loading data that may require signing or decryption
+          if (account.source === 'extension') {
+            this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
+            const extensionAvailable = await this.utilities.waitForNostrExtension();
+            if (!extensionAvailable) {
+              this.logger.warn('[StateService] Browser extension not available after timeout');
+              // Continue anyway - individual operations will handle missing extension
+            } else {
+              this.logger.info('[StateService] Browser extension is ready');
+            }
+          }
+
           this.clear();
           await this.load();
         } catch (error) {
