@@ -503,8 +503,8 @@ export class PanelNavigationService {
       // Clear right panel - just close it, don't navigate away from current left route
       this._rightStack.set([]);
       this._isBackNavigation = true;
-      // Clear the right outlet - Angular Router preserves the primary outlet automatically
-      this.router.navigate([{ outlets: { right: null } }]);
+      // Clear the right outlet - Angular Router preserves the primary outlet and query params automatically
+      this.router.navigate([{ outlets: { right: null } }], { queryParamsHandling: 'preserve' });
       return;
     }
 
@@ -540,8 +540,8 @@ export class PanelNavigationService {
     if (this._clearRightPanelCallback) {
       this._clearRightPanelCallback();
     }
-    // Clear the right outlet - Angular Router preserves the primary outlet automatically
-    this.router.navigate([{ outlets: { right: null } }]);
+    // Clear the right outlet - Angular Router preserves the primary outlet and query params automatically
+    this.router.navigate([{ outlets: { right: null } }], { queryParamsHandling: 'preserve' });
   }
 
   /**

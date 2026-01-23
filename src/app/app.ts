@@ -673,8 +673,8 @@ export class App implements OnInit {
       this._rightPanelHistory.set([]);
       this._hasRightRouterContent.set(false);
       this.panelActions.clearRightPanelActions();
-      // Navigate to clear the right outlet
-      this.router.navigate([{ outlets: { right: null } }], { replaceUrl: true });
+      // Navigate to clear the right outlet, preserving query params (e.g., /f?t=bitcoin for dynamic hashtag feeds)
+      this.router.navigate([{ outlets: { right: null } }], { replaceUrl: true, queryParamsHandling: 'preserve' });
     });
 
     // Track route changes for right panel state and cache clearing
