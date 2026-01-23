@@ -3499,6 +3499,7 @@ export class FeedService {
    * Sync feeds to kind 30078 settings event for cross-device synchronization.
    * This is called automatically when feeds are saved locally.
    * Uses debouncing to prevent excessive relay publishes.
+   * Compares feeds before publishing to avoid unnecessary signing requests.
    */
   private syncFeedsToSettingsTimeout: ReturnType<typeof setTimeout> | null = null;
   private syncFeedsToSettings(feeds: FeedConfig[]): void {
@@ -3520,6 +3521,13 @@ export class FeedService {
         // Convert to synced format (strip runtime properties)
         const syncedFeeds = feeds.map(feed => this.convertFeedConfigToSynced(feed));
 
+        // Compare with existing synced feeds to avoid unnecessary publishes
+        const existingSyncedFeeds = this.settingsService.getSyncedFeeds();
+        if (this.areFeedsEqual(syncedFeeds, existingSyncedFeeds)) {
+          this.logger.debug('Feeds unchanged, skipping sync to settings');
+          return;
+        }
+
         this.logger.info(`Syncing ${syncedFeeds.length} feeds to kind 30078 settings`);
         await this.settingsService.updateSyncedFeeds(syncedFeeds);
         this.logger.info('Feeds synced successfully to settings');
@@ -3530,6 +3538,60 @@ export class FeedService {
         this.syncInProgress = false;
       }
     }, 2000); // 2 second debounce
+  }
+
+  /**
+   * Compare two arrays of synced feeds to check if they are equal.
+   * Ignores updatedAt field for comparison since it changes on every save.
+   * @returns true if feeds are equal, false otherwise
+   */
+  private areFeedsEqual(feeds1: SyncedFeedConfig[], feeds2: SyncedFeedConfig[] | undefined): boolean {
+    if (!feeds2) return false;
+    if (feeds1.length !== feeds2.length) return false;
+
+    // Create maps for quick lookup by id
+    const feeds2Map = new Map(feeds2.map(f => [f.id, f]));
+
+    for (const feed1 of feeds1) {
+      const feed2 = feeds2Map.get(feed1.id);
+      if (!feed2) return false;
+
+      // Compare all properties except updatedAt (which changes on every save)
+      // and createdAt (which should be stable)
+      if (
+        feed1.label !== feed2.label ||
+        feed1.icon !== feed2.icon ||
+        feed1.type !== feed2.type ||
+        feed1.source !== feed2.source ||
+        feed1.relayConfig !== feed2.relayConfig ||
+        feed1.searchQuery !== feed2.searchQuery ||
+        feed1.showReplies !== feed2.showReplies ||
+        feed1.showReposts !== feed2.showReposts ||
+        feed1.isSystem !== feed2.isSystem ||
+        !this.arraysEqual(feed1.kinds, feed2.kinds) ||
+        !this.arraysEqual(feed1.customUsers, feed2.customUsers) ||
+        !this.arraysEqual(feed1.customStarterPacks, feed2.customStarterPacks) ||
+        !this.arraysEqual(feed1.customFollowSets, feed2.customFollowSets) ||
+        !this.arraysEqual(feed1.customInterestHashtags, feed2.customInterestHashtags) ||
+        !this.arraysEqual(feed1.customRelays, feed2.customRelays) ||
+        JSON.stringify(feed1.filters) !== JSON.stringify(feed2.filters)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Helper to compare two arrays for equality (order matters)
+   */
+  private arraysEqual<T>(arr1: T[] | undefined, arr2: T[] | undefined): boolean {
+    if (arr1 === arr2) return true;
+    if (!arr1 && !arr2) return true;
+    if (!arr1 || !arr2) return false;
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((val, index) => val === arr2[index]);
   }
 
   /**
