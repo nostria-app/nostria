@@ -617,7 +617,7 @@ export class FeedService {
     // Load cached events (skip for dynamic feeds - they should always fetch fresh data)
     const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
     let cachedEvents: Event[] = [];
-    
+
     if (!isDynamicFeed) {
       cachedEvents = await this.loadCachedEvents(feed.id);
 
@@ -1349,36 +1349,39 @@ export class FeedService {
 
       this.logger.info(`🏷️ Loading INTERESTS feed for hashtags: ${hashtags.join(', ')} with kinds: ${kinds.join(', ')}${since ? `, since: ${since}` : ' (no time filter)'}`);
 
-      // Build search query with hashtags for NIP-50 search relays
-      // Search relays understand "#hashtag" syntax and have indexed hashtag data
-      const searchQuery = hashtags.map(tag => `#${tag}`).join(' ');
-
-      this.logger.debug(`🏷️ Interests feed search query: "${searchQuery}"`);
-
-      // Use SearchRelayService to perform the hashtag search
-      // This is the same approach used by loadSearchFeed and works reliably
-      const events = await this.searchRelay.searchForFeed(
-        searchQuery,
+      // Use account relay with #t tag filter - Nostr filters with #t: [tag1, tag2] 
+      // already do OR matching (events with ANY of those tags)
+      const filter: any = {
         kinds,
-        100, // limit
-        since
-      );
+        '#t': hashtags, // Array of tags = OR matching
+        limit: 100,
+      };
 
-      if (events.length === 0) {
+      if (since) {
+        filter.since = since;
+      }
+
+      this.logger.debug(`🏷️ Querying account relays with filter: ${JSON.stringify(filter)}`);
+
+      const allEvents = await this.accountRelay.getMany<Event>(filter);
+
+      this.logger.debug(`🏷️ Account relay returned ${allEvents.length} events for hashtags: ${hashtags.join(', ')}`);
+
+      if (allEvents.length === 0) {
         this.logger.info(`🏷️ No events found for interest hashtags: ${hashtags.join(', ')}`);
         feedData.isRefreshing?.set(false);
         feedData.initialLoadComplete = true;
         return;
       }
 
-      this.logger.info(`🏷️ Found ${events.length} events for interest hashtags: ${hashtags.join(', ')}`);
+      this.logger.info(`🏷️ Found ${allEvents.length} events for interest hashtags: ${hashtags.join(', ')}`);
 
       // Add events to the feed
       const currentEvents = feedData.events();
       const existingIds = new Set(currentEvents.map(e => e.id));
 
       // Filter out duplicates and muted events
-      const newEvents = events.filter(event => {
+      const newEvents = allEvents.filter((event: Event) => {
         if (existingIds.has(event.id)) return false;
         if (this.accountState.muted(event)) return false;
         return true;
@@ -1386,11 +1389,11 @@ export class FeedService {
 
       if (newEvents.length > 0) {
         // Sort by created_at descending
-        const allEvents = [...currentEvents, ...newEvents].sort(
+        const combinedEvents = [...currentEvents, ...newEvents].sort(
           (a, b) => (b.created_at || 0) - (a.created_at || 0)
         );
 
-        feedData.events.set(allEvents);
+        feedData.events.set(combinedEvents);
 
         // Save to cache (skip for dynamic feeds - they change frequently)
         if (feed.id !== this.DYNAMIC_FEED_ID) {
@@ -1411,7 +1414,7 @@ export class FeedService {
       // Mark initial load as complete and stop showing loading spinner
       feedData.isRefreshing?.set(false);
       feedData.initialLoadComplete = true;
-      this.logger.info(`✅ Interests feed load complete for ${feed.id} - found ${events.length} events`);
+      this.logger.info(`✅ Interests feed load complete for ${feed.id} - found ${allEvents.length} events`);
 
     } catch (error) {
       this.logger.error('Error loading interests feed:', error);
