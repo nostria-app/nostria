@@ -9,13 +9,8 @@
   <!-- Panel Header -->
   <div class="panel-header">
     <h2 class="panel-title title-font">Summary</h2>
-    <button
-      mat-stroked-button
-      cdkOverlayOrigin
-      #timeOrigin="cdkOverlayOrigin"
-      (click)="toggleTimePanel()"
-      class="time-badge-btn"
-      matTooltip="Change time range">
+    <button mat-stroked-button cdkOverlayOrigin #timeOrigin="cdkOverlayOrigin" (click)="toggleTimePanel()"
+      class="time-badge-btn" matTooltip="Change time range">
       <mat-icon>schedule</mat-icon>
       <span>{{ selectedTimeLabel() }}</span>
     </button>
@@ -41,24 +36,16 @@
   </div>
 
   <!-- Time Range Panel Overlay -->
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="timeOrigin"
-    [cdkConnectedOverlayOpen]="timePanelOpen()"
-    [cdkConnectedOverlayPositions]="timePanelPositions"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="time-panel-backdrop"
-    (backdropClick)="closeTimePanel()">
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="timeOrigin" [cdkConnectedOverlayOpen]="timePanelOpen()"
+    [cdkConnectedOverlayPositions]="timePanelPositions" [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="time-panel-backdrop" (backdropClick)="closeTimePanel()">
     <div class="time-panel">
       <div class="time-panel-header">
         <mat-icon>schedule</mat-icon>
         <span>Time Range</span>
       </div>
       <div class="time-panel-content">
-        <button
-          mat-stroked-button
-          class="time-option"
-          [class.active]="selectedPreset() === null"
+        <button mat-stroked-button class="time-option" [class.active]="selectedPreset() === null"
           (click)="resetToLastVisit()">
           <mat-icon>history</mat-icon>
           <span>Since last visit</span>
@@ -68,10 +55,7 @@
         </button>
         <mat-divider></mat-divider>
         @for (preset of timePresets; track preset.hours) {
-        <button
-          mat-stroked-button
-          class="time-option"
-          [class.active]="selectedPreset() === preset.hours"
+        <button mat-stroked-button class="time-option" [class.active]="selectedPreset() === preset.hours"
           (click)="selectPreset(preset.hours)">
           <span>{{ preset.label }}</span>
           @if (selectedPreset() === preset.hours) {
@@ -108,83 +92,202 @@
     <p>There's no new activity from the people you follow during this time period.</p>
   </section>
   } @else {
-  <!-- Tabs -->
-  <mat-tab-group class="summary-tabs">
-    <!-- Activity Timeline Tab -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">schedule</mat-icon>
-        <span class="tab-label">Timeline</span>
-        @if (totalTimelineCount() > 0) {
-        <span class="tab-badge">{{ totalTimelineCount() }}</span>
-        }
-      </ng-template>
-      <div class="tab-content">
-        <!-- Who Posted Expander - at top of Timeline -->
-        @if (activePosters().length > 0) {
-        <mat-expansion-panel class="who-posted-panel" [expanded]="!postersCollapsed()" (expandedChange)="postersCollapsed.set(!$event)">
-          <mat-expansion-panel-header>
-            <mat-panel-title>
-              <mat-icon>group</mat-icon>
-              <span>Who Posted</span>
-              <span class="poster-count-badge">{{ totalPostersCount() }}</span>
-            </mat-panel-title>
-            <mat-panel-description>
-              @if (selectedPosters().size > 0) {
-              <span class="filter-active-hint">{{ selectedPosters().size }} selected</span>
-              } @else {
-              <span class="filter-hint-inline">Click to filter</span>
-              }
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          <div class="who-posted-content">
-            <div class="poster-grid">
-              @for (poster of activePosters(); track poster.pubkey) {
-              <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
-                (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
-                (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
-                [attr.aria-checked]="isPosterSelected(poster.pubkey)">
-                <div class="poster-avatar">
-                  <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"></app-user-profile>
-                  @if (isPosterSelected(poster.pubkey)) {
-                  <div class="selection-indicator">
-                    <mat-icon>check_circle</mat-icon>
-                  </div>
-                  }
-                </div>
-                <div class="poster-stats-badge">
-                  <span class="stat-item" matTooltip="Notes">
-                    <mat-icon>chat</mat-icon>
-                    {{ poster.notesCount }}
-                  </span>
-                  @if (poster.articlesCount > 0) {
-                  <span class="stat-item" matTooltip="Articles">
-                    <mat-icon>article</mat-icon>
-                    {{ poster.articlesCount }}
-                  </span>
-                  }
-                  @if (poster.mediaCount > 0) {
-                  <span class="stat-item" matTooltip="Media">
-                    <mat-icon>perm_media</mat-icon>
-                    {{ poster.mediaCount }}
-                  </span>
-                  }
-                </div>
+  <!-- Summary Content - Scrollable -->
+  <div class="summary-content">
+    <!-- Who Posted Expander -->
+    @if (activePosters().length > 0) {
+    <mat-expansion-panel class="summary-panel who-posted-panel" [expanded]="!postersCollapsed()"
+      (expandedChange)="postersCollapsed.set(!$event)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>group</mat-icon>
+          <span>Who Posted</span>
+          <span class="panel-count-badge">{{ totalPostersCount() }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          @if (selectedPosters().size > 0) {
+          <span class="filter-active-hint">{{ selectedPosters().size }} selected</span>
+          } @else {
+          <span class="filter-hint-inline">Click to filter</span>
+          }
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
+        <div class="poster-grid">
+          @for (poster of activePosters(); track poster.pubkey) {
+          <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
+            (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
+            (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
+            [attr.aria-checked]="isPosterSelected(poster.pubkey)">
+            <div class="poster-avatar">
+              <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"></app-user-profile>
+              @if (isPosterSelected(poster.pubkey)) {
+              <div class="selection-indicator">
+                <mat-icon>check_circle</mat-icon>
               </div>
               }
             </div>
-            @if (hasMorePosters()) {
-            <div class="load-more-container compact">
-              <button mat-stroked-button (click)="loadMorePosters(); $event.stopPropagation()">
-                <mat-icon>expand_more</mat-icon>
-                Load More
-              </button>
+            <div class="poster-stats-badge">
+              <span class="stat-item" matTooltip="Notes">
+                <mat-icon>chat</mat-icon>
+                {{ poster.notesCount }}
+              </span>
+              @if (poster.articlesCount > 0) {
+              <span class="stat-item" matTooltip="Articles">
+                <mat-icon>article</mat-icon>
+                {{ poster.articlesCount }}
+              </span>
+              }
+              @if (poster.mediaCount > 0) {
+              <span class="stat-item" matTooltip="Media">
+                <mat-icon>perm_media</mat-icon>
+                {{ poster.mediaCount }}
+              </span>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        @if (hasMorePosters()) {
+        <div class="load-more-container compact">
+          <button mat-stroked-button (click)="loadMorePosters(); $event.stopPropagation()">
+            <mat-icon>expand_more</mat-icon>
+            Load More
+          </button>
+        </div>
+        }
+      </div>
+    </mat-expansion-panel>
+    }
+
+    <!-- Articles Expander -->
+    @if (articleEvents().length > 0) {
+    <mat-expansion-panel class="summary-panel articles-panel" [expanded]="!articlesCollapsed()"
+      (expandedChange)="articlesCollapsed.set(!$event)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>article</mat-icon>
+          <span>Articles</span>
+          <span class="panel-count-badge">{{ articleEvents().length }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="filter-hint-inline">Long-form articles published recently</span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
+        <div class="articles-grid">
+          @for (event of articleEvents(); track event.id) {
+          <div class="article-card" (click)="openArticle(event)" (keydown.enter)="openArticle(event)" tabindex="0"
+            role="button">
+            @if (getArticleImage(event); as imageUrl) {
+            <div class="article-image">
+              <img [src]="imageUrl" alt="Article cover" loading="lazy" />
+            </div>
+            } @else {
+            <div class="article-image article-placeholder">
+              <mat-icon>article</mat-icon>
             </div>
             }
+            <div class="article-content">
+              <h3 class="article-title">{{ getArticleTitle(event) }}</h3>
+              <p class="article-summary">{{ getArticleSummary(event) }}</p>
+              <div class="article-footer">
+                <app-user-profile [pubkey]="event.pubkey" view="icon" class="article-author"></app-user-profile>
+                <span class="article-time">{{ event.created_at | ago }}</span>
+              </div>
+            </div>
           </div>
-        </mat-expansion-panel>
-        }
+          }
+        </div>
+      </div>
+    </mat-expansion-panel>
+    }
 
+    <!-- Media Expander -->
+    @if (mediaEvents().length > 0) {
+    <mat-expansion-panel class="summary-panel media-panel" [expanded]="!mediaCollapsed()"
+      (expandedChange)="mediaCollapsed.set(!$event)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>perm_media</mat-icon>
+          <span>Media</span>
+          <span class="panel-count-badge">{{ mediaEvents().length }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="filter-hint-inline">Photos and videos shared recently</span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
+        <div class="media-grid">
+          @for (event of mediaEvents(); track event.id) {
+          @if (getMediaUrl(event); as mediaUrl) {
+          <div class="media-card" (click)="openMediaDialog($event, event)" tabindex="0" role="button"
+            (keydown.enter)="openMediaDialog($any($event), event)">
+            <div class="media-preview">
+              @if (isVideoUrl(mediaUrl)) {
+              <div class="video-indicator">
+                <mat-icon>play_circle</mat-icon>
+              </div>
+              }
+              <img [src]="mediaUrl" alt="Media content" title="View media" loading="lazy" />
+            </div>
+            <div class="media-overlay">
+              <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
+              <a class="media-time" [routerLink]="[{ outlets: { right: ['e', event.id] } }]"
+                (click)="$event.stopPropagation()">{{ event.created_at | ago }}</a>
+            </div>
+          </div>
+          }
+          }
+        </div>
+      </div>
+    </mat-expansion-panel>
+    }
+
+    <!-- Profile Updates Expander -->
+    @if (profileUpdates().length > 0) {
+    <mat-expansion-panel class="summary-panel profiles-panel" [expanded]="!profilesCollapsed()"
+      (expandedChange)="profilesCollapsed.set(!$event)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>badge</mat-icon>
+          <span>Profile Updates</span>
+          <span class="panel-count-badge">{{ profileUpdates().length }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="filter-hint-inline">People who updated their profiles</span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
+        <div class="poster-grid">
+          @for (pubkey of profileUpdates(); track pubkey) {
+          <a class="poster-card" [routerLink]="[{ outlets: { right: ['p', pubkey] } }]">
+            <div class="poster-avatar">
+              <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
+            </div>
+          </a>
+          }
+        </div>
+      </div>
+    </mat-expansion-panel>
+    }
+
+    <!-- Timeline Expander -->
+    <mat-expansion-panel class="summary-panel timeline-panel" [expanded]="!timelineCollapsed()"
+      (expandedChange)="timelineCollapsed.set(!$event)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>schedule</mat-icon>
+          <span>Timeline</span>
+          @if (totalTimelineCount() > 0) {
+          <span class="panel-count-badge">{{ totalTimelineCount() }}</span>
+          }
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="filter-hint-inline">Recent activity from people you follow</span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
         @if (timelineEvents().length > 0 || isFilterMode()) {
         <div class="section-header-with-actions">
           <div class="timeline-filter-actions">
@@ -194,7 +297,8 @@
               GM / Pura Vida
             </button>
             @if (isFilterMode()) {
-            <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false)" class="clear-filter-btn">
+            <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false)"
+              class="clear-filter-btn">
               <mat-icon>clear</mat-icon>
               Clear All Filters
             </button>
@@ -240,112 +344,8 @@
         </div>
         }
       </div>
-    </mat-tab>
-
-    <!-- Articles Tab -->
-    @if (articleEvents().length > 0) {
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">article</mat-icon>
-        <span class="tab-label">Articles</span>
-        @if (articleEvents().length > 0) {
-        <span class="tab-badge">{{ articleEvents().length }}</span>
-        }
-      </ng-template>
-      <div class="tab-content">
-        <p class="section-description">Long-form articles published recently</p>
-        <div class="articles-grid">
-          @for (event of articleEvents(); track event.id) {
-          <div class="article-card" (click)="openArticle(event)" (keydown.enter)="openArticle(event)" tabindex="0"
-            role="button">
-            @if (getArticleImage(event); as imageUrl) {
-            <div class="article-image">
-              <img [src]="imageUrl" alt="Article cover" loading="lazy" />
-            </div>
-            } @else {
-            <div class="article-image article-placeholder">
-              <mat-icon>article</mat-icon>
-            </div>
-            }
-            <div class="article-content">
-              <h3 class="article-title">{{ getArticleTitle(event) }}</h3>
-              <p class="article-summary">{{ getArticleSummary(event) }}</p>
-              <div class="article-footer">
-                <app-user-profile [pubkey]="event.pubkey" view="icon" class="article-author"></app-user-profile>
-                <span class="article-time">{{ event.created_at | ago }}</span>
-              </div>
-            </div>
-          </div>
-          }
-        </div>
-      </div>
-    </mat-tab>
-    }
-
-    <!-- Media Tab -->
-    @if (mediaEvents().length > 0) {
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">perm_media</mat-icon>
-        <span class="tab-label">Media</span>
-        @if (mediaEvents().length > 0) {
-        <span class="tab-badge">{{ mediaEvents().length }}</span>
-        }
-      </ng-template>
-      <div class="tab-content">
-        <p class="section-description">Photos and videos shared recently</p>
-        <div class="media-grid">
-          @for (event of mediaEvents(); track event.id) {
-          @if (getMediaUrl(event); as mediaUrl) {
-          <div class="media-card" (click)="openMediaDialog($event, event)" tabindex="0" role="button"
-            (keydown.enter)="openMediaDialog($any($event), event)">
-            <div class="media-preview">
-              @if (isVideoUrl(mediaUrl)) {
-              <div class="video-indicator">
-                <mat-icon>play_circle</mat-icon>
-              </div>
-              }
-              <img [src]="mediaUrl" alt="Media content" title="View media" loading="lazy" />
-            </div>
-            <div class="media-overlay">
-              <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
-              <a class="media-time" [routerLink]="[{ outlets: { right: ['e', event.id] } }]"
-                (click)="$event.stopPropagation()">{{ event.created_at
-                | ago }}</a>
-            </div>
-          </div>
-          }
-          }
-        </div>
-      </div>
-    </mat-tab>
-    }
-
-    <!-- Profile Updates Tab -->
-    @if (profileUpdates().length > 0) {
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">badge</mat-icon>
-        <span class="tab-label">Profiles</span>
-        @if (profileUpdates().length > 0) {
-        <span class="tab-badge">{{ profileUpdates().length }}</span>
-        }
-      </ng-template>
-      <div class="tab-content">
-        <p class="section-description">People who updated their profiles</p>
-        <div class="poster-grid">
-          @for (pubkey of profileUpdates(); track pubkey) {
-          <a class="poster-card" [routerLink]="[{ outlets: { right: ['p', pubkey] } }]">
-            <div class="poster-avatar">
-              <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
-            </div>
-          </a>
-          }
-        </div>
-      </div>
-    </mat-tab>
-    }
-  </mat-tab-group>
+    </mat-expansion-panel>
+  </div>
   }
   }
 </div>

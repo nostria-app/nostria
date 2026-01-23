@@ -635,7 +635,7 @@ export class App implements OnInit {
     { path: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
     { path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
     { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
-    { path: 'stats', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
+    { path: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
     { path: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
     { path: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
   ];

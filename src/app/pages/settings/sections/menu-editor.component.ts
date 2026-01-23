@@ -41,7 +41,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
   { id: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
   { id: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
-  { id: 'stats', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
+  { id: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
   { id: 'premium', label: $localize`:@@app.nav.premium:Premium`, icon: 'diamond', authenticated: true },
   { id: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
   { id: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
