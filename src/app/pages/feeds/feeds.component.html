@@ -11,7 +11,13 @@
       <!-- Feed selector dropdown/tabs -->
       <div class="feed-tabs" #feedTabsContainer>
         <div class="feed-tabs-inner" #feedTabsInner>
-          @if (useDropdownSelector()) {
+          @if (!feedService.feedsLoaded()) {
+          <!-- Show loading indicator while feeds are loading -->
+          <button mat-button disabled>
+            <mat-icon>dynamic_feed</mat-icon>
+            Loading...
+          </button>
+          } @else if (useDropdownSelector()) {
           <button mat-button [matMenuTriggerFor]="feedMenu">
             <mat-icon>{{ feedIcon() }}</mat-icon>
             {{ feedLabel() }}
