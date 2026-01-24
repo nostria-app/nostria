@@ -986,6 +986,7 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   flex: 1;
+  position: relative; // Contain absolutely positioned feeds-container when hidden
   // Center the content wrapper within the panel when max-width is set
   margin-left: auto;
   margin-right: auto;
@@ -1074,8 +1075,9 @@ mat-sidenav-content {
       top: 0;
       left: 0;
       right: 0;
-      bottom: 0;
+      height: 100%; // Use height instead of bottom: 0 for proper sizing
       pointer-events: none;
+      overflow: hidden; // Prevent hidden feeds from affecting scroll height
     }
   }
 
