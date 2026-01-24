@@ -381,73 +381,74 @@
       </div>
       }
 
-      <!-- Two-Column Layout Container - Main scroll container for full-width scrollbars -->
-      <div class="dual-panel-layout" [class.feeds-visible]="panelNav.showFeeds()"
-        [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
-        [style.--left-column-width.px]="twoColumnLayout.leftColumnWidth()"
-        [style.--right-column-width.px]="twoColumnLayout.rightColumnWidth()"
-        [class.feeds-centered]="panelNav.feedsCentered()" [class.has-left-content]="panelNav.hasLeftContent()"
-        [class.has-right-content]="hasRightContent()" [class.mobile-layout]="panelNav.isMobile()"
-        [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
+      <!-- Main content area - contains panels and right sidebar -->
+      <div class="main-content-area">
+        <!-- Two-Column Layout Container - Main scroll container for full-width scrollbars -->
+        <div class="dual-panel-layout" [class.feeds-visible]="panelNav.showFeeds()"
+          [class.wide-left]="twoColumnLayout.leftWidthMode() === 'wide'"
+          [style.--left-column-width.px]="twoColumnLayout.leftColumnWidth()"
+          [style.--right-column-width.px]="twoColumnLayout.rightColumnWidth()"
+          [class.feeds-centered]="panelNav.feedsCentered()" [class.has-left-content]="panelNav.hasLeftContent()"
+          [class.has-right-content]="hasRightContent()" [class.mobile-layout]="panelNav.isMobile()"
+          [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
 
-        <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
-        @if (hasRightContent() && !panelNav.isMobile()) {
-        <button mat-icon-button class="left-panel-toggle" (click)="toggleLeftPanelCollapse()"
-          [class.animating]="toggleButtonAnimating()"
-          [matTooltip]="leftPanelCollapsed() ? 'Show left panel' : 'Hide left panel'">
-          <mat-icon>{{ leftPanelCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-        </button>
+          <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
+          @if (hasRightContent() && !panelNav.isMobile()) {
+          <button mat-icon-button class="left-panel-toggle" (click)="toggleLeftPanelCollapse()"
+            [class.animating]="toggleButtonAnimating()"
+            [matTooltip]="leftPanelCollapsed() ? 'Show left panel' : 'Hide left panel'">
+            <mat-icon>{{ leftPanelCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+          </button>
+          }
+
+          <!-- Left Panel: Feeds or list/root views - takes 50% or 100% width, scrollbar at panel edge -->
+          <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
+            [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()" (scroll)="onLeftPanelScroll($event)">
+
+            <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
+            <div class="panel-content-wrapper">
+              <!-- Feeds - Persistent (uses visibility for state preservation) -->
+              @if (app.authenticated()) {
+              <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
+                [class.feeds-hidden]="!panelNav.showFeeds()">
+                <app-feeds></app-feeds>
+              </div>
+              }
+
+              <!-- Left panel content - router outlet renders here for list routes -->
+              <div class="panel-content left-panel-content">
+                <router-outlet></router-outlet>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel: Detail views (routed) - takes 50% width, scrollbar at panel edge -->
+          <div class="right-panel" [class.active]="hasRightContent()"
+            [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
+            [class.expanded]="leftPanelCollapsed() && hasRightContent()" (scroll)="onRightPanelScroll($event)">
+
+            <!-- Right panel inner content wrapper - constrains content to max 700px -->
+            <div class="panel-content-wrapper">
+              <div class="panel-content right-panel-content">
+                <!-- Router-based right panel content -->
+                <router-outlet name="right"></router-outlet>
+                <!-- Dynamic component-based right panel content (e.g., from RightPanelService) -->
+                <app-right-panel-container></app-right-panel-container>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right sidebar - mini apps panel (shoutout, favorites, future mini apps) -->
+        @if (app.authenticated() && !layout.isHandset()) {
+        <div class="right-sidebar">
+          <app-shoutout-overlay></app-shoutout-overlay>
+          <app-favorites-overlay></app-favorites-overlay>
+        </div>
         }
-
-        <!-- Left Panel: Feeds or list/root views - takes 50% or 100% width, scrollbar at panel edge -->
-        <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
-          [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()"
-          (scroll)="onLeftPanelScroll($event)">
-
-          <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
-          <div class="panel-content-wrapper">
-            <!-- Feeds - Persistent (uses visibility for state preservation) -->
-            @if (app.authenticated()) {
-            <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
-              [class.feeds-hidden]="!panelNav.showFeeds()">
-              <app-feeds></app-feeds>
-            </div>
-            }
-
-            <!-- Left panel content - router outlet renders here for list routes -->
-            <div class="panel-content left-panel-content">
-              <router-outlet></router-outlet>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Panel: Detail views (routed) - takes 50% width, scrollbar at panel edge -->
-        <div class="right-panel" [class.active]="hasRightContent()"
-          [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
-          [class.expanded]="leftPanelCollapsed() && hasRightContent()"
-          (scroll)="onRightPanelScroll($event)">
-
-          <!-- Right panel inner content wrapper - constrains content to max 700px -->
-          <div class="panel-content-wrapper">
-            <div class="panel-content right-panel-content">
-              <!-- Router-based right panel content -->
-              <router-outlet name="right"></router-outlet>
-              <!-- Dynamic component-based right panel content (e.g., from RightPanelService) -->
-              <app-right-panel-container></app-right-panel-container>
-            </div>
-          </div>
-        </div>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
-
-  <!-- Right sidebar container - shoutout and favorites together -->
-  @if (app.authenticated()) {
-  <div class="right-sidebar-container">
-    <app-shoutout-overlay></app-shoutout-overlay>
-    <app-favorites-overlay></app-favorites-overlay>
-  </div>
-  }
 
   <!-- Media player - positioned in footer or fullscreen based on state -->
   @if (layout.showMediaPlayer()) {

@@ -2,9 +2,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   pointer-events: auto;
-  padding-right: 8px;
 }
 
 // Chat bubble button
@@ -90,10 +89,9 @@
 
 // Overlay panel
 .shoutout-overlay {
-  position: absolute;
-  top: 0;
-  right: 100%; // Position to the left of the button
-  margin-right: 8px;
+  position: fixed;
+  top: 80px; // Below toolbar with some margin
+  right: 72px; // Position to the left of the sidebar (64px + 8px margin)
   bottom: auto;
   max-height: calc(100dvh - 128px);
   width: 380px;
@@ -197,7 +195,7 @@
     border-bottom-color: rgba(255, 255, 255, 0.08);
   }
 
-  > mat-icon {
+  >mat-icon {
     color: var(--mat-sys-primary);
     flex-shrink: 0;
     font-size: 20px;
