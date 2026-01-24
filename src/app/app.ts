@@ -102,7 +102,6 @@ import { FeedsComponent } from './pages/feeds/feeds.component';
 import { RightPanelService } from './services/right-panel.service';
 import { RightPanelContainerComponent } from './components/right-panel-container/right-panel-container.component';
 import { TwoColumnLayoutService } from './services/two-column-layout.service';
-import { NavigationStackService } from './services/navigation-stack.service';
 import { PanelNavigationService } from './services/panel-navigation.service';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { PanelActionsService } from './services/panel-actions.service';
@@ -235,20 +234,17 @@ export class App implements OnInit {
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
-  navigationStack = inject(NavigationStackService);
   panelNav = inject(PanelNavigationService);
   rightPanel = inject(RightPanelService);
   panelActions = inject(PanelActionsService);
   private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
 
-  // Right panel routing state
-  private _hasRightRouterContent = signal(false);
-  private _rightPanelHistory = signal<string[]>([]);
+  // Right panel routing state - use PanelNavigationService as source of truth
   // hasRightContent checks both router-based content AND RightPanelService content
-  hasRightContent = computed(() => this._hasRightRouterContent() || this.rightPanel.hasContent());
+  hasRightContent = computed(() => this.panelNav.hasRightContent() || this.rightPanel.hasContent());
   // Show back button whenever there's content - clicking it will either go back in history or close the panel
   // Also show when RightPanelService has content (so user can close it)
-  canGoBackRight = computed(() => this._rightPanelHistory().length >= 1 || this.rightPanel.hasContent());
+  canGoBackRight = computed(() => this.panelNav.canGoBackRight() || this.rightPanel.hasContent());
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
@@ -669,20 +665,15 @@ export class App implements OnInit {
     // When switching sections, fully close the right panel (both RightPanelService and router outlet)
     this.panelNav.setClearRightPanelCallback(() => {
       this.rightPanel.clearHistory();
-      // Also clear router-based right panel content
-      this._rightPanelHistory.set([]);
-      this._hasRightRouterContent.set(false);
       this.panelActions.clearRightPanelActions();
       // Navigate to clear the right outlet, preserving query params (e.g., /f?t=bitcoin for dynamic hashtag feeds)
       this.router.navigate([{ outlets: { right: null } }], { replaceUrl: true, queryParamsHandling: 'preserve' });
     });
 
-    // Track route changes for right panel state and cache clearing
+    // Track route changes for cache clearing
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event) => {
-      this.updateRightPanelState();
-
       // Clear route cache when navigating to root pages
       const navEvent = event as NavigationEnd;
       const url = navEvent.urlAfterRedirects || navEvent.url;
@@ -1785,7 +1776,6 @@ export class App implements OnInit {
    */
   navigateToHome(): void {
     this.routeDataService.clearHistory();
-    this.navigationStack.clearAll();
     this.panelNav.clearHistory();
     this.router.navigate(['/f']);
   }
@@ -1821,9 +1811,7 @@ export class App implements OnInit {
     this.panelActions.clearLeftPanelActions();
     this.panelActions.clearRightPanelActions();
 
-    // Clear right panel state first (without navigating yet)
-    this._rightPanelHistory.set([]);
-    this._hasRightRouterContent.set(false);
+    // Clear right panel state (without navigating yet)
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
@@ -1856,30 +1844,6 @@ export class App implements OnInit {
   }
 
   /**
-   * Update right panel state based on current route
-   */
-  private updateRightPanelState(url?: string): void {
-    // Check if there's a 'right' outlet in the current route using UrlTree
-    const currentUrl = url || this.router.url;
-    const tree = this.router.parseUrl(currentUrl);
-    const rightGroup = tree.root.children['right'];
-
-    const hasRight = !!rightGroup;
-    this._hasRightRouterContent.set(hasRight);
-
-    if (hasRight) {
-      // Get the full path for the right outlet
-      const rightPath = rightGroup.toString();
-
-      // Only add to history if it's a new path
-      const history = this._rightPanelHistory();
-      if (history.length === 0 || history[history.length - 1] !== rightPath) {
-        this._rightPanelHistory.update(h => [...h, rightPath]);
-      }
-    }
-  }
-
-  /**
    * Go back in right panel navigation stack
    */
   goBackRight(): void {
@@ -1889,18 +1853,9 @@ export class App implements OnInit {
       return;
     }
 
-    // Otherwise, handle router-based navigation
-    const history = this._rightPanelHistory();
-    if (history.length > 1) {
-      // Remove current entry and navigate to previous
-      const previousPath = history[history.length - 2];
-      this._rightPanelHistory.update(h => h.slice(0, -1));
-      // Use panelNav.goBackRight() to properly handle back navigation flag
-      this.panelNav.goBackRight();
-    } else {
-      // Close right panel
-      this.closeRightPanel();
-    }
+    // Otherwise, delegate to PanelNavigationService which handles all the logic
+    // including back navigation flags and proper routing
+    this.panelNav.goBackRight();
   }
 
   /**
@@ -1915,16 +1870,10 @@ export class App implements OnInit {
       this.rightPanel.close();
     }
 
-    // Clear router-based state
-    this._rightPanelHistory.set([]);
-    this._hasRightRouterContent.set(false);
     // Clear right panel actions immediately
     this.panelActions.clearRightPanelActions();
-    // Clear the panel navigation right stack
-    this.panelNav.clearRightStack();
-
-    // Navigate to clear the right outlet
-    this.router.navigate([{ outlets: { right: null } }]);
+    // Close the panel navigation right stack - this handles navigation via callback
+    this.panelNav.closeRight();
   }
 
   /**

@@ -38,7 +38,6 @@ import { ReportTarget } from './reporting.service';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
-import { NavigationStackService } from './navigation-stack.service';
 import { RightPanelService } from './right-panel.service';
 import { PanelNavigationService } from './panel-navigation.service';
 import { SearchActionService } from './search-action.service';
@@ -73,7 +72,6 @@ export class LayoutService implements OnDestroy {
   private feedService = inject(FeedService);
   private pool = inject(RelayPoolService);
   private onDemandUserData = inject(OnDemandUserDataService);
-  private navigationStack = inject(NavigationStackService);
   private rightPanel = inject(RightPanelService);
   private panelNavigation = inject(PanelNavigationService);
   showMediaPlayer = signal(false);
@@ -93,7 +91,7 @@ export class LayoutService implements OnDestroy {
    * Signal that exposes whether there are items in the navigation stack.
    * Used to determine if content is loaded in the two-column layout.
    */
-  hasNavigationItems = computed(() => this.navigationStack.hasItems());
+  hasNavigationItems = computed(() => this.panelNavigation.hasRightContent());
 
   /**
    * Signal tracking whether we're currently on the home route.
@@ -1368,7 +1366,7 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
+  openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
     this.router.navigate(['/b', badge], { ...extra, state: { event } });
   }
 
@@ -2526,7 +2524,7 @@ openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
    */
   scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    
+
     const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
     const panelContainer = document.querySelector(panelSelector);
     if (panelContainer) {

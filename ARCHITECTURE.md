@@ -124,8 +124,8 @@ All components follow these patterns:
 
 ```typescript
 @Component({
-  selector: "app-example",
-  templateUrl: "./example.component.html",
+  selector: 'app-example',
+  templateUrl: './example.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExampleComponent {
@@ -321,7 +321,7 @@ Nostria uses `CustomDialogComponent` instead of Angular Material dialogs for bet
 ```typescript
 // CustomDialogService usage
 const ref = customDialog.open(MyDialogComponent, {
-  title: "Dialog Title",
+  title: 'Dialog Title',
   data: {
     /* ... */
   },
@@ -344,7 +344,7 @@ const result = await ref.closed.toPromise();
 ### Signal-Based Architecture
 
 ```typescript
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class StateService {
   // Writable signals for state
   private readonly _items = signal<Item[]>([]);
@@ -514,13 +514,12 @@ The app uses a sophisticated two-column layout system:
 
 ### Key Navigation Services
 
-| Service                  | Purpose                                  |
-| ------------------------ | ---------------------------------------- |
-| `RightPanelService`      | Manages right panel content stack        |
-| `PanelNavigationService` | Coordinates left/right panel navigation  |
-| `NavigationStackService` | Manages navigation history within panels |
-| `TwoColumnLayoutService` | Column width and visibility              |
-| `LayoutService`          | Screen size detection, dialog management |
+| Service                  | Purpose                                                      |
+| ------------------------ | ------------------------------------------------------------ |
+| `RightPanelService`      | Manages right panel content stack (component-based)          |
+| `PanelNavigationService` | Primary navigation service - manages left/right panel stacks |
+| `TwoColumnLayoutService` | Column width, visibility, and route categorization           |
+| `LayoutService`          | Screen size detection, dialog management                     |
 
 ### Right Panel Navigation
 
@@ -532,7 +531,7 @@ rightPanelService.open(
   {
     component: EventPageComponent,
     inputs: { dialogEventId: eventId },
-    title: "Thread",
+    title: 'Thread',
   },
   `/e/${eventId}`,
 );
@@ -574,7 +573,7 @@ interface MediaItem {
   title: string;
   artist: string;
   source: string;
-  type: "Music" | "Podcast" | "YouTube" | "Video" | "HLS" | "LiveKit" | "External";
+  type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit' | 'External';
   isLiveStream?: boolean;
   lyrics?: string;
 }
@@ -610,10 +609,10 @@ interface NostrUser {
   pubkey: string;
   privkey?: string; // Plain hex or encrypted
   mnemonic?: string; // BIP39 phrase (encrypted)
-  source: "extension" | "nsec" | "preview" | "remote" | "external";
+  source: 'extension' | 'nsec' | 'preview' | 'remote' | 'external';
   bunker?: BunkerPointer; // For NIP-46 remote signing
   isEncrypted?: boolean; // PIN protection flag
-  preferredSigningMethod?: "local" | "remote";
+  preferredSigningMethod?: 'local' | 'remote';
 }
 ```
 
@@ -832,13 +831,13 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
 ```typescript
 // app.routes.server.ts
 export const serverRoutes: ServerRoute[] = [
-  { path: "e/**", renderMode: RenderMode.Server }, // Events
-  { path: "p/**", renderMode: RenderMode.Server }, // Profiles
-  { path: "u/**", renderMode: RenderMode.Server }, // Usernames
-  { path: "a/**", renderMode: RenderMode.Server }, // Articles
-  { path: "stream/**", renderMode: RenderMode.Server },
-  { path: "music/**", renderMode: RenderMode.Server },
-  { path: "**", renderMode: RenderMode.Client }, // Everything else
+  { path: 'e/**', renderMode: RenderMode.Server }, // Events
+  { path: 'p/**', renderMode: RenderMode.Server }, // Profiles
+  { path: 'u/**', renderMode: RenderMode.Server }, // Usernames
+  { path: 'a/**', renderMode: RenderMode.Server }, // Articles
+  { path: 'stream/**', renderMode: RenderMode.Server },
+  { path: 'music/**', renderMode: RenderMode.Server },
+  { path: '**', renderMode: RenderMode.Client }, // Everything else
 ];
 ```
 
@@ -874,11 +873,11 @@ For social sharing previews:
 ```typescript
 // MetaService usage for SSR
 metaService.updateSocialMetadata({
-  title: "Event Title",
-  description: "Event content...",
-  image: "https://...",
-  url: "https://nostria.app/e/...",
-  twitterCard: "summary_large_image",
+  title: 'Event Title',
+  description: 'Event content...',
+  image: 'https://...',
+  url: 'https://nostria.app/e/...',
+  twitterCard: 'summary_large_image',
 });
 ```
 
@@ -1102,12 +1101,12 @@ Models are managed through the AI Settings page (`/ai/settings`):
 
 ```typescript
 // Load a model (downloads if not cached)
-await ai.loadModel("summarization", ai.summarizationModelId, (progress) => {
-  console.log("Download progress:", progress);
+await ai.loadModel('summarization', ai.summarizationModelId, (progress) => {
+  console.log('Download progress:', progress);
 });
 
 // Check if model is loaded/cached
-const status = await ai.checkModel("summarization", modelId);
+const status = await ai.checkModel('summarization', modelId);
 // { loaded: boolean, cached: boolean }
 
 // Delete model from cache
@@ -1222,7 +1221,7 @@ All backend services use regional routing:
 
 ```typescript
 @Component({
-  selector: "app-example",
+  selector: 'app-example',
   changeDetection: ChangeDetectionStrategy.OnPush,
   // No standalone: true needed (it's the default)
 })
