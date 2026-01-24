@@ -88,6 +88,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   private intersectionObserver?: IntersectionObserver;
   // Start as false - IntersectionObserver will set to true when actually visible
   private isInViewport = signal(false);
+  // Track if video was auto-played (vs manually played by user click)
+  // Only auto-played videos should be auto-paused when leaving viewport
+  private wasAutoPlayed = signal(false);
 
   // Progress calculations
   progressPercent = computed(() => {
@@ -126,6 +129,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     });
 
     // Handle viewport visibility changes for auto-play and auto-pause
+    // NOTE: This effect only handles AUTO-PLAY. Manual plays are handled by togglePlay().
+    // We intentionally do NOT auto-pause videos when they leave viewport, as this caused
+    // issues with videos in scrollable panels (right panel) where the IntersectionObserver
+    // would incorrectly report visibility. Users can pause manually if needed.
     effect(() => {
       const inViewport = this.isInViewport();
       const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
@@ -139,22 +146,21 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         return;
       }
       
+      // Only handle auto-play when entering viewport
+      // Do NOT auto-pause - this was causing issues with videos in scrollable containers
       if (inViewport && autoPlayAllowed) {
         // Video entered viewport and auto-play is allowed - play if enabled and hasn't been played yet
         if (this.autoplay() && !this.hasPlayedOnce() && video.paused) {
+          // Mark as auto-played for tracking purposes
+          this.wasAutoPlayed.set(true);
           video.play().catch(() => {
             // Autoplay failed - likely due to browser restrictions
             // User will need to click to play
           });
         }
-      } else if (!inViewport) {
-        // Video left viewport - pause if playing
-        // Note: We only pause when leaving viewport, NOT when autoPlayAllowed changes to false
-        // This allows manually started videos to keep playing even if autoplay conditions change
-        if (!video.paused) {
-          video.pause();
-        }
       }
+      // Removed auto-pause logic - was causing videos to stop when user clicked play
+      // in the right panel because IntersectionObserver reported incorrect visibility
     });
   }
 
@@ -293,6 +299,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     if (!video) return;
 
     if (video.paused) {
+      // Mark as manually played - don't auto-pause when leaving viewport
+      this.wasAutoPlayed.set(false);
       video.play().catch(() => {
         // Play failed, likely due to autoplay restrictions
       });
