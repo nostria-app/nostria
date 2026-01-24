@@ -1,6 +1,6 @@
 # Nostria - Software Architecture Document
 
-> **Nostria** - Your Social Media
+> **Nostria** - Your Social Network
 >
 > A beautiful, feature-rich Nostr client that puts control back where it belongs: with you.
 

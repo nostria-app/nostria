@@ -2,7 +2,7 @@
 
 <img src="public/icons/icon-128x128.png" alt="Nostria Logo" width="128" height="128">
 
-## Your Social Media, built for human connection.
+## Your Social Network, built for human connection.
 
 Humans are social beings. We thrive when we connect, share, and build relationships. Social media has the power to bring us closer together - but too often, that natural drive is taken advantage of. Nostria exists to change that dynamic.
 
@@ -14,7 +14,7 @@ Joining Nostria is quick, welcoming, and easy - because social media should invi
 
 On Nostria, users own their data, control their profiles, and resist censorship. No one can be silenced here - freedom and transparency are at the core of the experience.
 
-Nostria is **Your Social Media** - a place where lasting engagement comes from meaning, utility, and community.
+Nostria is **Your Social Network** - a place where lasting engagement comes from meaning, utility, and community.
 
 ## Installation
 
