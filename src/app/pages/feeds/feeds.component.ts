@@ -813,7 +813,18 @@ export class FeedsComponent implements OnDestroy {
     // Set up ResizeObserver for feed tabs overflow detection
     effect(() => {
       // Track feeds changes to re-check overflow when feeds are added/removed
-      const feeds = this.feeds();
+      // Note: We read feeds() to create a dependency but don't use it directly
+      // since we only need it to trigger re-evaluation
+      const _feeds = this.feeds();
+      const feedsLoaded = this.feedService.feedsLoaded();
+
+      // Reset overflow check state when feeds are reloading (e.g., account switch)
+      if (!feedsLoaded) {
+        this.feedTabsOverflowCheckComplete.set(false);
+        this.overflowStabilized = false;
+        this.lastOverflowState = null;
+        return;
+      }
 
       // Reset stabilization when feeds change to allow re-evaluation
       this.overflowStabilized = false;
