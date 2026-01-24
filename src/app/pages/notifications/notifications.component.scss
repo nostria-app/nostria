@@ -1,10 +1,12 @@
 // Host element styles - fill the full height of the container
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  // Don't set fixed height - let content flow naturally in new layout
-  // Override parent's overflow-y: auto so virtual scroll can manage its own scroll
-  overflow: visible;
+  // Fill the parent panel height so virtual scroll can work properly
+  height: 100%;
+  // Prevent any overflow from this element - virtual scroll handles scrolling
+  overflow: hidden;
   // Remove any generic padding added by parent
   padding-top: 0 !important;
 }
@@ -54,11 +56,13 @@
 .notifications-page {
   display: flex;
   flex-direction: column;
-  // Use viewport height to fill available space
-  min-height: calc(100vh - 64px); // Subtract toolbar height
+  // Fill parent height for virtual scroll to work
+  height: 100%;
   max-width: 700px;
   margin: 0 auto;
   width: 100%;
+  // Prevent overflow - virtual scroll handles scrolling
+  overflow: hidden;
   // Remove any inherited padding
   padding-top: 0;
 }
@@ -68,9 +72,10 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0;
+  min-height: 0; // Allow flex child to shrink for virtual scroll
   position: relative;
   border-radius: 12px;
+  overflow: hidden; // Clip to container, virtual scroll handles scrolling
 }
 
 // Notification badge in panel header
@@ -155,9 +160,9 @@
 
 // Notification list - CDK virtual scroll requires explicit height
 .notification-viewport {
-  // Use viewport-based height calculation for new layout
-  // The viewport renders inline in the scrollable container, not absolutely positioned
-  height: calc(100vh - 120px); // Subtract toolbar and header height
+  // Fill remaining space in flex container
+  flex: 1;
+  min-height: 0; // Required for flex child to shrink properly
   width: 100%;
   padding-bottom: 80px; // Space for mobile navigation menu
 
@@ -1057,6 +1062,7 @@
 // Dark mode adjustments
 :host-context(.dark) {
   .notification-item {
+
     // Unread notifications in dark mode - brighter surface with emphasis
     &:not(.read) {
       background: var(--mat-sys-surface-container-high);

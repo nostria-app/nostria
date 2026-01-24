@@ -225,6 +225,7 @@
 }
 
 .main-event-wrapper {
+
   // Ensure main event has no left border
   ::ng-deep app-event .note-card {
     border-left: none !important;
@@ -272,8 +273,9 @@
 
   // Parent threads: extend lines to connect with content below
   .threaded-parent {
+
     // All parent thread lines should extend to connect with next level
-    > .thread-line-clickable::before {
+    >.thread-line-clickable::before {
       // Extend line past the container
       bottom: -16px;
     }
