@@ -138,14 +138,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
       const isBlurred = this.blurred();
       const video = this.videoElement?.nativeElement;
-      
+
       if (!video) return;
-      
+
       // Never auto-play if video is blurred (behind reveal overlay)
       if (isBlurred) {
         return;
       }
-      
+
       // Only handle auto-play when entering viewport
       // Do NOT auto-pause - this was causing issues with videos in scrollable containers
       if (inViewport && autoPlayAllowed) {
@@ -191,12 +191,12 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.cleanupVideoListeners();
     this.clearAutoHideTimer();
-    
+
     // Clean up IntersectionObserver
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
     }
-    
+
     // Unregister from video playback service
     const video = this.videoElement?.nativeElement;
     if (video) {
@@ -242,7 +242,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.volume.set(video.volume);
       this.playbackRate.set(video.playbackRate);
       this.videoLoadedMetadata.emit(e);
-      
+
       // Apply persisted mute state when video loads
       const persistedMuted = this.videoPlayback.getMutedState();
       video.muted = persistedMuted;
