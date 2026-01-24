@@ -32,17 +32,14 @@ app-user-profile {
 // Note: Feeds is now always rendered inside global-feeds-panel, which handles positioning
 :host {
   display: block;
-  height: 100%;
 }
 
 .home-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
   position: relative; // For absolute positioning of header
   // No padding - content renders behind transparent toolbar
-  // Individual scroll areas handle their own padding
+  // No height/overflow - let parent panel handle scrolling
 
   // Scroll to top button - absolute position at bottom right of container
   .scroll-to-top-btn {
@@ -57,10 +54,8 @@ app-user-profile {
     }
   }
 
-  // On mobile, allow full page scrolling instead of per-column scrolling
+  // On mobile, add bottom padding for mobile nav
   @media (max-width: 1023px) {
-    overflow-y: auto;
-    overflow-x: hidden;
     // Add bottom padding for mobile nav (64px height + 24px bottom offset + safe area)
     padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
@@ -236,49 +231,16 @@ app-user-profile {
   }
 
   // Columns container - main content area
-  // Note: scrolling is handled by parent dual-panel-layout for full-width scrollbars
+  // Note: scrolling is handled by parent panel for full-width scrollbars
   .columns-container {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    overflow-y: visible; // Let parent handle scrolling
-    overflow-x: hidden;
     position: relative;
     max-width: 100%;
 
-    &::-webkit-scrollbar {
-      height: 12px;
-      display: block;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--mat-sys-surface-container);
-      border-radius: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--mat-sys-outline);
-      border-radius: 6px;
-
-      &:hover {
-        background: var(--mat-sys-on-surface-variant);
-      }
-    }
-
-    // On mobile, don't restrict height - let it flow naturally for page scrolling
-    @media (max-width: 1023px) {
-      flex-direction: column;
-      flex: none;
-      overflow: visible;
-      padding-bottom: 0;
-    }
-
     .columns-wrapper {
       display: flex;
-      flex: 1 0 auto; // Grow to fill space, don't shrink, auto basis
       gap: 12px;
-      // padding: 12px;
-      min-height: 0; // Allow flex items to shrink below content size
       min-width: 0; // Allow shrinking in flex layouts
       width: 100%; // Ensure it fills the container
 
@@ -287,17 +249,9 @@ app-user-profile {
         padding-top: 0;
       }
 
-      // Expand to full width when showing empty/loading state
-      &:has(.empty-columns-state) {
-        flex: 1;
-        width: 100%;
-      }
-
-      // On mobile, don't restrict height - let content flow naturally
+      // On mobile, stack columns vertically
       @media (max-width: 1023px) {
         flex-direction: column;
-        flex: none;
-        height: auto;
         width: 100%;
       }
 
@@ -318,7 +272,6 @@ app-user-profile {
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
-        overflow: hidden; // Clip content at card boundary
         position: relative;
 
         // Floating new posts button - sticky at column-unit level
@@ -383,7 +336,6 @@ app-user-profile {
           max-width: 100%;
           min-width: 0; // Allow shrinking
           flex: 1;
-          overflow: hidden; // Ensure content is clipped
         }
 
         // Set a preferred width but allow shrinking when necessary
@@ -416,16 +368,11 @@ app-user-profile {
 
         // Column content - contains feed items
         .column-content {
-          scroll-behavior: smooth;
-          flex: 1;
           display: flex;
           flex-direction: column;
-          overflow-y: visible; // Content flows in parent scroll container
-          overflow-x: hidden;
           position: relative;
           min-width: 0; // Allow shrinking in flex layouts
           padding-top: 12px; // Add spacing between header and first event
-          // Content starts below the fixed header (header is ~56px)
 
           // Column header - inside scrollable content
           .column-header {
