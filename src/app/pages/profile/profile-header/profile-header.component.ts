@@ -687,7 +687,7 @@ export class ProfileHeaderComponent implements OnDestroy {
         navigator
           .share({
             title: `Join me on Nostria!`,
-            text: `${this.name()} invited you to join Nostria - Your Social Media, Your Control`,
+            text: `${this.name()} invited you to join Nostria - Your Social Network, Your Control`,
             url: inviteUrl,
           })
           .then(() => {
