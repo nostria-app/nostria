@@ -1,8 +1,5 @@
 :host {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  display: block;
 
   // Only apply max-width and centering when not in dialog mode
   &:not(.dialog-mode) {
@@ -59,14 +56,9 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-// Scrollable content area
+// Content area - flows naturally, no scroll container
 .event-content {
-  flex: 1;
-  overflow-y: visible;
-  overflow-x: hidden;
   padding: 16px;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
 }
 
 .thread-loading {
