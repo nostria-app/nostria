@@ -1,22 +1,8 @@
 <div class="favorites-container">
 
-  <!-- Collapsed state - just show expand button -->
-  @if (isCollapsed() && favorites().length > 0) {
-  <button class="expand-strip-button" (click)="toggleCollapse()" type="button" 
-    matTooltip="Show favorites" aria-label="Show favorites">
-    <mat-icon>chevron_left</mat-icon>
-  </button>
-  }
-
-  <!-- Vertical favorites sidebar (visible when there are favorites and not collapsed) -->
-  @if (favorites().length > 0 && !isCollapsed()) {
+  <!-- Vertical favorites sidebar (visible when there are favorites) -->
+  @if (favorites().length > 0) {
   <div class="favorites-preview vertical">
-    <!-- Collapse button at the top -->
-    <button class="collapse-strip-button" (click)="toggleCollapse()" type="button"
-      matTooltip="Hide favorites" aria-label="Hide favorites">
-      <mat-icon>chevron_right</mat-icon>
-    </button>
-
     @for (item of topFavorites(); track item.pubkey) {
     <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)" (contextmenu)="$event.preventDefault()"
       (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"

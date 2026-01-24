@@ -44,9 +44,6 @@ export class FavoritesOverlayComponent implements OnDestroy {
   // Signal to track if overlay is docked/pinned
   isDocked = signal(false);
 
-  // Signal to track if overlay is collapsed (minimized)
-  isCollapsed = signal(false);
-
   // Signal to track if currently dragging
   isDragging = signal(false);
 
@@ -107,7 +104,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
   constructor() {
     // Initialize visible favorites count based on screen width
     this.updateVisibleFavoritesCount();
-    
+
     // Listen for window resize to update visible count
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', this.resizeHandler);
@@ -231,18 +228,18 @@ export class FavoritesOverlayComponent implements OnDestroy {
       this.visibleFavoritesCount.set(5);
       return;
     }
-    
+
     const height = window.innerHeight;
     // Each avatar takes approximately 48px (32px avatar + 8px gap + padding)
     // Reserve space for the "more" button (48px) and top/bottom padding (24px)
     // Available height for avatars = height - reserved space
     // The sidebar is vertically centered, so we use the full height
-    
+
     const reservedSpace = 72; // more button + padding
     const avatarHeight = 48;
     const availableHeight = height - reservedSpace;
     const maxAvatars = Math.floor(availableHeight / avatarHeight);
-    
+
     // Clamp between 3 and 15 avatars
     const count = Math.max(3, Math.min(15, maxAvatars));
     this.visibleFavoritesCount.set(count);
@@ -326,10 +323,6 @@ export class FavoritesOverlayComponent implements OnDestroy {
     if (newDocked) {
       this.isVisible.set(true);
     }
-  }
-
-  toggleCollapse(): void {
-    this.isCollapsed.update(v => !v);
   }
 
   onAvatarMouseEnter(event: MouseEvent, pubkey: string): void {

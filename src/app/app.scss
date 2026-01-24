@@ -280,23 +280,37 @@ nav {
   }
 }
 
-// Right sidebar container - holds shoutout and favorites together
-.right-sidebar-container {
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 100;
+// Right sidebar - mini apps panel (shoutout, favorites, future mini apps)
+// This is a static sidebar that sits to the right of the main content panels
+// Content scrolls in front of it (panels have their own scroll containers)
+.right-sidebar {
+  width: 64px;
+  min-width: 64px;
+  flex-shrink: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 16px;
+  gap: 8px;
+  background-color: transparent;
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 10;
 
-  // On mobile, don't center vertically - position at top for full-height overlay
-  @media (max-width: 599px) {
-    top: 0;
-    transform: none;
+  // Hide scrollbar but allow scrolling
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
   }
+}
+
+:host-context(.dark) .right-sidebar {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 // Right section (already defined in toolbar-right above)
@@ -348,6 +362,15 @@ mat-sidenav-content {
       margin-right: 0; // No margin on mobile, keep as overlay
     }
   }
+}
+
+// Main content area - flex row container for panels and right sidebar
+.main-content-area {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sidenav {
