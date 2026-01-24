@@ -645,12 +645,18 @@ export class FeedsComponent implements OnDestroy {
 
     // Pause video playback when feeds panel becomes hidden
     // This prevents videos from auto-playing in the background when user navigates away
+    // Use a previous value tracker to only pause when TRANSITIONING from visible to hidden,
+    // not when the panel is simply hidden (which would pause videos in other panels like
+    // the right panel when viewing events from notifications)
+    let previousFeedsVisible: boolean | null = null;
     effect(() => {
       const feedsVisible = this.panelNav.showFeeds();
-      if (!feedsVisible) {
-        // Feeds panel is hidden, pause any playing video
+      // Only pause when transitioning from visible (true) to hidden (false)
+      if (previousFeedsVisible === true && !feedsVisible) {
+        // Feeds panel just became hidden, pause any playing video that was playing in feeds
         this.videoPlayback.pauseCurrentVideo();
       }
+      previousFeedsVisible = feedsVisible;
     });
 
     // Pre-load relay feeds when the component is initialized
