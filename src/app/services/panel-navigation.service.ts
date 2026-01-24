@@ -500,11 +500,11 @@ export class PanelNavigationService {
     const stack = this._rightStack();
 
     if (stack.length <= 1) {
-      // Clear right panel - just close it, don't navigate away from current left route
+      // No history to go back to - close right panel and navigate to feeds
       this._rightStack.set([]);
       this._isBackNavigation = true;
-      // Clear the right outlet - Angular Router preserves the primary outlet and query params automatically
-      this.router.navigate([{ outlets: { right: null } }], { queryParamsHandling: 'preserve' });
+      // Navigate to feeds (home) when closing right panel with no back history
+      this.router.navigate(['/']);
       return;
     }
 
@@ -536,12 +536,11 @@ export class PanelNavigationService {
    */
   closeRight(): void {
     this._rightStack.set([]);
-    // Clear right panel callback if set
+    // Clear right panel callback if set - this handles clearing app state
     if (this._clearRightPanelCallback) {
       this._clearRightPanelCallback();
     }
-    // Clear the right outlet - Angular Router preserves the primary outlet and query params automatically
-    this.router.navigate([{ outlets: { right: null } }], { queryParamsHandling: 'preserve' });
+    // Note: Navigation to clear the right outlet is handled by the callback
   }
 
   /**
@@ -600,10 +599,12 @@ export class PanelNavigationService {
   }
 
   /**
-   * Check if right panel has history to go back
+   * Check if right panel has content (back button closes it if no history)
    */
   canGoBackRight(): boolean {
-    return this._rightStack().length > 1;
+    // Show back button whenever there's right panel content
+    // If there's no history to go back to, clicking back will close the panel and go to feeds
+    return this._rightStack().length > 0;
   }
 
   /**

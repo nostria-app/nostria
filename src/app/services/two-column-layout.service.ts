@@ -1,7 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router, NavigationEnd, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { NavigationStackService } from './navigation-stack.service';
 import { PanelNavigationService } from './panel-navigation.service';
 import { PanelActionsService } from './panel-actions.service';
 import { RightPanelService } from './right-panel.service';
@@ -42,7 +41,6 @@ interface RouteCategory {
 })
 export class TwoColumnLayoutService {
   private router = inject(Router);
-  private navigationStack = inject(NavigationStackService);
   private panelNav = inject(PanelNavigationService);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
@@ -151,7 +149,7 @@ export class TwoColumnLayoutService {
 
   // Whether right panel should be full-width
   isRightPanelFullWidth = computed(() => {
-    return this.navigationStack.isRightPanelFullWidth() || this._viewMode() === 'full-width';
+    return this.panelNav.isRightFullWidth() || this._viewMode() === 'full-width';
   });
 
   // CSS class for the main layout container
@@ -439,39 +437,10 @@ export class TwoColumnLayoutService {
   }
 
   /**
-   * Close right panel and clear navigation
-   */
-  closeRightPanel(): void {
-    this.navigationStack.clearRight();
-    this.rightPanelRoute.set(null);
-    this._viewMode.set('fixed');
-
-    // Navigate to home or last left panel route
-    const leftRoute = this.leftPanelRoute();
-    if (leftRoute && leftRoute !== '/') {
-      this.router.navigate([leftRoute]);
-    } else {
-      this.router.navigate(['/']);
-    }
-  }
-
-  /**
-   * Go back in right panel navigation
-   */
-  goBackRight(): void {
-    this.navigationStack.popRight();
-
-    // If no more items, close the right panel
-    if (!this.navigationStack.hasRightItems()) {
-      this.closeRightPanel();
-    }
-  }
-
-  /**
    * Reset navigation (clear both panels) and navigate to a root route
    */
   resetNavigation(route: string): void {
-    this.navigationStack.clearAll();
+    this.panelNav.clearHistory();
     // Clear right panel component stack (RightPanelService manages component instances)
     this.rightPanel.clearHistory();
     // Reset internal state
@@ -510,17 +479,6 @@ export class TwoColumnLayoutService {
   }
 
   /**
-   * Open an event (right panel, detail view)
-   */
-  openEvent(eventId: string, eventData?: Event): void {
-    this.rightPanelRoute.set(`/e/${eventId}`);
-    this.navigationStack.navigateToEvent(eventId, eventData);
-    this.router.navigate([{ outlets: { right: ['e', eventId] } }], {
-      state: { event: eventData }
-    });
-  }
-
-  /**
    * Get current layout state for debugging
    */
   getLayoutState() {
@@ -533,8 +491,8 @@ export class TwoColumnLayoutService {
       hasRightContent: this.hasRightContent(),
       shouldCenterFeeds: this.shouldCenterFeeds(),
       isRightPanelFullWidth: this.isRightPanelFullWidth(),
-      leftStackSize: this.navigationStack.getLeftStack().length,
-      rightStackSize: this.navigationStack.getRightStack().length,
+      leftStackSize: this.panelNav.leftStack().length,
+      rightStackSize: this.panelNav.rightStack().length,
     };
   }
 }
