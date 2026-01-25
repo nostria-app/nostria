@@ -500,11 +500,13 @@ export class PanelNavigationService {
     const stack = this._rightStack();
 
     if (stack.length <= 1) {
-      // No history to go back to - close right panel and navigate to feeds
+      // No history to go back to - close right panel
       this._rightStack.set([]);
       this._isBackNavigation = true;
-      // Navigate to feeds (home) when closing right panel with no back history
-      this.router.navigate(['/']);
+
+      // Clear the right outlet - must use outlets: { right: null } to remove the auxiliary route
+      // This preserves the primary outlet (left panel content) and only clears the right outlet
+      this.router.navigate([{ outlets: { right: null } }]);
       return;
     }
 
