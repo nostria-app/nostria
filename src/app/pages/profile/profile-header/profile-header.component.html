@@ -38,8 +38,8 @@
         @let parsedBadge = parsedBadges()[$index];
         @let isTimedOut = isBadgeTimedOut()[$index];
         @if (!isTimedOut) {
-        <a (click)="navigateToBadges($event)" class="badge-item"
-          (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
+        <a (click)="navigateToBadges($event)" class="badge-item" (mouseenter)="onBadgeMouseEnter($event, badge)"
+          (mouseleave)="onBadgeMouseLeave()">
           @if (isBadgeFailed()[$index]) {
           <!-- Show failed badge placeholder -->
           <div class="badge-placeholder badge-failed" title="Failed to load badge">
@@ -135,8 +135,8 @@
         } @else {
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
-        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard()" (keydown.enter)="copyNip05ToClipboard()"
-          (keydown.space)="copyNip05ToClipboard()" tabindex="0" role="button"
+        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard()"
+          (keydown.enter)="copyNip05ToClipboard()" (keydown.space)="copyNip05ToClipboard()" tabindex="0" role="button"
           [attr.aria-label]="'Copy ' + verifiedId.value + ' to clipboard'">{{ verifiedId.value }}</span>
 
         @if (verifiedFaviconUrl() && faviconVisible()) {

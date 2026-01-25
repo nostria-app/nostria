@@ -190,10 +190,12 @@ export class FeedsComponent implements OnDestroy {
   screenWidth = signal(window.innerWidth);
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
-  // Show scroll-to-top button when scrolled down - derived from layout service
-  showScrollToTop = computed(() =>
-    this.layoutService.leftPanelScrollReady() && !this.layoutService.leftPanelScrolledToTop()
-  );
+  // Feeds has its own scroll position tracking (independent from left panel)
+  // This ensures scroll position is preserved when navigating away and back
+  feedsScrollTop = signal(0);
+  feedsScrolledToTop = computed(() => this.feedsScrollTop() < 100);
+  // Show scroll-to-top button when scrolled down - uses feeds' own scroll state
+  showScrollToTop = computed(() => !this.feedsScrolledToTop());
   // Feed expanded state - use layoutService signal for cross-component communication
   feedsExpanded = computed(() => this.layoutService.feedsExpanded());
   private lastScrollTop = 0;
@@ -1059,24 +1061,23 @@ export class FeedsComponent implements OnDestroy {
       this.headerHidden.set(false);
     }
 
-    // Note: showScrollToTop is now a computed signal derived from layoutService
-
     this.lastScrollTop = scrollTop;
   }
 
   /**
    * Scroll the feed to the top
-   * Uses the layout service to scroll the main layout container
+   * Feeds has its own scroll container (columns-container) for independent scroll position
    */
   scrollToTop(): void {
-    // Use layout service to scroll the parent layout container
-    this.layoutService.scrollLayoutToTop();
+    // Scroll the feeds' own container to top
+    if (this.columnsContainer?.nativeElement) {
+      this.columnsContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   /**
    * Handle scroll on columns container and sync fixed scrollbar
-   * Note: With the new layout, vertical scrolling is handled by the parent dual-panel-layout
-   * This method now only handles horizontal scroll syncing for multi-column layouts
+   * Feeds has its own scroll container to preserve position when navigating away
    */
   onColumnsScroll(event: globalThis.Event): void {
     if (this.isSyncingScroll) return;
@@ -1084,7 +1085,8 @@ export class FeedsComponent implements OnDestroy {
     const container = event.target as HTMLElement | null;
     if (!container) return;
 
-    // Note: showScrollToTop is now derived from layoutService.leftPanelScrolledToTop()
+    // Track feeds' own scroll position for scroll-to-top button
+    this.feedsScrollTop.set(container.scrollTop);
 
     // Update scroll position for horizontal scrollbar syncing
     this.columnsScrollLeft.set(container.scrollLeft);

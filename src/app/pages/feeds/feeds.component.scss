@@ -32,14 +32,17 @@ app-user-profile {
 // Note: Feeds is now always rendered inside global-feeds-panel, which handles positioning
 :host {
   display: block;
+  height: 100%; // Fill the feeds-container
 }
 
 .home-container {
   display: flex;
   flex-direction: column;
   position: relative; // For absolute positioning of header
+  height: 100%; // Fill the host element
+  min-height: 0; // Required for flex children to shrink properly
   // No padding - content renders behind transparent toolbar
-  // No height/overflow - let parent panel handle scrolling
+  // Scrolling is handled by .columns-container to preserve position independently
 
   // Scroll to top button - absolute position at bottom right of container
   .scroll-to-top-btn {
@@ -230,13 +233,20 @@ app-user-profile {
     }
   }
 
-  // Columns container - main content area
-  // Note: scrolling is handled by parent panel for full-width scrollbars
+  // Columns container - main content area with its own scroll
+  // Feeds has its own scroll container to preserve scroll position when navigating away
+  // This is intentionally separate from the left panel's scroll so feeds maintains its position
   .columns-container {
     display: flex;
     flex-direction: column;
     position: relative;
     max-width: 100%;
+    flex: 1; // Fill available height
+    min-height: 0; // Required for flex children to shrink properly
+    overflow-y: auto; // Feeds has its own scroll
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
 
     .columns-wrapper {
       display: flex;

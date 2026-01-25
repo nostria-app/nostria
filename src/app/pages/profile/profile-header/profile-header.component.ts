@@ -1114,9 +1114,9 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.badgeService.parseDefinition(badgeEvent);
   }
 
-/**
-   * Navigates to the badges page
-   */
+  /**
+     * Navigates to the badges page
+     */
   viewAllBadges(): void {
     this.layout.openBadgesPage(this.npub() || this.pubkey());
   }
@@ -1159,9 +1159,9 @@ export class ProfileHeaderComponent implements OnDestroy {
   navigateToBadges(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    
+
     const currentPubkey = this.pubkey();
-    
+
     if (currentPubkey) {
       // Use the user-badges route which is specifically for viewing a user's badges
       this.router.navigate([{ outlets: { right: ['user-badges', currentPubkey] } }]);
