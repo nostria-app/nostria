@@ -2,6 +2,9 @@
 <div class="panel-header">
   <h2 class="panel-title title-font" i18n="@@nav.music">Music</h2>
   <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'">
+    <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+  </button>
   @if (isAuthenticated()) {
   <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add content">
     <mat-icon>add</mat-icon>
