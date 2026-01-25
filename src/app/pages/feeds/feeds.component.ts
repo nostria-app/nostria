@@ -345,7 +345,13 @@ export class FeedsComponent implements OnDestroy {
       const events = this.columnEvents().get(feed.id);
       const hasEvents = events !== undefined && events.length > 0;
       const initialLoadComplete = this.feedService.getColumnInitialLoadComplete(feed.id);
-      resultMap.set(feed.id, initialLoadComplete && !hasEvents);
+      // Also check if the feed is currently refreshing/loading - don't show "no results" while loading
+      const isRefreshingSignal = this.feedService.getColumnRefreshingState(feed.id);
+      const isRefreshing = isRefreshingSignal?.() ?? false;
+      const isLoadingMoreSignal = this.feedService.getColumnLoadingState(feed.id);
+      const isLoadingMore = isLoadingMoreSignal?.() ?? false;
+      // Only show "no results" when initial load is complete, not currently loading, and no events
+      resultMap.set(feed.id, initialLoadComplete && !isRefreshing && !isLoadingMore && !hasEvents);
     });
     return resultMap;
   });
