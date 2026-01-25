@@ -284,7 +284,7 @@
             <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
               (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
               (paste)="onSearchInputPaste($event)" (focus)="onSearchFocus()" i18n-placeholder="@@app.search.placeholder"
-              placeholder="Search..." />
+              placeholder="Search..." autocomplete="off" name="nostria-global-search" />
             @if (layout.searchInput && layout.searchInput.length > 0) {
             <button mat-icon-button class="search-action-button clear-search-button" (click)="clearSearchInput()"
               matTooltip="Clear search">
