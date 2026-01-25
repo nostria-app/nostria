@@ -1644,39 +1644,31 @@ mat-sidenav-content {
         margin: 0 !important;
         padding: 0 !important;
       }
+
+      // Prevent avatar images from stretching and center them
+      .sidenav-minimized-avatar {
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        min-height: 24px !important;
+        max-height: 24px !important;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0 !important;
+        margin: 0 auto !important;
+      }
     }
   }
 }
 
 .sidenav-small .mat-icon {
-  margin-right: 0 !important;
-  margin-left: 0 !important;
-}
-
-.sidenav-small .logo-icon {
-  width: 56px !important;
+  margin: 0 !important;
 }
 
 // Expandable navigation styles
 .nav-item {
   position: relative;
-}
-
-// Profile navigation item when sidenav is minimized
-.profile-nav-item {
-  min-height: 48px !important;
-  height: 48px !important;
-
-  .sidenav-minimized-avatar {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
-    border-radius: 50%;
-    object-fit: cover;
-    margin: 0 auto !important;
-    display: block !important;
-  }
 }
 
 .expandable-nav-item {
