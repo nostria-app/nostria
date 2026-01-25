@@ -13,3 +13,4 @@ export { SettingCacheComponent } from './cache.component';
 export { SettingDangerZoneComponent } from './danger-zone.component';
 export { SettingStorageComponent } from './storage.component';
 export { SettingMenuEditorComponent } from './menu-editor.component';
+export { SettingHomeDestinationComponent } from './home-destination.component';

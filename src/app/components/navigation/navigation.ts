@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 
 
 @Component({
@@ -20,6 +21,7 @@ export class NavigationComponent {
 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private localSettings = inject(LocalSettingsService);
 
   // Convert route data to signal
   routeData = toSignal(this.route.data.pipe(map(data => data)), {
@@ -47,11 +49,32 @@ export class NavigationComponent {
   }
 
   /**
-   * Navigate to feeds and clear navigation history
+   * Navigate to the configured home destination and clear navigation history.
+   * Options:
+   * - 'feeds': Navigate to /f (Feeds page)
+   * - 'home': Navigate to / (Home page)
+   * - 'first-menu-item': Navigate to the first visible menu item
    */
   navigateToHome(): void {
     this.routeDataService.clearHistory();
-    this.router.navigate(['/f']);
+
+    const destination = this.localSettings.homeDestination();
+    let path: string;
+
+    switch (destination) {
+      case 'home':
+        path = '/';
+        break;
+      case 'first-menu-item':
+        path = this.localSettings.firstMenuItemPath();
+        break;
+      case 'feeds':
+      default:
+        path = '/f';
+        break;
+    }
+
+    this.router.navigate([path]);
   }
 
   // Right click - show context menu
