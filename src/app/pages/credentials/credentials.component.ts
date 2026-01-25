@@ -46,9 +46,11 @@ export class CredentialsComponent implements OnInit {
 
   // PIN change controls
   isChangingPin = signal(false);
+  isResettingPin = signal(false);
   oldPinControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
   newPinControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
   confirmPinControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
+  resetPinControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
 
   // Cached nsec value (decrypted on demand)
   private cachedNsec = signal<string>('');
@@ -122,7 +124,21 @@ export class CredentialsComponent implements OnInit {
       return null;
     }
 
-    const pin = await this.pinPrompt.promptForPin();
+    // Use the retry mechanism for better UX
+    const pin = await this.pinPrompt.promptForPinWithRetry(
+      async (testPin) => {
+        try {
+          await this.nostrService.getDecryptedPrivateKey(account, testPin);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      {
+        title: 'Unlock Private Key',
+        message: 'Enter your PIN to access your private key.',
+      }
+    );
 
     if (!pin) {
       // User cancelled
@@ -131,14 +147,13 @@ export class CredentialsComponent implements OnInit {
     }
 
     try {
-      // Try to decrypt with the provided PIN
       const privkey = await this.nostrService.getDecryptedPrivateKey(account, pin);
       const nsec = this.utilities.getNsecFromPrivkey(privkey);
       this.snackBar.open('Private key unlocked', 'Dismiss', { duration: 2000 });
       return nsec;
     } catch {
-      // Wrong PIN
-      this.snackBar.open('Incorrect PIN. Please try again.', 'Dismiss', { duration: 3000 });
+      // This shouldn't happen since we validated the PIN
+      this.snackBar.open('Failed to decrypt private key', 'Dismiss', { duration: 3000 });
       return null;
     }
   }
@@ -194,7 +209,22 @@ export class CredentialsComponent implements OnInit {
       return null;
     }
 
-    const pin = await this.pinPrompt.promptForPin();
+    // Use the retry mechanism for better UX
+    const pin = await this.pinPrompt.promptForPinWithRetry(
+      async (testPin) => {
+        try {
+          const encryptedData = JSON.parse(account.mnemonic!);
+          await this.crypto.decryptPrivateKey(encryptedData, testPin);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      {
+        title: 'Unlock Recovery Phrase',
+        message: 'Enter your PIN to access your recovery phrase.',
+      }
+    );
 
     if (!pin) {
       // User cancelled
@@ -203,14 +233,13 @@ export class CredentialsComponent implements OnInit {
     }
 
     try {
-      // Try to decrypt with the provided PIN
       const encryptedData = JSON.parse(account.mnemonic);
       const mnemonic = await this.crypto.decryptPrivateKey(encryptedData, pin);
       this.snackBar.open('Recovery phrase unlocked', 'Dismiss', { duration: 2000 });
       return mnemonic;
     } catch {
-      // Wrong PIN
-      this.snackBar.open('Incorrect PIN. Please try again.', 'Dismiss', { duration: 3000 });
+      // This shouldn't happen since we validated the PIN
+      this.snackBar.open('Failed to decrypt recovery phrase', 'Dismiss', { duration: 3000 });
       return null;
     }
   }
@@ -567,6 +596,107 @@ export class CredentialsComponent implements OnInit {
   }
 
   /**
+   * Starts the PIN reset process (reset to default "0000")
+   */
+  startResettingPin(): void {
+    this.isResettingPin.set(true);
+    this.resetPinControl.reset();
+  }
+
+  /**
+   * Cancels the PIN reset process
+   */
+  cancelResettingPin(): void {
+    this.isResettingPin.set(false);
+    this.resetPinControl.reset();
+  }
+
+  /**
+   * Resets the PIN back to the default "0000"
+   */
+  async resetPinToDefault(): Promise<void> {
+    const account = this.accountState.account();
+
+    if (!account || !account.isEncrypted || !account.privkey) {
+      this.snackBar.open('No encrypted private key to reset', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const currentPin = this.resetPinControl.value;
+
+    if (!currentPin) {
+      this.snackBar.open('Please enter your current PIN', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      // Parse the encrypted data
+      const encryptedPrivkey = JSON.parse(account.privkey) as EncryptedData;
+
+      // Re-encrypt private key with default PIN
+      const reencryptedPrivkey = await this.crypto.reencryptPrivateKey(
+        encryptedPrivkey,
+        currentPin,
+        this.crypto.DEFAULT_PIN
+      );
+
+      // Also re-encrypt mnemonic if it exists
+      let reencryptedMnemonic: string | undefined;
+      if (account.mnemonic && account.isMnemonicEncrypted) {
+        try {
+          const encryptedMnemonic = JSON.parse(account.mnemonic) as EncryptedData;
+          const newMnemonicData = await this.crypto.reencryptPrivateKey(
+            encryptedMnemonic,
+            currentPin,
+            this.crypto.DEFAULT_PIN
+          );
+          reencryptedMnemonic = JSON.stringify(newMnemonicData);
+        } catch {
+          // If mnemonic decryption fails, just keep the existing value
+          reencryptedMnemonic = account.mnemonic;
+        }
+      }
+
+      // Update the account
+      const updatedAccount = {
+        ...account,
+        privkey: JSON.stringify(reencryptedPrivkey),
+        ...(reencryptedMnemonic && { mnemonic: reencryptedMnemonic }),
+      };
+
+      // Save to NostrService which will persist to localStorage
+      await this.nostrService.setAccount(updatedAccount);
+
+      // Clear PIN cache since we changed it
+      this.pinPrompt.clearCache();
+
+      this.snackBar.open('PIN reset to default (0000) successfully', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+
+      // Reset form
+      this.cancelResettingPin();
+    } catch (error) {
+      console.error('Failed to reset PIN:', error);
+      this.snackBar.open('Failed to reset PIN. Please check your current PIN and try again.', 'Dismiss', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  /**
    * Changes the PIN for the encrypted private key
    */
   async changePin(): Promise<void> {
@@ -614,24 +744,45 @@ export class CredentialsComponent implements OnInit {
     }
 
     try {
-      // Parse the encrypted data
-      const encryptedData = JSON.parse(account.privkey) as EncryptedData;
+      // Parse the encrypted private key data
+      const encryptedPrivkey = JSON.parse(account.privkey) as EncryptedData;
 
-      // Re-encrypt with new PIN
-      const reencryptedData = await this.crypto.reencryptPrivateKey(
-        encryptedData,
+      // Re-encrypt private key with new PIN
+      const reencryptedPrivkey = await this.crypto.reencryptPrivateKey(
+        encryptedPrivkey,
         oldPin,
         newPin
       );
 
+      // Also re-encrypt mnemonic if it exists
+      let reencryptedMnemonic: string | undefined;
+      if (account.mnemonic && account.isMnemonicEncrypted) {
+        try {
+          const encryptedMnemonic = JSON.parse(account.mnemonic) as EncryptedData;
+          const newMnemonicData = await this.crypto.reencryptPrivateKey(
+            encryptedMnemonic,
+            oldPin,
+            newPin
+          );
+          reencryptedMnemonic = JSON.stringify(newMnemonicData);
+        } catch {
+          // If mnemonic decryption fails, keep the existing value
+          reencryptedMnemonic = account.mnemonic;
+        }
+      }
+
       // Update the account
       const updatedAccount = {
         ...account,
-        privkey: JSON.stringify(reencryptedData),
+        privkey: JSON.stringify(reencryptedPrivkey),
+        ...(reencryptedMnemonic && { mnemonic: reencryptedMnemonic }),
       };
 
       // Save to NostrService which will persist to localStorage
       await this.nostrService.setAccount(updatedAccount);
+
+      // Clear PIN cache since we changed it
+      this.pinPrompt.clearCache();
 
       this.snackBar.open('PIN changed successfully', 'Dismiss', {
         duration: 3000,
