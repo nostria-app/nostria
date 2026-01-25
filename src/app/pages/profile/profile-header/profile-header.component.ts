@@ -1154,6 +1154,21 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   /**
+   * Navigate to badges page in right panel
+   */
+  navigateToBadges(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const currentPubkey = this.pubkey();
+    
+    if (currentPubkey) {
+      // Use the user-badges route which is specifically for viewing a user's badges
+      this.router.navigate([{ outlets: { right: ['user-badges', currentPubkey] } }]);
+    }
+  }
+
+  /**
    * Clears all badge loading timeouts and resets timed out badges
    */
   private clearBadgeTimeouts(): void {

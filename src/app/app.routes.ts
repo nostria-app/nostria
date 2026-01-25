@@ -69,6 +69,12 @@ const profileChildren: Routes = [
       import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
     title: 'Relays',
   },
+  {
+    path: 'badges',
+    loadComponent: () =>
+      import('./pages/profile/profile-badges/profile-badges.component').then(m => m.ProfileBadgesComponent),
+    title: 'Badges',
+  },
 {
     path: 'details',
     loadComponent: () =>
