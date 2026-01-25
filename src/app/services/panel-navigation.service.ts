@@ -359,6 +359,10 @@ export class PanelNavigationService {
     const leftPath = primaryGroup ? primaryGroup.toString() : '';
     const rightPath = rightGroup ? rightGroup.toString() : '';
 
+    // Track if we're clearing the right panel due to section change
+    // This prevents the right panel logic from re-adding the entry we just cleared
+    let clearingRightPanel = false;
+
     // --- LEFT PANEL LOGIC ---
     // Note: leftPath can be empty string '' for home route, which is valid
     if (leftPath !== undefined) {
@@ -391,6 +395,7 @@ export class PanelNavigationService {
         // Always clear the right panel when switching sections
         // This ensures right panel content doesn't persist across unrelated sections
         this._rightStack.set([]);
+        clearingRightPanel = true; // Prevent right panel logic from re-adding the entry
         if (this._clearRightPanelCallback) this._clearRightPanelCallback();
         if (this._clearCacheCallback) this._clearCacheCallback();
 
@@ -428,7 +433,9 @@ export class PanelNavigationService {
     }
 
     // --- RIGHT PANEL LOGIC ---
-    if (rightPath) {
+    // Skip if we just cleared the right panel due to section change
+    // The URL may still contain the right outlet, but we're about to navigate it away
+    if (rightPath && !clearingRightPanel) {
       const type = this.getRouteType(rightPath);
       const title = this.getRouteTitle(rightPath);
       const entry: NavigationEntry = { path: rightPath, title, type };
