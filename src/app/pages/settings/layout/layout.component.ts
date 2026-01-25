@@ -17,6 +17,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
     SettingMenuEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './layout.component.scss',
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
@@ -69,66 +70,6 @@ import { RightPanelService } from '../../../services/right-panel.service';
       </div>
     </div>
   `,
-  styles: [`
-    .panel-header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 56px;
-      padding: 0 16px;
-      flex-shrink: 0;
-      background-color: rgba(250, 250, 250, 0.92);
-      -webkit-backdrop-filter: blur(20px) saturate(1.8);
-      backdrop-filter: blur(20px) saturate(1.8);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    }
-
-    :host-context(.dark) .panel-header {
-      background-color: rgba(18, 18, 18, 0.92);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .panel-title {
-      margin: 0;
-      font-size: 1.25rem;
-    }
-
-    .panel-header-spacer {
-      flex: 1;
-    }
-
-    .content-medium {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    h2 {
-      margin-top: 24px;
-      margin-bottom: 16px;
-    }
-
-    h2:first-child {
-      margin-top: 0;
-    }
-
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      padding: 12px 0;
-    }
-
-    .setting-description {
-      color: var(--mat-sys-on-surface-variant);
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-  `],
 })
 export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly localSettings = inject(LocalSettingsService);
