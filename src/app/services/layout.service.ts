@@ -2139,11 +2139,18 @@ export class LayoutService implements OnDestroy {
   }
 
   /**
-   * Navigate to messages page to start a new chat with this user
+   * Navigate to messages page to start a new chat with this user.
+   * Always opens messages in full width (1400px) by clearing the right panel.
    */
   openSendMessage(pubkey: string) {
     this.logger.debug('Message requested for:', pubkey);
-    this.router.navigate(['/messages'], {
+
+    // Clear right panel to ensure messages opens in full 1400px width
+    this.rightPanel.clearHistory();
+    this.panelNavigation.clearRightStack();
+
+    // Navigate to messages and explicitly clear the right outlet
+    this.router.navigate([{ outlets: { primary: ['messages'], right: null } }], {
       queryParams: { pubkey: pubkey },
     });
   }
