@@ -521,9 +521,15 @@ export class ProfileComponent implements OnDestroy {
     if (this.isInRightPanel()) {
       // Use panel navigation for right panel back navigation
       this.panelNav.goBackRight();
+      return;
+    }
+
+    // In primary outlet - check if there's left panel history to go back to
+    if (this.panelNav.canGoBackLeft()) {
+      this.panelNav.goBackLeft();
     } else {
-      // Use browser history for primary outlet
-      this.location.back();
+      // No history - navigate to feeds as the default destination
+      this.router.navigate(['/f']);
     }
   }
 

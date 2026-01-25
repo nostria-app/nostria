@@ -79,6 +79,11 @@ export class EventPageComponent {
   // Computed to check if we're in dialog mode
   isInDialogMode = computed(() => !!this.dialogEventId());
 
+  // Detect if event is rendered in the right panel outlet
+  isInRightPanel = computed(() => {
+    return this.route.outlet === 'right';
+  });
+
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
@@ -251,16 +256,27 @@ export class EventPageComponent {
   }
 
   /**
-   * Navigate back - use panel navigation service for proper back handling
+   * Navigate back - handle both primary outlet and right panel scenarios
    */
   goBack(): void {
     // First check RightPanelService (for programmatic component-based panels)
     if (this.rightPanel.canGoBack()) {
       this.rightPanel.goBack();
-    } else {
-      // Use panel navigation service for router-based right panel
-      // This properly sets the back navigation flag to preserve left panel
+      return;
+    }
+
+    // If in right panel outlet, use panel navigation
+    if (this.isInRightPanel()) {
       this.panelNav.goBackRight();
+      return;
+    }
+
+    // In primary outlet - check if there's left panel history to go back to
+    if (this.panelNav.canGoBackLeft()) {
+      this.panelNav.goBackLeft();
+    } else {
+      // No history - navigate to feeds as the default destination
+      this.router.navigate(['/f']);
     }
   }
 

@@ -1392,6 +1392,27 @@ export class App implements OnInit {
   }
 
   /**
+   * Handle search container blur event.
+   * Closes the search when focus leaves the search container entirely.
+   */
+  onSearchBlur(event: FocusEvent): void {
+    // Check if the new focus target is still within the search container
+    const searchContainer = (event.currentTarget as HTMLElement);
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+
+    // If focus is moving to another element within the search container, don't close
+    if (relatedTarget && searchContainer.contains(relatedTarget)) {
+      return;
+    }
+
+    // Focus left the search container - close search if there's no input
+    // Keep search open if there's text in the input (user might be copying/pasting)
+    if (!this.layout.searchInput || this.layout.searchInput.length === 0) {
+      this.layout.closeSearch();
+    }
+  }
+
+  /**
    * Clear the search input and search results.
    */
   clearSearchInput(): void {
