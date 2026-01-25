@@ -21,6 +21,7 @@ import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -53,6 +54,11 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly favoritesService = inject(FavoritesService);
   private readonly accountState = inject(AccountStateService);
+  private readonly rightPanel = inject(RightPanelService);
+
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);

@@ -20,6 +20,8 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 import { FollowingBackupService } from '../../services/following-backup.service';
 import { FollowingHistoryDialogComponent } from './following-history-dialog/following-history-dialog.component';
+import { RightPanelService } from '../../services/right-panel.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface BackupStats {
   eventsCount: number;
@@ -39,6 +41,7 @@ interface BackupStats {
     MatProgressBarModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatTooltipModule,
     InfoTooltipComponent,
   ],
   templateUrl: './backup.component.html',
@@ -55,6 +58,11 @@ export class BackupComponent {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly followingBackupService = inject(FollowingBackupService);
   private readonly dialog = inject(MatDialog);
+  private readonly rightPanel = inject(RightPanelService);
+
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
 
   stats = signal<BackupStats>({
     eventsCount: 0,

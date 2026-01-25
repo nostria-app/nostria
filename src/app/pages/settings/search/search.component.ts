@@ -107,6 +107,10 @@ export class SearchSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   private async loadSearchRelays(pubkey: string) {
     try {
       // Try to fetch from relay first

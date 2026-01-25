@@ -49,6 +49,10 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   // Available trust relays
   trustRelays: TrustRelay[] = [
     {

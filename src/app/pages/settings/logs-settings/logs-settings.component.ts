@@ -81,6 +81,10 @@ export class LogsSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   disabledRelays = signal<any>([]);
   relayStats = computed(() => this.relaysService.relayStatsSignal());
   userRelays = computed(() => this.relaysService.userRelaysSignal());

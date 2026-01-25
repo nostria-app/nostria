@@ -70,6 +70,10 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   // NIP-56 report types
   reportTypes = [
     { key: 'nudity', label: 'Nudity/Adult Content', icon: 'explicit' },
