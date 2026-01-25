@@ -452,6 +452,9 @@ mat-sidenav-content {
 .menu-profile-button {
   padding: 0 !important;
   overflow: hidden;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 
   &.profile-button-picture {
     .menu-profile-avatar {
@@ -459,6 +462,7 @@ mat-sidenav-content {
       height: 32px;
       border-radius: 50%;
       object-fit: cover;
+      display: block;
     }
   }
 
