@@ -8,16 +8,23 @@ import { RouterLink } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
 import { DatePipe } from '@angular/common';
 import { SetUsernameDialogComponent, SetUsernameDialogData } from '../set-username-dialog/set-username-dialog.component';
+import { RightPanelService } from '../../../services/right-panel.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-premium-settings',
-  imports: [MatCardModule, MatListModule, MatButtonModule, MatIconModule, RouterLink, DatePipe],
+  imports: [MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, DatePipe],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
 export class PremiumSettings implements OnInit {
   accountState = inject(AccountStateService);
   private dialog = inject(MatDialog);
+  private rightPanel = inject(RightPanelService);
+
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
 
   async ngOnInit() {
     // Refresh subscription status when the premium settings page is opened

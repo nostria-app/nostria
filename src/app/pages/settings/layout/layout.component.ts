@@ -1,16 +1,31 @@
 import { Component, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-layout-settings',
   imports: [
     MatSlideToggleModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
     SettingMenuEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <div class="panel-header">
+      <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2 class="panel-title title-font" i18n="@@settings.sections.layout">Layout</h2>
+      <span class="panel-header-spacer"></span>
+    </div>
+
     <div class="content-medium">
       <div>
         <h2 i18n="@@settings.navigation.title">Navigation</h2>
@@ -55,6 +70,36 @@ import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
     </div>
   `,
   styles: [`
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      background-color: rgba(250, 250, 250, 0.92);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    :host-context(.dark) .panel-header {
+      background-color: rgba(18, 18, 18, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .panel-header-spacer {
+      flex: 1;
+    }
+
     .content-medium {
       max-width: 800px;
       margin: 0 auto;
@@ -87,6 +132,7 @@ import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
 })
 export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly localSettings = inject(LocalSettingsService);
+  private readonly rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
     // Parent settings component handles the page title
@@ -94,6 +140,10 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // No cleanup needed
+  }
+
+  goBack(): void {
+    this.rightPanel.goBack();
   }
 
   toggleStartOnLastRoute(): void {

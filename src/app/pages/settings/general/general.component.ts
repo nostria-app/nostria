@@ -23,6 +23,8 @@ import { ExternalLinkHandlerService } from '../../../services/external-link-hand
 import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
+import { RightPanelService } from '../../../services/right-panel.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface Language {
   code: string;
@@ -42,6 +44,7 @@ interface Language {
     MatSlideToggleModule,
     MatSliderModule,
     MatInputModule,
+    MatTooltipModule,
     StorageStatsComponent,
   ],
   templateUrl: './general.component.html',
@@ -61,6 +64,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   accountLocalState = inject(AccountLocalStateService);
   emojiSetService = inject(EmojiSetService);
   snackBar = inject(MatSnackBar);
+  private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
     // Parent settings component handles the page title
@@ -68,6 +72,10 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // No cleanup needed
+  }
+
+  goBack(): void {
+    this.rightPanel.goBack();
   }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());

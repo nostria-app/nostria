@@ -9,6 +9,8 @@ import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RightPanelService } from '../../../services/right-panel.service';
 
 interface WebManifest {
   version?: string;
@@ -23,7 +25,7 @@ interface WebManifest {
 @Component({
   selector: 'app-about',
   standalone: true,
-  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule],
+  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })
@@ -33,6 +35,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
+  private readonly rightPanel = inject(RightPanelService);
   version = signal('Loading...');
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
@@ -79,6 +82,10 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     // No cleanup needed
+  }
+
+  goBack(): void {
+    this.rightPanel.goBack();
   }
 
   private async fetchManifestVersion(): Promise<void> {

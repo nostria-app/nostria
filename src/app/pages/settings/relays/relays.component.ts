@@ -307,6 +307,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {
       return;

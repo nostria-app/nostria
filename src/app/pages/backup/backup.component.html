@@ -1,5 +1,13 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font" i18n="@@settings.sections.backup">Backup</h2>
+  <span class="panel-header-spacer"></span>
+</div>
+
 <div class="content-medium">
-   <ng-template #discoveryRelaysInfoContent>
+  <ng-template #discoveryRelaysInfoContent>
     <mat-card-header>
       <mat-card-title>
         <div class="info-title">
@@ -29,10 +37,7 @@
 
   <h2>
     Backup & Restore <mat-icon class="premium-icon">diamond</mat-icon>
-    <app-info-tooltip
-      [content]="discoveryRelaysInfoContent"
-      ariaLabel="Learn how backup work"
-    ></app-info-tooltip>
+    <app-info-tooltip [content]="discoveryRelaysInfoContent" ariaLabel="Learn how backup work"></app-info-tooltip>
   </h2>
 
   <p class="subtitle">Manage your Nostr data backups</p>
@@ -76,10 +81,10 @@
         </p>
 
         @if (isSaving()) {
-          <div class="progress-container">
-            <mat-progress-bar mode="determinate" [value]="progress()"></mat-progress-bar>
-            <span class="progress-text">{{ progress().toFixed(0) }}%</span>
-          </div>
+        <div class="progress-container">
+          <mat-progress-bar mode="determinate" [value]="progress()"></mat-progress-bar>
+          <span class="progress-text">{{ progress().toFixed(0) }}%</span>
+        </div>
         }
       </mat-card-content>
 
@@ -87,10 +92,10 @@
         <button mat-flat-button color="primary" [disabled]="isSaving()" (click)="saveBackup()">
           <mat-icon>save</mat-icon>
           @if (isSaving()) {
-            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-            CREATING BACKUP...
+          <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+          CREATING BACKUP...
           } @else {
-            SAVE BACKUP
+          SAVE BACKUP
           }
         </button>
       </mat-card-actions>
@@ -110,26 +115,21 @@
         </p>
 
         @if (isImporting()) {
-          <div class="progress-container">
-            <mat-progress-bar mode="determinate" [value]="importProgress()"></mat-progress-bar>
-            <span class="progress-text">{{ importProgress().toFixed(0) }}%</span>
-          </div>
+        <div class="progress-container">
+          <mat-progress-bar mode="determinate" [value]="importProgress()"></mat-progress-bar>
+          <span class="progress-text">{{ importProgress().toFixed(0) }}%</span>
+        </div>
         }
       </mat-card-content>
 
       <mat-card-actions>
-        <button
-          mat-flat-button
-          color="accent"
-          [disabled]="isImporting()"
-          (click)="initiateImport()"
-        >
+        <button mat-flat-button color="accent" [disabled]="isImporting()" (click)="initiateImport()">
           <mat-icon>upload_file</mat-icon>
           @if (isImporting()) {
-            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-            IMPORTING...
+          <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+          IMPORTING...
           } @else {
-            IMPORT BACKUP
+          IMPORT BACKUP
           }
         </button>
       </mat-card-actions>
@@ -150,10 +150,10 @@
 
     <mat-card-content>
       <p>
-        Your following list is automatically backed up every time you follow or unfollow someone. 
+        Your following list is automatically backed up every time you follow or unfollow someone.
         You can restore a previous version or merge it with your current list.
       </p>
-      
+
       <div class="backup-stats">
         <div class="stat">
           <mat-icon>backup</mat-icon>
@@ -169,11 +169,7 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <button 
-        mat-flat-button 
-        (click)="openFollowingHistory()"
-        [disabled]="followingBackupsCount() === 0"
-      >
+      <button mat-flat-button (click)="openFollowingHistory()" [disabled]="followingBackupsCount() === 0">
         <mat-icon>history</mat-icon>
         VIEW HISTORY
       </button>

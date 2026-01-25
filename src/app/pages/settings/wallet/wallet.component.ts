@@ -76,6 +76,10 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goBack(): void {
+    this.rightPanel.goBack();
+  }
+
   private loadSettings(): void {
     const currentSettings = this.settingsService.settings();
 
