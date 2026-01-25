@@ -75,7 +75,7 @@ const profileChildren: Routes = [
       import('./pages/profile/profile-badges/profile-badges.component').then(m => m.ProfileBadgesComponent),
     title: 'Badges',
   },
-{
+  {
     path: 'details',
     loadComponent: () =>
       import('./pages/profile/details/details.component').then(m => m.DetailsComponent),

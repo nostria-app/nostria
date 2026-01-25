@@ -54,7 +54,7 @@ export class ProfileBadgesComponent {
 
     return this.acceptedBadges().map(badge => {
       const definition = this.badgeService.getBadgeDefinition(badge.pubkey, badge.slug);
-      
+
       if (!definition) {
         return {
           slug: badge.slug,

@@ -74,7 +74,7 @@ export class BadgesComponent {
     return this.viewingPubkey() === this.accountState.pubkey();
   });
 
-constructor() {
+  constructor() {
     // Get the active tab from query params if available
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     if (tabParam) {
@@ -195,16 +195,16 @@ constructor() {
     return '';
   }
 
-goBack(): void {
+  goBack(): void {
     // Check if we're in the right panel (auxiliary outlet)
     const isInRightPanel = this.route.outlet === 'right';
-    
+
     if (isInRightPanel) {
       // Use panel navigation to properly close the right panel
       this.panelNav.goBackRight();
       return;
     }
-    
+
     // Left panel navigation - go back to profile
     const pubkey = this.viewingPubkey();
     if (pubkey) {

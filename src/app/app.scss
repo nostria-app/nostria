@@ -1082,6 +1082,12 @@ mat-sidenav-content {
     overflow-y: hidden;
   }
 
+  // Disable panel scrolling when feeds are visible
+  // Feeds has its own scroll container to preserve scroll position when navigating away and back
+  .dual-panel-layout.feeds-visible & {
+    overflow-y: hidden;
+  }
+
   // When left panel has content, ensure proper layout for header + content
   &.has-content {
 
@@ -1106,11 +1112,14 @@ mat-sidenav-content {
   }
 
   // Feeds container - persistent, uses visibility for state preservation
+  // This container fills the available space but doesn't scroll - the inner columns-container does
   .feeds-container {
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
+    min-height: 0; // Required for flex children to shrink properly
+    overflow: hidden; // Feeds manages its own scroll via columns-container
     transition: opacity 0.2s ease;
 
     // Active state - visible
@@ -1139,6 +1148,7 @@ mat-sidenav-content {
     display: block;
     height: 100%;
     width: 100%;
+    min-height: 0; // Required for flex children to shrink properly
   }
 
   // When animating, ensure smooth transition
