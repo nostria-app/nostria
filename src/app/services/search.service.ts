@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { LayoutService } from './layout.service';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { nip19 } from 'nostr-tools';
@@ -73,6 +73,17 @@ export class SearchService {
   isSearchingNotes = signal(false);
   isSearchingArticles = signal(false);
   isSearchingMessages = signal(false);
+
+  // Computed signal to check if there are visible results to display
+  hasVisibleResults = computed(() => {
+    const hasInput = this.layout.searchInput && this.layout.searchInput.trim().length > 0;
+    const hasResults = this.searchResults().length > 0 ||
+      this.searchActions().length > 0 ||
+      this.noteResults().length > 0 ||
+      this.articleResults().length > 0;
+    const isSearching = this.isSearchingRemote() || this.isSearchingNotes() || this.isSearchingArticles();
+    return hasInput || hasResults || isSearching;
+  });
 
   // Track last processed query to prevent redundant searches
   #lastQuery = '';
@@ -448,11 +459,11 @@ export class SearchService {
   // Search for notes (kind 1) on search relays
   private async searchNotes(query: string): Promise<void> {
     if (this.isSearchingNotes()) return;
-    
+
     this.isSearchingNotes.set(true);
     try {
       const events = await this.searchRelay.search(query, [1], 20);
-      
+
       // Only update if query is still current
       if (this.#lastQuery === query || this.layout.query() === query) {
         const results: SearchResultEvent[] = events.map(event => ({ event }));
@@ -469,11 +480,11 @@ export class SearchService {
   // Search for articles (kind 30023) on search relays
   private async searchArticles(query: string): Promise<void> {
     if (this.isSearchingArticles()) return;
-    
+
     this.isSearchingArticles.set(true);
     try {
       const events = await this.searchRelay.search(query, [30023], 20);
-      
+
       // Only update if query is still current
       if (this.#lastQuery === query || this.layout.query() === query) {
         const results: SearchResultEvent[] = events.map(event => ({ event }));
@@ -491,7 +502,7 @@ export class SearchService {
   // Note: This will only return public metadata, not content
   private async searchMessages(query: string): Promise<void> {
     if (this.isSearchingMessages()) return;
-    
+
     this.isSearchingMessages.set(true);
     try {
       // Search kind 1 notes that look like messages (contain @ mentions, are replies, etc.)
@@ -499,11 +510,11 @@ export class SearchService {
       const events = await this.searchRelay.search(query, [1], 20, {
         // We can't really search encrypted messages, so this searches public conversations
       });
-      
+
       // Only update if query is still current
       if (this.#lastQuery === query || this.layout.query() === query) {
         // Filter to find notes that are replies (have 'e' tags)
-        const replyEvents = events.filter(event => 
+        const replyEvents = events.filter(event =>
           event.tags.some(tag => tag[0] === 'e')
         );
         const results: SearchResultEvent[] = replyEvents.map(event => ({ event }));

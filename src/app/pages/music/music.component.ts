@@ -21,7 +21,6 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -72,7 +71,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private searchAction = inject(SearchActionService);
   private musicData = inject(MusicDataService);
 
   allTracks = signal<Event[]>([]);
@@ -83,9 +81,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
-
-  // Search handler reference for cleanup
-  private searchHandler: SearchHandler;
 
   // "Yours" section collapsed state
   yoursSectionCollapsed = signal(false);
@@ -352,32 +347,10 @@ export class MusicComponent implements OnInit, OnDestroy {
     setTimeout(() => this.updateContainerWidth(), 50);
     // Second update after CSS width transitions complete (transition is ~300ms)
     setTimeout(() => this.updateContainerWidth(), 400);
-
-    // Create search handler that intercepts global search (toggle behavior)
-    this.searchHandler = (query: string) => {
-      // Toggle search visibility
-      const newState = !this.showSearch();
-      this.showSearch.set(newState);
-      
-      if (newState) {
-        if (query) {
-          this.searchQuery.set(query);
-        }
-        // Focus search input after DOM update
-        setTimeout(() => {
-          this.searchInput?.nativeElement?.focus();
-        }, 50);
-      } else {
-        // Clear search when closing
-        this.clearSearch();
-      }
-      return { handled: true };
-    };
   }
 
   ngOnInit(): void {
-    // Register search handler to intercept global search
-    this.searchAction.registerHandler(this.searchHandler);
+    // Component initialization
   }
 
   /**
@@ -508,8 +481,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
-    // Unregister search handler
-    this.searchAction.unregisterHandler(this.searchHandler);
   }
 
   /**
