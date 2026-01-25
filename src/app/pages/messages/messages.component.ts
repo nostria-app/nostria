@@ -71,7 +71,6 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { SpeechService } from '../../services/speech.service';
 import { SettingsService } from '../../services/settings.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
-import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -155,7 +154,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
-  private searchAction = inject(SearchActionService);
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly speechService = inject(SpeechService);
@@ -163,9 +161,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly localSettings = inject(LocalSettingsService);
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
-
-  // Search handler reference for cleanup
-  private searchHandler: SearchHandler;
 
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
@@ -417,28 +412,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
 
-    // Create search handler that intercepts global search
-    // Create search handler that intercepts global search (toggle behavior)
-    this.searchHandler = (query: string) => {
-      // Toggle search visibility
-      const newState = !this.showSearch();
-      this.showSearch.set(newState);
-      
-      if (newState) {
-        if (query) {
-          this.chatSearchQuery.set(query);
-        }
-        // Focus search input after DOM update
-        setTimeout(() => {
-          this.chatSearchInput?.nativeElement?.focus();
-        }, 50);
-      } else {
-        // Clear search when closing
-        this.chatSearchQuery.set('');
-      }
-      return { handled: true };
-    };
-
     // Effect to sync mobile nav visibility with chat selection on mobile
     effect(() => {
       const chatId = this.selectedChatId();
@@ -589,8 +562,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    // Register search handler to intercept global search
-    this.searchAction.registerHandler(this.searchHandler);
 
     // Start live subscription for incoming DMs
     this.startLiveSubscription();
@@ -872,8 +843,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    // Unregister search handler
-    this.searchAction.unregisterHandler(this.searchHandler);
 
     // Reset mobile nav visibility
     this.layout.hideMobileNav.set(false);

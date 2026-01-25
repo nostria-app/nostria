@@ -76,9 +76,6 @@ import { Event, nip19, kinds } from 'nostr-tools';
               <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
                 <mat-icon>manage_search</mat-icon>
               </button>
-              <button mat-icon-button (click)="searchService.clearResults()">
-                <mat-icon>close</mat-icon>
-              </button>
             </div>
           </div>
           <div class="search-results-list">
@@ -105,11 +102,6 @@ import { Event, nip19, kinds } from 'nostr-tools';
               <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
                 <mat-icon>manage_search</mat-icon>
               </button>
-              @if (searchService.searchActions().length === 0) {
-                <button mat-icon-button (click)="searchService.clearResults()">
-                  <mat-icon>close</mat-icon>
-                </button>
-              }
             </div>
           </div>
           <div class="search-results-list">
@@ -239,9 +231,6 @@ import { Event, nip19, kinds } from 'nostr-tools';
               <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
                 <mat-icon>manage_search</mat-icon>
               </button>
-              <button mat-icon-button (click)="searchService.clearResults()">
-                <mat-icon>close</mat-icon>
-              </button>
             </div>
           </div>
           <div class="no-results-message">
@@ -260,7 +249,8 @@ import { Event, nip19, kinds } from 'nostr-tools';
         right: 0;
         background: var(--mat-sys-surface-container);
         border: 1px solid var(--mat-sys-outline-variant);
-        border-radius: 8px;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
         box-shadow: var(--mat-sys-level3);
         max-height: 400px;
         overflow-y: auto;
@@ -354,8 +344,8 @@ import { Event, nip19, kinds } from 'nostr-tools';
         justify-content: space-between;
         align-items: center;
         padding: 8px 16px;
-        border-bottom: 1px solid var(--mat-sys-outline-variant);
-        background: var(--mat-sys-surface-container-high);
+        border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
+        background: transparent;
         font-size: 12px;
         color: var(--mat-sys-on-surface-variant);
       }
@@ -379,16 +369,16 @@ import { Event, nip19, kinds } from 'nostr-tools';
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 0.4rem 1rem;
+        padding: 0.6rem 1rem;
         width: 100%;
         min-width: 0;
-        border-bottom: 1px solid var(--mat-sys-outline-variant);
+        border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
         cursor: pointer;
         transition: background-color 0.2s ease;
       }
 
       .search-result-item:last-child {
-        border-bottom: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
       }
 
       .search-result-item:hover,
@@ -524,15 +514,15 @@ export class SearchResultsComponent {
   hasSearchInput = () => this.layout.searchInput && this.layout.searchInput.trim().length > 0;
 
   // Check if we only have actions (URLs) and no search results
-  hasActionsOnly = () => 
-    this.searchService.searchActions().length > 0 && 
+  hasActionsOnly = () =>
+    this.searchService.searchActions().length > 0 &&
     this.searchService.searchResults().length === 0 &&
     !this.searchService.isSearchingRemote();
 
   // Check if any search is in progress
-  isSearching = () => 
-    this.searchService.isSearchingRemote() || 
-    this.searchService.isSearchingNotes() || 
+  isSearching = () =>
+    this.searchService.isSearchingRemote() ||
+    this.searchService.isSearchingNotes() ||
     this.searchService.isSearchingArticles();
 
   // Check if we have any results
@@ -595,12 +585,12 @@ export class SearchResultsComponent {
   formatTime(timestamp: number): string {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
-    
+
     if (diff < 60) return 'just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-    
+
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString();
   }

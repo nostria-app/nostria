@@ -180,6 +180,12 @@ nav {
     &.search-active {
       background-color: rgba(0, 0, 0, 0.08);
     }
+
+    // When search results are visible, remove bottom border radius to connect with results
+    &.has-results {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
   }
 }
 

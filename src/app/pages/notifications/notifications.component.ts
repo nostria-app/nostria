@@ -35,7 +35,6 @@ import { ProfileDisplayNameComponent } from '../../components/user-profile/displ
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { SearchActionService, SearchHandler } from '../../services/search-action.service';
 import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
 
 /**
@@ -82,7 +81,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private dataService = inject(DataService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private searchAction = inject(SearchActionService);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
@@ -97,9 +95,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Whether to show only unread notifications
   showUnreadOnly = signal(false);
   notificationType = NotificationType;
-
-  // Search handler reference for cleanup
-  private searchHandler: SearchHandler;
 
   // Filter panel state
   filterPanelOpen = signal(false);
@@ -160,27 +155,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       const filters = this.notificationFilters();
       this.localStorage.setItem(NOTIFICATION_FILTERS_KEY, JSON.stringify(filters));
     });
-
-    // Create search handler that intercepts global search (toggle behavior)
-    this.searchHandler = (query: string) => {
-      // Toggle search visibility
-      const newState = !this.showSearch();
-      this.showSearch.set(newState);
-      
-      if (newState) {
-        if (query) {
-          this.searchQuery.set(query);
-        }
-        // Focus search input after DOM update
-        setTimeout(() => {
-          this.searchInputElement?.nativeElement?.focus();
-        }, 50);
-      } else {
-        // Clear search when closing
-        this.searchQuery.set('');
-      }
-      return { handled: true };
-    };
   }
 
   // Helper to check if notification is a system notification (technical)
@@ -258,13 +232,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
-    // Register search handler to intercept global search
-    this.searchAction.registerHandler(this.searchHandler);
   }
 
   ngOnDestroy(): void {
-    // Unregister search handler
-    this.searchAction.unregisterHandler(this.searchHandler);
+    // Component cleanup
   }
 
   /**

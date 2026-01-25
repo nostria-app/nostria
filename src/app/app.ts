@@ -1391,6 +1391,17 @@ export class App implements OnInit {
     }
   }
 
+  /**
+   * Clear the search input and search results.
+   */
+  clearSearchInput(): void {
+    this.layout.searchInput = '';
+    this.layout.query.set('');
+    this.search.clearResults();
+    // Keep focus on search input after clearing
+    this.searchInputElement?.nativeElement?.focus();
+  }
+
   toggleMediaPlayer() {
     this.layout.showMediaPlayer.set(!this.layout.showMediaPlayer());
   }
