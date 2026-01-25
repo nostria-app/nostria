@@ -279,7 +279,7 @@
         <!-- Center section: Always-visible search -->
         <div class="toolbar-center">
           <div class="search-container toolbar-section" [class.search-active]="layout.search()"
-            [class.has-results]="search.hasVisibleResults()">
+            [class.has-results]="search.hasVisibleResults()" (focusout)="onSearchBlur($event)">
             <mat-icon class="search-icon">search</mat-icon>
             <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
               (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
