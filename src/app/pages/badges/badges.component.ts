@@ -18,7 +18,7 @@ import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
-
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DataService } from '../../services/data.service';
@@ -55,6 +55,7 @@ export class BadgesComponent {
   private readonly dataService = inject(DataService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
+  private readonly panelNav = inject(PanelNavigationService);
 
   isUpdating = signal<boolean>(false);
   isInitialLoading = signal<boolean>(true);
@@ -195,6 +196,16 @@ constructor() {
   }
 
 goBack(): void {
+    // Check if we're in the right panel (auxiliary outlet)
+    const isInRightPanel = this.route.outlet === 'right';
+    
+    if (isInRightPanel) {
+      // Use panel navigation to properly close the right panel
+      this.panelNav.goBackRight();
+      return;
+    }
+    
+    // Left panel navigation - go back to profile
     const pubkey = this.viewingPubkey();
     if (pubkey) {
       const npub = this.utilities.getNpubFromPubkey(pubkey);

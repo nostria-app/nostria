@@ -203,6 +203,7 @@ export class PanelNavigationService {
     'badges/details': { type: 'detail', title: 'Badge Details' },
     'badges/create': { type: 'detail', title: 'Create Badge' },
     'badges/edit': { type: 'detail', title: 'Edit Badge' },
+    'user-badges': { type: 'detail', title: 'User Badges' },
     'collections/media/details': { type: 'detail', title: 'Media Details' },
     'playlists/edit': { type: 'detail', title: 'Edit Playlist' },
     'polls/edit': { type: 'detail', title: 'Edit Poll' },

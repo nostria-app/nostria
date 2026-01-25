@@ -1,0 +1,52 @@
+<div class="badges-container">
+  <div class="badges-header">
+    <button mat-icon-button (click)="goBack()" matTooltip="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h2 class="badges-title title-font">Badges</h2>
+    <span class="header-spacer"></span>
+    <span class="badge-count">{{ acceptedBadges().length }} badges</span>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+  } @else if (acceptedBadges().length === 0) {
+    <div class="empty-state">
+      <mat-icon>military_tech</mat-icon>
+      <p>No badges yet</p>
+    </div>
+  } @else {
+    <div class="badges-list">
+      @for (badge of parsedBadges(); track (badge.pubkey + ':' + badge.slug); let i = $index) {
+        <a class="badge-item" [routerLink]="getBadgeDetailRoute(badge)">
+          <div class="badge-image-container">
+            @if (isBadgeFailed()[i]) {
+              <div class="badge-placeholder badge-failed">
+                <mat-icon>error_outline</mat-icon>
+              </div>
+            } @else if (badge.thumb || badge.image) {
+              <img [src]="badge.thumb || badge.image" [alt]="badge.name" class="badge-image" loading="lazy" />
+            } @else if (isBadgeLoading()[i]) {
+              <div class="badge-loading">
+                <mat-spinner diameter="32"></mat-spinner>
+              </div>
+            } @else {
+              <div class="badge-placeholder">
+                <mat-icon>military_tech</mat-icon>
+              </div>
+            }
+          </div>
+          <div class="badge-info">
+            <span class="badge-name">{{ badge.name }}</span>
+            @if (badge.description) {
+              <span class="badge-description">{{ badge.description }}</span>
+            }
+          </div>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </a>
+      }
+    </div>
+  }
+</div>
