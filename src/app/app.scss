@@ -400,6 +400,14 @@ mat-sidenav-content {
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
+  // Override Angular Material's internal container - use block layout to prevent compression
+  .mat-drawer-inner-container {
+    display: block !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
   // On mobile (over mode), ensure proper z-index
   @media (max-width: 599px) {
     z-index: 100 !important;
@@ -409,9 +417,12 @@ mat-sidenav-content {
     z-index: 0 !important;
   }
 
-  // Add padding to sidenav content on mobile so items aren't hidden by mobile nav
-  // if the sidenav is open and mobile nav is visible
+  // Ensure nav list items maintain their size
   mat-nav-list {
+    .mat-mdc-list-item {
+      min-height: 48px !important;
+    }
+
     @media (max-width: 599px) {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
@@ -1589,10 +1600,57 @@ mat-sidenav-content {
 
 .sidenav-small {
   width: 56px;
+
+  // Override Angular Material's internal container - use block layout to prevent compression
+  .mat-drawer-inner-container {
+    display: block !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  // Ensure nav list items are properly sized and centered
+  mat-nav-list {
+    .mat-mdc-list-item {
+      min-height: 48px !important;
+      height: 48px !important;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+
+      // Center the content wrapper
+      .mdc-list-item__content {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      // Reset icon start/avatar padding that Material adds
+      .mdc-list-item__start {
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+      }
+
+      // Center the icon within the item
+      mat-icon {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+  }
 }
 
 .sidenav-small .mat-icon {
   margin-right: 0 !important;
+  margin-left: 0 !important;
 }
 
 .sidenav-small .logo-icon {
@@ -1606,11 +1664,18 @@ mat-sidenav-content {
 
 // Profile navigation item when sidenav is minimized
 .profile-nav-item {
+  min-height: 48px !important;
+  height: 48px !important;
+
   .sidenav-minimized-avatar {
-    width: 24px;
-    height: 24px;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
     border-radius: 50%;
     object-fit: cover;
+    margin: 0 auto !important;
+    display: block !important;
   }
 }
 
