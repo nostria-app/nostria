@@ -291,7 +291,7 @@
               <mat-icon>close</mat-icon>
             </button>
             }
-            @if (layout.search()) {
+            @if (layout.search() && (!layout.searchInput || layout.searchInput.length === 0)) {
             <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
               [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
               @if (isSearchListening()) {
