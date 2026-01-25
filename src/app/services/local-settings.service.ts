@@ -7,6 +7,7 @@ import { Subject, debounceTime } from 'rxjs';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
+export type HomeDestination = 'feeds' | 'home' | 'first-menu-item';
 
 /**
  * Represents a menu item configuration for the main navigation.
@@ -36,6 +37,8 @@ export interface LocalSettings {
   removeTrackingParameters: boolean;
   calendarType: CalendarType;
   timeFormat: TimeFormat;
+  /** Where the home button (Nostria logo) should navigate to */
+  homeDestination: HomeDestination;
   /** Custom menu item order and visibility. Array order determines display order. */
   menuItems: MenuItemConfig[];
 }
@@ -57,6 +60,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   removeTrackingParameters: true,
   calendarType: 'gregorian',
   timeFormat: '24h',
+  homeDestination: 'feeds',
   menuItems: [], // Empty means use default order
 };
 
@@ -110,7 +114,38 @@ export class LocalSettingsService {
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
   readonly calendarType = computed(() => this.settings().calendarType);
   readonly timeFormat = computed(() => this.settings().timeFormat);
+  readonly homeDestination = computed(() => this.settings().homeDestination);
   readonly menuItems = computed(() => this.settings().menuItems);
+
+  /** Default menu item IDs in order (used when no custom config is set) */
+  private readonly defaultMenuIds = [
+    '/',
+    '/f',
+    'articles',
+    'summary',
+    'messages',
+    'people',
+    'collections',
+    'music',
+    'streams',
+  ];
+
+  /**
+   * Gets the path of the first visible menu item.
+   * Returns '/f' as fallback if no menu items are configured.
+   */
+  readonly firstMenuItemPath = computed(() => {
+    const menuConfig = this.menuItems();
+
+    if (menuConfig.length === 0) {
+      // Use first default menu item
+      return this.defaultMenuIds[0] || '/f';
+    }
+
+    // Find first visible item
+    const firstVisible = menuConfig.find(item => item.visible);
+    return firstVisible?.id || '/f';
+  });
 
   constructor() {
     // Set up debounced save - waits 300ms after last change before saving
@@ -383,6 +418,13 @@ export class LocalSettingsService {
    */
   setTimeFormat(timeFormat: TimeFormat): void {
     this.updateSettings({ timeFormat });
+  }
+
+  /**
+   * Set home destination preference
+   */
+  setHomeDestination(homeDestination: HomeDestination): void {
+    this.updateSettings({ homeDestination });
   }
 
   /**

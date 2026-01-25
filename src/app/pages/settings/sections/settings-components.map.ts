@@ -13,6 +13,7 @@ import { SettingCacheComponent } from './cache.component';
 import { SettingDangerZoneComponent } from './danger-zone.component';
 import { SettingStorageComponent } from './storage.component';
 import { SettingMenuEditorComponent } from './menu-editor.component';
+import { SettingHomeDestinationComponent } from './home-destination.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
@@ -34,6 +35,7 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
 
   // Navigation settings
   'navigation-settings': SettingNavigationComponent,
+  'home-destination': SettingHomeDestinationComponent,
 
   // Menu customization
   'menu-customization': SettingMenuEditorComponent,

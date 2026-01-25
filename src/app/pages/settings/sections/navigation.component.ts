@@ -1,10 +1,11 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { SettingHomeDestinationComponent } from './home-destination.component';
 
 @Component({
   selector: 'app-setting-navigation',
-  imports: [MatSlideToggleModule],
+  imports: [MatSlideToggleModule, SettingHomeDestinationComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="setting-section">
@@ -38,6 +39,8 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
       </div>
       <p class="setting-description" i18n="@@settings.navigation.open-threads-expanded.description">When viewing a thread, show all replies expanded by default. Disable for a cleaner initial view with collapsed replies.</p>
     </div>
+
+    <app-setting-home-destination />
   `,
   styles: [`
     .setting-section {
