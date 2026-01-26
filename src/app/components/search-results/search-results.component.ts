@@ -107,7 +107,7 @@ import { Event, nip19, kinds } from 'nostr-tools';
           <div class="search-results-list">
             @for (
               profile of getVisibleProfiles();
-              track $index;
+              track profile.event.pubkey;
               let i = $index
             ) {
               <div

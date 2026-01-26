@@ -2785,6 +2785,7 @@ export class DatabaseService {
   /**
    * Search cached profile events (kind 0) by name, display_name, nip05, or about
    * Returns profile events that match the search query
+   * Deduplicates by pubkey, keeping only the most recent profile event per user
    */
   async searchCachedProfiles(query: string): Promise<Event[]> {
     if (!query || query.trim() === '') {
@@ -2796,8 +2797,17 @@ export class DatabaseService {
     // Get all kind 0 events (profile metadata)
     const profileEvents = await this.getEventsByKind(0);
 
+    // First, deduplicate by pubkey - keep only the most recent profile event per user
+    const latestByPubkey = new Map<string, Event>();
+    for (const event of profileEvents) {
+      const existing = latestByPubkey.get(event.pubkey);
+      if (!existing || event.created_at > existing.created_at) {
+        latestByPubkey.set(event.pubkey, event);
+      }
+    }
+
     // Filter profiles that match the search term
-    return profileEvents.filter((event) => {
+    return Array.from(latestByPubkey.values()).filter((event) => {
       try {
         const data = JSON.parse(event.content);
         const name = data.name?.toLowerCase() || '';
