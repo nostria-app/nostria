@@ -916,14 +916,11 @@ mat-sidenav-content {
         width: 100%;
         min-width: 100%;
         max-width: 100%;
-        flex: 1; // Ensure it fills available height
-        height: 100%; // Explicit height for mobile
 
         .panel-content-wrapper {
           max-width: 700px;
           margin-left: auto;
           margin-right: auto;
-          height: 100%; // Ensure wrapper fills panel
         }
       }
 
@@ -1006,14 +1003,11 @@ mat-sidenav-content {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
-      flex: 1; // Ensure it fills available height on mobile
-      height: 100%; // Explicit height for mobile
 
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;
         margin-right: auto;
-        height: 100%; // Ensure wrapper fills panel on mobile
       }
     }
 
