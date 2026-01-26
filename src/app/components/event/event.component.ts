@@ -990,13 +990,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
 
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
+    // Use the event author's pubkey to query their relays for reports
+    const eventAuthorPubkey = targetRecordData.event.pubkey;
 
     try {
       const reports = await this.eventService.loadReports(
         targetRecordData.event.id,
-        userPubkey,
+        eventAuthorPubkey,
         invalidateCache
       );
       this.reports.set(reports);
@@ -1019,8 +1019,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
-    // Capture the event ID we're loading for to prevent race conditions
+    // Capture the event ID and author pubkey we're loading for to prevent race conditions
     const targetEventId = targetRecordData.event.id;
+    // IMPORTANT: Use the EVENT AUTHOR's pubkey, not the current user's pubkey!
+    // This ensures we query the author's relays where replies/reactions are likely to be found.
+    // This matches what loadReplies does in loadThreadProgressively.
+    const eventAuthorPubkey = targetRecordData.event.pubkey;
 
     console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8));
 
@@ -1031,12 +1035,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this.eventService.loadEventInteractions(
           targetEventId,
           targetRecordData.event.kind,
-          userPubkey,
+          eventAuthorPubkey,  // Use event author's pubkey for consistent relay queries
           invalidateCache
         ),
         this.eventService.loadQuotes(
           targetEventId,
-          userPubkey,
+          eventAuthorPubkey,  // Use event author's pubkey for consistent relay queries
           invalidateCache
         )
       ]);
@@ -1107,14 +1111,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
 
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
+    // Use the event author's pubkey to query their relays for reactions
+    const eventAuthorPubkey = targetRecordData.event.pubkey;
 
     this.isLoadingReactions.set(true);
     try {
       const reactions = await this.eventService.loadReactions(
         targetRecordData.event.id,
-        userPubkey,
+        eventAuthorPubkey,
         invalidateCache
       );
 
