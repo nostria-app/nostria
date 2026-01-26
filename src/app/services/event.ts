@@ -791,9 +791,16 @@ export class EventService {
       });
 
       // Extract events from records and filter valid replies
+      // IMPORTANT: Filter out events that only MENTION this event (marker='mention')
+      // Only include events where the e-tag is a thread relationship (root/reply/unmarked)
       const replies = replyRecords
         .map((record: NostrRecord) => record.event)
-        .filter((event: Event) => event.content && event.content.trim().length > 0);
+        .filter((event: Event) => {
+          if (!event.content || !event.content.trim()) return false;
+          // Check if ANY e-tag referencing this event is NOT a mention
+          const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+          return eTags.some((tag: string[]) => tag[3] !== 'mention');
+        });
 
       this.logger.info(
         'Successfully loaded replies for event:',
@@ -858,7 +865,16 @@ export class EventService {
           const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
           const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
           // Count replies (kind 1 events that reference this event)
-          const replyRecords = allRecords.filter((r) => r.event.kind === kinds.ShortTextNote);
+          // IMPORTANT: Filter out events that only MENTION this event (marker='mention')
+          // Only count events where the e-tag is a thread relationship (root/reply/unmarked)
+          const replyRecords = allRecords.filter((r) => {
+            if (r.event.kind !== kinds.ShortTextNote) return false;
+            // Check if ANY e-tag referencing this event is NOT a mention
+            // If the only e-tags pointing to this event are mentions, it's not a reply
+            const eTags = r.event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+            // A reply must have at least one e-tag that is NOT marked as 'mention'
+            return eTags.some((tag: string[]) => tag[3] !== 'mention');
+          });
 
           // Process reactions
           const reactionCounts = new Map<string, number>();
