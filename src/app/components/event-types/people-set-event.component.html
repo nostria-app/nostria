@@ -1,0 +1,85 @@
+<div class="people-set-container">
+  <div class="people-set-header">
+    <div class="title-section">
+      <h3 class="people-set-title">{{ title() }}</h3>
+      @if (description()) {
+      <p class="people-set-description">{{ description() }}</p>
+      }
+    </div>
+
+    <div class="header-actions">
+      <button mat-icon-button [matMenuTriggerFor]="actionsMenu" matTooltip="Actions">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <mat-menu #actionsMenu="matMenu">
+    <button mat-menu-item (click)="followAll()" [disabled]="allFollowed() || isFollowingAll()">
+      @if (isFollowingAll()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>person_add</mat-icon>
+      }
+      <span>Follow All</span>
+    </button>
+    <button mat-menu-item (click)="unfollowAll()" [disabled]="noneFollowed() || isUnfollowingAll()">
+      @if (isUnfollowingAll()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>person_remove</mat-icon>
+      }
+      <span>Unfollow All</span>
+    </button>
+    <button mat-menu-item (click)="copyList()">
+      <mat-icon>content_copy</mat-icon>
+      <span>Copy List</span>
+    </button>
+  </mat-menu>
+
+  <div class="people-set-content">
+    @if (publicKeys().length > 0) {
+    <div class="users-section">
+      <div class="section-header">
+        <h4 class="section-title">
+          <mat-icon>people</mat-icon>
+          {{ publicKeys().length }} People
+        </h4>
+        <span class="follow-count">
+          {{ followedCount() }}/{{ publicKeys().length }} following
+        </span>
+      </div>
+
+      <div class="users-grid">
+        @for (pubkey of publicKeys(); track pubkey) {
+        <div class="user-item">
+          <div class="user-content" (click)="navigateToProfile(pubkey)" (keyup.enter)="navigateToProfile(pubkey)"
+            (keyup.space)="navigateToProfile(pubkey)" tabindex="0" role="button" title="View profile"
+            [attr.aria-label]="'View profile'">
+            <app-user-profile [pubkey]="pubkey" [view]="'grid'"></app-user-profile>
+          </div>
+          <div class="user-actions">
+            @if (!isFollowing(pubkey)) {
+            <button mat-mini-fab class="follow-button" (click)="followUser(pubkey, $event)"
+              [attr.aria-label]="'Follow user'" matTooltip="Follow">
+              <mat-icon>person_add</mat-icon>
+            </button>
+            } @else {
+            <button mat-mini-fab class="follow-button following" (click)="unfollowUser(pubkey, $event)"
+              [attr.aria-label]="'Unfollow user'" matTooltip="Following">
+              <mat-icon>check</mat-icon>
+            </button>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon>people_outline</mat-icon>
+      <p>No users in this list</p>
+    </div>
+    }
+  </div>
+</div>
