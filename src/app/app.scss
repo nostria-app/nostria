@@ -916,11 +916,14 @@ mat-sidenav-content {
         width: 100%;
         min-width: 100%;
         max-width: 100%;
+        flex: 1; // Ensure it fills available height
+        height: 100%; // Explicit height for mobile
 
         .panel-content-wrapper {
           max-width: 700px;
           margin-left: auto;
           margin-right: auto;
+          height: 100%; // Ensure wrapper fills panel
         }
       }
 
@@ -1003,11 +1006,14 @@ mat-sidenav-content {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
+      flex: 1; // Ensure it fills available height on mobile
+      height: 100%; // Explicit height for mobile
 
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;
         margin-right: auto;
+        height: 100%; // Ensure wrapper fills panel on mobile
       }
     }
 
@@ -1053,7 +1059,7 @@ mat-sidenav-content {
   min-width: 0;
   max-width: 100%;
   min-height: 0;
-  flex-shrink: 1;
+  flex: 1; // Fill available height in dual-panel-layout
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1112,11 +1118,15 @@ mat-sidenav-content {
   }
 
   // Feeds container - persistent, uses visibility for state preservation
-  // This container fills the available space but doesn't scroll - the inner columns-container does
+  // Uses absolute positioning to overlay the panel-content-wrapper without competing for flex space
   .feeds-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     min-height: 0; // Required for flex children to shrink properly
     overflow: hidden; // Feeds manages its own scroll via columns-container
@@ -1126,27 +1136,23 @@ mat-sidenav-content {
     &.feeds-active {
       visibility: visible;
       opacity: 1;
-      position: relative;
+      z-index: 1; // Above panel-content when active
     }
 
     // Hidden state - preserve scroll position with visibility
     &.feeds-hidden {
       visibility: hidden;
       opacity: 0;
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 100%; // Use height instead of bottom: 0 for proper sizing
+      z-index: 0;
       pointer-events: none;
-      overflow: hidden; // Prevent hidden feeds from affecting scroll height
     }
   }
 
   // Ensure feeds component fills container
   app-feeds {
-    display: block;
-    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 1; // Fill available space in flex parent
     width: 100%;
     min-height: 0; // Required for flex children to shrink properly
   }

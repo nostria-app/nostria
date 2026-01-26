@@ -31,15 +31,17 @@ app-user-profile {
 // Make feeds component render edge-to-edge behind transparent toolbar and mobile menu
 // Note: Feeds is now always rendered inside global-feeds-panel, which handles positioning
 :host {
-  display: block;
-  height: 100%; // Fill the feeds-container
+  display: flex;
+  flex-direction: column;
+  height: 100%; // Fill the absolutely positioned feeds-container
+  min-height: 0; // Required for flex children to shrink properly
 }
 
 .home-container {
   display: flex;
   flex-direction: column;
   position: relative; // For absolute positioning of header
-  height: 100%; // Fill the host element
+  flex: 1; // Fill the host element
   min-height: 0; // Required for flex children to shrink properly
   // No padding - content renders behind transparent toolbar
   // Scrolling is handled by .columns-container to preserve position independently
@@ -55,12 +57,6 @@ app-user-profile {
       bottom: calc(24px + env(safe-area-inset-bottom, 0px));
       right: 16px;
     }
-  }
-
-  // On mobile, add bottom padding for mobile nav
-  @media (max-width: 1023px) {
-    // Add bottom padding for mobile nav (64px height + 24px bottom offset + safe area)
-    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
 
   .section-tabs {
@@ -247,6 +243,11 @@ app-user-profile {
     overflow-x: hidden;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+
+    // On mobile, add bottom padding for mobile nav (since this is the scroll container)
+    @media (max-width: 1023px) {
+      padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    }
 
     .columns-wrapper {
       display: flex;
