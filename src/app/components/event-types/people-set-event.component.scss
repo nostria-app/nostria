@@ -1,0 +1,170 @@
+.people-set-container {
+  padding: 16px;
+
+  .people-set-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+
+    .title-section {
+      flex: 1;
+
+      .people-set-title {
+        margin: 0 0 8px 0;
+        font-size: 1.25rem;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .people-set-description {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface-variant);
+        line-height: 1.4;
+      }
+    }
+
+    .header-actions {
+      flex-shrink: 0;
+    }
+  }
+
+  .people-set-content {
+    .users-section {
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 1rem;
+        color: var(--mat-sys-on-surface);
+
+        mat-icon {
+          color: var(--mat-sys-primary);
+        }
+      }
+
+      .follow-count {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+
+        .user-item {
+          position: relative;
+          border: 1px solid var(--mat-sys-outline-variant);
+          border-radius: 8px;
+          background-color: var(--mat-sys-surface);
+          transition: all 0.2s ease;
+          overflow: hidden;
+
+          &:hover {
+            border-color: var(--mat-sys-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+
+          .user-content {
+            padding: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background-color: var(--mat-sys-surface-container);
+            }
+
+            &:focus {
+              outline: 2px solid var(--mat-sys-primary);
+              outline-offset: -2px;
+              background-color: var(--mat-sys-surface-container);
+            }
+          }
+
+          .user-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+
+            .follow-button {
+              min-width: 32px;
+              width: 32px;
+              height: 32px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+              background-color: var(--mat-sys-primary);
+              color: var(--mat-sys-on-primary);
+
+              mat-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+              }
+
+              &.following {
+                background-color: var(--mat-sys-surface-container);
+                color: var(--mat-sys-on-surface-variant);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Dark mode styles
+:host-context(.dark) {
+  .people-set-container {
+    .users-section {
+      .users-grid {
+        .user-item {
+          &:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Menu spinner styling
+mat-menu {
+  .mat-mdc-menu-item {
+    mat-spinner {
+      margin-right: 16px;
+    }
+  }
+}

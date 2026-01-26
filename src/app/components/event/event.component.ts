@@ -38,6 +38,7 @@ import {
   AudioEventComponent,
   MusicEventComponent,
   EmojiSetEventComponent,
+  PeopleSetEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -85,6 +86,7 @@ type EventCardAppearance = 'card' | 'plain';
     AudioEventComponent,
     MusicEventComponent,
     EmojiSetEventComponent,
+    PeopleSetEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
