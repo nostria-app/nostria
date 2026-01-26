@@ -112,27 +112,27 @@ app-info-tooltip {
 }
 
 .text-green-500 {
-  color: #10b981;
+  color: var(--mat-success-color);
 }
 
 .text-yellow-500 {
-  color: #f59e0b;
+  color: var(--mat-sys-tertiary);
 }
 
 .text-red-500 {
-  color: #ef4444;
+  color: var(--mat-sys-error);
 }
 
 .text-gray-500 {
-  color: #6b7280;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .text-orange-500 {
-  color: #f97316;
+  color: var(--mat-sys-tertiary);
 }
 
 .text-blue-500 {
-  color: #3b82f6;
+  color: var(--mat-sys-primary);
 }
 
 .tab-content {
@@ -393,19 +393,19 @@ app-info-tooltip {
             }
 
             &.signal-excellent {
-              color: #4caf50;
+              color: var(--mat-success-color);
             }
 
             &.signal-good {
-              color: #8bc34a;
+              color: var(--mat-success-lighter);
             }
 
             &.signal-fair {
-              color: #ff9800;
+              color: var(--mat-sys-tertiary);
             }
 
             &.signal-poor {
-              color: #f44336;
+              color: var(--mat-sys-error);
             }
           }
         }
@@ -554,8 +554,8 @@ app-info-tooltip {
             align-items: center;
             padding: 4px 10px;
             border-radius: 12px;
-            background: var(--mat-primary-color);
-            color: white;
+            background: var(--mat-sys-primary);
+            color: var(--mat-sys-on-primary);
             font-size: 0.75rem;
             font-weight: 600;
             font-family: 'Courier New', monospace;
@@ -573,22 +573,25 @@ app-info-tooltip {
             align-items: center;
             padding: 6px 12px;
             border-radius: 14px;
-            background: var(--mat-text-disabled-color);
-            color: white;
+            background: var(--mat-sys-surface-container-high);
+            color: var(--mat-sys-on-surface);
             font-size: 0.75rem;
             font-weight: 600;
             font-family: inherit;
 
             &.payment {
-              background: #ff9800;
+              background: var(--mat-sys-tertiary-container);
+              color: var(--mat-sys-on-tertiary-container);
             }
 
             &.auth {
-              background: #2196f3;
+              background: var(--mat-sys-primary-container);
+              color: var(--mat-sys-on-primary-container);
             }
 
             &.restricted {
-              background: #f44336;
+              background: var(--mat-sys-error-container);
+              color: var(--mat-sys-on-error-container);
             }
           }
         }
@@ -602,23 +605,23 @@ app-info-tooltip {
           font-weight: 700;
 
           &.performance-excellent {
-            background: #4caf50;
-            color: white;
+            background: var(--mat-success-color);
+            color: var(--mat-sys-on-primary);
           }
 
           &.performance-good {
-            background: #8bc34a;
-            color: white;
+            background: var(--mat-success-lighter);
+            color: var(--mat-sys-on-primary);
           }
 
           &.performance-fair {
-            background: #ff9800;
-            color: white;
+            background: var(--mat-sys-tertiary);
+            color: var(--mat-sys-on-tertiary);
           }
 
           &.performance-poor {
-            background: #f44336;
-            color: white;
+            background: var(--mat-sys-error);
+            color: var(--mat-sys-on-error);
           }
         }
       }
@@ -809,12 +812,12 @@ app-info-tooltip {
   border: 1px solid var(--mat-divider-color);
   padding: 20px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--mat-sys-level1);
   animation: fadeInUp 0.5s ease-out;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--mat-sys-level3);
     border-color: var(--mat-primary-color);
   }
 
@@ -897,23 +900,23 @@ app-info-tooltip {
       }
 
       &.performance-excellent {
-        background: linear-gradient(135deg, #4caf50, #66bb6a);
-        color: white;
+        background: var(--mat-success-color);
+        color: var(--mat-sys-on-primary);
       }
 
       &.performance-good {
-        background: linear-gradient(135deg, #8bc34a, #9ccc65);
-        color: white;
+        background: var(--mat-success-lighter);
+        color: var(--mat-sys-on-primary);
       }
 
       &.performance-fair {
-        background: linear-gradient(135deg, #ff9800, #ffb74d);
-        color: white;
+        background: var(--mat-sys-tertiary);
+        color: var(--mat-sys-on-tertiary);
       }
 
       &.performance-poor {
-        background: linear-gradient(135deg, #f44336, #ef5350);
-        color: white;
+        background: var(--mat-sys-error);
+        color: var(--mat-sys-on-error);
       }
     }
   }
@@ -1126,7 +1129,7 @@ app-info-tooltip {
 .zero-relays-card {
   margin-bottom: 2rem;
   border: 2px solid var(--mat-sys-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--mat-sys-level2);
 }
 
 .zero-relays-container {

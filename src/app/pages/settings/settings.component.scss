@@ -31,7 +31,7 @@ h2 {
 
 .danger-zone {
   h2 {
-    color: #f44336;
+    color: var(--mat-sys-error);
     margin-bottom: 8px;
   }
 }
@@ -44,19 +44,15 @@ h2 {
   padding: 12px 0;
 
   &.danger-zone {
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    border-top: 1px solid var(--mat-sys-outline-variant);
     padding-top: 24px;
     margin-top: 24px;
-
-    @media (prefers-color-scheme: dark) {
-      border-top-color: rgba(255, 255, 255, 0.12);
-    }
   }
 }
 
 .wipe-data-button {
-  background-color: #f44336;
-  color: white;
+  background-color: var(--mat-sys-error);
+  color: var(--mat-sys-on-error);
 }
 
 .tab-content {

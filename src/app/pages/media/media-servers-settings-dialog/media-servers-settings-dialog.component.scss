@@ -285,8 +285,8 @@
 .primary-badge {
   font-size: 11px;
   padding: 2px 8px;
-  background-color: #ffc107;
-  color: rgba(0, 0, 0, 0.87);
+  background-color: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
   border-radius: 12px;
   flex-shrink: 0;
 }

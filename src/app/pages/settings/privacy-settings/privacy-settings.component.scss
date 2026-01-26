@@ -157,7 +157,7 @@ h3 {
 }
 
 .empty-state {
-  color: #757575;
+  color: var(--mat-sys-on-surface-variant);
   font-style: italic;
   padding: 12px 0;
 }
@@ -165,7 +165,7 @@ h3 {
 mat-list {
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 4px;
 }
 
