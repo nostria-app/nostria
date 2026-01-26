@@ -1072,6 +1072,8 @@ export class FeedsComponent implements OnDestroy {
     // Scroll the feeds' own container to top
     if (this.columnsContainer?.nativeElement) {
       this.columnsContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+      // Also reset the header to visible
+      this.headerHidden.set(false);
     }
   }
 
@@ -1537,11 +1539,14 @@ export class FeedsComponent implements OnDestroy {
 
     // Scroll to the top to show the new posts
     // The scroll container is .columns-container (referenced by columnsContainer ViewChild)
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure the DOM has been updated before scrolling
+    requestAnimationFrame(() => {
       if (this.columnsContainer?.nativeElement) {
         this.columnsContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+        // Also reset the header to visible
+        this.headerHidden.set(false);
       }
-    }, 0);
+    });
 
     if (pendingCount > 0) {
       this.notificationService.notify(`Loaded ${pendingCount} new ${pendingCount === 1 ? 'post' : 'posts'}`);
