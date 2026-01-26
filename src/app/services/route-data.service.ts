@@ -277,7 +277,6 @@ export class RouteDataService implements OnDestroy {
       bookmarks: 'Bookmarks',
       premium: 'Premium',
       beta: 'Beta',
-      backup: 'Backup',
       'media-queue': 'Media Queue',
     };
 

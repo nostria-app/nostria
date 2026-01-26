@@ -186,7 +186,6 @@ export class PanelNavigationService {
     'premium': { type: 'list', title: 'Premium' },
     'analytics': { type: 'list', title: 'Analytics' },
     'ai': { type: 'list', title: 'AI' },
-    'backup': { type: 'list', title: 'Backup' },
     'delete-event': { type: 'list', title: 'Delete Event' },
     'delete-account': { type: 'list', title: 'Delete Account' },
     'search': { type: 'list', title: 'Search' },

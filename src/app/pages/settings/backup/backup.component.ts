@@ -8,19 +8,19 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { DatabaseService } from '../../services/database.service';
-import { NostrService } from '../../services/nostr.service';
-import { LoggerService } from '../../services/logger.service';
+import { DatabaseService } from '../../../services/database.service';
+import { NostrService } from '../../../services/nostr.service';
+import { LoggerService } from '../../../services/logger.service';
 import JSZip from '@progress/jszip-esm';
-import { ApplicationService } from '../../services/application.service';
-import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationService } from '../../../services/application.service';
+import { AccountStateService } from '../../../services/account-state.service';
 import { kinds } from 'nostr-tools';
-import { UtilitiesService } from '../../services/utilities.service';
-import { AccountRelayService } from '../../services/relays/account-relay';
-import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
-import { FollowingBackupService } from '../../services/following-backup.service';
+import { UtilitiesService } from '../../../services/utilities.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
+import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
+import { FollowingBackupService } from '../../../services/following-backup.service';
 import { FollowingHistoryDialogComponent } from './following-history-dialog/following-history-dialog.component';
-import { RightPanelService } from '../../services/right-panel.service';
+import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface BackupStats {
@@ -32,7 +32,6 @@ interface BackupStats {
 
 @Component({
   selector: 'app-backup',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

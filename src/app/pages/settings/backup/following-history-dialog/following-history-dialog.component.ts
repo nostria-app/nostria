@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
-import { FollowingBackupService, FollowingBackup } from '../../../services/following-backup.service';
+import { FollowingBackupService, FollowingBackup } from '../../../../services/following-backup.service';
 
 @Component({
   selector: 'app-following-history-dialog',
