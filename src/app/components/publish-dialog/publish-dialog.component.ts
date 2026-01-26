@@ -169,7 +169,8 @@ export class PublishDialogComponent {
       if (parsed.pubkey && typeof parsed.pubkey !== 'string') {
         return null;
       }
-      if (typeof parsed.created_at !== 'number') {
+      // created_at can be missing (will be auto-generated) or must be a number
+      if (parsed.created_at !== undefined && parsed.created_at !== null && typeof parsed.created_at !== 'number') {
         return null;
       }
       if (typeof parsed.kind !== 'number') {
@@ -439,8 +440,12 @@ export class PublishDialogComponent {
         console.log('Validation failed: pubkey is not a string', parsed.pubkey);
         return null;
       }
-      if (typeof parsed.created_at !== 'number') {
-        this.customEventError.set('Event must have a valid "created_at" field');
+      // Auto-generate created_at if missing (similar to how id/sig are auto-generated during signing)
+      if (parsed.created_at === undefined || parsed.created_at === null) {
+        parsed.created_at = Math.floor(Date.now() / 1000);
+        console.log('Auto-generated created_at:', parsed.created_at);
+      } else if (typeof parsed.created_at !== 'number') {
+        this.customEventError.set('Event "created_at" field must be a number (Unix timestamp) or omitted for auto-generation');
         console.log('Validation failed: created_at is not a number', typeof parsed.created_at, parsed.created_at);
         return null;
       }
