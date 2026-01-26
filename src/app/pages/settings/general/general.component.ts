@@ -49,6 +49,7 @@ interface Language {
   ],
   templateUrl: './general.component.html',
   styleUrl: './general.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class GeneralSettingsComponent implements OnInit, OnDestroy {
   logger = inject(LoggerService);

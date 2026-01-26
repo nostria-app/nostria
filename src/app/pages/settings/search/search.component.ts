@@ -53,6 +53,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
   ],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class SearchSettingsComponent implements OnInit, OnDestroy {
   private nostr = inject(NostrService);

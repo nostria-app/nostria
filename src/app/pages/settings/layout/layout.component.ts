@@ -18,6 +18,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './layout.component.scss',
+  host: { class: 'panel-with-sticky-header' },
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
