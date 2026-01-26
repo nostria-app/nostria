@@ -790,16 +790,27 @@ export class EventService {
         includeAccountRelays: true,
       });
 
-      // Extract events from records and filter valid replies
-      // IMPORTANT: Filter out events that only MENTION this event (marker='mention')
-      // Only include events where the e-tag is a thread relationship (root/reply/unmarked)
+      // Extract events and filter to actual thread participants
+      // NOTE: buildThreadTree() will do further filtering to only include downstream descendants
+      // but we pre-filter here to improve performance and exclude obvious non-replies
       const replies = replyRecords
         .map((record: NostrRecord) => record.event)
         .filter((event: Event) => {
+          // Filter out events with empty content
           if (!event.content || !event.content.trim()) return false;
-          // Check if ANY e-tag referencing this event is NOT a mention
-          const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
-          return eTags.some((tag: string[]) => tag[3] !== 'mention');
+
+          // Use getEventTags to properly parse the thread relationship
+          // Only include events that are actually part of the thread (not just mentions)
+          const eventTags = this.getEventTags(event);
+          const { rootId, replyId, mentionIds } = eventTags;
+
+          // If this event only mentions the target event (not a thread relationship), exclude it
+          if (mentionIds.includes(eventId) && rootId !== eventId && replyId !== eventId) {
+            return false;
+          }
+
+          // Include if it has any thread relationship to the target event
+          return rootId === eventId || replyId === eventId;
         });
 
       this.logger.info(
@@ -864,16 +875,26 @@ export class EventService {
           const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
           const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
           const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
-          // Count replies (kind 1 events that reference this event)
-          // IMPORTANT: Filter out events that only MENTION this event (marker='mention')
-          // Only count events where the e-tag is a thread relationship (root/reply/unmarked)
+          // Count replies (kind 1 events that are actual thread replies to this event)
+          // IMPORTANT: An event having an e-tag referencing this event doesn't mean it's a reply!
+          // It could be a mention, quote, or reply to a different event in the thread.
+          // We must use getEventTags to determine if this event actually REPLIES to this specific event.
           const replyRecords = allRecords.filter((r) => {
             if (r.event.kind !== kinds.ShortTextNote) return false;
-            // Check if ANY e-tag referencing this event is NOT a mention
-            // If the only e-tags pointing to this event are mentions, it's not a reply
-            const eTags = r.event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
-            // A reply must have at least one e-tag that is NOT marked as 'mention'
-            return eTags.some((tag: string[]) => tag[3] !== 'mention');
+
+            // Filter out events with empty content (same as loadReplies)
+            if (!r.event.content || !r.event.content.trim()) return false;
+
+            // Use getEventTags to properly parse the thread relationship
+            const eventTags = this.getEventTags(r.event);
+            const { rootId, replyId } = eventTags;
+
+            // An event is a direct reply to this event if:
+            // 1. replyId matches this event (explicit reply marker), OR
+            // 2. rootId matches this event AND no replyId (direct reply to root with no explicit reply marker)
+            // Note: If replyId is set to a DIFFERENT event, this is NOT a direct reply to us,
+            // it's a reply to that other event (even if rootId matches us as the thread root)
+            return replyId === eventId || (rootId === eventId && !replyId);
           });
 
           // Process reactions
