@@ -67,6 +67,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
   ],
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class RelaysComponent implements OnInit, OnDestroy {
   // relay = inject(RelayService);

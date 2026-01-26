@@ -44,6 +44,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
   ],
   templateUrl: './privacy-settings.component.html',
   styleUrls: ['./privacy-settings.component.scss'],
+  host: { class: 'panel-with-sticky-header' },
 })
 export class PrivacySettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);

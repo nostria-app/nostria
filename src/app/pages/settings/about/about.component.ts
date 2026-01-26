@@ -28,6 +28,7 @@ interface WebManifest {
   imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class AboutComponent implements OnInit, OnDestroy {
   private readonly app = inject(ApplicationService);

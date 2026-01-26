@@ -35,6 +35,7 @@ interface ZapAmount {
   ],
   templateUrl: './wallet.component.html',
   styleUrls: ['./wallet.component.scss'],
+  host: { class: 'panel-with-sticky-header' },
 })
 export class WalletSettingsComponent implements OnInit, OnDestroy {
   private settingsService = inject(SettingsService);

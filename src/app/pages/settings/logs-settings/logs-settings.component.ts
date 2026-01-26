@@ -55,6 +55,7 @@ export interface RelayConnection {
   ],
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss'],
+  host: { class: 'panel-with-sticky-header' },
 })
 export class LogsSettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);

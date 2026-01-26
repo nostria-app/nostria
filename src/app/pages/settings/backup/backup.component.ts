@@ -45,6 +45,7 @@ interface BackupStats {
   ],
   templateUrl: './backup.component.html',
   styleUrl: './backup.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class BackupComponent {
   private database = inject(DatabaseService);

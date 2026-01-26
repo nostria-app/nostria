@@ -30,6 +30,7 @@ interface TrustRelay {
   ],
   templateUrl: './trust.component.html',
   styleUrl: './trust.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class TrustSettingsComponent implements OnInit, OnDestroy {
   localSettings = inject(LocalSettingsService);
