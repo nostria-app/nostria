@@ -15,7 +15,7 @@ export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<u
   'privacy': () => import('./privacy-settings/privacy-settings.component').then(m => m.PrivacySettingsComponent),
   'trust': () => import('./trust/trust.component').then(m => m.TrustSettingsComponent),
   'wallet': () => import('./wallet/wallet.component').then(m => m.WalletSettingsComponent),
-  'backup': () => import('../backup/backup.component').then(m => m.BackupComponent),
+  'backup': () => import('./backup/backup.component').then(m => m.BackupComponent),
   'premium': () => import('../premium/settings/settings').then(m => m.PremiumSettings),
   'logs': () => import('./logs-settings/logs-settings.component').then(m => m.LogsSettingsComponent),
   'about': () => import('./about/about.component').then(m => m.AboutComponent),

@@ -349,7 +349,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-backup',
       label: 'Open Backup',
       icon: 'backup',
-      action: () => this.router.navigate(['/backup']),
+      action: () => this.router.navigate(['/settings/backup']),
       keywords: ['backup', 'export', 'save', 'restore', 'keys']
     },
     {
