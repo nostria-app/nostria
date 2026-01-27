@@ -1,11 +1,12 @@
 <!-- Panel Header -->
 <div class="panel-header">
-  <h2 class="panel-title title-font">People</h2>
+  <h2 class="panel-title title-font">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'People' }}</h2>
   <span class="panel-header-spacer"></span>
 
   <!-- List Selector -->
   @if (allFollowSets().length > 0) {
-  <button mat-icon-button [matMenuTriggerFor]="followSetsMenu" [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'All Following'">
+  <button mat-icon-button [matMenuTriggerFor]="followSetsMenu"
+    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'All Following'">
     <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
   </button>
 
@@ -28,6 +29,11 @@
       <span>Create new list</span>
     </button>
   </mat-menu>
+  } @else {
+  <!-- Create List button when no lists exist -->
+  <button mat-icon-button (click)="createNewList()" matTooltip="Create List">
+    <mat-icon>playlist_add</mat-icon>
+  </button>
   }
 
   <!-- Add Person button -->
@@ -43,39 +49,23 @@
   }
 
   <!-- View toggle button - cycles through modes -->
-  <button
-    mat-icon-button
-    (click)="cycleViewMode()"
-    [matTooltip]="'View: ' + viewMode() + ' (click to change)'">
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'">
     <mat-icon>{{ getViewModeIcon() }}</mat-icon>
   </button>
 
   <!-- Filter button with overlay panel -->
-  <button
-    mat-icon-button
-    #filterTrigger
-    cdkOverlayOrigin
-    #filterOrigin="cdkOverlayOrigin"
-    (click)="toggleFilterPanel()"
-    [matTooltip]="'Filter & Sort'"
-    [class.active-filters]="hasActiveFilters()">
+  <button mat-icon-button #filterTrigger cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" (click)="toggleFilterPanel()"
+    [matTooltip]="'Filter & Sort'" [class.active-filters]="hasActiveFilters()">
     <mat-icon>tune</mat-icon>
   </button>
 
   <!-- Filter Panel Overlay -->
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="filterOrigin"
-    [cdkConnectedOverlayOpen]="filterPanelOpen()"
-    [cdkConnectedOverlayPositions]="filterPanelPositions"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
+    [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayPositions]="filterPanelPositions"
+    [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
     (backdropClick)="closeFilterPanel()">
-    <app-people-filter-panel
-      [filters]="filters()"
-      [sortOption]="sortOption()"
-      (filtersChanged)="onFiltersChanged($event)"
-      (sortOptionChanged)="onSortOptionChanged($event)">
+    <app-people-filter-panel [filters]="filters()" [sortOption]="sortOption()"
+      (filtersChanged)="onFiltersChanged($event)" (sortOptionChanged)="onSortOptionChanged($event)">
     </app-people-filter-panel>
   </ng-template>
 </div>

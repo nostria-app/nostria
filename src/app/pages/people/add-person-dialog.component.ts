@@ -317,6 +317,9 @@ export class AddPersonDialogComponent {
   private followSetsService = inject(FollowSetsService);
   private followingService = inject(FollowingService);
 
+  // Store the follow set in a signal to ensure it's captured at dialog creation time
+  private readonly targetFollowSet = signal<FollowSet | null>(this.data?.followSet ?? null);
+
   state = signal<DialogState>('input');
   inputValue = signal<string>('');
   errorMessage = signal<string>('');
@@ -325,22 +328,27 @@ export class AddPersonDialogComponent {
   alreadyInSet = signal<boolean>(false);
 
   // Whether we're adding to a custom follow set (vs main following list)
-  isAddingToSet = computed(() => !!this.data?.followSet);
+  isAddingToSet = computed(() => !!this.targetFollowSet());
+
+  constructor() {
+    this.logger.debug('[AddPersonDialog] Opened with data:', this.data);
+    this.logger.debug('[AddPersonDialog] Target follow set:', this.targetFollowSet());
+  }
 
   // Computed: Check if input looks like an npub, hex, or NIP-05
   isSpecialInput = computed(() => {
     const input = this.inputValue().trim();
     if (!input) return false;
-    return input.startsWith('npub') || 
-           input.startsWith('nprofile') || 
-           input.includes('@') || 
-           /^[0-9a-f]{64}$/i.test(input);
+    return input.startsWith('npub') ||
+      input.startsWith('nprofile') ||
+      input.includes('@') ||
+      /^[0-9a-f]{64}$/i.test(input);
   });
 
   // Computed: Search results from cached profiles
   searchResults = computed(() => {
     const input = this.inputValue().trim().toLowerCase();
-    
+
     // Don't show search results if input looks like npub/hex/NIP-05
     if (!input || this.isSpecialInput()) {
       return [];
@@ -369,16 +377,17 @@ export class AddPersonDialogComponent {
     const pubkey = profile.event.pubkey;
     this.inputValue.set('');
     this.discoveredPubkey.set(pubkey);
-    
+
     // Check if already following
     const isFollowing = this.accountState.isFollowing();
     this.alreadyFollowing.set(isFollowing(pubkey));
-    
+
     // Check if already in the target set (if adding to a set)
-    if (this.data?.followSet) {
-      this.alreadyInSet.set(this.data.followSet.pubkeys.includes(pubkey));
+    const followSet = this.targetFollowSet();
+    if (followSet) {
+      this.alreadyInSet.set(followSet.pubkeys.includes(pubkey));
     }
-    
+
     this.state.set('preview');
   }
 
@@ -465,8 +474,9 @@ export class AddPersonDialogComponent {
       this.alreadyFollowing.set(isFollowing(pubkey));
 
       // Check if already in the target set (if adding to a set)
-      if (this.data?.followSet) {
-        this.alreadyInSet.set(this.data.followSet.pubkeys.includes(pubkey));
+      const followSet = this.targetFollowSet();
+      if (followSet) {
+        this.alreadyInSet.set(followSet.pubkeys.includes(pubkey));
       }
 
       // Query discovery relay for user's relays
@@ -503,12 +513,13 @@ export class AddPersonDialogComponent {
 
   async onFollow(): Promise<void> {
     const pubkey = this.discoveredPubkey();
+    const followSet = this.targetFollowSet();
 
     if (!pubkey) {
       return;
     }
 
-    if (this.alreadyFollowing() && !this.data?.followSet) {
+    if (this.alreadyFollowing() && !followSet) {
       return;
     }
 
@@ -520,9 +531,9 @@ export class AddPersonDialogComponent {
       this.state.set('loading');
 
       // If a follow set is provided, add to that set
-      if (this.data?.followSet) {
-        await this.followSetsService.addToFollowSet(this.data.followSet.dTag, pubkey);
-        this.logger.info(`Added ${pubkey} to follow set ${this.data.followSet.title}`);
+      if (followSet) {
+        await this.followSetsService.addToFollowSet(followSet.dTag, pubkey);
+        this.logger.info(`Added ${pubkey} to follow set ${followSet.title}`);
       } else {
         // Otherwise, follow the user (add to main following list)
         await this.accountState.follow(pubkey);
@@ -537,27 +548,29 @@ export class AddPersonDialogComponent {
       }, 1500);
     } catch (err) {
       this.logger.error('Error adding person', err);
-      const action = this.data?.followSet ? 'add to list' : 'follow';
+      const action = followSet ? 'add to list' : 'follow';
       this.errorMessage.set(`Failed to ${action}. Please try again.`);
       this.state.set('error');
     }
   }
 
   getDialogTitle(): string {
-    if (this.data?.followSet) {
-      return `Add Person to ${this.data.followSet.title}`;
+    const followSet = this.targetFollowSet();
+    if (followSet) {
+      return `Add Person to ${followSet.title}`;
     }
     return 'Add Person to Follow';
   }
 
   getActionButtonText(): string {
+    const followSet = this.targetFollowSet();
     if (this.alreadyInSet()) {
       return 'Already in List';
     }
-    if (this.alreadyFollowing() && !this.data?.followSet) {
+    if (this.alreadyFollowing() && !followSet) {
       return 'Already Following';
     }
-    if (this.data?.followSet) {
+    if (followSet) {
       return 'Add to List';
     }
     return 'Follow';

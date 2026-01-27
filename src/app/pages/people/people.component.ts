@@ -674,6 +674,9 @@ export class PeopleComponent implements OnDestroy {
   }
 
   openAddPersonDialog() {
+    const selectedSet = this.selectedFollowSet();
+    this.logger.debug('[People] Opening add person dialog with follow set:', selectedSet?.title ?? 'None (All Following)');
+
     const dialogRef = this.dialog.open(AddPersonDialogComponent, {
       width: '600px',
       // maxWidth: '90vw',
@@ -681,7 +684,7 @@ export class PeopleComponent implements OnDestroy {
       disableClose: false,
       autoFocus: true,
       data: {
-        followSet: this.selectedFollowSet(), // Pass the currently selected follow set (null if "All Following")
+        followSet: selectedSet, // Pass the currently selected follow set (null if "All Following")
       },
     });
 
@@ -690,10 +693,10 @@ export class PeopleComponent implements OnDestroy {
         this.logger.info('Person added:', result);
         // FollowingService will automatically reload when following list changes
         // If a follow set was selected, reload it with fresh data from the service
-        const selectedSet = this.selectedFollowSet();
-        if (selectedSet) {
+        const currentSelectedSet = this.selectedFollowSet();
+        if (currentSelectedSet) {
           // Get the updated follow set from the service (with new pubkeys)
-          const updatedSet = this.followSetsService.getFollowSetByDTag(selectedSet.dTag);
+          const updatedSet = this.followSetsService.getFollowSetByDTag(currentSelectedSet.dTag);
           if (updatedSet) {
             this.selectFollowSet(updatedSet);
           }
@@ -726,6 +729,8 @@ export class PeopleComponent implements OnDestroy {
 
       if (newSet) {
         this.notificationService.notify(`List "${newSet.title}" created successfully`);
+        // Auto-select the newly created list
+        await this.selectFollowSet(newSet);
       } else {
         this.notificationService.notify('Failed to create list');
       }
