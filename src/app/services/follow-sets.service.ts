@@ -123,8 +123,11 @@ export class FollowSetsService {
             dbEvents.map(event => this.parseFollowSetEvent(event))
           )).filter((set): set is FollowSet => set !== null);
 
-          this.followSets.set(dbSets);
-          this.logger.info(`[FollowSets] Loaded ${dbSets.length} follow sets from database`);
+          // Deduplicate by dTag, keeping only the newest event for each dTag
+          const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
+
+          this.followSets.set(deduplicatedDbSets);
+          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database`);
         }
 
         // Then fetch from relays to get any updates
@@ -142,8 +145,11 @@ export class FollowSetsService {
           events.map(record => this.parseFollowSetEvent(record.event))
         )).filter((set): set is FollowSet => set !== null);
 
-        this.followSets.set(sets);
-        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
+        // Deduplicate by dTag, keeping only the newest event for each dTag
+        const deduplicatedSets = this.deduplicateByDTag(sets);
+
+        this.followSets.set(deduplicatedSets);
+        this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets (from ${sets.length} events)`);
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');
@@ -207,6 +213,23 @@ export class FollowSetsService {
       this.logger.error('[FollowSets] Failed to parse follow set event:', error);
       return null;
     }
+  }
+
+  /**
+   * Deduplicate follow sets by dTag, keeping only the newest event for each dTag
+   */
+  private deduplicateByDTag(sets: FollowSet[]): FollowSet[] {
+    const setsByDTag = new Map<string, FollowSet>();
+
+    for (const set of sets) {
+      const existing = setsByDTag.get(set.dTag);
+      // Keep the newer event (higher createdAt timestamp)
+      if (!existing || set.createdAt > existing.createdAt) {
+        setsByDTag.set(set.dTag, set);
+      }
+    }
+
+    return Array.from(setsByDTag.values());
   }
 
   /**
