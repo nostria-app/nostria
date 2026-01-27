@@ -2,6 +2,10 @@
   padding: 16px;
   max-width: 800px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
 }
 
 mat-card {

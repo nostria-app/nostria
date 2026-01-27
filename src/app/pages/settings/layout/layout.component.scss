@@ -2,6 +2,10 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 16px;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
 }
 
 h2 {

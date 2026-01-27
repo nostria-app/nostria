@@ -1,3 +1,10 @@
+// Content area mobile padding
+.content-medium {
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
 .danger-zone {
   h2 {
     color: var(--mat-sys-error);

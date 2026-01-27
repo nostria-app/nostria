@@ -1,3 +1,10 @@
+// Content area mobile padding
+.content-medium {
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
 .setting-item {
   display: flex;
   justify-content: space-between;
