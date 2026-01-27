@@ -98,6 +98,12 @@ export class SearchService {
         return;
       }
 
+      // Skip searching for Nostr entities - they should be routed directly, not searched
+      // The LayoutService.handleSearch handles routing for these
+      if (this.isNostrEntity(searchValue)) {
+        return;
+      }
+
       this.#lastQuery = searchValue;
       console.log('SearchService effect triggered with query:', query);
 
@@ -681,5 +687,25 @@ export class SearchService {
     this.layout.router.navigate(['/search'], {
       queryParams: { q: `#${hashtag}` },
     });
+  }
+
+  /**
+   * Check if a value is a Nostr entity (npub, nprofile, nevent, note, naddr, nsec)
+   * These should be routed directly, not searched
+   */
+  private isNostrEntity(value: string): boolean {
+    if (!value) return false;
+
+    // Handle nostr: URL prefix
+    const cleanValue = value.startsWith('nostr:') ? value.substring(6) : value;
+
+    return (
+      cleanValue.startsWith('npub') ||
+      cleanValue.startsWith('nprofile') ||
+      cleanValue.startsWith('nevent') ||
+      cleanValue.startsWith('note1') ||
+      cleanValue.startsWith('naddr') ||
+      cleanValue.startsWith('nsec')
+    );
   }
 }
