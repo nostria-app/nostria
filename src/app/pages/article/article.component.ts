@@ -219,12 +219,18 @@ export class ArticleComponent implements OnDestroy {
         // For other unknown kinds, continue loading as-is (fallback)
       }
 
-      const encoded = nip19.naddrEncode({
-        identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
-        kind: receivedData.kind,
-        pubkey: receivedData.pubkey,
-      });
-      this.link = encoded;
+      // Use the original naddr from route if available (preserves relay hints),
+      // otherwise create a new one (no relay hints available from receivedData)
+      if (naddr.startsWith('naddr1')) {
+        this.link = naddr;
+      } else {
+        const encoded = nip19.naddrEncode({
+          identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
+          kind: receivedData.kind,
+          pubkey: receivedData.pubkey,
+        });
+        this.link = encoded;
+      }
 
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
@@ -561,20 +567,23 @@ export class ArticleComponent implements OnDestroy {
     const title = this.title();
     const summary = this.summary();
     const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    const image = this.image();
 
     const dialogData: ShareArticleDialogData = {
       title: title || 'Nostr Article',
       summary: summary || undefined,
+      image: image || undefined,
       url: window.location.href,
       eventId: event.id,
       pubkey: event.pubkey,
       identifier: identifier,
       kind: event.kind,
+      naddr: this.naddr() || this.link, // Pass original naddr to preserve relay hints
     };
 
     this.dialog.open(ShareArticleDialogComponent, {
       data: dialogData,
-      width: '360px',
+      width: '450px',
     });
   }
 
