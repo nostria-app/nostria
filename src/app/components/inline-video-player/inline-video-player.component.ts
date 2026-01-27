@@ -129,10 +129,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     });
 
     // Handle viewport visibility changes for auto-play and auto-pause
-    // NOTE: This effect only handles AUTO-PLAY. Manual plays are handled by togglePlay().
-    // We intentionally do NOT auto-pause videos when they leave viewport, as this caused
-    // issues with videos in scrollable panels (right panel) where the IntersectionObserver
-    // would incorrectly report visibility. Users can pause manually if needed.
+    // NOTE: This effect handles both auto-play and auto-pause based on viewport visibility.
     effect(() => {
       const inViewport = this.isInViewport();
       const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
@@ -146,21 +143,22 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      // Only handle auto-play when entering viewport
-      // Do NOT auto-pause - this was causing issues with videos in scrollable containers
-      if (inViewport && autoPlayAllowed) {
-        // Video entered viewport and auto-play is allowed - play if enabled and hasn't been played yet
-        if (this.autoplay() && !this.hasPlayedOnce() && video.paused) {
-          // Mark as auto-played for tracking purposes
+      if (inViewport) {
+        // Video entered viewport
+        if (autoPlayAllowed && this.autoplay() && !this.hasPlayedOnce() && video.paused) {
+          // Auto-play is allowed - play if enabled and hasn't been played yet
           this.wasAutoPlayed.set(true);
           video.play().catch(() => {
             // Autoplay failed - likely due to browser restrictions
             // User will need to click to play
           });
         }
+      } else {
+        // Video left viewport - pause if currently playing
+        if (!video.paused) {
+          video.pause();
+        }
       }
-      // Removed auto-pause logic - was causing videos to stop when user clicked play
-      // in the right panel because IntersectionObserver reported incorrect visibility
     });
   }
 
