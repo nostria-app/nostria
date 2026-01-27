@@ -615,14 +615,40 @@ export class EventService {
 
     // Handle addressable events (naddr)
     if (decoded.type === 'naddr') {
-      const { kind, pubkey, identifier } = decoded.data;
-      this.logger.info('Loading addressable event:', { kind, pubkey, identifier });
+      const { kind, pubkey, identifier, relays: relayHints } = decoded.data;
+      this.logger.info('Loading addressable event:', { kind, pubkey, identifier, relayHints });
 
       // Strategy for addressable events: Try multiple sources
-      // 1. Local database first
+      // 0. Relay hints (if provided) - fastest when available
+      // 1. Local database
       // 2. Author's relays
       // 3. Account relays
       // 4. Discovery relays
+
+      // Step 0: Try relay hints first if provided (with short timeout)
+      if (relayHints && relayHints.length > 0) {
+        this.logger.debug('Trying relay hints from naddr:', relayHints);
+        try {
+          const event = await this.relayPool.get(
+            relayHints,
+            {
+              authors: [pubkey],
+              kinds: [kind],
+              '#d': [identifier],
+            },
+            2000 // Short timeout since we have specific hints
+          );
+          if (event) {
+            this.logger.info('Loaded addressable event from relay hints:', event.id);
+            await this.database.saveEvent(event);
+            return event;
+          }
+          this.logger.debug('Addressable event not found via relay hints, falling back to normal flow');
+        } catch (error) {
+          this.logger.debug('Failed to fetch addressable event from relay hints:', error);
+          // Continue with normal flow
+        }
+      }
 
       // Step 1: Check local database
       const cachedEvent = await this.database.getParameterizedReplaceableEvent(pubkey, kind, identifier);
@@ -694,9 +720,10 @@ export class EventService {
     }
 
     // For 'note' type, decoded.data is just the hex string
-    // For 'nevent' type, decoded.data is an object with id and author
+    // For 'nevent' type, decoded.data is an object with id, author, and optionally relays
     const hex = decoded.type === 'note' ? decoded.data : decoded.data.id;
     const author = decoded.type === 'nevent' ? decoded.data.author : null;
+    const relayHints = decoded.type === 'nevent' ? decoded.data.relays : undefined;
 
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {
@@ -706,7 +733,8 @@ export class EventService {
 
     try {
       // Strategy: Try multiple sources in order of efficiency
-      // 1. Local database first (fastest, no network)
+      // 0. Relay hints (if provided in nevent) - fastest when available
+      // 1. Local database (fastest, no network)
       // 2. Author's relays (if author provided in nevent) - most likely to have the event
       // 3. Account relays - for events from followed accounts
       // 4. Discovery relays - broad coverage fallback
@@ -717,6 +745,27 @@ export class EventService {
       if (cachedEvent) {
         this.logger.info('Loaded event from local database:', cachedEvent.id);
         return cachedEvent;
+      }
+
+      // Try relay hints first if provided (with short timeout)
+      if (relayHints && relayHints.length > 0) {
+        this.logger.debug('Trying relay hints from nevent:', relayHints);
+        try {
+          const event = await this.relayPool.get(
+            relayHints,
+            { ids: [hex] },
+            2000 // Short timeout since we have specific hints
+          );
+          if (event) {
+            this.logger.info('Loaded event from relay hints:', event.id);
+            await this.database.saveEvent(event);
+            return event;
+          }
+          this.logger.debug('Event not found via relay hints, falling back to normal flow');
+        } catch (error) {
+          this.logger.debug('Failed to fetch from relay hints:', error);
+          // Continue with normal flow
+        }
       }
 
       if (author) {
