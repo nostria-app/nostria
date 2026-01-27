@@ -1046,19 +1046,11 @@ export class ZapService {
         zapRequest = JSON.parse(descriptionJson) as Event;
       } catch (firstError) {
         // If parsing fails, try to fix common issues with control characters
-        // Replace literal newlines in content strings with escaped newlines
+        // Control characters (0x00-0x1F) must be escaped in JSON strings
         try {
-          // This is a heuristic approach: find the content field and escape newlines within it
-          descriptionJson = descriptionJson.replace(
-            /"content":"([^"]*)"/g,
-            (match, content) => {
-              const escapedContent = content
-                .replace(/\n/g, '\\n')
-                .replace(/\r/g, '\\r')
-                .replace(/\t/g, '\\t');
-              return `"content":"${escapedContent}"`;
-            }
-          );
+          // Escape all unescaped control characters in the JSON string
+          // This handles newlines, tabs, carriage returns, and other control chars
+          descriptionJson = this.escapeControlCharactersInJson(descriptionJson);
           zapRequest = JSON.parse(descriptionJson) as Event;
           this.logger.debug('Successfully parsed zap request after escaping control characters');
         } catch (secondError) {
@@ -1601,6 +1593,75 @@ export class ZapService {
       this.logger.error('Failed to get gift premium zaps for user:', error);
       return [];
     }
+  }
+
+  /**
+   * Escape unescaped control characters in a JSON string.
+   * JSON requires control characters (0x00-0x1F) to be escaped.
+   * This method finds string values in JSON and escapes control characters within them.
+   */
+  private escapeControlCharactersInJson(json: string): string {
+    // We need to escape control characters only within string values
+    // This regex-based approach processes the JSON character by character
+    // to properly handle string boundaries
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < json.length; i++) {
+      const char = json[i];
+      const charCode = json.charCodeAt(i);
+
+      if (escapeNext) {
+        // Previous character was a backslash, this character is already escaped
+        result += char;
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        // Backslash in a string - next character is escaped
+        result += char;
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"') {
+        // Toggle string state
+        inString = !inString;
+        result += char;
+        continue;
+      }
+
+      if (inString && charCode >= 0 && charCode <= 0x1f) {
+        // Control character inside a string - escape it
+        switch (charCode) {
+          case 0x08: // backspace
+            result += '\\b';
+            break;
+          case 0x09: // tab
+            result += '\\t';
+            break;
+          case 0x0a: // newline
+            result += '\\n';
+            break;
+          case 0x0c: // form feed
+            result += '\\f';
+            break;
+          case 0x0d: // carriage return
+            result += '\\r';
+            break;
+          default:
+            // Other control characters use \uXXXX format
+            result += '\\u' + charCode.toString(16).padStart(4, '0');
+        }
+      } else {
+        result += char;
+      }
+    }
+
+    return result;
   }
 }
 
