@@ -185,6 +185,12 @@ export class ShareArticleDialogComponent {
   private snackBar = inject(MatSnackBar);
   private customDialog = inject(CustomDialogService);
 
+  /** Generate clean canonical URL for sharing (always nostria.app with clean path) */
+  private getShareUrl(): string {
+    const naddr = this.getNaddr();
+    return `https://nostria.app/a/${naddr}`;
+  }
+
   getAuthorDisplay(): string {
     if (this.data.pubkey) {
       const npub = nip19.npubEncode(this.data.pubkey);
@@ -213,7 +219,7 @@ export class ShareArticleDialogComponent {
 
   async copyLink() {
     try {
-      await navigator.clipboard.writeText(this.data.url);
+      await navigator.clipboard.writeText(this.getShareUrl());
       this.snackBar.open('Link copied to clipboard', 'Close', { duration: 2000 });
       this.dialogRef.close();
     } catch (error) {
@@ -223,46 +229,46 @@ export class ShareArticleDialogComponent {
   }
 
   shareToFacebook() {
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.data.url)}`;
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.getShareUrl())}`;
     window.open(url, '_blank', 'width=600,height=400');
     this.dialogRef.close();
   }
 
   shareViaEmail() {
     const subject = encodeURIComponent(this.data.title || 'Check out this article');
-    const body = encodeURIComponent(`${this.data.summary || this.data.title}\n\n${this.data.url}`);
+    const body = encodeURIComponent(`${this.data.summary || this.data.title}\n\n${this.getShareUrl()}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
     this.dialogRef.close();
   }
 
   shareToBluesky() {
-    const text = encodeURIComponent(`${this.data.title || 'Check out this article'}\n\n${this.data.url}`);
+    const text = encodeURIComponent(`${this.data.title || 'Check out this article'}\n\n${this.getShareUrl()}`);
     window.open(`https://bsky.app/intent/compose?text=${text}`, '_blank');
     this.dialogRef.close();
   }
 
   shareToTwitter() {
     const text = encodeURIComponent(this.data.title || 'Check out this article');
-    const url = encodeURIComponent(this.data.url);
+    const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=600,height=400');
     this.dialogRef.close();
   }
 
   shareToLinkedIn() {
-    const url = encodeURIComponent(this.data.url);
+    const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
     this.dialogRef.close();
   }
 
   shareToReddit() {
     const title = encodeURIComponent(this.data.title || 'Check out this article');
-    const url = encodeURIComponent(this.data.url);
+    const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://www.reddit.com/submit?title=${title}&url=${url}`, '_blank');
     this.dialogRef.close();
   }
 
   shareToPinterest() {
-    const url = encodeURIComponent(this.data.url);
+    const url = encodeURIComponent(this.getShareUrl());
     const description = encodeURIComponent(this.data.title || '');
     const media = encodeURIComponent(this.data.image || '');
     window.open(`https://pinterest.com/pin/create/button/?url=${url}&description=${description}&media=${media}`, '_blank', 'width=600,height=400');
@@ -271,7 +277,7 @@ export class ShareArticleDialogComponent {
 
   shareToHackerNews() {
     const title = encodeURIComponent(this.data.title || 'Check out this article');
-    const url = encodeURIComponent(this.data.url);
+    const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://news.ycombinator.com/submitlink?t=${title}&u=${url}`, '_blank');
     this.dialogRef.close();
   }
@@ -285,7 +291,7 @@ export class ShareArticleDialogComponent {
   }
 
   copyEmbed() {
-    const embedCode = `<iframe src="${this.data.url}" width="100%" height="400" frameborder="0"></iframe>`;
+    const embedCode = `<iframe src="${this.getShareUrl()}" width="100%" height="400" frameborder="0"></iframe>`;
     navigator.clipboard.writeText(embedCode).then(() => {
       this.snackBar.open('Embed code copied!', 'Close', { duration: 2000 });
       this.dialogRef.close();
