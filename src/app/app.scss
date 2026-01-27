@@ -1077,7 +1077,7 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   flex: 1;
-  position: relative; // Contain absolutely positioned feeds-container when hidden
+  position: relative;
   // Center the content wrapper within the panel when max-width is set
   margin-left: auto;
   margin-right: auto;
@@ -1150,7 +1150,8 @@ mat-sidenav-content {
   }
 
   // Feeds container - persistent, uses visibility for state preservation
-  // Uses absolute positioning to overlay the panel-content-wrapper without competing for flex space
+  // Positioned directly in left-panel for scrollbar at panel edge
+  // Content constraint is handled by feeds component's .column-unit with max-width
   .feeds-container {
     display: flex;
     flex-direction: column;

@@ -6,401 +6,410 @@
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
 
-    <!-- Panel Header - matches right panel style -->
-    <div class="panel-header" [class.header-hidden]="headerHidden()">
-      <!-- Feed selector dropdown/tabs -->
-      <div class="feed-tabs" #feedTabsContainer>
-        <div class="feed-tabs-inner" #feedTabsInner>
-          @if (!feedService.feedsLoaded()) {
-          <!-- Show loading indicator while feeds are loading -->
-          <button mat-button disabled>
-            <mat-icon>dynamic_feed</mat-icon>
-            Loading...
-          </button>
-          } @else if (useDropdownSelector()) {
-          <button mat-button [matMenuTriggerFor]="feedMenu">
-            <mat-icon>{{ feedIcon() }}</mat-icon>
-            {{ feedLabel() }}
-          </button>
+    <!-- Panel Header - sticky, always visible, constrained width -->
+    <div class="panel-header">
+      <div class="panel-header-inner">
+        <!-- Feed selector dropdown/tabs -->
+        <div class="feed-tabs" #feedTabsContainer>
+          <div class="feed-tabs-inner" #feedTabsInner>
+            @if (!feedService.feedsLoaded()) {
+            <!-- Show loading indicator while feeds are loading -->
+            <button mat-button disabled>
+              <mat-icon>dynamic_feed</mat-icon>
+              Loading...
+            </button>
+            } @else if (useDropdownSelector()) {
+            <button mat-button [matMenuTriggerFor]="feedMenu">
+              <mat-icon>{{ feedIcon() }}</mat-icon>
+              {{ feedLabel() }}
+            </button>
 
-          <mat-menu #feedMenu="matMenu">
+            <mat-menu #feedMenu="matMenu">
+              @for (feed of feeds(); track feed.id) {
+              <button mat-menu-item (click)="selectFeed(feed.id)">
+                <mat-icon>{{ feed.icon }}</mat-icon>
+                <span>{{ feed.label }}</span>
+              </button>
+              }
+            </mat-menu>
+            } @else {
             @for (feed of feeds(); track feed.id) {
-            <button mat-menu-item (click)="selectFeed(feed.id)">
+            <button class="feed-tab" mat-button
+              [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
+              (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
               <mat-icon>{{ feed.icon }}</mat-icon>
               <span>{{ feed.label }}</span>
             </button>
             }
-          </mat-menu>
-          } @else {
-          @for (feed of feeds(); track feed.id) {
-          <button class="feed-tab" mat-button
-            [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
-            (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
-            <mat-icon>{{ feed.icon }}</mat-icon>
-            <span>{{ feed.label }}</span>
-          </button>
-          }
-          }
+            }
+          </div>
+
+          <!-- Public Relay Feeds Menu -->
+          <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+          </app-relay-feed-menu>
         </div>
 
-        <!-- Public Relay Feeds Menu -->
-        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
-        </app-relay-feed-menu>
+        <span class="spacer"></span>
+
+        <!-- Filter button with overlay panel -->
+        @if (feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
+        <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
+          matTooltip="Filter content">
+          <mat-icon>tune</mat-icon>
+        </button>
+
+        <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
+          [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
+          [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
+          [cdkConnectedOverlayPositions]="filterPanelPositions">
+          <app-feed-filter-panel [feed]="activeFeed()" (kindsChanged)="onKindsChanged($event)"
+            (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
+          </app-feed-filter-panel>
+        </ng-template>
+        }
+
+        <!-- Feed menu with all actions -->
+        <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+
+        <mat-menu #feedManagementMenu="matMenu">
+          @let feed = activeFeed();
+          <!-- Refresh -->
+          @if (feed && !showRelayFeed()) {
+          <button mat-menu-item (click)="refreshFeed(feed)">
+            <mat-icon>refresh</mat-icon>
+            <span>Refresh Content</span>
+          </button>
+          <mat-divider></mat-divider>
+          }
+
+          <!-- Add Feed -->
+          <button mat-menu-item (click)="addNewFeed()">
+            <mat-icon>add</mat-icon>
+            <span>Add Feed</span>
+          </button>
+
+          <mat-divider></mat-divider>
+
+          <!-- Edit / Delete / Reset -->
+          <button mat-menu-item (click)="editCurrentFeed()"
+            [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
+            <mat-icon>edit</mat-icon>
+            <span>Edit Feed</span>
+          </button>
+          <button mat-menu-item (click)="deleteCurrentFeed()"
+            [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
+            <mat-icon>delete</mat-icon>
+            <span>Delete Feed</span>
+          </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="resetFeeds()">
+            <mat-icon>restore</mat-icon>
+            <span>Reset Feeds</span>
+          </button>
+        </mat-menu>
       </div>
+      <!-- End panel-header-inner -->
+    </div>
 
-      <span class="spacer"></span>
+    <!-- Content wrapper to constrain width and center - scrollbar stays at panel edge -->
+    <div class="feeds-content-wrapper">
 
-      <!-- Filter button with overlay panel -->
-      @if (feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
-      <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
-        matTooltip="Filter content">
-        <mat-icon>tune</mat-icon>
-      </button>
+      <!-- Relay Feed View - shown when relay query param is present -->
+      @if (showRelayFeed()) {
+      <div class="relay-feed-container">
+        <div class="relay-column-wrapper">
+          <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
+        </div>
+      </div>
+      } @else if (showDynamicFeed()) {
+      <!-- Dynamic Hashtag Feed View - shown when hashtag query param is present -->
+      @let dynFeed = dynamicFeed();
+      @if (dynFeed) {
+      <div class="columns-wrapper" #columnsWrapper>
+        <div class="column-unit dynamic-feed-unit" [attr.data-column-id]="dynFeed.id" [class.visible]="true">
+          <!-- Dynamic feed header with close button -->
+          <div class="dynamic-feed-header">
+            <div class="dynamic-feed-info">
+              <mat-icon>tag</mat-icon>
+              <span class="dynamic-feed-label">{{ dynFeed.label }}</span>
+              @if (dynFeed.customInterestHashtags && dynFeed.customInterestHashtags.length > 1) {
+              <span class="dynamic-feed-count">({{ dynFeed.customInterestHashtags.length }} hashtags)</span>
+              }
+            </div>
+            <button mat-icon-button (click)="closeDynamicFeed()" matTooltip="Close dynamic feed">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
 
-      <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
-        [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
-        [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
-        [cdkConnectedOverlayPositions]="filterPanelPositions">
-        <app-feed-filter-panel [feed]="activeFeed()" (kindsChanged)="onKindsChanged($event)"
-          (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
-        </app-feed-filter-panel>
-      </ng-template>
+          <!-- Feed Content -->
+          <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
+            @let dynamicEvents = columnEvents().get(dynFeed.id);
+            @let dynamicFeedHasEvents = dynamicEvents && dynamicEvents.length > 0;
+            @let dynamicInitialLoadComplete = feedService.getColumnInitialLoadComplete(dynFeed.id);
+
+            @if (dynamicInitialLoadComplete && !dynamicFeedHasEvents) {
+            <!-- No results for hashtag search -->
+            <div class="no-results-state">
+              <div class="no-results-content">
+                <mat-icon class="no-results-icon">search_off</mat-icon>
+                <h3>No posts found</h3>
+                <p>
+                  No posts found for {{ dynFeed.label }}. Try checking back later.
+                </p>
+              </div>
+            </div>
+            } @else if (!dynamicFeedHasEvents) {
+            <!-- Loading skeleton -->
+            <div class="column-skeleton-items">
+              @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
+              <div class="feed-item-skeleton">
+                <div class="item-header-skeleton">
+                  <div class="avatar-skeleton"></div>
+                  <div class="user-info-skeleton">
+                    <div class="username-skeleton"></div>
+                    <div class="timestamp-skeleton"></div>
+                  </div>
+                </div>
+                <div class="item-content-skeleton">
+                  <div class="content-line-skeleton"></div>
+                  <div class="content-line-skeleton"></div>
+                  <div class="content-line-skeleton short"></div>
+                </div>
+                <div class="item-actions-skeleton">
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
+                </div>
+              </div>
+              }
+              <div class="skeleton-loading-indicator">
+                <div class="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span class="loading-text">Loading posts...</span>
+              </div>
+            </div>
+            } @else {
+            <div class="column-items">
+              @for (event of dynamicEvents; track event.id) {
+              <app-event [event]="event"></app-event>
+              }
+
+              @if (hasMoreEventsToRender(dynFeed.id)) {
+              <div class="load-more-rendered-events">
+                <button mat-stroked-button (click)="loadMoreRenderedEvents(dynFeed.id)" class="load-more-button">
+                  <mat-icon>expand_more</mat-icon>
+                  Show more
+                </button>
+              </div>
+              }
+
+              <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
+            </div>
+            }
+          </div>
+        </div>
+      </div>
       }
-
-      <!-- Feed menu with all actions -->
-      <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-
-      <mat-menu #feedManagementMenu="matMenu">
+      } @else {
+      <div class="columns-wrapper" #columnsWrapper>
+        <!-- Normal Feeds with connected headers and content - only show when initialized -->
+        @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded() && activeFeed()) {
         @let feed = activeFeed();
-        <!-- Refresh -->
-        @if (feed && !showRelayFeed()) {
-        <button mat-menu-item (click)="refreshFeed(feed)">
-          <mat-icon>refresh</mat-icon>
-          <span>Refresh Content</span>
-        </button>
-        <mat-divider></mat-divider>
-        }
+        @if (feed) {
+        <div class="column-unit" [attr.data-column-id]="feed.id" [class.visible]="true">
 
-        <!-- Add Feed -->
-        <button mat-menu-item (click)="addNewFeed()">
-          <mat-icon>add</mat-icon>
-          <span>Add Feed</span>
-        </button>
-
-        <mat-divider></mat-divider>
-
-        <!-- Edit / Delete / Reset -->
-        <button mat-menu-item (click)="editCurrentFeed()"
-          [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
-          <mat-icon>edit</mat-icon>
-          <span>Edit Feed</span>
-        </button>
-        <button mat-menu-item (click)="deleteCurrentFeed()"
-          [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
-          <mat-icon>delete</mat-icon>
-          <span>Delete Feed</span>
-        </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="resetFeeds()">
-          <mat-icon>restore</mat-icon>
-          <span>Reset Feeds</span>
-        </button>
-      </mat-menu>
-    </div>
-
-    <!-- Relay Feed View - shown when relay query param is present -->
-    @if (showRelayFeed()) {
-    <div class="relay-feed-container">
-      <div class="relay-column-wrapper">
-        <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
-      </div>
-    </div>
-    } @else if (showDynamicFeed()) {
-    <!-- Dynamic Hashtag Feed View - shown when hashtag query param is present -->
-    @let dynFeed = dynamicFeed();
-    @if (dynFeed) {
-    <div class="columns-wrapper" #columnsWrapper>
-      <div class="column-unit dynamic-feed-unit" [attr.data-column-id]="dynFeed.id" [class.visible]="true">
-        <!-- Dynamic feed header with close button -->
-        <div class="dynamic-feed-header">
-          <div class="dynamic-feed-info">
-            <mat-icon>tag</mat-icon>
-            <span class="dynamic-feed-label">{{ dynFeed.label }}</span>
-            @if (dynFeed.customInterestHashtags && dynFeed.customInterestHashtags.length > 1) {
-            <span class="dynamic-feed-count">({{ dynFeed.customInterestHashtags.length }} hashtags)</span>
-            }
-          </div>
-          <button mat-icon-button (click)="closeDynamicFeed()" matTooltip="Close dynamic feed">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-
-        <!-- Feed Content -->
-        <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
-          @let dynamicEvents = columnEvents().get(dynFeed.id);
-          @let dynamicFeedHasEvents = dynamicEvents && dynamicEvents.length > 0;
-          @let dynamicInitialLoadComplete = feedService.getColumnInitialLoadComplete(dynFeed.id);
-
-          @if (dynamicInitialLoadComplete && !dynamicFeedHasEvents) {
-          <!-- No results for hashtag search -->
-          <div class="no-results-state">
-            <div class="no-results-content">
-              <mat-icon class="no-results-icon">search_off</mat-icon>
-              <h3>No posts found</h3>
-              <p>
-                No posts found for {{ dynFeed.label }}. Try checking back later.
-              </p>
-            </div>
-          </div>
-          } @else if (!dynamicFeedHasEvents) {
-          <!-- Loading skeleton -->
-          <div class="column-skeleton-items">
-            @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
-            <div class="feed-item-skeleton">
-              <div class="item-header-skeleton">
-                <div class="avatar-skeleton"></div>
-                <div class="user-info-skeleton">
-                  <div class="username-skeleton"></div>
-                  <div class="timestamp-skeleton"></div>
-                </div>
-              </div>
-              <div class="item-content-skeleton">
-                <div class="content-line-skeleton"></div>
-                <div class="content-line-skeleton"></div>
-                <div class="content-line-skeleton short"></div>
-              </div>
-              <div class="item-actions-skeleton">
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
-              </div>
-            </div>
-            }
-            <div class="skeleton-loading-indicator">
-              <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <span class="loading-text">Loading posts...</span>
-            </div>
-          </div>
-          } @else {
-          <div class="column-items">
-            @for (event of dynamicEvents; track event.id) {
-            <app-event [event]="event"></app-event>
-            }
-
-            @if (hasMoreEventsToRender(dynFeed.id)) {
-            <div class="load-more-rendered-events">
-              <button mat-stroked-button (click)="loadMoreRenderedEvents(dynFeed.id)" class="load-more-button">
-                <mat-icon>expand_more</mat-icon>
-                Show more
-              </button>
-            </div>
-            }
-
-            <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
+          <!-- Floating new posts button - positioned sticky relative to column-unit -->
+          @if (getPendingEventsCount(feed.id) > 0) {
+          <div class="new-posts-floating">
+            <button mat-raised-button color="primary" (click)="loadNewPosts(feed.id)" class="new-posts-button">
+              <mat-icon>arrow_upward</mat-icon>
+              {{ getPendingEventsCount(feed.id) }} new {{ getPendingEventsCount(feed.id) === 1 ? 'note' : 'notes' }}
+            </button>
           </div>
           }
-        </div>
-      </div>
-    </div>
-    }
-    } @else {
-    <div class="columns-wrapper" #columnsWrapper>
-      <!-- Normal Feeds with connected headers and content - only show when initialized -->
-      @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded() && activeFeed()) {
-      @let feed = activeFeed();
-      @if (feed) {
-      <div class="column-unit" [attr.data-column-id]="feed.id" [class.visible]="true">
 
-        <!-- Floating new posts button - positioned sticky relative to column-unit -->
-        @if (getPendingEventsCount(feed.id) > 0) {
-        <div class="new-posts-floating">
-          <button mat-raised-button color="primary" (click)="loadNewPosts(feed.id)" class="new-posts-button">
-            <mat-icon>arrow_upward</mat-icon>
-            {{ getPendingEventsCount(feed.id) }} new {{ getPendingEventsCount(feed.id) === 1 ? 'note' : 'notes' }}
-          </button>
-        </div>
-        }
-
-        <!-- Filters Section -->
-        @if (showAdvancedFilters()) {
-        <div class="filters-section">
-          <h3>Filter by tags</h3>
-          <div class="tag-chips">
-            @for (tag of availableTags(); track $index) {
-            <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
-              #{{ tag }}
-            </mat-chip-option>
-            }
-          </div>
-        </div>
-        }
-
-        <!-- Feed Content with Individual Scrolling -->
-        <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
-
-          <!-- Empty following state message -->
-          @if (shouldShowEmptyFollowingMessage().get(feed.id)) {
-          <div class="empty-following-state">
-            <div class="empty-state-content">
-              <mat-icon class="empty-state-icon">group_add</mat-icon>
-              <h3>You're not following anyone yet</h3>
-              <p>
-                Start building your network by following interesting people.
-                Let's discover profiles using Starter Packs!
-              </p>
-              <button mat-raised-button color="primary" (click)="navigateToPeople()" class="discover-people-btn">
-                <mat-icon>explore</mat-icon>
-                Discover People
-              </button>
+          <!-- Filters Section -->
+          @if (showAdvancedFilters()) {
+          <div class="filters-section">
+            <h3>Filter by tags</h3>
+            <div class="tag-chips">
+              @for (tag of availableTags(); track $index) {
+              <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
+                #{{ tag }}
+              </mat-chip-option>
+              }
             </div>
           </div>
-          } @else if (feed.id === 'default-feed-trending' || feed.source === 'trending') {
-          <!-- Trending column uses dedicated trending component -->
-          <app-trending-column></app-trending-column>
-          } @else if (feedHasNoResults().get(feed.id)) {
-          <!-- Show no results message when initial load is complete but no events found -->
-          <div class="no-results-state">
-            <div class="no-results-content">
-              <mat-icon class="no-results-icon">search_off</mat-icon>
-              <h3>No results found</h3>
-              <p>
-                @if (feed.source === 'search' && feed.searchQuery) {
-                No posts found matching "{{ feed.searchQuery }}".
-                } @else {
-                No posts found for this feed. Try adjusting the feed settings or check back later.
-                }
-              </p>
-              <button mat-stroked-button (click)="refreshFeed(feed)">
-                <mat-icon>refresh</mat-icon>
-                Try Again
-              </button>
+          }
+
+          <!-- Feed Content with Individual Scrolling -->
+          <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
+
+            <!-- Empty following state message -->
+            @if (shouldShowEmptyFollowingMessage().get(feed.id)) {
+            <div class="empty-following-state">
+              <div class="empty-state-content">
+                <mat-icon class="empty-state-icon">group_add</mat-icon>
+                <h3>You're not following anyone yet</h3>
+                <p>
+                  Start building your network by following interesting people.
+                  Let's discover profiles using Starter Packs!
+                </p>
+                <button mat-raised-button color="primary" (click)="navigateToPeople()" class="discover-people-btn">
+                  <mat-icon>explore</mat-icon>
+                  Discover People
+                </button>
+              </div>
             </div>
-          </div>
-          } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
-          <!-- Show skeleton items while content is loading or no events available yet -->
-          <div class="column-skeleton-items">
-            @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
-            <div class="feed-item-skeleton">
-              <div class="item-header-skeleton">
-                <div class="avatar-skeleton"></div>
-                <div class="user-info-skeleton">
-                  <div class="username-skeleton"></div>
-                  <div class="timestamp-skeleton"></div>
+            } @else if (feed.id === 'default-feed-trending' || feed.source === 'trending') {
+            <!-- Trending column uses dedicated trending component -->
+            <app-trending-column></app-trending-column>
+            } @else if (feedHasNoResults().get(feed.id)) {
+            <!-- Show no results message when initial load is complete but no events found -->
+            <div class="no-results-state">
+              <div class="no-results-content">
+                <mat-icon class="no-results-icon">search_off</mat-icon>
+                <h3>No results found</h3>
+                <p>
+                  @if (feed.source === 'search' && feed.searchQuery) {
+                  No posts found matching "{{ feed.searchQuery }}".
+                  } @else {
+                  No posts found for this feed. Try adjusting the feed settings or check back later.
+                  }
+                </p>
+                <button mat-stroked-button (click)="refreshFeed(feed)">
+                  <mat-icon>refresh</mat-icon>
+                  Try Again
+                </button>
+              </div>
+            </div>
+            } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
+            <!-- Show skeleton items while content is loading or no events available yet -->
+            <div class="column-skeleton-items">
+              @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
+              <div class="feed-item-skeleton">
+                <div class="item-header-skeleton">
+                  <div class="avatar-skeleton"></div>
+                  <div class="user-info-skeleton">
+                    <div class="username-skeleton"></div>
+                    <div class="timestamp-skeleton"></div>
+                  </div>
+                </div>
+                <div class="item-content-skeleton">
+                  <div class="content-line-skeleton"></div>
+                  <div class="content-line-skeleton"></div>
+                  <div class="content-line-skeleton short"></div>
+                </div>
+                <div class="item-actions-skeleton">
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
+                  <div class="action-skeleton"></div>
                 </div>
               </div>
-              <div class="item-content-skeleton">
-                <div class="content-line-skeleton"></div>
-                <div class="content-line-skeleton"></div>
-                <div class="content-line-skeleton short"></div>
-              </div>
-              <div class="item-actions-skeleton">
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
-                <div class="action-skeleton"></div>
+              }
+
+              <!-- Loading indicator -->
+              <div class="skeleton-loading-indicator">
+                <div class="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span class="loading-text">Loading content...</span>
               </div>
             </div>
-            }
+            } @else {
+            <div class="column-items">
+              @let columnEventsData = columnEvents().get(feed.id);
+              @if (columnEventsData && columnEventsData.length > 0) {
+              @for (event of columnEventsData; track event.id) {
+              <app-event [event]="event"></app-event>
+              }
 
-            <!-- Loading indicator -->
-            <div class="skeleton-loading-indicator">
-              <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+              <!-- Show "Load More" button when there are more events in memory to render -->
+              @if (hasMoreEventsToRender(feed.id)) {
+              <div class="load-more-rendered-events">
+                <button mat-stroked-button (click)="loadMoreRenderedEvents(feed.id)" class="load-more-button">
+                  <mat-icon>expand_more</mat-icon>
+                  Show more
+                </button>
               </div>
-              <span class="loading-text">Loading content...</span>
-            </div>
-          </div>
-          } @else {
-          <div class="column-items">
-            @let columnEventsData = columnEvents().get(feed.id);
-            @if (columnEventsData && columnEventsData.length > 0) {
-            @for (event of columnEventsData; track event.id) {
-            <app-event [event]="event"></app-event>
-            }
+              }
 
-            <!-- Show "Load More" button when there are more events in memory to render -->
-            @if (hasMoreEventsToRender(feed.id)) {
-            <div class="load-more-rendered-events">
-              <button mat-stroked-button (click)="loadMoreRenderedEvents(feed.id)" class="load-more-button">
-                <mat-icon>expand_more</mat-icon>
-                Show more
-              </button>
-            </div>
-            }
-
-            <!-- Invisible trigger for Intersection Observer to detect scroll-to-bottom -->
-            <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
-            }
-            <!-- @else {
+              <!-- Invisible trigger for Intersection Observer to detect scroll-to-bottom -->
+              <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
+              }
+              <!-- @else {
                       <div class="no-events">
                         <p>No events available for this feed</p>
                       </div>
                     } -->
+            </div>
+
+            <!-- Loading more indicator - only show when we have content and are loading more -->
+            @let columnLoadingState = feedService.getColumnLoadingState(feed.id);
+            @let columnHasMore = feedService.getColumnHasMore(feed.id);
+            @let loadMoreEventsData = columnEvents().get(feed.id);
+            @if (loadMoreEventsData && loadMoreEventsData.length > 0 && columnLoadingState && columnLoadingState() &&
+            columnHasMore && columnHasMore()) {
+            <div class="column-loading-more">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span class="loading-more-text">Loading more...</span>
+            </div>
+            }
+            }
           </div>
+        </div>
+        }
+        }
 
-          <!-- Loading more indicator - only show when we have content and are loading more -->
-          @let columnLoadingState = feedService.getColumnLoadingState(feed.id);
-          @let columnHasMore = feedService.getColumnHasMore(feed.id);
-          @let loadMoreEventsData = columnEvents().get(feed.id);
-          @if (loadMoreEventsData && loadMoreEventsData.length > 0 && columnLoadingState && columnLoadingState() &&
-          columnHasMore && columnHasMore()) {
-          <div class="column-loading-more">
-            <mat-spinner diameter="24"></mat-spinner>
-            <span class="loading-more-text">Loading more...</span>
+        <!-- Loading indicator while initializing -->
+        @if (!app.initialized() || !accountState.initialized() || !feedService.feedsLoaded()) {
+        <div class="empty-columns-state">
+          <div class="empty-state-content">
+            <mat-spinner diameter="48"></mat-spinner>
+            <div class="loading-text">Loading feeds...</div>
           </div>
-          }
-          }
         </div>
-      </div>
-      }
-      }
+        }
 
-      <!-- Loading indicator while initializing -->
-      @if (!app.initialized() || !accountState.initialized() || !feedService.feedsLoaded()) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-spinner diameter="48"></mat-spinner>
-          <div class="loading-text">Loading feeds...</div>
+        <!-- Zero state when no feeds are available -->
+        @else if (feeds().length === 0) {
+        <div class="empty-columns-state">
+          <div class="empty-state-content">
+            <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
+            <h2>No feeds added</h2>
+            <p>
+              Create your first feed to start organizing and viewing content from various sources.
+            </p>
+            <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
+              <mat-icon>add</mat-icon>
+              Add Your First Feed
+            </button>
+          </div>
         </div>
-      </div>
-      }
+        }
 
-      <!-- Zero state when no feeds are available -->
-      @else if (feeds().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
-          <h2>No feeds added</h2>
-          <p>
-            Create your first feed to start organizing and viewing content from various sources.
-          </p>
-          <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Feed
-          </button>
-        </div>
-      </div>
-      }
-
-      <!-- Add column button -->
-      <!-- @if (!isMobileView()) {
+        <!-- Add column button -->
+        <!-- @if (!isMobileView()) {
         <div class="add-column-button">
           <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new column">
             <mat-icon>add</mat-icon>
           </button>
         </div>
         } -->
+      </div>
+      }
+
     </div>
-    }
+    <!-- End feeds-content-wrapper -->
   </div>
 
   <!-- Scroll to top button - fixed position -->
