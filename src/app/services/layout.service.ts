@@ -988,8 +988,17 @@ export class LayoutService implements OnDestroy {
     // Trim the input to remove leading/trailing whitespace
     const trimmedValue = event.target.value.trim();
 
-    // Set query immediately for cached search results
     console.log('onSearchInput called with value:', trimmedValue);
+
+    // Handle Nostr entities immediately (npub, nevent, naddr, etc.) - route directly, don't search
+    if (this.isNostrEntity(trimmedValue) || trimmedValue.startsWith('nostr:')) {
+      clearTimeout(this.debounceTimer);
+      // Don't set query for Nostr entities - they should route, not search
+      this.handleSearch(trimmedValue);
+      return;
+    }
+
+    // Set query for regular search terms
     this.query.set(trimmedValue);
 
     // Debounce logic to wait until user finishes typing for special searches
@@ -1279,7 +1288,7 @@ export class LayoutService implements OnDestroy {
     });
   }
 
-openArticle(naddr: string, event?: Event): void {
+  openArticle(naddr: string, event?: Event): void {
     // Open article in the right panel using named outlet routing
     this.router.navigate([{ outlets: { right: ['a', naddr] } }], {
       state: { articleEvent: event }

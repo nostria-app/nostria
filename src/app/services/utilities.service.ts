@@ -465,7 +465,8 @@ export class UtilitiesService {
         const isWrite = marker === 'write' || !marker;
 
         return { url, read: isRead, write: isWrite };
-      });
+      })
+      .filter(entry => entry.url.trim() !== '');
   }
 
   /**

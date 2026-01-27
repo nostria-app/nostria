@@ -376,7 +376,9 @@ export class PanelNavigationService {
 
       const currentSection = currentLeft?.path.split('/')[0] || '';
       const newSection = leftPath.split('/')[0] || '';
-      const isSameSection = currentSection === newSection && currentSection !== '';
+      // isSameSection is true if sections match (including when both are empty/home)
+      // OR if left path hasn't actually changed (e.g., navigating to right outlet only)
+      const isSameSection = currentSection === newSection;
       const isSearchNavigation = newSection === 'search'; // Search preserves history
       const shouldPreserveRightPanel = this._preserveRightPanelOnNextNavigation;
 
