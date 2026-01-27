@@ -274,7 +274,13 @@ export class EventMenuComponent {
 
     const url = new URL('https://nostria.app/');
     url.search = '';
-    url.pathname = `/e/${encoded}`;
+
+    // Use /a/ prefix for articles (kind 30023), /e/ for everything else
+    if (event.kind === kinds.LongFormArticle) {
+      url.pathname = `/a/${encoded}`;
+    } else {
+      url.pathname = `/e/${encoded}`;
+    }
     return url.toString();
   });
 

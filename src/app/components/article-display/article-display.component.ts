@@ -27,6 +27,8 @@ import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
+import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
+import { DataService } from '../../services/data.service';
 
 export interface ArticleData {
   event?: Event;
@@ -439,5 +441,65 @@ export class ArticleDisplayComponent {
       width: '400px',
       panelClass: 'responsive-dialog'
     });
+  }
+
+  /**
+   * Open reactions dialog to show all reactions, zaps, reposts, and quotes
+   */
+  async openReactionsDialog(tab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {
+    const ev = this.event();
+    if (!ev) return;
+
+    // Load reactions and zaps data
+    const [reactions, zapData] = await Promise.all([
+      this.eventService.loadReactions(ev.id, ev.pubkey),
+      this.loadZapsForDialog(ev),
+    ]);
+
+    const dialogData: ReactionsDialogData = {
+      event: ev,
+      reactions: reactions.events,
+      zaps: zapData,
+      reposts: [], // TODO: load reposts if needed
+      quotes: [], // TODO: load quotes if needed
+      selectedTab: tab,
+    };
+
+    this.dialog.open(ReactionsDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      maxWidth: '95vw',
+      panelClass: 'responsive-dialog'
+    });
+  }
+
+  /**
+   * Load zaps formatted for the reactions dialog
+   */
+  private async loadZapsForDialog(event: Event): Promise<ReactionsDialogData['zaps']> {
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      const zaps: ReactionsDialogData['zaps'] = [];
+
+      for (const receipt of zapReceipts) {
+        const { zapRequest, amount, comment } = this.zapService.parseZapReceipt(receipt);
+        if (zapRequest) {
+          zaps.push({
+            receipt,
+            zapRequest,
+            amount,
+            comment,
+            senderPubkey: zapRequest.pubkey,
+            timestamp: receipt.created_at,
+          });
+        }
+      }
+
+      // Sort by amount descending
+      return zaps.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    } catch (err) {
+      this.logger.error('Failed to load zaps for dialog:', err);
+      return [];
+    }
   }
 }

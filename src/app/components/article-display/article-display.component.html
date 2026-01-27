@@ -1,4 +1,29 @@
 <div class="article-container">
+  <!-- Top Actions Bar (only in full mode) -->
+  @if (mode() === 'full') {
+  <div class="article-top-actions">
+    <div class="top-actions-left">
+      @if (accountState.isCurrentUser(authorPubkey())) {
+      <button mat-icon-button (click)="layout.createArticle(link())" title="Edit Article">
+        <mat-icon>edit</mat-icon>
+      </button>
+      }
+    </div>
+    <div class="top-actions-right">
+      <button mat-icon-button (click)="openBookmarkSelector()"
+        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
+        <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
+      </button>
+      <button mat-icon-button (click)="share.emit()" title="Share Article">
+        <mat-icon>share</mat-icon>
+      </button>
+      @if (event()) {
+      <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
+      }
+    </div>
+  </div>
+  }
+
   <!-- Header Section -->
   <header class="article-header">
     @if (image()) {
@@ -27,20 +52,20 @@
           </div>
         </div>
 
-        <!-- Engagement Metrics Row -->
+        <!-- Engagement Metrics Row - clickable to open reactions dialog -->
         <div class="engagement-row">
-          <span class="engagement-item">
+          <button class="engagement-item engagement-button" mat-button (click)="openReactionsDialog('likes')">
             <mat-icon>thumb_up</mat-icon>
             <span class="count">{{ reactionCount() }}</span>
-          </span>
+          </button>
           <span class="engagement-item">
             <mat-icon>chat_bubble</mat-icon>
             <span class="count">{{ commentCount() }}</span>
           </span>
-          <span class="engagement-item">
+          <button class="engagement-item engagement-button" mat-button (click)="openReactionsDialog('zaps')">
             <mat-icon>bolt</mat-icon>
             <span class="count">{{ formatZapAmount(zapTotal()) }}</span>
-          </span>
+          </button>
         </div>
 
         <!-- Top Zappers -->
@@ -49,18 +74,6 @@
           <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
         </div>
         }
-        }
-
-        @if (hashtags().length > 0) {
-        <div class="article-hashtags">
-          <mat-chip-set>
-            @for (hashtag of uniqueHashtags(); track hashtag) {
-            <mat-chip highlighted>
-              {{ hashtag }}
-            </mat-chip>
-            }
-          </mat-chip-set>
-        </div>
         }
 
         <!-- Text-to-Speech Controls (Header) - only in full mode -->
@@ -197,59 +210,42 @@
     }
   </main>
 
+  <!-- Tags Section (moved to bottom, only in full mode) -->
+  @if (mode() === 'full' && uniqueHashtags().length > 0) {
+  <section class="article-tags">
+    <mat-chip-set>
+      @for (hashtag of uniqueHashtags(); track hashtag) {
+      <mat-chip highlighted>
+        {{ hashtag }}
+      </mat-chip>
+      }
+    </mat-chip-set>
+  </section>
+  }
+
   <!-- Footer Actions (only in full mode) -->
   @if (mode() === 'full') {
   <footer class="article-footer">
     <div class="article-actions">
       @if (accountState.isCurrentUser(authorPubkey())) {
-      <button mat-button (click)="layout.createArticle(link())" title="Edit Article">
+      <button mat-icon-button (click)="layout.createArticle(link())" title="Edit Article">
         <mat-icon>edit</mat-icon>
-        Edit
       </button>
       }
 
-      <button mat-button (click)="openBookmarkSelector()"
+      <button mat-icon-button (click)="openBookmarkSelector()"
         [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
         <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
-        Bookmark
       </button>
 
-      <button mat-button (click)="share.emit()">
+      <button mat-icon-button (click)="share.emit()" title="Share Article">
         <mat-icon>share</mat-icon>
-        Share
       </button>
 
       @if (event()) {
-      <app-reaction-button [event]="event()!" [view]="'full'"></app-reaction-button>
-      <app-repost-button [event]="event()!" [view]="'full'"></app-repost-button>
-      }
-
-      <!-- Text-to-Speech Controls -->
-      <!-- @if (!isSpeaking()) {
-      <button mat-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
-        <mat-icon>volume_up</mat-icon>
-        Read Aloud
-      </button>
-      } @else {
-      @if (isPaused()) {
-      <button mat-button color="primary" (click)="resumeSpeech.emit()" title="Resume reading">
-        <mat-icon>play_arrow</mat-icon>
-        Resume
-      </button>
-      } @else {
-      <button mat-button color="primary" (click)="pauseSpeech.emit()" title="Pause reading">
-        <mat-icon>pause</mat-icon>
-        Pause
-      </button>
-      }
-      <button mat-button color="primary" (click)="stopSpeech.emit()" title="Stop reading">
-        <mat-icon>stop</mat-icon>
-        Stop
-      </button>
-      } -->
-
-      @if (event()) {
-      <app-event-menu [event]="event()!" [view]="'full'"></app-event-menu>
+      <app-reaction-button [event]="event()!" [view]="'icon'"></app-reaction-button>
+      <app-repost-button [event]="event()!" [view]="'icon'"></app-repost-button>
+      <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
       }
     </div>
   </footer>
