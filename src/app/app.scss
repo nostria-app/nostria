@@ -1307,12 +1307,13 @@ mat-sidenav-content {
     max-width: none;
   }
 
-  // Ensure the container component fills the panel (legacy)
+  // Ensure the container component lets content flow naturally
+  // Do NOT use flex-direction: column or set height constraints
+  // as these break position: sticky on child elements
   app-right-panel-container {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    display: block;
+    // Do NOT set overflow, height, or flex properties
+    // Scrolling happens at .right-panel level
   }
 
   // Ensure routed components fill the panel
