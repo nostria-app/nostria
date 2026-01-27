@@ -14,15 +14,8 @@
   }
 }
 
-.settings-container {
-  width: 100%;
-  max-width: 700px;
-  margin: 0 auto;
-
-  @media (max-width: 768px) {
-    padding-bottom: 80px;
-  }
-}
+// Settings container removed - child components handle their own layout
+// Mobile padding is handled by content-medium class in child components
 
 // Common styles for child setting components
 h2 {
