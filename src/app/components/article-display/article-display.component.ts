@@ -86,6 +86,9 @@ export class ArticleDisplayComponent {
   // Display mode: 'full' shows everything, 'preview' hides author, comments, some actions
   mode = input<'full' | 'preview'>('full');
 
+  // Whether to show the top actions bar (set to false when page has its own header)
+  showTopActions = input<boolean>(true);
+
   // Text-to-speech inputs (only used in full mode)
   isSpeaking = input<boolean>(false);
   isPaused = input<boolean>(false);

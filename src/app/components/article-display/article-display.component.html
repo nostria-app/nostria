@@ -1,6 +1,6 @@
 <div class="article-container">
-  <!-- Top Actions Bar (only in full mode) -->
-  @if (mode() === 'full') {
+  <!-- Top Actions Bar (only in full mode when showTopActions is true) -->
+  @if (mode() === 'full' && showTopActions()) {
   <div class="article-top-actions">
     <div class="top-actions-left">
       @if (accountState.isCurrentUser(authorPubkey())) {
