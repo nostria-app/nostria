@@ -36,6 +36,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { NostrRecord } from '../../interfaces';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 
 @Component({
   selector: 'app-article',
@@ -67,6 +68,7 @@ export class ArticleComponent implements OnDestroy {
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
+  private relayPool = inject(RelayPoolService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -244,6 +246,7 @@ export class ArticleComponent implements OnDestroy {
         pubkey: string;
         identifier: string;
         kind: number;
+        relays?: string[];
       };
       this.logger.debug('Decoded naddr:', addrData);
 
@@ -273,6 +276,33 @@ export class ArticleComponent implements OnDestroy {
 
       pubkey = addrData.pubkey;
       slug = decoded.data.identifier;
+
+      // If we have relay hints in the naddr, try them first for faster loading
+      if (addrData.relays && addrData.relays.length > 0) {
+        this.logger.debug('Trying relay hints from naddr:', addrData.relays);
+        try {
+          this.isLoading.set(true);
+          const event = await this.relayPool.get(
+            addrData.relays,
+            {
+              authors: [addrData.pubkey],
+              kinds: [addrData.kind],
+              '#d': [addrData.identifier],
+            },
+            2000 // Short timeout since we have specific hints
+          );
+          if (event) {
+            this.logger.debug('Article found via relay hints');
+            this.event.set(event);
+            this.isLoading.set(false);
+            return;
+          }
+          this.logger.debug('Article not found via relay hints, falling back to normal flow');
+        } catch (error) {
+          this.logger.debug('Failed to fetch from relay hints:', error);
+          // Continue with normal flow
+        }
+      }
     } else if (this.isAddressableFormat(naddr)) {
       // Handle raw addressable event format: kind:pubkey:d-tag (e.g., 30023:pubkey:slug)
       const parts = naddr.split(':');
