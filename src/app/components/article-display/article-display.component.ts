@@ -446,6 +446,16 @@ export class ArticleDisplayComponent {
   }
 
   /**
+   * Scroll to the comments section
+   */
+  scrollToComments() {
+    const commentsSection = document.getElementById('article-comments');
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /**
    * Open reactions dialog to show all reactions, zaps, reposts, and quotes
    */
   async openReactionsDialog(tab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {
