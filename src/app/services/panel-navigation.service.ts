@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -60,6 +61,8 @@ export class PanelNavigationService {
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
   private panelActions = inject(PanelActionsService);
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // Navigation stacks for each panel
   private _leftStack = signal<NavigationEntry[]>([]);
@@ -431,6 +434,13 @@ export class PanelNavigationService {
       if (leftPathActuallyChanged) {
         this.panelActions.clearPageTitle();
         this.panelActions.clearLeftPanelActions();
+
+        // Scroll left panel to top on forward navigation (not back, not feeds)
+        // Feeds route ('/f') should preserve scroll position as users navigate feeds
+        const isFeedsRoute = leftPath === 'f' || leftPath === '/f';
+        if (!this._isBackNavigation && !isFeedsRoute) {
+          this.scrollLeftPanelToTop();
+        }
       }
     }
 
@@ -454,8 +464,11 @@ export class PanelNavigationService {
         }
       } else {
         // Forward nav
-        if (!currentRight || currentRight.path !== rightPath) {
+        const rightPathActuallyChanged = !currentRight || currentRight.path !== rightPath;
+        if (rightPathActuallyChanged) {
           this._rightStack.update(s => [...s, entry]);
+          // Scroll right panel to top on forward navigation
+          this.scrollRightPanelToTop();
         }
       }
 
@@ -646,5 +659,35 @@ export class PanelNavigationService {
     this._rightStack.set([]);
     this._currentRoute.set(null);
     this._currentRoutePanel.set(null);
+  }
+
+  /**
+   * Scroll left panel to top
+   * Called when navigating to new content (not back navigation, not feeds)
+   */
+  private scrollLeftPanelToTop(): void {
+    if (!this.isBrowser) return;
+    // Use setTimeout to ensure the scroll happens after the route change
+    setTimeout(() => {
+      const leftPanel = document.querySelector('.left-panel');
+      if (leftPanel) {
+        leftPanel.scrollTop = 0;
+      }
+    }, 0);
+  }
+
+  /**
+   * Scroll right panel to top
+   * Called when navigating to new content (not back navigation)
+   */
+  private scrollRightPanelToTop(): void {
+    if (!this.isBrowser) return;
+    // Use setTimeout to ensure the scroll happens after the route change
+    setTimeout(() => {
+      const rightPanel = document.querySelector('.right-panel');
+      if (rightPanel) {
+        rightPanel.scrollTop = 0;
+      }
+    }, 0);
   }
 }
