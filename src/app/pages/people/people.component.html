@@ -1,19 +1,19 @@
 <!-- Panel Header -->
 <div class="panel-header">
-  <h2 class="panel-title title-font">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'People' }}</h2>
+  <h2 class="panel-title title-font">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</h2>
   <span class="panel-header-spacer"></span>
 
   <!-- List Selector -->
   @if (allFollowSets().length > 0) {
   <button mat-icon-button [matMenuTriggerFor]="followSetsMenu"
-    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'All Following'">
+    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'Following'">
     <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
   </button>
 
   <mat-menu #followSetsMenu="matMenu">
     <button mat-menu-item (click)="selectFollowSet(null)">
       <mat-icon>people</mat-icon>
-      <span>All Following</span>
+      <span>Following</span>
     </button>
     <mat-divider></mat-divider>
     @for (set of allFollowSets(); track set.id) {
