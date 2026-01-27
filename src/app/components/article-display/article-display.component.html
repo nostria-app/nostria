@@ -18,6 +18,7 @@
         <mat-icon>share</mat-icon>
       </button>
       @if (event()) {
+      <app-zap-button [event]="event()!"></app-zap-button>
       <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
       }
     </div>
@@ -244,6 +245,7 @@
 
       @if (event()) {
       <app-reaction-button [event]="event()!" [view]="'icon'"></app-reaction-button>
+      <app-zap-button [event]="event()!"></app-zap-button>
       <app-repost-button [event]="event()!" [view]="'icon'"></app-repost-button>
       <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
       }
