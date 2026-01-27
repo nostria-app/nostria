@@ -434,7 +434,8 @@ export class UtilitiesService {
         const url = tag[1];
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
-      });
+      })
+      .filter(url => url.trim() !== '');
 
     return relayUrls;
   }

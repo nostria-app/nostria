@@ -45,28 +45,21 @@ import { RightPanelService, RightPanelEntry } from '../../services/right-panel.s
   `,
   styles: [`
     .right-panel-wrapper {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+      display: block;
       width: 100%;
-      overflow: hidden;
+      // Do NOT set height: 100% or overflow - let content flow naturally
+      // This allows position: sticky to work in child components
     }
     
     .panel-content {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-      min-height: 0; // Important for flex children to allow shrinking
+      display: block;
+      // Do NOT set overflow - scrolling happens at .right-panel level
+      // This is critical for position: sticky to work in child components
     }
     
-    // Ensure dynamically inserted components fill the panel content
-    // No padding-top by default - components either have their own sticky header
-    // or the content should start at the top
+    // Ensure dynamically inserted components display correctly
     .panel-content ::ng-deep > * {
       display: block;
-      min-height: 100%;
     }
     
     // Hide inactive components but keep them in DOM
