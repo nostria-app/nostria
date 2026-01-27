@@ -15,6 +15,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { RepostButtonComponent } from '../event/repost-button/repost-button.component';
 import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
+import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
@@ -67,6 +68,7 @@ interface TopZapper {
     DateToggleComponent,
     RepostButtonComponent,
     ReactionButtonComponent,
+    ZapButtonComponent,
     EventMenuComponent,
     MentionHoverDirective,
     CommentsListComponent,
