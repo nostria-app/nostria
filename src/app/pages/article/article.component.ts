@@ -14,6 +14,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import type { SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
@@ -37,6 +38,10 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../compo
 import { NostrRecord } from '../../interfaces';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { RightPanelService } from '../../services/right-panel.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
+import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 
 @Component({
   selector: 'app-article',
@@ -46,8 +51,11 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
     ArticleDisplayComponent,
-    MatMenuModule
+    MatMenuModule,
+    ZapButtonComponent,
+    EventMenuComponent
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
@@ -59,7 +67,7 @@ export class ArticleComponent implements OnDestroy {
   private readonly userDataService = inject(UserDataService);
   private logger = inject(LoggerService);
   private data = inject(DataService);
-  private layout = inject(LayoutService);
+  layout = inject(LayoutService);
   private formatService = inject(FormatService);
   private url = inject(UrlUpdateService);
   private readonly cache = inject(Cache);
@@ -69,6 +77,8 @@ export class ArticleComponent implements OnDestroy {
   accountState = inject(AccountStateService);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
   private relayPool = inject(RelayPoolService);
+  private rightPanel = inject(RightPanelService);
+  private panelNav = inject(PanelNavigationService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -149,6 +159,38 @@ export class ArticleComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
     this.stopSpeech();
+  }
+
+  /**
+   * Check if this component is rendered in the right panel
+   */
+  isInRightPanel(): boolean {
+    return this.route.outlet === 'right';
+  }
+
+  /**
+   * Navigate back - handle both primary outlet and right panel scenarios
+   */
+  goBack(): void {
+    // First check RightPanelService (for programmatic component-based panels)
+    if (this.rightPanel.canGoBack()) {
+      this.rightPanel.goBack();
+      return;
+    }
+
+    // If in right panel outlet, use panel navigation
+    if (this.isInRightPanel()) {
+      this.panelNav.goBackRight();
+      return;
+    }
+
+    // In primary outlet - check if there's left panel history to go back to
+    if (this.panelNav.canGoBackLeft()) {
+      this.panelNav.goBackLeft();
+    } else {
+      // No history - navigate to feeds as the default destination
+      this.router.navigate(['/f']);
+    }
   }
 
   bookmarkArticle() {

@@ -1,3 +1,29 @@
+<!-- Panel Header - Fixed at top -->
+<div class="panel-header">
+  <button mat-icon-button class="back-button" (click)="goBack()" matTooltip="Go back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">{{ title() || 'Article' }}</h2>
+  <span class="panel-header-spacer"></span>
+
+  @if (event()) {
+    @if (accountState.isCurrentUser(authorPubkey())) {
+    <button mat-icon-button (click)="layout.createArticle(link)" matTooltip="Edit Article">
+      <mat-icon>edit</mat-icon>
+    </button>
+    }
+    <button mat-icon-button (click)="bookmarkArticle()"
+      [matTooltip]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
+      <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
+    </button>
+    <button mat-icon-button (click)="shareArticle()" matTooltip="Share Article">
+      <mat-icon>share</mat-icon>
+    </button>
+    <app-zap-button [event]="event()!"></app-zap-button>
+    <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
+  }
+</div>
+
 @let article = event();
 
 @if (isLoading()) {
@@ -33,7 +59,7 @@
 } @else if (article) {
 <div class="article-container">
   <!-- Use ArticleDisplayComponent for rendering -->
-  <app-article-display [article]="articleData()" mode="full" [isSpeaking]="isSpeaking()" [isPaused]="isPaused()"
+  <app-article-display [article]="articleData()" mode="full" [showTopActions]="false" [isSpeaking]="isSpeaking()" [isPaused]="isPaused()"
     [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()" [isTranslating]="isTranslating()"
     [availableVoices]="availableVoices()" [selectedVoice]="selectedVoice()" [playbackRate]="playbackRate()"
     (startSpeech)="startSpeech()" (pauseSpeech)="pauseSpeech()" (resumeSpeech)="resumeSpeech()"
