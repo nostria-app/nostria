@@ -312,7 +312,8 @@
         </div>
 
         <!-- Right section: action buttons and notifications -->
-        <div class="toolbar-section toolbar-right" [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
+        <div class="toolbar-section toolbar-right"
+          [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
           <!-- Right panel actions (when right panel has content) -->
           @if (hasRightContent()) {
           @for (action of panelActions.rightPanelActions(); track action.id) {
@@ -410,16 +411,16 @@
           <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
             [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()" (scroll)="onLeftPanelScroll($event)">
 
+            <!-- Feeds - Persistent, positioned directly in left-panel for scrollbar at panel edge -->
+            @if (app.authenticated()) {
+            <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
+              [class.feeds-hidden]="!panelNav.showFeeds()">
+              <app-feeds></app-feeds>
+            </div>
+            }
+
             <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
             <div class="panel-content-wrapper">
-              <!-- Feeds - Persistent (uses visibility for state preservation) -->
-              @if (app.authenticated()) {
-              <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
-                [class.feeds-hidden]="!panelNav.showFeeds()">
-                <app-feeds></app-feeds>
-              </div>
-              }
-
               <!-- Left panel content - router outlet renders here for list routes -->
               <div class="panel-content left-panel-content">
                 <router-outlet></router-outlet>

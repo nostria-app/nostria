@@ -37,6 +37,45 @@ app-user-profile {
   min-height: 0; // Required for flex children to shrink properly
 }
 
+// Content wrapper to constrain and center feed content
+// This is inside the scroll container so scrollbar stays at panel edge
+.feeds-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+// When right panel has content, align feed content towards center (right side of left panel)
+:host-context(.dual-panel-layout.has-right-content) {
+  .feeds-content-wrapper {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  .panel-header-inner {
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
+
+// Mobile: center content when right panel overlays
+:host-context(.dual-panel-layout.has-right-content.mobile-layout) {
+  .feeds-content-wrapper {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .panel-header-inner {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 .home-container {
   display: flex;
   flex-direction: column;
@@ -82,16 +121,13 @@ app-user-profile {
     }
   }
 
-  // Panel header styles - matches right panel style
+  // Panel header styles - sticky at top of scroll container, full width for glass effect
   .panel-header {
     position: sticky;
     top: 0;
     z-index: 50;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    width: 100%;
     min-height: 56px;
-    padding: 0 12px;
     flex-shrink: 0;
 
     // Glass effect - light mode
@@ -100,13 +136,17 @@ app-user-profile {
     backdrop-filter: blur(20px) saturate(1.8);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-    // Hidden state for scroll behavior
-    transition: opacity 0.3s ease, transform 0.3s ease;
-
-    &.header-hidden {
-      opacity: 0;
-      transform: translateY(-10px);
-      pointer-events: none;
+    // Inner content wrapper - constrains content to 700px and centers
+    .panel-header-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 700px;
+      min-height: 56px;
+      padding: 0 12px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .spacer {
@@ -266,20 +306,15 @@ app-user-profile {
         width: 100%;
       }
 
-      // Center when there's only one column
-      &:has(.column-unit:only-child) {
-        margin: 0 auto;
-      }
-
       // For when there aren't enough columns to fill the width
       // Column unit - contains both header and content
       .column-unit {
         display: flex;
         flex-direction: column;
-        width: 700px;
-        max-width: 700px;
+        width: 100%; // Fill wrapper width (wrapper handles max-width constraint)
+        max-width: 100%;
         min-width: 0; // Allow shrinking in flex layouts
-        flex: 1 1 700px; // Can grow and shrink from 700px base
+        flex: 1; // Fill available space
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
