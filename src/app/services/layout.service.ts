@@ -1062,11 +1062,15 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    // Clear existing panels when navigating to a Nostr entity from search
+    // This ensures a clean slate - the entity becomes the main focus
+    this.rightPanel.clearHistory();
+
     // Handle different nostr entity types
     if (value.startsWith('npub')) {
       this.toggleSearch();
       this.searchInput = '';
-      this.openProfile(value);
+      this.openProfileAsPrimary(value);
       return;
     }
 
@@ -1074,7 +1078,7 @@ export class LayoutService implements OnDestroy {
       this.toggleSearch();
       try {
         const decoded = nip19.decode(value).data as ProfilePointer;
-        this.openProfile(decoded.pubkey);
+        this.openProfileAsPrimary(decoded.pubkey);
       } catch (error) {
         console.warn('Failed to decode nprofile:', value, error);
         this.toast('Invalid profile format', 3000, 'error-snackbar');
@@ -1085,8 +1089,8 @@ export class LayoutService implements OnDestroy {
     if (value.startsWith('nevent')) {
       this.toggleSearch();
       try {
-        // Use the nevent value directly since openGenericEvent expects the encoded value
-        this.openGenericEvent(value);
+        // Open in primary outlet and clear right panel
+        this.openEventAsPrimary(value);
       } catch (error) {
         console.warn('Failed to decode nevent:', value, error);
         this.toast('Invalid event format', 3000, 'error-snackbar');
@@ -1097,9 +1101,9 @@ export class LayoutService implements OnDestroy {
     if (value.startsWith('note')) {
       this.toggleSearch();
       try {
-        // Note ID - open in right panel
+        // Open in primary outlet and clear right panel
         console.log('Opening note:', value);
-        this.openGenericEvent(value);
+        this.openEventAsPrimary(value);
       } catch (error) {
         console.warn('Failed to handle note:', value, error);
         this.toast('Invalid note format', 3000, 'error-snackbar');
@@ -1113,11 +1117,11 @@ export class LayoutService implements OnDestroy {
         const decoded = nip19.decode(value).data as AddressPointer;
 
         if (decoded.kind === kinds.LongFormArticle) {
-          // Route to article page for long-form articles
-          this.openArticle(value);
+          // Route to article page in primary outlet
+          this.openArticleAsPrimary(value);
         } else {
-          // Route to event page for other addressable events (starter packs, etc.)
-          this.openGenericEvent(value);
+          // Route to event page in primary outlet
+          this.openEventAsPrimary(value);
         }
       } catch (error) {
         console.warn('Failed to decode naddr:', value, error);
@@ -1159,6 +1163,16 @@ export class LayoutService implements OnDestroy {
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     // Profile always opens in the right panel using named outlet routing
     this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+  }
+
+  /**
+   * Open a profile in the primary (left) panel, clearing both panels.
+   * Used when navigating from search to make the profile the main focus.
+   */
+  openProfileAsPrimary(pubkey: string): void {
+    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
+    // Navigate to primary outlet and clear right panel
+    this.router.navigate([{ outlets: { primary: ['p', npub], right: null } }]);
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
@@ -1230,6 +1244,16 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  /**
+   * Open an event in the primary (left) panel, clearing both panels.
+   * Used when navigating from search to make the event the main focus.
+   */
+  openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string): void {
+    this.router.navigate([{ outlets: { primary: ['e', eventId], right: null } }], {
+      state: { event, trustedByPubkey }
+    });
+  }
+
   private async openEventInDialog(eventId: string, event?: Event, trustedByPubkey?: string): Promise<void> {
     // Close existing dialog if any
     if (this.currentEventDialogRef) {
@@ -1291,6 +1315,16 @@ export class LayoutService implements OnDestroy {
   openArticle(naddr: string, event?: Event): void {
     // Open article in the right panel using named outlet routing
     this.router.navigate([{ outlets: { right: ['a', naddr] } }], {
+      state: { articleEvent: event }
+    });
+  }
+
+  /**
+   * Open an article in the primary (left) panel, clearing both panels.
+   * Used when navigating from search to make the article the main focus.
+   */
+  openArticleAsPrimary(naddr: string, event?: Event): void {
+    this.router.navigate([{ outlets: { primary: ['a', naddr], right: null } }], {
       state: { articleEvent: event }
     });
   }
