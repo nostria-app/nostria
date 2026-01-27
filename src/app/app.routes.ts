@@ -115,12 +115,18 @@ export const routes: Routes = [
     data: { isRoot: true },
     title: 'Summary',
   },
-  {
+{
     path: 'e/:id',
     loadComponent: () =>
       import('./pages/event/event.component').then(m => m.EventPageComponent),
     resolve: { data: DataResolver },
     title: 'Event',
+  },
+  {
+    path: 'z/:id',
+    loadComponent: () =>
+      import('./pages/zap-detail/zap-detail.component').then(m => m.ZapDetailComponent),
+    title: 'Zap',
   },
   {
     path: 'relays',
@@ -635,7 +641,7 @@ export const routes: Routes = [
     title: 'Join Nostria',
   },
 
-  // Right panel routes (named outlet)
+// Right panel routes (named outlet)
   {
     path: 'e/:id',
     outlet: 'right',
@@ -643,6 +649,13 @@ export const routes: Routes = [
       import('./pages/event/event.component').then(m => m.EventPageComponent),
     resolve: { data: DataResolver },
     title: 'Event',
+  },
+  {
+    path: 'z/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/zap-detail/zap-detail.component').then(m => m.ZapDetailComponent),
+    title: 'Zap',
   },
   {
     path: 'a/:id',

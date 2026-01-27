@@ -111,6 +111,17 @@ nav {
     padding: 0;
     margin: 0;
   }
+
+  // Hidden state when search is focused on mobile
+  &.mobile-search-focused {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+  }
 }
 
 // Center section - always-visible search
@@ -121,10 +132,18 @@ nav {
   max-width: 600px;
   min-width: 0;
   margin: 0 auto;
+  transition: max-width 0.2s ease, flex 0.2s ease;
 
   // On mobile, allow search to take more space
   @media (max-width: 599px) {
     max-width: none;
+  }
+
+  // When search is focused on mobile, take full width
+  &.mobile-search-expanded {
+    flex: 1;
+    max-width: none;
+    width: 100%;
   }
 
   .search-container {
@@ -208,12 +227,31 @@ nav {
 .toolbar-right {
   flex-shrink: 0;
   gap: 4px;
+  transition: opacity 0.2s ease, visibility 0.2s ease, width 0.2s ease;
 
   // Create button - clean and simple
   .create-button {
     mat-icon {
       font-size: 24px;
     }
+  }
+
+  // Hidden state when search is focused on mobile
+  &.mobile-search-focused {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+// Hide create button on mobile (there's one in the mobile nav)
+.hide-on-mobile {
+  @media (max-width: 599px) {
+    display: none !important;
   }
 }
 

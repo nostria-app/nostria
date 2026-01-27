@@ -265,6 +265,9 @@ export class App implements OnInit {
   isSearchListening = signal(false);
   isSearchTranscribing = signal(false);
 
+  // Track search focus state for mobile full-width mode
+  searchFocused = signal(false);
+
   // Track shortcuts dialog reference for toggle behavior
   private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
 
@@ -1386,6 +1389,7 @@ export class App implements OnInit {
    * Opens the search results panel when the always-visible search input is focused.
    */
   onSearchFocus(): void {
+    this.searchFocused.set(true);
     if (!this.layout.search()) {
       this.layout.toggleSearch();
     }
@@ -1405,7 +1409,10 @@ export class App implements OnInit {
       return;
     }
 
-    // Focus left the search container - close search if there's no input
+    // Focus left the search container
+    this.searchFocused.set(false);
+
+    // Close search if there's no input
     // Keep search open if there's text in the input (user might be copying/pasting)
     if (!this.layout.searchInput || this.layout.searchInput.length === 0) {
       this.layout.closeSearch();

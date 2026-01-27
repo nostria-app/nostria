@@ -460,7 +460,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
+/**
    * Navigate to the event details page
    */
   viewEvent(notification: Notification): void {
@@ -477,16 +477,21 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // For zap notifications, open the zap detail page
+    if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.zapReceiptId) {
+      this.layout.openZapDetail(contentNotif.metadata.zapReceiptId);
+      return;
+    }
+
     // Handle navigation based on notification type
     if (contentNotif.eventId) {
       // Determine the correct author for the nevent encoding
       // - For reactions: eventId is the event being reacted to (your note), author is YOU
       // - For replies/mentions/reposts: eventId is the triggering event, author is the person who triggered it
-      // - For zaps: eventId is the zapped event (your note), author is YOU
       let eventAuthor: string | undefined;
 
-      if (contentNotif.type === NotificationType.REACTION || contentNotif.type === NotificationType.ZAP) {
-        // For reactions and zaps, the eventId refers to YOUR note that was reacted to/zapped
+      if (contentNotif.type === NotificationType.REACTION) {
+        // For reactions, the eventId refers to YOUR note that was reacted to
         // So the author should be the current user
         eventAuthor = this.accountState.pubkey() ?? undefined;
       } else {
@@ -509,9 +514,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // For profile zaps (no specific event), navigate to recipient's profile
+    // For profile zaps without zapReceiptId (legacy), navigate to recipient's profile
     if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
-      const npubId = nip19.npubEncode(contentNotif.metadata.recipientPubkey);
       this.layout.openProfile(contentNotif.metadata.recipientPubkey);
     }
   }

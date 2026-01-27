@@ -1,0 +1,103 @@
+<!-- Panel Header - Fixed at top -->
+<div class="panel-header">
+  <button mat-icon-button class="back-button" (click)="goBack()" matTooltip="Go back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Zap Details</h2>
+  <span class="panel-header-spacer"></span>
+</div>
+
+<!-- Scrollable Content -->
+<div class="zap-content">
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="32"></mat-spinner>
+      <p class="loading-text">Loading zap details...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-container">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <h3 class="error-title">{{ error() }}</h3>
+      <p class="error-description">The zap receipt could not be loaded.</p>
+    </div>
+  } @else {
+    <!-- Zap Amount (prominent display) -->
+    <div class="zap-amount-section">
+      <div class="zap-icon">
+        <mat-icon>bolt</mat-icon>
+      </div>
+      <div class="zap-amount">{{ formatSats(zapAmount()) }}</div>
+      <div class="zap-unit">sats</div>
+    </div>
+
+    <!-- Sender Section -->
+    <div class="zap-party-section">
+      <div class="party-label">From</div>
+      @if (senderPubkey()) {
+        <div class="party-info" (click)="openSenderProfile()" (keydown.enter)="openSenderProfile()" tabindex="0" role="button">
+          <app-user-profile [pubkey]="senderPubkey()!" [view]="'small'" [disableLink]="true"></app-user-profile>
+          <mat-icon class="navigate-icon">chevron_right</mat-icon>
+        </div>
+      } @else {
+        <div class="party-info unknown">
+          <mat-icon>person_outline</mat-icon>
+          <span>Unknown sender</span>
+        </div>
+      }
+    </div>
+
+    <!-- Recipient Section -->
+    <div class="zap-party-section">
+      <div class="party-label">To</div>
+      @if (recipientPubkey()) {
+        <div class="party-info" (click)="openRecipientProfile()" (keydown.enter)="openRecipientProfile()" tabindex="0" role="button">
+          <app-user-profile [pubkey]="recipientPubkey()!" [view]="'small'" [disableLink]="true"></app-user-profile>
+          <mat-icon class="navigate-icon">chevron_right</mat-icon>
+        </div>
+      } @else {
+        <div class="party-info unknown">
+          <mat-icon>person_outline</mat-icon>
+          <span>Unknown recipient</span>
+        </div>
+      }
+    </div>
+
+    <!-- Zap Comment/Message -->
+    @if (zapComment()) {
+      <div class="zap-message-section">
+        <div class="section-label">Message</div>
+        <div class="zap-message">{{ zapComment() }}</div>
+      </div>
+    }
+
+    <!-- Timestamp -->
+    @if (zapTimestamp()) {
+      <div class="zap-timestamp-section">
+        <mat-icon>schedule</mat-icon>
+        <span>{{ zapTimestamp() | ago }}</span>
+      </div>
+    }
+
+    <!-- Zapped Event Preview -->
+    @if (!isProfileZap()) {
+      <div class="zapped-event-section">
+        <div class="section-label">Zapped Note</div>
+        @if (zappedEvent()) {
+          <div class="event-preview" (click)="openZappedEvent()" (keydown.enter)="openZappedEvent()" tabindex="0" role="button">
+            <app-event [event]="zappedEvent()!" appearance="card" [navigationDisabled]="true"></app-event>
+          </div>
+        } @else {
+          <div class="event-loading">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Loading note...</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="profile-zap-indicator">
+        <mat-icon>account_circle</mat-icon>
+        <span>This is a profile zap</span>
+      </div>
+    }
+  }
+</div>

@@ -1279,11 +1279,19 @@ export class LayoutService implements OnDestroy {
     });
   }
 
-  openArticle(naddr: string, event?: Event): void {
+openArticle(naddr: string, event?: Event): void {
     // Open article in the right panel using named outlet routing
     this.router.navigate([{ outlets: { right: ['a', naddr] } }], {
       state: { articleEvent: event }
     });
+  }
+
+  /**
+   * Open a zap detail page in the right panel
+   * @param zapReceiptId - The zap receipt event ID (hex or nevent encoded)
+   */
+  openZapDetail(zapReceiptId: string): void {
+    this.router.navigate([{ outlets: { right: ['z', zapReceiptId] } }]);
   }
 
   /**
