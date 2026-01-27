@@ -190,23 +190,9 @@
     min-height: 90px;
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    opacity: 0.7;
-  }
-
   &:hover {
     transform: translateY(-4px);
     box-shadow: var(--mat-sys-level3);
-
-    &::after {
-      height: 6px;
-    }
   }
 
   .mat-mdc-card-content {
@@ -306,33 +292,6 @@
     }
   }
 
-  &.new-user::after {
-    background: linear-gradient(90deg, #4caf50, #8bc34a);
-  }
-
-  &.existing-user::after {
-    background: linear-gradient(90deg, #9c27b0, #673ab7);
-  }
-
-  &.nsec::after {
-    background: linear-gradient(90deg, #673ab7, #3f51b5);
-  }
-
-  &.extension::after {
-    background: linear-gradient(90deg, #ff9800, #ff5722);
-  }
-
-  &.connect::after {
-    background: linear-gradient(90deg, #2196f3, #03a9f4);
-  }
-
-  &.preview::after {
-    background: linear-gradient(90deg, #009688, #4caf50);
-  }
-
-  &.external::after {
-    background: linear-gradient(90deg, #ffb300, #ff6f00);
-  }
 }
 
 // Region selection styles
@@ -691,18 +650,9 @@
     margin-bottom: 12px;
   }
 
-  &::after {
-    height: 6px;
-    background: linear-gradient(90deg, #673ab7, #3f51b5);
-  }
-
   &:hover {
     border-color: var(--mat-sys-primary);
     box-shadow: var(--mat-sys-level4);
-
-    &::after {
-      height: 8px;
-    }
   }
 
   .mat-mdc-card-content {
