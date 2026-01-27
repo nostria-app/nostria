@@ -251,10 +251,11 @@
 
     .content-textarea {
       resize: none;
-      overflow-y: auto;
-      min-height: 120px;
-      height: 100%;
-      flex: 1;
+      overflow-y: hidden;
+      min-height: 200px;
+      max-height: 500px;
+      height: auto;
+      width: 100%;
 
       &.over-limit {
         color: var(--mat-sys-error);
@@ -1096,7 +1097,8 @@
       .content-textarea {
         min-height: 60px;
         max-height: 200px;
-        overflow-y: auto;
+        overflow-y: hidden;
+        height: auto;
       }
     }
 

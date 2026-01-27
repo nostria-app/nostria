@@ -408,7 +408,7 @@ export class SearchService {
     });
   }
 
-  // Method to clear search results
+  // Method to clear search results and cancel any pending searches
   clearResults(): void {
     untracked(() => {
       this.searchResults.set([]);
@@ -417,6 +417,13 @@ export class SearchService {
       this.articleResults.set([]);
       this.messageResults.set([]);
       this.activeTab.set('all');
+      // Reset searching states to hide loading indicators
+      this.isSearchingRemote.set(false);
+      this.isSearchingNotes.set(false);
+      this.isSearchingArticles.set(false);
+      this.isSearchingMessages.set(false);
+      // Reset last query to prevent stale results from appearing
+      this.#lastQuery = '';
     });
   }
 

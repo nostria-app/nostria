@@ -1416,6 +1416,7 @@ export class App implements OnInit {
     // Keep search open if there's text in the input (user might be copying/pasting)
     if (!this.layout.searchInput || this.layout.searchInput.length === 0) {
       this.layout.closeSearch();
+      this.search.clearResults();
     }
   }
 

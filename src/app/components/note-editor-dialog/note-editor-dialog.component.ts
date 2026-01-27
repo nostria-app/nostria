@@ -586,6 +586,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       setTimeout(() => {
         if (this.contentTextarea) {
           this.contentTextarea.nativeElement.focus();
+          // Initial auto-resize for any pre-filled content
+          this.autoResizeTextarea(this.contentTextarea.nativeElement);
         }
       }, 100);
     }
@@ -1585,11 +1587,37 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = target.value;
     this.content.set(newContent);
 
+    // Auto-resize the textarea
+    this.autoResizeTextarea(target);
+
     // Check for removed mentions and sync with mentions list
     this.syncMentionsWithContent(newContent);
 
     // Check for mention trigger
     this.handleMentionInput(newContent, target.selectionStart || 0);
+  }
+
+  /**
+   * Auto-resize the textarea based on its content.
+   * Adjusts the height to fit the content while respecting min/max constraints.
+   */
+  private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+
+    // Get computed style for min/max height
+    const computedStyle = window.getComputedStyle(textarea);
+    const minHeight = parseInt(computedStyle.minHeight, 10) || 200;
+    const maxHeight = this.inlineMode() ? 200 : 500; // Max height for inline vs dialog mode
+
+    // Calculate the new height based on scrollHeight
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+
+    // Set the new height
+    textarea.style.height = `${newHeight}px`;
+
+    // Enable scrolling if content exceeds max height
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   /**
