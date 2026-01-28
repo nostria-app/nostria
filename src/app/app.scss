@@ -1346,12 +1346,18 @@ mat-sidenav-content {
   // This allows position: sticky to work properly in child components
   &.right-panel-content {
     display: block;
+    // Ensure height context for percentage-based children
+    // flex: 1 from parent makes this fill available space
+    // height: 100% passes this down to children
+    height: 100%;
 
     // Components with sticky headers need special handling
     // The host element must not create a new containing block that breaks sticky
     .panel-with-sticky-header,
     router-outlet+.panel-with-sticky-header {
       display: block;
+      // Ensure component fills parent so sticky header works throughout scroll
+      min-height: 100%;
       // Do NOT set overflow, height constraints, or transforms on the host
       // as these break position: sticky on child elements
     }

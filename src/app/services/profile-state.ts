@@ -70,6 +70,11 @@ export class ProfileState {
   // This is separate from cached events to ensure proper infinite scroll
   private oldestRelayTimestamp = signal<number | null>(null);
 
+  // Track consecutive empty/small batches to determine when we've truly reached the end
+  // This prevents false "reached end" when relay returns partial results
+  private consecutiveSmallBatches = signal<number>(0);
+  private readonly MAX_CONSECUTIVE_SMALL_BATCHES = 3;
+
   // Loading states for articles
   isLoadingMoreArticles = signal<boolean>(false);
   hasMoreArticles = signal<boolean>(true);
@@ -205,6 +210,7 @@ export class ProfileState {
     this.replies.set([]);
     this.articles.set([]);
     this.oldestRelayTimestamp.set(null);
+    this.consecutiveSmallBatches.set(0);
     this.media.set([]);
     this.audio.set([]);
     this.reactions.set([]);
@@ -1038,6 +1044,9 @@ export class ProfileState {
         `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, ${newReposts.length} more reposts, ${newReactions.length} more reactions, ${newAudio.length} more audio, ${newMedia.length} more video`
       );
 
+      // Track if we added any new content
+      let addedAnyContent = false;
+
       // Add new notes to the existing ones with final deduplication check
       if (newNotes.length > 0) {
         this.notes.update(existing => {
@@ -1048,6 +1057,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1062,6 +1076,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1076,6 +1095,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new reposts (${newReposts.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1090,6 +1114,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new reactions (${newReactions.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1103,6 +1132,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new audio (${newAudio.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1116,6 +1150,11 @@ export class ProfileState {
           console.log(
             `Adding ${filtered.length} new media (${newMedia.length - filtered.length} duplicates filtered)`
           );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
           return [...existing, ...filtered];
         });
       }
@@ -1139,18 +1178,47 @@ export class ProfileState {
         });
       }
 
-      // Determine if there are more notes to load
-      // - If relay returned fewer events than we requested, we've reached the end
-      // - If relay returned 0 events, we've reached the end  
-      // - Otherwise, there might be more events to load
-      const reachedEnd = eventsFromRelay === 0 || eventsFromRelay < LOAD_LIMIT;
+      // Determine if there are more notes to load using multiple criteria:
+      // 1. If relay returned 0 events, we've reached the end
+      // 2. If we added any new unique content, there might be more
+      // 3. If we got a full batch but all were duplicates, keep trying (up to a limit)
+      // 4. If relay returned fewer than limit multiple times in a row, we've reached the end
 
-      if (reachedEnd) {
-        this.logger.info(`Reached end of notes for ${pubkey}: received ${eventsFromRelay} events (limit was ${LOAD_LIMIT})`);
+      if (eventsFromRelay === 0) {
+        // Relay returned nothing - definitely at the end
+        this.logger.info(`Reached end of notes for ${pubkey}: relay returned 0 events`);
         this.hasMoreNotes.set(false);
-      } else {
-        // Relay returned a full page, there might be more events
+        this.consecutiveSmallBatches.set(0);
+      } else if (addedAnyContent) {
+        // We got new content - there might be more
         this.hasMoreNotes.set(true);
+        this.consecutiveSmallBatches.set(0);
+      } else if (eventsFromRelay < LOAD_LIMIT) {
+        // Small batch with no new content - increment counter
+        const newCount = this.consecutiveSmallBatches() + 1;
+        this.consecutiveSmallBatches.set(newCount);
+        
+        if (newCount >= this.MAX_CONSECUTIVE_SMALL_BATCHES) {
+          this.logger.info(`Reached end of notes for ${pubkey}: ${newCount} consecutive small batches with no new content`);
+          this.hasMoreNotes.set(false);
+        } else {
+          // Keep trying - might be temporary relay issue or duplicates
+          this.logger.debug(`Small batch ${newCount}/${this.MAX_CONSECUTIVE_SMALL_BATCHES} with no new content, continuing`);
+          this.hasMoreNotes.set(true);
+        }
+      } else {
+        // Full batch but all duplicates - might have more unique content further back
+        // Increment counter since we're not making progress
+        const newCount = this.consecutiveSmallBatches() + 1;
+        this.consecutiveSmallBatches.set(newCount);
+        
+        if (newCount >= this.MAX_CONSECUTIVE_SMALL_BATCHES) {
+          this.logger.info(`Reached end of notes for ${pubkey}: ${newCount} consecutive batches with no new content`);
+          this.hasMoreNotes.set(false);
+        } else {
+          this.logger.debug(`Full batch ${newCount}/${this.MAX_CONSECUTIVE_SMALL_BATCHES} but all duplicates, continuing`);
+          this.hasMoreNotes.set(true);
+        }
       }
 
       this.isLoadingMoreNotes.set(false);

@@ -1,5 +1,8 @@
 :host {
   display: block;
+  // Ensure the component fills the scroll container so the sticky header
+  // remains sticky throughout the entire scroll range
+  min-height: 100%;
 }
 
 // Component-specific panel-header nested styles

@@ -69,6 +69,11 @@ export class ProfileStateService {
   // This is separate from cached events to ensure proper infinite scroll
   private oldestRelayTimestamp = signal<number | null>(null);
 
+  // Track consecutive empty/small batches to determine when we've truly reached the end
+  // This prevents false "reached end" when relay returns partial results
+  private consecutiveSmallBatches = signal<number>(0);
+  private readonly MAX_CONSECUTIVE_SMALL_BATCHES = 3;
+
   // Loading states for articles
   isLoadingMoreArticles = signal<boolean>(false);
   hasMoreArticles = signal<boolean>(true);
@@ -175,6 +180,7 @@ export class ProfileStateService {
     this.replies.set([]);
     this.articles.set([]);
     this.oldestRelayTimestamp.set(null);
+    this.consecutiveSmallBatches.set(0);
     this.media.set([]);
     this.audio.set([]);
     this.reactions.set([]);
@@ -819,6 +825,19 @@ export class ProfileStateService {
       this.cacheEventsToDatabase(events).catch(err => {
         this.logger.error('Failed to cache timeline events:', err);
       });
+
+      // Check if initial load suggests we might have reached the end
+      // Only set hasMoreNotes to false if we got very few events (much less than limit)
+      // A full batch suggests there's more content available
+      const INITIAL_LIMIT = 50;
+      if (events.length < INITIAL_LIMIT / 2) {
+        // Got less than half of what we requested - might be at the end
+        // but don't set to false yet, let loadMoreNotes confirm it
+        this.logger.debug(`Initial load got ${events.length} events (limit ${INITIAL_LIMIT}), might be near end`);
+      }
+    } else {
+      // No events returned from initial load
+      this.logger.debug('Initial load returned no events from relay');
     }
 
     // Load additional media items separately to ensure we have enough for the media tab
@@ -1221,17 +1240,38 @@ export class ProfileStateService {
         });
       }
 
-      // Determine if there are more notes to load
-      // - If relay returned fewer events than we requested, we've reached the end
-      // - If relay returned 0 events, we've reached the end  
-      // - Otherwise, there might be more events to load
-      const reachedEnd = eventsFromRelay === 0 || eventsFromRelay < LOAD_LIMIT;
+      // Determine if there are more notes to load using multiple criteria:
+      // 1. If relay returned 0 events, we've reached the end
+      // 2. If we added any new unique content, there might be more
+      // 3. If we got a full batch but all were duplicates, keep trying (up to a limit)
+      // 4. If relay returned fewer than limit multiple times in a row, we've reached the end
 
-      if (reachedEnd) {
-        this.logger.info(`Reached end of notes for ${pubkey}: received ${eventsFromRelay} events (limit was ${LOAD_LIMIT})`);
+      if (eventsFromRelay === 0) {
+        // Relay returned nothing - definitely at the end
+        this.logger.info(`Reached end of notes for ${pubkey}: relay returned 0 events`);
         this.hasMoreNotes.set(false);
+        this.consecutiveSmallBatches.set(0);
+      } else if (addedAnyContent) {
+        // We got new content - there might be more
+        this.hasMoreNotes.set(true);
+        this.consecutiveSmallBatches.set(0);
+      } else if (eventsFromRelay < LOAD_LIMIT) {
+        // Small batch with no new content - increment counter
+        const newCount = this.consecutiveSmallBatches() + 1;
+        this.consecutiveSmallBatches.set(newCount);
+        
+        if (newCount >= this.MAX_CONSECUTIVE_SMALL_BATCHES) {
+          this.logger.info(`Reached end of notes for ${pubkey}: ${newCount} consecutive small batches with no new content`);
+          this.hasMoreNotes.set(false);
+        } else {
+          // Keep trying - might be temporary relay issue or duplicates
+          this.logger.debug(`Small batch ${newCount}/${this.MAX_CONSECUTIVE_SMALL_BATCHES} with no new content, will keep trying`);
+          this.hasMoreNotes.set(true);
+        }
       } else {
-        // Relay returned a full page, there might be more events
+        // Full batch returned but all duplicates - likely relay still has older events
+        // Keep hasMoreNotes true to continue fetching
+        this.logger.debug(`Full batch returned but all were duplicates, continuing pagination`);
         this.hasMoreNotes.set(true);
       }
 
