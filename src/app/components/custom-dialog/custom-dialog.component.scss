@@ -316,6 +316,17 @@
   }
 }
 
+// Command Palette Dialog Override
+.dialog-container.command-palette-dialog {
+  .dialog-header {
+    display: none;
+  }
+
+  .dialog-content {
+    padding: 0;
+  }
+}
+
 // Actions
 .dialog-actions {
   display: flex;
