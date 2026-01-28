@@ -41,6 +41,9 @@
       @if (displayLabels()) {
       <div class="sidenav-profile-section">
         <div class="sidenav-profile-row">
+          <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-collapse-button">
+            <mat-icon>arrow_menu_close</mat-icon>
+          </button>
           <div class="sidenav-profile-header" [class.accounts-expanded]="accountsExpanded()"
             (click)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
             (keydown.enter)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
@@ -82,9 +85,6 @@
             <mat-icon class="expand-accounts-icon">{{ accountsExpanded() ? 'expand_less' : (accountState.hasAccounts() ?
               'expand_more' : 'login') }}</mat-icon>
           </div>
-          <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-collapse-button">
-            <mat-icon>arrow_menu_close</mat-icon>
-          </button>
         </div>
 
         <!-- Expandable Accounts List -->
@@ -272,7 +272,6 @@
               <mat-icon class="profile-icon">menu</mat-icon>
               }
               }
-              <mat-icon class="menu-arrow-icon">arrow_menu_open</mat-icon>
             </div>
           </button>
           <app-navigation></app-navigation>
