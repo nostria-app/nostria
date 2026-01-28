@@ -651,8 +651,14 @@ export class SearchService {
    * Sort results by source priority: following > cached > remote
    */
   private sortBySourcePriority(results: SearchResultProfile[]): SearchResultProfile[] {
-    const sourcePriority = { following: 0, cached: 1, remote: 2 };
-    return [...results].sort((a, b) => sourcePriority[a.source] - sourcePriority[b.source]);
+    const sourcePriority: Record<string, number> = { following: 0, cached: 1, remote: 2 };
+    const sorted = [...results].sort((a, b) => {
+      const priorityA = sourcePriority[a.source] ?? 99;
+      const priorityB = sourcePriority[b.source] ?? 99;
+      return priorityA - priorityB;
+    });
+    console.log('Sorted results by source:', sorted.map(r => ({ source: r.source, name: r.data?.name || r.data?.display_name })));
+    return sorted;
   }
 
   /**

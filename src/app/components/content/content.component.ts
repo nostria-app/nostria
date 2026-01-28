@@ -474,23 +474,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Safety timeout: if intersection observer doesn't trigger within 2 seconds,
-    // force content to be visible to prevent blank screens
-    const safetyTimeout = setTimeout(() => {
-      if (!this._isVisible() && !this._hasBeenVisible()) {
-        console.warn('[ContentComponent] Forcing content visible after timeout');
-        this._isVisible.set(true);
-        this._hasBeenVisible.set(true);
-      }
-    }, 2000);
+    const element = this.contentContainer.nativeElement;
 
     // Options for the observer (which part of item visible, etc)
     // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     const options = {
       root: null, // Use viewport as root
       rootMargin: '200px', // Start loading 200px before entering viewport
-      threshold: 0.01, // 1% of the item visible
+      threshold: 0, // Trigger as soon as any part is visible
     };
+
     this.intersectionObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         const isIntersecting = entry.isIntersecting;
@@ -499,14 +492,26 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         // Once visible, mark as having been visible (to keep content loaded)
         if (isIntersecting) {
           this._hasBeenVisible.set(true);
-          // Clear safety timeout since observer worked
-          clearTimeout(safetyTimeout);
         }
       });
     }, options);
 
     // Start observing the element
-    this.intersectionObserver.observe(this.contentContainer.nativeElement);
+    this.intersectionObserver.observe(element);
+
+    // Check if element is already visible in viewport immediately
+    // This handles the case where content is already on screen when observer attaches
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const margin = 200; // Match rootMargin
+
+    // Element is considered visible if it's within viewport + margin
+    const isAlreadyVisible = rect.top < viewportHeight + margin && rect.bottom > -margin;
+
+    if (isAlreadyVisible) {
+      this._isVisible.set(true);
+      this._hasBeenVisible.set(true);
+    }
   }
 
   private async loadSocialPreviews(urls: string[]): Promise<void> {
