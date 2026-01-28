@@ -18,7 +18,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RouterModule } from '@angular/router';
 import { DataService } from '../../../services/data.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { SettingsService } from '../../../services/settings.service';
@@ -62,7 +61,6 @@ interface ProfileData {
     MatProgressSpinnerModule,
     MatMenuModule,
     MatDividerModule,
-    RouterModule
   ],
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
@@ -268,6 +266,15 @@ export class ProfileHoverCardComponent {
     } finally {
       this.isLoadingFollowing.set(false);
     }
+  }
+
+  profileUrl = computed(() => `/p/${this.npubValue()}`);
+
+  onProfileClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.hoverCardService.hideHoverCard();
+    this.layout.openProfile(this.pubkey());
   }
 
   async reportProfile(): Promise<void> {

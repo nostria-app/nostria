@@ -130,11 +130,11 @@ app-user-profile {
     min-height: 56px;
     flex-shrink: 0;
 
-    // Glass effect - light mode
-    background-color: rgba(255, 255, 255, 0.92);
+    // Glass effect using Material 3 surface color - works in light and dark mode
+    background-color: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
     backdrop-filter: blur(20px) saturate(1.8);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
 
     // Inner content wrapper - constrains content to 700px and centers
     .panel-header-inner {
@@ -196,12 +196,6 @@ app-user-profile {
         }
       }
     }
-  }
-
-  // Dark mode for panel header
-  :host-context(.dark) & .panel-header {
-    background-color: rgba(18, 18, 18, 0.92);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   // Filters section

@@ -14,15 +14,14 @@ import { nip19, type Event } from 'nostr-tools';
 import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { RouterModule } from '@angular/router';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 import { ScrollStateService } from '../../../services/scroll-state.service';
 import { SettingsService } from '../../../services/settings.service';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-profile-display-name',
-  standalone: true,
-  imports: [RouterModule],
+  imports: [],
   templateUrl: './profile-display-name.component.html',
   styleUrl: './profile-display-name.component.scss',
 })
@@ -34,6 +33,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   readonly utilities = inject(UtilitiesService);
   private scrollState = inject(ScrollStateService);
   private settingsService = inject(SettingsService);
+  private layout = inject(LayoutService);
 
   private linkElement: HTMLElement | null = null;
 
@@ -52,6 +52,25 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   // Debounce control variables
   private debouncedLoadTimer?: number;
   private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
+
+  /**
+   * Computed npub value from pubkey
+   */
+  npubValue = computed<string>(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey) {
+      return '';
+    }
+    return nip19.npubEncode(pubkey);
+  });
+
+  /**
+   * Computed URL for the profile link - used for href attribute for accessibility
+   */
+  profileUrl = computed(() => {
+    const npub = this.npubValue();
+    return npub ? `/p/${npub}` : '';
+  });
 
   constructor() {
     // Effect to trigger load when scrolling stops if the component is visible but not loaded
@@ -166,15 +185,6 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  npubValue = computed<string>(() => {
-    const pubkey = this.pubkey();
-    if (!pubkey) {
-      return '';
-    }
-
-    return nip19.npubEncode(pubkey);
-  });
-
   /**
    * Truncated npub value (first 8 characters) for display when profile is not found
    */
@@ -281,5 +291,22 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   onMouseLeave(): void {
     this.linkElement = null;
     this.hoverCardService.hideHoverCard();
+  }
+
+  /**
+   * Handles navigation to profile - uses layout.openProfile to support two-column view
+   */
+  onProfileClick(event: MouseEvent): void {
+    if (this.disableLink()) {
+      event.preventDefault();
+      return;
+    }
+
+    // Prevent default browser navigation
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Use layout service to handle navigation (supports two-column view)
+    this.layout.openProfile(this.pubkey());
   }
 }

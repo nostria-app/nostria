@@ -1,8 +1,8 @@
 import { Component, input, inject, computed, ChangeDetectionStrategy } from '@angular/core';
-import { RouterModule } from '@angular/router';
 import { nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ProfileDisplayNameComponent } from '../../user-profile/display-name/profile-display-name.component';
+import { LayoutService } from '../../../services/layout.service';
 
 interface ContentPart {
   type: 'text' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr';
@@ -14,17 +14,17 @@ interface ContentPart {
 
 @Component({
   selector: 'app-chat-content',
-  imports: [RouterModule, ProfileDisplayNameComponent],
+  imports: [ProfileDisplayNameComponent],
   template: `
     @for (part of parsedContent(); track $index) {
       @if (part.type === 'text') {
         <span>{{ part.content }}</span>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
-        <a class="nostr-mention" [routerLink]="[{ outlets: { right: ['p', part.pubkey] } }]">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
+        <a class="nostr-mention" (click)="onProfileClick($event, part.pubkey!)">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
       } @else if (part.type === 'note' || part.type === 'nevent') {
-        <a class="nostr-event-link" [routerLink]="[{ outlets: { right: ['e', part.eventId] } }]">📝 note</a>
+        <a class="nostr-event-link" (click)="onEventClick($event, part.eventId!)">📝 note</a>
       } @else if (part.type === 'naddr') {
-        <a class="nostr-event-link" [routerLink]="[{ outlets: { right: ['a', part.encodedEvent] } }]">📄 article</a>
+        <a class="nostr-event-link" (click)="onArticleClick($event, part.encodedEvent!)">📄 article</a>
       }
     }
   `,
@@ -65,6 +65,7 @@ interface ContentPart {
 })
 export class ChatContentComponent {
   private utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
 
   content = input.required<string>();
 
@@ -162,5 +163,23 @@ export class ChatContentComponent {
       console.warn('Failed to parse nostr URI:', uri, error);
       return null;
     }
+  }
+
+  onProfileClick(event: MouseEvent, pubkey: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openProfile(pubkey);
+  }
+
+  onEventClick(event: MouseEvent, eventId: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openGenericEvent(eventId);
+  }
+
+  onArticleClick(event: MouseEvent, encodedEvent: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openArticle(encodedEvent);
   }
 }

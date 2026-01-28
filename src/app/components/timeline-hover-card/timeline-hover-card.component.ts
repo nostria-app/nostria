@@ -2,6 +2,7 @@ import {
   Component,
   input,
   signal,
+  computed,
   effect,
   inject,
   untracked,
@@ -11,7 +12,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RouterModule } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DatabaseService } from '../../services/database.service';
@@ -24,13 +24,11 @@ import type { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-timeline-hover-card',
-  standalone: true,
   imports: [
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    RouterModule
   ],
   templateUrl: './timeline-hover-card.component.html',
   styleUrl: './timeline-hover-card.component.scss',
@@ -49,6 +47,8 @@ export class TimelineHoverCardComponent {
   isLoading = signal(false);
 
   npubValue = signal<string>('');
+
+  profileUrl = computed(() => `/p/${this.npubValue()}`);
 
   // Expose isFavorite as a computed signal
   isFavorite = () => this.favoritesService.isFavorite(this.pubkey());
@@ -209,6 +209,12 @@ export class TimelineHoverCardComponent {
     } else {
       this.layout.openGenericEvent(neventId);
     }
+  }
+
+  onProfileClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openProfile(this.pubkey());
   }
 
   toggleFavorite(event: Event): void {

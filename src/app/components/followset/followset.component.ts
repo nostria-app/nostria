@@ -4,8 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ImageCacheService } from '../../services/image-cache.service';
+import { LayoutService } from '../../services/layout.service';
 
 export interface Interest {
   id: string;
@@ -30,12 +30,13 @@ export interface SuggestedProfile {
  */
 @Component({
   selector: 'app-followset',
-  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule, RouterLink],
+  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
   templateUrl: './followset.component.html',
   styleUrl: './followset.component.scss',
 })
 export class FollowsetComponent {
   private readonly imageCacheService = inject(ImageCacheService);
+  private readonly layout = inject(LayoutService);
 
   // Inputs
   title = input<string>('What interests you?');
@@ -95,6 +96,12 @@ export class FollowsetComponent {
 
     // Emit event to follow this profile immediately
     this.followProfile.emit(profileId);
+  }
+
+  onProfileClick(event: MouseEvent, profileId: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openProfile(profileId);
   }
 
   getInterestName(interestId: string): string {

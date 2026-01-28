@@ -261,7 +261,7 @@
       <div class="panel-content">
         <div class="poster-grid">
           @for (pubkey of profileUpdates(); track pubkey) {
-          <a class="poster-card" [routerLink]="[{ outlets: { right: ['p', pubkey] } }]">
+          <a class="poster-card" (click)="onProfileClick($event, pubkey)">
             <div class="poster-avatar">
               <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
             </div>

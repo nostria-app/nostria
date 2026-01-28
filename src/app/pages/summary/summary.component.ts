@@ -683,6 +683,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timelinePage.set(1);
   }
 
+  onProfileClick(event: MouseEvent, pubkey: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openProfile(pubkey);
+  }
+
   toggleGmFilter(): void {
     this.gmFilterEnabled.update(v => !v);
     this.timelinePage.set(1);
