@@ -27,7 +27,6 @@ import type { ReportTarget } from '../../../services/reporting.service';
 
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
@@ -56,7 +55,6 @@ export class EventMenuComponent {
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
   accountLocalState = inject(AccountLocalStateService);
-  profileState = inject(ProfileStateService);
   dialog = inject(MatDialog);
   customDialog = inject(CustomDialogService);
   data = inject(DataService);
@@ -87,8 +85,13 @@ export class EventMenuComponent {
 
   // Check if we're on our own profile page
   isOnOwnProfile = computed<boolean>(() => {
-    const profilePubkey = this.profileState.pubkey();
-    return profilePubkey === this.accountState.pubkey();
+    const accountPubkey = this.accountState.pubkey();
+    if (!accountPubkey) {
+      return false;
+    }
+
+    const event = this.event();
+    return event?.pubkey === accountPubkey;
   });
 
   // Check if this is a kind:1 event (text note)

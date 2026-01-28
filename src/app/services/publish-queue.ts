@@ -1,6 +1,5 @@
 import { computed, effect, inject, Injectable, Injector } from '@angular/core';
 import { Event, UnsignedEvent } from 'nostr-tools';
-import { ProfileStateService } from './profile-state.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
@@ -17,7 +16,6 @@ export enum PublishTarget {
 })
 export class PublishQueueService {
   private readonly discoveryRelay = inject(DiscoveryRelayService);
-  private readonly profileState = inject(ProfileStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelayService = inject(UserRelayService);
