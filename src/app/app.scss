@@ -1400,11 +1400,11 @@ mat-sidenav-content {
   z-index: 50;
   width: 100%;
   
-  // Glass effect background on the wrapper for full-width backdrop blur
-  background-color: rgba(250, 250, 250, 0.92);
+  // Glass effect background using Material 3 surface color
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
   
   // Inner .panel-header should not have its own sticky/background
   // Also set default max-width and centering (can be overridden by layout contexts)
@@ -1423,12 +1423,6 @@ mat-sidenav-content {
     margin-left: auto;
     margin-right: auto;
   }
-}
-
-// Dark mode for wrapper
-.dark .panel-header-wrapper {
-  background-color: rgba(18, 18, 18, 0.92);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 // ============================================
