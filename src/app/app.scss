@@ -1378,8 +1378,21 @@ mat-sidenav-content {
 // ============================================
 // Panel Header Wrapper (for sticky headers rendered at panel level)
 // ============================================
-// Wraps panel headers to constrain width while keeping sticky at panel edge
-// These rules mirror the .panel-content-wrapper rules for each layout context
+// NEW APPROACH: Headers are rendered at the panel level via services
+// (RightPanelHeaderService, LeftPanelHeaderService) and wrapped in .panel-header-wrapper.
+// This ensures proper sticky behavior regardless of nested DOM structure.
+//
+// Components register their header templates via the service, and app.html renders them
+// inside .panel-header-wrapper before .panel-content-wrapper.
+//
+// The wrapper provides:
+// - Sticky positioning at the panel level
+// - Full-width glass effect background
+// - Width constraints on inner .panel-header to match content width
+//
+// OLD APPROACH (still used by most components):
+// Components render .panel-header directly in their template with position: sticky.
+// See .panel-header styles below for that approach.
 
 .panel-header-wrapper {
   position: sticky;
@@ -1514,10 +1527,14 @@ mat-sidenav-content {
 }
 
 // ============================================
-// Panel Header Styles (Fixed headers for each panel)
+// Panel Header Styles (OLD APPROACH - direct rendering)
 // ============================================
-// Panel headers are sticky-positioned within each panel's scroll container
-// They stay fixed while scrolling
+// These styles apply to .panel-header elements rendered directly in component templates.
+// Most components still use this approach. The sticky positioning works when the
+// component's host has proper height (use .panel-with-sticky-header class).
+//
+// For components using the NEW APPROACH (via header services), the sticky/background
+// properties are overridden by .panel-header-wrapper ::ng-deep .panel-header rules above.
 
 .panel-header {
   position: sticky;

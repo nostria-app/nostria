@@ -107,7 +107,6 @@ import { firstValueFrom } from 'rxjs';
   styleUrl: './profile.component.scss',
   host: {
     '[class.in-right-panel]': 'isInRightPanel()',
-    'class': 'panel-with-sticky-header',
   },
   providers: [
     {
