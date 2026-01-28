@@ -54,14 +54,47 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
 
   /**
-   * Computed npub value from pubkey
+   * Normalized hex pubkey - handles both hex and npub inputs
    */
-  npubValue = computed<string>(() => {
+  private normalizedPubkey = computed<string>(() => {
     const pubkey = this.pubkey();
     if (!pubkey) {
       return '';
     }
-    return nip19.npubEncode(pubkey);
+
+    // If it's already a valid hex pubkey, return it
+    if (this.utilities.isValidHexPubkey(pubkey)) {
+      return pubkey;
+    }
+
+    // If it's an npub, convert to hex
+    if (pubkey.startsWith('npub1')) {
+      try {
+        const hexPubkey = this.utilities.getPubkeyFromNpub(pubkey);
+        if (this.utilities.isValidHexPubkey(hexPubkey)) {
+          return hexPubkey;
+        }
+      } catch {
+        // Fall through to return empty
+      }
+    }
+
+    return '';
+  });
+
+  /**
+   * Computed npub value from pubkey
+   */
+  npubValue = computed<string>(() => {
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return '';
+    }
+    try {
+      return nip19.npubEncode(pubkey);
+    } catch {
+      return '';
+    }
   });
 
   /**
@@ -79,7 +112,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
       const isVisible = this.isVisible();
       const profile = this.profile();
       const isLoading = this.isLoading();
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
 
       if (!isScrolling && isVisible && !profile && !isLoading && pubkey) {
         untracked(() => {
@@ -88,9 +121,9 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // Set up an effect to watch for changes to npub input
+    // Set up an effect to watch for changes to pubkey input
     effect(() => {
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
 
       if (pubkey) {
         // If the pubkey changed, reset the profile data to force reload

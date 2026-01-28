@@ -503,6 +503,54 @@ export class DataService {
   }
 
   /**
+   * Get the contacts (following) event for a user.
+   * @param pubkey The user's pubkey
+   * @returns The contacts event (kind 3) or null if not found
+   */
+  async getContactsEvent(pubkey: string): Promise<Event | null> {
+    // Try storage first
+    let event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+    if (!event) {
+      // Try to get from relays
+      event = await this.sharedRelayEx.get(pubkey, {
+        authors: [pubkey],
+        kinds: [kinds.Contacts],
+      });
+
+      if (event) {
+        await this.database.saveEvent(event);
+      }
+    }
+
+    return event;
+  }
+
+  /**
+   * Get the relay list event for a user.
+   * @param pubkey The user's pubkey
+   * @returns The relay list event (kind 10002) or null if not found
+   */
+  async getRelayListEvent(pubkey: string): Promise<Event | null> {
+    // Try storage first
+    let event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+    if (!event) {
+      // Try to get from relays
+      event = await this.sharedRelayEx.get(pubkey, {
+        authors: [pubkey],
+        kinds: [kinds.RelayList],
+      });
+
+      if (event) {
+        await this.database.saveEvent(event);
+      }
+    }
+
+    return event;
+  }
+
+  /**
    * Attempt deep resolution by searching batches of observed relays for profile metadata.
    * This is a fallback mechanism when normal profile loading fails.
    * @param pubkey The hex pubkey to search for

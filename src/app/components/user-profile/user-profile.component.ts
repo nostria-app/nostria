@@ -120,13 +120,46 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private debouncedLoadTimer?: number;
   private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
 
-  npubValue = computed<string>(() => {
+  /**
+   * Normalized hex pubkey - handles both hex and npub inputs
+   */
+  private normalizedPubkey = computed<string>(() => {
     const pubkey = this.pubkey();
     if (!pubkey) {
       return '';
     }
 
-    return nip19.npubEncode(pubkey);
+    // If it's already a valid hex pubkey, return it
+    if (this.utilities.isValidHexPubkey(pubkey)) {
+      return pubkey;
+    }
+
+    // If it's an npub, convert to hex
+    if (pubkey.startsWith('npub1')) {
+      try {
+        const hexPubkey = this.utilities.getPubkeyFromNpub(pubkey);
+        if (this.utilities.isValidHexPubkey(hexPubkey)) {
+          return hexPubkey;
+        }
+      } catch {
+        // Fall through to return empty
+      }
+    }
+
+    return '';
+  });
+
+  npubValue = computed<string>(() => {
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return '';
+    }
+
+    try {
+      return nip19.npubEncode(pubkey);
+    } catch {
+      return '';
+    }
   });
 
   /**
@@ -149,9 +182,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.isLoading.set(false);
       }
     });
-    // Set up an effect to watch for changes to npub input
+    // Set up an effect to watch for changes to pubkey input
     effect(() => {
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
 
       if (pubkey) {
         // If the pubkey changed, reset the profile data to force reload
@@ -167,7 +200,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.publicKey = pubkey;
 
         untracked(() => {
-          const npub = this.utilities.getNpubFromPubkey(pubkey);
+          // Use the already computed npubValue instead of calling getNpubFromPubkey
+          const npub = this.npubValue();
           this.npub.set(npub);
 
           // Try to get cached profile synchronously first for instant display

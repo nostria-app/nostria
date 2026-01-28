@@ -1,0 +1,181 @@
+<div class="user-relays-container">
+  <div class="relays-header">
+    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="profile-mini">
+      @if (viewingProfile(); as profile) {
+      <div class="profile-mini-avatar">
+        @if (profile.data?.picture) {
+        <img [src]="profile.data.picture" alt="Profile picture" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </div>
+      <h1 class="profile-mini-name">{{ getProfileDisplayName() }}'s Relays</h1>
+      } @else {
+      <div class="profile-mini-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <h1 class="profile-mini-name">Relays</h1>
+      }
+    </div>
+  </div>
+
+  <div class="relays-content">
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading relays...</p>
+    </div>
+    } @else if (error()) {
+    <div class="error-container">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+    } @else if (relayList().length === 0) {
+    <div class="empty-list">
+      <mat-icon>dns</mat-icon>
+      <p>This user does not have any relays.</p>
+    </div>
+    } @else {
+    <div class="relays-list">
+      @for (url of relayList(); track url) {
+      <mat-card class="relay-card">
+        <div class="relay-card-header" (click)="toggleRelayDetails(url)" (keydown.enter)="toggleRelayDetails(url)"
+          (keydown)="onKeyDown($event, url)" tabindex="0" role="button" [attr.aria-expanded]="isRelayExpanded(url)">
+          <div class="relay-info">
+            <mat-icon class="relay-icon">dns</mat-icon>
+            <div class="relay-details">
+              <div class="relay-name">{{ getRelayDisplayName(url) }}</div>
+              <div class="relay-url">{{ formatRelayUrl(url) }}</div>
+            </div>
+          </div>
+          <div class="relay-actions">
+            <button mat-icon-button class="copy-button" (click)="copyRelayUrl($event, url)" aria-label="Copy relay URL"
+              matTooltip="Copy relay URL">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+            <mat-icon class="expand-icon">{{ isRelayExpanded(url) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </div>
+        </div>
+
+        @if (isRelayExpanded(url)) {
+        <mat-divider></mat-divider>
+        <div class="relay-expanded-details">
+          @if (isNip11Loading(url)) {
+          <div class="loading-container">
+            <mat-spinner diameter="32"></mat-spinner>
+            <p>Loading relay information...</p>
+          </div>
+          } @else if (getNip11Info(url)) {
+          <div class="nip11-info">
+            @if (getNip11Info(url)?.description) {
+            <div class="info-section">
+              <div class="info-label">Description</div>
+              <div class="info-value">{{ getNip11Info(url)?.description }}</div>
+            </div>
+            }
+
+            @if (getNip11Info(url)?.software) {
+            <div class="info-section">
+              <div class="info-label">Software</div>
+              <div class="info-value">
+                {{ getNip11Info(url)?.software }}
+                @if (getNip11Info(url)?.version) {
+                <span class="software-version">v{{ getNip11Info(url)?.version }}</span>
+                }
+              </div>
+            </div>
+            }
+
+            @if (getNip11Info(url)?.contact) {
+            <div class="info-section">
+              <div class="info-label">Contact</div>
+              <div class="info-value">
+                <a [href]="getNip11Info(url)?.contact" target="_blank" rel="noopener noreferrer">
+                  {{ getNip11Info(url)?.contact }}
+                </a>
+              </div>
+            </div>
+            }
+
+            @if (getNip11Info(url)?.supported_nips && getNip11Info(url)!.supported_nips!.length > 0) {
+            <div class="info-section">
+              <div class="info-label">Supported NIPs</div>
+              <div class="info-value nip-chips">
+                @for (nip of getNip11Info(url)?.supported_nips; track nip) {
+                <span class="nip-chip">NIP-{{ nip }}</span>
+                }
+              </div>
+            </div>
+            }
+
+            @if (getNip11Info(url)?.limitation) {
+            <div class="info-section">
+              <div class="info-label">Limitations</div>
+              <div class="info-value limitations-grid">
+                @if (getNip11Info(url)?.limitation?.payment_required !== undefined) {
+                <div class="limitation-item">
+                  <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.payment_required">
+                    {{ getNip11Info(url)?.limitation?.payment_required ? 'payment' : 'money_off' }}
+                  </mat-icon>
+                  <span>{{ getNip11Info(url)?.limitation?.payment_required ? 'Payment Required' : 'Free' }}</span>
+                </div>
+                }
+                @if (getNip11Info(url)?.limitation?.auth_required !== undefined) {
+                <div class="limitation-item">
+                  <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.auth_required">
+                    {{ getNip11Info(url)?.limitation?.auth_required ? 'lock' : 'lock_open' }}
+                  </mat-icon>
+                  <span>{{ getNip11Info(url)?.limitation?.auth_required ? 'Auth Required' : 'Public' }}</span>
+                </div>
+                }
+                @if (getNip11Info(url)?.limitation?.restricted_writes !== undefined) {
+                <div class="limitation-item">
+                  <mat-icon [class.text-warning]="getNip11Info(url)?.limitation?.restricted_writes">
+                    {{ getNip11Info(url)?.limitation?.restricted_writes ? 'edit_off' : 'edit' }}
+                  </mat-icon>
+                  <span>{{ getNip11Info(url)?.limitation?.restricted_writes ? 'Restricted Writes' : 'Open Writes'
+                    }}</span>
+                </div>
+                }
+              </div>
+            </div>
+            }
+
+            @if (getNip11Info(url)?.posting_policy || getNip11Info(url)?.privacy_policy) {
+            <div class="info-section">
+              <div class="info-label">Policies</div>
+              <div class="info-value policy-links">
+                @if (getNip11Info(url)?.posting_policy) {
+                <a [href]="getNip11Info(url)?.posting_policy" target="_blank" rel="noopener noreferrer">
+                  <mat-icon>policy</mat-icon>
+                  Posting Policy
+                </a>
+                }
+                @if (getNip11Info(url)?.privacy_policy) {
+                <a [href]="getNip11Info(url)?.privacy_policy" target="_blank" rel="noopener noreferrer">
+                  <mat-icon>privacy_tip</mat-icon>
+                  Privacy Policy
+                </a>
+                }
+              </div>
+            </div>
+            }
+          </div>
+          } @else {
+          <div class="no-info">
+            <mat-icon>info_outline</mat-icon>
+            <p>No relay information available (NIP-11 not supported or unavailable)</p>
+          </div>
+          }
+        </div>
+        }
+      </mat-card>
+      }
+    </div>
+    }
+  </div>
+</div>

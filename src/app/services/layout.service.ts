@@ -1188,17 +1188,17 @@ export class LayoutService implements OnDestroy {
   openProfile(pubkey: string): void {
     // Always use npub in URLs for consistency and bookmarkability
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
-    
+
     const currentUrl = this.router.url;
     const primaryPath = currentUrl.split('(')[0] || '/';
-    
+
     // If we're already on a profile page in primary, navigate to the new profile as primary
     // This avoids "profile in profile" routing issues with Angular's auxiliary outlets
     if (primaryPath.startsWith('/p/')) {
       this.router.navigateByUrl(`/p/${npub}`);
       return;
     }
-    
+
     this.navigateToRightPanel(`p/${npub}`);
   }
 
@@ -1277,7 +1277,7 @@ export class LayoutService implements OnDestroy {
     // Get current primary route to preserve it when opening right panel
     const currentUrl = this.router.url;
     const primaryPath = currentUrl.split('(')[0] || '/';
-    
+
     // Construct the full URL with the right outlet
     const targetUrl = `${primaryPath}(right:e/${eventId})`;
     this.router.navigateByUrl(targetUrl, {
@@ -1357,7 +1357,7 @@ export class LayoutService implements OnDestroy {
     // Handle overloaded parameters: (naddr, event?) or (naddr, slug) or (naddr, event, slug)
     let event: Event | undefined;
     let slug: string | undefined;
-    
+
     if (typeof eventOrSlug === 'string') {
       // Second parameter is a slug, not an event
       slug = eventOrSlug;
@@ -1365,13 +1365,13 @@ export class LayoutService implements OnDestroy {
       event = eventOrSlug;
       slug = maybeSlug;
     }
-    
+
     // Get current primary route to preserve it when opening right panel
     const currentUrl = this.router.url;
     const primaryPath = currentUrl.split('(')[0] || '/';
-    
+
     // Construct the full URL with the right outlet (with optional slug)
-    const targetUrl = slug 
+    const targetUrl = slug
       ? `${primaryPath}(right:a/${naddr}/${slug})`
       : `${primaryPath}(right:a/${naddr})`;
     this.router.navigateByUrl(targetUrl, {
@@ -1503,6 +1503,20 @@ export class LayoutService implements OnDestroy {
     const currentUrl = this.router.url;
     const primaryPath = currentUrl.split('(')[0] || '/';
     const targetUrl = `${primaryPath}(right:user-badges/${pubkeyOrNpub})`;
+    this.router.navigateByUrl(targetUrl);
+  }
+
+  openFollowingPage(pubkeyOrNpub: string): void {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:user-following/${pubkeyOrNpub})`;
+    this.router.navigateByUrl(targetUrl);
+  }
+
+  openRelaysPage(pubkeyOrNpub: string): void {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:user-relays/${pubkeyOrNpub})`;
     this.router.navigateByUrl(targetUrl);
   }
 

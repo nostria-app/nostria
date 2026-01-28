@@ -198,13 +198,13 @@
       }
 
       <div class="profile-extra-info">
-        <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
+        <a class="following-count" (click)="navigateToFollowing($event)">
           Following {{ profileState.followingList().length }}
         </a>
 
         <!-- @if (profileState.relay?.userRelaysFound()) { -->
         @if (getUserRelays() && getUserRelays().length > 0) {
-        <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
+        <a class="following-count" (click)="navigateToRelays($event)">
           Relays {{ getUserRelays().length }}
         </a>
         } @else if (!isLoadingRelays()) {
