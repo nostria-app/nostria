@@ -1487,6 +1487,11 @@ app-media-queue {
   z-index: 99 !important;
 }
 
+// Ensure backdrop is visible when shown (fixes intermittent visibility issue)
+.mat-drawer-backdrop.mat-drawer-shown {
+  visibility: visible !important;
+}
+
 // Sidenavs above backdrop but below toolbar
 .mat-drawer,
 .mat-drawer-container .mat-drawer {
