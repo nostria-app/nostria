@@ -1,19 +1,19 @@
-<div class="following-container" @slideInOut #followingContainer>
-  <div class="following-header" @profileShrink>
+<div class="user-following-container">
+  <div class="following-header">
     <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
       <mat-icon>arrow_back</mat-icon>
     </button>
 
     <div class="profile-mini">
-      @if (userProfile(); as profile) {
+      @if (viewingProfile(); as profile) {
       <div class="profile-mini-avatar">
-        @if (profile.picture) {
-        <img [src]="profile.picture" alt="Profile picture" />
+        @if (profile.data?.picture) {
+        <img [src]="profile.data.picture" alt="Profile picture" />
         } @else {
         <mat-icon>account_circle</mat-icon>
         }
       </div>
-      <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
+      <h1 class="profile-mini-name">{{ getProfileDisplayName() }}'s Following</h1>
       } @else {
       <div class="profile-mini-avatar">
         <mat-icon>account_circle</mat-icon>
@@ -117,7 +117,7 @@
           [maxBufferPx]="maxBufferPx">
           <mat-list class="full-width-list">
             @for (user of mutualConnectionsList(); track user.id) {
-            <app-user-profile [pubkey]="user.id"></app-user-profile>
+            <app-user-profile [pubkey]="user.npub"></app-user-profile>
             }
           </mat-list>
         </cdk-virtual-scroll-viewport>

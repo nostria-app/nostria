@@ -761,6 +761,20 @@ export const routes: Routes = [
       import('./pages/badges/badges.component').then(m => m.BadgesComponent),
     title: 'Badges',
   },
+  {
+    path: 'user-following/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/user-following/user-following.component').then(m => m.UserFollowingComponent),
+    title: 'Following',
+  },
+  {
+    path: 'user-relays/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/user-relays/user-relays.component').then(m => m.UserRelaysComponent),
+    title: 'Relays',
+  },
 
   { path: '**', redirectTo: '/' },
 ];

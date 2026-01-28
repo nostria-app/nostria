@@ -1,0 +1,283 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+.user-following-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.following-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  margin-bottom: 0;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.back-button {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  .search-container {
+    display: flex;
+    align-items: center;
+    border-radius: 24px;
+    padding: 0 12px;
+    background-color: var(--mat-sys-surface-container);
+    max-width: 200px;
+
+    mat-icon {
+      opacity: 0.5;
+      margin-right: 4px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    input {
+      border: none;
+      background: transparent;
+      outline: none;
+      width: 100%;
+      min-width: 80px;
+      padding: 8px 0;
+      color: var(--mat-sys-on-surface);
+      font-size: 14px;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+
+    .clear-search {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// Sort menu styles
+.sort-menu,
+::ng-deep .sort-menu {
+  .filter-menu-header {
+    padding: 12px 16px 8px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filter-section {
+    padding: 8px 16px 16px;
+
+    mat-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+}
+
+.profile-mini {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+
+  &-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--mat-caption-text-color, #757575);
+    }
+  }
+
+  &-name {
+    margin: 0;
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Tab styles
+.following-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-top: 0;
+
+  ::ng-deep .mat-mdc-tab-header {
+    position: sticky;
+    top: 72px;
+    z-index: 2;
+    background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+    border-top: none;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.following-content {
+  flex: 1;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+.virtual-scroll-viewport {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
+.following-list {
+  padding: 0;
+}
+
+.following-item {
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
+  }
+
+  &-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .default-user-avatar {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-caption-text-color, #757575);
+    }
+  }
+
+  &-npub {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+}
+
+.loading-container,
+.error-container,
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 2rem;
+  width: 100%;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 8px 0 0;
+  }
+}
+
+// Make the components fill the entire virtual scroll item space
+::ng-deep .cdk-virtual-scroll-content-wrapper {
+  width: 100%;
+}
+
+// Make sure the mat-list items fill the width
+::ng-deep .mat-mdc-list {
+  width: 100%;
+}
+
+::ng-deep .mat-mdc-list-item {
+  width: 100%;
+}
+
+app-user-profile {
+  margin-bottom: 2px;
+  margin-left: 2px;
+}

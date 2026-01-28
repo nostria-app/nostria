@@ -1169,6 +1169,34 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   /**
+   * Navigate to following page in right panel
+   */
+  navigateToFollowing(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentPubkey = this.pubkey();
+
+    if (currentPubkey) {
+      this.layout.openFollowingPage(currentPubkey);
+    }
+  }
+
+  /**
+   * Navigate to relays page in right panel
+   */
+  navigateToRelays(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentPubkey = this.pubkey();
+
+    if (currentPubkey) {
+      this.layout.openRelaysPage(currentPubkey);
+    }
+  }
+
+  /**
    * Clears all badge loading timeouts and resets timed out badges
    */
   private clearBadgeTimeouts(): void {
