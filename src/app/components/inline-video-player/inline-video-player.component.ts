@@ -14,6 +14,7 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
@@ -41,6 +42,7 @@ import { VideoPlaybackService } from '../../services/video-playback.service';
 export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly hostElement = inject(ElementRef);
+  private readonly overlayContainer = inject(OverlayContainer);
   private readonly videoPlayback = inject(VideoPlaybackService);
   // Inputs
   src = input.required<string>();
@@ -99,6 +101,21 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Track if video was auto-played (vs manually played by user click)
   // Only auto-played videos should be auto-paused when leaving viewport
   private wasAutoPlayed = signal(false);
+
+  private readonly fullscreenChangeHandler = () => {
+    const isFullscreen = !!document.fullscreenElement;
+    this.isFullscreen.set(isFullscreen);
+
+    const overlayContainerEl = this.overlayContainer.getContainerElement();
+    if (isFullscreen) {
+      const fullscreenElement = document.fullscreenElement;
+      if (fullscreenElement && overlayContainerEl) {
+        fullscreenElement.appendChild(overlayContainerEl);
+      }
+    } else if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
+      document.body.appendChild(overlayContainerEl);
+    }
+  };
 
   // Progress calculations
   progressPercent = computed(() => {
@@ -192,6 +209,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.intersectionObserver.observe(this.hostElement.nativeElement);
       }
     }
+
+    if (isPlatformBrowser(this.platformId)) {
+      document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    }
   }
 
   ngOnDestroy(): void {
@@ -201,6 +222,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     // Clean up IntersectionObserver
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
+    }
+
+    if (isPlatformBrowser(this.platformId)) {
+      document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
     }
 
     // Clean up blob URL if created
@@ -459,10 +484,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
-        this.isFullscreen.set(false);
       } else {
         await container.requestFullscreen();
-        this.isFullscreen.set(true);
       }
     } catch {
       // Fullscreen not supported
