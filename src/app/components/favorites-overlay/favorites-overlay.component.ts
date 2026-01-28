@@ -340,7 +340,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
 
   navigateToProfile(pubkey: string): void {
     this.hideOverlay();
-    this.router.navigate(['/p', pubkey]);
+    this.layout.openProfile(pubkey);
   }
 
   navigateToPeople(): void {

@@ -10,7 +10,6 @@ import {
   ChangeDetectionStrategy,
   ComponentRef,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { nip19 } from 'nostr-tools';
 import type { ProfilePointer } from 'nostr-tools/nip19';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
@@ -19,6 +18,7 @@ import { ProfileHoverCardComponent } from '../user-profile/hover-card/profile-ho
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
+import { LayoutService } from '../../services/layout.service';
 
 interface BioToken {
   type: 'text' | 'nostr-mention' | 'url' | 'linebreak';
@@ -90,7 +90,7 @@ interface BioToken {
 export class BioContentComponent implements OnDestroy {
   content = input<string>('');
 
-  private router = inject(Router);
+  private layout = inject(LayoutService);
   private utilities = inject(UtilitiesService);
   private data = inject(DataService);
   private overlay = inject(Overlay);
@@ -269,7 +269,7 @@ export class BioContentComponent implements OnDestroy {
   onMentionClick(token: BioToken): void {
     if (token.pubkey) {
       const npub = this.utilities.getNpubFromPubkey(token.pubkey);
-      this.router.navigate(['/p', npub]);
+      this.layout.openProfile(npub);
     }
   }
 
