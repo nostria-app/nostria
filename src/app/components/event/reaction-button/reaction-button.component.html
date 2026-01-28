@@ -17,20 +17,77 @@
 
   <!-- Reaction picker menu -->
   <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
-    <div class="reaction-picker" tabindex="-1" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-      @for (emoji of quickReactions; track emoji) {
-      <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-        (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
-        {{ emoji }}
-      </button>
+    <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()">
+      <!-- Quick reactions row -->
+      <div class="quick-reactions">
+        @for (emoji of quickReactions; track emoji) {
+        <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+          (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+          {{ emoji }}
+        </button>
+        }
+      </div>
+
+      <!-- Recent emojis section -->
+      @if (recentEmojis().length > 0) {
+      <div class="emoji-section">
+        <div class="section-header">Recent</div>
+        <div class="emoji-grid">
+          @for (recent of recentEmojis(); track recent.emoji) {
+          <button mat-icon-button class="emoji-button"
+            [class.selected]="userReaction()?.event?.content === recent.emoji"
+            (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+            [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+            @if (recent.url) {
+            <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+            } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
+            <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+            } @else {
+            {{ recent.emoji }}
+            }
+          </button>
+          }
+        </div>
+      </div>
       }
-      @for (emoji of customEmojis(); track emoji.shortcode) {
-      <button mat-icon-button class="emoji-button custom-emoji"
-        [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
-        (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-        [matTooltip]="emoji.shortcode">
-        <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
-      </button>
+
+      <!-- Custom emoji sets tabs -->
+      @if (emojiSets().length > 0) {
+      <div class="emoji-sets-container">
+        <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
+          class="emoji-tabs">
+          @for (set of emojiSets(); track set.id) {
+          <mat-tab [label]="set.title">
+            <div class="emoji-grid">
+              @for (emoji of set.emojis; track emoji.shortcode) {
+              <button mat-icon-button class="emoji-button custom-emoji"
+                [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+                (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+                [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+                <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+              </button>
+              }
+            </div>
+          </mat-tab>
+          }
+        </mat-tab-group>
+      </div>
+      } @else if (customEmojis().length > 0) {
+      <!-- Fallback: show all custom emojis in a single grid if no sets loaded -->
+      <div class="emoji-section">
+        <div class="section-header">Custom Emojis</div>
+        <div class="emoji-grid">
+          @for (emoji of customEmojis(); track emoji.shortcode) {
+          <button mat-icon-button class="emoji-button custom-emoji"
+            [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+            (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+            [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+          </button>
+          }
+        </div>
+      </div>
       }
     </div>
   </mat-menu>
@@ -57,23 +114,79 @@
       }
     </button>
 
-    <!-- Reaction picker menu -->
+    <!-- Reaction picker menu (full view) -->
     <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
-      <div class="reaction-picker" tabindex="-1" (click)="$event.stopPropagation()"
+      <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
         (keydown)="$event.stopPropagation()">
-        @for (emoji of quickReactions; track emoji) {
-        <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-          (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
-          {{ emoji }}
-        </button>
+        <!-- Quick reactions row -->
+        <div class="quick-reactions">
+          @for (emoji of quickReactions; track emoji) {
+          <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+            (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+            {{ emoji }}
+          </button>
+          }
+        </div>
+
+        <!-- Recent emojis section -->
+        @if (recentEmojis().length > 0) {
+        <div class="emoji-section">
+          <div class="section-header">Recent</div>
+          <div class="emoji-grid">
+            @for (recent of recentEmojis(); track recent.emoji) {
+            <button mat-icon-button class="emoji-button"
+              [class.selected]="userReaction()?.event?.content === recent.emoji"
+              (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+              [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+              @if (recent.url) {
+              <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+              } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
+              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+              } @else {
+              {{ recent.emoji }}
+              }
+            </button>
+            }
+          </div>
+        </div>
         }
-        @for (emoji of customEmojis(); track emoji.shortcode) {
-        <button mat-icon-button class="emoji-button custom-emoji"
-          [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
-          (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-          [matTooltip]="emoji.shortcode">
-          <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
-        </button>
+
+        <!-- Custom emoji sets tabs -->
+        @if (emojiSets().length > 0) {
+        <div class="emoji-sets-container">
+          <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
+            class="emoji-tabs">
+            @for (set of emojiSets(); track set.id) {
+            <mat-tab [label]="set.title">
+              <div class="emoji-grid">
+                @for (emoji of set.emojis; track emoji.shortcode) {
+                <button mat-icon-button class="emoji-button custom-emoji"
+                  [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+                  (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+                  <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+                </button>
+                }
+              </div>
+            </mat-tab>
+            }
+          </mat-tab-group>
+        </div>
+        } @else if (customEmojis().length > 0) {
+        <!-- Fallback: show all custom emojis in a single grid if no sets loaded -->
+        <div class="emoji-section">
+          <div class="section-header">Custom Emojis</div>
+          <div class="emoji-grid">
+            @for (emoji of customEmojis(); track emoji.shortcode) {
+            <button mat-icon-button class="emoji-button custom-emoji"
+              [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+              (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+              [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+              <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+            </button>
+            }
+          </div>
+        </div>
         }
       </div>
     </mat-menu>

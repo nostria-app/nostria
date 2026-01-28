@@ -121,55 +121,184 @@
 ::ng-deep .reaction-picker-menu {
   .mat-mdc-menu-content {
     padding: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .mat-mdc-menu-panel {
-    overflow: visible;
+    overflow: hidden;
+    max-width: 320px;
+    max-height: 400px;
   }
 }
 
+// Main emoji picker container
+.emoji-picker-container {
+  display: flex;
+  flex-direction: column;
+  width: 296px;
+  max-height: 360px;
+  overflow: hidden;
+}
+
+// Quick reactions row at top
+.quick-reactions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  flex-shrink: 0;
+}
+
+// Emoji section with header
+.emoji-section {
+  padding: 8px 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  .section-header {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Grid layout for emojis
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 40px);
+  gap: 4px;
+  max-height: 200px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 0;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--mat-sys-outline-variant);
+    border-radius: 3px;
+
+    &:hover {
+      background: var(--mat-sys-outline);
+    }
+  }
+}
+
+// Emoji sets container with tabs
+.emoji-sets-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .emoji-tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    ::ng-deep {
+      .mat-mdc-tab-header {
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+        overflow: hidden;
+      }
+
+      .mat-mdc-tab-labels {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none; // Hide scrollbar on Firefox
+
+        &::-webkit-scrollbar {
+          display: none; // Hide scrollbar on Chrome/Safari
+        }
+      }
+
+      .mat-mdc-tab {
+        min-width: 60px;
+        padding: 0 8px;
+        flex-shrink: 0;
+      }
+
+      .mat-mdc-tab-body-wrapper {
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .mat-mdc-tab-body-content {
+        overflow: hidden;
+        padding: 8px 12px;
+      }
+    }
+  }
+
+  .emoji-grid {
+    max-height: 180px;
+  }
+}
+
+// Emoji button styles
+.emoji-button {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+  padding: 0;
+  min-width: 40px;
+  line-height: 1;
+  text-align: center;
+
+  // Override mat-icon-button styles
+  &.mat-mdc-icon-button {
+    --mdc-icon-button-state-layer-size: 40px;
+    --mdc-icon-button-icon-size: 1.25rem;
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container-highest);
+    transform: scale(1.1);
+  }
+
+  &.selected {
+    background: var(--mat-sys-primary-container);
+  }
+
+  &.custom-emoji {
+    .custom-emoji-img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+  }
+}
+
+.custom-emoji-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+// Legacy reaction picker (keeping for backward compatibility)
 .reaction-picker {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 12px;
-
-  .emoji-button {
-    width: 36px;
-    height: 36px;
-    font-size: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s ease, transform 0.15s ease;
-    padding: 0;
-    min-width: 36px;
-    line-height: 1;
-    text-align: center;
-
-    // Override mat-icon-button styles
-    &.mat-mdc-icon-button {
-      --mdc-icon-button-state-layer-size: 36px;
-      --mdc-icon-button-icon-size: 1.25rem;
-    }
-
-    &:hover {
-      background: var(--mat-sys-surface-container-highest);
-      transform: scale(1.15);
-    }
-
-    &.selected {
-      background: var(--mat-sys-primary-container);
-    }
-
-    &.custom-emoji {
-      .custom-emoji-img {
-        width: 24px;
-        height: 24px;
-        object-fit: contain;
-      }
-    }
-  }
 }

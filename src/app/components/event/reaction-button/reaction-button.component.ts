@@ -5,14 +5,18 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../../../interfaces';
 import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService, RecentEmoji } from '../../../services/account-local-state.service';
 import { EventService, ReactionEvents } from '../../../services/event';
 import { ReactionService } from '../../../services/reaction.service';
 import { LayoutService } from '../../../services/layout.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
+import { DataService } from '../../../services/data.service';
+import { DatabaseService } from '../../../services/database.service';
 
 type ViewMode = 'icon' | 'full';
 
@@ -23,6 +27,12 @@ interface ReactionGroup {
   userReacted: boolean;
 }
 
+interface EmojiSetGroup {
+  id: string;
+  title: string;
+  emojis: { shortcode: string; url: string }[];
+}
+
 @Component({
   selector: 'app-reaction-button',
   imports: [
@@ -30,7 +40,8 @@ interface ReactionGroup {
     MatButtonModule,
     MatTooltipModule,
     MatMenuModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTabsModule
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -38,10 +49,13 @@ interface ReactionGroup {
 export class ReactionButtonComponent {
   private readonly eventService = inject(EventService);
   private readonly accountState = inject(AccountStateService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly reactionService = inject(ReactionService);
   private readonly layout = inject(LayoutService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly emojiSetService = inject(EmojiSetService);
+  private readonly data = inject(DataService);
+  private readonly database = inject(DatabaseService);
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -50,6 +64,9 @@ export class ReactionButtonComponent {
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   customEmojis = signal<{ shortcode: string; url: string }[]>([]);
+  emojiSets = signal<EmojiSetGroup[]>([]);
+  recentEmojis = signal<RecentEmoji[]>([]);
+  activeTabIndex = signal<number>(0);
 
   // Quick reactions for the picker
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -115,23 +132,34 @@ export class ReactionButtonComponent {
     return this.reactions().events.length;
   });
 
-  constructor() {
-    // Load user's custom emojis
+constructor() {
+    // Load user's custom emojis and emoji sets
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
         this.customEmojis.set([]);
+        this.emojiSets.set([]);
+        this.recentEmojis.set([]);
         return;
       }
 
       untracked(async () => {
         try {
+          // Load recent emojis from local state
+          const recent = this.accountLocalState.getRecentEmojis(pubkey);
+          this.recentEmojis.set(recent);
+
+          // Load user's custom emojis
           const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
           const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
           this.customEmojis.set(emojiArray);
+
+          // Load emoji sets grouped by set for tabbed display
+          await this.loadEmojiSetsGrouped(pubkey);
         } catch (error) {
           console.error('Failed to load custom emojis for reactions:', error);
           this.customEmojis.set([]);
+          this.emojiSets.set([]);
         }
       });
     });
@@ -234,6 +262,9 @@ export class ReactionButtonComponent {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
         this.snackBar.open('Failed to add reaction. Please try again.', 'Dismiss', { duration: 3000 });
       } else {
+        // Track emoji usage for recent emojis
+        const customEmoji = this.customEmojis().find(e => `:${e.shortcode}:` === emoji);
+        this.trackEmojiUsage(emoji, customEmoji?.url);
         // Notify parent to reload reactions
         this.reactionChanged.emit();
       }
@@ -401,5 +432,86 @@ export class ReactionButtonComponent {
       events: currentEvents,
       data: currentData,
     });
+  }
+
+  /**
+   * Load emoji sets grouped by their set for tabbed display
+   */
+  private async loadEmojiSetsGrouped(pubkey: string): Promise<void> {
+    try {
+      // Get user's preferred emojis list (kind 10030)
+      const emojiListEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+
+      if (!emojiListEvent) {
+        this.emojiSets.set([]);
+        return;
+      }
+
+      const sets: EmojiSetGroup[] = [];
+
+      // First, add inline emojis as "My Emojis" set
+      const inlineEmojis: { shortcode: string; url: string }[] = [];
+      for (const tag of emojiListEvent.tags) {
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          inlineEmojis.push({ shortcode: tag[1], url: tag[2] });
+        }
+      }
+      if (inlineEmojis.length > 0) {
+        sets.push({
+          id: 'inline',
+          title: 'My Emojis',
+          emojis: inlineEmojis
+        });
+      }
+
+      // Process emoji set references (a tags pointing to kind 30030)
+      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+
+      for (const ref of emojiSetRefs) {
+        const [kind, refPubkey, identifier] = ref[1].split(':');
+        if (kind === '30030' && refPubkey && identifier) {
+          const emojiSet = await this.emojiSetService.getEmojiSet(refPubkey, identifier);
+          if (emojiSet) {
+            const emojis = Array.from(emojiSet.emojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+            sets.push({
+              id: emojiSet.id,
+              title: emojiSet.title,
+              emojis
+            });
+          }
+        }
+      }
+
+      this.emojiSets.set(sets);
+    } catch (error) {
+      console.error('Failed to load emoji sets grouped:', error);
+      this.emojiSets.set([]);
+    }
+  }
+
+  /**
+   * Track emoji usage for recent emojis
+   */
+  private trackEmojiUsage(emoji: string, url?: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    this.accountLocalState.addRecentEmoji(pubkey, emoji, url);
+
+    // Update local signal immediately for UI responsiveness
+    const recent = this.accountLocalState.getRecentEmojis(pubkey);
+    this.recentEmojis.set(recent);
+  }
+
+  /**
+   * Get the URL for a custom emoji by its shortcode format (:shortcode:)
+   */
+  getCustomEmojiUrlByShortcode(emoji: string): string | undefined {
+    if (!emoji.startsWith(':') || !emoji.endsWith(':')) {
+      return undefined;
+    }
+    const shortcode = emoji.slice(1, -1);
+    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+    return customEmoji?.url;
   }
 }

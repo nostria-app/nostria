@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
 
   .dialog-content-wrapper {
     position: relative;
@@ -10,6 +11,8 @@
     display: flex;
     flex-direction: column;
     padding: 16px 20px;
+    width: 100%;
+    box-sizing: border-box;
 
     @media (max-width: 600px),
     (max-height: 700px) {
@@ -225,28 +228,72 @@
     display: flex;
     flex-direction: column;
 
-    ::ng-deep .mat-mdc-text-field-wrapper {
-      overflow: visible;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    // Make the mat-form-field itself full width
+    &.mat-mdc-form-field {
+      width: 100% !important;
+      --mat-form-field-container-max-width: 100%;
+      --mdc-outlined-text-field-container-shape: 4px;
     }
 
-    ::ng-deep .mat-mdc-form-field-flex {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+    ::ng-deep {
+      // Ensure all wrapper elements are full width
+      .mat-mdc-text-field-wrapper {
+        overflow: visible;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
 
-    ::ng-deep .mat-mdc-form-field-infix {
-      overflow: visible;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+      .mat-mdc-form-field-flex {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
 
-    ::ng-deep .mdc-floating-label {
-      max-width: none;
+      .mat-mdc-form-field-infix {
+        overflow: visible;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-basis: auto;
+        // Minimal padding for label spacing
+        padding-top: 16px !important;
+        padding-bottom: 4px !important;
+      }
+
+      .mdc-notched-outline {
+        width: 100% !important;
+      }
+
+      .mdc-floating-label {
+        max-width: none;
+      }
+
+      // Specifically target the MDC text field input container
+      .mdc-text-field {
+        width: 100% !important;
+      }
+
+      // Target all possible textarea selectors
+      textarea.mat-mdc-input-element,
+      textarea.mdc-text-field__input,
+      .mat-mdc-form-field-infix textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        box-sizing: border-box !important;
+        word-wrap: break-word;
+        word-break: normal;
+        white-space: pre-wrap;
+        padding: 4px 0 !important;
+      }
     }
 
     .content-textarea {
@@ -255,7 +302,14 @@
       min-height: 200px;
       max-height: 500px;
       height: auto;
-      width: 100%;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 100% !important;
+      box-sizing: border-box !important;
+      word-wrap: break-word;
+      word-break: normal;
+      white-space: pre-wrap;
+      padding: 4px 0 !important;
 
       &.over-limit {
         color: var(--mat-sys-error);
@@ -524,12 +578,14 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
 
   .textarea-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    width: 100%;
 
     .content-field {
       width: 100%;
@@ -538,6 +594,29 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
+
+      // Override mat-form-field width
+      &.mat-mdc-form-field {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      // Ensure all Material form field internals are full width
+      ::ng-deep {
+        .mat-mdc-text-field-wrapper,
+        .mat-mdc-form-field-flex,
+        .mat-mdc-form-field-infix {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        textarea.mat-mdc-input-element,
+        textarea.mdc-text-field__input {
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box;
+        }
+      }
 
       // Reduce top spacing on mobile
       @media (max-width: 600px),
@@ -1094,11 +1173,40 @@
   // Smaller textarea for inline mode
   .content-editor-section {
     .content-field {
+      // Ensure full width for inline mode too
+      width: 100% !important;
+
+      ::ng-deep {
+        .mat-mdc-text-field-wrapper,
+        .mat-mdc-form-field-flex,
+        .mat-mdc-form-field-infix,
+        .mdc-text-field {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        .mat-mdc-form-field-infix {
+          padding-top: 14px !important;
+          padding-bottom: 4px !important;
+        }
+
+        textarea {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 100% !important;
+          padding: 2px 0 !important;
+        }
+      }
+
       .content-textarea {
         min-height: 60px;
         max-height: 200px;
         overflow-y: hidden;
         height: auto;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        padding: 2px 0 !important;
       }
     }
 
