@@ -1416,23 +1416,22 @@ export class App implements OnInit {
     // Focus left the search container
     this.searchFocused.set(false);
 
-    // Close search if there's no input
-    // Keep search open if there's text in the input (user might be copying/pasting)
-    if (!this.layout.searchInput || this.layout.searchInput.length === 0) {
-      this.layout.closeSearch();
-      this.search.clearResults();
-    }
+    // Dismiss search when focus leaves the container
+    this.clearSearchInput(false);
+    this.layout.closeSearch();
   }
 
   /**
    * Clear the search input and search results.
    */
-  clearSearchInput(): void {
+  clearSearchInput(keepFocus = true): void {
     this.layout.searchInput = '';
     this.layout.query.set('');
     this.search.clearResults();
-    // Keep focus on search input after clearing
-    this.searchInputElement?.nativeElement?.focus();
+    if (keepFocus) {
+      // Keep focus on search input after clearing
+      this.searchInputElement?.nativeElement?.focus();
+    }
   }
 
   toggleMediaPlayer() {
