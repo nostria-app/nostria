@@ -386,7 +386,9 @@ export class RelayFeedMenuComponent {
     // Only return favicon if we have info (meaning we fetched it but it has no icon/banner)
     // If no info, return null to show the fallback icon while we fetch
     if (info) {
-      return `https://${domain}/favicon.ico`;
+      // Strip wss:// or ws:// prefix if present to construct valid favicon URL
+      const hostname = domain.replace(/^wss?:\/\//, '');
+      return `https://${hostname}/favicon.ico`;
     }
     return null;
   }

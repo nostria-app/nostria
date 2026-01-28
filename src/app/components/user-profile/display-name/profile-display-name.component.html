@@ -15,8 +15,8 @@
   }
 </span>
 } @else {
-<a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="profile-link" (mouseenter)="onMouseEnter($event)"
-  (mouseleave)="onMouseLeave()">
+<a [attr.href]="profileUrl()" class="profile-link" (mouseenter)="onMouseEnter($event)"
+  (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
   @if (isLoading() || profile() === null) {
   ...
   } @else if (profile() && !profile().isEmpty && profile().data) {

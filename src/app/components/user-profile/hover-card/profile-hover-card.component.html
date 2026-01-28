@@ -16,7 +16,7 @@
 
     <!-- Profile Header -->
     <div class="profile-header">
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="avatar-link">
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="avatar-link">
         @if (profile()?.data?.picture && !imageLoadError()) {
         @if (settingsService.settings().imageCacheEnabled && profile()?.data?.picture) {
         <img [src]="getOptimizedImageUrl(profile()!.data!.picture!)" (error)="onImageLoadError()" alt="User Avatar"
@@ -74,12 +74,12 @@
 
     <!-- Profile Info -->
     <div class="profile-info">
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="name-link">
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="name-link">
         <div class="display-name">
           {{ profile()?.data?.display_name || profile()?.data?.name || 'Anonymous' }}
         </div>
       </a>
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="alias-link">
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="alias-link">
         <div class="alias">{{ aliasOrNpub() }}</div>
       </a>
     </div>
@@ -132,7 +132,7 @@
         }
       </button>
       }
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" mat-stroked-button>
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" mat-stroked-button>
         View Profile
       </a>
     </div>

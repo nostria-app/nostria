@@ -9,7 +9,7 @@
   <div class="card-inner-content">
     <!-- Header with profile info -->
     <div class="timeline-header">
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" class="profile-link">
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="profile-link">
         @if (getAvatarUrl()) {
         <img [src]="getAvatarUrl()!" alt="Avatar" class="avatar" />
         } @else {
@@ -48,7 +48,7 @@
 
     <!-- Footer -->
     <div class="timeline-footer">
-      <a [routerLink]="[{ outlets: { right: ['p', npubValue()] } }]" mat-stroked-button>
+      <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" mat-stroked-button>
         <mat-icon>visibility</mat-icon>
         View Full Profile
       </a>

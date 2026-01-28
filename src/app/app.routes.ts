@@ -6,7 +6,16 @@ import { streamResolver } from './stream-resolver';
 
 // Only import the main landing component eagerly
 // Everything else should be lazy-loaded
-const profileChildren: Routes = [
+
+/**
+ * Creates profile children routes.
+ * IMPORTANT: Must return a fresh array for each use to avoid router state issues.
+ * Using the same array reference across multiple outlets (primary and auxiliary)
+ * causes Angular's setRouterState to enter infinite recursion when traversing
+ * the state tree, resulting in "Maximum call stack size exceeded" errors.
+ */
+function createProfileChildren(): Routes {
+  return [
   {
     path: '',
     loadComponent: () =>
@@ -81,7 +90,8 @@ const profileChildren: Routes = [
       import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
     title: 'Details',
   },
-];
+  ];
+}
 
 export const routes: Routes = [
   // Home - Two-column layout with feeds on left and dynamic content on right
@@ -501,21 +511,21 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile-open.component').then(m => m.ProfileOpenComponent),
     resolve: { data: DataResolver },
-    children: profileChildren,
+    children: createProfileChildren(),
   },
   {
     path: 'p/:id',
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver },
-    children: profileChildren,
+    children: createProfileChildren(),
   },
   {
     path: 'u/:username',
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver, user: UsernameResolver },
-    children: profileChildren,
+    children: createProfileChildren(),
   },
   {
     path: 'premium',
@@ -679,7 +689,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver },
-    children: profileChildren,
+    children: createProfileChildren(),
   },
   {
     path: 'u/:username',
@@ -687,7 +697,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver, user: UsernameResolver },
-    children: profileChildren,
+    children: createProfileChildren(),
   },
   {
     path: 'stream/:encodedEvent',
