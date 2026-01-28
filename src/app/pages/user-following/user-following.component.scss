@@ -15,13 +15,12 @@
   align-items: center;
   padding: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
   z-index: 3;
   background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
   margin-bottom: 0;
   gap: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .back-button {
@@ -153,42 +152,32 @@
 
 // Tab styles
 .following-tabs {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  margin-top: 0;
+  overflow: hidden;
 
   ::ng-deep .mat-mdc-tab-header {
-    position: sticky;
-    top: 72px;
-    z-index: 2;
     background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
-    border-top: none;
+    flex-shrink: 0;
   }
 
   ::ng-deep .mat-mdc-tab-body-wrapper {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin: 0;
-    padding: 0;
+    flex: 1;
+    overflow: hidden;
   }
 }
 
 .following-content {
-  flex: 1;
   padding: 0;
-  display: flex;
-  overflow: hidden;
   height: 100%;
   width: 100%;
 }
 
 .virtual-scroll-viewport {
-  height: 100%;
+  // CDK virtual scroll requires explicit height
+  height: calc(100vh - 180px);
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  min-height: 200px;
 }
 
 .following-list {
