@@ -103,7 +103,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
   private readonly router = inject(Router);
-  private readonly layout = inject(LayoutService);
+  protected readonly layout = inject(LayoutService);
 
   // ViewChild for load more sentinel
   loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
@@ -733,7 +733,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     // For regular events, navigate to event route in right outlet
     const eventId = timelineEvent.id;
-    this.router.navigate([{ outlets: { right: ['e', eventId] } }]);
+    this.layout.openGenericEvent(eventId);
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {
@@ -772,7 +772,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('[Summary] Failed to encode article naddr:', err);
       // Fallback to event dialog
-      this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
+      this.layout.openGenericEvent(event.id);
     }
   }
 

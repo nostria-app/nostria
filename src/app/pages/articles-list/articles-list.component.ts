@@ -374,7 +374,7 @@ export class ArticlesListComponent {
       kind: targetEvent.kind,
     });
 
-    this.router.navigate([{ outlets: { right: ['a', naddr] } }]);
+    this.layout.openArticle(naddr, targetEvent);
   }
 
   onTabChange(index: number): void {

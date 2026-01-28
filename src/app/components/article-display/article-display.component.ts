@@ -415,7 +415,7 @@ export class ArticleDisplayComponent {
       event.preventDefault();
       event.stopPropagation();
       const id = href.split('/')[2];
-      this.router.navigate([{ outlets: { right: ['e', id] } }]);
+      this.layout.openGenericEvent(id);
     } else if (href.startsWith('/a/')) {
       event.preventDefault();
       event.stopPropagation();
@@ -425,11 +425,7 @@ export class ArticleDisplayComponent {
         const id = parts[2];
         const slug = parts.length > 3 ? parts[3] : undefined;
 
-        if (slug) {
-          this.router.navigate([{ outlets: { right: ['a', id, slug] } }]);
-        } else {
-          this.router.navigate([{ outlets: { right: ['a', id] } }]);
-        }
+        this.layout.openArticle(id, slug);
       }
     }
   }

@@ -58,8 +58,7 @@
 
     <!-- View Badge Button -->
     <div class="card-actions">
-      <a mat-flat-button color="primary" [routerLink]="[{ outlets: { right: ['p', npub() || pubkey(), 'badges'] } }]"
-        class="view-button">
+      <a mat-flat-button color="primary" (click)="layout.openBadgesPage(pubkey())" class="view-button" tabindex="0">
         <mat-icon>visibility</mat-icon>
         View Badge Details
       </a>

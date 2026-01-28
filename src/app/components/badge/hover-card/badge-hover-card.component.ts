@@ -12,11 +12,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RouterModule } from '@angular/router';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { NostrEvent } from 'nostr-tools';
 import { DatabaseService } from '../../../services/database.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-badge-hover-card',
@@ -25,7 +25,6 @@ import { UtilitiesService } from '../../../services/utilities.service';
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    RouterModule
 ],
   templateUrl: './badge-hover-card.component.html',
   styleUrl: './badge-hover-card.component.scss',
@@ -37,6 +36,7 @@ export class BadgeHoverCardComponent {
   private badgeService = inject(BadgeService);
   private database = inject(DatabaseService);
   private utilities = inject(UtilitiesService);
+  layout = inject(LayoutService);
 
   npub = computed(() => {
     return this.utilities.getNpubFromPubkey(this.pubkey());

@@ -4,6 +4,7 @@ import { LoggerService } from './logger.service';
 import { nip19 } from 'nostr-tools';
 import { Wallets } from './wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { LayoutService } from './layout.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,7 @@ export class NostrProtocolService {
   private readonly logger = inject(LoggerService);
   private readonly wallets = inject(Wallets);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly layout = inject(LayoutService);
 
   /**
    * Handles nostr protocol URLs by parsing the URI and navigating to the appropriate route
@@ -209,7 +211,7 @@ export class NostrProtocolService {
         case 'npub':
           this.logger.info('[NostrProtocol] Routing to profile page for npub');
           this.logger.debug('[NostrProtocol] Profile pubkey:', data);
-          await this.router.navigate([{ outlets: { right: ['p', data] } }]);
+          this.layout.openProfile(data as string);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page');
           break;
 
@@ -223,16 +225,14 @@ export class NostrProtocolService {
             throw new Error('Invalid nprofile data: missing pubkey');
           }
 
-          // Convert hex pubkey to npub for URL consistency
-          const npub = nip19.npubEncode(data.pubkey);
-          await this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+          this.layout.openProfile(data.pubkey);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page from nprofile');
           break;
 
         case 'note':
           this.logger.info('[NostrProtocol] Routing to event page for note');
           this.logger.debug('[NostrProtocol] Note id:', data);
-          await this.router.navigate([{ outlets: { right: ['e', data] } }]);
+          this.layout.openGenericEvent(data as string);
           this.logger.info('[NostrProtocol] Successfully navigated to event page');
           break;
 
@@ -246,7 +246,7 @@ export class NostrProtocolService {
             throw new Error('Invalid nevent data: missing id');
           }
 
-          await this.router.navigate([{ outlets: { right: ['e', data.id] } }]);
+          this.layout.openGenericEvent(data.id);
           this.logger.info('[NostrProtocol] Successfully navigated to event page from nevent');
           break;
 
@@ -262,7 +262,7 @@ export class NostrProtocolService {
               '[NostrProtocol] Using identifier for naddr routing:',
               data.identifier
             );
-            await this.router.navigate([{ outlets: { right: ['e', data.identifier] } }]);
+            this.layout.openGenericEvent(data.identifier);
             this.logger.info('[NostrProtocol] Successfully navigated to event page from naddr');
           } else {
             this.logger.error('[NostrProtocol] No identifier found in naddr data:', data);

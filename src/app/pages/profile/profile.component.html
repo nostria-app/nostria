@@ -8,22 +8,22 @@
     <span class="panel-header-spacer"></span>
 
     @if (!isOwnProfile() && !isLoading() && !error()) {
-      <!-- Send private message button -->
-      <button mat-icon-button matTooltip="Send private message" (click)="openSendMessage()">
-        <mat-icon>message</mat-icon>
-      </button>
+    <!-- Send private message button -->
+    <button mat-icon-button matTooltip="Send private message" (click)="openSendMessage()">
+      <mat-icon>message</mat-icon>
+    </button>
 
-      <!-- Zap Button -->
-      @if (hasLightningAddress()) {
-        <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
-      }
+    <!-- Zap Button -->
+    @if (hasLightningAddress()) {
+    <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
+    }
 
-      <!-- Gift Premium Button - Only show if user doesn't have premium -->
-      @if (!isPremium()) {
-        <button mat-icon-button matTooltip="Gift Premium subscription" (click)="giftPremium()">
-          <mat-icon>card_giftcard</mat-icon>
-        </button>
-      }
+    <!-- Gift Premium Button - Only show if user doesn't have premium -->
+    @if (!isPremium()) {
+    <button mat-icon-button matTooltip="Gift Premium subscription" (click)="giftPremium()">
+      <mat-icon>card_giftcard</mat-icon>
+    </button>
+    }
     }
 
     <button mat-icon-button [matMenuTriggerFor]="viewOptionsMenu" matTooltip="Display options">
@@ -31,11 +31,11 @@
     </button>
 
     @if (!isLoading() && !error()) {
-      <button mat-icon-button [matMenuTriggerFor]="profileMenu" matTooltip="More options">
-        <mat-icon>more_vert</mat-icon>
-      </button>
+    <button mat-icon-button [matMenuTriggerFor]="profileMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
     }
-    
+
     <mat-menu #viewOptionsMenu="matMenu" class="view-options-menu" [overlapTrigger]="false">
       <div class="view-options-header" (click)="preventMenuClose($event)">
         <span>Display Options</span>
@@ -47,38 +47,38 @@
     <!-- Profile Menu (moved from profile-header) -->
     <mat-menu #profileMenu="matMenu">
       @if (!isOwnProfile()) {
-        <button mat-menu-item (click)="openSendMessage()">
-          <mat-icon>message</mat-icon>
-          <span>Message</span>
-        </button>
+      <button mat-menu-item (click)="openSendMessage()">
+        <mat-icon>message</mat-icon>
+        <span>Message</span>
+      </button>
 
-        @if (hasLightningAddress()) {
-          <button mat-menu-item (click)="zapUser()">
-            <mat-icon>bolt</mat-icon>
-            <span>Zap</span>
-          </button>
-        }
+      @if (hasLightningAddress()) {
+      <button mat-menu-item (click)="zapUser()">
+        <mat-icon>bolt</mat-icon>
+        <span>Zap</span>
+      </button>
+      }
 
-        <!-- Gift Premium - Only show if user doesn't have premium -->
-        @if (!isPremium()) {
-          <button mat-menu-item (click)="giftPremium()">
-            <mat-icon>card_giftcard</mat-icon>
-            <span>Gift Premium</span>
-          </button>
-        }
+      <!-- Gift Premium - Only show if user doesn't have premium -->
+      @if (!isPremium()) {
+      <button mat-menu-item (click)="giftPremium()">
+        <mat-icon>card_giftcard</mat-icon>
+        <span>Gift Premium</span>
+      </button>
+      }
       }
 
       <mat-divider></mat-divider>
       @if (!isFollowing()) {
-        <button mat-menu-item (click)="followUser()">
-          <mat-icon>person_add</mat-icon>
-          <span>{{ isFollowingMe() ? 'Follow Back' : 'Follow' }}</span>
-        </button>
+      <button mat-menu-item (click)="followUser()">
+        <mat-icon>person_add</mat-icon>
+        <span>{{ isFollowingMe() ? 'Follow Back' : 'Follow' }}</span>
+      </button>
       } @else {
-        <button mat-menu-item (click)="unfollowUser()">
-          <mat-icon>person_remove</mat-icon>
-          <span>Unfollow</span>
-        </button>
+      <button mat-menu-item (click)="unfollowUser()">
+        <mat-icon>person_remove</mat-icon>
+        <span>Unfollow</span>
+      </button>
       }
 
       <button mat-menu-item (click)="toggleFavorite()">
@@ -91,10 +91,10 @@
       </button>
 
       @if (isOwnProfile()) {
-        <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
-          <mat-icon>edit</mat-icon>
-          <span>Edit Profile</span>
-        </button>
+      <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
+        <mat-icon>edit</mat-icon>
+        <span>Edit Profile</span>
+      </button>
       }
 
       <button mat-menu-item [matMenuTriggerFor]="copyMenu">
@@ -118,22 +118,22 @@
       </button>
 
       @if (!isOwnProfile()) {
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="reportUser()">
-          <mat-icon>warning</mat-icon>
-          <span>Report User</span>
-        </button>
-        @if (isUserBlocked()) {
-          <button mat-menu-item (click)="blockUser()">
-            <mat-icon>check_circle</mat-icon>
-            <span>Unblock User</span>
-          </button>
-        } @else {
-          <button mat-menu-item (click)="blockUser()">
-            <mat-icon>block</mat-icon>
-            <span>Block User</span>
-          </button>
-        }
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="reportUser()">
+        <mat-icon>warning</mat-icon>
+        <span>Report User</span>
+      </button>
+      @if (isUserBlocked()) {
+      <button mat-menu-item (click)="blockUser()">
+        <mat-icon>check_circle</mat-icon>
+        <span>Unblock User</span>
+      </button>
+      } @else {
+      <button mat-menu-item (click)="blockUser()">
+        <mat-icon>block</mat-icon>
+        <span>Block User</span>
+      </button>
+      }
       }
     </mat-menu>
 
@@ -191,10 +191,10 @@
     <!-- Submenu for Lists -->
     <mat-menu #followSetsMenu="matMenu">
       @for (set of availableFollowSets(); track set.id) {
-        <button mat-menu-item (click)="addToFollowSet(set.dTag)">
-          <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-          <span>{{ set.title }}</span>
-        </button>
+      <button mat-menu-item (click)="addToFollowSet(set.dTag)">
+        <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+        <span>{{ set.title }}</span>
+      </button>
       }
       <mat-divider></mat-divider>
       <button mat-menu-item (click)="createNewFollowSet()">
@@ -286,7 +286,13 @@
   </div>
 
   <div class="profile-outlet" [class.mobile]="layoutService.isHandset()">
+    @if (isInRightPanel()) {
+    <!-- When in right panel (auxiliary outlet), render profile-home directly without nested routing -->
+    <!-- This avoids Angular router state tree issues with nested children in auxiliary outlets -->
+    <app-profile-home></app-profile-home>
+    } @else {
     <router-outlet></router-outlet>
+    }
   </div>
   }
   }

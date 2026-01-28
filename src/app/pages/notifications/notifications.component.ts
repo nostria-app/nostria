@@ -454,9 +454,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     if (contentNotif.authorPubkey) {
       // Mark notification as read
       this.markAsRead(notification.id);
-      // Always use npub in URLs for consistency and bookmarkability
-      const npub = contentNotif.authorPubkey.startsWith('npub') ? contentNotif.authorPubkey : nip19.npubEncode(contentNotif.authorPubkey);
-      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+      this.layout.openProfile(contentNotif.authorPubkey);
     }
   }
 
@@ -471,9 +469,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // For new follower notifications, navigate to the follower's profile
     if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
-      // Always use npub in URLs for consistency and bookmarkability
-      const npub = contentNotif.authorPubkey.startsWith('npub') ? contentNotif.authorPubkey : nip19.npubEncode(contentNotif.authorPubkey);
-      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+      this.layout.openProfile(contentNotif.authorPubkey);
       return;
     }
 

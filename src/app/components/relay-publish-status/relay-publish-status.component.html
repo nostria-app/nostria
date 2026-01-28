@@ -23,7 +23,7 @@
     </mat-card-title>
     <mat-card-subtitle>
       <div class="subtitle-row">
-        <span>Event ID: <a [routerLink]="[{ outlets: { right: ['e', notification.event.id] } }]">{{
+        <span>Event ID: <a (click)="layout.openGenericEvent(notification.event.id)" tabindex="0">{{
             notification.event.id.substring(0, 8)
             }}</a>...</span>
         <span class="progress-text">{{ progress | number:'1.0-0' }}% complete</span>

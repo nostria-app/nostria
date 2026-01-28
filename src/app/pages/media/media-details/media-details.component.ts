@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, DestroyRef, viewChild, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -20,6 +20,7 @@ import { PublishService } from '../../../services/publish.service';
 import { nip19 } from 'nostr-tools';
 import { AudioPlayerComponent } from '../../../components/audio-player/audio-player.component';
 import { VideoControlsComponent } from '../../../components/video-controls/video-controls.component';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-media-details',
@@ -40,7 +41,7 @@ import { VideoControlsComponent } from '../../../components/video-controls/video
 })
 export class MediaDetailsComponent {
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  private layout = inject(LayoutService);
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -332,7 +333,7 @@ export class MediaDetailsComponent {
           duration: 3000,
         });
         // Close the right panel after deletion
-        this.router.navigate([{ outlets: { right: null } }]);
+        this.layout.closeRightPanel();
       } catch (error) {
         this.snackBar.open('Failed to delete media', 'Close', {
           duration: 3000,
@@ -410,7 +411,7 @@ export class MediaDetailsComponent {
           author: signedEvent.pubkey,
           kind: signedEvent.kind,
         });
-        this.router.navigate([{ outlets: { right: ['e', neventId] } }], { state: { event: signedEvent } });
+        this.layout.openGenericEvent(neventId, signedEvent);
       } else {
         this.snackBar.open('Failed to publish to some relays', 'Close', {
           duration: 5000,
@@ -585,7 +586,7 @@ export class MediaDetailsComponent {
 
   goBack(): void {
     // Close the right panel
-    this.router.navigate([{ outlets: { right: null } }]);
+    this.layout.closeRightPanel();
   }
 
   getMediaIcon(type: string | null | undefined): string {

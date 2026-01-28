@@ -526,9 +526,10 @@ export class PanelNavigationService {
       this._rightStack.set([]);
       this._isBackNavigation = true;
 
-      // Clear the right outlet - must use outlets: { right: null } to remove the auxiliary route
-      // This preserves the primary outlet (left panel content) and only clears the right outlet
-      this.router.navigate([{ outlets: { right: null } }]);
+      // Clear the right outlet by navigating to just the primary path
+      const currentUrl = this.router.url;
+      const primaryPath = currentUrl.split('(')[0] || '/';
+      this.router.navigateByUrl(primaryPath);
       return;
     }
 
@@ -537,8 +538,12 @@ export class PanelNavigationService {
     const prev = newStack[newStack.length - 1];
     this._rightStack.set(newStack);
     this._isBackNavigation = true;
-    // Navigate to previous right panel route
-    this.router.navigate([{ outlets: { right: prev.path.split('/') } }]);
+    
+    // Navigate to previous right panel route using navigateByUrl
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:${prev.path})`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**

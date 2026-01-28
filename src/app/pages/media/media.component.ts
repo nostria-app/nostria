@@ -337,7 +337,7 @@ export class MediaComponent {
 
     // Otherwise, navigate to details
     this.localStorage.setItem(this.appState.MEDIA_FILTER, this.mediaFilter());
-    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
+    this.layout.openMediaDetails(item.sha256);
   }
 
   selectAll(): void {
@@ -409,7 +409,7 @@ export class MediaComponent {
 
   openDetailsDialog(item: MediaItem): void {
     this.localStorage.setItem(this.appState.MEDIA_FILTER, this.mediaFilter());
-    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
+    this.layout.openMediaDetails(item.sha256);
   }
 
   openMediaPreview(event: Event, item: MediaItem): void {
@@ -440,7 +440,7 @@ export class MediaComponent {
     }
 
     this.localStorage.setItem(this.appState.MEDIA_FILTER, this.mediaFilter());
-    this.router.navigate([{ outlets: { right: ['collections', 'media', 'details', item.sha256] } }]);
+    this.layout.openMediaDetails(item.sha256);
   }
 
   async deleteSelected(sha256?: string): Promise<void> {
@@ -752,7 +752,7 @@ export class MediaComponent {
         );
 
         if (lastSuccessfulEventId) {
-          this.router.navigate([{ outlets: { right: ['e', lastSuccessfulEventId] } }]);
+          this.layout.openGenericEvent(lastSuccessfulEventId);
         }
       } else {
         this.snackBar.open('Failed to publish items', 'Close', { duration: 3000 });

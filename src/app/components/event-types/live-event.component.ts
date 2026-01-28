@@ -15,6 +15,7 @@ import { MediaItem } from '../../interfaces';
 import { IgdbService, GameData } from '../../services/igdb.service';
 import { GameHoverCardService } from '../../services/game-hover-card.service';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-live-event',
@@ -37,6 +38,7 @@ export class LiveEventComponent {
   @ViewChild('gameCoverElement') gameCoverElement?: ElementRef<HTMLElement>;
 
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private mediaPlayer = inject(MediaPlayerService);
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
@@ -331,7 +333,7 @@ export class LiveEventComponent {
       // Fallback to event page
       const event = this.event();
       if (event) {
-        this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
+        this.layout.openGenericEvent(event.id);
       }
     }
   }

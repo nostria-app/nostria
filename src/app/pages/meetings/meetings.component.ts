@@ -13,8 +13,8 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
-import { Router } from '@angular/router';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { LayoutService } from '../../services/layout.service';
 
 interface MeetingSpace {
   event: Event;
@@ -43,7 +43,7 @@ export class MeetingsComponent {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
-  private router = inject(Router);
+  private layout = inject(LayoutService);
 
   meetingSpaces = signal<MeetingSpace[]>([]);
   loading = signal(true);
@@ -246,12 +246,12 @@ export class MeetingsComponent {
       window.open(serviceUrl, '_blank', 'noopener,noreferrer');
     } else {
       // Fallback to event page
-      this.router.navigate([{ outlets: { right: ['e', space.id] } }]);
+      this.layout.openGenericEvent(space.id);
     }
   }
 
   viewMeeting(meeting: Event): void {
-    this.router.navigate([{ outlets: { right: ['e', meeting.id] } }]);
+    this.layout.openGenericEvent(meeting.id);
   }
 
   getStatusIcon(status: string): string {

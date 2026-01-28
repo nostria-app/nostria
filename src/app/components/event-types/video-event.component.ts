@@ -15,6 +15,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
+import { LayoutService } from '../../services/layout.service';
 
 interface VideoData {
   url: string;
@@ -61,6 +62,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   @ViewChild(VideoControlsComponent) videoControlsRef?: VideoControlsComponent;
 
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
@@ -666,7 +668,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           panelClass: 'media-with-comments-dialog',
         });
       } else {
-        this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
+        this.layout.openGenericEvent(event.id);
       }
     }
   }

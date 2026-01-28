@@ -41,6 +41,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
 import { nip19, Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
+import { LayoutService } from '../../services/layout.service';
 import { getEventHash } from 'nostr-tools/pure';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { PowService, PowProgress } from '../../services/pow.service';
@@ -163,6 +164,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private powService = inject(PowService);
   private mentionInputService = inject(MentionInputService);
   private dataService = inject(DataService);
@@ -1237,7 +1239,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             author: signedEvent.pubkey,
             kind: signedEvent.kind,
           });
-          this.router.navigate([{ outlets: { right: ['e', nevent] } }], { state: { event: signedEvent } });
+          this.layout.openGenericEvent(nevent, signedEvent);
 
           // Unsubscribe after handling
           if (this.publishSubscription) {

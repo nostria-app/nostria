@@ -974,7 +974,7 @@ export class LayoutService implements OnDestroy {
 
   navigateToProfile(npub: string): void {
     // Profile always opens in the right panel
-    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+    this.openProfile(npub);
   }
   onSearchInput(event: any) {
     if (event.target.value === null) {
@@ -1155,11 +1155,51 @@ export class LayoutService implements OnDestroy {
     );
   }
 
+  /**
+   * Navigate to a route in the right panel using navigateByUrl.
+   * Uses navigateByUrl with full URL construction to avoid router state issues.
+   * @param rightPath The path for the right panel (e.g., 'p/npub...' or 'e/nevent...')
+   * @param options Optional navigation state
+   */
+  navigateToRightPanel(rightPath: string, options?: { state?: Record<string, unknown> }): void {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:${rightPath})`;
+    this.router.navigateByUrl(targetUrl, options);
+  }
+
+  /**
+   * Close the right panel by navigating to the primary path only.
+   */
+  closeRightPanel(): void {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    this.router.navigateByUrl(primaryPath);
+  }
+
+  /**
+   * Open media details in the right panel.
+   * @param sha256 The SHA256 hash of the media item
+   */
+  openMediaDetails(sha256: string): void {
+    this.navigateToRightPanel(`collections/media/details/${sha256}`);
+  }
+
   openProfile(pubkey: string): void {
     // Always use npub in URLs for consistency and bookmarkability
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
-    // Profile always opens in the right panel using named outlet routing
-    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+    
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    
+    // If we're already on a profile page in primary, navigate to the new profile as primary
+    // This avoids "profile in profile" routing issues with Angular's auxiliary outlets
+    if (primaryPath.startsWith('/p/')) {
+      this.router.navigateByUrl(`/p/${npub}`);
+      return;
+    }
+    
+    this.navigateToRightPanel(`p/${npub}`);
   }
 
   /**
@@ -1169,7 +1209,7 @@ export class LayoutService implements OnDestroy {
   openProfileAsPrimary(pubkey: string): void {
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     // Navigate to primary outlet and clear right panel
-    this.router.navigate([{ outlets: { primary: ['p', npub], right: null } }]);
+    this.router.navigateByUrl(`/p/${npub}`);
   }
 
   openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
@@ -1234,9 +1274,13 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string): void {
-    // Open events in the right panel using named outlet routing
-    // This provides consistent behavior across all list views (bookmarks, summary, feeds, etc.)
-    this.router.navigate([{ outlets: { right: ['e', eventId] } }], {
+    // Get current primary route to preserve it when opening right panel
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    
+    // Construct the full URL with the right outlet
+    const targetUrl = `${primaryPath}(right:e/${eventId})`;
+    this.router.navigateByUrl(targetUrl, {
       state: { event, trustedByPubkey }
     });
   }
@@ -1246,7 +1290,7 @@ export class LayoutService implements OnDestroy {
    * Used when navigating from search to make the event the main focus.
    */
   openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string): void {
-    this.router.navigate([{ outlets: { primary: ['e', eventId], right: null } }], {
+    this.router.navigateByUrl(`/e/${eventId}`, {
       state: { event, trustedByPubkey }
     });
   }
@@ -1309,9 +1353,28 @@ export class LayoutService implements OnDestroy {
     });
   }
 
-  openArticle(naddr: string, event?: Event): void {
-    // Open article in the right panel using named outlet routing
-    this.router.navigate([{ outlets: { right: ['a', naddr] } }], {
+  openArticle(naddr: string, eventOrSlug?: Event | string, maybeSlug?: string): void {
+    // Handle overloaded parameters: (naddr, event?) or (naddr, slug) or (naddr, event, slug)
+    let event: Event | undefined;
+    let slug: string | undefined;
+    
+    if (typeof eventOrSlug === 'string') {
+      // Second parameter is a slug, not an event
+      slug = eventOrSlug;
+    } else {
+      event = eventOrSlug;
+      slug = maybeSlug;
+    }
+    
+    // Get current primary route to preserve it when opening right panel
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    
+    // Construct the full URL with the right outlet (with optional slug)
+    const targetUrl = slug 
+      ? `${primaryPath}(right:a/${naddr}/${slug})`
+      : `${primaryPath}(right:a/${naddr})`;
+    this.router.navigateByUrl(targetUrl, {
       state: { articleEvent: event }
     });
   }
@@ -1321,7 +1384,7 @@ export class LayoutService implements OnDestroy {
    * Used when navigating from search to make the article the main focus.
    */
   openArticleAsPrimary(naddr: string, event?: Event): void {
-    this.router.navigate([{ outlets: { primary: ['a', naddr], right: null } }], {
+    this.router.navigateByUrl(`/a/${naddr}`, {
       state: { articleEvent: event }
     });
   }
@@ -1331,14 +1394,20 @@ export class LayoutService implements OnDestroy {
    * @param zapReceiptId - The zap receipt event ID (hex or nevent encoded)
    */
   openZapDetail(zapReceiptId: string): void {
-    this.router.navigate([{ outlets: { right: ['z', zapReceiptId] } }]);
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:z/${zapReceiptId})`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**
    * Open a music playlist in the right panel
    */
   openMusicPlaylist(pubkey: string, dTag: string, event?: Event): void {
-    this.router.navigate([{ outlets: { right: ['music', 'playlist', pubkey, dTag] } }], {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:music/playlist/${pubkey}/${dTag})`;
+    this.router.navigateByUrl(targetUrl, {
       state: { playlistEvent: event }
     });
   }
@@ -1347,14 +1416,20 @@ export class LayoutService implements OnDestroy {
    * Open a music artist in the right panel
    */
   openMusicArtist(npub: string): void {
-    this.router.navigate([{ outlets: { right: ['music', 'artist', npub] } }]);
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:music/artist/${npub})`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**
    * Open a song detail in the right panel
    */
   openSongDetail(pubkey: string, dTag: string, event?: Event): void {
-    this.router.navigate([{ outlets: { right: ['music', 'song', pubkey, dTag] } }], {
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:music/song/${pubkey}/${dTag})`;
+    this.router.navigateByUrl(targetUrl, {
       state: { songEvent: event }
     });
   }
@@ -1363,14 +1438,20 @@ export class LayoutService implements OnDestroy {
    * Open liked songs in the right panel
    */
   openMusicLiked(): void {
-    this.router.navigate([{ outlets: { right: ['music', 'liked'] } }]);
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:music/liked)`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**
    * Open liked playlists in the right panel
    */
   openMusicLikedPlaylists(): void {
-    this.router.navigate([{ outlets: { right: ['music', 'liked-playlists'] } }]);
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:music/liked-playlists)`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**
@@ -1419,7 +1500,10 @@ export class LayoutService implements OnDestroy {
   }
 
   openBadgesPage(pubkeyOrNpub: string): void {
-    this.router.navigate([{ outlets: { right: ['user-badges', pubkeyOrNpub] } }]);
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:user-badges/${pubkeyOrNpub})`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   scrollToOptimalProfilePosition() {
@@ -2198,9 +2282,7 @@ export class LayoutService implements OnDestroy {
     this.panelNavigation.clearRightStack();
 
     // Navigate to messages and explicitly clear the right outlet
-    this.router.navigate([{ outlets: { primary: ['messages'], right: null } }], {
-      queryParams: { pubkey: pubkey },
-    });
+    this.router.navigateByUrl(`/messages?pubkey=${encodeURIComponent(pubkey)}`);
   }
 
   /**

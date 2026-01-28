@@ -1394,9 +1394,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   viewProfile(): void {
     const pubkey = this.selectedChat()?.pubkey;
     if (pubkey) {
-      // Always use npub in URLs for consistency and bookmarkability
-      const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
-      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+      this.layout.openProfile(pubkey);
     }
   }
 

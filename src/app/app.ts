@@ -674,7 +674,7 @@ export class App implements OnInit {
       this.rightPanel.clearHistory();
       this.panelActions.clearRightPanelActions();
       // Navigate to clear the right outlet, preserving query params (e.g., /f?t=bitcoin for dynamic hashtag feeds)
-      this.router.navigate([{ outlets: { right: null } }], { replaceUrl: true, queryParamsHandling: 'preserve' });
+      this.layout.closeRightPanel();
     });
 
     // Track route changes for cache clearing
@@ -1222,13 +1222,12 @@ export class App implements OnInit {
       if (entity.startsWith('npub') || entity.startsWith('nprofile')) {
         // Handle profile entities
         if (entity.startsWith('npub')) {
-          this.router.navigate([{ outlets: { right: ['p', entity] } }]);
+          this.layout.openProfile(entity);
         } else {
           // nprofile - decode to get pubkey, then encode as npub for URL
           const decoded = nip19.decode(entity);
           if (decoded.type === 'nprofile' && typeof decoded.data === 'object' && decoded.data && 'pubkey' in decoded.data) {
-            const npub = nip19.npubEncode(decoded.data.pubkey);
-            this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+            this.layout.openProfile(decoded.data.pubkey);
           } else {
             throw new Error('Invalid nprofile data');
           }
@@ -1869,7 +1868,7 @@ export class App implements OnInit {
     this.panelNav.clearRightStack();
 
     // Navigate to feeds and clear right outlet in one navigation
-    this.router.navigate([{ outlets: { primary: ['f'], right: null } }]);
+    this.router.navigateByUrl('/f');
   }
 
   /**
@@ -1930,23 +1929,21 @@ export class App implements OnInit {
    * Open event in right panel using routing
    */
   openEventInRightPanel(eventId: string): void {
-    this.router.navigate([{ outlets: { right: ['e', eventId] } }]);
+    this.layout.openGenericEvent(eventId);
   }
 
   /**
    * Open article in right panel using routing
    */
   openArticleInRightPanel(naddr: string): void {
-    this.router.navigate([{ outlets: { right: ['a', naddr] } }]);
+    this.layout.openArticle(naddr);
   }
 
   /**
    * Open profile in right panel using routing
    */
   openProfileInRightPanel(pubkey: string): void {
-    // Always use npub in URLs for consistency and bookmarkability
-    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
-    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+    this.layout.openProfile(pubkey);
   }
 
   /**
