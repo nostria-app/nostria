@@ -74,6 +74,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   isFullscreen = signal(false);
   volumeSliderVisible = signal(false);
   isReady = signal(false);
+  hasError = signal(false);
+
+  // Fallback blob URL when QUIC protocol fails
+  private blobUrl = signal<string | null>(null);
+  private hasTriedBlobFallback = false;
+
+  // Computed source - use blob URL if available, otherwise original src
+  effectiveSrc = computed(() => this.blobUrl() ?? this.src());
 
   // Computed mute state - uses persisted state from service
   // The muted input is only used during initial load if no persisted state exists
@@ -195,6 +203,12 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.intersectionObserver.disconnect();
     }
 
+    // Clean up blob URL if created
+    const blob = this.blobUrl();
+    if (blob) {
+      URL.revokeObjectURL(blob);
+    }
+
     // Unregister from video playback service
     const video = this.videoElement?.nativeElement;
     if (video) {
@@ -248,9 +262,20 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     };
     const onCanPlay = () => {
       this.isReady.set(true);
+      this.hasError.set(false);
       this.videoCanPlay.emit();
     };
-    const onError = (e: Event) => this.videoError.emit(e as ErrorEvent);
+    const onError = (e: Event) => {
+      // Try blob fallback on network errors (like QUIC protocol errors)
+      // This fetches the video without range requests, bypassing QUIC issues
+      if (!this.hasTriedBlobFallback && this.src()) {
+        this.hasTriedBlobFallback = true;
+        this.tryBlobFallback();
+      } else {
+        this.hasError.set(true);
+        this.videoError.emit(e as ErrorEvent);
+      }
+    };
 
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
@@ -288,6 +313,41 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     if (this.videoEventCleanup) {
       this.videoEventCleanup();
       this.videoEventCleanup = null;
+    }
+  }
+
+  /**
+   * Fallback for QUIC protocol errors.
+   * Fetches the video as a blob without range requests, which bypasses
+   * QUIC/HTTP3 issues that can occur with partial content (206) responses.
+   */
+  private async tryBlobFallback(): Promise<void> {
+    const url = this.src();
+    if (!url || !isPlatformBrowser(this.platformId)) return;
+
+    try {
+      const response = await fetch(url, {
+        // Avoid range requests by not specifying any range headers
+        headers: {
+          // Some servers respect this hint to disable HTTP/3
+          'Accept': 'video/*',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      this.blobUrl.set(blobUrl);
+
+      // The video element will automatically update due to effectiveSrc() change
+      // Reset error state since we're retrying
+      this.hasError.set(false);
+    } catch {
+      // Blob fallback also failed, show error state
+      this.hasError.set(true);
     }
   }
 

@@ -90,6 +90,51 @@
   }
 }
 
+// Error overlay
+.error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  z-index: 10;
+  padding: 20px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-error, #f44336);
+  }
+
+  span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .open-link {
+    color: var(--mat-sys-primary, #FDA100);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 8px 16px;
+    border: 1px solid var(--mat-sys-primary, #FDA100);
+    border-radius: 20px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: rgba(253, 161, 0, 0.1);
+    }
+  }
+}
+
 // Controls bar
 .controls-bar {
   position: relative;
