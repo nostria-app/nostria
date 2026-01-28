@@ -9,6 +9,21 @@
   overflow: hidden;
 }
 
+.dialog-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px;
+  background-color: var(--mat-sys-surface-container);
+
+  .close-button {
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+}
+
 .search-header {
   display: flex;
   align-items: center;
@@ -46,15 +61,6 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
-    }
-  }
-
-  .close-button {
-    margin-left: 8px;
-    color: var(--mat-sys-on-surface-variant);
-
-    &:hover {
-      color: var(--mat-sys-on-surface);
     }
   }
 }
@@ -192,5 +198,83 @@
 
   100% {
     transform: rotate(360deg);
+  }
+}
+
+// Responsive styles for smaller screens
+@media (max-width: 600px) {
+  .command-palette-container {
+    max-height: 70dvh;
+  }
+
+  .dialog-top-bar {
+    padding: 2px 4px;
+  }
+
+  .search-header {
+    padding: 10px 12px;
+
+    .search-icon {
+      margin-right: 8px;
+    }
+
+    .search-input {
+      font-size: 16px;
+      // Prevents iOS zoom on focus
+      touch-action: manipulation;
+    }
+
+    // Hide keyboard shortcuts on mobile - they're not relevant for touch users
+    .shortcuts {
+      display: none;
+    }
+  }
+
+  .footer {
+    padding: 6px 12px;
+
+    .voice-button {
+      span {
+        // Hide text label on very small screens, keep icon
+        @media (max-width: 360px) {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .no-results {
+    padding: 24px 16px;
+
+    &.listening-hint {
+      mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+      }
+    }
+  }
+}
+
+// Extra small screens (very narrow phones)
+@media (max-width: 360px) {
+  .dialog-top-bar {
+    padding: 2px 2px;
+  }
+
+  .search-header {
+    padding: 8px 10px;
+
+    .search-input {
+      font-size: 15px;
+    }
+  }
+
+  .results-list {
+    padding: 4px 0;
+  }
+
+  .footer {
+    padding: 4px 10px;
   }
 }
