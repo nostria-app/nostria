@@ -57,7 +57,8 @@ app-user-profile {
     margin-right: 0;
   }
 
-  .panel-header-inner {
+  // Must match specificity of .home-container .panel-header .panel-header-inner
+  .home-container .panel-header .panel-header-inner {
     margin-left: auto;
     margin-right: 0;
   }
@@ -70,7 +71,8 @@ app-user-profile {
     margin-right: auto;
   }
 
-  .panel-header-inner {
+  // Must match specificity of .home-container .panel-header .panel-header-inner
+  .home-container .panel-header .panel-header-inner {
     margin-left: auto;
     margin-right: auto;
   }
