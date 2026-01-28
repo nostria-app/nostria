@@ -9,8 +9,11 @@ import {
   computed,
   input,
   OnDestroy,
+  TemplateRef,
+  viewChild,
+  AfterViewInit,
 } from '@angular/core';
-import { isPlatformBrowser, Location } from '@angular/common';
+import { isPlatformBrowser, Location, NgTemplateOutlet } from '@angular/common';
 import {
   ActivatedRoute,
   ParamMap,
@@ -59,6 +62,8 @@ import { ReportingService, ReportTarget } from '../../services/reporting.service
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ProfileViewOptionsInlineComponent } from './profile-view-options/profile-view-options-inline.component';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { RightPanelHeaderService } from '../../services/right-panel-header.service';
+import { LeftPanelHeaderService } from '../../services/left-panel-header.service';
 import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
 import { ZapDialogComponent, ZapDialogData } from '../../components/zap-dialog/zap-dialog.component';
@@ -78,6 +83,7 @@ import { firstValueFrom } from 'rxjs';
   imports: [
     RouterModule,
     RouterOutlet,
+    NgTemplateOutlet,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -111,9 +117,12 @@ import { firstValueFrom } from 'rxjs';
     },
   ],
 })
-export class ProfileComponent implements OnDestroy {
+export class ProfileComponent implements OnDestroy, AfterViewInit {
   // Input for two-column layout mode - when provided, uses this instead of route params
   twoColumnPubkey = input<string | undefined>(undefined);
+
+  // Template reference for the header (used when in right panel)
+  readonly headerTemplate = viewChild<TemplateRef<unknown>>('headerTemplate');
 
   private data = inject(DataService);
   private route = inject(ActivatedRoute);
@@ -138,6 +147,8 @@ export class ProfileComponent implements OnDestroy {
   private readonly reportingService = inject(ReportingService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly panelNav = inject(PanelNavigationService);
+  private readonly rightPanelHeader = inject(RightPanelHeaderService);
+  private readonly leftPanelHeader = inject(LeftPanelHeaderService);
   private readonly zapService = inject(ZapService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly followSetsService = inject(FollowSetsService);
@@ -1251,8 +1262,27 @@ export class ProfileComponent implements OnDestroy {
     return `${baseUrl}${url}`;
   }
 
+  ngAfterViewInit(): void {
+    // Register header template with the appropriate panel header service
+    const template = this.headerTemplate();
+    if (template) {
+      if (this.isInRightPanel()) {
+        this.rightPanelHeader.setHeaderTemplate(template);
+      } else {
+        this.leftPanelHeader.setHeaderTemplate(template);
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     // Clean up the ProfileState instance to prevent memory leaks
     this.profileState.destroy();
+    
+    // Clear the panel header when component is destroyed
+    if (this.isInRightPanel()) {
+      this.rightPanelHeader.clear();
+    } else {
+      this.leftPanelHeader.clear();
+    }
   }
 }

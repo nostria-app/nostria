@@ -419,6 +419,13 @@
             </div>
             }
 
+            <!-- Left panel sticky header - rendered at panel level for proper sticky behavior -->
+            @if (leftPanelHeader.headerTemplate()) {
+              <div class="panel-header-wrapper">
+                <ng-container *ngTemplateOutlet="leftPanelHeader.headerTemplate()"></ng-container>
+              </div>
+            }
+
             <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
             <div class="panel-content-wrapper">
               <!-- Left panel content - router outlet renders here for list routes -->
@@ -432,6 +439,13 @@
           <div class="right-panel" [class.active]="hasRightContent()"
             [class.overlay-mode]="panelNav.isMobile() && hasRightContent()"
             [class.expanded]="leftPanelCollapsed() && hasRightContent()" (scroll)="onRightPanelScroll($event)">
+
+            <!-- Right panel sticky header - rendered at panel level for proper sticky behavior -->
+            @if (rightPanelHeader.headerTemplate()) {
+              <div class="panel-header-wrapper">
+                <ng-container *ngTemplateOutlet="rightPanelHeader.headerTemplate()"></ng-container>
+              </div>
+            }
 
             <!-- Right panel inner content wrapper - constrains content to max 700px -->
             <div class="panel-content-wrapper">

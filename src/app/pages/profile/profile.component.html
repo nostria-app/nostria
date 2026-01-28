@@ -1,206 +1,212 @@
-<div class="panel-header">
-  <button mat-icon-button (click)="goBack()" matTooltip="Back">
-    <mat-icon>arrow_back</mat-icon>
-  </button>
-  <h2 class="panel-title title-font">{{ profileDisplayName() }}</h2>
-  <span class="panel-header-spacer"></span>
-
-  @if (!isOwnProfile() && !isLoading() && !error()) {
-    <!-- Send private message button -->
-    <button mat-icon-button matTooltip="Send private message" (click)="openSendMessage()">
-      <mat-icon>message</mat-icon>
+<!-- Header template - used by RightPanelHeaderService when in right panel -->
+<ng-template #headerTemplate>
+  <div class="panel-header">
+    <button mat-icon-button (click)="goBack()" matTooltip="Back">
+      <mat-icon>arrow_back</mat-icon>
     </button>
+    <h2 class="panel-title title-font">{{ profileDisplayName() }}</h2>
+    <span class="panel-header-spacer"></span>
 
-    <!-- Zap Button -->
-    @if (hasLightningAddress()) {
-      <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
-    }
-
-    <!-- Gift Premium Button - Only show if user doesn't have premium -->
-    @if (!isPremium()) {
-      <button mat-icon-button matTooltip="Gift Premium subscription" (click)="giftPremium()">
-        <mat-icon>card_giftcard</mat-icon>
-      </button>
-    }
-  }
-
-  <button mat-icon-button [matMenuTriggerFor]="viewOptionsMenu" matTooltip="Display options">
-    <mat-icon>tune</mat-icon>
-  </button>
-
-  @if (!isLoading() && !error()) {
-    <button mat-icon-button [matMenuTriggerFor]="profileMenu" matTooltip="More options">
-      <mat-icon>more_vert</mat-icon>
-    </button>
-  }
-  
-  <mat-menu #viewOptionsMenu="matMenu" class="view-options-menu" [overlapTrigger]="false">
-    <div class="view-options-header" (click)="preventMenuClose($event)">
-      <span>Display Options</span>
-    </div>
-    <mat-divider></mat-divider>
-    <app-profile-view-options-inline></app-profile-view-options-inline>
-  </mat-menu>
-
-  <!-- Profile Menu (moved from profile-header) -->
-  <mat-menu #profileMenu="matMenu">
-    @if (!isOwnProfile()) {
-      <button mat-menu-item (click)="openSendMessage()">
+    @if (!isOwnProfile() && !isLoading() && !error()) {
+      <!-- Send private message button -->
+      <button mat-icon-button matTooltip="Send private message" (click)="openSendMessage()">
         <mat-icon>message</mat-icon>
-        <span>Message</span>
       </button>
 
+      <!-- Zap Button -->
       @if (hasLightningAddress()) {
-        <button mat-menu-item (click)="zapUser()">
-          <mat-icon>bolt</mat-icon>
-          <span>Zap</span>
-        </button>
+        <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
       }
 
-      <!-- Gift Premium - Only show if user doesn't have premium -->
+      <!-- Gift Premium Button - Only show if user doesn't have premium -->
       @if (!isPremium()) {
-        <button mat-menu-item (click)="giftPremium()">
+        <button mat-icon-button matTooltip="Gift Premium subscription" (click)="giftPremium()">
           <mat-icon>card_giftcard</mat-icon>
-          <span>Gift Premium</span>
         </button>
       }
     }
 
-    <mat-divider></mat-divider>
-    @if (!isFollowing()) {
-      <button mat-menu-item (click)="followUser()">
-        <mat-icon>person_add</mat-icon>
-        <span>{{ isFollowingMe() ? 'Follow Back' : 'Follow' }}</span>
-      </button>
-    } @else {
-      <button mat-menu-item (click)="unfollowUser()">
-        <mat-icon>person_remove</mat-icon>
-        <span>Unfollow</span>
+    <button mat-icon-button [matMenuTriggerFor]="viewOptionsMenu" matTooltip="Display options">
+      <mat-icon>tune</mat-icon>
+    </button>
+
+    @if (!isLoading() && !error()) {
+      <button mat-icon-button [matMenuTriggerFor]="profileMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
       </button>
     }
-
-    <button mat-menu-item (click)="toggleFavorite()">
-      <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
-      <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
-    </button>
-    <button mat-menu-item [matMenuTriggerFor]="followSetsMenu">
-      <mat-icon>group_add</mat-icon>
-      <span>Add to list</span>
-    </button>
-
-    @if (isOwnProfile()) {
-      <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
-        <mat-icon>edit</mat-icon>
-        <span>Edit Profile</span>
-      </button>
-    }
-
-    <button mat-menu-item [matMenuTriggerFor]="copyMenu">
-      <mat-icon>content_copy</mat-icon>
-      <span>Copy</span>
-    </button>
-
-    <button mat-menu-item [matMenuTriggerFor]="shareMenu">
-      <mat-icon>share</mat-icon>
-      <span>Share</span>
-    </button>
-
-    <button mat-menu-item [matMenuTriggerFor]="publishEventMenu">
-      <mat-icon>publish</mat-icon>
-      <span>Publish Event</span>
-    </button>
-
-    <button mat-menu-item routerLink="details" [queryParamsHandling]="'preserve'">
-      <mat-icon>info</mat-icon>
-      <span>Details</span>
-    </button>
-
-    @if (!isOwnProfile()) {
+    
+    <mat-menu #viewOptionsMenu="matMenu" class="view-options-menu" [overlapTrigger]="false">
+      <div class="view-options-header" (click)="preventMenuClose($event)">
+        <span>Display Options</span>
+      </div>
       <mat-divider></mat-divider>
-      <button mat-menu-item (click)="reportUser()">
-        <mat-icon>warning</mat-icon>
-        <span>Report User</span>
-      </button>
-      @if (isUserBlocked()) {
-        <button mat-menu-item (click)="blockUser()">
-          <mat-icon>check_circle</mat-icon>
-          <span>Unblock User</span>
+      <app-profile-view-options-inline></app-profile-view-options-inline>
+    </mat-menu>
+
+    <!-- Profile Menu (moved from profile-header) -->
+    <mat-menu #profileMenu="matMenu">
+      @if (!isOwnProfile()) {
+        <button mat-menu-item (click)="openSendMessage()">
+          <mat-icon>message</mat-icon>
+          <span>Message</span>
+        </button>
+
+        @if (hasLightningAddress()) {
+          <button mat-menu-item (click)="zapUser()">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap</span>
+          </button>
+        }
+
+        <!-- Gift Premium - Only show if user doesn't have premium -->
+        @if (!isPremium()) {
+          <button mat-menu-item (click)="giftPremium()">
+            <mat-icon>card_giftcard</mat-icon>
+            <span>Gift Premium</span>
+          </button>
+        }
+      }
+
+      <mat-divider></mat-divider>
+      @if (!isFollowing()) {
+        <button mat-menu-item (click)="followUser()">
+          <mat-icon>person_add</mat-icon>
+          <span>{{ isFollowingMe() ? 'Follow Back' : 'Follow' }}</span>
         </button>
       } @else {
-        <button mat-menu-item (click)="blockUser()">
-          <mat-icon>block</mat-icon>
-          <span>Block User</span>
+        <button mat-menu-item (click)="unfollowUser()">
+          <mat-icon>person_remove</mat-icon>
+          <span>Unfollow</span>
         </button>
       }
-    }
-  </mat-menu>
 
-  <mat-menu #copyMenu="matMenu">
-    <button mat-menu-item (click)="copyNpub()">
-      <span>Identifier (npub)</span>
-    </button>
-    <button mat-menu-item (click)="copyHex()">
-      <span>Identifier (hex)</span>
-    </button>
-    <button mat-menu-item (click)="copyNprofile()">
-      <span>Identifier (nprofile)</span>
-    </button>
-    <button mat-menu-item (click)="copyProfileData()">
-      <span>Profile Data</span>
-    </button>
-    <button mat-menu-item (click)="copyProfileUrl()">
-      <mat-icon>link</mat-icon>
-      <span>Profile URL</span>
-    </button>
-    <button mat-menu-item (click)="copyFollowingList()">
-      <span>Following List</span>
-    </button>
-    <button mat-menu-item (click)="copyRelayList()">
-      <span>Relay List</span>
-    </button>
-  </mat-menu>
-
-  <mat-menu #shareMenu="matMenu">
-    <button mat-menu-item (click)="shareInviteLink()">
-      <mat-icon>person_add</mat-icon>
-      <span>Invitation</span>
-    </button>
-    <button mat-menu-item (click)="shareProfile()">
-      <mat-icon>share</mat-icon>
-      <span>Profile</span>
-    </button>
-  </mat-menu>
-
-  <mat-menu #publishEventMenu="matMenu">
-    <button mat-menu-item (click)="publishProfileEvent()">
-      <mat-icon>account_circle</mat-icon>
-      <span>Profile</span>
-    </button>
-    <button mat-menu-item (click)="publishRelayListEvent()">
-      <mat-icon>dns</mat-icon>
-      <span>Relay List</span>
-    </button>
-    <button mat-menu-item (click)="publishFollowingListEvent()">
-      <mat-icon>people</mat-icon>
-      <span>Following List</span>
-    </button>
-  </mat-menu>
-
-  <!-- Submenu for Lists -->
-  <mat-menu #followSetsMenu="matMenu">
-    @for (set of availableFollowSets(); track set.id) {
-      <button mat-menu-item (click)="addToFollowSet(set.dTag)">
-        <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-        <span>{{ set.title }}</span>
+      <button mat-menu-item (click)="toggleFavorite()">
+        <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+        <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
       </button>
-    }
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="createNewFollowSet()">
-      <mat-icon>add_circle</mat-icon>
-      <span>Create new list</span>
-    </button>
-  </mat-menu>
-</div>
+      <button mat-menu-item [matMenuTriggerFor]="followSetsMenu">
+        <mat-icon>group_add</mat-icon>
+        <span>Add to list</span>
+      </button>
+
+      @if (isOwnProfile()) {
+        <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
+          <mat-icon>edit</mat-icon>
+          <span>Edit Profile</span>
+        </button>
+      }
+
+      <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+        <mat-icon>content_copy</mat-icon>
+        <span>Copy</span>
+      </button>
+
+      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
+
+      <button mat-menu-item [matMenuTriggerFor]="publishEventMenu">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
+      </button>
+
+      <button mat-menu-item routerLink="details" [queryParamsHandling]="'preserve'">
+        <mat-icon>info</mat-icon>
+        <span>Details</span>
+      </button>
+
+      @if (!isOwnProfile()) {
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="reportUser()">
+          <mat-icon>warning</mat-icon>
+          <span>Report User</span>
+        </button>
+        @if (isUserBlocked()) {
+          <button mat-menu-item (click)="blockUser()">
+            <mat-icon>check_circle</mat-icon>
+            <span>Unblock User</span>
+          </button>
+        } @else {
+          <button mat-menu-item (click)="blockUser()">
+            <mat-icon>block</mat-icon>
+            <span>Block User</span>
+          </button>
+        }
+      }
+    </mat-menu>
+
+    <mat-menu #copyMenu="matMenu">
+      <button mat-menu-item (click)="copyNpub()">
+        <span>Identifier (npub)</span>
+      </button>
+      <button mat-menu-item (click)="copyHex()">
+        <span>Identifier (hex)</span>
+      </button>
+      <button mat-menu-item (click)="copyNprofile()">
+        <span>Identifier (nprofile)</span>
+      </button>
+      <button mat-menu-item (click)="copyProfileData()">
+        <span>Profile Data</span>
+      </button>
+      <button mat-menu-item (click)="copyProfileUrl()">
+        <mat-icon>link</mat-icon>
+        <span>Profile URL</span>
+      </button>
+      <button mat-menu-item (click)="copyFollowingList()">
+        <span>Following List</span>
+      </button>
+      <button mat-menu-item (click)="copyRelayList()">
+        <span>Relay List</span>
+      </button>
+    </mat-menu>
+
+    <mat-menu #shareMenu="matMenu">
+      <button mat-menu-item (click)="shareInviteLink()">
+        <mat-icon>person_add</mat-icon>
+        <span>Invitation</span>
+      </button>
+      <button mat-menu-item (click)="shareProfile()">
+        <mat-icon>share</mat-icon>
+        <span>Profile</span>
+      </button>
+    </mat-menu>
+
+    <mat-menu #publishEventMenu="matMenu">
+      <button mat-menu-item (click)="publishProfileEvent()">
+        <mat-icon>account_circle</mat-icon>
+        <span>Profile</span>
+      </button>
+      <button mat-menu-item (click)="publishRelayListEvent()">
+        <mat-icon>dns</mat-icon>
+        <span>Relay List</span>
+      </button>
+      <button mat-menu-item (click)="publishFollowingListEvent()">
+        <mat-icon>people</mat-icon>
+        <span>Following List</span>
+      </button>
+    </mat-menu>
+
+    <!-- Submenu for Lists -->
+    <mat-menu #followSetsMenu="matMenu">
+      @for (set of availableFollowSets(); track set.id) {
+        <button mat-menu-item (click)="addToFollowSet(set.dTag)">
+          <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          <span>{{ set.title }}</span>
+        </button>
+      }
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="createNewFollowSet()">
+        <mat-icon>add_circle</mat-icon>
+        <span>Create new list</span>
+      </button>
+    </mat-menu>
+  </div>
+</ng-template>
+
+<!-- Header is always rendered by the panel header service at app level -->
+<!-- This ensures proper sticky behavior in both left and right panels -->
 
 <div class="profile-page">
   @if (isLoading()) {
