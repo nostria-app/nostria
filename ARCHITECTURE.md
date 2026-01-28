@@ -1219,6 +1219,8 @@ All backend services use regional routing:
 
 Minimum 16px to prevent iOS Safari auto-zoom on focus
 
+Don't be afraid of adding global styles to "styles.scss" instead of doing component specific styles. This is to avoid duplicate and have more reuse.
+
 ### Component Best Practices
 
 ```typescript

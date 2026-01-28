@@ -1,8 +1,5 @@
 :host {
   display: block;
-  // Ensure the component fills the scroll container so the sticky header
-  // remains sticky throughout the entire scroll range
-  min-height: 100%;
 }
 
 // Component-specific panel-header nested styles
@@ -337,7 +334,9 @@
   }
 
   // In right panel, let content flow naturally
-  :host(.in-right-panel) & {
+  // Use both class-based and context-based detection for robustness
+  :host(.in-right-panel) &,
+  :host-context(.right-panel) & {
     height: auto;
     min-height: 0;
   }

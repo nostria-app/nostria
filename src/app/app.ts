@@ -107,6 +107,8 @@ import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { PanelActionsService } from './services/panel-actions.service';
 import { PlatformService } from './services/platform.service';
 import { NgTemplateOutlet } from '@angular/common';
+import { RightPanelHeaderService } from './services/right-panel-header.service';
+import { LeftPanelHeaderService } from './services/left-panel-header.service';
 
 interface NavItem {
   path: string;
@@ -237,6 +239,8 @@ export class App implements OnInit {
   panelNav = inject(PanelNavigationService);
   rightPanel = inject(RightPanelService);
   panelActions = inject(PanelActionsService);
+  rightPanelHeader = inject(RightPanelHeaderService);
+  leftPanelHeader = inject(LeftPanelHeaderService);
   private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
 
   // Right panel routing state - use PanelNavigationService as source of truth

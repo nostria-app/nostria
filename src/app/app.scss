@@ -1081,6 +1081,14 @@ mat-sidenav-content {
   // Center the content wrapper within the panel when max-width is set
   margin-left: auto;
   margin-right: auto;
+
+  // In right panel, remove all flex properties and height constraints
+  // This allows child components with sticky headers to work properly
+  .right-panel & {
+    display: block;
+    min-height: unset;
+    flex: unset;
+  }
 }
 
 // Left Panel - takes 50% or 100% of viewport, content constrained inside
@@ -1279,7 +1287,6 @@ mat-sidenav-content {
   max-width: 50%;
   min-height: 0;
   display: none;
-  flex-direction: column;
   position: relative;
   z-index: 5;
   // Transparent background - content renders behind main toolbar
@@ -1299,7 +1306,9 @@ mat-sidenav-content {
     z-index 0s linear;
 
   &.active {
-    display: flex;
+    // Use block layout instead of flex to allow sticky positioning to work properly
+    // Flex containers can interfere with sticky positioning in child elements
+    display: block;
   }
 
   &.full-width {
@@ -1325,6 +1334,20 @@ mat-sidenav-content {
       display: block;
     }
   }
+
+  // Components with sticky headers need their host element to extend full content height
+  // The .panel-with-sticky-header class is added by components that have a sticky .panel-header
+  .panel-with-sticky-header {
+    display: block;
+    // No height constraints - let content determine height
+  }
+
+  // Override any viewport-height constraints on profile-outlet when in right panel
+  // This ensures sticky headers work properly by letting content flow naturally
+  .profile-outlet {
+    height: auto !important;
+    min-height: 0 !important;
+  }
 }
 
 // Panel Content Area (used by both panels)
@@ -1342,24 +1365,150 @@ mat-sidenav-content {
     flex-direction: column;
   }
 
-  // Right panel content - NO flex, just block layout
-  // This allows position: sticky to work properly in child components
+  // Right panel content - block layout for proper sticky behavior
+  // Since .right-panel is now display: block, we don't need flex properties
   &.right-panel-content {
     display: block;
-    // Ensure height context for percentage-based children
-    // flex: 1 from parent makes this fill available space
-    // height: 100% passes this down to children
-    height: 100%;
+    min-height: unset;
+    flex: unset;
+    // Do NOT set overflow or height constraints that could break sticky
+  }
+}
 
-    // Components with sticky headers need special handling
-    // The host element must not create a new containing block that breaks sticky
-    .panel-with-sticky-header,
-    router-outlet+.panel-with-sticky-header {
-      display: block;
-      // Ensure component fills parent so sticky header works throughout scroll
-      min-height: 100%;
-      // Do NOT set overflow, height constraints, or transforms on the host
-      // as these break position: sticky on child elements
+// ============================================
+// Panel Header Wrapper (for sticky headers rendered at panel level)
+// ============================================
+// Wraps panel headers to constrain width while keeping sticky at panel edge
+// These rules mirror the .panel-content-wrapper rules for each layout context
+
+.panel-header-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  
+  // Glass effect background on the wrapper for full-width backdrop blur
+  background-color: rgba(250, 250, 250, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  
+  // Inner .panel-header should not have its own sticky/background
+  // Also set default max-width and centering (can be overridden by layout contexts)
+  // Use ::ng-deep because the .panel-header comes from other components via ngTemplateOutlet
+  // and has their view encapsulation attributes, not app's
+  ::ng-deep .panel-header {
+    position: relative;
+    top: auto;
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-bottom: none;
+    // Default width constraint - ensures max-width works
+    width: 100%;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+// Dark mode for wrapper
+.dark .panel-header-wrapper {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+// ============================================
+// Panel Header Wrapper - Layout Context Rules
+// ============================================
+// These rules mirror the .panel-content-wrapper max-width/margin rules
+// Use ::ng-deep because .panel-header comes from other components via ngTemplateOutlet
+
+.dual-panel-layout {
+  // Feeds visible (left panel only, no right content)
+  &.feeds-visible:not(.has-right-content) {
+    .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: var(--left-column-width, 700px);
+      margin: 0 auto;
+    }
+  }
+
+  // Wide left mode (e.g., Music without detail open)
+  &.wide-left:not(.has-right-content) {
+    .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: var(--left-column-width, 1400px);
+      margin: 0 auto;
+    }
+  }
+
+  // Left panel has routed content (without right panel)
+  &.has-left-content:not(.has-right-content) {
+    .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: var(--left-column-width, 700px);
+      margin: 0 auto;
+    }
+  }
+
+  // Both panels have content - side by side
+  &.has-right-content {
+    // Left panel: align to right (towards center)
+    .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: 0;
+    }
+
+    // Right panel: align to left (towards center)
+    .right-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: 700px;
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    // Tablet breakpoint - center both
+    @media (max-width: 1023px) {
+      .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .right-panel .panel-header-wrapper ::ng-deep .panel-header {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+  }
+
+  // Left panel collapsed - right takes full width
+  &.left-collapsed {
+    .right-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  // Full-width mode for right panel (Streams, Meetings, etc.)
+  &.right-full-width {
+    .right-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: none;
+    }
+  }
+
+  // Mobile layout
+  &.mobile-layout {
+    .left-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .right-panel .panel-header-wrapper ::ng-deep .panel-header {
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
   }
 }
