@@ -481,8 +481,8 @@
   }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-  @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
-  <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()">
+@if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
+  <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()" [class.sidenav-open]="opened()">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']"
       (click)="$event.preventDefault(); onMobileNavClick('/')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">

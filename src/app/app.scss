@@ -1774,6 +1774,11 @@ mat-sidenav-content {
     opacity: 0;
     pointer-events: none;
   }
+
+  // When sidenav is open, lower z-index so backdrop can receive clicks
+  &.sidenav-open {
+    z-index: 98; // Below backdrop (z-index: 99) so clicking anywhere dismisses sidenav
+  }
 }
 
 // Hide mobile nav completely when fullscreen is active
@@ -2336,14 +2341,11 @@ mat-sidenav-content {
   }
 }
 
-// Ensure backdrop appears above toolbar and mobile nav but below sidenav
+// Ensure backdrop appears above content but below sidenav
+// On mobile (over mode), backdrop must be below sidenav (z-index: 100) so sidenav is clickable
+// but above other content so it creates the dimming overlay effect
 .sidenav-container .mat-drawer-backdrop {
-  z-index: 1000 !important;
-
-  // On mobile, ensure backdrop is above mobile nav
-  @media (max-width: 599px) {
-    z-index: 1000 !important;
-  }
+  z-index: 99 !important;
 }
 
 // Fullscreen media player overlay
