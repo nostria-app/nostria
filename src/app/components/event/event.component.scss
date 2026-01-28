@@ -53,8 +53,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 8px 12px;
   // Match note content background for cohesive look
+  // Horizontal padding matches video player controls (12px)
   background-color: transparent;
   border-radius: 0 0 12px 12px;
 
@@ -69,6 +70,8 @@
   align-items: center;
   gap: 24px;
   flex: 1;
+  // Compensate for mat-icon-button internal padding to align with video player controls
+  margin-left: -10px;
 
   &.compact {
     gap: 12px;
