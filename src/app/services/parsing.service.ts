@@ -37,7 +37,8 @@ export interface ContentToken {
   | 'base64-audio'
   | 'base64-video'
   | 'cashu'
-  | 'hashtag';
+  | 'hashtag'
+  | 'rss-feed';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
@@ -325,6 +326,10 @@ export class ParsingService {
     const base64ImageRegex = /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
     const base64AudioRegex = /(data:audio\/[a-zA-Z0-9]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
     const base64VideoRegex = /(data:video\/[a-zA-Z0-9]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
+
+    // RSS feed URL regex - matches URLs containing rss.xml, .rss, feed.xml, /feed/, or /rss/
+    // Supports both with and without https:// prefix (e.g., podcast.example.com/rss.xml)
+    const rssFeedRegex = /((?:https?:\/\/)?[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/[^\s##"<>]*)?(?:rss\.xml|\.rss|feed\.xml|\/feed(?:\/|$)|\/rss(?:\/|$)|atom\.xml|\.atom))(?=\s|##LINEBREAK##|$|[),;!?])/gi;
 
     // Split content and generate tokens
     const tokens: ContentToken[] = [];
@@ -684,6 +689,40 @@ export class ParsingService {
         content: match[0],
         type: 'base64-audio',
       });
+    }
+
+    // Find RSS feed URLs (before general URL matching)
+    rssFeedRegex.lastIndex = 0;
+    while ((match = rssFeedRegex.exec(processedContent)) !== null) {
+      let rssUrl = match[0];
+      const start = match.index;
+
+      // Trim trailing punctuation
+      const trailingPattern = /[)\],;!?.]+$/;
+      while (trailingPattern.test(rssUrl)) {
+        const lastChar = rssUrl.slice(-1);
+        if (lastChar === '/' || lastChar === '#') break;
+        rssUrl = rssUrl.slice(0, -1);
+      }
+
+      if (!rssUrl) continue;
+
+      // Check if this position is already matched by a higher-priority match
+      const isAlreadyMatched = matches.some(m =>
+        (start >= m.start && start < m.end) ||
+        (start + rssUrl.length > m.start && start + rssUrl.length <= m.end)
+      );
+
+      if (!isAlreadyMatched) {
+        // Ensure URL has protocol for fetching
+        const normalizedUrl = rssUrl.startsWith('http') ? rssUrl : `https://${rssUrl}`;
+        matches.push({
+          start,
+          end: start + rssUrl.length,
+          content: normalizedUrl,
+          type: 'rss-feed',
+        });
+      }
     }
 
     // Find remaining URLs

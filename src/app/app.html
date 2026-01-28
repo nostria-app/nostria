@@ -37,55 +37,54 @@
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
 
-      <!-- Close button at top of sidenav -->
-      <div class="sidenav-close-row">
-        <button mat-icon-button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-close-button">
-          <mat-icon>arrow_menu_close</mat-icon>
-        </button>
-      </div>
-
       <!-- User Profile Section at Top -->
       @if (displayLabels()) {
       <div class="sidenav-profile-section">
-        <div class="sidenav-profile-header" [class.accounts-expanded]="accountsExpanded()"
-          (click)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
-          (keydown.enter)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
-          (keydown.space)="$event.preventDefault(); accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
-          tabindex="0" role="button"
-          [attr.aria-label]="accountState.hasAccounts() ? (accountsExpanded() ? 'Collapse accounts' : 'Expand accounts') : 'Login or create account'">
-          <div class="sidenav-profile-avatar">
-            @if (accountState.profile()?.data?.picture) {
-            @if (settings.settings().imageCacheEnabled) {
-            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
-              class="avatar-image" />
-            } @else {
-            <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
-            }
-            } @else {
-            @if (app.authenticated()) {
-            <mat-icon class="avatar-icon">account_circle</mat-icon>
-            } @else {
-            <mat-icon class="avatar-icon">account_circle_off</mat-icon>
-            }
-            }
+        <div class="sidenav-profile-row">
+          <div class="sidenav-profile-header" [class.accounts-expanded]="accountsExpanded()"
+            (click)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+            (keydown.enter)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+            (keydown.space)="$event.preventDefault(); accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+            tabindex="0" role="button"
+            [attr.aria-label]="accountState.hasAccounts() ? (accountsExpanded() ? 'Collapse accounts' : 'Expand accounts') : 'Login or create account'">
+            <div class="sidenav-profile-avatar">
+              @if (accountState.profile()?.data?.picture) {
+              @if (settings.settings().imageCacheEnabled) {
+              <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
+                class="avatar-image" />
+              } @else {
+              <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
+              }
+              } @else {
+              @if (app.authenticated()) {
+              <mat-icon class="avatar-icon">account_circle</mat-icon>
+              } @else {
+              <mat-icon class="avatar-icon">account_circle_off</mat-icon>
+              }
+              }
+            </div>
+            <div class="sidenav-profile-info">
+              @if (accountState.profile()?.data; as profile) {
+              <span class="sidenav-profile-name">{{ profile.display_name || profile.name || (accountState.pubkey() |
+                npub)
+                }}</span>
+              } @else if (app.authenticated()) {
+              <span class="sidenav-profile-name">{{ accountState.account()?.name || (accountState.pubkey() | npub)
+                }}</span>
+              } @else {
+              <span class="sidenav-profile-name" i18n="@@app.profile.not-logged-in">Not logged in</span>
+              }
+              @if (accountState.hasActiveSubscription()) {
+              <span class="sidenav-premium-badge" i18n="@@app.profile.premium"
+                [matTooltip]="accountState.expiresWhen() ? ('Premium expires: ' + (accountState.expiresWhen() | date:'mediumDate')) : ''">Premium</span>
+              }
+            </div>
+            <mat-icon class="expand-accounts-icon">{{ accountsExpanded() ? 'expand_less' : (accountState.hasAccounts() ?
+              'expand_more' : 'login') }}</mat-icon>
           </div>
-          <div class="sidenav-profile-info">
-            @if (accountState.profile()?.data; as profile) {
-            <span class="sidenav-profile-name">{{ profile.display_name || profile.name || (accountState.pubkey() | npub)
-              }}</span>
-            } @else if (app.authenticated()) {
-            <span class="sidenav-profile-name">{{ accountState.account()?.name || (accountState.pubkey() | npub)
-              }}</span>
-            } @else {
-            <span class="sidenav-profile-name" i18n="@@app.profile.not-logged-in">Not logged in</span>
-            }
-            @if (accountState.hasActiveSubscription()) {
-            <span class="sidenav-premium-badge" i18n="@@app.profile.premium"
-              [matTooltip]="accountState.expiresWhen() ? ('Premium expires: ' + (accountState.expiresWhen() | date:'mediumDate')) : ''">Premium</span>
-            }
-          </div>
-          <mat-icon class="expand-accounts-icon">{{ accountsExpanded() ? 'expand_less' : (accountState.hasAccounts() ?
-            'expand_more' : 'login') }}</mat-icon>
+          <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-collapse-button">
+            <mat-icon>arrow_menu_close</mat-icon>
+          </button>
         </div>
 
         <!-- Expandable Accounts List -->

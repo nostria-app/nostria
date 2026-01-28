@@ -124,6 +124,16 @@
 } @else if (token.type === 'url') {
 <a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
   (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
+} @else if (token.type === 'rss-feed') {
+<a class="rss-feed-link" tabindex="0" role="button"
+  (click)="onRssFeedClick(token.content, $event)"
+  (keydown.enter)="onRssFeedClick(token.content, $event)"
+  (keydown.space)="onRssFeedClick(token.content, $event)"
+  title="Play RSS Feed">
+  <mat-icon class="rss-icon">rss_feed</mat-icon>
+  <span class="rss-url">{{ token.content }}</span>
+  <span class="rss-action">Play</span>
+</a>
 } @else if (token.type === 'youtube') {
 <div class="media-container youtube-container">
   <div class="responsive-media-frame">
