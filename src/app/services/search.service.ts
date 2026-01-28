@@ -88,15 +88,16 @@ export class SearchService {
   // Track last processed query to prevent redundant searches
   #lastQuery = '';
 
+  // Debounce timer for search
+  #debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Debounce delay in milliseconds
+  readonly #debounceDelay = 300;
+
   constructor() {
-    effect(async () => {
+    effect(() => {
       const query = this.layout.query();
       const searchValue = query?.trim() || '';
-
-      // Skip if query hasn't changed
-      if (searchValue === this.#lastQuery) {
-        return;
-      }
 
       // Skip searching for Nostr entities - they should be routed directly, not searched
       // The LayoutService.handleSearch handles routing for these
@@ -104,216 +105,245 @@ export class SearchService {
         return;
       }
 
-      this.#lastQuery = searchValue;
-      console.log('SearchService effect triggered with query:', query);
-
-      // Check if query is a URL
-      const isUrl = /^(http|https):\/\/[^ "]+$/.test(searchValue);
-
-      if (isUrl) {
-        this.searchActions.set([
-          {
-            icon: 'note_add',
-            label: 'Publish Note',
-            description: 'Create a new note with this URL',
-            callback: () => {
-              this.eventService.createNote({ content: searchValue });
-              this.layout.toggleSearch();
-            },
-          },
-          {
-            icon: 'playlist_add',
-            label: 'Add to Media Queue',
-            description: 'Add this media to your playback queue',
-            callback: () => {
-              const dialogRef = this.dialog.open(AddMediaDialog, {
-                data: { url: searchValue },
-                width: '500px',
-              });
-
-              dialogRef.afterClosed().subscribe(async (result) => {
-                if (result && result.url) {
-                  try {
-                    const feed = await this.rssParser.parse(result.url);
-                    const startIndex = this.mediaPlayer.media().length;
-
-                    if (feed && feed.items.length > 0) {
-                      // Determine media type based on feed medium
-                      let mediaType: 'Music' | 'Podcast' | 'Video';
-                      let toastMessage: string;
-                      switch (feed.medium) {
-                        case 'music':
-                          mediaType = 'Music';
-                          toastMessage = 'Added music to queue';
-                          break;
-                        case 'video':
-                        case 'film':
-                          mediaType = 'Video';
-                          toastMessage = 'Added video to queue';
-                          break;
-                        default:
-                          mediaType = 'Podcast';
-                          toastMessage = 'Added podcast to queue';
-                      }
-
-                      for (const item of feed.items) {
-                        this.mediaPlayer.enque({
-                          artist: feed.author || feed.title,
-                          artwork: item.image || feed.image,
-                          title: item.title,
-                          source: item.mediaUrl,
-                          type: mediaType,
-                        });
-                      }
-                      this.layout.toast(toastMessage);
-                    } else {
-                      this.mediaPlayer.enque({
-                        artist: 'Unknown',
-                        artwork: '',
-                        title: result.url,
-                        source: result.url,
-                        type: 'Podcast',
-                      });
-                      this.layout.toast('Added to queue');
-                    }
-
-                    if (result.playImmediately) {
-                      this.mediaPlayer.index = startIndex;
-                      this.mediaPlayer.start();
-                    }
-                  } catch (err) {
-                    console.error('Failed to parse RSS:', err);
-                    // Show error message instead of adding invalid URL to queue
-                    const errorMessage = err instanceof Error ? err.message : 'Failed to load RSS feed';
-                    this.layout.toast(errorMessage);
-                  }
-                }
-              });
-              this.layout.toggleSearch();
-            },
-          },
-        ]);
-      } else {
-        this.searchActions.set([]);
+      // Clear any pending debounce timer
+      if (this.#debounceTimer) {
+        clearTimeout(this.#debounceTimer);
+        this.#debounceTimer = null;
       }
 
-      if (searchValue) {
-        // Check if this is a hashtag search
-        const isHashtagSearch = searchValue.startsWith('#');
-
-        if (isHashtagSearch) {
-          // Handle hashtag search - navigate to search results page
-          this.searchActions.set([
-            {
-              icon: 'tag',
-              label: `Search for ${searchValue}`,
-              description: 'Search notes with this hashtag on search relays',
-              callback: () => {
-                this.searchByHashtag(searchValue.slice(1));
-                this.layout.toggleSearch();
-              },
-            },
-          ]);
-          this.searchResults.set([]);
-          return;
-        }
-
-        // First, search in following profiles using FollowingService
-        const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
-        const followingRecords = this.followingService.toNostrRecords(followingResults);
-
-        // Mark following results with source
-        const followingProfileResults: SearchResultProfile[] = followingRecords.map(profile => ({
-          ...profile,
-          source: 'following' as const,
-        }));
-
-        console.log(
-          'Following search results:',
-          followingProfileResults.length,
-          'results for query:',
-          searchValue
-        );
-
-        // Search in all cached profiles from database (excluding already found following profiles)
-        const followingPubkeys = new Set(followingRecords.map(p => p.event.pubkey));
-        const cachedProfileEvents = await this.database.searchCachedProfiles(searchValue);
-
-        const cachedProfileResults: SearchResultProfile[] = cachedProfileEvents
-          .filter(event => !followingPubkeys.has(event.pubkey)) // Exclude duplicates
-          .map(event => {
-            let data = {};
-            try {
-              data = JSON.parse(event.content);
-            } catch {
-              // Invalid JSON in content
-            }
-            return {
-              event,
-              data,
-              source: 'cached' as const,
-            };
-          });
-
-        console.log(
-          'Cached search results:',
-          cachedProfileResults.length,
-          'additional cached profiles for query:',
-          searchValue
-        );
-
-        // Combine following and cached results
-        const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
-
-        // Fetch WoT scores and sort results
-        await this.enrichWithWoTScoresAndSort(allLocalResults, searchValue);
-
-        // Also search for profiles on search relays (in background)
-        this.searchProfilesOnSearchRelays(searchValue, allLocalResults);
-
-        // Check if the query is a valid hex string (64 characters) - potential event ID
-        const isHexEventId = /^[0-9a-f]{64}$/i.test(searchValue);
-
-        // If no cached results and query looks like an event ID, search for the event
-        if (allLocalResults.length === 0 && isHexEventId) {
-          await this.searchForEventById(searchValue);
-        }
-
-        // If query looks like an email (NIP-05), also try NIP-05 lookup
-        if (searchValue.indexOf('@') > -1) {
-          let nip05Value = searchValue;
-          // Only prefix with "_" if the query starts with "@" (domain-only, no username)
-          // e.g., "@nostria.app" becomes "_@nostria.app"
-          // But "sondreb@nostria.app" stays as is
-          if (searchValue.startsWith('@') && !nip05Value.startsWith('_')) {
-            nip05Value = '_' + nip05Value;
-          }
-
-          if (isNip05(nip05Value)) {
-            try {
-              const profile = await queryProfile(nip05Value);
-              console.log('Profile:', profile);
-
-              if (profile?.pubkey) {
-                this.layout.openProfile(profile?.pubkey);
-                this.layout.toggleSearch();
-              } else {
-                this.layout.toast('Profile not found via NIP-05');
-              }
-            } catch (error) {
-              console.error('NIP-05 lookup failed:', error);
-              // Don't show error toast, just continue with cached results
-            }
-          }
-        }
-      } else {
-        // Clear results when query is empty
+      // If query is empty, clear results immediately (no debounce)
+      if (!searchValue) {
+        this.#lastQuery = '';
         untracked(() => {
           this.searchResults.set([]);
           this.searchActions.set([]);
         });
+        return;
       }
+
+      // Skip if query hasn't changed
+      if (searchValue === this.#lastQuery) {
+        return;
+      }
+
+      // Debounce the actual search
+      this.#debounceTimer = setTimeout(() => {
+        this.#performSearch(searchValue);
+      }, this.#debounceDelay);
     });
+  }
+
+  /**
+   * Perform the actual search after debounce
+   */
+  async #performSearch(searchValue: string): Promise<void> {
+    // Double-check the query is still current after debounce
+    const currentQuery = this.layout.query()?.trim() || '';
+    if (currentQuery !== searchValue) {
+      return;
+    }
+
+    this.#lastQuery = searchValue;
+    console.log('SearchService effect triggered with query:', searchValue);
+
+    // Check if query is a URL
+    const isUrl = /^(http|https):\/\/[^ "]+$/.test(searchValue);
+
+    if (isUrl) {
+      this.searchActions.set([
+        {
+          icon: 'note_add',
+          label: 'Publish Note',
+          description: 'Create a new note with this URL',
+          callback: () => {
+            this.eventService.createNote({ content: searchValue });
+            this.layout.toggleSearch();
+          },
+        },
+        {
+          icon: 'playlist_add',
+          label: 'Add to Media Queue',
+          description: 'Add this media to your playback queue',
+          callback: () => {
+            const dialogRef = this.dialog.open(AddMediaDialog, {
+              data: { url: searchValue },
+              width: '500px',
+            });
+
+            dialogRef.afterClosed().subscribe(async (result) => {
+              if (result && result.url) {
+                try {
+                  const feed = await this.rssParser.parse(result.url);
+                  const startIndex = this.mediaPlayer.media().length;
+
+                  if (feed && feed.items.length > 0) {
+                    // Determine media type based on feed medium
+                    let mediaType: 'Music' | 'Podcast' | 'Video';
+                    let toastMessage: string;
+                    switch (feed.medium) {
+                      case 'music':
+                        mediaType = 'Music';
+                        toastMessage = 'Added music to queue';
+                        break;
+                      case 'video':
+                      case 'film':
+                        mediaType = 'Video';
+                        toastMessage = 'Added video to queue';
+                        break;
+                      default:
+                        mediaType = 'Podcast';
+                        toastMessage = 'Added podcast to queue';
+                    }
+
+                    for (const item of feed.items) {
+                      this.mediaPlayer.enque({
+                        artist: feed.author || feed.title,
+                        artwork: item.image || feed.image,
+                        title: item.title,
+                        source: item.mediaUrl,
+                        type: mediaType,
+                      });
+                    }
+                    this.layout.toast(toastMessage);
+                  } else {
+                    this.mediaPlayer.enque({
+                      artist: 'Unknown',
+                      artwork: '',
+                      title: result.url,
+                      source: result.url,
+                      type: 'Podcast',
+                    });
+                    this.layout.toast('Added to queue');
+                  }
+
+                  if (result.playImmediately) {
+                    this.mediaPlayer.index = startIndex;
+                    this.mediaPlayer.start();
+                  }
+                } catch (err) {
+                  console.error('Failed to parse RSS:', err);
+                  // Show error message instead of adding invalid URL to queue
+                  const errorMessage = err instanceof Error ? err.message : 'Failed to load RSS feed';
+                  this.layout.toast(errorMessage);
+                }
+              }
+            });
+            this.layout.toggleSearch();
+          },
+        },
+      ]);
+    } else {
+      this.searchActions.set([]);
+    }
+
+    // Check if this is a hashtag search
+    const isHashtagSearch = searchValue.startsWith('#');
+
+    if (isHashtagSearch) {
+      // Handle hashtag search - navigate to search results page
+      this.searchActions.set([
+        {
+          icon: 'tag',
+          label: `Search for ${searchValue}`,
+          description: 'Search notes with this hashtag on search relays',
+          callback: () => {
+            this.searchByHashtag(searchValue.slice(1));
+            this.layout.toggleSearch();
+          },
+        },
+      ]);
+      this.searchResults.set([]);
+      return;
+    }
+
+    // First, search in following profiles using FollowingService
+    const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
+    const followingRecords = this.followingService.toNostrRecords(followingResults);
+
+    // Mark following results with source
+    const followingProfileResults: SearchResultProfile[] = followingRecords.map(profile => ({
+      ...profile,
+      source: 'following' as const,
+    }));
+
+    console.log(
+      'Following search results:',
+      followingProfileResults.length,
+      'results for query:',
+      searchValue
+    );
+
+    // Search in all cached profiles from database (excluding already found following profiles)
+    const followingPubkeys = new Set(followingRecords.map(p => p.event.pubkey));
+    const cachedProfileEvents = await this.database.searchCachedProfiles(searchValue);
+
+    const cachedProfileResults: SearchResultProfile[] = cachedProfileEvents
+      .filter(event => !followingPubkeys.has(event.pubkey)) // Exclude duplicates
+      .map(event => {
+        let data = {};
+        try {
+          data = JSON.parse(event.content);
+        } catch {
+          // Invalid JSON in content
+        }
+        return {
+          event,
+          data,
+          source: 'cached' as const,
+        };
+      });
+
+    console.log(
+      'Cached search results:',
+      cachedProfileResults.length,
+      'additional cached profiles for query:',
+      searchValue
+    );
+
+    // Combine following and cached results
+    const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
+
+    // Fetch WoT scores and sort results
+    await this.enrichWithWoTScoresAndSort(allLocalResults, searchValue);
+
+    // Also search for profiles on search relays (in background)
+    this.searchProfilesOnSearchRelays(searchValue, allLocalResults);
+
+    // Check if the query is a valid hex string (64 characters) - potential event ID
+    const isHexEventId = /^[0-9a-f]{64}$/i.test(searchValue);
+
+    // If no cached results and query looks like an event ID, search for the event
+    if (allLocalResults.length === 0 && isHexEventId) {
+      await this.searchForEventById(searchValue);
+    }
+
+    // If query looks like an email (NIP-05), also try NIP-05 lookup
+    if (searchValue.indexOf('@') > -1) {
+      let nip05Value = searchValue;
+      // Only prefix with "_" if the query starts with "@" (domain-only, no username)
+      // e.g., "@nostria.app" becomes "_@nostria.app"
+      // But "sondreb@nostria.app" stays as is
+      if (searchValue.startsWith('@') && !nip05Value.startsWith('_')) {
+        nip05Value = '_' + nip05Value;
+      }
+
+      if (isNip05(nip05Value)) {
+        try {
+          const profile = await queryProfile(nip05Value);
+          console.log('Profile:', profile);
+
+          if (profile?.pubkey) {
+            this.layout.openProfile(profile?.pubkey);
+            this.layout.toggleSearch();
+          } else {
+            this.layout.toast('Profile not found via NIP-05');
+          }
+        } catch (error) {
+          console.error('NIP-05 lookup failed:', error);
+          // Don't show error toast, just continue with cached results
+        }
+      }
+    }
   }
 
   /**
@@ -547,11 +577,16 @@ export class SearchService {
    * @param queryContext - The search query that triggered this enrichment (for race condition prevention)
    */
   private async enrichWithWoTScoresAndSort(results: SearchResultProfile[], queryContext?: string): Promise<void> {
+    // Sort by source priority first (following > cached > remote)
+    const sortedResults = this.sortBySourcePriority(results);
+
+    // Always set results immediately to show something to the user
+    untracked(() => {
+      this.searchResults.set(sortedResults);
+    });
+
     if (!this.trustService.isEnabled() || results.length === 0) {
-      // If WoT is not enabled, just set results without scoring
-      untracked(() => {
-        this.searchResults.set(results);
-      });
+      // If WoT is not enabled or no results, we're done
       return;
     }
 
@@ -608,11 +643,16 @@ export class SearchService {
       this.logger.debug(`Enriched ${enrichedResults.length} profiles with WoT scores`);
     } catch (error) {
       this.logger.error('Failed to enrich results with WoT scores', error);
-      // Fall back to unsorted results
-      untracked(() => {
-        this.searchResults.set(results);
-      });
+      // Fall back to source-sorted results (already set at the start)
     }
+  }
+
+  /**
+   * Sort results by source priority: following > cached > remote
+   */
+  private sortBySourcePriority(results: SearchResultProfile[]): SearchResultProfile[] {
+    const sourcePriority = { following: 0, cached: 1, remote: 2 };
+    return [...results].sort((a, b) => sourcePriority[a.source] - sourcePriority[b.source]);
   }
 
   /**
