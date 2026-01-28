@@ -37,13 +37,23 @@
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
 
+      <!-- Close button at top of sidenav -->
+      <div class="sidenav-close-row">
+        <button mat-icon-button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-close-button">
+          <mat-icon>arrow_menu_close</mat-icon>
+        </button>
+      </div>
+
       <!-- User Profile Section at Top -->
       @if (displayLabels()) {
       <div class="sidenav-profile-section">
-        <div class="sidenav-profile-header">
-          <div class="sidenav-profile-avatar" (click)="toggleSidenav()" (keydown.enter)="toggleSidenav()"
-            (keydown.space)="toggleSidenav(); $event.preventDefault()" tabindex="0" role="button" title="Toggle sidebar"
-            aria-label="Toggle sidebar">
+        <div class="sidenav-profile-header" [class.accounts-expanded]="accountsExpanded()"
+          (click)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+          (keydown.enter)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+          (keydown.space)="$event.preventDefault(); accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
+          tabindex="0" role="button"
+          [attr.aria-label]="accountState.hasAccounts() ? (accountsExpanded() ? 'Collapse accounts' : 'Expand accounts') : 'Login or create account'">
+          <div class="sidenav-profile-avatar">
             @if (accountState.profile()?.data?.picture) {
             @if (settings.settings().imageCacheEnabled) {
             <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
@@ -74,24 +84,13 @@
               [matTooltip]="accountState.expiresWhen() ? ('Premium expires: ' + (accountState.expiresWhen() | date:'mediumDate')) : ''">Premium</span>
             }
           </div>
-          @if (accountState.hasAccounts()) {
-          <button mat-icon-button class="expand-accounts-button" (click)="toggleAccountsExpanded()"
-            [attr.aria-label]="accountsExpanded() ? 'Collapse accounts' : 'Expand accounts'" matTooltip="Switch account"
-            i18n-matTooltip="@@app.profile.switch-account">
-            <mat-icon>{{ accountsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-          } @else {
-          <button mat-icon-button class="expand-accounts-button" (click)="addAccount()"
-            aria-label="Login or create account" matTooltip="Login or create account"
-            i18n-matTooltip="@@app.profile.login-or-create">
-            <mat-icon>login</mat-icon>
-          </button>
-          }
+          <mat-icon class="expand-accounts-icon">{{ accountsExpanded() ? 'expand_less' : (accountState.hasAccounts() ?
+            'expand_more' : 'login') }}</mat-icon>
         </div>
 
         <!-- Expandable Accounts List -->
         @if (accountsExpanded() && accountState.hasAccounts()) {
-        <div class="sidenav-accounts-list">
+        <div class="sidenav-accounts-list expanded">
           @for (item of accountsWithProfiles(); track item.account.pubkey) {
           <button class="sidenav-account-item" (click)="switchAccount(item.account.pubkey); closeSidenavOnMobile()">
             <div class="sidenav-account-avatar">
@@ -259,20 +258,23 @@
           [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
           <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle menu" class="menu-profile-button"
             [class.profile-button-picture]="accountState.profile()?.data?.picture">
-            @if (accountState.profile()?.data?.picture) {
-            @if (settings.settings().imageCacheEnabled) {
-            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
-              alt="Menu" />
-            } @else {
-            <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
-            }
-            } @else {
-            @if (app.authenticated()) {
-            <mat-icon>account_circle</mat-icon>
-            } @else {
-            <mat-icon>menu</mat-icon>
-            }
-            }
+            <div class="menu-button-content">
+              @if (accountState.profile()?.data?.picture) {
+              @if (settings.settings().imageCacheEnabled) {
+              <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="menu-profile-avatar"
+                alt="Menu" />
+              } @else {
+              <img [src]="accountState.profile()?.data?.picture" class="menu-profile-avatar" alt="Menu" />
+              }
+              } @else {
+              @if (app.authenticated()) {
+              <mat-icon class="profile-icon">account_circle</mat-icon>
+              } @else {
+              <mat-icon class="profile-icon">menu</mat-icon>
+              }
+              }
+              <mat-icon class="menu-arrow-icon">arrow_menu_open</mat-icon>
+            </div>
           </button>
           <app-navigation></app-navigation>
         </div>
@@ -425,9 +427,9 @@
 
             <!-- Left panel sticky header - rendered at panel level for proper sticky behavior -->
             @if (leftPanelHeader.headerTemplate()) {
-              <div class="panel-header-wrapper">
-                <ng-container *ngTemplateOutlet="leftPanelHeader.headerTemplate()"></ng-container>
-              </div>
+            <div class="panel-header-wrapper">
+              <ng-container *ngTemplateOutlet="leftPanelHeader.headerTemplate()"></ng-container>
+            </div>
             }
 
             <!-- Left panel inner content wrapper - constrains content to max 700px/1400px -->
@@ -446,9 +448,9 @@
 
             <!-- Right panel sticky header - rendered at panel level for proper sticky behavior -->
             @if (rightPanelHeader.headerTemplate()) {
-              <div class="panel-header-wrapper">
-                <ng-container *ngTemplateOutlet="rightPanelHeader.headerTemplate()"></ng-container>
-              </div>
+            <div class="panel-header-wrapper">
+              <ng-container *ngTemplateOutlet="rightPanelHeader.headerTemplate()"></ng-container>
+            </div>
             }
 
             <!-- Right panel inner content wrapper - constrains content to max 700px -->

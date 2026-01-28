@@ -475,7 +475,8 @@ mat-sidenav-content {
 .sidenav-close-row {
   display: flex;
   align-items: center;
-  padding: 8px;
+  justify-content: flex-end;
+  padding: 4px 8px 0;
   gap: 8px;
 
   .sidenav-close-button {
@@ -500,10 +501,17 @@ mat-sidenav-content {
 // Menu profile button in toolbar (replaces hamburger)
 .menu-profile-button {
   padding: 0 !important;
-  overflow: hidden;
+  overflow: visible;
   display: flex !important;
   align-items: center;
   justify-content: center;
+  min-width: 48px !important;
+
+  .menu-button-content {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
 
   &.profile-button-picture {
     .menu-profile-avatar {
@@ -515,10 +523,19 @@ mat-sidenav-content {
     }
   }
 
-  mat-icon {
+  .profile-icon {
     font-size: 28px;
     width: 28px;
     height: 28px;
+  }
+
+  .menu-arrow-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-left: -4px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
   }
 }
 
@@ -533,10 +550,41 @@ mat-sidenav-content {
   gap: 12px;
   padding: 8px;
   border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &:active {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  &.accounts-expanded {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
 }
 
 :host-context(.dark) .sidenav-profile-header {
-  // No hover state needed - individual elements handle their own interactions
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &:active {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &.accounts-expanded {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Expand accounts icon (replaces button)
+.expand-accounts-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+  transition: color 0.2s ease;
 }
 
 .sidenav-profile-avatar {
@@ -549,17 +597,6 @@ mat-sidenav-content {
   align-items: center;
   justify-content: center;
   background-color: var(--mat-sys-surface-container);
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
 
   .avatar-image {
     width: 100%;
@@ -576,9 +613,7 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .sidenav-profile-avatar {
-  &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  }
+  // Dark mode background handled by surface-container
 }
 
 .sidenav-profile-info {
@@ -607,29 +642,26 @@ mat-sidenav-content {
   width: fit-content;
 }
 
-.expand-accounts-button {
-  color: var(--mat-sys-on-surface-variant);
-  transition: transform 0.2s ease, color 0.2s ease;
-  flex-shrink: 0;
-
-  &:hover {
-    color: var(--mat-sys-on-surface);
-  }
-}
-
 // Expandable accounts list in sidenav
 .sidenav-accounts-list {
   padding-left: 8px;
   border-left: 2px solid var(--mat-sys-outline-variant);
   margin-left: 28px;
+  margin-top: 4px;
+
+  &.expanded {
+    border-left: none;
+    margin-left: 0;
+    padding-left: 0;
+  }
 }
 
 .sidenav-account-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 6px;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
   background: transparent;
   border: none;
@@ -644,11 +676,12 @@ mat-sidenav-content {
 
   &.sidenav-add-account {
     color: var(--mat-sys-primary);
+    margin-top: 4px;
 
     mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
   }
 }
@@ -660,8 +693,8 @@ mat-sidenav-content {
 }
 
 .sidenav-account-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
@@ -677,18 +710,19 @@ mat-sidenav-content {
   }
 
   mat-icon {
-    font-size: 28px;
-    width: 28px;
-    height: 28px;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
     color: var(--mat-sys-on-surface-variant);
   }
 }
 
 .sidenav-account-name {
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 // Profile quick actions row
@@ -1399,13 +1433,13 @@ mat-sidenav-content {
   top: 0;
   z-index: 50;
   width: 100%;
-  
+
   // Glass effect background using Material 3 surface color
   background-color: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
-  
+
   // Inner .panel-header should not have its own sticky/background
   // Also set default max-width and centering (can be overridden by layout contexts)
   // Use ::ng-deep because the .panel-header comes from other components via ngTemplateOutlet
@@ -1432,6 +1466,7 @@ mat-sidenav-content {
 // Use ::ng-deep because .panel-header comes from other components via ngTemplateOutlet
 
 .dual-panel-layout {
+
   // Feeds visible (left panel only, no right content)
   &.feeds-visible:not(.has-right-content) {
     .left-panel .panel-header-wrapper ::ng-deep .panel-header {
@@ -1458,6 +1493,7 @@ mat-sidenav-content {
 
   // Both panels have content - side by side
   &.has-right-content {
+
     // Left panel: align to right (towards center)
     .left-panel .panel-header-wrapper ::ng-deep .panel-header {
       max-width: 700px;
@@ -2330,7 +2366,7 @@ mat-sidenav-content {
 .command-palette-button {
   position: relative;
   opacity: 0.7;
-  
+
   &:hover {
     opacity: 1;
   }
