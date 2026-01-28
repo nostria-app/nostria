@@ -9,7 +9,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { Router } from '@angular/router';
 import { ShoutoutService, Shoutout } from '../../services/shoutout.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
@@ -47,7 +46,6 @@ interface RecipientOption {
   styleUrl: './shoutout-overlay.component.scss',
 })
 export class ShoutoutOverlayComponent {
-  private router = inject(Router);
   private shoutoutService = inject(ShoutoutService);
   private data = inject(DataService);
   private timelineHoverCardService = inject(TimelineHoverCardService);
@@ -249,7 +247,7 @@ export class ShoutoutOverlayComponent {
 
   navigateToProfile(pubkey: string): void {
     this.hideOverlay();
-    this.router.navigate(['/p', pubkey]);
+    this.layout.openProfile(pubkey);
   }
 
   getDisplayName(profile?: NostrRecord): string {

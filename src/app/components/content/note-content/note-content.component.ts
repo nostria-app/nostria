@@ -405,10 +405,11 @@ export class NoteContentComponent implements OnDestroy {
     switch (type) {
       case 'npub':
       case 'nprofile': {
-        // Navigate to profile page
+        // Navigate to profile page - open in right panel
         const record = data as Record<string, unknown>;
         const pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
-        this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
+        const npub = this.utilities.getNpubFromPubkey(pubkey);
+        this.layout.openProfile(npub);
         break;
       }
       case 'note':
@@ -769,7 +770,7 @@ export class NoteContentComponent implements OnDestroy {
     if (autoPlayAll) {
       return true;
     }
-    
+
     // Default behavior: auto-play short videos (15 seconds or less)
     if (token.duration !== undefined && token.duration <= 15) {
       return true;
