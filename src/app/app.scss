@@ -541,7 +541,14 @@ mat-sidenav-content {
 
 // Sidenav Profile Section styles
 .sidenav-profile-section {
-  padding: 0 8px 8px;
+  padding: 0 0 8px 8px;
+}
+
+// Row container for profile header and collapse button
+.sidenav-profile-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
 }
 
 .sidenav-profile-header {
@@ -549,9 +556,11 @@ mat-sidenav-content {
   align-items: center;
   gap: 12px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 8px 0 0 8px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  flex: 1;
+  min-width: 0;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
@@ -585,6 +594,47 @@ mat-sidenav-content {
   color: var(--mat-sys-on-surface-variant);
   flex-shrink: 0;
   transition: color 0.2s ease;
+}
+
+// Collapse sidenav button in profile header - matches account selection height
+.sidenav-collapse-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-surface-variant);
+  background-color: transparent;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  flex-shrink: 0;
+  width: 40px;
+  align-self: stretch;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  .mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:active {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+}
+
+:host-context(.dark) .sidenav-collapse-button {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &:active {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 .sidenav-profile-avatar {
@@ -1847,7 +1897,7 @@ mat-sidenav-content {
 
 
 .sidenav-labels {
-  width: 220px;
+  width: 240px;
 }
 
 .sidenav-small {

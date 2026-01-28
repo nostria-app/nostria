@@ -47,6 +47,65 @@
   word-break: break-word;
 }
 
+// RSS feed link styling
+.rss-feed-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container, #f5f5f5);
+  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  color: var(--mat-sys-on-surface, #000);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  font-size: 0.9em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high, #e8e8e8);
+    border-color: var(--mat-sys-primary, #6200ea);
+  }
+
+  .rss-icon {
+    color: var(--mat-sys-primary, #ff6600);
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .rss-url {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rss-action {
+    flex-shrink: 0;
+    font-size: 0.85em;
+    color: var(--mat-sys-primary, #6200ea);
+    padding-left: 8px;
+    border-left: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  }
+}
+
+// Dark mode adjustments for RSS feed link
+:host-context(.dark) {
+  .rss-feed-link {
+    background: var(--mat-sys-surface-container, #2e2e2e);
+    border-color: var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.12));
+
+    &:hover {
+      background: var(--mat-sys-surface-container-high, #3a3a3a);
+    }
+  }
+}
+
 // Nostr mention styling
 .nostr-mention {
   color: var(--mat-sys-primary);

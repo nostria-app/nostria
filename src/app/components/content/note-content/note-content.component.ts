@@ -26,6 +26,8 @@ import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 import { LayoutService } from '../../../services/layout.service';
+import { RssParserService } from '../../../services/rss-parser.service';
+import { MediaPlayerService } from '../../../services/media-player.service';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -62,6 +64,8 @@ export class NoteContentComponent implements OnDestroy {
   private videoPlayback = inject(VideoPlaybackService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private externalLinkHandler = inject(ExternalLinkHandlerService);
+  private rssParser = inject(RssParserService);
+  private mediaPlayer = inject(MediaPlayerService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -1123,5 +1127,69 @@ export class NoteContentComponent implements OnDestroy {
       event.stopPropagation();
     }
     // Otherwise, let the browser handle it (open in new tab)
+  }
+
+  /**
+   * Handle RSS feed link click - add to media queue and start playing immediately
+   */
+  async onRssFeedClick(url: string, event: Event): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      const feed = await this.rssParser.parse(url);
+      const startIndex = this.mediaPlayer.media().length;
+
+      if (feed && feed.items.length > 0) {
+        // Determine media type based on feed medium
+        let mediaType: 'Music' | 'Podcast' | 'Video';
+        let toastMessage: string;
+        switch (feed.medium) {
+          case 'music':
+            mediaType = 'Music';
+            toastMessage = 'Playing music';
+            break;
+          case 'video':
+          case 'film':
+            mediaType = 'Video';
+            toastMessage = 'Playing video';
+            break;
+          default:
+            mediaType = 'Podcast';
+            toastMessage = 'Playing podcast';
+        }
+
+        for (const item of feed.items) {
+          this.mediaPlayer.enque({
+            artist: feed.author || feed.title,
+            artwork: item.image || feed.image,
+            title: item.title,
+            source: item.mediaUrl,
+            type: mediaType,
+          });
+        }
+
+        // Start playing immediately
+        this.mediaPlayer.index = startIndex;
+        this.mediaPlayer.start();
+        this.layout.toast(toastMessage);
+      } else {
+        // Fallback: add URL directly as podcast
+        this.mediaPlayer.enque({
+          artist: 'Unknown',
+          artwork: '',
+          title: url,
+          source: url,
+          type: 'Podcast',
+        });
+        this.mediaPlayer.index = this.mediaPlayer.media().length - 1;
+        this.mediaPlayer.start();
+        this.layout.toast('Playing media');
+      }
+    } catch (err) {
+      console.error('Failed to parse RSS:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load RSS feed';
+      this.layout.toast(errorMessage);
+    }
   }
 }
