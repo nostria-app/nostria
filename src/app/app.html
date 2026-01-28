@@ -307,6 +307,10 @@
               <mat-icon>qr_code_scanner</mat-icon>
             </button>
             }
+            <button mat-icon-button class="search-action-button command-palette-button" (click)="openCommandPalette()"
+              i18n-matTooltip="@@app.search.command-palette" matTooltip="Command palette (Ctrl+K)">
+              <mat-icon>terminal</mat-icon>
+            </button>
             <app-search-results></app-search-results>
           </div>
         </div>

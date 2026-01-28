@@ -2325,3 +2325,13 @@ mat-sidenav-content {
     color: var(--mat-sys-primary);
   }
 }
+
+// Command palette button in search bar
+.command-palette-button {
+  position: relative;
+  opacity: 0.7;
+  
+  &:hover {
+    opacity: 1;
+  }
+}
