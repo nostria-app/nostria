@@ -94,8 +94,8 @@ export class ProfileHomeComponent {
     return isActive || (path === 'notes' && firstChild === '');
   }
 
-  // We'll get the pubkey from the parent route
+  // We'll get the pubkey from the profile state (which is set by parent ProfileComponent)
   getPubkey(): string {
-    return this.route.parent?.snapshot.paramMap.get('id') || '';
+    return this.profileState.pubkey() || '';
   }
 }

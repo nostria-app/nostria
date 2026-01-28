@@ -717,6 +717,13 @@ export class App implements OnInit {
       this.previousHasRightContent = hasRight;
     });
 
+    // Ensure mobile search full-width state resets when search closes
+    effect(() => {
+      if (!this.layout.search()) {
+        this.searchFocused.set(false);
+      }
+    });
+
     if (!this.app.isBrowser()) {
       this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;

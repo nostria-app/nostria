@@ -16,80 +16,80 @@ import { streamResolver } from './stream-resolver';
  */
 function createProfileChildren(): Routes {
   return [
-  {
-    path: '',
-    loadComponent: () =>
-      import('./pages/profile/profile-home/profile-home.component').then(m => m.ProfileHomeComponent),
-    children: [
-      {
-        path: '',
-        loadComponent: () =>
-          import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
-        title: 'Timeline',
-      },
-      {
-        path: 'notes',
-        loadComponent: () =>
-          import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
-        title: 'Timeline',
-      },
-      {
-        path: 'reads',
-        loadComponent: () =>
-          import('./pages/profile/profile-reads/profile-reads.component').then(m => m.ProfileReadsComponent),
-        title: 'Reads',
-      },
-      {
-        path: 'media',
-        loadComponent: () =>
-          import('./pages/profile/profile-media/profile-media.component').then(m => m.ProfileMediaComponent),
-        title: 'Media',
-      },
-      {
-        path: 'connection',
-        loadComponent: () =>
-          import('./pages/profile/profile-connection/profile-connection.component').then(m => m.ProfileConnectionComponent),
-        title: 'Connection',
-      },
-    ],
-  },
-  {
-    path: 'about',
-    loadComponent: () =>
-      import('./pages/profile/profile-about/profile-about.component').then(m => m.ProfileAboutComponent),
-    data: { isRoot: true },
-    title: 'About',
-  },
-  {
-    path: 'edit',
-    loadComponent: () =>
-      import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
-    title: 'Edit Profile',
-  },
-  {
-    path: 'following',
-    loadComponent: () =>
-      import('./pages/profile/following/following.component').then(m => m.FollowingComponent),
-    title: 'Following',
-  },
-  {
-    path: 'relays',
-    loadComponent: () =>
-      import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
-    title: 'Relays',
-  },
-  {
-    path: 'badges',
-    loadComponent: () =>
-      import('./pages/profile/profile-badges/profile-badges.component').then(m => m.ProfileBadgesComponent),
-    title: 'Badges',
-  },
-  {
-    path: 'details',
-    loadComponent: () =>
-      import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
-    title: 'Details',
-  },
+    {
+      path: '',
+      loadComponent: () =>
+        import('./pages/profile/profile-home/profile-home.component').then(m => m.ProfileHomeComponent),
+      children: [
+        {
+          path: '',
+          loadComponent: () =>
+            import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+          title: 'Timeline',
+        },
+        {
+          path: 'notes',
+          loadComponent: () =>
+            import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+          title: 'Timeline',
+        },
+        {
+          path: 'reads',
+          loadComponent: () =>
+            import('./pages/profile/profile-reads/profile-reads.component').then(m => m.ProfileReadsComponent),
+          title: 'Reads',
+        },
+        {
+          path: 'media',
+          loadComponent: () =>
+            import('./pages/profile/profile-media/profile-media.component').then(m => m.ProfileMediaComponent),
+          title: 'Media',
+        },
+        {
+          path: 'connection',
+          loadComponent: () =>
+            import('./pages/profile/profile-connection/profile-connection.component').then(m => m.ProfileConnectionComponent),
+          title: 'Connection',
+        },
+      ],
+    },
+    {
+      path: 'about',
+      loadComponent: () =>
+        import('./pages/profile/profile-about/profile-about.component').then(m => m.ProfileAboutComponent),
+      data: { isRoot: true },
+      title: 'About',
+    },
+    {
+      path: 'edit',
+      loadComponent: () =>
+        import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
+      title: 'Edit Profile',
+    },
+    {
+      path: 'following',
+      loadComponent: () =>
+        import('./pages/profile/following/following.component').then(m => m.FollowingComponent),
+      title: 'Following',
+    },
+    {
+      path: 'relays',
+      loadComponent: () =>
+        import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
+      title: 'Relays',
+    },
+    {
+      path: 'badges',
+      loadComponent: () =>
+        import('./pages/profile/profile-badges/profile-badges.component').then(m => m.ProfileBadgesComponent),
+      title: 'Badges',
+    },
+    {
+      path: 'details',
+      loadComponent: () =>
+        import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
+      title: 'Details',
+    },
   ];
 }
 
@@ -125,7 +125,7 @@ export const routes: Routes = [
     data: { isRoot: true },
     title: 'Summary',
   },
-{
+  {
     path: 'e/:id',
     loadComponent: () =>
       import('./pages/event/event.component').then(m => m.EventPageComponent),
@@ -651,7 +651,7 @@ export const routes: Routes = [
     title: 'Join Nostria',
   },
 
-// Right panel routes (named outlet)
+  // Right panel routes (named outlet)
   {
     path: 'e/:id',
     outlet: 'right',
