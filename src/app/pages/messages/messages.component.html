@@ -23,7 +23,7 @@
     <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
   </div>
   } @else {
-<div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
+<div class="messages-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
     <!-- Panel Header -->
     <div class="panel-header">
       <h2 class="panel-title title-font">Messages</h2>
@@ -252,7 +252,7 @@
       }
     </div>
   </div>
-  <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()"
+  <div class="messages-right" [class.mobile-hidden]="isSinglePaneView() && showMobileList()"
     [class.sidepanel-open]="showChatDetails()">
     @if (!selectedChat()) {
     <div class="no-chat-selected">
@@ -266,7 +266,7 @@
     <div class="chat-content-wrapper">
       <div class="message-list-header">
         <div class="chat-header-user">
-          @if (layout.isHandset() && !showMobileList()) {
+          @if (isSinglePaneView() && !showMobileList()) {
           <button mat-icon-button class="back-button" (click)="backToList()">
             <mat-icon>arrow_back</mat-icon>
           </button>

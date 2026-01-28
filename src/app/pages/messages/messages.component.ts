@@ -174,6 +174,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
   showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
   showSearch = signal<boolean>(false); // Toggle search input visibility
+  
+  // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
+  // This enables the same behavior as mobile (toggle between list and thread) when viewing
+  // a profile or event from the messages, as the left panel shrinks to 700px
+  isSinglePaneView = computed(() => this.layout.isHandset() || this.layout.hasNavigationItems());
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
 
@@ -415,11 +420,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Effect to sync mobile nav visibility with chat selection on mobile
     effect(() => {
       const chatId = this.selectedChatId();
-      const isHandset = this.layout.isHandset();
+      const isSinglePane = this.isSinglePaneView();
       const showingMobileList = this.showMobileList();
 
-      // On mobile, hide the nav when viewing a chat, show it when viewing the list
-      if (isHandset) {
+      // On single-pane view (mobile or right panel open), hide the nav when viewing a chat, show it when viewing the list
+      if (isSinglePane) {
         this.layout.hideMobileNav.set(chatId !== null && !showingMobileList);
       }
     });
@@ -968,8 +973,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Reset hasMoreMessages for the new chat
     this.hasMoreMessages.set(true);
 
-    // Only hide the chat list on mobile devices
-    if (this.layout.isHandset()) {
+    // Hide the chat list in single-pane view (mobile or when right panel is open)
+    if (this.isSinglePaneView()) {
       this.showMobileList.set(false);
       this.layout.hideMobileNav.set(true);
     }
