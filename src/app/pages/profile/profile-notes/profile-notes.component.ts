@@ -200,7 +200,20 @@ export class ProfileNotesComponent {
 
           this.logger.debug('Loading more timeline content from relays...');
           this.lastLoadTime = now;
-          this.loadMoreNotes();
+
+          // Load more notes and schedule a scroll recheck after completion
+          // This ensures continuous loading while user stays at bottom
+          this.loadMoreNotes().then(() => {
+            // After loading completes, schedule a scroll position recheck
+            // This will trigger another load cycle if we're still at bottom and there's more content
+            setTimeout(() => {
+              if (this.profileState.isInRightPanel()) {
+                this.layout.refreshRightPanelScroll();
+              } else {
+                this.layout.refreshLeftPanelScroll();
+              }
+            }, 150);
+          });
         } finally {
           // Reset flag after a short delay to prevent rapid re-entry
           setTimeout(() => {
