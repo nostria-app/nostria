@@ -75,6 +75,7 @@ import { UserRelayService } from '../../services/relays/user-relay';
 import { AccountService } from '../../api/services';
 import { PublicAccount } from '../../api/models';
 import { firstValueFrom } from 'rxjs';
+import { ProfileHomeComponent } from './profile-home/profile-home.component';
 
 @Component({
   selector: 'app-profile',
@@ -101,6 +102,7 @@ import { firstValueFrom } from 'rxjs';
     ProfileHeaderComponent,
     ProfileViewOptionsInlineComponent,
     ZapButtonComponent,
+    ProfileHomeComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',

@@ -254,7 +254,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   goToProfile(): void {
     const npub = this.artistNpub();
     if (npub) {
-      this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+      this.layout.openProfile(npub);
     }
   }
 

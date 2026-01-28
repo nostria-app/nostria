@@ -475,7 +475,12 @@ export class TwoColumnLayoutService {
     // Always use npub in URLs for consistency and bookmarkability
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     this.rightPanelRoute.set(`/p/${npub}`);
-    this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+    
+    // Use navigateByUrl to avoid router state issues with named outlets
+    const currentUrl = this.router.url;
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    const targetUrl = `${primaryPath}(right:p/${npub})`;
+    this.router.navigateByUrl(targetUrl);
   }
 
   /**

@@ -137,13 +137,7 @@ export class ContactCardComponent {
   openFullProfile(): void {
     const pubkey = this.pubkey();
     if (pubkey) {
-      // Convert hex to npub
-      try {
-        const npub = nip19.npubEncode(pubkey);
-        this.router.navigate([{ outlets: { right: ['p', npub] } }]);
-      } catch (error) {
-        this.logger.error('Error converting pubkey to npub:', error);
-      }
+      this.layout.openProfile(pubkey);
     }
   }
 

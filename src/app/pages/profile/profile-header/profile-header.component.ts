@@ -1164,7 +1164,7 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     if (currentPubkey) {
       // Use the user-badges route which is specifically for viewing a user's badges
-      this.router.navigate([{ outlets: { right: ['user-badges', currentPubkey] } }]);
+      this.layout.openBadgesPage(currentPubkey);
     }
   }
 

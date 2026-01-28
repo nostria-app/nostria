@@ -9,13 +9,13 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
-import { RouterModule } from '@angular/router';
 import { RelayPublishingNotification, RelayPublishPromise } from '../../services/database.service';
 import {
   EventDetailsDialogComponent,
   type EventDetailsDialogData,
 } from '../event-details-dialog/event-details-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-relay-publish-status',
@@ -27,7 +27,6 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
     MatDividerModule,
     MatChipsModule,
     MatTooltipModule,
-    RouterModule,
     DecimalPipe,
   ],
   templateUrl: './relay-publish-status.component.html',
@@ -40,6 +39,7 @@ export class RelayPublishStatusComponent {
 
   private nostrService = inject(NostrService);
   private customDialog = inject(CustomDialogService);
+  layout = inject(LayoutService);
 
   get successCount(): number {
     if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {

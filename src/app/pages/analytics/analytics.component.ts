@@ -37,6 +37,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { ZapService } from '../../services/zap.service';
 import { Metrics } from '../../services/metrics';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { LayoutService } from '../../services/layout.service';
 
 // Time period options
 type TimePeriod = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -156,6 +157,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   private readonly zapService = inject(ZapService);
   private readonly metricsService = inject(Metrics);
   protected readonly app = inject(ApplicationService);
+  protected readonly layout = inject(LayoutService);
 
   // Time period state
   selectedPeriod = signal<TimePeriod>('7d');

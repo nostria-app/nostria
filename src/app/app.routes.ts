@@ -683,13 +683,16 @@ export const routes: Routes = [
     title: 'Article',
     resolve: { data: DataResolver, article: ArticleResolver },
   },
+  // Profile routes in auxiliary outlet WITHOUT children to avoid Angular router state tree issues.
+  // When the same nested children structure exists in both primary and auxiliary outlets,
+  // Angular's setRouterState enters infinite recursion. Profiles in the right panel
+  // will only show the default "notes" tab view.
   {
     path: 'p/:id',
     outlet: 'right',
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver },
-    children: createProfileChildren(),
   },
   {
     path: 'u/:username',
@@ -697,7 +700,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver, user: UsernameResolver },
-    children: createProfileChildren(),
   },
   {
     path: 'stream/:encodedEvent',

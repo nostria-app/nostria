@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { Router, NavigationStart, RouterLink } from '@angular/router';
+import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { nip19 } from 'nostr-tools';
@@ -13,6 +13,7 @@ import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { LayoutService } from '../../services/layout.service';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -41,7 +42,6 @@ export interface ReactionsDialogData {
     MatListModule,
     UserProfileComponent,
     AgoPipe,
-    RouterLink
   ],
   template: `
     <div class="reactions-dialog">
@@ -194,7 +194,7 @@ export interface ReactionsDialogData {
                           [pubkey]="quote.event.pubkey"
                           view="compact"
                         ></app-user-profile>
-                        <a class="reaction-time quote-link" [routerLink]="[{ outlets: { right: ['e', getNevent(quote.event)] } }]">
+                        <a class="reaction-time quote-link" (click)="openQuote(quote.event)" tabindex="0">
                           {{ quote.event.created_at | ago }}
                         </a>
                       </div>
@@ -443,6 +443,7 @@ export interface ReactionsDialogData {
 export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
   private router = inject(Router);
+  private layout = inject(LayoutService);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
 
   constructor() {
@@ -529,6 +530,11 @@ export class ReactionsDialogComponent {
       author: event.pubkey,
       kind: event.kind,
     });
+  }
+
+  openQuote(event: { id: string; pubkey: string; kind: number }): void {
+    const nevent = this.getNevent(event);
+    this.layout.openGenericEvent(nevent);
   }
 
   close(): void {

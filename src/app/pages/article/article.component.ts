@@ -242,11 +242,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(receivedData.pubkey);
         if (receivedData.kind === 34139) {
           // Music playlist
-          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, identifier] } }], { replaceUrl: true });
+          this.layout.openMusicPlaylist(npub, identifier, receivedData);
           return;
         } else if (receivedData.kind === 36787) {
           // Music track
-          this.router.navigate([{ outlets: { right: ['music', 'song', npub, identifier] } }], { replaceUrl: true });
+          this.layout.openSongDetail(npub, identifier, receivedData);
           return;
         } else if (receivedData.kind === 32100) {
           // M3U Playlist - redirect to event page
@@ -255,7 +255,7 @@ export class ArticleComponent implements OnDestroy {
             author: receivedData.pubkey,
             kind: receivedData.kind,
           });
-          this.router.navigate([{ outlets: { right: ['e', nevent] } }], { replaceUrl: true, state: { event: receivedData } });
+          this.layout.openGenericEvent(nevent, receivedData);
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
@@ -303,11 +303,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(addrData.pubkey);
         if (addrData.kind === 34139) {
           // Music playlist
-          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, addrData.identifier] } }], { replaceUrl: true });
+          this.layout.openMusicPlaylist(npub, addrData.identifier);
           return;
         } else if (addrData.kind === 36787) {
           // Music track
-          this.router.navigate([{ outlets: { right: ['music', 'song', npub, addrData.identifier] } }], { replaceUrl: true });
+          this.layout.openSongDetail(npub, addrData.identifier);
           return;
         } else if (addrData.kind === 32100) {
           // M3U Playlist - redirect to event page using naddr
@@ -316,7 +316,7 @@ export class ArticleComponent implements OnDestroy {
             pubkey: addrData.pubkey,
             identifier: addrData.identifier,
           });
-          this.router.navigate([{ outlets: { right: ['e', naddr] } }], { replaceUrl: true });
+          this.layout.openGenericEvent(naddr);
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
@@ -365,11 +365,11 @@ export class ArticleComponent implements OnDestroy {
         const npub = nip19.npubEncode(pubkey);
         if (kind === 34139) {
           // Music playlist
-          this.router.navigate([{ outlets: { right: ['music', 'playlist', npub, slug] } }], { replaceUrl: true });
+          this.layout.openMusicPlaylist(npub, slug);
           return;
         } else if (kind === 36787) {
           // Music track
-          this.router.navigate([{ outlets: { right: ['music', 'song', npub, slug] } }], { replaceUrl: true });
+          this.layout.openSongDetail(npub, slug);
           return;
         } else if (kind === 32100) {
           // M3U Playlist - redirect to event page using naddr
@@ -378,7 +378,7 @@ export class ArticleComponent implements OnDestroy {
             pubkey: pubkey,
             identifier: slug,
           });
-          this.router.navigate([{ outlets: { right: ['e', naddr] } }], { replaceUrl: true });
+          this.layout.openGenericEvent(naddr);
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)

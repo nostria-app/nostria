@@ -12,6 +12,7 @@ import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -34,6 +35,7 @@ export class PhotoEventComponent {
 
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
@@ -383,7 +385,7 @@ export class PhotoEventComponent {
           panelClass: 'media-with-comments-dialog',
         });
       } else {
-        this.router.navigate([{ outlets: { right: ['e', event.id] } }]);
+        this.layout.openGenericEvent(event.id);
       }
     }
   }

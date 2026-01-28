@@ -233,8 +233,8 @@
             </div>
             <div class="media-overlay">
               <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
-              <a class="media-time" [routerLink]="[{ outlets: { right: ['e', event.id] } }]"
-                (click)="$event.stopPropagation()">{{ event.created_at | ago }}</a>
+              <a class="media-time" (click)="layout.openGenericEvent(event.id); $event.stopPropagation()"
+                tabindex="0">{{ event.created_at | ago }}</a>
             </div>
           </div>
           }

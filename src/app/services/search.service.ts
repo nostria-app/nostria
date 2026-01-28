@@ -435,9 +435,8 @@ export class SearchService {
   // Navigate to primary outlet and clear right pane so search result is the main focus
   selectSearchResult(profile: NostrRecord): void {
     const pubkey = profile.event.pubkey;
-    const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     // Navigate to profile in primary outlet and clear right panel
-    this.layout.router.navigate([{ outlets: { primary: ['p', npub], right: null } }]);
+    this.layout.openProfileAsPrimary(pubkey);
     this.layout.toggleSearch();
     untracked(() => {
       this.searchResults.set([]);

@@ -56,9 +56,15 @@ export class ProfileHomeComponent {
 
   constructor() {
     // Listen for navigation end to save the active tab
+    // Only save tab state when not in the right panel to avoid interfering with auxiliary route navigation
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
+        // Skip tab saving when in the right panel (auxiliary outlet)
+        if (this.route.outlet === 'right') {
+          return;
+        }
+        
         const currentPubkey = this.accountState.pubkey();
         const profilePubkey = this.getPubkey();
         const currentPath = this.route.firstChild?.snapshot?.url[0]?.path ?? 'notes';
@@ -68,6 +74,12 @@ export class ProfileHomeComponent {
           this.accountLocalState.setActiveProfileTab(currentPubkey, `${profilePubkey}:${currentPath}`);
         }
       });
+
+    // Skip tab restoration when in the right panel (auxiliary outlet)
+    // This prevents interfering with auxiliary route navigation
+    if (this.route.outlet === 'right') {
+      return;
+    }
 
     // Check if we should restore a saved tab
     const currentPubkey = this.accountState.pubkey();

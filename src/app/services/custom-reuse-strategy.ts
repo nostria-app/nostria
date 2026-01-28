@@ -133,6 +133,12 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
    * Determine if the route should be reused
    */
   shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
+    // Never reuse routes in the 'right' auxiliary outlet
+    // This prevents Angular's router state tree from getting confused
+    // when the same profile route config is used in both primary and auxiliary outlets
+    if (future.outlet === 'right' || curr.outlet === 'right') {
+      return false;
+    }
     return future.routeConfig === curr.routeConfig;
   }
 

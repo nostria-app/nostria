@@ -623,9 +623,7 @@ export class SearchResultsComponent {
       author: note.event.pubkey,
       kind: note.event.kind,
     });
-    this.router.navigate([{ outlets: { primary: ['e', nevent], right: null } }], {
-      state: { event: note.event }
-    });
+    this.layout.openEventAsPrimary(nevent, note.event);
     this.searchService.clearResults();
     this.layout.toggleSearch();
   }
@@ -639,9 +637,7 @@ export class SearchResultsComponent {
       pubkey: article.event.pubkey,
       identifier: dTag,
     });
-    this.router.navigate([{ outlets: { primary: ['a', naddr], right: null } }], {
-      state: { event: article.event }
-    });
+    this.layout.openArticleAsPrimary(naddr, article.event);
     this.searchService.clearResults();
     this.layout.toggleSearch();
   }

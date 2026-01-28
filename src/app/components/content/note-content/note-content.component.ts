@@ -25,6 +25,7 @@ import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
+import { LayoutService } from '../../../services/layout.service';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -48,6 +49,7 @@ export class NoteContentComponent implements OnDestroy {
   trustedByPubkey = input<string | undefined>(undefined);
 
   private router = inject(Router);
+  private layout = inject(LayoutService);
   private utilities = inject(UtilitiesService);
   private dialog = inject(MatDialog);
   private formatService = inject(FormatService);
@@ -366,28 +368,28 @@ export class NoteContentComponent implements OnDestroy {
         const identifier = nostrUri.replace('nostr:', '');
         if (identifier.startsWith('npub')) {
           // Use npub directly
-          this.router.navigate([{ outlets: { right: ['p', identifier] } }]);
+          this.layout.openProfile(identifier);
         } else {
           // Convert nprofile to npub
           const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
           if (hexPubkey) {
             const npub = nip19.npubEncode(hexPubkey);
-            this.router.navigate([{ outlets: { right: ['p', npub] } }]);
+            this.layout.openProfile(npub);
           } else {
             // Fallback to raw identifier if conversion fails
-            this.router.navigate([{ outlets: { right: ['p', identifier] } }]);
+            this.layout.openProfile(identifier);
           }
         }
         return;
       } else if (nostrUri.startsWith('nostr:note') || nostrUri.startsWith('nostr:nevent')) {
         // Navigate to the event page using the raw note/nevent
         const identifier = nostrUri.replace('nostr:', '');
-        this.router.navigate([{ outlets: { right: ['e', identifier] } }]);
+        this.layout.openGenericEvent(identifier);
         return;
       } else if (nostrUri.startsWith('nostr:naddr')) {
         // Navigate to the article page using the raw naddr
         const identifier = nostrUri.replace('nostr:', '');
-        this.router.navigate([{ outlets: { right: ['a', identifier] } }]);
+        this.layout.openArticle(identifier);
         return;
       }
     }
