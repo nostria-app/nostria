@@ -1475,7 +1475,13 @@ app-media-queue {
 }
 
 // Sidenav z-index hierarchy - all below toolbar (z-index: 1000)
-// Backdrop covers content but stays below toolbar
+// Content must be below backdrop so backdrop can receive clicks
+.mat-drawer-content,
+.mat-drawer-container .mat-drawer-content {
+  z-index: 1 !important;
+}
+
+// Backdrop covers content but stays below sidenav
 .mat-drawer-backdrop,
 .mat-drawer-container .mat-drawer-backdrop {
   z-index: 99 !important;
