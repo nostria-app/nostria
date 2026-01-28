@@ -172,7 +172,7 @@ nav {
       flex: 1;
       border: none;
       background: transparent;
-      font-size: 14px;
+      font-size: 16px; // Minimum 16px to prevent iOS Safari auto-zoom on focus
       color: var(--mat-sys-on-surface);
       outline: none;
       min-width: 0;

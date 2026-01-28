@@ -1217,6 +1217,8 @@ All backend services use regional routing:
 - **ESLint**: Angular ESLint rules
 - **TypeScript**: Strict mode, no `any`
 
+Minimum 16px to prevent iOS Safari auto-zoom on focus
+
 ### Component Best Practices
 
 ```typescript

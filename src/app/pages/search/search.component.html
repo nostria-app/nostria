@@ -87,17 +87,17 @@
           <span>All ({{ totalResults() }})</span>
         </ng-template>
         <div class="tab-content">
-          @if (profileResults().length > 0) {
+          @if (sortedProfileResults().length > 0) {
           <h3 class="section-title">
             <mat-icon>person</mat-icon>
             Profiles ({{ profileCount() }})
           </h3>
           <div class="profiles-grid">
-            @for (item of profileResults().slice(0, 6); track trackByEventId($index, item)) {
+            @for (item of sortedProfileResults().slice(0, 6); track trackByEventId($index, item)) {
             <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
             }
           </div>
-          @if (profileResults().length > 6) {
+          @if (sortedProfileResults().length > 6) {
           <button mat-button class="view-all-button" (click)="selectedTabIndex.set(1)">
             View all {{ profileCount() }} profiles
             <mat-icon>arrow_forward</mat-icon>
@@ -151,14 +151,14 @@
           <span>Profiles ({{ profileCount() }})</span>
         </ng-template>
         <div class="tab-content">
-          @if (profileResults().length === 0) {
+          @if (sortedProfileResults().length === 0) {
           <div class="empty-tab">
             <mat-icon>person_off</mat-icon>
             <p>No profiles found</p>
           </div>
           } @else {
           <div class="profiles-grid full">
-            @for (item of profileResults(); track trackByEventId($index, item)) {
+            @for (item of sortedProfileResults(); track trackByEventId($index, item)) {
             <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
             }
           </div>

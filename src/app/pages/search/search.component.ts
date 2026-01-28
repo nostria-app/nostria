@@ -22,6 +22,7 @@ import { FollowingService } from '../../services/following.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { NostrRecord } from '../../interfaces';
 import { EventComponent } from '../../components/event/event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
@@ -65,6 +66,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private searchRelay = inject(SearchRelayService);
   private followingService = inject(FollowingService);
+  private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   protected utilities = inject(UtilitiesService);
@@ -91,6 +93,24 @@ export class SearchComponent implements OnInit, OnDestroy {
   profileCount = computed(() => this.profileResults().length);
   noteCount = computed(() => this.noteResults().length);
   articleCount = computed(() => this.articleResults().length);
+
+  // Sorted profile results - followed accounts appear first
+  sortedProfileResults = computed(() => {
+    const results = this.profileResults();
+    const isFollowing = this.accountState.isFollowing();
+
+    return [...results].sort((a, b) => {
+      const aFollowing = isFollowing(a.event.pubkey);
+      const bFollowing = isFollowing(b.event.pubkey);
+
+      // Followed accounts come first
+      if (aFollowing && !bFollowing) return -1;
+      if (!aFollowing && bFollowing) return 1;
+
+      // Within same group, sort by created_at (newest first)
+      return b.event.created_at - a.event.created_at;
+    });
+  });
 
   // Tab index
   selectedTabIndex = signal(0);
