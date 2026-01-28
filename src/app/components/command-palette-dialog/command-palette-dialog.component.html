@@ -1,10 +1,4 @@
 <div dialog-content class="command-palette-container">
-  <div class="dialog-top-bar">
-    <button mat-icon-button class="close-button" (click)="dialogRef.close()" aria-label="Close">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-
   <div class="search-header">
     <mat-icon class="search-icon">search</mat-icon>
     <input #searchInput type="text" [ngModel]="searchQuery()"
@@ -26,6 +20,10 @@
       <span class="shortcut">↵</span> to select
     </div>
     }
+
+    <button mat-icon-button class="close-button" (click)="dialogRef.close()" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
 
   <div class="results-list">
