@@ -182,6 +182,12 @@ export class BookmarkService {
     await this.subscribeToBookmarkLists();
   }
 
+  /** Pending reload timeout for debouncing */
+  private pendingReload: ReturnType<typeof setTimeout> | null = null;
+
+  /** Flag to track if reload is needed after EOSE */
+  private needsReloadAfterEose = false;
+
   private async subscribeToBookmarkLists() {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
@@ -197,13 +203,20 @@ export class BookmarkService {
           // Save to database
           const dTag = event.tags.find(t => t[0] === 'd')?.[1];
           if (dTag) {
-            await this.database.saveReplaceableEvent({ ...event, dTag });
+            const wasSaved = await this.database.saveReplaceableEvent({ ...event, dTag });
+            // Only schedule reload if the event was actually saved (newer than existing)
+            if (wasSaved) {
+              this.needsReloadAfterEose = true;
+            }
           }
-          // Reload lists
-          await this.loadBookmarkLists();
         },
         () => {
           console.log('🔖 End of stored bookmark lists (EOSE)');
+          // Only reload if any new events were saved
+          if (this.needsReloadAfterEose) {
+            this.needsReloadAfterEose = false;
+            this.scheduleReload();
+          }
         }
       );
     } catch (error) {
@@ -212,11 +225,27 @@ export class BookmarkService {
   }
 
   /**
+   * Schedule a debounced reload of bookmark lists
+   * Prevents multiple rapid reloads when receiving many events
+   */
+  private scheduleReload() {
+    // Cancel any pending reload
+    if (this.pendingReload) {
+      clearTimeout(this.pendingReload);
+    }
+
+    // Schedule reload after a short delay to batch multiple changes
+    this.pendingReload = setTimeout(async () => {
+      this.pendingReload = null;
+      await this.loadBookmarkLists();
+    }, 100);
+  }
+
+  /**
    * Load all bookmark lists from database and decrypt private ones
    * This is called on initialization and can be called again to retry failed decryptions
    */
   async loadBookmarkLists() {
-    console.log('[BookmarkService] 🔄 Loading/reloading bookmark lists...');
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       return;
@@ -225,15 +254,11 @@ export class BookmarkService {
     // Query for all bookmark lists (kind 30003)
     const events = await this.database.getEventsByPubkeyAndKind(pubkey, 30003);
 
-    console.log('[BookmarkService] Loading bookmark lists, found events:', events.length);
-
     // Filter out YouTube bookmarks (they have a 't' tag with 'youtube')
     const filteredEvents = events.filter(event => {
       const tTags = event.tags.filter(t => t[0] === 't');
       return !tTags.some(t => t[1] === 'youtube');
     });
-
-    console.log('[BookmarkService] After YouTube filter:', filteredEvents.length);
 
     // Deduplicate by d-tag (keep only the latest event for each d-tag)
     const deduplicatedMap = new Map<string, Event>();
@@ -247,15 +272,11 @@ export class BookmarkService {
       }
     }
 
-    console.log(`[BookmarkService] After deduplication: ${deduplicatedMap.size} unique lists`);
-
     const lists: BookmarkList[] = Array.from(deduplicatedMap.values()).map(event => {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
 
       // Per NIP-51: private lists have encrypted content, public lists have empty content
       const isPrivate = !!event.content && event.content.length > 0;
-
-      console.log(`[BookmarkService] Processing list ${dTag}, isPrivate: ${isPrivate}, content length: ${event.content?.length || 0}`);
 
       const titleTag = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
 
@@ -272,7 +293,7 @@ export class BookmarkService {
       };
     });
 
-    console.log(`[BookmarkService] ✅ List loading completed, setting ${lists.length} lists`);
+    console.log(`[BookmarkService] ✅ Loaded ${lists.length} bookmark lists (from ${events.length} events)`);
     this.bookmarkLists.set(lists);
   }
 
