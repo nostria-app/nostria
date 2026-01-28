@@ -44,7 +44,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { nip19, kinds } from 'nostr-tools';
 import { ProfileState } from '../../services/profile-state';
 import { ProfileStateFactory, PROFILE_STATE } from '../../services/profile-state-factory.service';
-import { ProfileStateService } from '../../services/profile-state.service';
 import { ProfileTrackingService } from '../../services/profile-tracking.service';
 import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
@@ -136,7 +135,6 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private platformId = inject(PLATFORM_ID);
   layoutService = inject(LayoutService);
   profileState = inject(PROFILE_STATE);
-  private readonly globalProfileState = inject(ProfileStateService); // For backward compatibility with external components
   accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
   private readonly url = inject(UrlUpdateService);
@@ -441,10 +439,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
             // Always set the profile pubkey first
             this.profileState.setCurrentProfilePubkey(id);
 
-            // Also update the global profile state for backward compatibility with external components
-            this.globalProfileState.currentProfileKey.set(id);
-
-            // Tell ProfileStateService which panel we're in for scroll signal handling
+            // Tell ProfileState which panel we're in for scroll signal handling
             this.profileState.isInRightPanel.set(this.route.outlet === 'right');
 
             this.pubkey.set(id);

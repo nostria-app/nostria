@@ -9,7 +9,6 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/media-preview.component';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import { AddressPointer, EventPointer, ProfilePointer } from 'nostr-tools/nip19';
-import { ProfileStateService } from './profile-state.service';
 import { NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
@@ -66,7 +65,6 @@ export class LayoutService implements OnDestroy {
   breakpointObserver = inject(BreakpointObserver);
   optimalProfilePosition = 240;
 
-  profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
   private userRelayService = inject(UserRelayService);
   private feedService = inject(FeedService);
@@ -768,11 +766,10 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
-    if (type === 'nprofile') {
-      const pubkey = this.profileState.pubkey();
+    if (type === 'nprofile' && typeof text === 'string') {
       const profilePointer: ProfilePointer = {
         pubkey: text,
-        relays: pubkey ? this.userRelayService.getRelaysForPubkey(pubkey) : undefined,
+        relays: this.userRelayService.getRelaysForPubkey(text),
       };
       text = nip19.nprofileEncode(profilePointer);
     }

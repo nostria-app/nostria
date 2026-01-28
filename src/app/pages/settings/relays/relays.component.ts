@@ -33,7 +33,6 @@ import { LayoutService } from '../../../services/layout.service';
 import { DatabaseService } from '../../../services/database.service';
 import { NotificationService } from '../../../services/notification.service';
 import { ApplicationService } from '../../../services/application.service';
-import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
@@ -79,7 +78,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private notifications = inject(NotificationService);
   private app = inject(ApplicationService);
-  private profileState = inject(ProfileStateService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);

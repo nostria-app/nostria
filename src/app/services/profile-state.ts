@@ -9,7 +9,7 @@ import { TimelineFilterOptions, DEFAULT_TIMELINE_FILTER } from '../interfaces/ti
 
 /**
  * ProfileState holds all state for a single profile view.
- * Unlike ProfileStateService (singleton), this class is instantiated per-profile,
+ * Unlike the legacy singleton service, this class is instantiated per-profile,
  * ensuring data isolation when multiple profiles are open in different panes.
  */
 export class ProfileState {
