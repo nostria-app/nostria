@@ -1,14 +1,25 @@
 <div class="inline-video-container" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()"
   (mousemove)="onMouseMove()" (touchstart)="onTouchStart()" (click)="$event.stopPropagation()">
-  <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [muted]="shouldBeMuted()"
+  <video #videoElement class="video-element" [src]="effectiveSrc()" [poster]="poster()" [muted]="shouldBeMuted()"
     [loop]="loop()" playsinline preload="metadata" (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
     (click)="onVideoClick($event)" (dblclick)="onVideoDoubleClick($event)"></video>
 
   <!-- Center play button - only visible before first play -->
-  @if (paused() && !hasPlayedOnce()) {
+  @if (paused() && !hasPlayedOnce() && !hasError()) {
   <button class="center-play-btn" (click)="onPlayButtonClick()" aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
+  }
+
+  <!-- Error overlay - shown when video fails to load -->
+  @if (hasError()) {
+  <div class="error-overlay">
+    <mat-icon>error_outline</mat-icon>
+    <span>Video failed to load</span>
+    <a [href]="src()" target="_blank" rel="noopener noreferrer" class="open-link">
+      Open in new tab
+    </a>
+  </div>
   }
 
   <!-- Controls overlay - visible on hover while playing, or when paused after first play -->
