@@ -117,7 +117,7 @@
           [maxBufferPx]="maxBufferPx">
           <mat-list class="full-width-list">
             @for (user of mutualConnectionsList(); track user.id) {
-            <app-user-profile [pubkey]="user.npub"></app-user-profile>
+            <app-user-profile [pubkey]="user.id"></app-user-profile>
             }
           </mat-list>
         </cdk-virtual-scroll-viewport>
