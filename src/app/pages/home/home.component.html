@@ -175,44 +175,58 @@
   </div>
 
   <!-- AI Section -->
-  <section class="section-block">
-    <h2 class="section-label" i18n="@@home.section.ai">AI</h2>
-    <div class="section-row">
+  <section class="bento-section">
+    <h2 class="bento-section-label" i18n="@@home.section.ai">AI</h2>
+    <div class="bento-section-grid">
       @if (isAiEnabled()) {
-      <a routerLink="/ai" class="mini-tile" mat-ripple>
-        <mat-icon>psychology</mat-icon>
-        <span i18n="@@home.ai.models">AI Models</span>
+      <a routerLink="/ai" class="bento-tile tile-ai-models tile-section-wide" mat-ripple>
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">psychology</mat-icon>
+          <div class="tile-text">
+            <h3 i18n="@@home.ai.models">AI Models</h3>
+            <p>Chat with AI assistants</p>
+          </div>
+        </div>
       </a>
       }
-      <a routerLink="/ai/settings" class="mini-tile" mat-ripple>
-        <mat-icon>settings_suggest</mat-icon>
+      <a routerLink="/ai/settings" class="bento-tile tile-ai-settings tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">settings_suggest</mat-icon>
         <span i18n="@@home.ai.settings">AI Settings</span>
       </a>
     </div>
   </section>
 
   <!-- Collections Section -->
-  <section class="section-block">
-    <h2 class="section-label" i18n="@@home.section.collections">Your Collections</h2>
-    <div class="section-row">
-      <a routerLink="/collections/media" class="mini-tile" mat-ripple>
-        <mat-icon>photo_library</mat-icon>
-        <span i18n="@@home.collections.media">Media</span>
+  <section class="bento-section">
+    <h2 class="bento-section-label" i18n="@@home.section.collections">Your Collections</h2>
+    <div class="bento-section-grid collections-grid">
+      <a routerLink="/collections/media" class="bento-tile tile-col-media tile-section-medium" mat-ripple>
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">photo_library</mat-icon>
+          <h3 i18n="@@home.collections.media">Media</h3>
+          <p>Your saved media</p>
+        </div>
       </a>
-      <a routerLink="/collections/bookmarks" class="mini-tile" mat-ripple>
-        <mat-icon>bookmarks</mat-icon>
-        <span i18n="@@home.bookmarks">Bookmarks</span>
+      <a routerLink="/collections/bookmarks" class="bento-tile tile-col-bookmarks tile-section-medium" mat-ripple>
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">bookmarks</mat-icon>
+          <h3 i18n="@@home.bookmarks">Bookmarks</h3>
+          <p>Saved for later</p>
+        </div>
       </a>
-      <a routerLink="/collections/relays" class="mini-tile" mat-ripple>
-        <mat-icon>hub</mat-icon>
+      <a routerLink="/collections/relays" class="bento-tile tile-col-relays tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">hub</mat-icon>
         <span i18n="@@home.relays">Relays</span>
       </a>
-      <a routerLink="/collections/emojis" class="mini-tile" mat-ripple>
-        <mat-icon>emoji_emotions</mat-icon>
+      <a routerLink="/collections/emojis" class="bento-tile tile-col-emojis tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">emoji_emotions</mat-icon>
         <span i18n="@@home.collections.emojis">Emojis</span>
       </a>
-      <a routerLink="/collections/interests" class="mini-tile" mat-ripple>
-        <mat-icon>interests</mat-icon>
+      <a routerLink="/collections/interests" class="bento-tile tile-col-interests tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">interests</mat-icon>
         <span i18n="@@home.collections.interests">Interests</span>
       </a>
     </div>
@@ -220,77 +234,94 @@
 
   <!-- Premium Section -->
   @if (account.hasActiveSubscription()) {
-  <section class="premium-section active">
-    <div class="premium-header">
+  <section class="bento-section premium-active">
+    <div class="bento-section-header premium-header">
       <mat-icon class="star-icon">star</mat-icon>
       <h2 i18n="@@home.section.premium">Premium Tools</h2>
     </div>
-    <div class="premium-grid">
-      <a routerLink="/stats" class="premium-tile" mat-ripple>
-        <mat-icon>bar_chart</mat-icon>
-        <span i18n="@@home.analytics">Analytics</span>
+    <div class="bento-section-grid premium-grid">
+      <a routerLink="/stats" class="bento-tile tile-premium-analytics tile-section-medium" mat-ripple>
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">bar_chart</mat-icon>
+          <h3 i18n="@@home.analytics">Analytics</h3>
+          <p>Track your stats</p>
+        </div>
       </a>
-      <a routerLink="/settings/backup" class="premium-tile" mat-ripple>
-        <mat-icon>cloud_upload</mat-icon>
-        <span i18n="@@home.backup">Backup</span>
+      <a routerLink="/settings/backup" class="bento-tile tile-premium-backup tile-section-medium" mat-ripple>
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">cloud_upload</mat-icon>
+          <h3 i18n="@@home.backup">Backup</h3>
+          <p>Cloud storage</p>
+        </div>
       </a>
-      <a routerLink="/memos" class="premium-tile" mat-ripple>
-        <mat-icon>sticky_note_2</mat-icon>
+      <a routerLink="/memos" class="bento-tile tile-premium-memos tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">sticky_note_2</mat-icon>
         <span i18n="@@home.memos">Memos</span>
       </a>
-      <a routerLink="/calendar" class="premium-tile" mat-ripple>
-        <mat-icon>calendar_month</mat-icon>
+      <a routerLink="/calendar" class="bento-tile tile-premium-calendar tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">calendar_month</mat-icon>
         <span i18n="@@home.calendar">Calendar</span>
       </a>
-      <a routerLink="/youtube" class="premium-tile" mat-ripple>
-        <mat-icon>video_library</mat-icon>
+      <a routerLink="/youtube" class="bento-tile tile-premium-youtube tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">video_library</mat-icon>
         <span i18n="@@home.youtube">YouTube</span>
       </a>
-      <a routerLink="/premium" class="premium-tile" mat-ripple>
-        <mat-icon>card_membership</mat-icon>
+      <a routerLink="/premium" class="bento-tile tile-premium-subscription tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">card_membership</mat-icon>
         <span i18n="@@home.subscription">Subscription</span>
       </a>
     </div>
   </section>
   } @else {
-  <section class="premium-section upsell">
-    <a routerLink="/premium" class="premium-upsell-card" mat-ripple>
-      <div class="upsell-content">
-        <mat-icon class="star-icon">star</mat-icon>
-        <div>
-          <h3 i18n="@@home.premium.title">Upgrade to Premium</h3>
-          <p i18n="@@home.premium.description">Get analytics, cloud backup, and more</p>
+  <section class="bento-section">
+    <a routerLink="/premium" class="bento-tile tile-premium-upsell tile-upsell" mat-ripple>
+      <div class="tile-background"></div>
+      <div class="tile-content">
+        <div class="upsell-content">
+          <mat-icon class="star-icon">star</mat-icon>
+          <div class="tile-text">
+            <h3 i18n="@@home.premium.title">Upgrade to Premium</h3>
+            <p i18n="@@home.premium.description">Get analytics, cloud backup, and more</p>
+          </div>
         </div>
+        <mat-icon class="tile-arrow">arrow_forward</mat-icon>
       </div>
-      <mat-icon class="arrow-icon">arrow_forward</mat-icon>
     </a>
   </section>
   }
 
   <!-- More Section -->
-  <section class="section-block">
-    <h2 class="section-label" i18n="@@home.section.more">More</h2>
-    <div class="section-row">
-      <button class="mini-tile" mat-ripple (click)="openCommandPalette()">
-        <mat-icon>terminal</mat-icon>
-        <span i18n="@@home.commands">Commands</span>
+  <section class="bento-section">
+    <h2 class="bento-section-label" i18n="@@home.section.more">More</h2>
+    <div class="bento-section-grid more-grid">
+      <button class="bento-tile tile-more-commands tile-section-wide" mat-ripple (click)="openCommandPalette()">
+        <div class="tile-background"></div>
+        <div class="tile-content">
+          <mat-icon class="tile-icon">terminal</mat-icon>
+          <div class="tile-text">
+            <h3 i18n="@@home.commands">Commands</h3>
+            <p>Quick actions & shortcuts</p>
+          </div>
+        </div>
       </button>
-      <button class="mini-tile" mat-ripple (click)="openPublishCustomEvent()">
-        <mat-icon>publish</mat-icon>
+      <button class="bento-tile tile-more-publish tile-section-small" mat-ripple (click)="openPublishCustomEvent()">
+        <mat-icon class="tile-icon">publish</mat-icon>
         <span i18n="@@home.publish-event">Publish Event</span>
       </button>
       @if (shouldShowInstallOption()) {
-      <button class="mini-tile" mat-ripple (click)="openInstallDialog()">
-        <mat-icon>download</mat-icon>
+      <button class="bento-tile tile-more-install tile-section-small" mat-ripple (click)="openInstallDialog()">
+        <mat-icon class="tile-icon">download</mat-icon>
         <span i18n="@@home.install-app">Install App</span>
       </button>
       }
-      <a routerLink="/settings" class="mini-tile" mat-ripple>
-        <mat-icon>settings</mat-icon>
+      <a routerLink="/settings" class="bento-tile tile-more-settings tile-section-small" mat-ripple>
+        <mat-icon class="tile-icon">settings</mat-icon>
         <span i18n="@@home.settings">Settings</span>
       </a>
-      <button class="mini-tile" mat-ripple (click)="openWhatsNewDialog()">
-        <mat-icon>campaign</mat-icon>
+      <button class="bento-tile tile-more-whatsnew tile-section-small" mat-ripple (click)="openWhatsNewDialog()">
+        <mat-icon class="tile-icon">campaign</mat-icon>
         <span i18n="@@home.whats-new">What's New</span>
       </button>
     </div>
