@@ -82,6 +82,17 @@ interface AccountLocalState {
   leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
   zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
   threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', or follow set d-tag
+  recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
+}
+
+/**
+ * Recent emoji stored per-account
+ * Can be a standard emoji or a custom emoji with shortcode and URL
+ */
+export interface RecentEmoji {
+  emoji: string; // The emoji character or :shortcode: for custom emojis
+  url?: string; // URL for custom emojis (NIP-30)
+  timestamp: number; // When the emoji was last used (for sorting)
 }
 
 /**
@@ -1058,6 +1069,49 @@ export class AccountLocalStateService {
   setLeftPanelCollapsed(pubkey: string, collapsed: boolean): void {
     this.updateAccountState(pubkey, { leftPanelCollapsed: collapsed });
     this.leftPanelCollapsedVersion.update(v => v + 1);
+  }
+
+  /**
+   * Get recent emojis for an account
+   * Returns up to 12 most recently used emojis, sorted by most recent first
+   */
+  getRecentEmojis(pubkey: string): RecentEmoji[] {
+    const state = this.getAccountState(pubkey);
+    const emojis = state.recentEmojis || [];
+    // Sort by timestamp descending (most recent first) and limit to 12
+    return [...emojis].sort((a, b) => b.timestamp - a.timestamp).slice(0, 12);
+  }
+
+  /**
+   * Add an emoji to recent emojis for an account
+   * If the emoji already exists, updates its timestamp
+   * Keeps only the 20 most recent emojis
+   */
+  addRecentEmoji(pubkey: string, emoji: string, url?: string): void {
+    const state = this.getAccountState(pubkey);
+    const currentEmojis = state.recentEmojis || [];
+    const timestamp = Date.now();
+
+    // Remove existing entry for this emoji if present
+    const filteredEmojis = currentEmojis.filter(e => e.emoji !== emoji);
+
+    // Add new entry at the beginning
+    const newEmoji: RecentEmoji = { emoji, timestamp };
+    if (url) {
+      newEmoji.url = url;
+    }
+
+    // Keep only the 20 most recent emojis
+    const updatedEmojis = [newEmoji, ...filteredEmojis].slice(0, 20);
+
+    this.updateAccountState(pubkey, { recentEmojis: updatedEmojis });
+  }
+
+  /**
+   * Clear recent emojis for an account
+   */
+  clearRecentEmojis(pubkey: string): void {
+    this.updateAccountState(pubkey, { recentEmojis: [] });
   }
 
   /**
