@@ -764,8 +764,269 @@ export class UtilitiesService {
     return sortedRelays.slice(0, count);
   }
 
-  currentDate() {
+  /**
+   * Get the current timestamp in seconds (Nostr format).
+   * IMPORTANT: Nostr uses UNIX timestamps in seconds, not milliseconds.
+   */
+  currentDate(): number {
     return Math.floor(Date.now() / 1000);
+  }
+
+  /**
+   * Alias for currentDate() - returns current timestamp in seconds.
+   * Use this for better readability when working with timestamps.
+   */
+  now(): number {
+    return this.currentDate();
+  }
+
+  /**
+   * Get a future timestamp by adding minutes to the current time.
+   * @param minutes Number of minutes to add
+   * @returns Timestamp in seconds
+   */
+  futureDate(minutes: number): number {
+    return this.currentDate() + minutes * 60;
+  }
+
+  /**
+   * Get a past timestamp by subtracting a time duration from now.
+   * @param seconds Number of seconds to subtract
+   * @returns Timestamp in seconds
+   */
+  pastDate(seconds: number): number {
+    return this.currentDate() - seconds;
+  }
+
+  // ============================================================================
+  // Tag Extraction Utilities
+  // ============================================================================
+
+  /**
+   * Get a single tag value from an event by tag name.
+   * @param event The Nostr event
+   * @param tagName The tag name to search for (e.g., 'title', 'image', 'summary')
+   * @returns The tag value or undefined if not found
+   */
+  getTagValue(event: Event | UnsignedEvent, tagName: string): string | undefined {
+    const tag = event.tags.find(t => t[0] === tagName);
+    return tag?.[1];
+  }
+
+  /**
+   * Get all values for a specific tag from an event.
+   * @param event The Nostr event
+   * @param tagName The tag name to search for
+   * @returns Array of tag values
+   */
+  getAllTagValues(event: Event | UnsignedEvent, tagName: string): string[] {
+    return event.tags
+      .filter(t => t[0] === tagName && t.length >= 2)
+      .map(t => t[1]);
+  }
+
+  /**
+   * Check if an event has a specific tag.
+   * @param event The Nostr event
+   * @param tagName The tag name to check for
+   * @returns True if the tag exists
+   */
+  hasTag(event: Event | UnsignedEvent, tagName: string): boolean {
+    return event.tags.some(t => t[0] === tagName);
+  }
+
+  /**
+   * Get all tags matching a tag name (returns full tag arrays).
+   * @param event The Nostr event
+   * @param tagName The tag name to search for
+   * @returns Array of full tag arrays
+   */
+  getTagsMatching(event: Event | UnsignedEvent, tagName: string): string[][] {
+    return event.tags.filter(t => t[0] === tagName);
+  }
+
+  /**
+   * Get the title tag value from an event.
+   */
+  getTitleTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'title');
+  }
+
+  /**
+   * Get the image tag value from an event.
+   */
+  getImageTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'image');
+  }
+
+  /**
+   * Get the thumb tag value from an event.
+   */
+  getThumbTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'thumb');
+  }
+
+  /**
+   * Get the summary tag value from an event.
+   */
+  getSummaryTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'summary');
+  }
+
+  /**
+   * Get the content-warning tag from an event.
+   */
+  getContentWarningTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'content-warning');
+  }
+
+  /**
+   * Get the status tag value from an event.
+   */
+  getStatusTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'status');
+  }
+
+  /**
+   * Get the streaming URL tag value from an event.
+   */
+  getStreamingTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'streaming');
+  }
+
+  /**
+   * Get the blurhash tag value from an event.
+   */
+  getBlurhashTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'blurhash');
+  }
+
+  /**
+   * Get the duration tag value from an event (as a number).
+   */
+  getDurationTag(event: Event | UnsignedEvent): number | undefined {
+    const value = this.getTagValue(event, 'duration');
+    return value ? parseInt(value, 10) : undefined;
+  }
+
+  /**
+   * Get the alt tag value from an event.
+   */
+  getAltTag(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'alt');
+  }
+
+  /**
+   * Get all imeta tags from an event.
+   */
+  getImetaTags(event: Event | UnsignedEvent): string[][] {
+    return this.getTagsMatching(event, 'imeta');
+  }
+
+  // ============================================================================
+  // String Utilities
+  // ============================================================================
+
+  /**
+   * Truncate a string with ellipsis, showing start and end characters.
+   * @param str The string to truncate
+   * @param startChars Number of characters to show at the start
+   * @param endChars Number of characters to show at the end
+   * @returns Truncated string with ellipsis
+   */
+  truncateString(str: string, startChars: number, endChars: number): string {
+    if (!str || str.length <= startChars + endChars + 3) {
+      return str;
+    }
+    return `${str.substring(0, startChars)}...${str.substring(str.length - endChars)}`;
+  }
+
+  /**
+   * Normalize a search term by trimming whitespace and converting to lowercase.
+   * @param str The string to normalize
+   * @returns Normalized string
+   */
+  normalizeSearchTerm(str: string): string {
+    return str?.toLowerCase().trim() ?? '';
+  }
+
+  /**
+   * Escape HTML special characters to prevent XSS.
+   * Safe to use in both browser and SSR contexts.
+   * @param text The text to escape
+   * @returns HTML-escaped string
+   */
+  escapeHtml(text: string): string {
+    if (!this.isBrowser()) {
+      // SSR-safe fallback
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
+   * Format an object as pretty-printed JSON.
+   * @param obj The object to format
+   * @returns Formatted JSON string
+   */
+  formatJson(obj: unknown): string {
+    return JSON.stringify(obj, null, 2);
+  }
+
+  // ============================================================================
+  // Array Utilities
+  // ============================================================================
+
+  /**
+   * Remove duplicates from an array.
+   * @param array The array to deduplicate
+   * @returns Array with unique values
+   */
+  unique<T>(array: T[]): T[] {
+    return [...new Set(array)];
+  }
+
+  /**
+   * Remove duplicates from an array using a key selector function.
+   * @param array The array to deduplicate
+   * @param keySelector Function to extract the key for comparison
+   * @returns Array with unique values based on the key
+   */
+  uniqueBy<T, K>(array: T[], keySelector: (item: T) => K): T[] {
+    const seen = new Set<K>();
+    return array.filter(item => {
+      const key = keySelector(item);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  // ============================================================================
+  // Hex Validation Utilities
+  // ============================================================================
+
+  /**
+   * Validate if a string is a valid hex string of a specific length.
+   * @param str The string to validate
+   * @param length Expected length (optional)
+   * @returns True if valid hex
+   */
+  isValidHex(str: string, length?: number): boolean {
+    if (!str || typeof str !== 'string') {
+      return false;
+    }
+    const regex = length ? new RegExp(`^[0-9a-fA-F]{${length}}$`) : /^[0-9a-fA-F]+$/;
+    return regex.test(str);
   }
 
   /**

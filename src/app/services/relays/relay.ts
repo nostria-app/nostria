@@ -263,6 +263,24 @@ export abstract class RelayServiceBase {
   }
 
   /**
+   * Move a relay from one position to another
+   * @param fromIndex The current index of the relay
+   * @param toIndex The target index for the relay
+   */
+  moveRelay(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= this.relayUrls.length ||
+        toIndex < 0 || toIndex >= this.relayUrls.length) {
+      this.logger.warn('Invalid relay move indices:', { fromIndex, toIndex, length: this.relayUrls.length });
+      return;
+    }
+    const [movedRelay] = this.relayUrls.splice(fromIndex, 1);
+    this.relayUrls.splice(toIndex, 0, movedRelay);
+    this.updateRelaysSignal();
+    this.notifyRelaysModified();
+    this.logger.debug('Moved relay:', { fromIndex, toIndex, relay: movedRelay });
+  }
+
+  /**
    * Clear all relays
    */
   clearRelays(): void {

@@ -18,6 +18,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { Poll, PollResponse, PollResults } from '../../interfaces';
 import { PollCardComponent } from '../../components/poll-card/poll-card.component';
 import { PollDetailsDialogComponent } from '../../components/poll-details-dialog/poll-details-dialog.component';
+import { ClipboardService } from '../../services/clipboard.service';
 
 @Component({
   selector: 'app-polls',
@@ -43,6 +44,7 @@ export class PollsComponent {
   private snackBar = inject(MatSnackBar);
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
+  private clipboard = inject(ClipboardService);
 
   polls = this.pollService.polls;
   drafts = this.pollService.drafts;
@@ -254,12 +256,7 @@ export class PollsComponent {
         kind: 1068,
       });
 
-      await navigator.clipboard.writeText(nevent);
-      this.snackBar.open('Poll address copied to clipboard!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      await this.clipboard.copyText(nevent, 'Poll address copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy nevent address:', error);
       this.snackBar.open('Failed to copy address', 'Close', {
@@ -298,12 +295,7 @@ export class PollsComponent {
         ],
       };
 
-      await navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
-      this.snackBar.open('Event data copied to clipboard!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      await this.clipboard.copyJson(eventData, 'Event data copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy event data:', error);
       this.snackBar.open('Failed to copy event data', 'Close', {

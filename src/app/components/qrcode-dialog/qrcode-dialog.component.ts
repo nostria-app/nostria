@@ -1,10 +1,11 @@
-import { Component, Inject, AfterViewInit } from '@angular/core';
+import { Component, Inject, AfterViewInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
+import { ClipboardService } from '../../services/clipboard.service';
 
 export interface QRCodeDialogData {
   did: string;
@@ -20,6 +21,8 @@ export interface QRCodeDialogData {
   styleUrl: './qrcode-dialog.component.scss',
 })
 export class QRCodeDialogComponent implements AfterViewInit {
+  private clipboard = inject(ClipboardService);
+
   qrStyle = 'did';
 
   qrValue = '';
@@ -31,7 +34,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
   }
 
   async copyValue() {
-    await navigator.clipboard.writeText(this.qrValue);
+    await this.clipboard.copyText(this.qrValue);
   }
 
   generateQR(data: string) {

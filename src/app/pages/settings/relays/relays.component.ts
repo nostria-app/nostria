@@ -24,6 +24,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
@@ -63,6 +64,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
     MatSelectModule,
     MatTooltipModule,
     InfoTooltipComponent,
+    DragDropModule,
   ],
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss',
@@ -463,6 +465,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.accountRelay.removeRelay(relay.url);
     await this.publish();
     this.showMessage('Relay removed');
+  }
+
+  async onRelayDrop(event: CdkDragDrop<Relay[]>) {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+    this.logger.info('Reordering relay', { from: event.previousIndex, to: event.currentIndex });
+    this.accountRelay.moveRelay(event.previousIndex, event.currentIndex);
+    await this.publish();
+    this.showMessage('Relay order updated');
   }
 
   async repairMalformedRelayList() {

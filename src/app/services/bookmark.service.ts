@@ -9,6 +9,7 @@ import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
 import { EncryptionService } from './encryption.service';
+import { UtilitiesService } from './utilities.service';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -41,6 +42,7 @@ export class BookmarkService {
   layout = inject(LayoutService);
   database = inject(DatabaseService);
   encryption = inject(EncryptionService);
+  private utilities = inject(UtilitiesService);
 
   // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
@@ -393,7 +395,7 @@ export class BookmarkService {
       event = this.bookmarkEvent() || {
         kind: kinds.BookmarkList,
         pubkey: this.accountState.pubkey(),
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: this.utilities.currentDate(),
         content: '',
         tags: [],
         id: '',
@@ -412,7 +414,7 @@ export class BookmarkService {
       event = list.event || {
         kind: 30003,
         pubkey: this.accountState.pubkey(),
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: this.utilities.currentDate(),
         content: '',
         tags: [
           ['d', targetListId],
@@ -596,7 +598,7 @@ export class BookmarkService {
     const event: Event = {
       kind: 30003,
       pubkey: userPubkey,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: this.utilities.currentDate(),
       content: content,
       tags: tags,
       id: '',
@@ -720,7 +722,7 @@ export class BookmarkService {
     const event: Event = {
       kind: 30003,
       pubkey: list.event.pubkey,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: this.utilities.currentDate(),
       tags: newTags,
       content: newContent,
       id: '',
@@ -742,7 +744,7 @@ export class BookmarkService {
     const deletionEvent: Event = {
       kind: 5,
       pubkey: this.accountState.pubkey()!,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: this.utilities.currentDate(),
       content: 'Deleted bookmark list',
       tags: [
         ['a', `30003:${this.accountState.pubkey()}:${listId}`]
@@ -771,7 +773,7 @@ export class BookmarkService {
 
     event.id = '';
     event.sig = '';
-    event.created_at = Math.floor(Date.now() / 1000);
+    event.created_at = this.utilities.currentDate();
 
     // Sign the event
     const signedEvent = await this.nostr.signEvent(event);

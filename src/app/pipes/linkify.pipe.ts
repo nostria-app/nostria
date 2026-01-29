@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { UtilitiesService } from '../services/utilities.service';
 
 /**
  * Linkify pipe - transforms URLs in text into clickable links
@@ -11,6 +12,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 })
 export class LinkifyPipe implements PipeTransform {
   private sanitizer = inject(DomSanitizer);
+  private utilities = inject(UtilitiesService);
 
   transform(text: string): SafeHtml {
     if (!text) return '';
@@ -19,7 +21,7 @@ export class LinkifyPipe implements PipeTransform {
     const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
 
     // Escape HTML entities first to prevent XSS
-    const escaped = this.escapeHtml(text);
+    const escaped = this.utilities.escapeHtml(text);
 
     // Replace URLs with anchor tags
     const linked = escaped.replace(urlRegex, (url) => {
@@ -37,12 +39,6 @@ export class LinkifyPipe implements PipeTransform {
     });
 
     return this.sanitizer.bypassSecurityTrustHtml(linked);
-  }
-
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   private truncateUrl(url: string, maxLength = 50): string {

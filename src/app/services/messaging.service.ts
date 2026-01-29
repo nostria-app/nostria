@@ -645,7 +645,7 @@ export class MessagingService implements NostriaService {
       }
 
       // Update lastCheck timestamp
-      const now = Math.floor(Date.now() / 1000);
+      const now = this.utilities.currentDate();
       this.accountLocalState.setMessagesLastCheck(myPubkey, now);
 
       this.logger.info('Chat refresh complete');
@@ -792,7 +792,7 @@ export class MessagingService implements NostriaService {
 
       // Store pubkeys of people who've messaged us
       // const chatPubkeys = new Set<string>();
-      let oldestTimestamp = this.oldestChatTimestamp() || Math.floor(Date.now() / 1000);
+      let oldestTimestamp = this.oldestChatTimestamp() || this.utilities.currentDate();
 
       // Track pending decryption promises so we can wait for them
       const pendingDecryptions: Promise<void>[] = [];
@@ -1066,7 +1066,7 @@ export class MessagingService implements NostriaService {
           // which would prevent future full loads from working
           const hasChats = this.chatsMap().size > 0;
           if (!isIncrementalSync || hasChats) {
-            const now = Math.floor(Date.now() / 1000);
+            const now = this.utilities.currentDate();
             this.accountLocalState.setMessagesLastCheck(myPubkey, now);
           }
 
@@ -1287,7 +1287,7 @@ export class MessagingService implements NostriaService {
     // We need to use a buffer that accounts for this, plus some extra margin.
     // Using 3 days (259200 seconds) to be safe.
     const NIP17_TIMESTAMP_BUFFER = 259200; // 3 days in seconds
-    const since = Math.floor(Date.now() / 1000) - NIP17_TIMESTAMP_BUFFER;
+    const since = this.utilities.currentDate() - NIP17_TIMESTAMP_BUFFER;
 
     // Filter for messages where we're tagged (incoming NIP-04/NIP-44, and our own outgoing NIP-44)
     const filterTagged: Filter = {
@@ -1601,7 +1601,7 @@ export class MessagingService implements NostriaService {
     if (!until) {
       const currentMessages = this.getChatMessages(chatId);
       if (currentMessages.length === 0) {
-        until = Math.floor(Date.now() / 1000); // Current timestamp
+        until = this.utilities.currentDate(); // Current timestamp
       } else {
         until = Math.min(...currentMessages.map(m => m.created_at)) - 1;
       }

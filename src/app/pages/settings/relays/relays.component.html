@@ -103,10 +103,13 @@
               configured</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <mat-list>
+            <mat-list cdkDropList (cdkDropListDropped)="onRelayDrop($event)">
               @for (relay of userRelays(); track relay.url) {
-              <mat-list-item [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
+              <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
                 <div class="relay-item-container">
+                  <div class="relay-drag-handle" cdkDragHandle>
+                    <mat-icon>drag_indicator</mat-icon>
+                  </div>
                   <div class="relay-status-icon">
                     @if (hasRelayAuthFailed(relay.url)) {
                     @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
@@ -633,6 +636,10 @@
       <p i18n="@@settings.relays.info.p4">
         When you save Account Relays, your Relays List is additionally publishes to the Discovery
         Relays to help others find you.
+      </p>
+      <p i18n="@@settings.relays.info.p5">
+        The first relay in the list will be used as the relay hint when sharing articles or notes
+        that belong to your account. Drag relays to reorder them.
       </p>
     </mat-card-content>
   </ng-template>

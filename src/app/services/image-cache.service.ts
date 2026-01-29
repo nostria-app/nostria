@@ -1,4 +1,5 @@
-import { Injectable, inject, computed } from '@angular/core';
+import { Injectable, inject, computed, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { SettingsService } from './settings.service';
 import { SwUpdate } from '@angular/service-worker';
 import { ImagePreloaderService } from './image-preloader.service';
@@ -12,6 +13,8 @@ export class ImageCacheService {
   private readonly swUpdate = inject(SwUpdate);
   private readonly imagePreloader = inject(ImagePreloaderService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   /**
    * Gets the proxy base URL based on the user's selected region.
@@ -86,6 +89,9 @@ export class ImageCacheService {
    * Clears all cached images by clearing Angular SW cache
    */
   async clearAllCache(): Promise<void> {
+    // Skip on server - caches API is browser-only
+    if (!this.isBrowser) return;
+
     try {
       if (!('caches' in window)) return;
 
@@ -152,6 +158,9 @@ export class ImageCacheService {
    * Checks if caching is available and enabled
    */
   isCacheAvailable(): boolean {
+    // Always return false on server
+    if (!this.isBrowser) return false;
+
     return (
       'caches' in window &&
       (this.settingsService.settings().imageCacheEnabled ?? false) &&

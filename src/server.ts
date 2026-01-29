@@ -14,6 +14,124 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+// ============================================
+// Bot Detection for Social Sharing Previews
+// ============================================
+
+/**
+ * List of known social media and search engine bot user agents
+ * These bots fetch pages to generate link previews
+ */
+const BOT_USER_AGENTS = [
+  // Social media crawlers
+  'facebookexternalhit',
+  'Facebot',
+  'Twitterbot',
+  'LinkedInBot',
+  'WhatsApp',
+  'TelegramBot',
+  'Slackbot',
+  'Discordbot',
+  'Pinterest',
+  'Embedly',
+  // Search engine bots
+  'Googlebot',
+  'bingbot',
+  'DuckDuckBot',
+  'Baiduspider',
+  'YandexBot',
+  // Other preview generators
+  'Applebot',
+  'developers.google.com/+/web/snippet',
+  'redditbot',
+  'Quora Link Preview',
+  'Rogerbot',
+  'Screaming Frog',
+  'vkShare',
+  'W3C_Validator',
+  'Iframely',
+];
+
+/**
+ * Check if the request is from a known bot/crawler
+ */
+function isBot(userAgent: string | undefined): boolean {
+  if (!userAgent) return false;
+  const ua = userAgent.toLowerCase();
+  return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
+}
+
+// ============================================
+// SSR Response Cache for Bot Requests
+// ============================================
+
+interface CachedResponse {
+  html: string;
+  headers: Record<string, string>;
+  timestamp: number;
+}
+
+// Cache for SSR responses (keyed by URL path)
+const ssrCache = new Map<string, CachedResponse>();
+
+// Cache configuration
+const SSR_CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes for cache entries
+const SSR_CACHE_MAX_ENTRIES = 1000; // Maximum number of cached entries
+const SSR_CACHE_CLEANUP_INTERVAL_MS = 60 * 1000; // Cleanup every minute
+
+// SSR-able route patterns (routes that should be server-rendered)
+const SSR_ROUTE_PATTERNS = [
+  /^\/e\/.+/,      // Event pages
+  /^\/p\/.+/,      // Profile pages
+  /^\/u\/.+/,      // Username pages
+  /^\/a\/.+/,      // Article pages
+  /^\/stream\/.+/, // Stream pages
+  /^\/music\/artist\/.+/, // Music artist pages
+  /^\/music\/song\/.+/,   // Music song pages
+  /^\/music\/playlist\/.+/, // Music playlist pages
+];
+
+/**
+ * Check if a URL path should be server-rendered
+ */
+function isSSRRoute(path: string): boolean {
+  return SSR_ROUTE_PATTERNS.some(pattern => pattern.test(path));
+}
+
+/**
+ * Cleanup expired cache entries
+ */
+function cleanupSSRCache(): void {
+  const now = Date.now();
+  let removed = 0;
+
+  for (const [key, value] of ssrCache.entries()) {
+    if (now - value.timestamp > SSR_CACHE_MAX_AGE_MS) {
+      ssrCache.delete(key);
+      removed++;
+    }
+  }
+
+  // If still over limit, remove oldest entries
+  if (ssrCache.size > SSR_CACHE_MAX_ENTRIES) {
+    const entries = Array.from(ssrCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+    const toRemove = entries.slice(0, ssrCache.size - SSR_CACHE_MAX_ENTRIES);
+    for (const [key] of toRemove) {
+      ssrCache.delete(key);
+      removed++;
+    }
+  }
+
+  if (removed > 0) {
+    console.log(`[SSR Cache] Cleaned up ${removed} expired entries. Current size: ${ssrCache.size}`);
+  }
+}
+
+// Start cache cleanup interval
+setInterval(cleanupSSRCache, SSR_CACHE_CLEANUP_INTERVAL_MS);
+
 // Configure multer for handling multipart/form-data (file uploads)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -188,22 +306,117 @@ app.use(
 
 /**
  * Handle all other requests by rendering the Angular application.
+ * For bot requests, responses are cached to improve performance.
  */
-app.use((req, res, next) => {
-  console.log(`[SSR] Handling request: ${req.url}`);
-  angularApp
-    .handle(req)
-    .then(response => {
-      if (response) {
-        console.log(`[SSR] Rendered: ${req.url}`);
-        return writeResponseToNodeResponse(response, res);
+app.use(async (req, res, next) => {
+  const userAgent = req.headers['user-agent'];
+  const isBotRequest = isBot(userAgent);
+  const path = req.path;
+  const isSSR = isSSRRoute(path);
+
+  console.log(`[SSR] Handling request: ${req.url} | Bot: ${isBotRequest} | SSR Route: ${isSSR}`);
+
+  // Check cache for bot requests on SSR routes
+  if (isBotRequest && isSSR) {
+    const cached = ssrCache.get(path);
+    if (cached && (Date.now() - cached.timestamp) < SSR_CACHE_MAX_AGE_MS) {
+      console.log(`[SSR] Cache hit for bot request: ${path}`);
+
+      // Set cached headers
+      for (const [key, value] of Object.entries(cached.headers)) {
+        res.setHeader(key, value);
       }
-      return next();
-    })
-    .catch(err => {
-      console.error(`[SSR] Error rendering ${req.url}:`, err);
-      next(err);
-    });
+
+      // Add cache status header
+      res.setHeader('X-SSR-Cache', 'HIT');
+      res.setHeader('X-SSR-Cache-Age', Math.floor((Date.now() - cached.timestamp) / 1000).toString());
+
+      res.send(cached.html);
+      return;
+    }
+  }
+
+  try {
+    const response = await angularApp.handle(req);
+
+    if (response) {
+      console.log(`[SSR] Rendered: ${req.url}`);
+
+      // For bot requests on SSR routes, cache the response
+      if (isBotRequest && isSSR) {
+        // Read the response body
+        const html = await response.text();
+
+        // Prepare headers for caching (convert Headers to object)
+        const headersToCache: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headersToCache[key] = value;
+        });
+
+        // Cache the response
+        ssrCache.set(path, {
+          html,
+          headers: headersToCache,
+          timestamp: Date.now(),
+        });
+        console.log(`[SSR] Cached response for: ${path}. Cache size: ${ssrCache.size}`);
+
+        // Set Cache-Control headers for bots (allow CDN/proxy caching)
+        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
+        res.setHeader('X-SSR-Cache', 'MISS');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+        // Copy other headers from the original response
+        response.headers.forEach((value, key) => {
+          if (key.toLowerCase() !== 'cache-control' && key.toLowerCase() !== 'content-type') {
+            res.setHeader(key, value);
+          }
+        });
+
+        res.send(html);
+        return;
+      }
+
+      // For non-bot requests, set shorter cache time
+      if (isSSR) {
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=3600');
+      }
+
+      return writeResponseToNodeResponse(response, res);
+    }
+    return next();
+  } catch (err) {
+    console.error(`[SSR] Error rendering ${req.url}:`, err);
+
+    // For bot requests, try to serve a basic fallback with meta tags
+    if (isBotRequest && isSSR) {
+      console.log(`[SSR] Serving fallback for bot after error: ${path}`);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.status(200).send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nostria - Decentralized Social Network</title>
+  <meta name="description" content="View this content on Nostria, your decentralized social network">
+  <meta property="og:title" content="Nostria - Decentralized Social Network">
+  <meta property="og:description" content="View this content on Nostria, your decentralized social network">
+  <meta property="og:image" content="https://nostria.app/assets/nostria-social.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nostria - Decentralized Social Network">
+  <meta name="twitter:description" content="View this content on Nostria, your decentralized social network">
+  <meta name="twitter:image" content="https://nostria.app/assets/nostria-social.jpg">
+</head>
+<body>
+  <h1>Loading...</h1>
+  <script>window.location.reload();</script>
+</body>
+</html>`);
+      return;
+    }
+
+    next(err);
+  }
 });
 
 // Global error handler for uncaught exceptions

@@ -1,5 +1,5 @@
-import { Pipe, PipeTransform } from '@angular/core';
-import { nip19 } from 'nostr-tools';
+import { Pipe, PipeTransform, inject } from '@angular/core';
+import { UtilitiesService } from '../services/utilities.service';
 
 @Pipe({
   name: 'npub',
@@ -7,16 +7,17 @@ import { nip19 } from 'nostr-tools';
   pure: true,
 })
 export class NPubPipe implements PipeTransform {
+  private utilities = inject(UtilitiesService);
+
   transform(value?: string, format: 'long' | 'short' = 'long'): string {
     if (!value) {
       return '';
     }
 
-    console.debug('Converting public key to npub', value);
-    const npub = nip19.npubEncode(value);
+    const npub = this.utilities.getNpubFromPubkey(value);
 
     return format === 'short'
-      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+      ? this.utilities.truncateString(npub, 6, 6)
       : npub;
   }
 }

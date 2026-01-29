@@ -864,11 +864,57 @@ if (this.isBrowser) {
 
 - `window`, `document`, `localStorage`
 - `navigator`, `location`
+- `caches` API (Cache Storage)
+- `setTimeout`/`setInterval` (without platform check)
 - Any DOM manipulation
 
-### MetaService
+### Social Media Bot Detection
 
-For social sharing previews:
+The SSR server (`src/server.ts`) detects social media bots and search engine crawlers to provide optimized responses with proper meta tags:
+
+**Detected Bots:**
+- Social: Facebook, Twitter, LinkedIn, Discord, Slack, Telegram, WhatsApp, Pinterest, Tumblr
+- Search: Google, Bing, Yahoo, DuckDuckGo, Baidu, Yandex
+- Other: Embed services, preview generators
+
+```typescript
+// Bot detection in server.ts
+const BOT_USER_AGENTS = [
+  'facebookexternalhit', 'Facebot', 'Twitterbot', 'LinkedInBot',
+  'Discordbot', 'Slackbot', 'TelegramBot', 'WhatsApp',
+  'Googlebot', 'bingbot', 'DuckDuckBot', // ... and more
+];
+```
+
+### SSR Response Caching
+
+For bot requests, SSR responses are cached in memory to improve performance:
+
+| Configuration | Value | Purpose |
+|---------------|-------|---------|
+| `SSR_CACHE_MAX_AGE_MS` | 5 minutes | Cache TTL |
+| `SSR_CACHE_MAX_ENTRIES` | 1000 | Maximum cached responses |
+| Cache-Control (bot) | `max-age=300, s-maxage=600` | CDN caching headers |
+
+**Cache Headers:**
+- `X-SSR-Cache: HIT` - Response served from cache
+- `X-SSR-Cache: MISS` - Fresh SSR render
+
+### Timeout Configuration
+
+Timeouts ensure fast responses for social media bots:
+
+| Component | Timeout | Purpose |
+|-----------|---------|---------|
+| `METADATA_REQUEST_TIMEOUT_MS` | 4 seconds | API metadata fetch |
+| `TOTAL_RESOLVER_TIMEOUT_MS` | 6 seconds | Total resolver time |
+| `RELAY_FETCH_TIMEOUT_MS` | 3 seconds | Relay queries (stream resolver) |
+
+On timeout, default meta tags are returned so bots still get a valid response.
+
+### MetaService & Canonical URLs
+
+The `MetaService` handles social sharing metadata with proper canonical URL generation:
 
 ```typescript
 // MetaService usage for SSR
@@ -876,9 +922,48 @@ metaService.updateSocialMetadata({
   title: 'Event Title',
   description: 'Event content...',
   image: 'https://...',
-  url: 'https://nostria.app/e/...',
+  url: 'https://nostria.app/p/npub1...', // Canonical URL
   twitterCard: 'summary_large_image',
 });
+```
+
+**Canonical URL Generation (og:url):**
+
+The `og:url` meta tag always uses canonical Nostr-encoded URLs, regardless of how the content was accessed:
+
+| Access URL | og:url (Canonical) |
+|------------|-------------------|
+| `/u/sondreb` (username) | `https://nostria.app/p/npub1zl3g38...` |
+| `/p/nprofile1...` (with relays) | `https://nostria.app/p/npub1...` (npub form) |
+| `/a/naddr1...` (with relay hints) | `https://nostria.app/a/naddr1...` (without hints) |
+| `/a/npub.../slug` (friendly URL) | `https://nostria.app/a/naddr1...` (naddr form) |
+| `/stream/naddr1...` (with relays) | `https://nostria.app/stream/naddr1...` (without relays) |
+
+**Key Files:**
+- `src/server.ts` - Bot detection, caching, fallback HTML
+- `src/app/services/meta.service.ts` - Meta tag updates, canonical URL generation
+- `src/app/data-resolver.ts` - Profile/event/article metadata resolution
+- `src/app/stream-resolver.ts` - Stream metadata resolution
+
+### Resolvers
+
+SSR uses resolvers to fetch metadata before rendering:
+
+| Resolver | Route | Purpose |
+|----------|-------|---------|
+| `DataResolver` | `/p/**`, `/u/**`, `/e/**`, `/a/**` | Profile, event, article metadata |
+| `StreamResolver` | `/stream/**` | Live stream metadata |
+| `ArticleResolver` | `/a/:id/:slug` | Article content |
+| `UsernameResolver` | `/u/:username` | Username to pubkey resolution |
+
+### Fallback HTML
+
+If SSR fails for a bot request, a fallback HTML page is served with default meta tags:
+
+```html
+<meta property="og:title" content="Nostria - Your Social Network" />
+<meta property="og:description" content="A decentralized social network..." />
+<meta property="og:image" content="https://nostria.app/assets/nostria-social.jpg" />
 ```
 
 ---

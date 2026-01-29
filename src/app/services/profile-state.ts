@@ -576,137 +576,13 @@ export class ProfileState {
       return;
     }
 
-    // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
-    // Try user-specific relays first
-    const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-
-    // Check if we're still loading this profile (user didn't switch to another profile)
-    if (this.currentlyLoadingPubkey() !== pubkey) {
-      this.logger.info(`Profile switched during contacts load. Discarding results for: ${pubkey}`);
-      this.isInitiallyLoading.set(false);
-      return;
-    }
-
-    // Double-check against the current pubkey
-    if (this.pubkey() !== pubkey) {
-      this.logger.info(`Current profile changed during contacts load. Discarding results for: ${pubkey}`);
-      this.isInitiallyLoading.set(false);
-      return;
-    }
-
-    if (contactsEvent && contactsEvent.kind === kinds.Contacts) {
-      // Only update if the relay event is newer than what we have from cache
-      const currentTimestamp = this.followingListTimestamp();
-      if (contactsEvent.created_at > currentTimestamp) {
-        const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
-        this.followingList.set(followingList);
-        this.followingListTimestamp.set(contactsEvent.created_at);
-        this.logger.debug(`Updated following list from relay with ${followingList.length} entries (timestamp: ${contactsEvent.created_at})`);
-        // Save to database for future caching
-        this.database.saveReplaceableEvent(contactsEvent).catch(err => {
-          this.logger.error('Failed to cache contacts event:', err);
-        });
-      } else {
-        this.logger.debug(`Skipping relay following list - cached data is newer or same (cached: ${currentTimestamp}, relay: ${contactsEvent.created_at})`);
-      }
-    }
-
-    // Also fetch relay list (kind 10002) for display in profile
-    const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-
-    // Check if we're still loading this profile
-    if (this.currentlyLoadingPubkey() !== pubkey || this.pubkey() !== pubkey) {
-      this.logger.info(`Profile switched during relay list load. Stopping for: ${pubkey}`);
-      this.isInitiallyLoading.set(false);
-      return;
-    }
-
-    if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
-      // Only update if the relay event is newer than what we have from cache
-      const currentTimestamp = this.relayListTimestamp();
-      if (relayListEvent.created_at > currentTimestamp) {
-        const relayUrls = this.utilities.getRelayUrls(relayListEvent);
-        this.relayList.set(relayUrls);
-        this.relayListTimestamp.set(relayListEvent.created_at);
-        this.logger.debug(`Updated relay list from relay with ${relayUrls.length} relays (timestamp: ${relayListEvent.created_at})`);
-        // Save to database for future caching
-        this.database.saveReplaceableEvent(relayListEvent).catch(err => {
-          this.logger.error('Failed to cache relay list event:', err);
-        });
-      } else {
-        this.logger.debug(`Skipping relay list update - cached data is newer or same (cached: ${currentTimestamp}, relay: ${relayListEvent.created_at})`);
-      }
-    }
-
-    // Also try to get contacts from global/discovery relays as fallback
-    // This is needed because contacts might be on different relays than recent content
-    setTimeout(async () => {
-      // Check if we're still on the same profile
-      if (this.currentlyLoadingPubkey() !== pubkey) {
-        this.logger.info(`Profile switched before fallback contacts load. Skipping for: ${pubkey}`);
-        return;
-      }
-
-      // Double-check against the current pubkey
-      if (this.pubkey() !== pubkey) {
-        this.logger.info(`Current profile changed before fallback contacts load. Skipping for: ${pubkey}`);
-        return;
-      }
-
-      // Check if we still don't have a following list after initial attempt
-      if (this.followingList().length === 0) {
-        console.log('No contacts found on user relays, trying discovery relays as fallback');
-        try {
-          // Try to get contacts event by searching author + kind
-          const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
-
-          // Verify we're still on the same profile after async operation
-          if (this.currentlyLoadingPubkey() !== pubkey) {
-            this.logger.info(`Profile switched during fallback contacts load. Discarding results for: ${pubkey}`);
-            return;
-          }
-
-          // Double-check against the current pubkey
-          if (this.pubkey() !== pubkey) {
-            this.logger.info(`Current profile changed during fallback contacts load. Discarding results for: ${pubkey}`);
-            return;
-          }
-
-          if (contactsEvents && contactsEvents.length > 0) {
-            // Find the most recent contacts event
-            const newestContactsEvent = contactsEvents.reduce((newest, current) =>
-              current.created_at > newest.created_at ? current : newest
-            );
-            // Only update if newer than what we have
-            const currentTimestamp = this.followingListTimestamp();
-            if (newestContactsEvent.created_at > currentTimestamp) {
-              const followingList = this.utilities.getPTagsValuesFromEvent(newestContactsEvent);
-              console.log('Following list found via discovery search:', followingList);
-              this.followingList.set(followingList);
-              this.followingListTimestamp.set(newestContactsEvent.created_at);
-              // Save to database for future caching
-              this.database.saveReplaceableEvent(newestContactsEvent).catch(err => {
-                this.logger.error('Failed to cache fallback contacts event:', err);
-              });
-            }
-          }
-        } catch (error) {
-          console.log('Fallback contacts search failed:', error);
-        }
-      }
-    }, 2000); // Wait 2 seconds before trying fallback
-
+    // PRIORITY 1: Load timeline events FIRST - this is what users want to see immediately
     // Build the kinds array based on filter options
     const currentFilter = this.timelineFilter();
     const kindsToQuery: number[] = [];
 
-    // Always query for articles and pictures (for media tab)
-    kindsToQuery.push(kinds.LongFormArticle, 20);
-
-    // Add notes/replies if either is enabled
-    if (currentFilter.showNotes || currentFilter.showReplies) {
-      kindsToQuery.push(kinds.ShortTextNote);
-    }
+    // Always include notes for timeline
+    kindsToQuery.push(kinds.ShortTextNote);
 
     // Add reposts if enabled
     if (currentFilter.showReposts) {
@@ -718,17 +594,14 @@ export class ProfileState {
       kindsToQuery.push(1222, 1244);
     }
 
-    // Add video if enabled
-    if (currentFilter.showVideo) {
-      kindsToQuery.push(21, 22, 34235, 34236);
-    }
-
     // Optionally add reactions if enabled
     if (currentFilter.showReactions) {
       kindsToQuery.push(kinds.Reaction); // Kind 7
     }
 
-    // Subscribe to content events (notes, articles, reposts, media, and optionally reactions/highlights)
+    this.logger.debug(`PRIORITY 1: Loading timeline events for ${pubkey}`);
+
+    // Subscribe to content events (notes, reposts, and optionally reactions)
     const events = await this.userRelayService.query(pubkey, {
       kinds: kindsToQuery,
       authors: [pubkey],
@@ -750,42 +623,25 @@ export class ProfileState {
     }
 
     for (const event of events || []) {
-      console.log('Initial content event received', event);
-      if (event.kind === kinds.LongFormArticle) {
-        const record = this.utilities.toRecord(event);
-        // Check for duplicates before adding
-        this.articles.update(articles => {
-          const exists = articles.some(a => a.event.id === event.id);
-          if (exists) {
-            console.log('Duplicate article event prevented:', event.id);
-            return articles;
-          }
-          console.log('Adding new article:', event.id);
-          return [...articles, record];
-        });
-      } else if (event.kind === kinds.ShortTextNote) {
+      if (event.kind === kinds.ShortTextNote) {
         const record = this.utilities.toRecord(event);
         if (this.utilities.isRootPost(event)) {
           // Check for duplicates before adding to notes
-          this.notes.update(events => {
-            const exists = events.some(n => n.event.id === event.id);
-            if (exists) {
-              console.log('Duplicate note event prevented:', event.id);
-              return events;
+          this.notes.update(existingNotes => {
+            const exists = existingNotes.some(n => n.event.id === event.id);
+            if (!exists) {
+              return [...existingNotes, record];
             }
-            console.log('Adding new note:', event.id);
-            return [...events, record];
+            return existingNotes;
           });
         } else {
           // Check for duplicates before adding to replies
-          this.replies.update(events => {
-            const exists = events.some(r => r.event.id === event.id);
-            if (exists) {
-              console.log('Duplicate reply event prevented:', event.id);
-              return events;
+          this.replies.update(existingReplies => {
+            const exists = existingReplies.some(r => r.event.id === event.id);
+            if (!exists) {
+              return [...existingReplies, record];
             }
-            console.log('Adding new reply:', event.id);
-            return [...events, record];
+            return existingReplies;
           });
         }
       } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
@@ -793,49 +649,30 @@ export class ProfileState {
         // Check for duplicates before adding to reposts
         this.reposts.update(reposts => {
           const exists = reposts.some(r => r.event.id === event.id);
-          if (exists) {
-            console.log('Duplicate repost event prevented:', event.id);
-            return reposts;
+          if (!exists) {
+            return [...reposts, record];
           }
-          console.log('Adding new repost:', event.id);
-          return [...reposts, record];
-        });
-      } else if (event.kind === 20 || event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
-        // Handle media events (20 = Picture, 21 = Video, 22 = Short Video, 34235 = Addressable Video, 34236 = Addressable Short Video)
-        const record = this.utilities.toRecord(event);
-        // Check for duplicates before adding to media
-        this.media.update(media => {
-          const exists = media.some(m => m.event.id === event.id);
-          if (exists) {
-            console.log('Duplicate media event prevented:', event.id);
-            return media;
-          }
-          console.log('Adding new media:', event.id);
-          return [...media, record];
+          return reposts;
         });
       } else if (event.kind === 1222 || event.kind === 1244) {
         // Handle audio events
         const record = this.utilities.toRecord(event);
         this.audio.update(audio => {
           const exists = audio.some(a => a.event.id === event.id);
-          if (exists) {
-            console.log('Duplicate audio event prevented:', event.id);
-            return audio;
+          if (!exists) {
+            return [...audio, record];
           }
-          console.log('Adding new audio:', event.id);
-          return [...audio, record];
+          return audio;
         });
       } else if (event.kind === kinds.Reaction) {
         // Handle reaction events (Kind 7)
         const record = this.utilities.toRecord(event);
         this.reactions.update(reactions => {
           const exists = reactions.some(r => r.event.id === event.id);
-          if (exists) {
-            console.log('Duplicate reaction event prevented:', event.id);
-            return reactions;
+          if (!exists) {
+            return [...reactions, record];
           }
-          console.log('Adding new reaction:', event.id);
-          return [...reactions, record];
+          return reactions;
         });
       }
     }
@@ -857,13 +694,167 @@ export class ProfileState {
       });
     }
 
-    // Load additional media items separately to ensure we have enough for the media tab
-    // This runs in parallel with the main query to optimize loading time
+    // Timeline loaded - mark initial loading complete so UI can render
+    this.isInitiallyLoading.set(false);
+    this.logger.info(`PRIORITY 1 complete: Timeline loaded for ${pubkey}`);
+
+    // PRIORITY 2: Load secondary data in background (non-blocking)
+    // These are loaded after timeline so user sees content immediately
+    this.loadSecondaryData(pubkey);
+  }
+
+  /**
+   * Load secondary profile data (contacts, relay list, articles, media) in the background.
+   * This is called after the timeline is loaded to avoid blocking the initial render.
+   * Data is loaded sequentially to avoid overwhelming relays with too many subscriptions.
+   */
+  private async loadSecondaryData(pubkey: string): Promise<void> {
+    // Check if we're still on the same profile
+    if (this.currentlyLoadingPubkey() !== pubkey) {
+      this.logger.debug(`Profile switched, skipping secondary data load for: ${pubkey}`);
+      return;
+    }
+
+    this.logger.debug(`PRIORITY 2: Loading secondary data for ${pubkey}`);
+
+    // 2a. Load contacts (following list) - important for profile header
+    try {
+      const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      
+      if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+      if (contactsEvent && contactsEvent.kind === kinds.Contacts) {
+        const currentTimestamp = this.followingListTimestamp();
+        if (contactsEvent.created_at > currentTimestamp) {
+          const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
+          this.followingList.set(followingList);
+          this.followingListTimestamp.set(contactsEvent.created_at);
+          this.logger.debug(`Updated following list with ${followingList.length} entries`);
+          this.database.saveReplaceableEvent(contactsEvent).catch(err => {
+            this.logger.error('Failed to cache contacts event:', err);
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error('Error loading contacts:', err);
+    }
+
+    // Small delay between queries to avoid relay rate limiting
+    await this.delay(100);
+
+    // 2b. Load relay list - needed for profile relays tab
+    if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+    try {
+      const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      
+      if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+      if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
+        const currentTimestamp = this.relayListTimestamp();
+        if (relayListEvent.created_at > currentTimestamp) {
+          const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+          this.relayList.set(relayUrls);
+          this.relayListTimestamp.set(relayListEvent.created_at);
+          this.logger.debug(`Updated relay list with ${relayUrls.length} relays`);
+          this.database.saveReplaceableEvent(relayListEvent).catch(err => {
+            this.logger.error('Failed to cache relay list event:', err);
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error('Error loading relay list:', err);
+    }
+
+    // Small delay between queries
+    await this.delay(100);
+
+    // 2c. Load articles - for reads tab
+    if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+    try {
+      const articleEvents = await this.userRelayService.query(pubkey, {
+        kinds: [kinds.LongFormArticle],
+        authors: [pubkey],
+        limit: 20,
+      });
+
+      if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+      for (const event of articleEvents || []) {
+        if (event.kind === kinds.LongFormArticle) {
+          const record = this.utilities.toRecord(event);
+          this.articles.update(articles => {
+            const exists = articles.some(a => a.event.id === event.id);
+            if (!exists) {
+              return [...articles, record];
+            }
+            return articles;
+          });
+        }
+      }
+      this.logger.debug(`Loaded ${articleEvents?.length || 0} articles`);
+    } catch (err) {
+      this.logger.error('Error loading articles:', err);
+    }
+
+    // Small delay between queries
+    await this.delay(100);
+
+    // 2d. Load media - for media tab
+    if (this.currentlyLoadingPubkey() !== pubkey) return;
+    
     this.loadInitialMedia(pubkey);
 
-    // Initial load complete - set loading to false
-    this.isInitiallyLoading.set(false);
-    this.logger.info(`Initial profile data load completed for: ${pubkey}`);
+    // 2e. Fallback contacts search (deferred) - only if we don't have contacts yet
+    if (this.followingList().length === 0) {
+      this.logger.debug(`No contacts found, scheduling fallback search for ${pubkey}`);
+      setTimeout(() => this.loadFallbackContacts(pubkey), 1500);
+    }
+
+    this.logger.info(`PRIORITY 2 complete: Secondary data loaded for ${pubkey}`);
+  }
+
+  /**
+   * Try to load contacts from discovery relays as a fallback.
+   * This is used when contacts aren't found on the user's preferred relays.
+   */
+  private async loadFallbackContacts(pubkey: string): Promise<void> {
+    if (this.currentlyLoadingPubkey() !== pubkey) return;
+    if (this.followingList().length > 0) return; // Already have contacts
+
+    this.logger.debug(`Trying fallback contacts search for ${pubkey}`);
+
+    try {
+      const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+
+      if (this.currentlyLoadingPubkey() !== pubkey) return;
+
+      if (contactsEvents && contactsEvents.length > 0) {
+        const newestContactsEvent = contactsEvents.reduce((newest, current) =>
+          current.created_at > newest.created_at ? current : newest
+        );
+        const currentTimestamp = this.followingListTimestamp();
+        if (newestContactsEvent.created_at > currentTimestamp) {
+          const followingList = this.utilities.getPTagsValuesFromEvent(newestContactsEvent);
+          this.followingList.set(followingList);
+          this.followingListTimestamp.set(newestContactsEvent.created_at);
+          this.logger.debug(`Fallback: Found ${followingList.length} contacts`);
+          this.database.saveReplaceableEvent(newestContactsEvent).catch(err => {
+            this.logger.error('Failed to cache fallback contacts event:', err);
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.debug('Fallback contacts search failed:', error);
+    }
+  }
+
+  /**
+   * Helper to add a delay between operations to avoid overwhelming relays.
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

@@ -11,11 +11,13 @@ export class ApplicationStateService {
   logger = inject(LoggerService);
 
   showSuccess = signal(false);
-  isOnline = signal(navigator.onLine);
+  private platformId = inject(PLATFORM_ID);
+  private document = inject(DOCUMENT);
+
+  // Initialize isOnline with a safe default for SSR
+  isOnline = signal(isPlatformBrowser(this.platformId) ? navigator.onLine : true);
   isPublishing = signal(false); // Track when events are being published
   feedHasInitialContent = signal(false); // Track when feed has initial content ready
-  private document = inject(DOCUMENT);
-  private platformId = inject(PLATFORM_ID);
 
   // pubkey = signal<string | null>(null);
 

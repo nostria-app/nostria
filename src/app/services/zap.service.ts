@@ -466,7 +466,7 @@ export class ZapService {
     const zapRequest: UnsignedEvent = {
       kind: 9734,
       content: message,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: this.utilities.currentDate(),
       tags,
       pubkey: currentUser.pubkey,
     };
@@ -1202,7 +1202,7 @@ export class ZapService {
       {
         kinds: [9735], // Zap receipts
         '#e': [eventId],
-        since: Math.floor(Date.now() / 1000), // Only new zaps from now
+        since: this.utilities.currentDate(), // Only new zaps from now
       },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for event:', event);
@@ -1248,7 +1248,7 @@ export class ZapService {
       {
         kinds: [9735], // Zap receipts
         '#p': [pubkey],
-        since: Math.floor(Date.now() / 1000), // Only new zaps from now
+        since: this.utilities.currentDate(), // Only new zaps from now
       },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for user:', event);
