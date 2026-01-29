@@ -175,4 +175,218 @@
       </button>
     </mat-card-actions>
   </mat-card>
+
+  <mat-divider style="margin: 32px 0;"></mat-divider>
+
+  <!-- Data Migration Section -->
+  <ng-template #migrationInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">info</mat-icon>
+          Data Migration
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        Data migration allows you to recover your historical events from old relays and republish
+        them to your current account relays.
+      </p>
+      <h3>Migration Depths:</h3>
+      <ul>
+        <li><strong>Basic:</strong> Notes, reposts, reactions, and articles</li>
+        <li><strong>Extended:</strong> Basic + media, highlights, comments, file metadata</li>
+        <li><strong>Deep:</strong> Extended + calendar events, lists, badges, zaps, and more</li>
+      </ul>
+      <p>
+        This is useful when you've changed your relay configuration and want to ensure all your
+        data is available on your new relays.
+      </p>
+    </mat-card-content>
+  </ng-template>
+
+  <h3>
+    Data Migration
+    <app-info-tooltip [content]="migrationInfoContent" ariaLabel="Learn about data migration"></app-info-tooltip>
+  </h3>
+  <p class="subtitle">Recover and republish events from old relays to your current relays</p>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="card-icon">sync</mat-icon>
+      <mat-card-title>Migrate Data from Old Relays</mat-card-title>
+      <mat-card-subtitle>Fetch events from source relays and republish to your account relays</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (!showMigrationSection()) {
+        <p>
+          If you have old events stored on relays that are no longer in your relay list, you can
+          migrate them to your current relays.
+        </p>
+        <button mat-flat-button (click)="toggleMigrationSection()">
+          <mat-icon>expand_more</mat-icon>
+          SHOW MIGRATION OPTIONS
+        </button>
+      } @else {
+        <!-- Add Relay Form -->
+        <div class="migration-form">
+          <mat-form-field appearance="outline" class="relay-input">
+            <mat-label>Relay URL</mat-label>
+            <input matInput
+                   placeholder="wss://relay.example.com"
+                   [ngModel]="manualRelayUrl()"
+                   (ngModelChange)="manualRelayUrl.set($event)"
+                   (keyup.enter)="addManualRelay()"
+                   [disabled]="isMigrating()">
+            <mat-icon matSuffix>dns</mat-icon>
+          </mat-form-field>
+          <button mat-flat-button (click)="addManualRelay()" [disabled]="isMigrating()">
+            <mat-icon>add</mat-icon>
+            ADD
+          </button>
+        </div>
+
+        <!-- Relay List -->
+        @if (oldRelayUrls().length > 0) {
+          <div class="relay-list">
+            <h4>Source Relays ({{ oldRelayUrls().length }})</h4>
+            @for (relay of oldRelayUrls(); track relay) {
+              <div class="relay-item">
+                <mat-icon class="relay-icon">dns</mat-icon>
+                <span class="relay-url">{{ formatRelayUrl(relay) }}</span>
+                <button mat-icon-button
+                        (click)="migrateFromSingleRelay(relay)"
+                        [disabled]="isMigrating()"
+                        matTooltip="Migrate from this relay">
+                  <mat-icon>play_arrow</mat-icon>
+                </button>
+                <button mat-icon-button
+                        (click)="removeOldRelay(relay)"
+                        [disabled]="isMigrating()"
+                        matTooltip="Remove from list">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="empty-state">
+            <mat-icon>info</mat-icon>
+            No source relays added. Enter a relay URL above to add one.
+          </p>
+        }
+
+        <!-- Migration Depth Selection -->
+        <div class="migration-options">
+          <mat-form-field appearance="outline">
+            <mat-label>Migration Depth</mat-label>
+            <mat-select [ngModel]="migrationDepth()" (ngModelChange)="migrationDepth.set($event)" [disabled]="isMigrating()">
+              <mat-option value="basic">Basic (Notes, Reposts, Reactions, Articles)</mat-option>
+              <mat-option value="extended">Extended (+ Media, Highlights, Comments)</mat-option>
+              <mat-option value="deep">Deep (+ Calendar, Lists, Badges, Zaps)</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="depth-kinds">
+            <span class="depth-label">Event kinds to migrate:</span>
+            <div class="kind-chips">
+              @for (kind of getDepthKinds(migrationDepth()); track kind) {
+                <span class="kind-chip" [matTooltip]="getKindDescription(kind)">{{ kind }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Migration Progress -->
+        @if (isMigrating()) {
+          <div class="migration-progress">
+            <div class="progress-header">
+              <span class="progress-status">
+                @switch (migrationProgress().status) {
+                  @case ('connecting') { Connecting to relay... }
+                  @case ('fetching') { Fetching events (kind {{ migrationProgress().currentKind }})... }
+                  @case ('publishing') { Publishing events... }
+                  @default { Processing... }
+                }
+              </span>
+              <span class="progress-percent">{{ migrationProgressPercent() }}%</span>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="migrationProgressPercent()"></mat-progress-bar>
+            <div class="progress-details">
+              <span>Relay: {{ formatRelayUrl(migrationProgress().currentRelay) }}</span>
+              <span>Fetched: {{ migrationProgress().eventsFetched }}</span>
+              <span>Published: {{ migrationProgress().eventsPublished }}</span>
+              @if (migrationProgress().eventsFailed > 0) {
+                <span class="error-count">Failed: {{ migrationProgress().eventsFailed }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Migration Results -->
+        @if (migrationResults().length > 0 && !isMigrating()) {
+          <div class="migration-results">
+            <h4>Migration Results</h4>
+            @for (result of migrationResults(); track result.sourceRelay) {
+              <div class="result-item" [class.has-errors]="result.errors.length > 0">
+                <div class="result-header">
+                  <mat-icon>{{ result.errors.length > 0 ? 'warning' : 'check_circle' }}</mat-icon>
+                  <span class="result-relay">{{ formatRelayUrl(result.sourceRelay) }}</span>
+                </div>
+                <div class="result-stats">
+                  <span>Fetched: {{ result.eventsFetched }}</span>
+                  <span>Published: {{ result.eventsPublished }}</span>
+                  @if (result.eventsFailed > 0) {
+                    <span class="error-count">Failed: {{ result.eventsFailed }}</span>
+                  }
+                </div>
+                @if (result.errors.length > 0) {
+                  <div class="result-errors">
+                    @for (error of result.errors.slice(0, 3); track error) {
+                      <span class="error-message">{{ error }}</span>
+                    }
+                    @if (result.errors.length > 3) {
+                      <span class="error-more">...and {{ result.errors.length - 3 }} more errors</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Error Display -->
+        @if (migrationProgress().status === 'error') {
+          <div class="migration-error">
+            <mat-icon>error</mat-icon>
+            <span>{{ migrationProgress().errorMessage }}</span>
+          </div>
+        }
+      }
+    </mat-card-content>
+
+    @if (showMigrationSection()) {
+      <mat-card-actions>
+        @if (isMigrating()) {
+          <button mat-flat-button (click)="cancelMigration()">
+            <mat-icon>stop</mat-icon>
+            CANCEL
+          </button>
+        } @else {
+          <button mat-flat-button
+                  (click)="migrateFromAllRelays()"
+                  [disabled]="oldRelayUrls().length === 0">
+            <mat-icon>sync</mat-icon>
+            MIGRATE FROM ALL RELAYS
+          </button>
+          <button mat-stroked-button (click)="toggleMigrationSection()">
+            <mat-icon>expand_less</mat-icon>
+            HIDE
+          </button>
+        }
+      </mat-card-actions>
+    }
+  </mat-card>
 </div>
