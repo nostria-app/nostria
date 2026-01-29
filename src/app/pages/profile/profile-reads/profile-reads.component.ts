@@ -21,6 +21,7 @@ import { EventService } from '../../../services/event';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { ZapService } from '../../../services/zap.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 /** Engagement metrics for an article */
 interface ArticleEngagement {
@@ -63,6 +64,7 @@ export class ProfileReadsComponent implements OnChanges {
   private sharedRelay = inject(SharedRelayService);
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);
+  private accountRelay = inject(AccountRelayService);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
@@ -267,10 +269,13 @@ export class ProfileReadsComponent implements OnChanges {
     const title = this.getArticleTitle(event);
 
     if (slug) {
+      const relayHint = this.accountRelay.relays()[0]?.url;
+      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
       const naddr = nip19.naddrEncode({
         identifier: slug,
         pubkey: event.pubkey,
         kind: event.kind,
+        relays: relayHints,
       });
       const url = `${window.location.origin}/a/${naddr}`;
 

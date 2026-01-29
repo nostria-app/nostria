@@ -24,6 +24,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
@@ -90,6 +91,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   readonly relayAuth = inject(RelayAuthService);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly router = inject(Router);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -1183,5 +1185,18 @@ export class RelaysComponent implements OnInit, OnDestroy {
   getObservedRelayByUrl(url: string): { authFailureReason?: string } {
     const observedRelay = this.observedRelays().find(r => r.url === url);
     return observedRelay || {};
+  }
+
+  /**
+   * Navigate to backup settings with migration section and pass the old relay URLs
+   */
+  openMigrationSettings(): void {
+    // Navigate to backup settings with relay URLs as query params
+    this.router.navigate(['/settings/backup'], {
+      queryParams: {
+        migration: 'true',
+        relays: JSON.stringify(this.followingRelayUrls()),
+      },
+    });
   }
 }

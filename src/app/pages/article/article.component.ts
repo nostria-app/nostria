@@ -42,6 +42,7 @@ import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-article',
@@ -79,6 +80,7 @@ export class ArticleComponent implements OnDestroy {
   private relayPool = inject(RelayPoolService);
   private rightPanel = inject(RightPanelService);
   private panelNav = inject(PanelNavigationService);
+  private accountRelay = inject(AccountRelayService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -611,6 +613,9 @@ export class ArticleComponent implements OnDestroy {
     const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
     const image = this.image();
 
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
     const dialogData: ShareArticleDialogData = {
       title: title || 'Nostr Article',
       summary: summary || undefined,
@@ -620,7 +625,13 @@ export class ArticleComponent implements OnDestroy {
       pubkey: event.pubkey,
       identifier: identifier,
       kind: event.kind,
-      naddr: this.naddr() || this.link, // Pass original naddr to preserve relay hints
+      encodedId,
+      naddr: this.naddr() || this.link || nip19.naddrEncode({
+        identifier: identifier,
+        pubkey: event.pubkey,
+        kind: event.kind,
+        relays: relayHints,
+      }),
     };
 
     this.dialog.open(ShareArticleDialogComponent, {
