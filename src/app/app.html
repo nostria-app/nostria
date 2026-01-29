@@ -41,31 +41,30 @@
       @if (displayLabels()) {
       <div class="sidenav-profile-section">
         <div class="sidenav-profile-row">
-          <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-collapse-button">
-            <mat-icon>arrow_menu_close</mat-icon>
+          <!-- Avatar button - closes sidenav (same position as toolbar avatar) -->
+          <button (click)="toggleSidenav()" aria-label="Close menu" class="sidenav-avatar-button">
+            @if (accountState.profile()?.data?.picture) {
+            @if (settings.settings().imageCacheEnabled) {
+            <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
+              class="avatar-image" />
+            } @else {
+            <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
+            }
+            } @else {
+            @if (app.authenticated()) {
+            <mat-icon class="avatar-icon">account_circle</mat-icon>
+            } @else {
+            <mat-icon class="avatar-icon">account_circle_off</mat-icon>
+            }
+            }
           </button>
-          <div class="sidenav-profile-header" [class.accounts-expanded]="accountsExpanded()"
+          <!-- Account info and expander - separate from avatar -->
+          <div class="sidenav-account-header" [class.accounts-expanded]="accountsExpanded()"
             (click)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
             (keydown.enter)="accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
             (keydown.space)="$event.preventDefault(); accountState.hasAccounts() ? toggleAccountsExpanded() : addAccount()"
             tabindex="0" role="button"
             [attr.aria-label]="accountState.hasAccounts() ? (accountsExpanded() ? 'Collapse accounts' : 'Expand accounts') : 'Login or create account'">
-            <div class="sidenav-profile-avatar">
-              @if (accountState.profile()?.data?.picture) {
-              @if (settings.settings().imageCacheEnabled) {
-              <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" alt="Profile"
-                class="avatar-image" />
-              } @else {
-              <img [src]="accountState.profile()?.data?.picture" alt="Profile" class="avatar-image" />
-              }
-              } @else {
-              @if (app.authenticated()) {
-              <mat-icon class="avatar-icon">account_circle</mat-icon>
-              } @else {
-              <mat-icon class="avatar-icon">account_circle_off</mat-icon>
-              }
-              }
-            </div>
             <div class="sidenav-profile-info">
               @if (accountState.profile()?.data; as profile) {
               <span class="sidenav-profile-name">{{ profile.display_name || profile.name || (accountState.pubkey() |
@@ -159,24 +158,22 @@
       }
 
       <mat-nav-list>
-        <!-- Profile icon when sidenav is minimized -->
+        <!-- Profile avatar when sidenav is minimized - toggles sidenav -->
         @if (!displayLabels()) {
-        <a mat-list-item [routerLink]="app.authenticated() ? accountState.profilePath() : undefined"
-          (click)="!app.authenticated() ? addAccount() : closeSidenavOnMobile()" class="nav-item profile-nav-item"
-          [matTooltip]="app.authenticated() ? 'My Profile' : 'Login'" matTooltipPosition="right"
-          i18n-matTooltip="@@app.profile.my-profile">
+        <button mat-list-item (click)="toggleSidenav()" class="nav-item profile-nav-item sidenav-minimized-avatar-button"
+           matTooltipPosition="right">
           @if (accountState.profile()?.data?.picture) {
           @if (settings.settings().imageCacheEnabled) {
-          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" matListItemIcon
+          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)"
             class="sidenav-minimized-avatar" alt="Profile" />
           } @else {
-          <img [src]="accountState.profile()?.data?.picture" matListItemIcon class="sidenav-minimized-avatar"
-            alt="Profile" />
+          <img [src]="accountState.profile()?.data?.picture"
+            class="sidenav-minimized-avatar" alt="Profile" />
           }
           } @else {
-          <mat-icon matListItemIcon>{{ app.authenticated() ? 'account_circle' : 'account_circle_off' }}</mat-icon>
+          <mat-icon class="sidenav-minimized-icon">{{ app.authenticated() ? 'account_circle' : 'account_circle_off' }}</mat-icon>
           }
-        </a>
+        </button>
         }
 
         @for (item of navigationItems(); track $index) {

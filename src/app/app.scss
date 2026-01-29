@@ -540,19 +540,115 @@ mat-sidenav-content {
   padding: 0 0 8px 0;
 }
 
-// Row container for profile header and collapse button
+// Row container for avatar button and account header
 .sidenav-profile-row {
   display: flex;
-  align-items: stretch;
-  gap: 0;
+  align-items: center;
+  gap: 8px;
+  // Align avatar with toolbar: toolbar has padding 8px + glass-section padding 8px
+  // Adding more left padding to shift avatar right
+  padding: 8px 8px 8px 12px;
 }
 
+// Avatar button in sidenav - closes the sidenav, positioned to match toolbar avatar
+.sidenav-avatar-button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-color: var(--mat-sys-surface-container);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+:host-context(.dark) .sidenav-avatar-button {
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+// Account header - name and expander (separate from avatar)
+.sidenav-account-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex: 1;
+  min-width: 0;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &:active {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  &.accounts-expanded {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+:host-context(.dark) .sidenav-account-header {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &:active {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &.accounts-expanded {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Expand accounts icon (replaces button)
+.expand-accounts-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+}
+
+// Legacy styles kept for backwards compatibility
 .sidenav-profile-header {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 8px;
-  border-radius: 0 8px 8px 0;
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s ease;
   flex: 1;
@@ -585,54 +681,6 @@ mat-sidenav-content {
   }
 }
 
-// Expand accounts icon (replaces button)
-.expand-accounts-icon {
-  color: var(--mat-sys-on-surface-variant);
-  flex-shrink: 0;
-  transition: color 0.2s ease;
-}
-
-// Collapse sidenav button in profile header - matches account selection height
-.sidenav-collapse-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mat-sys-on-surface-variant);
-  background-color: transparent;
-  border: none;
-  border-radius: 8px 0 0 8px;
-  flex-shrink: 0;
-  width: 40px;
-  align-self: stretch;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-
-  .mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--mat-sys-on-surface);
-  }
-
-  &:active {
-    background-color: rgba(0, 0, 0, 0.08);
-  }
-}
-
-:host-context(.dark) .sidenav-collapse-button {
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-
-  &:active {
-    background-color: rgba(255, 255, 255, 0.12);
-  }
-}
-
 .sidenav-profile-avatar {
   width: 40px;
   height: 40px;
@@ -656,10 +704,6 @@ mat-sidenav-content {
     height: 40px;
     color: var(--mat-sys-on-surface-variant);
   }
-}
-
-:host-context(.dark) .sidenav-profile-avatar {
-  // Dark mode background handled by surface-container
 }
 
 .sidenav-profile-info {
@@ -1947,18 +1991,52 @@ mat-sidenav-content {
         margin: 0 !important;
         padding: 0 !important;
       }
+    }
 
-      // Prevent avatar images from stretching and center them
+    // Minimized avatar button - special styling for the profile toggle
+    .sidenav-minimized-avatar-button {
+      min-height: 56px !important;
+      height: 56px !important;
+      margin-bottom: 4px;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+
+      .mdc-list-item__content {
+        padding: 0 !important;
+      }
+
+      // Remove any ripple or state layer borders
+      &::before,
+      &::after {
+        border: none !important;
+      }
+
+      .mat-mdc-button-persistent-ripple,
+      .mdc-list-item__ripple {
+        border: none !important;
+      }
+
+      // Avatar image in minimized mode - matches toolbar avatar size
       .sidenav-minimized-avatar {
-        width: 24px !important;
-        height: 24px !important;
-        min-width: 24px !important;
-        max-width: 24px !important;
-        min-height: 24px !important;
-        max-height: 24px !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
         border-radius: 50%;
         object-fit: cover;
         flex-shrink: 0 !important;
+        margin: 0 auto !important;
+        border: none !important;
+      }
+
+      // Icon fallback in minimized mode
+      .sidenav-minimized-icon {
+        font-size: 40px !important;
+        width: 40px !important;
+        height: 40px !important;
         margin: 0 auto !important;
       }
     }

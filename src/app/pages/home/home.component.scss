@@ -264,6 +264,88 @@
   }
 }
 
+// Bento Sections (AI, Collections, Premium, More)
+.bento-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bento-section-label {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.bento-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  h2 {
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+}
+
+.bento-section-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+// Section tile sizes
+.tile-section-wide {
+  grid-column: span 2;
+
+  .tile-content {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .tile-text {
+    h3 {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.tile-section-medium {
+  grid-row: span 2;
+
+  .tile-content {
+    justify-content: flex-end;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+}
+
+.tile-section-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+
+  .tile-icon {
+    margin-bottom: 4px;
+  }
+
+  span {
+    font-size: 0.85rem;
+  }
+}
+
 // Individual tile colors
 .tile-feeds {
   .tile-background {
@@ -451,19 +533,6 @@
 }
 
 // Tiny tiles colors
-.tile-shoutouts {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid transparent;
-
-  mat-icon {
-    color: #FF9800;
-  }
-
-  &:hover {
-    background-color: var(--mat-sys-surface-container-high);
-  }
-}
-
 .tile-find-people {
   background-color: var(--mat-sys-surface);
   border: 1px solid transparent;
@@ -552,6 +621,327 @@
 
   &:hover {
     border-color: rgba(76, 175, 80, 0.3);
+  }
+}
+
+// AI Section tiles
+.tile-ai-models {
+  background: linear-gradient(135deg, rgba(103, 58, 183, 0.12) 0%, rgba(156, 39, 176, 0.08) 100%);
+  border: 1px solid rgba(103, 58, 183, 0.15);
+
+  .tile-icon {
+    color: #673AB7;
+  }
+
+  .tile-background {
+    background: linear-gradient(135deg, rgba(103, 58, 183, 0.2) 0%, rgba(156, 39, 176, 0.1) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(103, 58, 183, 0.4);
+  }
+}
+
+.tile-ai-settings {
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(156, 39, 176, 0.15);
+
+  .tile-icon {
+    color: #9C27B0;
+  }
+
+  &:hover {
+    border-color: rgba(156, 39, 176, 0.4);
+  }
+}
+
+// Collections Section tiles
+.tile-col-media {
+  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(63, 81, 181, 0.15);
+
+  .tile-icon {
+    color: #3F51B5;
+  }
+
+  .tile-background {
+    background: linear-gradient(160deg, rgba(63, 81, 181, 0.2) 0%, rgba(63, 81, 181, 0.05) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(63, 81, 181, 0.4);
+  }
+}
+
+.tile-col-bookmarks {
+  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 193, 7, 0.15);
+
+  .tile-icon {
+    color: #FFC107;
+  }
+
+  .tile-background {
+    background: linear-gradient(160deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 193, 7, 0.05) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(255, 193, 7, 0.4);
+  }
+}
+
+.tile-col-relays {
+  background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(0, 188, 212, 0.15);
+
+  .tile-icon {
+    color: #00BCD4;
+  }
+
+  &:hover {
+    border-color: rgba(0, 188, 212, 0.4);
+  }
+}
+
+.tile-col-emojis {
+  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 152, 0, 0.15);
+
+  .tile-icon {
+    color: #FF9800;
+  }
+
+  &:hover {
+    border-color: rgba(255, 152, 0, 0.4);
+  }
+}
+
+.tile-col-interests {
+  background: linear-gradient(160deg, rgba(233, 30, 99, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(233, 30, 99, 0.15);
+
+  .tile-icon {
+    color: #E91E63;
+  }
+
+  &:hover {
+    border-color: rgba(233, 30, 99, 0.4);
+  }
+}
+
+// Premium Section tiles
+.premium-active {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.06) 0%, rgba(255, 215, 0, 0.02) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 24px;
+  padding: 24px;
+
+  .premium-header {
+    .star-icon {
+      color: #FFD700;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    h2 {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+}
+
+.tile-premium-analytics {
+  background: linear-gradient(160deg, rgba(255, 215, 0, 0.15) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+
+  .tile-icon {
+    color: #FFD700;
+  }
+
+  .tile-background {
+    background: linear-gradient(160deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.05) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(255, 215, 0, 0.5);
+  }
+}
+
+.tile-premium-backup {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.15);
+
+  .tile-icon {
+    color: #4CAF50;
+  }
+
+  .tile-background {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.05) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(76, 175, 80, 0.4);
+  }
+}
+
+.tile-premium-memos {
+  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 193, 7, 0.15);
+
+  .tile-icon {
+    color: #FFC107;
+  }
+
+  &:hover {
+    border-color: rgba(255, 193, 7, 0.4);
+  }
+}
+
+.tile-premium-calendar {
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.15);
+
+  .tile-icon {
+    color: #2196F3;
+  }
+
+  &:hover {
+    border-color: rgba(33, 150, 243, 0.4);
+  }
+}
+
+.tile-premium-youtube {
+  background: linear-gradient(160deg, rgba(244, 67, 54, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(244, 67, 54, 0.15);
+
+  .tile-icon {
+    color: #F44336;
+  }
+
+  &:hover {
+    border-color: rgba(244, 67, 54, 0.4);
+  }
+}
+
+.tile-premium-subscription {
+  background: linear-gradient(160deg, rgba(255, 215, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+
+  .tile-icon {
+    color: #FFD700;
+  }
+
+  &:hover {
+    border-color: rgba(255, 215, 0, 0.4);
+  }
+}
+
+// Premium Upsell tile
+.tile-premium-upsell {
+  grid-column: span 4;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.03) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+
+  .tile-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .upsell-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .star-icon {
+    color: #FFD700;
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+  }
+
+  .tile-background {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+  }
+
+  &:hover {
+    border-color: #FFD700;
+    box-shadow: 0 12px 32px rgba(255, 215, 0, 0.15);
+  }
+}
+
+// More Section tiles
+.tile-more-commands {
+  background: linear-gradient(135deg, rgba(96, 125, 139, 0.12) 0%, rgba(120, 144, 156, 0.08) 100%);
+  border: 1px solid rgba(96, 125, 139, 0.15);
+
+  .tile-icon {
+    color: #607D8B;
+  }
+
+  .tile-background {
+    background: linear-gradient(135deg, rgba(96, 125, 139, 0.2) 0%, rgba(120, 144, 156, 0.1) 100%);
+  }
+
+  &:hover {
+    border-color: rgba(96, 125, 139, 0.4);
+  }
+}
+
+.tile-more-publish {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.15);
+
+  .tile-icon {
+    color: #4CAF50;
+  }
+
+  &:hover {
+    border-color: rgba(76, 175, 80, 0.4);
+  }
+}
+
+.tile-more-install {
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.15);
+
+  .tile-icon {
+    color: #2196F3;
+  }
+
+  &:hover {
+    border-color: rgba(33, 150, 243, 0.4);
+  }
+}
+
+.tile-more-settings {
+  background: linear-gradient(160deg, rgba(158, 158, 158, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(158, 158, 158, 0.15);
+
+  .tile-icon {
+    color: #9E9E9E;
+  }
+
+  &:hover {
+    border-color: rgba(158, 158, 158, 0.4);
+  }
+}
+
+.tile-more-whatsnew {
+  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(255, 152, 0, 0.15);
+
+  .tile-icon {
+    color: #FF9800;
+  }
+
+  &:hover {
+    border-color: rgba(255, 152, 0, 0.4);
   }
 }
 
@@ -813,12 +1203,20 @@
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .bento-section-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .tile-large {
     grid-column: span 2;
   }
 
   .tile-tall {
     grid-row: span 2;
+  }
+
+  .tile-premium-upsell {
+    grid-column: span 3;
   }
 }
 
@@ -828,12 +1226,18 @@
     gap: 12px;
   }
 
+  .bento-section-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
   .tile-large {
     grid-column: span 2;
     grid-row: span 2;
   }
 
-  .tile-wide {
+  .tile-wide,
+  .tile-section-wide {
     grid-column: span 2;
   }
 
@@ -841,8 +1245,17 @@
     grid-row: span 2;
   }
 
-  .tile-medium {
+  .tile-medium,
+  .tile-section-medium {
     grid-row: span 1;
+  }
+
+  .tile-premium-upsell {
+    grid-column: span 2;
+  }
+
+  .premium-active {
+    padding: 20px;
   }
 
   .premium-section.active .premium-grid {
@@ -867,6 +1280,11 @@
   }
 
   .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .bento-section-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
@@ -896,7 +1314,8 @@
     }
   }
 
-  .tile-wide {
+  .tile-wide,
+  .tile-section-wide {
     grid-column: span 2;
   }
 
@@ -904,8 +1323,13 @@
     grid-row: span 2;
   }
 
-  .tile-medium {
+  .tile-medium,
+  .tile-section-medium {
     grid-row: span 1;
+  }
+
+  .tile-premium-upsell {
+    grid-column: span 2;
   }
 
   .bento-tile .tile-content {
@@ -913,7 +1337,8 @@
   }
 
   .tile-small,
-  .tile-tiny {
+  .tile-tiny,
+  .tile-section-small {
     padding: 12px;
   }
 
@@ -925,6 +1350,10 @@
     padding: 12px 16px;
     flex: 1 1 calc(50% - 4px);
     min-width: 140px;
+  }
+
+  .premium-active {
+    padding: 16px;
   }
 
   .premium-section.active {
