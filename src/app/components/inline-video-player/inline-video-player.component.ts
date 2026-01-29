@@ -21,6 +21,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { VideoPlaybackService } from '../../services/video-playback.service';
+import { VolumeGestureDirective } from '../../directives/volume-gesture.directive';
 
 @Component({
   selector: 'app-inline-video-player',
@@ -30,6 +31,7 @@ import { VideoPlaybackService } from '../../services/video-playback.service';
     MatSliderModule,
     MatMenuModule,
     MatTooltipModule,
+    VolumeGestureDirective,
   ],
   templateUrl: './inline-video-player.component.html',
   styleUrl: './inline-video-player.component.scss',
@@ -117,7 +119,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   };
 
-  // Progress calculations
+// Progress calculations
   progressPercent = computed(() => {
     const dur = this.duration();
     if (dur <= 0) return 0;
@@ -129,6 +131,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     if (dur <= 0) return 0;
     return (this.buffered() / dur) * 100;
   });
+
+  // Track if user is dragging the progress bar
+  isDraggingProgress = signal(false);
+  private progressElement: HTMLElement | null = null;
 
   // Formatted times
   formattedCurrentTime = computed(() => this.formatTime(this.currentTime()));
@@ -226,6 +232,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
     if (isPlatformBrowser(this.platformId)) {
       document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+      // Clean up progress touch listeners
+      document.removeEventListener('touchmove', this.boundProgressTouchMove);
+      document.removeEventListener('touchend', this.boundProgressTouchEnd);
+      document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
     }
 
     // Clean up blob URL if created
@@ -424,13 +434,26 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  toggleMute(): void {
+toggleMute(): void {
     const video = this.videoElement?.nativeElement;
     if (video) {
       const newMutedState = !video.muted;
       video.muted = newMutedState;
       // Persist mute state for all videos
       this.videoPlayback.setMuted(newMutedState);
+    }
+  }
+
+  onVolumeGestureChange(volume: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      // Normalize volume to 0-1 range (input is 0-100 from gesture)
+      const normalizedVolume = volume / 100;
+      video.volume = normalizedVolume;
+      if (video.muted && normalizedVolume > 0) {
+        video.muted = false;
+        this.videoPlayback.setMuted(false);
+      }
     }
   }
 
@@ -444,10 +467,53 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onProgressClick(event: MouseEvent): void {
+onProgressClick(event: MouseEvent): void {
     const progressBar = event.currentTarget as HTMLElement;
     const rect = progressBar.getBoundingClientRect();
     const percent = (event.clientX - rect.left) / rect.width;
+    const time = percent * this.duration();
+
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.currentTime = time;
+    }
+  }
+
+  onProgressTouchStart(event: TouchEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.progressElement = event.currentTarget as HTMLElement;
+    this.isDraggingProgress.set(true);
+    this.seekToTouchPosition(event);
+
+    // Add touch move listener to document for tracking outside the element
+    document.addEventListener('touchmove', this.boundProgressTouchMove, { passive: false });
+    document.addEventListener('touchend', this.boundProgressTouchEnd);
+    document.addEventListener('touchcancel', this.boundProgressTouchEnd);
+  }
+
+  private boundProgressTouchMove = (event: TouchEvent) => this.onProgressTouchMove(event);
+  private boundProgressTouchEnd = () => this.onProgressTouchEnd();
+
+  private onProgressTouchMove(event: TouchEvent): void {
+    if (!this.isDraggingProgress() || !this.progressElement) return;
+    event.preventDefault();
+    this.seekToTouchPosition(event);
+  }
+
+  private onProgressTouchEnd(): void {
+    this.isDraggingProgress.set(false);
+    this.progressElement = null;
+    document.removeEventListener('touchmove', this.boundProgressTouchMove);
+    document.removeEventListener('touchend', this.boundProgressTouchEnd);
+    document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
+  }
+
+  private seekToTouchPosition(event: TouchEvent): void {
+    if (!this.progressElement) return;
+    const touch = event.touches[0];
+    const rect = this.progressElement.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
     const time = percent * this.duration();
 
     const video = this.videoElement?.nativeElement;

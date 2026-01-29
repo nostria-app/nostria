@@ -146,9 +146,9 @@ export class SettingsRegistryService {
     },
     {
       id: 'auto-play-video',
-      title: $localize`:@@settings.media.auto-play:Auto-Play Short Form Videos`,
-      description: $localize`:@@settings.media.auto-play:Auto-Play Short Form Videos`,
-      keywords: ['autoplay', 'video', 'short', 'form', 'play', 'automatic'],
+      title: $localize`:@@settings.media.auto-play-all:Auto-Play All Videos`,
+      description: $localize`:@@settings.media.auto-play-all.description:When enabled, all videos will automatically play muted when they appear in the feed`,
+      keywords: ['autoplay', 'video', 'play', 'automatic', 'muted', 'all', 'always'],
       section: 'general',
       sectionTitle: $localize`:@@settings.sections.general:General`,
       icon: 'play_circle',

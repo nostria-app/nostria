@@ -46,6 +46,16 @@ import { ImagePlaceholderService } from '../../../services/image-placeholder.ser
         <mat-slide-toggle [checked]="settings.settings().repeatShortForm ?? true" (change)="toggleRepeatShortForm()">
         </mat-slide-toggle>
       </div>
+
+      <div class="setting-item">
+        <span i18n="@@settings.media.auto-play-all">Auto-Play All Videos</span>
+        <mat-slide-toggle [checked]="settings.settings().autoPlayVideos ?? false" (change)="toggleAutoPlayVideos()">
+        </mat-slide-toggle>
+      </div>
+      <p class="setting-description" i18n="@@settings.media.auto-play-all.description">
+        When enabled, all videos will automatically play muted when they appear in the feed.
+        Short videos (15 seconds or less) will also loop automatically.
+      </p>
     </div>
   `,
   styles: [`
@@ -91,5 +101,10 @@ export class SettingMediaComponent {
   toggleRepeatShortForm(): void {
     const currentValue = this.settings.settings()?.repeatShortForm ?? true;
     this.settings.updateSettings({ repeatShortForm: !currentValue });
+  }
+
+  toggleAutoPlayVideos(): void {
+    const currentValue = this.settings.settings()?.autoPlayVideos ?? false;
+    this.settings.updateSettings({ autoPlayVideos: !currentValue });
   }
 }
