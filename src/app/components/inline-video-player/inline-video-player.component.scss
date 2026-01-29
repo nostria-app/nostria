@@ -381,14 +381,14 @@
 }
 
 // Show PiP menu item on small screens (outside ::ng-deep for proper media query)
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   ::ng-deep .inline-video-menu .pip-menu-item {
     display: flex;
   }
 }
 
-// Responsive - Mobile screens
-@media (max-width: 480px) {
+// Responsive - Mobile screens (matches mobile menu breakpoint)
+@media (max-width: 600px) {
   .controls-bar {
     padding: 0 8px 6px;
     gap: 8px;

@@ -197,7 +197,7 @@
             } @else {
             <div class="column-items">
               @for (event of dynamicEvents; track event.id) {
-              <app-event [event]="event"></app-event>
+              <app-event [event]="event" [inFeedsPanel]="true"></app-event>
               }
 
               @if (hasMoreEventsToRender(dynFeed.id)) {
@@ -330,7 +330,7 @@
               @let columnEventsData = columnEvents().get(feed.id);
               @if (columnEventsData && columnEventsData.length > 0) {
               @for (event of columnEventsData; track event.id) {
-              <app-event [event]="event"></app-event>
+              <app-event [event]="event" [inFeedsPanel]="true"></app-event>
               }
 
               <!-- Show "Load More" button when there are more events in memory to render -->

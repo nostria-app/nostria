@@ -53,6 +53,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   muted = input<boolean>(false);
   loop = input<boolean>(false);
   blurred = input<boolean>(false);
+  /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
+  inFeedsPanel = input<boolean>(false);
 
   // Outputs - renamed to avoid conflict with DOM events
   videoPlay = output<void>();
@@ -163,8 +165,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     // NOTE: This effect handles both auto-play and auto-pause based on viewport visibility.
     effect(() => {
       const inViewport = this.isInViewport();
-      const autoPlayAllowed = this.videoPlayback.autoPlayAllowed();
+      const feedsAutoPlayAllowed = this.videoPlayback.autoPlayAllowed();
       const isBlurred = this.blurred();
+      const isInFeeds = this.inFeedsPanel();
       const video = this.videoElement?.nativeElement;
 
       if (!video) return;
@@ -174,9 +177,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      // For videos in the Feeds panel, only auto-play when Feeds is visible
+      // For videos elsewhere (profiles, etc.), always allow auto-play based on viewport
+      const canAutoPlay = isInFeeds ? feedsAutoPlayAllowed : true;
+
       if (inViewport) {
         // Video entered viewport
-        if (autoPlayAllowed && this.autoplay() && !this.hasPlayedOnce() && video.paused) {
+        if (canAutoPlay && this.autoplay() && !this.hasPlayedOnce() && video.paused) {
           // Auto-play is allowed - play if enabled and hasn't been played yet
           this.wasAutoPlayed.set(true);
           video.play().catch(() => {

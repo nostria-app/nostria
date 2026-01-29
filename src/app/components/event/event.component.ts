@@ -115,6 +115,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   trustedByPubkey = input<string | undefined>(undefined);
   // Optional: relay hints for fetching the event (e.g., for trending feeds)
   relayHints = input<string[] | undefined>(undefined);
+  // Whether this event is rendered inside the Feeds panel (for video auto-play control)
+  inFeedsPanel = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions

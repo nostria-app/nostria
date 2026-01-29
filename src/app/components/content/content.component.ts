@@ -102,6 +102,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Disable content expansion (for dialogs and direct event views)
   disableExpansion = input<boolean>(false);
 
+  // Whether this content is rendered inside the Feeds panel (for video auto-play control)
+  inFeedsPanel = input<boolean>(false);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);

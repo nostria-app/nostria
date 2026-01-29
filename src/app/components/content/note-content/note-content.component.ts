@@ -49,6 +49,8 @@ export class NoteContentComponent implements OnDestroy {
   authorPubkey = input<string | undefined>(undefined);
   // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
   trustedByPubkey = input<string | undefined>(undefined);
+  // Whether this content is rendered inside the Feeds panel (for video auto-play control)
+  inFeedsPanel = input<boolean>(false);
 
   private router = inject(Router);
   private layout = inject(LayoutService);

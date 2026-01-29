@@ -124,7 +124,7 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="repostedRecord()?.data" [event]="repostedEvent" [trustedByPubkey]="item.event.pubkey"
-        [disableExpansion]="navigationDisabled()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -221,7 +221,7 @@
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()"></app-content>
+            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
           }
         </mat-card-content>
         @if (isRootContentLong()) {
@@ -313,7 +313,7 @@
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()"></app-content>
+            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
           }
         </mat-card-content>
         @if (isParentContentLong()) {
@@ -400,7 +400,7 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -489,7 +489,7 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {

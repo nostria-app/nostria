@@ -47,6 +47,12 @@
     opacity: 0;
     pointer-events: none;
   }
+
+  // Ensure cursor is hidden on all interactive elements
+  .image-container,
+  .preview-image {
+    cursor: none;
+  }
 }
 
 .controls-left {
