@@ -257,6 +257,11 @@
                 <mat-icon class="relay-icon">dns</mat-icon>
                 <span class="relay-url">{{ formatRelayUrl(relay) }}</span>
                 <button mat-icon-button
+                        (click)="showRelayInfo(relay)"
+                        matTooltip="View relay info (NIP-11)">
+                  <mat-icon>info</mat-icon>
+                </button>
+                <button mat-icon-button
                         (click)="migrateFromSingleRelay(relay)"
                         [disabled]="isMigrating()"
                         matTooltip="Migrate from this relay">

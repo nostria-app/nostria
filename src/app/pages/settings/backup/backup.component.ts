@@ -29,6 +29,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MigrationService, MigrationResult } from '../../../services/migration.service';
 import { Subscription } from 'rxjs';
+import { RelayInfoDialogComponent, RelayDialogData } from '../relays/relay-info-dialog.component';
 
 interface BackupStats {
   eventsCount: number;
@@ -513,5 +514,17 @@ export class BackupComponent implements OnInit, OnDestroy {
 
   getDepthKinds(depth: 'basic' | 'extended' | 'deep'): number[] {
     return this.migrationService.getEventKinds(depth);
+  }
+
+  showRelayInfo(relayUrl: string): void {
+    this.dialog.open(RelayInfoDialogComponent, {
+      data: {
+        relayUrl,
+        adding: false,
+        showMigration: false, // Don't show migration options in this context
+      } as RelayDialogData,
+      width: '500px',
+      maxWidth: '90vw',
+    });
   }
 }
