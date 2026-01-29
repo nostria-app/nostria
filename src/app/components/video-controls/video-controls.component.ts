@@ -10,13 +10,16 @@ import {
   HostListener,
   ChangeDetectionStrategy,
   OnDestroy,
+  PLATFORM_ID,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UtilitiesService } from '../../services/utilities.service';
+import { VolumeGestureDirective } from '../../directives/volume-gesture.directive';
 
 export interface QualityLevel {
   index: number;
@@ -55,6 +58,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     MatSliderModule,
     MatMenuModule,
     MatTooltipModule,
+    VolumeGestureDirective,
   ],
   templateUrl: './video-controls.component.html',
   styleUrl: './video-controls.component.scss',
@@ -72,6 +76,8 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
 export class VideoControlsComponent implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly hostElement = inject(ElementRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   // Inputs
   videoElement = input<HTMLVideoElement | undefined>();
@@ -99,10 +105,19 @@ export class VideoControlsComponent implements OnDestroy {
   isHoveringControlsBar = signal(false);
   isSeeking = signal(false);
 
+  // Seek preview state (for time bubble while dragging/touching progress bar)
+  seekPreviewTime = signal<number | null>(null);
+  seekPreviewPercent = signal<number>(0);
+  isShowingSeekPreview = signal(false);
+
   // Track if last interaction was touch to ignore synthetic mouse events
   private lastInteractionWasTouch = false;
   private touchInteractionTimeout: ReturnType<typeof setTimeout> | null = null;
   volumeSliderVisible = signal(false);
+
+  // Small screen detection for responsive menu (Cast/PiP move into settings menu)
+  isSmallScreen = signal(false);
+  private mediaQueryList: MediaQueryList | null = null;
 
   // Video state signals (updated via event listeners)
   paused = signal(true);
@@ -139,6 +154,10 @@ export class VideoControlsComponent implements OnDestroy {
   // Formatted times
   formattedCurrentTime = computed(() => this.formatTime(this.currentTime()));
   formattedDuration = computed(() => this.formatTime(this.duration()));
+  formattedSeekPreview = computed(() => {
+    const time = this.seekPreviewTime();
+    return time !== null ? this.formatTime(time) : '';
+  });
 
   // Volume icon based on state
   volumeIcon = computed(() => {
@@ -160,6 +179,13 @@ export class VideoControlsComponent implements OnDestroy {
   readonly playbackRates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
   constructor() {
+    // Initialize small screen detection
+    if (this.isBrowser) {
+      this.mediaQueryList = window.matchMedia('(max-width: 600px)');
+      this.isSmallScreen.set(this.mediaQueryList.matches);
+      this.mediaQueryList.addEventListener('change', this.onMediaQueryChange);
+    }
+
     // Watch for video element changes and attach event listeners
     effect(() => {
       const video = this.videoElement();
@@ -209,7 +235,17 @@ export class VideoControlsComponent implements OnDestroy {
     if (this.touchInteractionTimeout) {
       clearTimeout(this.touchInteractionTimeout);
     }
+    // Clean up progress touch listeners
+    document.removeEventListener('touchmove', this.boundProgressTouchMove);
+    document.removeEventListener('touchend', this.boundProgressTouchEnd);
+    document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
+    // Clean up media query listener
+    this.mediaQueryList?.removeEventListener('change', this.onMediaQueryChange);
   }
+
+  private onMediaQueryChange = (e: MediaQueryListEvent) => {
+    this.isSmallScreen.set(e.matches);
+  };
 
   private attachVideoListeners(video: HTMLVideoElement): void {
     const onPlay = () => {
@@ -471,6 +507,12 @@ export class VideoControlsComponent implements OnDestroy {
     this.muteToggle.emit();
   }
 
+  // Volume gesture change (from press-and-hold swipe on touch devices)
+  onVolumeGestureChange(volume: number): void {
+    // Volume from gesture is 0-100, emit as 0-1
+    this.volumeChange.emit(volume / 100);
+  }
+
   showVolumeSlider(): void {
     this.volumeSliderVisible.set(true);
   }
@@ -479,31 +521,118 @@ export class VideoControlsComponent implements OnDestroy {
     this.volumeSliderVisible.set(false);
   }
 
+  // Reference to progress bar element for touch handling
+  private progressBarElement: HTMLElement | null = null;
+
   // Seeking
   onProgressClick(event: MouseEvent): void {
     const progressBar = event.currentTarget as HTMLElement;
     const rect = progressBar.getBoundingClientRect();
-    const percent = (event.clientX - rect.left) / rect.width;
+    const percent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const time = percent * this.duration();
     this.seek.emit(time);
   }
 
   onProgressMouseDown(event: MouseEvent): void {
+    event.preventDefault();
     this.isSeeking.set(true);
+    this.progressBarElement = event.currentTarget as HTMLElement;
+    this.updateSeekPreview(event.clientX);
     this.onProgressClick(event);
 
     const onMouseMove = (e: MouseEvent) => {
-      this.onProgressClick(e);
+      this.updateSeekPreview(e.clientX);
+      this.seekFromClientX(e.clientX);
     };
 
     const onMouseUp = () => {
       this.isSeeking.set(false);
+      this.isShowingSeekPreview.set(false);
+      this.seekPreviewTime.set(null);
+      this.progressBarElement = null;
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+  }
+
+  // Touch handlers for mobile progress bar interaction
+  onProgressTouchStart(event: TouchEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isSeeking.set(true);
+    this.progressBarElement = event.currentTarget as HTMLElement;
+
+    const touch = event.touches[0];
+    this.updateSeekPreview(touch.clientX);
+    this.seekFromClientX(touch.clientX);
+
+    // Add document-level touch handlers for tracking outside the element
+    document.addEventListener('touchmove', this.boundProgressTouchMove, { passive: false });
+    document.addEventListener('touchend', this.boundProgressTouchEnd);
+    document.addEventListener('touchcancel', this.boundProgressTouchEnd);
+  }
+
+  private boundProgressTouchMove = (event: TouchEvent) => this.onProgressTouchMove(event);
+  private boundProgressTouchEnd = () => this.onProgressTouchEnd();
+
+  private onProgressTouchMove(event: TouchEvent): void {
+    if (!this.isSeeking() || !this.progressBarElement) return;
+    event.preventDefault();
+    const touch = event.touches[0];
+    this.updateSeekPreview(touch.clientX);
+    this.seekFromClientX(touch.clientX);
+  }
+
+  private onProgressTouchEnd(): void {
+    this.isSeeking.set(false);
+    this.isShowingSeekPreview.set(false);
+    this.seekPreviewTime.set(null);
+    this.progressBarElement = null;
+    document.removeEventListener('touchmove', this.boundProgressTouchMove);
+    document.removeEventListener('touchend', this.boundProgressTouchEnd);
+    document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
+  }
+
+  // Helper to update seek preview from clientX position
+  private updateSeekPreview(clientX: number): void {
+    if (!this.progressBarElement) return;
+    const rect = this.progressBarElement.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const time = percent * this.duration();
+    this.seekPreviewPercent.set(percent * 100);
+    this.seekPreviewTime.set(time);
+    this.isShowingSeekPreview.set(true);
+  }
+
+  // Helper to seek from clientX position
+  private seekFromClientX(clientX: number): void {
+    if (!this.progressBarElement) return;
+    const rect = this.progressBarElement.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const time = percent * this.duration();
+    this.seek.emit(time);
+  }
+
+  // Show seek preview on hover (mouse only)
+  onProgressMouseMove(event: MouseEvent): void {
+    if (this.isSeeking()) return; // Don't update hover preview while seeking
+    const progressBar = event.currentTarget as HTMLElement;
+    const rect = progressBar.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const time = percent * this.duration();
+    this.seekPreviewPercent.set(percent * 100);
+    this.seekPreviewTime.set(time);
+    this.isShowingSeekPreview.set(true);
+  }
+
+  onProgressMouseLeave(): void {
+    if (!this.isSeeking()) {
+      this.isShowingSeekPreview.set(false);
+      this.seekPreviewTime.set(null);
+    }
   }
 
   seekRelative(seconds: number): void {

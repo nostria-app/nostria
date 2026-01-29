@@ -17,21 +17,16 @@ import { isPlatformBrowser } from '@angular/common';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSliderModule } from '@angular/material/slider';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { VideoPlaybackService } from '../../services/video-playback.service';
-import { VolumeGestureDirective } from '../../directives/volume-gesture.directive';
+import { VideoControlsComponent } from '../video-controls/video-controls.component';
+import { CastService } from '../../services/cast.service';
 
 @Component({
   selector: 'app-inline-video-player',
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatSliderModule,
-    MatMenuModule,
-    MatTooltipModule,
-    VolumeGestureDirective,
+    VideoControlsComponent,
   ],
   templateUrl: './inline-video-player.component.html',
   styleUrl: './inline-video-player.component.scss',
@@ -46,6 +41,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   private readonly hostElement = inject(ElementRef);
   private readonly overlayContainer = inject(OverlayContainer);
   private readonly videoPlayback = inject(VideoPlaybackService);
+  private readonly castService = inject(CastService);
+
+  @ViewChild(VideoControlsComponent) videoControlsRef?: VideoControlsComponent;
   // Inputs
   src = input.required<string>();
   poster = input<string>();
@@ -67,6 +65,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
+  // Signal for video element to pass to VideoControlsComponent
+  videoElementSignal = signal<HTMLVideoElement | undefined>(undefined);
+
   // State signals
   paused = signal(true);
   hasPlayedOnce = signal(false); // Track if video has been played at least once
@@ -76,9 +77,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   volume = signal(1);
   isMuted = signal(false);
   playbackRate = signal(1);
-  controlsVisible = signal(true);
+  private controlsVisible = signal(true);
   isFullscreen = signal(false);
-  volumeSliderVisible = signal(false);
   isReady = signal(false);
   hasError = signal(false);
 
@@ -120,34 +120,6 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       document.body.appendChild(overlayContainerEl);
     }
   };
-
-// Progress calculations
-  progressPercent = computed(() => {
-    const dur = this.duration();
-    if (dur <= 0) return 0;
-    return (this.currentTime() / dur) * 100;
-  });
-
-  bufferedPercent = computed(() => {
-    const dur = this.duration();
-    if (dur <= 0) return 0;
-    return (this.buffered() / dur) * 100;
-  });
-
-  // Track if user is dragging the progress bar
-  isDraggingProgress = signal(false);
-  private progressElement: HTMLElement | null = null;
-
-  // Formatted times
-  formattedCurrentTime = computed(() => this.formatTime(this.currentTime()));
-  formattedDuration = computed(() => this.formatTime(this.duration()));
-
-  // Volume icon
-  volumeIcon = computed(() => {
-    if (this.isMuted() || this.volume() === 0) return 'volume_off';
-    if (this.volume() < 0.5) return 'volume_down';
-    return 'volume_up';
-  });
 
   readonly playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -239,10 +211,6 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
     if (isPlatformBrowser(this.platformId)) {
       document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
-      // Clean up progress touch listeners
-      document.removeEventListener('touchmove', this.boundProgressTouchMove);
-      document.removeEventListener('touchend', this.boundProgressTouchEnd);
-      document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
     }
 
     // Clean up blob URL if created
@@ -260,6 +228,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   onVideoElementReady(): void {
     if (this.videoElement?.nativeElement) {
+      this.videoElementSignal.set(this.videoElement.nativeElement);
       this.attachVideoListeners(this.videoElement.nativeElement);
     }
   }
@@ -411,15 +380,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onVideoClick(event: MouseEvent | TouchEvent): void {
+  onVideoClick(_event: MouseEvent | TouchEvent): void {
     // Toggle play/pause when clicking on video
-    // Show controls briefly on touch devices
-    if (event instanceof TouchEvent) {
-      if (!this.paused()) {
-        this.showControls();
-        this.startAutoHideTimer();
-      }
-    }
     this.togglePlay();
   }
 
@@ -429,117 +391,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.toggleFullscreen();
   }
 
-  onPlayButtonClick(): void {
-    this.togglePlay();
-  }
-
-  onTouchStart(): void {
-    // On touch devices, show controls when user touches the container
-    if (!this.paused()) {
-      this.showControls();
-      this.startAutoHideTimer();
-    }
-  }
-
-toggleMute(): void {
+  toggleMute(): void {
     const video = this.videoElement?.nativeElement;
     if (video) {
       const newMutedState = !video.muted;
       video.muted = newMutedState;
       // Persist mute state for all videos
       this.videoPlayback.setMuted(newMutedState);
-    }
-  }
-
-  onVolumeGestureChange(volume: number): void {
-    const video = this.videoElement?.nativeElement;
-    if (video) {
-      // Normalize volume to 0-1 range (input is 0-100 from gesture)
-      const normalizedVolume = volume / 100;
-      video.volume = normalizedVolume;
-      if (video.muted && normalizedVolume > 0) {
-        video.muted = false;
-        this.videoPlayback.setMuted(false);
-      }
-    }
-  }
-
-  onVolumeSliderChange(value: number): void {
-    const video = this.videoElement?.nativeElement;
-    if (video) {
-      video.volume = value / 100;
-      if (video.muted && value > 0) {
-        video.muted = false;
-      }
-    }
-  }
-
-onProgressClick(event: MouseEvent): void {
-    const progressBar = event.currentTarget as HTMLElement;
-    const rect = progressBar.getBoundingClientRect();
-    const percent = (event.clientX - rect.left) / rect.width;
-    const time = percent * this.duration();
-
-    const video = this.videoElement?.nativeElement;
-    if (video) {
-      video.currentTime = time;
-    }
-  }
-
-  onProgressTouchStart(event: TouchEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.progressElement = event.currentTarget as HTMLElement;
-    this.isDraggingProgress.set(true);
-    this.seekToTouchPosition(event);
-
-    // Add touch move listener to document for tracking outside the element
-    document.addEventListener('touchmove', this.boundProgressTouchMove, { passive: false });
-    document.addEventListener('touchend', this.boundProgressTouchEnd);
-    document.addEventListener('touchcancel', this.boundProgressTouchEnd);
-  }
-
-  private boundProgressTouchMove = (event: TouchEvent) => this.onProgressTouchMove(event);
-  private boundProgressTouchEnd = () => this.onProgressTouchEnd();
-
-  private onProgressTouchMove(event: TouchEvent): void {
-    if (!this.isDraggingProgress() || !this.progressElement) return;
-    event.preventDefault();
-    this.seekToTouchPosition(event);
-  }
-
-  private onProgressTouchEnd(): void {
-    this.isDraggingProgress.set(false);
-    this.progressElement = null;
-    document.removeEventListener('touchmove', this.boundProgressTouchMove);
-    document.removeEventListener('touchend', this.boundProgressTouchEnd);
-    document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
-  }
-
-  private seekToTouchPosition(event: TouchEvent): void {
-    if (!this.progressElement) return;
-    const touch = event.touches[0];
-    const rect = this.progressElement.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-    const time = percent * this.duration();
-
-    const video = this.videoElement?.nativeElement;
-    if (video) {
-      video.currentTime = time;
-    }
-  }
-
-  onProgressKeyDown(event: KeyboardEvent): void {
-    const video = this.videoElement?.nativeElement;
-    if (!video) return;
-
-    const step = 5; // seconds
-    if (event.key === 'ArrowLeft') {
-      video.currentTime = Math.max(0, video.currentTime - step);
-      event.preventDefault();
-    } else if (event.key === 'ArrowRight') {
-      video.currentTime = Math.min(video.duration, video.currentTime + step);
-      event.preventDefault();
     }
   }
 
@@ -580,34 +438,46 @@ onProgressClick(event: MouseEvent): void {
     }
   }
 
-  showVolumeSlider(): void {
-    this.volumeSliderVisible.set(true);
+  async castToDevice(): Promise<void> {
+    const video = this.videoElement?.nativeElement;
+    const videoUrl = this.effectiveSrc();
+    if (!video || !videoUrl) return;
+
+    await this.castService.castVideoElement(
+      video,
+      videoUrl,
+      'Video', // Default title
+    );
   }
 
-  hideVolumeSlider(): void {
-    this.volumeSliderVisible.set(false);
-  }
-
-  onMouseEnter(): void {
-    this.showControls();
-  }
-
-  onMouseLeave(): void {
-    // Immediately hide controls when mouse leaves (no delay)
-    if (!this.paused()) {
-      this.clearAutoHideTimer();
-      this.controlsVisible.set(false);
+  // Handler methods for VideoControlsComponent outputs
+  onSeek(time: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.currentTime = time;
     }
   }
 
-  onMouseMove(): void {
-    this.showControls();
-    if (!this.paused()) {
-      this.startAutoHideTimer();
+  onVolumeChange(volume: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.volume = volume;
+      if (video.muted && volume > 0) {
+        video.muted = false;
+        this.videoPlayback.setMuted(false);
+      }
     }
   }
 
-  showControls(): void {
+  onMuteToggle(): void {
+    this.toggleMute();
+  }
+
+  onPlaybackRateChange(rate: number): void {
+    this.setPlaybackRate(rate);
+  }
+
+  private showControls(): void {
     this.clearAutoHideTimer();
     this.controlsVisible.set(true);
   }
