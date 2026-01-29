@@ -4,7 +4,8 @@
 
   <!-- Center play button (large, only when paused and never played) -->
   @if (paused() && !hasPlayedOnce()) {
-  <button class="center-play-btn" mat-icon-button (click)="onCenterPlayButtonClick()" aria-label="Play">
+  <button class="center-play-btn" mat-icon-button (click)="onCenterPlayButtonClick(); $event.stopPropagation()"
+    aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
   }
@@ -12,7 +13,8 @@
   <!-- Bottom gradient and controls -->
   <div class="gradient-bottom"></div>
 
-  <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()">
+  <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()"
+    (click)="$event.stopPropagation()">
     <!-- Progress bar (hidden for live streams) -->
     @if (!mergedConfig().isLiveStream) {
     <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" role="slider"

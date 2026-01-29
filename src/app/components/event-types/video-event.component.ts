@@ -148,8 +148,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      // Don't pause if we're in fullscreen mode (fullscreen changes viewport intersection)
+      const isFullscreen = !!document.fullscreenElement;
+
       // Pause video when leaving viewport (for ALL video types, not just short form)
-      if (!inViewport && isCurrentlyExpanded && !videoElement.paused) {
+      // But don't pause if we're in fullscreen mode
+      if (!inViewport && isCurrentlyExpanded && !videoElement.paused && !isFullscreen) {
         console.log('🎥 [Video AutoPlay] Pausing video (left viewport)');
         videoElement.pause();
       }
@@ -282,7 +286,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     // Check if event has actual placeholder data (blurhash or thumbhash)
     const data = this.imagePlaceholder.getPlaceholderFromEvent(event, 0);
     const hasPlaceholder = data.blurhash || data.thumbhash;
-    
+
     if (!hasPlaceholder) {
       // No placeholder available - return null to let video show its native preview
       return null;
@@ -505,7 +509,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           height: video.videoHeight
         });
       }
-      
+
       // Apply persisted mute state when video loads
       const persistedMuted = this.videoPlayback.getMutedState();
       video.muted = persistedMuted;
