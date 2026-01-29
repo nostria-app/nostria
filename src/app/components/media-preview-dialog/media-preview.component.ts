@@ -49,9 +49,9 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   private readonly DOUBLE_TAP_DELAY = 300; // milliseconds
   private readonly DOUBLE_TAP_DISTANCE = 50; // pixels
 
-  // Auto-hide controls after inactivity
+// Auto-hide controls after inactivity
   private hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly HIDE_CONTROLS_DELAY = 3000; // 3 seconds
+  private readonly HIDE_CONTROLS_DELAY = 2000; // 2 seconds
   controlsVisible = signal(true);
 
   isVideoLoading = true;

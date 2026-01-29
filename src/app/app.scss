@@ -2440,6 +2440,9 @@ mat-sidenav-content {
 // but above other content so it creates the dimming overlay effect
 .sidenav-container .mat-drawer-backdrop {
   z-index: 99 !important;
+  // Ensure touch events work on mobile after mode transitions
+  touch-action: auto !important;
+  pointer-events: auto !important;
 }
 
 // Fullscreen media player overlay

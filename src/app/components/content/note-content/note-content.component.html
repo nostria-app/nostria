@@ -165,6 +165,7 @@
   <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined"
     [blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
     [autoplay]="shouldAutoPlayVideo(token)" [loop]="shouldLoopVideo(token)"
+    [inFeedsPanel]="inFeedsPanel()"
     (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)"
     class="main-video"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />

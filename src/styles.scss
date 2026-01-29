@@ -1487,9 +1487,22 @@ app-media-queue {
   z-index: 99 !important;
 }
 
-// Ensure backdrop is visible when shown (fixes intermittent visibility issue)
+// Ensure backdrop is visible and interactive when shown
+// This fixes the backdrop click not working after mode transitions (side -> over)
 .mat-drawer-backdrop.mat-drawer-shown {
   visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  touch-action: auto !important;
+  // Ensure backdrop covers full area
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  // Explicit touch handling for mobile devices
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
 // Sidenavs above backdrop but below toolbar

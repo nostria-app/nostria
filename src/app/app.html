@@ -30,7 +30,7 @@
   }
   @if (app.initialized()) {
   <!-- Sidenav container spans full height -->
-  <mat-sidenav-container class="sidenav-container" [autosize]="true">
+  <mat-sidenav-container class="sidenav-container" [autosize]="true" (backdropClick)="onBackdropClick()">
     <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"

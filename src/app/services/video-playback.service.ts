@@ -36,13 +36,21 @@ export class VideoPlaybackService {
   
   /**
    * Whether auto-play is allowed based on current app state.
-   * Auto-play is generally allowed - the IntersectionObserver in the video
-   * component handles visibility detection to prevent playing hidden videos.
+   * This specifically prevents videos in the Feeds panel from auto-playing
+   * when Feeds is not visible (e.g., when viewing a profile).
+   * The IntersectionObserver in the video component handles viewport visibility,
+   * but we need this check because Feeds is always rendered in the background.
    */
   readonly autoPlayAllowed = computed(() => {
-    // Always allow auto-play - the video component's IntersectionObserver
-    // will handle pausing videos that aren't visible in the viewport
-    return true;
+    // If feeds panel is visible, allow auto-play there
+    if (this.panelNav.showFeeds()) {
+      return true;
+    }
+    // Feeds is NOT visible - videos in feeds should not auto-play
+    // Return false so the effect in inline-video-player checks this
+    // Videos in other panels (profile, etc.) will still auto-play
+    // because they're rendered via router-outlet, not the feeds panel
+    return false;
   });
 
   constructor() {

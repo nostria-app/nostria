@@ -806,6 +806,11 @@ export class App implements OnInit {
       if (isHandset) {
         if (isFirstRun || (!isFirstRun && !previousIsHandset)) {
           this.localSettings.setMenuOpen(false);
+          // When transitioning to mobile, explicitly close the sidenav
+          // This ensures the backdrop is properly reset for the new mode
+          if (this.sidenav?.opened) {
+            this.sidenav.close();
+          }
         }
       }
 
@@ -1117,6 +1122,39 @@ export class App implements OnInit {
     }
     // Set initial floating toolbar position
     this.updateFloatingToolbarPosition();
+
+    // Add manual backdrop click handler as fallback
+    // This fixes the issue where backdrop click doesn't work after mode transition
+    this.setupBackdropClickHandler();
+  }
+
+  /**
+   * Set up a manual click/touch handler on the backdrop element.
+   * This provides a fallback for cases where Angular Material's
+   * backdrop click event doesn't fire properly (e.g., after mode transition).
+   */
+  private setupBackdropClickHandler(): void {
+    if (!this.app.isBrowser()) return;
+
+    // Use event delegation on document to catch backdrop clicks
+    // This handles both click and touch events
+    const handleBackdropInteraction = (event: Event) => {
+      const target = event.target as HTMLElement;
+
+      // Check if the click/touch is on the backdrop
+      if (target && target.classList.contains('mat-drawer-backdrop')) {
+        // Only close if sidenav is open and we're in mobile (over) mode
+        if (this.sidenav?.opened && this.layout.isHandset()) {
+          event.preventDefault();
+          event.stopPropagation();
+          this.sidenav.close();
+        }
+      }
+    };
+
+    // Listen for both click and touchend events
+    this.document.addEventListener('click', handleBackdropInteraction, { capture: true });
+    this.document.addEventListener('touchend', handleBackdropInteraction, { capture: true });
   }
 
   qrScan() {
@@ -1330,6 +1368,18 @@ export class App implements OnInit {
   /** Close sidenav on mobile (overlay mode) after navigation */
   closeSidenavOnMobile() {
     if (this.layout.isHandset() && this.sidenav?.opened) {
+      this.sidenav.close();
+    }
+  }
+
+  /**
+   * Handle backdrop click on sidenav container.
+   * This explicitly closes the sidenav when backdrop is clicked,
+   * which ensures proper handling especially after mode transitions
+   * from 'side' to 'over' when resizing the window.
+   */
+  onBackdropClick() {
+    if (this.sidenav?.opened) {
       this.sidenav.close();
     }
   }
