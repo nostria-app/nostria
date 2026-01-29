@@ -24,7 +24,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
@@ -47,6 +46,7 @@ import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { EventRepublishService } from '../../../services/event-republish.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { BackupComponent } from '../backup/backup.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -91,7 +91,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   readonly relayAuth = inject(RelayAuthService);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
-  private readonly router = inject(Router);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -1191,12 +1190,17 @@ export class RelaysComponent implements OnInit, OnDestroy {
    * Navigate to backup settings with migration section and pass the old relay URLs
    */
   openMigrationSettings(): void {
-    // Navigate to backup settings with relay URLs as query params
-    this.router.navigate(['/settings/backup'], {
-      queryParams: {
-        migration: 'true',
-        relays: JSON.stringify(this.followingRelayUrls()),
+    // Open backup component directly via RightPanelService with migration inputs
+    this.rightPanel.open(
+      {
+        component: BackupComponent,
+        inputs: {
+          migrationRelays: this.followingRelayUrls(),
+          startMigration: true,
+        },
+        title: 'Backup & Migration',
       },
-    });
+      '/settings/backup'
+    );
   }
 }

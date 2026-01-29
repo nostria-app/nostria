@@ -1,4 +1,5 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { Component, inject, signal, effect, computed, OnInit, OnDestroy, input } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +9,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { FormsModule } from '@angular/forms';
 import { DatabaseService } from '../../../services/database.service';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -22,6 +27,8 @@ import { FollowingBackupService } from '../../../services/following-backup.servi
 import { FollowingHistoryDialogComponent } from './following-history-dialog/following-history-dialog.component';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MigrationService, MigrationResult } from '../../../services/migration.service';
+import { Subscription } from 'rxjs';
 
 interface BackupStats {
   eventsCount: number;
@@ -41,13 +48,17 @@ interface BackupStats {
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    FormsModule,
     InfoTooltipComponent,
   ],
   templateUrl: './backup.component.html',
   styleUrl: './backup.component.scss',
   host: { class: 'panel-with-sticky-header' },
 })
-export class BackupComponent {
+export class BackupComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private nostr = inject(NostrService);
   private snackBar = inject(MatSnackBar);
@@ -59,6 +70,14 @@ export class BackupComponent {
   private readonly followingBackupService = inject(FollowingBackupService);
   private readonly dialog = inject(MatDialog);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly route = inject(ActivatedRoute);
+  readonly migrationService = inject(MigrationService);
+
+  // Input properties for migration (used when opened via RightPanelService)
+  migrationRelays = input<string[]>();
+  startMigration = input<boolean>();
+
+  private routeSubscription: Subscription | null = null;
 
   goBack(): void {
     this.rightPanel.goBack();
@@ -82,12 +101,59 @@ export class BackupComponent {
   followingBackupsCount = computed(() => this.followingBackupService.getBackups().length);
   currentFollowingCount = computed(() => this.accountState.followingList().length);
 
+  // Migration signals
+  showMigrationSection = signal(false);
+  oldRelayUrls = signal<string[]>([]);
+  manualRelayUrl = signal('');
+  migrationDepth = signal<'basic' | 'extended' | 'deep'>('basic');
+  migrationResults = signal<MigrationResult[]>([]);
+
+  // Expose migration progress from service
+  migrationProgress = computed(() => this.migrationService.progress());
+  isMigrating = computed(() => this.migrationService.isRunning());
+  migrationProgressPercent = computed(() => this.migrationService.progressPercent());
+
   constructor() {
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
         await this.loadBackupStats();
       }
     });
+  }
+
+  ngOnInit(): void {
+    // Check for migration inputs (from RightPanelService)
+    const inputRelays = this.migrationRelays();
+    if (this.startMigration() && inputRelays && inputRelays.length > 0) {
+      this.oldRelayUrls.set(inputRelays);
+      this.showMigrationSection.set(true);
+      this.logger.info('Migration initiated from relays page (via inputs)', { relays: inputRelays });
+      return; // Skip query params check if inputs are provided
+    }
+
+    // Fallback: Check for migration query params from relays page (for direct URL navigation)
+    this.routeSubscription = this.route.queryParams.subscribe(params => {
+      if (params['migration'] === 'true' && params['relays']) {
+        try {
+          const relays = JSON.parse(params['relays']);
+          if (Array.isArray(relays) && relays.length > 0) {
+            this.oldRelayUrls.set(relays);
+            this.showMigrationSection.set(true);
+            this.logger.info('Migration initiated from relays page (via query params)', { relays });
+          }
+        } catch (e) {
+          this.logger.error('Failed to parse relay URLs from query params', e);
+        }
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.routeSubscription) {
+      this.routeSubscription.unsubscribe();
+    }
+    // Cancel any ongoing migration
+    this.migrationService.cancel();
   }
 
   async loadBackupStats(): Promise<void> {
@@ -303,5 +369,149 @@ export class BackupComponent {
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
     });
+  }
+
+  // Migration methods
+
+  toggleMigrationSection(): void {
+    this.showMigrationSection.update(v => !v);
+  }
+
+  parseRelayUrl(url: string): string | null {
+    let relayUrl = url.trim();
+    if (!relayUrl) return null;
+
+    // Add wss:// if no protocol specified
+    if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+      relayUrl = `wss://${relayUrl}`;
+    }
+
+    // Add trailing slash if just domain
+    try {
+      const parsedUrl = new URL(relayUrl);
+      if (parsedUrl.pathname === '/') {
+        relayUrl = relayUrl.endsWith('/') ? relayUrl : `${relayUrl}/`;
+      }
+      return relayUrl;
+    } catch {
+      return null;
+    }
+  }
+
+  addManualRelay(): void {
+    const url = this.parseRelayUrl(this.manualRelayUrl());
+    if (!url) {
+      this.showMessage('Please enter a valid relay URL');
+      return;
+    }
+
+    // Check if already in list
+    if (this.oldRelayUrls().includes(url)) {
+      this.showMessage('This relay is already in the list');
+      return;
+    }
+
+    this.oldRelayUrls.update(relays => [...relays, url]);
+    this.manualRelayUrl.set('');
+    this.showMessage('Relay added to migration list');
+  }
+
+  removeOldRelay(url: string): void {
+    this.oldRelayUrls.update(relays => relays.filter(r => r !== url));
+  }
+
+  async migrateFromSingleRelay(relayUrl: string): Promise<void> {
+    if (this.isMigrating()) {
+      this.showMessage('Migration already in progress');
+      return;
+    }
+
+    this.migrationResults.set([]);
+    const result = await this.migrationService.migrateFromRelay(relayUrl, this.migrationDepth());
+    this.migrationResults.set([result]);
+
+    if (result.errors.length > 0) {
+      this.showMessage(`Migration completed with ${result.errors.length} errors`, 5000);
+    } else {
+      this.showMessage(`Successfully migrated ${result.eventsPublished} events`);
+    }
+
+    // Refresh stats after migration
+    await this.loadBackupStats();
+  }
+
+  async migrateFromAllRelays(): Promise<void> {
+    if (this.isMigrating()) {
+      this.showMessage('Migration already in progress');
+      return;
+    }
+
+    const relays = this.oldRelayUrls();
+    if (relays.length === 0) {
+      this.showMessage('No relays to migrate from');
+      return;
+    }
+
+    this.migrationResults.set([]);
+    const results = await this.migrationService.migrateFromRelays(relays, this.migrationDepth());
+    this.migrationResults.set(results);
+
+    const totalPublished = results.reduce((sum, r) => sum + r.eventsPublished, 0);
+    const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
+
+    if (totalErrors > 0) {
+      this.showMessage(`Migration completed: ${totalPublished} events migrated, ${totalErrors} errors`, 5000);
+    } else {
+      this.showMessage(`Successfully migrated ${totalPublished} events from ${relays.length} relays`);
+    }
+
+    // Refresh stats after migration
+    await this.loadBackupStats();
+  }
+
+  cancelMigration(): void {
+    this.migrationService.cancel();
+    this.showMessage('Migration cancelled');
+  }
+
+  formatRelayUrl(url: string): string {
+    return url.replace(/^wss:\/\//, '');
+  }
+
+  getKindDescription(kind: number): string {
+    const descriptions: Record<number, string> = {
+      1: 'Notes',
+      6: 'Reposts',
+      7: 'Reactions',
+      16: 'Generic reposts',
+      20: 'Pictures',
+      21: 'Videos',
+      22: 'Audio',
+      1063: 'File metadata',
+      1111: 'Comments',
+      9802: 'Highlights',
+      30023: 'Articles',
+      30024: 'Draft articles',
+      31922: 'Calendar events (date)',
+      31923: 'Calendar events (time)',
+      31924: 'Calendars',
+      31925: 'RSVPs',
+      10000: 'Mute list',
+      10001: 'Pin list',
+      30000: 'Follow sets',
+      30001: 'Lists',
+      30003: 'Bookmarks',
+      30008: 'Profile badges',
+      30009: 'Badge definitions',
+      8: 'Badge awards',
+      1984: 'Reports',
+      9735: 'Zap receipts',
+      30078: 'App data',
+    };
+    return descriptions[kind] || `Kind ${kind}`;
+  }
+
+  getDepthKinds(depth: 'basic' | 'extended' | 'deep'): number[] {
+    return this.migrationService.getEventKinds(depth);
   }
 }
