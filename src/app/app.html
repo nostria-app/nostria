@@ -579,6 +579,13 @@
 
 <!-- Profile actions menu for minimized sidenav -->
 <mat-menu #minimizedProfileActionsMenu="matMenu" xPosition="after">
+  <!-- Account switching submenu -->
+  @if (accountState.hasAccounts()) {
+  <button mat-menu-item [matMenuTriggerFor]="accountSwitchSubMenu">
+    <mat-icon>switch_account</mat-icon>
+    <span i18n="@@app.profile.switch-account">Switch account</span>
+  </button>
+  }
   @if (app.authenticated()) {
   <button mat-menu-item [routerLink]="accountState.profilePath()" (click)="closeSidenavOnMobile()">
     <mat-icon>person</mat-icon>
@@ -615,5 +622,31 @@
     <mat-icon>dark_mode</mat-icon>
     <span i18n="@@app.theme.dark-mode">Dark mode</span>
     }
+  </button>
+</mat-menu>
+
+<!-- Account switch submenu -->
+<mat-menu #accountSwitchSubMenu="matMenu">
+  @for (item of accountsWithProfiles(); track item.account.pubkey) {
+  <button mat-menu-item (click)="switchAccount(item.account.pubkey)" class="account-switch-item">
+    <div class="menu-account-avatar">
+      @if (item.profile?.data?.picture) {
+      @if (settings.settings().imageCacheEnabled) {
+      <img [src]="getOptimizedImageUrl(item.profile!.data!.picture)" alt="Profile" class="avatar-image" />
+      } @else {
+      <img [src]="item.profile!.data!.picture" alt="Profile" class="avatar-image" />
+      }
+      } @else {
+      <mat-icon>account_circle</mat-icon>
+      }
+    </div>
+    <span>{{ item.profile?.data?.display_name || item.profile?.data?.name || item.account.name ||
+      (item.account.pubkey | npub) }}</span>
+  </button>
+  }
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="addAccount()">
+    <mat-icon>person_add</mat-icon>
+    <span i18n="@@app.profile.add-account">Add account</span>
   </button>
 </mat-menu>

@@ -30,7 +30,8 @@
     <!-- Bottom controls bar -->
     <div class="controls-bar">
       <!-- Progress bar -->
-      <div class="progress-container" (click)="onProgressClick($event)" (keydown)="onProgressKeyDown($event)"
+      <div class="progress-container" [class.dragging]="isDraggingProgress()" (click)="onProgressClick($event)"
+        (touchstart)="onProgressTouchStart($event)" (keydown)="onProgressKeyDown($event)"
         role="slider" aria-label="Video progress" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0"
         aria-valuemax="100" tabindex="0">
         <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
@@ -48,8 +49,8 @@
 
           <!-- Volume -->
           <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
-            <button mat-icon-button (click)="toggleMute()" [matTooltip]="isMuted() ? 'Unmute' : 'Mute'"
-              class="control-btn">
+            <button mat-icon-button (click)="toggleMute()" [matTooltip]="isMuted() ? 'Unmute (hold to adjust)' : 'Mute (hold to adjust)'"
+              class="control-btn" appVolumeGesture (volumeChange)="onVolumeGestureChange($event)">
               <mat-icon>{{ volumeIcon() }}</mat-icon>
             </button>
             @if (volumeSliderVisible()) {
@@ -80,6 +81,11 @@
               <span>Speed</span>
               <span class="menu-value">{{ playbackRate() === 1 ? 'Normal' : playbackRate() + 'x' }}</span>
             </button>
+            <!-- Picture in Picture - shown in menu on small screens -->
+            <button mat-menu-item (click)="pictureInPicture()" class="pip-menu-item">
+              <mat-icon>picture_in_picture_alt</mat-icon>
+              <span>Picture-in-picture</span>
+            </button>
           </mat-menu>
           <mat-menu #speedMenu="matMenu" class="inline-video-menu">
             @for (rate of playbackRates; track rate) {
@@ -89,8 +95,8 @@
             }
           </mat-menu>
 
-          <!-- Picture in Picture -->
-          <button mat-icon-button (click)="pictureInPicture()" matTooltip="Picture-in-picture" class="control-btn">
+          <!-- Picture in Picture - hidden on small screens (shown in settings menu) -->
+          <button mat-icon-button (click)="pictureInPicture()" matTooltip="Picture-in-picture" class="control-btn pip-button">
             <mat-icon>picture_in_picture_alt</mat-icon>
           </button>
 
