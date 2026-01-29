@@ -1997,7 +1997,7 @@ mat-sidenav-content {
     .sidenav-minimized-avatar-button {
       min-height: 56px !important;
       height: 56px !important;
-      margin-bottom: 4px;
+      margin-bottom: 0;
       border: none !important;
       outline: none !important;
       background: transparent !important;
@@ -2038,6 +2038,26 @@ mat-sidenav-content {
         width: 40px !important;
         height: 40px !important;
         margin: 0 auto !important;
+      }
+    }
+
+    // Minimized settings button - opens profile actions menu
+    .sidenav-minimized-settings-button {
+      min-height: 48px !important;
+      height: 48px !important;
+      margin-bottom: 4px;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+
+      .mdc-list-item__content {
+        padding: 0 !important;
+      }
+
+      mat-icon {
+        font-size: 24px !important;
+        width: 24px !important;
+        height: 24px !important;
       }
     }
   }
