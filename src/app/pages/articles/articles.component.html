@@ -45,6 +45,11 @@
     </div>
   </mat-menu>
   }
+  @if (isAuthenticated()) {
+  <a mat-icon-button routerLink="/articles/edit" matTooltip="My Articles">
+    <mat-icon>edit_document</mat-icon>
+  </a>
+  }
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh articles">
     <mat-icon>refresh</mat-icon>
   </button>

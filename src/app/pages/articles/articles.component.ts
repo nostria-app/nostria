@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDividerModule } from '@angular/material/divider';
+import { RouterLink } from '@angular/router';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -35,7 +36,7 @@ const BATCH_DELAY_MS = 100;
 
 @Component({
   selector: 'app-articles-discover',
-  imports: [
+imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
@@ -44,6 +45,7 @@ const BATCH_DELAY_MS = 100;
     MatMenuModule,
     MatSlideToggleModule,
     MatDividerModule,
+    RouterLink,
     ArticleEventComponent,
     UserProfileComponent,
     AgoPipe,
