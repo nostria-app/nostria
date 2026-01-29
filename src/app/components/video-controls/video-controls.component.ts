@@ -72,6 +72,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '(mousemove)': 'onMouseMove()',
     '(touchstart)': 'onTouchStart($event)',
     '(click)': 'onOverlayClick($event)',
+    '(dblclick)': 'onOverlayDoubleClick($event)',
   },
 })
 export class VideoControlsComponent implements OnDestroy {
@@ -418,6 +419,13 @@ export class VideoControlsComponent implements OnDestroy {
     // Don't toggle if click was on controls-bar or center play button (they stop propagation)
     // This method is only reached when clicking on the overlay area
     this.playPause.emit();
+  }
+
+  /** Called when double-clicking on the overlay to toggle fullscreen */
+  onOverlayDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.fullscreenToggle.emit();
   }
 
   /** Called when mouse enters the controls-bar (buttons area) */
