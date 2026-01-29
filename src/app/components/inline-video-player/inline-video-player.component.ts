@@ -165,7 +165,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         }
       } else {
         // Video left viewport - pause if currently playing
-        if (!video.paused) {
+        // But don't pause if we're in fullscreen mode (fullscreen changes viewport intersection)
+        const isFullscreen = !!document.fullscreenElement;
+        if (!video.paused && !isFullscreen) {
           video.pause();
         }
       }
