@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 
@@ -21,6 +22,8 @@ import { LoggerService } from './logger.service';
 export class CacheCleanupService {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   // Cleanup configuration
   private readonly INITIAL_DELAY_MS = 5 * 60 * 1000; // 5 minutes
@@ -40,6 +43,12 @@ export class CacheCleanupService {
    * This should be called once during app initialization
    */
   start(): void {
+    // Skip on server - only run in browser
+    if (!this.isBrowser) {
+      this.logger.debug('CacheCleanupService skipped - not in browser environment');
+      return;
+    }
+
     if (this.isRunning()) {
       this.logger.warn('CacheCleanupService is already running');
       return;
@@ -53,14 +62,14 @@ export class CacheCleanupService {
     this.nextCleanup.set(nextCleanupTime);
 
     // Schedule the first cleanup after initial delay
-    this.initialTimeoutId = window.setTimeout(() => {
+    this.initialTimeoutId = setTimeout(() => {
       this.performCleanup();
 
       // After the first cleanup, schedule periodic cleanups
-      this.cleanupIntervalId = window.setInterval(() => {
+      this.cleanupIntervalId = setInterval(() => {
         this.performCleanup();
-      }, this.CLEANUP_INTERVAL_MS);
-    }, this.INITIAL_DELAY_MS);
+      }, this.CLEANUP_INTERVAL_MS) as unknown as number;
+    }, this.INITIAL_DELAY_MS) as unknown as number;
 
     this.logger.info(
       `CacheCleanupService scheduled to start in ${this.INITIAL_DELAY_MS / 1000} seconds`

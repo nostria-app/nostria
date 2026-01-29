@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { nip19 } from 'nostr-tools';
 
 export interface MetadataResponse {
   author: {
@@ -15,6 +16,10 @@ export interface MetadataResponse {
   content: string;
   tags: any[];
 }
+
+// Timeout for metadata API requests (in milliseconds)
+// Social media bots typically have short timeouts, so we need to respond quickly
+const METADATA_REQUEST_TIMEOUT_MS = 4000;
 
 @Injectable({
   providedIn: 'root',
@@ -86,6 +91,7 @@ export class MetaService {
         content: config.description,
       });
     if (config.image) this.meta.updateTag({ property: 'og:image', content: config.image });
+    if (config.url) this.meta.updateTag({ property: 'og:url', content: config.url });
 
     // Twitter Card
     if (config.title) this.meta.updateTag({ name: 'twitter:title', content: config.title });
@@ -119,18 +125,85 @@ export class MetaService {
     if (addr.startsWith('nevent')) {
       // This API will parse out the event ID and author from the Nostr event address.
       url = `${this.#metadataUrl}e/${addr}`;
-      targetUrl = `https://nostria.app/e/${addr}`;
-    } else if (addr.startsWith('nprofile') || addr.startsWith('npub')) {
+      // For nevent, decode and re-encode without relay hints
+      try {
+        const decoded = nip19.decode(addr);
+        if (decoded.type === 'nevent') {
+          const canonicalNevent = nip19.neventEncode({
+            id: decoded.data.id,
+            author: decoded.data.author,
+            kind: decoded.data.kind,
+            // No relays - canonical form
+          });
+          targetUrl = `https://nostria.app/e/${canonicalNevent}`;
+        } else {
+          targetUrl = `https://nostria.app/e/${addr}`;
+        }
+      } catch {
+        targetUrl = `https://nostria.app/e/${addr}`;
+      }
+    } else if (addr.startsWith('nprofile')) {
       // This API will parse out the profile ID from the Nostr profile address.
+      url = `${this.#metadataUrl}p/${addr}`;
+      // For nprofile, decode and convert to npub (canonical form)
+      try {
+        const decoded = nip19.decode(addr);
+        if (decoded.type === 'nprofile') {
+          const npub = nip19.npubEncode(decoded.data.pubkey);
+          targetUrl = `https://nostria.app/p/${npub}`;
+        } else {
+          targetUrl = `https://nostria.app/p/${addr}`;
+        }
+      } catch {
+        targetUrl = `https://nostria.app/p/${addr}`;
+      }
+    } else if (addr.startsWith('npub')) {
+      // npub is already canonical
       url = `${this.#metadataUrl}p/${addr}`;
       targetUrl = `https://nostria.app/p/${addr}`;
     } else if (addr.startsWith('naddr')) {
       // This API will parse out the event ID from the Nostr address.
       url = `${this.#metadataUrl}a/${addr}`;
-      targetUrl = `https://nostria.app/a/${addr}`;
+      // For naddr, decode and re-encode without relay hints
+      try {
+        const decoded = nip19.decode(addr);
+        if (decoded.type === 'naddr') {
+          const canonicalNaddr = nip19.naddrEncode({
+            kind: decoded.data.kind,
+            pubkey: decoded.data.pubkey,
+            identifier: decoded.data.identifier,
+            // No relays - canonical form
+          });
+          targetUrl = `https://nostria.app/a/${canonicalNaddr}`;
+        } else {
+          targetUrl = `https://nostria.app/a/${addr}`;
+        }
+      } catch {
+        targetUrl = `https://nostria.app/a/${addr}`;
+      }
     }
 
-    const data = await firstValueFrom(this.http.get<MetadataResponse>(url));
+    // Fetch metadata with timeout to ensure fast response for social media bots
+    const data = await firstValueFrom(
+      this.http.get<MetadataResponse>(url).pipe(
+        timeout(METADATA_REQUEST_TIMEOUT_MS),
+        catchError(error => {
+          console.error(`[SSR] Metadata fetch failed or timed out for ${addr}:`, error?.message || error);
+          // Return a minimal response on timeout/error so SSR can still complete
+          return of({
+            author: {
+              profile: {
+                display_name: undefined,
+                name: undefined,
+                picture: '',
+              },
+            },
+            content: '',
+            tags: [],
+          } as MetadataResponse);
+        })
+      )
+    );
 
     // Extract image URL - check various tag formats
     let eventImageUrl = this.extractImageUrlFromImageTag(data.tags); // Check 'image' tag first (music tracks, etc.)

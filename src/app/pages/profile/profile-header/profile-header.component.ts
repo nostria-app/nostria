@@ -12,7 +12,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ProfileState } from '../../../services/profile-state';
 import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
@@ -371,9 +370,11 @@ export class ProfileHeaderComponent implements OnDestroy {
     });
 
     // Add effect to check if the profile being viewed has muted the current user
+    // DEFERRED: This is non-critical information, load after cached events
     effect(async () => {
       const profilePubkey = this.pubkey();
       const myPubkey = this.accountState.pubkey();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
 
       // Reset state when profile changes
       untracked(() => {
@@ -382,9 +383,16 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
 
       // Don't check for own profile or if no pubkeys available
-      if (!profilePubkey || !myPubkey || profilePubkey === myPubkey) {
+      // Wait for cached events to load before making this query
+      if (!profilePubkey || !myPubkey || profilePubkey === myPubkey || !cachedLoaded) {
         return;
       }
+
+      // Add delay to avoid competing with more important queries
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Verify we're still on the same profile
+      if (this.pubkey() !== profilePubkey) return;
 
       untracked(() => {
         this.isLoadingMuteStatus.set(true);
@@ -432,15 +440,26 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // Load badges when pubkey changes
+    // Load badges when pubkey changes - DEFERRED: badges are lowest priority
+    // Wait for cachedEventsLoaded signal to be true before loading badges
     effect(async () => {
       const currentPubkey = this.pubkey();
-      if (currentPubkey) {
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
+      
+      if (currentPubkey && cachedLoaded) {
         // Clear badges first to prevent showing stale data from previous profile
         this.badgeService.clear();
         // Clear timed out badges and cancel any pending timeouts
         this.clearBadgeTimeouts();
-        await this.badgeService.loadAcceptedBadges(currentPubkey);
+        
+        // Add a small delay to ensure timeline queries complete first
+        // This prevents badge queries from competing with more important data
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Double-check we're still on the same profile after delay
+        if (this.pubkey() === currentPubkey) {
+          await this.badgeService.loadAcceptedBadges(currentPubkey);
+        }
       }
     });
 
@@ -475,11 +494,19 @@ export class ProfileHeaderComponent implements OnDestroy {
     });
 
     // Load trust metrics when pubkey changes and trust is enabled
+    // DEFERRED: Trust metrics are supplementary info, load after main content
     effect(async () => {
       const currentPubkey = this.pubkey();
       const enabled = this.trustService.isEnabled();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
 
-      if (currentPubkey && enabled) {
+      if (currentPubkey && enabled && cachedLoaded) {
+        // Add delay to avoid competing with more important queries
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        // Verify we're still on the same profile
+        if (this.pubkey() !== currentPubkey) return;
+        
         const metrics = await this.trustService.fetchMetrics(currentPubkey);
         untracked(() => {
           this.trustRank.set(metrics?.rank);
@@ -925,7 +952,7 @@ export class ProfileHeaderComponent implements OnDestroy {
         await this.followSetsService.addToFollowSet(dTag, pubkey);
         this.layout.toast('Added to list');
       }
-    } catch (error) {
+    } catch {
       this.layout.toast('Failed to update list');
     }
   }
@@ -958,7 +985,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       } else {
         this.layout.toast('Failed to create list');
       }
-    } catch (error) {
+    } catch {
       this.layout.toast('Failed to create list');
     }
   }

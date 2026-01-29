@@ -25,12 +25,11 @@ export class FormatService {
   private userRelaysService = inject(UserRelaysService);
 
   /**
-   * Escape HTML special characters to prevent XSS
+   * Escape HTML special characters to prevent XSS.
+   * Uses UtilitiesService.escapeHtml() for consistency.
    */
   private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return this.utilities.escapeHtml(text);
   }
 
   /**
@@ -259,7 +258,7 @@ export class FormatService {
    * Calculate relative time from a Nostr timestamp (seconds since epoch)
    */
   private getRelativeTime(timestamp: number): string {
-    const now = Math.floor(Date.now() / 1000);
+    const now = this.utilities.currentDate();
     const diff = now - timestamp;
 
     if (diff < 0) return 'in the future';

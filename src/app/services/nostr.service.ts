@@ -1062,12 +1062,20 @@ export class NostrService implements NostriaService {
     }
   }
 
+  /**
+   * Get the current timestamp in seconds (Nostr format).
+   * @deprecated Use UtilitiesService.currentDate() or this.utilities.currentDate() instead
+   */
   currentDate() {
-    return Math.floor(Date.now() / 1000);
+    return this.utilities.currentDate();
   }
 
+  /**
+   * Get a future timestamp by adding minutes to the current time.
+   * @deprecated Use UtilitiesService.futureDate() or this.utilities.futureDate() instead
+   */
   futureDate(minutes: number) {
-    return Math.floor((Date.now() + minutes * 60 * 1000) / 1000);
+    return this.utilities.futureDate(minutes);
   }
 
   createEvent(kind: number, content: string, tags: string[][]): UnsignedEvent {
