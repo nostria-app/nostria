@@ -6,7 +6,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NoteEditorDialogComponent, NoteEditorDialogData } from '../note-editor-dialog/note-editor-dialog.component';
-import { nip19 } from 'nostr-tools';
+import { kinds, nip19 } from 'nostr-tools';
+import { AccountRelayService } from '../../services/relays/account-relay';
+import { UtilitiesService } from '../../services/utilities.service';
 
 export interface ShareArticleDialogData {
   title: string;
@@ -17,6 +19,7 @@ export interface ShareArticleDialogData {
   pubkey: string;
   identifier?: string;
   kind: number;
+  encodedId?: string;
   naddr?: string; // The original naddr with relay hints
 }
 
@@ -180,15 +183,24 @@ export interface ShareArticleDialogData {
   `,
 })
 export class ShareArticleDialogComponent {
-  private dialogRef = inject(MatDialogRef<ShareArticleDialogComponent>);
-  data = inject<ShareArticleDialogData>(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<ShareArticleDialogComponent>, { optional: true });
+  data = inject<ShareArticleDialogData>(MAT_DIALOG_DATA, { optional: true }) ?? {
+    title: 'Share',
+    url: '',
+    eventId: '',
+    pubkey: '',
+    kind: 1,
+  };
   private snackBar = inject(MatSnackBar);
   private customDialog = inject(CustomDialogService);
+  private accountRelay = inject(AccountRelayService);
+  private utilities = inject(UtilitiesService);
 
   /** Generate clean canonical URL for sharing (always nostria.app with clean path) */
   private getShareUrl(): string {
-    const naddr = this.getNaddr();
-    return `https://nostria.app/a/${naddr}`;
+    const encodedId = this.getEncodedId();
+    const prefix = this.data.kind === kinds.LongFormArticle ? 'a' : 'e';
+    return `https://nostria.app/${prefix}/${encodedId}`;
   }
 
   getAuthorDisplay(): string {
@@ -200,12 +212,12 @@ export class ShareArticleDialogComponent {
   }
 
   shareAsNote() {
-    const naddr = this.getNaddr();
-    this.dialogRef.close();
+    const encodedId = this.getEncodedId();
+    this.dialogRef?.close();
 
     setTimeout(() => {
       const noteData: NoteEditorDialogData = {
-        content: `nostr:${naddr}`,
+        content: `nostr:${encodedId}`,
       };
 
       this.customDialog.open(NoteEditorDialogComponent, {
@@ -221,7 +233,7 @@ export class ShareArticleDialogComponent {
     try {
       await navigator.clipboard.writeText(this.getShareUrl());
       this.snackBar.open('Link copied to clipboard', 'Close', { duration: 2000 });
-      this.dialogRef.close();
+      this.dialogRef?.close();
     } catch (error) {
       console.error('Failed to copy link:', error);
       this.snackBar.open('Failed to copy link', 'Close', { duration: 3000 });
@@ -231,40 +243,40 @@ export class ShareArticleDialogComponent {
   shareToFacebook() {
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.getShareUrl())}`;
     window.open(url, '_blank', 'width=600,height=400');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareViaEmail() {
     const subject = encodeURIComponent(this.data.title || 'Check out this article');
     const body = encodeURIComponent(`${this.data.summary || this.data.title}\n\n${this.getShareUrl()}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToBluesky() {
     const text = encodeURIComponent(`${this.data.title || 'Check out this article'}\n\n${this.getShareUrl()}`);
     window.open(`https://bsky.app/intent/compose?text=${text}`, '_blank');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToTwitter() {
     const text = encodeURIComponent(this.data.title || 'Check out this article');
     const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=600,height=400');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToLinkedIn() {
     const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=400');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToReddit() {
     const title = encodeURIComponent(this.data.title || 'Check out this article');
     const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://www.reddit.com/submit?title=${title}&url=${url}`, '_blank');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToPinterest() {
@@ -272,21 +284,21 @@ export class ShareArticleDialogComponent {
     const description = encodeURIComponent(this.data.title || '');
     const media = encodeURIComponent(this.data.image || '');
     window.open(`https://pinterest.com/pin/create/button/?url=${url}&description=${description}&media=${media}`, '_blank', 'width=600,height=400');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   shareToHackerNews() {
     const title = encodeURIComponent(this.data.title || 'Check out this article');
     const url = encodeURIComponent(this.getShareUrl());
     window.open(`https://news.ycombinator.com/submitlink?t=${title}&u=${url}`, '_blank');
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   sendAsMessage() {
-    const naddr = this.getNaddr();
-    this.dialogRef.close();
+    const encodedId = this.getEncodedId();
+    this.dialogRef?.close();
 
-    // TODO: Open message composer with naddr
+    // TODO: Open message composer with encodedId
     this.snackBar.open('Send as message - Coming soon!', 'Close', { duration: 2000 });
   }
 
@@ -294,20 +306,35 @@ export class ShareArticleDialogComponent {
     const embedCode = `<iframe src="${this.getShareUrl()}" width="100%" height="400" frameborder="0"></iframe>`;
     navigator.clipboard.writeText(embedCode).then(() => {
       this.snackBar.open('Embed code copied!', 'Close', { duration: 2000 });
-      this.dialogRef.close();
+      this.dialogRef?.close();
     });
   }
 
-  private getNaddr(): string {
-    // Use the original naddr if available (preserves relay hints)
+  private getEncodedId(): string {
+    if (this.data.encodedId) {
+      return this.data.encodedId;
+    }
     if (this.data.naddr) {
       return this.data.naddr;
     }
-    // Fallback to creating a new one (no relay hints)
-    return nip19.naddrEncode({
-      identifier: this.data.identifier || '',
-      pubkey: this.data.pubkey,
+
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+
+    if (this.data.kind >= 30000 && this.data.kind < 40000) {
+      return nip19.naddrEncode({
+        identifier: this.data.identifier || '',
+        pubkey: this.data.pubkey,
+        kind: this.data.kind,
+        relays: relayHints,
+      });
+    }
+
+    return nip19.neventEncode({
+      id: this.data.eventId,
+      author: this.data.pubkey,
       kind: this.data.kind,
+      relays: relayHints,
     });
   }
 }

@@ -17,7 +17,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
@@ -37,6 +37,7 @@ import {
   EventDetailsResult,
 } from './event-details-dialog/event-details-dialog.component';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { UtilitiesService } from '../../services/utilities.service';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -110,6 +111,7 @@ interface CalendarCollection {
 })
 export class Calendar {
   private accountRelay = inject(AccountRelayService);
+  private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
   public app = inject(ApplicationService); // Made public for template access
   private dialog = inject(MatDialog);
@@ -1055,8 +1057,15 @@ export class Calendar {
 
   shareEvent(event: CalendarEvent): void {
     const eventDTag = this.getEventDTag(event);
-    const eventCoordinate = `${event.kind}:${event.pubkey}:${eventDTag}`;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?event=${encodeURIComponent(eventCoordinate)}`;
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const naddr = nip19.naddrEncode({
+      identifier: eventDTag,
+      pubkey: event.pubkey,
+      kind: event.kind,
+      relays: relayHints,
+    });
+    const shareUrl = `https://nostria.app/a/${naddr}`;
 
     if (navigator.share) {
       // Use native sharing if available

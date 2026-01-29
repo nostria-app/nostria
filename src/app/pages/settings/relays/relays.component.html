@@ -192,7 +192,11 @@
             <p>
               We can remove these relays from your following list by clicking the button below.
             </p>
-            <p>
+            <p i18n="@@settings.relays.deprecated.migrate-hint">
+              If you have historical events on these old relays, you can migrate them to your current
+              Account Relays to ensure your data is not lost.
+            </p>
+            <div class="deprecated-actions">
               <button mat-flat-button (click)="cleanFollowingList()" [disabled]="isCleaningFollowingList()">
                 @if (isCleaningFollowingList()) {
                 <mat-icon class="spinning-icon">sync</mat-icon>
@@ -200,7 +204,11 @@
                 <span i18n="@@settings.relays.deprecated.remove">Remove relays from Following List</span> ({{
                 followingRelayUrls().length }})
               </button>
-            </p>
+              <button mat-stroked-button (click)="openMigrationSettings()">
+                <mat-icon>sync_alt</mat-icon>
+                <span i18n="@@settings.relays.deprecated.migrate">Migrate Data from Old Relays</span>
+              </button>
+            </div>
           </mat-card-content>
         </mat-card>
         }

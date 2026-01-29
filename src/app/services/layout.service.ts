@@ -2359,13 +2359,20 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
+    const shareUrl = event.kind === kinds.LongFormArticle
+      ? `https://nostria.app/a/${encoded}`
+      : `https://nostria.app/e/${encoded}`;
+
     // Share profile action using the Web Share API if available
     if (navigator.share) {
       navigator
         .share({
           title: `Nostria Event`,
           text: `Check out this event on Nostria`,
-          url: window.location.href,
+          url: shareUrl,
         })
         .then(() => {
           this.logger.debug('Event shared successfully');
@@ -2375,7 +2382,7 @@ export class LayoutService implements OnDestroy {
         });
     } else {
       // Fallback if Web Share API is not available
-      this.copyToClipboard(window.location.href, 'event URL');
+      this.copyToClipboard(shareUrl, 'event URL');
     }
   }
 

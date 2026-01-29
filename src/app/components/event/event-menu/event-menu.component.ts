@@ -37,6 +37,8 @@ import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dia
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventService } from '../../../services/event';
 import { BookmarkListSelectorComponent } from '../../bookmark-list-selector/bookmark-list-selector.component';
+import { AccountRelayService } from '../../../services/relays/account-relay';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../share-article-dialog/share-article-dialog.component';
 
 @Component({
   selector: 'app-event-menu',
@@ -68,6 +70,7 @@ export class EventMenuComponent {
   utilities = inject(UtilitiesService);
   playlistService = inject(PlaylistService);
   eventService = inject(EventService);
+  private accountRelay = inject(AccountRelayService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -246,6 +249,45 @@ export class EventMenuComponent {
     }
   }
 
+  shareEventDialog(): void {
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
+
+    const dialogData: ShareArticleDialogData = {
+      title: ev.kind === kinds.LongFormArticle ? 'Article' : this.getEventPreviewTitle(ev.content),
+      summary: ev.content || undefined,
+      url: window.location.href,
+      eventId: ev.id,
+      pubkey: ev.pubkey,
+      identifier: ev.tags.find(tag => tag[0] === 'd')?.[1],
+      kind: ev.kind,
+      encodedId,
+    };
+
+    this.dialog.open(ShareArticleDialogComponent, {
+      data: dialogData,
+      width: '450px',
+    });
+  }
+
+  private getEventPreviewTitle(content: string): string {
+    const cleaned = content.replace(/\s+/g, ' ').trim();
+    if (!cleaned) {
+      return 'Event';
+    }
+    const maxLength = 72;
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+    return `${cleaned.slice(0, maxLength).trim()}…`;
+  }
+
   onBookmarkClick(event: MouseEvent) {
     event.stopPropagation();
     const targetItem = this.record();
@@ -273,7 +315,9 @@ export class EventMenuComponent {
     }
 
     // Use encodeEventForUrl which handles addressable events (naddr) vs regular events (nevent)
-    const encoded = this.utilities.encodeEventForUrl(event);
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
     const url = new URL('https://nostria.app/');
     url.search = '';
@@ -293,7 +337,9 @@ export class EventMenuComponent {
     if (!event) {
       return '';
     }
-    return this.utilities.encodeEventForUrl(event);
+    const relayHint = this.accountRelay.relays()[0]?.url;
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    return this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
   });
 
   constructor() {

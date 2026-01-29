@@ -204,6 +204,17 @@ app-info-tooltip {
   background-color: var(--mat-sys-surface-container-lowest);
 }
 
+.warning-card {
+  border-left-color: var(--mat-sys-tertiary);
+}
+
+.deprecated-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
 .info-title {
   display: flex;
   align-items: center;
