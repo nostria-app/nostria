@@ -15,13 +15,22 @@
   <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()">
     <!-- Progress bar (hidden for live streams) -->
     @if (!mergedConfig().isLiveStream) {
-    <div class="progress-container" tabindex="0" role="slider" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-      aria-label="Video progress" (click)="onProgressClick($event)"
+    <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" role="slider"
+      [attr.aria-valuenow]="progressPercent()" aria-valuemin="0" aria-valuemax="100" aria-label="Video progress"
+      (click)="onProgressClick($event)"
       (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
-      (mousedown)="onProgressMouseDown($event)">
+      (mousedown)="onProgressMouseDown($event)" (mousemove)="onProgressMouseMove($event)"
+      (mouseleave)="onProgressMouseLeave()" (touchstart)="onProgressTouchStart($event)">
       <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
-      <div class="progress-played" [style.width.%]="progressPercent()"></div>
-      <div class="progress-thumb" [style.left.%]="progressPercent()"></div>
+      <div class="progress-played" [style.width.%]="isSeeking() ? seekPreviewPercent() : progressPercent()"></div>
+      <div class="progress-thumb" [style.left.%]="isSeeking() ? seekPreviewPercent() : progressPercent()"></div>
+
+      <!-- Seek preview time bubble -->
+      @if (isShowingSeekPreview() && formattedSeekPreview()) {
+      <div class="seek-preview-bubble" [style.left.%]="seekPreviewPercent()">
+        {{ formattedSeekPreview() }}
+      </div>
+      }
     </div>
     }
 
@@ -37,8 +46,8 @@
 
         <!-- Volume -->
         <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
-          <button mat-icon-button (click)="onMuteToggle()" [matTooltip]="muted() ? 'Unmute (m)' : 'Mute (m)'"
-            class="control-btn">
+          <button mat-icon-button [matTooltip]="muted() ? 'Unmute (m)' : 'Mute (m)'" class="control-btn"
+            appVolumeGesture (volumeChange)="onVolumeGestureChange($event)" (tap)="onMuteToggle()">
             <mat-icon>{{ volumeIcon() }}</mat-icon>
           </button>
           @if (volumeSliderVisible()) {
@@ -62,7 +71,8 @@
       <!-- Right controls -->
       <div class="controls-right">
         <!-- Settings Menu (YouTube-style with Playback Speed and Quality) -->
-        @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate) {
+        @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate || (isSmallScreen() &&
+        (mergedConfig().showCast || mergedConfig().showPiP))) {
         <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
           <mat-icon>settings</mat-icon>
         </button>
@@ -81,6 +91,20 @@
             <mat-icon>tune</mat-icon>
             <span>Quality</span>
             <span class="menu-value">{{ currentQualityLabel() }}</span>
+          </button>
+          }
+          <!-- Cast to TV (in menu on small screens) -->
+          @if (isSmallScreen() && mergedConfig().showCast) {
+          <button mat-menu-item (click)="onCastToggle()">
+            <mat-icon>cast</mat-icon>
+            <span>Play on TV</span>
+          </button>
+          }
+          <!-- Picture in Picture (in menu on small screens) -->
+          @if (isSmallScreen() && mergedConfig().showPiP) {
+          <button mat-menu-item (click)="onPipToggle()">
+            <mat-icon>picture_in_picture_alt</mat-icon>
+            <span>Picture-in-picture</span>
           </button>
           }
         </mat-menu>
@@ -108,15 +132,15 @@
         </mat-menu>
         }
 
-        <!-- Cast to TV -->
-        @if (mergedConfig().showCast) {
+        <!-- Cast to TV (visible only on larger screens) -->
+        @if (!isSmallScreen() && mergedConfig().showCast) {
         <button mat-icon-button (click)="onCastToggle()" matTooltip="Play on TV" class="control-btn">
           <mat-icon>cast</mat-icon>
         </button>
         }
 
-        <!-- Picture in Picture -->
-        @if (mergedConfig().showPiP) {
+        <!-- Picture in Picture (visible only on larger screens) -->
+        @if (!isSmallScreen() && mergedConfig().showPiP) {
         <button mat-icon-button (click)="onPipToggle()" matTooltip="Picture-in-picture" class="control-btn">
           <mat-icon>picture_in_picture_alt</mat-icon>
         </button>

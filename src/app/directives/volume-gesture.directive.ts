@@ -21,8 +21,10 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private readonly environmentInjector = inject(EnvironmentInjector);
 
   volumeChange = output<number>();
+  tap = output<void>(); // Emitted on short press (for mute toggle)
 
   private isHolding = false;
+  private gestureStarted = false; // Track if a gesture was started
   private startX = 0;
   private startVolume = 0;
   private holdTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -122,6 +124,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
 
   private startGesture(clientX: number): void {
     this.startX = clientX;
+    this.gestureStarted = true;
 
     // Get current volume from the nearest audio/video element or default to 100
     const mediaElement = document.querySelector('audio, video') as HTMLMediaElement;
@@ -152,9 +155,15 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
     this.clearHoldTimeout();
 
     if (this.isHolding) {
+      // Was a long press with volume adjustment
       this.isHolding = false;
       this.hideVolumeOverlay();
+    } else if (this.gestureStarted) {
+      // Was a short tap - emit tap event for mute toggle
+      this.tap.emit();
     }
+
+    this.gestureStarted = false;
   }
 
   private clearHoldTimeout(): void {

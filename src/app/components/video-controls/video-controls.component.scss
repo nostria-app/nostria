@@ -110,28 +110,25 @@
   cursor: pointer;
   transition: height 0.15s ease, margin-bottom 0.15s ease;
   margin-bottom: 8px;
+  // Ensure touch events work properly
+  touch-action: none;
 
-  // Extended touch/hover area above the progress bar
+  // Extended touch/hover area above the progress bar for easier interaction
   &::before {
     content: '';
     position: absolute;
     left: 0;
     right: 0;
-    top: -24px;
-    height: 24px;
+    top: -20px;
+    bottom: -10px;
     cursor: pointer;
-    // Only visible (for interaction) when expanded
-    display: none;
   }
 
   &:hover,
-  &:focus {
+  &:focus,
+  &.seeking {
     height: 10px;
     margin-bottom: 5px;
-
-    &::before {
-      display: block;
-    }
 
     .progress-thumb {
       opacity: 1;
@@ -139,10 +136,12 @@
     }
   }
 
-  // &:focus {
-  //   outline: 2px solid var(--mat-sys-primary);
-  //   outline-offset: 2px;
-  // }
+  // While seeking, always show expanded state
+  &.seeking {
+    .progress-thumb {
+      transform: translateX(-50%) scale(1.3);
+    }
+  }
 }
 
 .progress-buffered {
@@ -178,6 +177,35 @@
   pointer-events: none;
   margin-top: -8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+// Seek preview bubble (YouTube-style time preview)
+.seek-preview-bubble {
+  position: absolute;
+  bottom: 100%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  margin-bottom: 8px;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  // Caret/arrow pointing down
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.85);
+  }
 }
 
 // Controls row
