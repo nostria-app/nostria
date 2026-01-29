@@ -71,6 +71,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '(mouseleave)': 'onMouseLeave()',
     '(mousemove)': 'onMouseMove()',
     '(touchstart)': 'onTouchStart($event)',
+    '(click)': 'onOverlayClick($event)',
   },
 })
 export class VideoControlsComponent implements OnDestroy {
@@ -410,6 +411,13 @@ export class VideoControlsComponent implements OnDestroy {
     this.isHovering.set(false);
     // Show controls and start auto-hide timer on touch
     this.showControlsAndStartTimer();
+  }
+
+  /** Called when clicking on the overlay (not on controls) to toggle play/pause */
+  onOverlayClick(event: MouseEvent): void {
+    // Don't toggle if click was on controls-bar or center play button (they stop propagation)
+    // This method is only reached when clicking on the overlay area
+    this.playPause.emit();
   }
 
   /** Called when mouse enters the controls-bar (buttons area) */

@@ -4,8 +4,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  // Always pass through mouse events to parent - only controls-bar should capture
-  pointer-events: none;
+  // Receive mouse events for hover detection, pass through to video for click-to-play
+  pointer-events: auto;
   opacity: 0;
   transition: opacity 0.15s ease;
   z-index: 10;
@@ -13,8 +13,6 @@
   &.visible,
   &.is-paused {
     opacity: 1;
-    // Don't set pointer-events: auto here - let parent handle mouse events
-    // The controls-bar will have pointer-events: auto for actual buttons
   }
 }
 
