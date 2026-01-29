@@ -448,3 +448,28 @@
     }
   }
 }
+
+// Fullscreen styles - remove height constraints
+// Note: fullscreen is requested on .video-player-container, not :host
+.video-player-container:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: none !important;
+  background: black;
+
+  .video-wrapper {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-player {
+    max-height: 100vh;
+    max-width: 100vw;
+    width: auto;
+    height: auto;
+  }
+}
