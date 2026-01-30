@@ -38,7 +38,7 @@
       } @else {
 
       <div class="notes-list">
-        @for (item of profileState.displayedTimeline(); track item.event.id || $index) {
+        @for (item of profileState.displayedTimeline(); track item.event.id) {
         <app-event [event]="item.event" appearance="plain"></app-event>
         }
 

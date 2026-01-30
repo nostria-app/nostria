@@ -17,6 +17,7 @@ import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface MediaWithCommentsDialogData {
   event: Event;
@@ -59,6 +60,7 @@ export class MediaWithCommentsDialogComponent {
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
   private settings = inject(SettingsService);
+  private utilities = inject(UtilitiesService);
   data: MediaWithCommentsDialogData = inject(MAT_DIALOG_DATA);
   bookmark = inject(BookmarkService);
 
@@ -403,18 +405,7 @@ export class MediaWithCommentsDialogComponent {
   }
 
   private parseImetaTag(imetaTag: string[]): Record<string, string> {
-    const parsed: Record<string, string> = {};
-    for (let i = 1; i < imetaTag.length; i++) {
-      const part = imetaTag[i];
-      if (!part) continue;
-      const spaceIndex = part.indexOf(' ');
-      if (spaceIndex > 0) {
-        const key = part.substring(0, spaceIndex);
-        const value = part.substring(spaceIndex + 1);
-        parsed[key] = value;
-      }
-    }
-    return parsed;
+    return this.utilities.parseImetaTag(imetaTag);
   }
 
   private getMimeTypeFromUrl(url: string): string {

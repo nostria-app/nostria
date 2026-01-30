@@ -878,6 +878,11 @@ export class ProfileState {
     // Use a larger limit to fetch more events at once for better pagination
     const LOAD_LIMIT = 50;
 
+    // CRITICAL: Capture the current timeline state BEFORE loading new events
+    // This allows us to preserve the user's scroll position by adjusting displayLimit
+    const timelineCountBefore = this.sortedTimeline().length;
+    const displayLimitBefore = this.displayLimit();
+
     try {
       // Use the tracked relay timestamp for pagination, falling back to provided timestamp or current time
       // This ensures we don't skip events by using cached event timestamps
@@ -1173,6 +1178,25 @@ export class ProfileState {
         this.cacheEventsToDatabase(events).catch(err => {
           this.logger.error('Failed to cache loadMoreNotes events:', err);
         });
+      }
+
+      // CRITICAL FIX: Adjust displayLimit to preserve the user's scroll position
+      // When new events are loaded and inserted into sortedTimeline (which is sorted by created_at desc),
+      // events that were previously visible might get pushed beyond the displayLimit.
+      // We need to increase the displayLimit by the number of new items that were inserted
+      // BEFORE the user's current viewing position to keep the same events visible.
+      if (addedAnyContent) {
+        const timelineCountAfter = this.sortedTimeline().length;
+        const newItemsCount = timelineCountAfter - timelineCountBefore;
+
+        // If the user had scrolled past the initial limit and we added new items,
+        // increase the limit to compensate for any items inserted before the current view
+        if (newItemsCount > 0 && displayLimitBefore > this.INITIAL_DISPLAY_LIMIT) {
+          // Increase displayLimit by the number of new items to maintain scroll position
+          const newLimit = displayLimitBefore + newItemsCount;
+          this.displayLimit.set(newLimit);
+          this.logger.debug(`Adjusted displayLimit from ${displayLimitBefore} to ${newLimit} (added ${newItemsCount} items)`);
+        }
       }
 
       // Determine if there are more notes to load using multiple criteria:

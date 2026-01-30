@@ -574,35 +574,19 @@ export class SearchResultsComponent {
     return articles;
   }
 
-  // Truncate content for display
+  // Truncate content for display - delegates to centralized utility
   truncateContent(content: string, maxLength: number): string {
-    if (!content) return '';
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return this.utilities.truncateContent(content, maxLength);
   }
 
-  // Format timestamp to relative time
+  // Format timestamp to relative time - delegates to centralized utility
   formatTime(timestamp: number): string {
-    const now = Math.floor(Date.now() / 1000);
-    const diff = now - timestamp;
-
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString();
+    return this.utilities.formatRelativeTime(timestamp);
   }
 
-  // Get shortened npub for display
+  // Get shortened npub for display - delegates to centralized utility
   getNpubShort(pubkey: string): string {
-    try {
-      const npub = this.utilities.getNpubFromPubkey(pubkey);
-      return npub.slice(0, 12) + '...';
-    } catch {
-      return pubkey.slice(0, 8) + '...';
-    }
+    return this.utilities.getNpubShort(pubkey);
   }
 
   // Get article title from tags or content

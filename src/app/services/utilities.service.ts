@@ -1559,4 +1559,219 @@ export class UtilitiesService {
   shouldAlwaysFetchFromRelay(kind: number): boolean {
     return this.isReplaceableEvent(kind) || this.isParameterizedReplaceableEvent(kind);
   }
+
+  // ============================================================================
+  // Time/Date Utilities
+  // ============================================================================
+
+  /**
+   * Get relative time string from a Nostr timestamp (seconds since epoch).
+   * Examples: "just now", "5m ago", "2h ago", "3d ago", "2w ago"
+   * @param timestamp Unix timestamp in seconds (Nostr format)
+   * @param includeAgo Whether to include "ago" suffix (default: true)
+   * @returns Human-readable relative time string
+   */
+  getRelativeTime(timestamp: number, includeAgo = true): string {
+    const now = this.currentDate();
+    const diff = now - timestamp;
+
+    if (diff < 0) return 'in the future';
+
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+
+    const suffix = includeAgo ? ' ago' : '';
+
+    if (diff < minute) return 'just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m${suffix}`;
+    if (diff < day) return `${Math.floor(diff / hour)}h${suffix}`;
+    if (diff < week) return `${Math.floor(diff / day)}d${suffix}`;
+    return `${Math.floor(diff / week)}w${suffix}`;
+  }
+
+  /**
+   * Format a timestamp as relative time, with fallback to localized date for old timestamps.
+   * @param timestamp Unix timestamp in seconds (Nostr format)
+   * @param maxRelativeDays Maximum days before switching to localized date (default: 7)
+   * @returns Human-readable time string
+   */
+  formatRelativeTime(timestamp: number, maxRelativeDays = 7): string {
+    if (timestamp === 0) return 'never';
+
+    const now = this.currentDate();
+    const diff = now - timestamp;
+    const maxRelativeSeconds = maxRelativeDays * 24 * 60 * 60;
+
+    if (diff < maxRelativeSeconds) {
+      return this.getRelativeTime(timestamp);
+    }
+
+    return new Date(timestamp * 1000).toLocaleDateString();
+  }
+
+  // ============================================================================
+  // Content Truncation Utilities
+  // ============================================================================
+
+  /**
+   * Truncate content to a maximum length with ellipsis.
+   * @param content The content to truncate
+   * @param maxLength Maximum length before truncation (default: 200)
+   * @returns Truncated content with "..." if needed
+   */
+  truncateContent(content: string, maxLength = 200): string {
+    if (!content) return '';
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  }
+
+  /**
+   * Truncate an invoice/payment string showing start and end.
+   * @param invoice The invoice string to truncate
+   * @param visibleChars Number of characters to show at start and end (default: 10)
+   * @returns Truncated invoice like "lnbc1234...xyz789"
+   */
+  truncateInvoice(invoice: string, visibleChars = 10): string {
+    if (!invoice || invoice.length <= visibleChars * 2) return invoice;
+    return `${invoice.substring(0, visibleChars)}...${invoice.substring(invoice.length - visibleChars)}`;
+  }
+
+  /**
+   * Get a shortened npub for display.
+   * @param pubkey Hex pubkey or npub
+   * @param startChars Characters to show at start (default: 12)
+   * @returns Shortened npub like "npub1abc123..."
+   */
+  getNpubShort(pubkey: string, startChars = 12): string {
+    try {
+      const npub = this.isValidNpub(pubkey) ? pubkey : this.getNpubFromPubkey(pubkey);
+      return npub.length > startChars ? `${npub.slice(0, startChars)}...` : npub;
+    } catch {
+      return pubkey.length > startChars ? `${pubkey.slice(0, startChars)}...` : pubkey;
+    }
+  }
+
+  // ============================================================================
+  // Imeta Tag Utilities (NIP-92)
+  // ============================================================================
+
+  /**
+   * Parse an imeta tag into a key-value object.
+   * Format: ["imeta", "url https://...", "m image/jpeg", "blurhash ABC123", ...]
+   * @param tag The imeta tag array
+   * @param preserveFirstUrl If true, preserves the first 'url' value and ignores subsequent ones (useful for videos)
+   * @returns Object with key-value pairs extracted from the tag
+   */
+  parseImetaTag(tag: string[], preserveFirstUrl = false): Record<string, string> {
+    const parsed: Record<string, string> = {};
+    // Skip the first element which is 'imeta'
+    for (let i = 1; i < tag.length; i++) {
+      const part = tag[i];
+      if (!part) continue;
+      const spaceIndex = part.indexOf(' ');
+      if (spaceIndex > 0) {
+        const key = part.substring(0, spaceIndex);
+        const value = part.substring(spaceIndex + 1);
+        
+        // For 'url' key with preserveFirstUrl, prefer the first occurrence
+        if (preserveFirstUrl && key === 'url' && parsed[key]) {
+          continue;
+        }
+        
+        parsed[key] = value;
+      }
+    }
+    return parsed;
+  }
+
+  /**
+   * Get all parsed imeta tags from an event.
+   * @param event The Nostr event
+   * @returns Array of parsed imeta tag objects
+   */
+  getParsedImetaTags(event: Event | UnsignedEvent): Record<string, string>[] {
+    return this.getImetaTags(event).map(tag => this.parseImetaTag(tag));
+  }
+
+  // ============================================================================
+  // Event Sorting Utilities
+  // ============================================================================
+
+  /**
+   * Sort events by created_at in descending order (newest first).
+   * @param events Array of events to sort
+   * @returns Sorted array (mutates original array)
+   */
+  sortByCreatedAtDesc<T extends { created_at: number }>(events: T[]): T[] {
+    return events.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  }
+
+  /**
+   * Sort events by created_at in ascending order (oldest first).
+   * @param events Array of events to sort
+   * @returns Sorted array (mutates original array)
+   */
+  sortByCreatedAtAsc<T extends { created_at: number }>(events: T[]): T[] {
+    return events.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+  }
+
+  // ============================================================================
+  // Numeric Utilities
+  // ============================================================================
+
+  /**
+   * Sum values from an array of objects by a selector function.
+   * @param items Array of items
+   * @param selector Function to extract the number from each item
+   * @returns Sum of all selected values
+   */
+  sumBy<T>(items: T[], selector: (item: T) => number): number {
+    return items.reduce((total, item) => total + (selector(item) || 0), 0);
+  }
+
+  // ============================================================================
+  // Nostr Kind Constants
+  // ============================================================================
+
+  /** Video event kinds (NIP-71) */
+  static readonly VIDEO_KINDS = [21, 22, 34235, 34236] as const;
+
+  /** Photo event kinds (NIP-68) */
+  static readonly PHOTO_KINDS = [20] as const;
+
+  /** Article event kinds (NIP-23) */
+  static readonly ARTICLE_KINDS = [30023] as const;
+
+  /** Music track event kinds */
+  static readonly MUSIC_KINDS = [32123] as const;
+
+  /**
+   * Check if a kind is a video event kind
+   */
+  isVideoKind(kind: number): boolean {
+    return UtilitiesService.VIDEO_KINDS.includes(kind as 21 | 22 | 34235 | 34236);
+  }
+
+  /**
+   * Check if a kind is a photo event kind
+   */
+  isPhotoKind(kind: number): boolean {
+    return kind === 20;
+  }
+
+  /**
+   * Check if a kind is an article event kind
+   */
+  isArticleKind(kind: number): boolean {
+    return kind === 30023;
+  }
+
+  /**
+   * Check if a kind is a music track event kind
+   */
+  isMusicKind(kind: number): boolean {
+    return kind === 32123;
+  }
 }

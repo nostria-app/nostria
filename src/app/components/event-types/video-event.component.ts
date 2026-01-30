@@ -16,6 +16,7 @@ import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { LayoutService } from '../../services/layout.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface VideoData {
   url: string;
@@ -71,6 +72,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private videoPlayback = inject(VideoPlaybackService);
   private castService = inject(CastService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private utilities = inject(UtilitiesService);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -778,29 +780,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   }
 
   private parseImetaTag(imetaTag: string[]): Record<string, string> {
-    const parsed: Record<string, string> = {};
-
-    for (let i = 1; i < imetaTag.length; i++) {
-      const part = imetaTag[i];
-      if (!part) continue;
-
-      // Find the first space to separate key from value
-      const spaceIndex = part.indexOf(' ');
-      if (spaceIndex > 0) {
-        const key = part.substring(0, spaceIndex);
-        const value = part.substring(spaceIndex + 1);
-
-        // For 'url' key, prefer the first occurrence (usually the direct MP4)
-        // Don't overwrite if we already have a value
-        if (key === 'url' && parsed[key]) {
-          continue;
-        }
-
-        parsed[key] = value;
-      }
-    }
-
-    return parsed;
+    // Use preserveFirstUrl=true for videos to prefer the direct MP4 URL
+    return this.utilities.parseImetaTag(imetaTag, true);
   }
 
   /**
