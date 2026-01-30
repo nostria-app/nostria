@@ -305,10 +305,11 @@ export class ParsingService {
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
-    // URL regex: matches http/https URLs, allows #, :, and . in the URL path
+    // URL regex: matches http/https URLs, allows #, :, ., and () in the URL path
+    // Parentheses are allowed to support URL-encoded text fragments and Wikipedia-style URLs
+    // Trailing punctuation (including unbalanced parens) is handled by post-processing cleanup
     // Stops at whitespace, LINEBREAK markers, quotes, or common trailing punctuation
-    // Note: single quotes and other punctuation are only URL terminators when followed by whitespace or at end
-    const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?]\s|[),;!?]$|")/g;
+    const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/g;
     const youtubeRegex =
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
