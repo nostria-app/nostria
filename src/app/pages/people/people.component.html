@@ -87,7 +87,10 @@
 
     <!-- Alphabet Navigation Sidebar -->
     @if (showAlphabetNav() && sortedPeople().length > 0) {
-    <div class="alphabet-nav">
+    <div class="alphabet-nav" #alphabetNav
+      (touchstart)="onAlphabetTouchStart($event)"
+      (touchmove)="onAlphabetTouchMove($event)"
+      (touchend)="onAlphabetTouchEnd()">
       @for (letter of availableLetters(); track letter) {
       <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
         (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">

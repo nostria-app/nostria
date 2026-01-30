@@ -574,6 +574,8 @@
   max-height: calc(100vh - var(--toolbar-height) - 120px);
   overflow-y: auto;
   overflow-x: visible;
+  // Enable touch events on the container for swipe gestures
+  touch-action: none;
 
   &::-webkit-scrollbar {
     width: 0;
@@ -581,6 +583,12 @@
   }
 
   scrollbar-width: none;
+
+  // Highlight container during touch swipe
+  &.swiping {
+    background: var(--mat-sys-surface-container-high);
+    border-radius: var(--mat-sys-corner-medium);
+  }
 
   .letter-button {
     pointer-events: auto;

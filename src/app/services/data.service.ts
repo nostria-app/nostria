@@ -1,4 +1,4 @@
-import { inject, Injectable, Injector } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -16,6 +16,14 @@ import type { AccountStateService } from './account-state.service';
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
   save?: boolean; // Whether to save the event to storage
+}
+
+export interface DeepDiscoveryStatus {
+  pubkey: string;
+  phase: 'idle' | 'user-relays' | 'observed-relays';
+  currentBatch: number;
+  totalBatches: number;
+  message: string;
 }
 
 @Injectable({
@@ -48,6 +56,9 @@ export class DataService {
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
+
+  // Signal to track deep discovery status for UI feedback
+  readonly deepDiscoveryStatus = signal<DeepDiscoveryStatus | null>(null);
 
   // Clean up old pending requests periodically
   constructor() {
@@ -559,6 +570,15 @@ export class DataService {
   private async loadProfileWithDeepResolution(pubkey: string): Promise<Event | null> {
     const BATCH_SIZE = 10;
 
+    // Update status to indicate we're starting deep discovery
+    this.deepDiscoveryStatus.set({
+      pubkey,
+      phase: 'user-relays',
+      currentBatch: 0,
+      totalBatches: 0,
+      message: 'Searching user relays...',
+    });
+
     // First, try to get the user's relay list - this helps identify where their profile might be
     let userRelayUrls: string[] = [];
     try {
@@ -573,6 +593,14 @@ export class DataService {
       const optimalRelays = this.relaysService.getOptimalRelays(userRelayUrls, 15);
       this.logger.info(`[Profile Deep Resolution] Trying ${optimalRelays.length} user relays first`);
 
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'user-relays',
+        currentBatch: 0,
+        totalBatches: 0,
+        message: `Querying ${optimalRelays.length} user relays...`,
+      });
+
       try {
         const events = await this.relayPool.query(optimalRelays, {
           authors: [pubkey],
@@ -583,6 +611,7 @@ export class DataService {
           // Return the most recent metadata event
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found on user's relays!`);
+          this.deepDiscoveryStatus.set(null); // Clear status on success
           return mostRecent;
         }
       } catch (error) {
@@ -595,6 +624,7 @@ export class DataService {
 
     if (observedRelays.length === 0) {
       this.logger.info('[Profile Deep Resolution] No observed relays available');
+      this.deepDiscoveryStatus.set(null); // Clear status
       return null;
     }
 
@@ -616,6 +646,15 @@ export class DataService {
       const end = Math.min(start + BATCH_SIZE, relayUrls.length);
       const batchRelays = relayUrls.slice(start, end);
 
+      // Update discovery status for UI feedback
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'observed-relays',
+        currentBatch: i + 1,
+        totalBatches,
+        message: `Searching relays (batch ${i + 1}/${totalBatches})...`,
+      });
+
       this.logger.debug(`[Profile Deep Resolution] Searching batch ${i + 1}/${totalBatches}`);
 
       try {
@@ -629,6 +668,7 @@ export class DataService {
           // Return the most recent metadata event
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found in batch ${i + 1}/${totalBatches}!`);
+          this.deepDiscoveryStatus.set(null); // Clear status on success
           return mostRecent;
         }
       } catch (error) {
@@ -638,6 +678,7 @@ export class DataService {
     }
 
     this.logger.info('[Profile Deep Resolution] Profile not found after searching all batches');
+    this.deepDiscoveryStatus.set(null); // Clear status
     return null;
   }
 

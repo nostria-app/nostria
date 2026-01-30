@@ -104,6 +104,9 @@ export class PeopleComponent implements OnDestroy {
     return sort === 'name-asc' || sort === 'name-desc';
   });
   selectedLetter = signal<string | null>(null);
+  alphabetNavElement = viewChild<ElementRef>('alphabetNav');
+  private isTouchSwiping = false;
+
   availableLetters = computed(() => {
     if (!this.showAlphabetNav()) return [];
 
@@ -596,6 +599,57 @@ export class PeopleComponent implements OnDestroy {
         setTimeout(() => this.scrollToLetterElement(index), 100);
       } else {
         this.scrollToLetterElement(index);
+      }
+    }
+  }
+
+  /**
+   * Handle touch start on alphabet navigation for swipe gesture
+   */
+  onAlphabetTouchStart(event: TouchEvent) {
+    this.isTouchSwiping = true;
+    this.handleAlphabetTouch(event);
+  }
+
+  /**
+   * Handle touch move on alphabet navigation for swipe gesture
+   */
+  onAlphabetTouchMove(event: TouchEvent) {
+    if (!this.isTouchSwiping) return;
+    event.preventDefault(); // Prevent page scrolling while swiping
+    this.handleAlphabetTouch(event);
+  }
+
+  /**
+   * Handle touch end on alphabet navigation
+   */
+  onAlphabetTouchEnd() {
+    this.isTouchSwiping = false;
+  }
+
+  /**
+   * Determine which letter is under the touch point and scroll to it
+   */
+  private handleAlphabetTouch(event: TouchEvent) {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const alphabetNav = this.alphabetNavElement();
+    if (!alphabetNav) return;
+
+    // Get the element under the touch point
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!element) return;
+
+    // Check if the element is a letter button (or get its parent if it's a child)
+    const letterButton = element.closest('.letter-button') as HTMLElement;
+    if (letterButton) {
+      const letter = letterButton.textContent?.trim();
+      if (letter && this.availableLetters().includes(letter)) {
+        // Only trigger if it's a different letter than currently selected
+        if (letter !== this.selectedLetter()) {
+          this.scrollToLetter(letter);
+        }
       }
     }
   }
