@@ -201,7 +201,12 @@ export class StreamsComponent implements OnInit, OnDestroy {
 
     // Combine with streams-specific relays from the user's relay set
     const customStreamsRelays = this.streamsRelays();
-    const allRelayUrls = [...new Set([...accountRelays, ...customStreamsRelays])];
+    let allRelayUrls = [...new Set([...accountRelays, ...customStreamsRelays])];
+
+    // For anonymous users, use default anonymous relays
+    if (allRelayUrls.length === 0) {
+      allRelayUrls = this.utilities.anonymousRelays;
+    }
 
     console.log('[Streams] Account relays:', accountRelays);
     console.log('[Streams] Custom streams relays:', customStreamsRelays);

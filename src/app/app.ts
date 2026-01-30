@@ -78,7 +78,7 @@ import { RouteDataService } from './services/route-data.service';
 import { InstallService } from './services/install.service';
 import { ImageCacheService } from './services/image-cache.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
-import { AccountLocalStateService } from './services/account-local-state.service';
+import { AccountLocalStateService, ANONYMOUS_PUBKEY } from './services/account-local-state.service';
 import { filter } from 'rxjs/operators';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
@@ -281,8 +281,7 @@ export class App implements OnInit {
 
   // User's preference for whether to collapse left panel when right panel has content
   preferLeftPanelCollapsed = computed(() => {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) return false;
+    const pubkey = this.accountState.pubkey() || ANONYMOUS_PUBKEY;
     return this.accountLocalState.getLeftPanelCollapsed(pubkey);
   });
 
@@ -1912,10 +1911,8 @@ export class App implements OnInit {
     this.panelActions.clearRightPanelActions();
 
     // Clear right panel state (without navigating yet)
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
-    }
+    const pubkey = this.accountState.pubkey() || ANONYMOUS_PUBKEY;
+    this.accountLocalState.setLeftPanelCollapsed(pubkey, false);
     this.panelNav.clearRightStack();
 
     // Navigate to feeds and clear right outlet in one navigation
@@ -1928,19 +1925,17 @@ export class App implements OnInit {
    * The toggle button fades out during the animation and fades back in when complete.
    */
   toggleLeftPanelCollapse(): void {
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      // Fade out the toggle button
-      this.toggleButtonAnimating.set(true);
+    const pubkey = this.accountState.pubkey() || ANONYMOUS_PUBKEY;
+    // Fade out the toggle button
+    this.toggleButtonAnimating.set(true);
 
-      // Toggle the collapsed state
-      this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
+    // Toggle the collapsed state
+    this.accountLocalState.setLeftPanelCollapsed(pubkey, !this.preferLeftPanelCollapsed());
 
-      // Fade button back in after animation completes
-      setTimeout(() => {
-        this.toggleButtonAnimating.set(false);
-      }, 450);
-    }
+    // Fade button back in after animation completes
+    setTimeout(() => {
+      this.toggleButtonAnimating.set(false);
+    }, 450);
   }
 
   /**

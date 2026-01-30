@@ -538,6 +538,16 @@ export class UtilitiesService {
     'wss://nostr.mom/',
   ];
 
+  /**
+   * Default relays for anonymous/unauthenticated users.
+   * These are used when no account is logged in to fetch public content.
+   */
+  readonly anonymousRelays: string[] = [
+    'wss://relay.damus.io',
+    'wss://relay.primal.net',
+    'wss://nos.lol',
+  ];
+
   normalizeRelayUrls(urls: string[]): string[] {
     return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
   }

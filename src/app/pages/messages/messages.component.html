@@ -23,7 +23,7 @@
     <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
   </div>
   } @else {
-<div class="messages-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
+  <div class="messages-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
     <!-- Panel Header -->
     <div class="panel-header">
       <h2 class="panel-title title-font">Messages</h2>
@@ -325,9 +325,11 @@
           <span class="date-label">{{ group.dateLabel }}</span>
         </div>
         @for (message of group.messages; track message.id) {
-        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
+        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
+          (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
+          (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
-            [class.failed]="message.failed">
+            [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
             @if (message.replyTo) {
             @let repliedMessage = getMessageById(message.replyTo);
             @if (repliedMessage) {
@@ -368,9 +370,25 @@
           </div>
           } @else {
           <div class="message-actions">
-            <button mat-icon-button class="reply-button" (click)="setReplyTo(message)" matTooltip="Reply">
-              <mat-icon>reply</mat-icon>
+            <button mat-icon-button class="more-button" [matMenuTriggerFor]="messageMenu"
+              (click)="$event.stopPropagation()" matTooltip="More options">
+              <mat-icon>more_vert</mat-icon>
             </button>
+            <mat-menu #messageMenu="matMenu">
+              <button mat-menu-item (click)="setReplyTo(message)">
+                <mat-icon>reply</mat-icon>
+                <span>Reply</span>
+              </button>
+              <button mat-menu-item (click)="copyMessageContent(message)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
+                <mat-icon>delete</mat-icon>
+                <span>Delete</span>
+              </button>
+            </mat-menu>
           </div>
           }
         </div>

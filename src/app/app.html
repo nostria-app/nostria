@@ -418,12 +418,10 @@
             [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()" (scroll)="onLeftPanelScroll($event)">
 
             <!-- Feeds - Persistent, positioned directly in left-panel for scrollbar at panel edge -->
-            @if (app.authenticated()) {
             <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
               [class.feeds-hidden]="!panelNav.showFeeds()">
               <app-feeds></app-feeds>
             </div>
-            }
 
             <!-- Left panel sticky header - rendered at panel level for proper sticky behavior -->
             @if (leftPanelHeader.headerTemplate()) {

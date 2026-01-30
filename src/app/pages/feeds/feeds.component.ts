@@ -48,7 +48,6 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
-import { Introduction } from '../../components/introduction/introduction';
 import { AccountStateService } from '../../services/account-state.service';
 import { RepostService } from '../../services/repost.service';
 import { EventComponent } from '../../components/event/event.component';
@@ -81,7 +80,6 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
     MatDialogModule,
     MatProgressSpinnerModule,
     MatDividerModule,
-    Introduction,
     EventComponent,
     NewFeedDialogComponent,
     TrendingColumnComponent,
