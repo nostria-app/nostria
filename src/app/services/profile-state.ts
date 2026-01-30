@@ -536,7 +536,11 @@ export class ProfileState {
         }
       }
 
-      this.logger.info(`Loaded cached events: notes=${this.notes().length}, articles=${this.articles().length}, media=${this.media().length}`);
+      this.logger.info(`Loaded cached events: notes=${this.notes().length}, replies=${this.replies().length}, reposts=${this.reposts().length}, articles=${this.articles().length}, media=${this.media().length}`);
+      
+      // Log the computed timeline to verify filtering is working
+      const currentTimeline = this.sortedTimeline();
+      this.logger.debug(`[loadCachedEvents] After loading cache: sortedTimeline=${currentTimeline.length}, filter=${JSON.stringify(this.timelineFilter())}`);
     } catch (error) {
       this.logger.error(`Error loading cached events for ${pubkey}:`, error);
       // Don't throw - continue with relay loading even if cache fails
@@ -568,6 +572,7 @@ export class ProfileState {
     // Note: currentlyLoadingPubkey, isInitiallyLoading, and loadCachedEvents 
     // are now handled in the constructor effect for faster initial display
     this.logger.info(`Loading fresh profile data from relays for: ${pubkey}`);
+    this.logger.debug(`[loadUserData] Current state before loading: notes=${this.notes().length}, replies=${this.replies().length}, displayedTimeline=${this.sortedTimeline().length}`);
 
     // Check if profile was switched before we start
     if (this.currentlyLoadingPubkey() !== pubkey) {
@@ -697,6 +702,7 @@ export class ProfileState {
     // Timeline loaded - mark initial loading complete so UI can render
     this.isInitiallyLoading.set(false);
     this.logger.info(`PRIORITY 1 complete: Timeline loaded for ${pubkey}`);
+    this.logger.debug(`[loadUserData] After timeline load: notes=${this.notes().length}, replies=${this.replies().length}, reposts=${this.reposts().length}, displayedTimeline=${this.sortedTimeline().length}, filter=${JSON.stringify(this.timelineFilter())}`);
 
     // PRIORITY 2: Load secondary data in background (non-blocking)
     // These are loaded after timeline so user sees content immediately

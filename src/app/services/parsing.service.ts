@@ -38,7 +38,8 @@ export interface ContentToken {
   | 'base64-video'
   | 'cashu'
   | 'hashtag'
-  | 'rss-feed';
+  | 'rss-feed'
+  | 'bolt12';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
@@ -56,6 +57,10 @@ export interface ContentToken {
     mint?: string;
     amount?: number;
     unit?: string;
+  };
+  bolt12Data?: {
+    offer: string;
+    type: 'offer' | 'invoice';
   };
 }
 
@@ -331,6 +336,11 @@ export class ParsingService {
     // Supports both with and without https:// prefix (e.g., podcast.example.com/rss.xml)
     const rssFeedRegex = /((?:https?:\/\/)?[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/[^\s##"<>]*)?(?:rss\.xml|\.rss|feed\.xml|\/feed(?:\/|$)|\/rss(?:\/|$)|atom\.xml|\.atom))(?=\s|##LINEBREAK##|$|[),;!?])/gi;
 
+    // BOLT12 regex - matches lightning offers (lno1...) and invoices (lni1...)
+    // BOLT12 offers start with "lno1" and invoices start with "lni1"
+    // They use bech32 encoding with only lowercase letters and digits (no 1, b, i, o)
+    const bolt12Regex = /(ln[oi]1[ac-hj-np-z02-9]+)(?=\s|##LINEBREAK##|$|[),;!?])/gi;
+
     // Split content and generate tokens
     const tokens: ContentToken[] = [];
     let lastIndex = 0;
@@ -373,6 +383,10 @@ export class ParsingService {
         mint?: string;
         amount?: number;
         unit?: string;
+      };
+      bolt12Data?: {
+        offer: string;
+        type: 'offer' | 'invoice';
       };
     }[] = [];
 
@@ -475,6 +489,25 @@ export class ParsingService {
         console.warn('Error parsing cashu token:', match[0], error);
         // If parsing fails, treat it as regular text
       }
+    }
+
+    // Find BOLT12 offers and invoices
+    bolt12Regex.lastIndex = 0;
+    while ((match = bolt12Regex.exec(processedContent)) !== null) {
+      const bolt12String = match[0].toLowerCase();
+      // Determine if it's an offer (lno1) or invoice (lni1)
+      const bolt12Type: 'offer' | 'invoice' = bolt12String.startsWith('lno1') ? 'offer' : 'invoice';
+
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: bolt12String,
+        type: 'bolt12',
+        bolt12Data: {
+          offer: bolt12String,
+          type: bolt12Type,
+        },
+      });
     }
 
     // Find hashtags
@@ -799,6 +832,10 @@ export class ParsingService {
 
       if (match.cashuData) {
         token.cashuData = match.cashuData;
+      }
+
+      if (match.bolt12Data) {
+        token.bolt12Data = match.bolt12Data;
       }
 
       if (match.waveform) {

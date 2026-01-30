@@ -1774,7 +1774,15 @@ export class NostrService implements NostriaService {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
-      // Persist the account to local storage.
+      // Update the accounts signal with the new lastUsed timestamp
+      this.accountState.accounts.update(accounts =>
+        accounts.map(account => account.pubkey === pubkey ? targetUser : account)
+      );
+
+      // Persist updated accounts to local storage
+      this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(this.accountState.accounts()));
+
+      // Persist the current account to local storage
       this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
 
       // This will trigger a lot of effects.

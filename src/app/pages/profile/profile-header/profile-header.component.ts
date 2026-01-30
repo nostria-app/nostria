@@ -290,17 +290,15 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.favoritesService.isFavorite(this.pubkey());
   });
 
+  // Use ProfileState.relayList() directly - this is populated from local database cache first
+  // for instant display, then updated from discovery relay if a newer version is found
   getUserRelays = computed(() => {
-    const pubkey = this.profileState.pubkey();
-    if (!pubkey) return [];
-    return this.userRelayService.getRelaysForPubkey(pubkey) || [];
+    return this.profileState.relayList() || [];
   });
 
-  // Check if relay discovery is currently in progress
+  // Check if we're still loading cached events (relay list is loaded as part of cached events)
   isLoadingRelays = computed(() => {
-    const pubkey = this.profileState.pubkey();
-    if (!pubkey) return false;
-    return this.userRelayService.isLoadingRelaysForPubkey(pubkey);
+    return !this.profileState.cachedEventsLoaded();
   });
 
   // Check if the current user is blocked
@@ -459,6 +457,14 @@ export class ProfileHeaderComponent implements OnDestroy {
         // Double-check we're still on the same profile after delay
         if (this.pubkey() === currentPubkey) {
           await this.badgeService.loadAcceptedBadges(currentPubkey);
+
+          // Prefetch only the small set used in the header UI.
+          // Avoid preloading every accepted badge definition here.
+          this.badgeService.preloadBadgeDefinitionsInBackground(
+            this.badgeService.acceptedBadges().slice(0, 3)
+          ).catch(() => {
+            // Best-effort only
+          });
         }
       }
     });

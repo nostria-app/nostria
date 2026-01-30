@@ -38,7 +38,7 @@
     @if (awardDate()) {
     <div class="badge-metadata">
       <mat-icon>calendar_today</mat-icon>
-      <span>Awarded: {{ badge().created_at | timestamp: 'medium' }}</span>
+      <span>Awarded: {{ awardDate()! | timestamp: 'medium' }}</span>
     </div>
     }
   </mat-card-content>
@@ -110,7 +110,7 @@
       @if (awardDate()) {
       <div class="badge-metadata">
         <mat-icon>calendar_today</mat-icon>
-        <span>Awarded: {{ badge().created_at | timestamp: 'medium' }}</span>
+        <span>Awarded: {{ awardDate()! | timestamp: 'medium' }}</span>
       </div>
       }
     </div>

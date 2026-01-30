@@ -14,10 +14,8 @@ import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { SubscriptionCacheService } from './subscription-cache.service';
 import { RelayPoolService } from './relays/relay-pool';
-import {
-  CommentEditorDialogComponent,
-  CommentEditorDialogData,
-} from '../components/comment-editor-dialog/comment-editor-dialog.component';
+// CommentEditorDialogComponent is dynamically imported to break circular dependency
+import type { CommentEditorDialogData } from '../components/comment-editor-dialog/comment-editor-dialog.component';
 import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AccountStateService } from './account-state.service';
@@ -1745,7 +1743,10 @@ export class EventService {
     checkClosed();
   }
 
-  createComment(rootEvent: Event): MatDialogRef<CommentEditorDialogComponent> {
+  async createComment(rootEvent: Event): Promise<{ published: boolean; event?: Event } | undefined> {
+    // Dynamically import CommentEditorDialogComponent to break circular dependency
+    const { CommentEditorDialogComponent } = await import('../components/comment-editor-dialog/comment-editor-dialog.component');
+
     // Open comment editor dialog for NIP-22 comments
     const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
       panelClass: 'responsive-dialog',
@@ -1757,16 +1758,20 @@ export class EventService {
       } as CommentEditorDialogData,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.published) {
-        console.log('Comment published successfully:', result.event);
-      }
+    return new Promise((resolve) => {
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result?.published) {
+          console.log('Comment published successfully:', result.event);
+        }
+        resolve(result);
+      });
     });
-
-    return dialogRef;
   }
 
-  createCommentReply(rootEvent: Event, parentComment: Event): MatDialogRef<CommentEditorDialogComponent> {
+  async createCommentReply(rootEvent: Event, parentComment: Event): Promise<{ published: boolean; event?: Event } | undefined> {
+    // Dynamically import CommentEditorDialogComponent to break circular dependency
+    const { CommentEditorDialogComponent } = await import('../components/comment-editor-dialog/comment-editor-dialog.component');
+
     // Open comment editor dialog for replying to a comment
     const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
       panelClass: 'responsive-dialog',
@@ -1779,13 +1784,14 @@ export class EventService {
       } as CommentEditorDialogData,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.published) {
-        console.log('Comment reply published successfully:', result.event);
-      }
+    return new Promise((resolve) => {
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result?.published) {
+          console.log('Comment reply published successfully:', result.event);
+        }
+        resolve(result);
+      });
     });
-
-    return dialogRef;
   }
 
   async createAudioReply(rootEvent: Event): Promise<Event | undefined> {

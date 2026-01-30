@@ -121,6 +121,11 @@
     [unit]="token.cashuData?.unit || 'sat'">
   </app-cashu-token>
 </div>
+} @else if (token.type === 'bolt12') {
+<div class="bolt12-container">
+  <app-bolt12-offer [offer]="token.content" [type]="token.bolt12Data?.type || 'offer'">
+  </app-bolt12-offer>
+</div>
 } @else if (token.type === 'url') {
 <a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
   (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>

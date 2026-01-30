@@ -55,6 +55,9 @@ export class ProfileNotesComponent {
       return;
     }
 
+    this.logger.info('[ProfileNotes] Component constructed, setting up effects...');
+    this.logger.debug(`[ProfileNotes] Initial state: pubkey=${this.profileState.pubkey()}, notes=${this.profileState.notes().length}, displayedTimeline=${this.profileState.displayedTimeline().length}`);
+
     // Effect to load pinned notes when profile changes
     effect(async () => {
       const currentPubkey = this.profileState.pubkey();
@@ -90,13 +93,27 @@ export class ProfileNotesComponent {
       const currentNotes = this.profileState.displayedTimeline();
       const cachedEventsLoaded = this.profileState.cachedEventsLoaded();
 
+      this.logger.debug(`[ProfileNotes] Effect triggered: pubkey=${currentPubkey}, displayedTimeline=${currentNotes.length}, cachedLoaded=${cachedEventsLoaded}, notes=${this.profileState.notes().length}, replies=${this.profileState.replies().length}`);
+
       // Wait for cached events to be loaded first - this gives instant UI feedback
       if (!cachedEventsLoaded) {
+        this.logger.debug('[ProfileNotes] Waiting for cached events to load...');
         return;
       }
 
-      // If we have a pubkey but no notes, and we're not already loading, load some notes
-      if (currentPubkey && currentNotes.length === 0 && !this.profileState.isLoadingMoreNotes()) {
+      // Check if we have ANY timeline content loaded (not just filtered timeline)
+      // This prevents loading from relays when we have cached content that's just filtered out
+      const hasAnyTimelineContent = 
+        this.profileState.notes().length > 0 || 
+        this.profileState.replies().length > 0 || 
+        this.profileState.reposts().length > 0 ||
+        this.profileState.audio().length > 0 ||
+        this.profileState.reactions().length > 0;
+
+      this.logger.debug(`[ProfileNotes] Has any timeline content: ${hasAnyTimelineContent}`);
+
+      // If we have a pubkey but NO content at all (not even filtered), and we're not already loading, load some notes
+      if (currentPubkey && !hasAnyTimelineContent && currentNotes.length === 0 && !this.profileState.isLoadingMoreNotes()) {
         this.logger.debug('No notes found for profile after cache check, loading from relays...');
         this.loadMoreNotes();
       }

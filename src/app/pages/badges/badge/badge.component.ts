@@ -9,17 +9,13 @@ import {
   untracked,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { NostrService } from '../../../services/nostr.service';
 import { kinds, NostrEvent } from 'nostr-tools';
-import { DatabaseService } from '../../../services/database.service';
-import { DataService } from '../../../services/data.service';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { AccountRelayService } from '../../../services/relays/account-relay';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 export type BadgeLayout = 'vertical' | 'horizontal';
@@ -39,7 +35,7 @@ export type BadgeLayout = 'vertical' | 'horizontal';
   styleUrl: './badge.component.scss',
 })
 export class BadgeComponent {
-  badge = input<NostrEvent | any | undefined>(undefined);
+  badge = input<NostrEvent | { pubkey: string; slug: string } | undefined>(undefined);
   definition = signal<NostrEvent | undefined | null>(undefined);
   parsed = signal<ParsedBadge | undefined>(undefined);
   // definition = input<NostrEvent | any | undefined>(undefined);
@@ -59,11 +55,7 @@ export class BadgeComponent {
   @Output() viewClicked = new EventEmitter<void>();
   @Output() removeClicked = new EventEmitter<void>();
 
-  nostr = inject(NostrService);
-  database = inject(DatabaseService);
-  data = inject(DataService);
   badgeService = inject(BadgeService);
-  relay = inject(AccountRelayService);
 
   // Parsed badge data as signals
   id = signal<string>('');
@@ -74,6 +66,16 @@ export class BadgeComponent {
   tags = signal<string[]>([]);
   error = signal<string | null>(null);
   awardDate = signal<number | null>(null);
+
+  private isAcceptedBadgeRef(
+    value: NostrEvent | { pubkey: string; slug: string }
+  ): value is { pubkey: string; slug: string } {
+    return (
+      typeof (value as { pubkey?: unknown }).pubkey === 'string' &&
+      typeof (value as { slug?: unknown }).slug === 'string' &&
+      typeof (value as { kind?: unknown }).kind !== 'number'
+    );
+  }
 
   constructor() {
     effect(async () => {
@@ -88,78 +90,19 @@ export class BadgeComponent {
     });
   }
 
-  async parseBadge(event: NostrEvent | any) {
-    if (event.slug) {
-      // Check if definition is already loaded
-      const definition = this.badgeService.getBadgeDefinition(event.pubkey, event.slug);
+  async parseBadge(event: NostrEvent | { pubkey: string; slug: string }): Promise<void> {
+    this.error.set(null);
+    this.awardDate.set(null);
 
-      if (definition) {
-        // Definition already in memory, use it immediately
-        this.definition.set(definition);
-      } else {
-        // Set definition to null to show loading state
-        this.definition.set(null);
-
-        // Load definition in background (non-blocking)
-        this.loadBadgeDefinition(event.pubkey, event.slug).then(def => {
-          this.definition.set(def || undefined);
-        }).catch(err => {
-          console.error('Error loading badge definition:', err);
-          this.error.set('Failed to load badge');
-          this.definition.set(undefined);
-        });
-      }
-    } else if (event.kind === kinds.BadgeDefinition) {
-      this.definition.set(event);
-
-      // const parsedBadge = this.badgeService.parseBadgeDefinition(event);
-
-      // if (!parsedBadge) {
-      //   this.error.set('Failed to parse badge data');
-      //   return;
-      // }
-
-      // // Update the signals with the parsed values
-      // this.id.set(parsedBadge.slug || '');
-      // this.description.set(parsedBadge.description || '');
-      // this.name.set(parsedBadge.name || '');
-      // this.image.set(parsedBadge.image || '');
-      // this.thumb.set(parsedBadge.thumb || '');
-      // this.tags.set(parsedBadge.tags || []);
-    } else if (event.kind === kinds.BadgeAward) {
-      const aTag = this.utilities.getATagValueFromEvent(event);
-      const values = aTag?.split(':');
-
-      if (!values) {
+    if (this.isAcceptedBadgeRef(event)) {
+      const cached = this.badgeService.getBadgeDefinition(event.pubkey, event.slug);
+      if (cached) {
+        this.definition.set(cached);
+        this.parsed.set(this.badgeService.parseDefinition(cached));
         return;
       }
 
-      const slug = values[2];
-
-      const definition = await this.loadBadgeDefinition(event.pubkey, slug);
-      this.definition.set(definition);
-      const parsedBadge = await this.badgeService.parseReward(event);
-
-      if (!parsedBadge) {
-        this.error.set('Failed to parse badge data');
-        return;
-      }
-
-      // Update the signals with the parsed values
-      this.id.set(parsedBadge.id || '');
-      this.description.set(parsedBadge.description || '');
-      this.name.set(parsedBadge.name || '');
-      this.image.set(parsedBadge.image || '');
-      this.thumb.set(parsedBadge.thumb || '');
-      this.tags.set(parsedBadge.tags || []);
-    }
-
-    if (this.definition()) {
-      const parsedBadge = this.badgeService.parseDefinition(this.definition()!);
-      console.log('Parsed Badge:', parsedBadge);
-      this.parsed.set(parsedBadge);
-    } else if (this.definition() === null) {
-      // null means loading, set a loading placeholder
+      this.definition.set(null);
       this.parsed.set({
         slug: '',
         name: 'Loading...',
@@ -168,10 +111,82 @@ export class BadgeComponent {
         thumb: '',
         tags: [],
       });
-    } else {
-      // undefined means failed to load
-      this.error.set('Failed to parse badge data');
+
+      this.loadBadgeDefinition(event.pubkey, event.slug)
+        .then(definition => {
+          this.definition.set(definition || undefined);
+          if (definition) {
+            this.parsed.set(this.badgeService.parseDefinition(definition));
+          } else {
+            this.error.set('Failed to load badge');
+          }
+        })
+        .catch(err => {
+          console.error('Error loading badge definition:', err);
+          this.error.set('Failed to load badge');
+          this.definition.set(undefined);
+        });
+      return;
     }
+
+    if (event.kind === kinds.BadgeDefinition) {
+      this.definition.set(event);
+      this.parsed.set(this.badgeService.parseDefinition(event));
+      return;
+    }
+
+    if (event.kind === kinds.BadgeAward) {
+      this.awardDate.set(event.created_at);
+
+      // BadgeAward references its definition via the a-tag: 30009:<pubkey>:<slug>
+      const aTag = this.utilities.getATagValueFromEvent(event);
+      const values = aTag?.split(':');
+
+      if (!values || values.length < 3) {
+        this.definition.set(undefined);
+        this.parsed.set({
+          slug: '',
+          name: 'Unknown Badge',
+          description: 'Badge reference missing',
+          image: '',
+          thumb: '',
+          tags: [],
+        });
+        return;
+      }
+
+      const definitionPubkey = values[1] || event.pubkey;
+      const slug = values[2];
+
+      this.definition.set(null);
+      this.parsed.set({
+        slug: '',
+        name: 'Loading...',
+        description: 'Loading badge definition...',
+        image: '',
+        thumb: '',
+        tags: [],
+      });
+
+      this.loadBadgeDefinition(definitionPubkey, slug)
+        .then(definition => {
+          this.definition.set(definition || undefined);
+          if (definition) {
+            this.parsed.set(this.badgeService.parseDefinition(definition));
+          } else {
+            this.error.set('Failed to load badge');
+          }
+        })
+        .catch(err => {
+          console.error('Error loading badge definition:', err);
+          this.error.set('Failed to load badge');
+          this.definition.set(undefined);
+        });
+      return;
+    }
+
+    this.definition.set(undefined);
+    this.error.set('Failed to parse badge data');
   }
 
   onAccept(event: Event): void {
@@ -185,7 +200,6 @@ export class BadgeComponent {
   }
 
   onRemove(event: Event): void {
-    debugger;
     event.stopPropagation();
     this.removeClicked.emit();
   }

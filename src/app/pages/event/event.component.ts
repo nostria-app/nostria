@@ -32,7 +32,7 @@ import { Title } from '@angular/platform-browser';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
-import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
+import { InlineReplyEditorComponent } from '../../components/inline-reply-editor/inline-reply-editor.component';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
@@ -62,7 +62,7 @@ export const REPLY_FILTER_FOLLOWING = 'following';
 
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, NoteEditorDialogComponent],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, InlineReplyEditorComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {

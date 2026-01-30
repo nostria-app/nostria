@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal, NgZone } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrService } from './nostr.service';
-import { Event, kinds, NostrEvent } from 'nostr-tools';
+import { Event, kinds, NostrEvent, type Filter } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -158,7 +158,11 @@ export class BadgeService implements NostriaService {
   async loadIssuedBadges(pubkey: string): Promise<void> {
     this.isLoadingIssued.set(true);
     try {
-      const badgeAwardEvents = await this.accountRelay.getEventsByPubkeyAndKind(
+      // Ensure relays are discovered for this pubkey first
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+      // Use userRelayService to query the specific user's relays
+      const badgeAwardEvents = await this.userRelayService.getEventsByPubkeyAndKind(
         pubkey,
         kinds.BadgeAward
       );
@@ -320,8 +324,11 @@ export class BadgeService implements NostriaService {
         this.putBadgeDefinition(event);
       }
 
-      // Then fetch fresh from relays
-      const badgeDefinitionEvents = await this.accountRelay.getEventsByPubkeyAndKind(
+      // Ensure relays are discovered for this pubkey first
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+      // Then fetch fresh from relays using userRelayService
+      const badgeDefinitionEvents = await this.userRelayService.getEventsByPubkeyAndKind(
         pubkey,
         kinds.BadgeDefinition
       );
@@ -343,14 +350,59 @@ export class BadgeService implements NostriaService {
   async loadReceivedBadges(pubkey: string): Promise<void> {
     this.isLoadingReceived.set(true);
     try {
-      const receivedAwardsEvents = await this.accountRelay.getEventsByKindAndPubKeyTag(
-        pubkey,
-        kinds.BadgeAward
-      );
-      console.log('receivedAwardsEvents:', receivedAwardsEvents);
+      // Ensure relays are discovered for this pubkey first
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
-      await this.fetchBadgeIssuers(receivedAwardsEvents);
+      // Some relays apply low implicit limits when no `limit` is provided.
+      // Fetch in pages until we have everything.
+      const PAGE_SIZE = 200;
+      const MAX_PAGES = 50;
+
+      const byId = new Map<string, NostrEvent>();
+      let until: number | undefined;
+
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const filter: Filter = {
+          kinds: [kinds.BadgeAward],
+          limit: PAGE_SIZE,
+          until,
+          ['#p']: [pubkey],
+        };
+
+        // Use userRelayService to query the specific user's relays
+        const pageEvents = await this.userRelayService.query(pubkey, filter) as NostrEvent[] | null;
+
+        if (!pageEvents || pageEvents.length === 0) {
+          break;
+        }
+
+        for (const ev of pageEvents) {
+          if (!byId.has(ev.id)) {
+            byId.set(ev.id, ev);
+          }
+        }
+
+        if (pageEvents.length < PAGE_SIZE) {
+          break;
+        }
+
+        const oldest = pageEvents.reduce((min, ev) => Math.min(min, ev.created_at), Infinity);
+        if (!Number.isFinite(oldest)) {
+          break;
+        }
+        until = oldest - 1;
+        if (until <= 0) {
+          break;
+        }
+      }
+
+      const receivedAwardsEvents = [...byId.values()].sort((a, b) => b.created_at - a.created_at);
       this.receivedBadges.set(receivedAwardsEvents);
+
+      // Load issuer metadata in the background so the list can render immediately.
+      this.fetchBadgeIssuers(receivedAwardsEvents).catch(err => {
+        console.error('Error fetching badge issuers:', err);
+      });
     } catch (err) {
       console.error('Error loading received badges:', err);
     } finally {
@@ -382,22 +434,33 @@ export class BadgeService implements NostriaService {
     // Get unique issuer pubkeys
     const issuerPubkeys = [...new Set(receivedBadges.map(badge => badge.pubkey))];
 
-    // Fetch metadata for each issuer
-    for (const pubkey of issuerPubkeys) {
-      try {
-        const metadata = await this.data.getProfile(pubkey);
-        // const metadata = await this.nostr.getMetadataForUser(pubkey);
+    // Fetch metadata for each issuer with modest concurrency.
+    const CONCURRENCY = 6;
+    const queue = [...issuerPubkeys];
 
-        if (metadata) {
-          issuers[pubkey] = metadata.data;
-        } else {
+    const worker = async () => {
+      while (queue.length > 0) {
+        const pubkey = queue.shift();
+        if (!pubkey) {
+          continue;
+        }
+
+        try {
+          const metadata = await this.data.getProfile(pubkey);
+
+          if (metadata) {
+            issuers[pubkey] = metadata.data;
+          } else {
+            issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+          }
+        } catch (err) {
+          console.error(`Error fetching metadata for ${pubkey}:`, err);
           issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
         }
-      } catch (err) {
-        console.error(`Error fetching metadata for ${pubkey}:`, err);
-        issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
       }
-    }
+    };
+
+    await Promise.allSettled(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()));
 
     this.badgeIssuers.set(issuers);
   }
@@ -463,48 +526,38 @@ export class BadgeService implements NostriaService {
 
     console.log('Parsed badge pairs:', pairs);
     this.acceptedBadges.set(pairs);
-
-    // Start loading badge definitions in the background
-    this.loadBadgeDefinitionsInBackground(pairs);
   }
 
-  private async loadBadgeDefinitionsInBackground(
-    badges: { pubkey: string; slug: string }[]
+  /**
+   * Optional helper to prefetch badge definitions (small batches).
+   * Keep this opt-in to avoid heavy background work on profile open.
+   */
+  async preloadBadgeDefinitionsInBackground(
+    badges: { pubkey: string; slug: string }[],
+    options: { batchSize?: number; batchDelayMs?: number } = {}
   ): Promise<void> {
-    console.log(`Starting background load of ${badges.length} badge definitions`);
+    const batchSize = options.batchSize ?? 10;
+    const batchDelayMs = options.batchDelayMs ?? 75;
 
-    // Load in batches to avoid overwhelming the network
-    const BATCH_SIZE = 10;
-    const BATCH_DELAY = 100; // ms between batches
+    for (let i = 0; i < badges.length; i += batchSize) {
+      const batch = badges.slice(i, i + batchSize);
 
-    for (let i = 0; i < badges.length; i += BATCH_SIZE) {
-      const batch = badges.slice(i, i + BATCH_SIZE);
-
-      // Load batch in parallel
       await Promise.allSettled(
         batch.map(async badge => {
-          // Check if we already have this definition cached or if it's already loading
           const cached = this.getBadgeDefinition(badge.pubkey, badge.slug);
           const isLoading = this.isBadgeDefinitionLoading(badge.pubkey, badge.slug);
           const isFailed = this.isBadgeDefinitionFailed(badge.pubkey, badge.slug);
 
           if (!cached && !isLoading && !isFailed) {
-            try {
-              await this.loadBadgeDefinition(badge.pubkey, badge.slug);
-            } catch (err) {
-              console.error(`Failed to load badge definition for ${badge.slug}:`, err);
-            }
+            await this.loadBadgeDefinition(badge.pubkey, badge.slug);
           }
         })
       );
 
-      // Add a small delay between batches to prevent UI blocking
-      if (i + BATCH_SIZE < badges.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      if (i + batchSize < badges.length) {
+        await new Promise(resolve => setTimeout(resolve, batchDelayMs));
       }
     }
-
-    console.log(`Completed background load of ${badges.length} badge definitions`);
   }
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {

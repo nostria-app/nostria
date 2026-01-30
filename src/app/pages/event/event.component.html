@@ -73,9 +73,9 @@
       [trustedByPubkey]="trustedByPubkey()"></app-event>
   </div>
 
-  <!-- Inline Reply using the full-featured note editor -->
+  <!-- Inline Reply Editor -->
   <div [style.margin-left.px]="parentEvents().length * 16">
-    <app-note-editor-dialog [inlineMode]="true" [replyToEvent]="event()!"></app-note-editor-dialog>
+    <app-inline-reply-editor [replyToEvent]="event()!"></app-inline-reply-editor>
   </div>
   }
 

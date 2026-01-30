@@ -2,6 +2,8 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
+import { DatabaseService } from '../database.service';
+import { kinds } from 'nostr-tools';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +12,7 @@ export class UserRelaysService {
   private readonly discoveryRelayService = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
   private readonly utilitiesService = inject(UtilitiesService);
+  private readonly database = inject(DatabaseService);
 
   // High-performance cache with timestamp tracking
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
@@ -79,21 +82,36 @@ export class UserRelaysService {
 
   /**
    * Internal method to discover and cache relays
+   * Strategy: Load from local database FIRST for instant display,
+   * then fetch from discovery relay for updates
    */
   private async discoverAndCacheRelays(pubkey: string): Promise<string[]> {
     let relays: string[] = [];
+    let dbRelays: string[] = [];
 
     try {
-      // First, try to get relays from discovery service (kind 10002 or kind 3)
-      relays = await this.discoveryRelayService.getUserRelayUrls(pubkey);
-
-      // If no relays found through discovery, try fallback relays
-      if (relays.length === 0) {
-        relays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+      // FIRST: Try to load from local database for immediate availability
+      const dbRelayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      if (dbRelayListEvent) {
+        dbRelays = this.utilitiesService.getOptimalRelayUrlsForFetching(dbRelayListEvent);
+        if (dbRelays.length > 0) {
+          // Cache the database result immediately for instant UI display
+          this.cachedRelays.update(cache => {
+            const newCache = new Map(cache);
+            newCache.set(pubkey, dbRelays);
+            return newCache;
+          });
+          this.cacheTimestamps.set(pubkey, Date.now());
+          relays = dbRelays;
+        }
       }
 
-      // Cache the result if we found relays
-      if (relays.length > 0) {
+      // THEN: Fetch from discovery service for potential updates (kind 10002 or kind 3)
+      const discoveryRelays = await this.discoveryRelayService.getUserRelayUrls(pubkey);
+
+      // If discovery found relays, use them (they may be more up-to-date)
+      if (discoveryRelays.length > 0) {
+        relays = discoveryRelays;
         this.cachedRelays.update(cache => {
           const newCache = new Map(cache);
           newCache.set(pubkey, relays);
@@ -102,8 +120,26 @@ export class UserRelaysService {
         this.cacheTimestamps.set(pubkey, Date.now());
       }
 
+      // If no relays found through either method, try fallback relays
+      if (relays.length === 0) {
+        relays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+        if (relays.length > 0) {
+          this.cachedRelays.update(cache => {
+            const newCache = new Map(cache);
+            newCache.set(pubkey, relays);
+            return newCache;
+          });
+          this.cacheTimestamps.set(pubkey, Date.now());
+        }
+      }
+
     } catch (error) {
       console.error('Error fetching user relays:', error);
+
+      // If we already have database relays, keep using them
+      if (dbRelays.length > 0) {
+        return dbRelays;
+      }
 
       // Fallback to relay hints if discovery fails
       try {

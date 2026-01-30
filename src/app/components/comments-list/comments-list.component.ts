@@ -266,14 +266,12 @@ export class CommentsListComponent implements AfterViewInit {
       }
     } else {
       // Open comment creation dialog
-      const dialogRef = this.eventService.createComment(this.event());
+      const result = await this.eventService.createComment(this.event());
 
       // Handle dialog result
-      dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
-        if (result?.published && result.event) {
-          this.addCommentToList(result.event);
-        }
-      });
+      if (result?.published && result.event) {
+        this.addCommentToList(result.event);
+      }
     }
   }
 

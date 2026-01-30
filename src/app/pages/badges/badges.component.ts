@@ -1,4 +1,5 @@
-import { Component, effect, inject, signal, untracked, computed } from '@angular/core';
+import { Component, effect, inject, signal, untracked, computed, ElementRef, ViewChild, NgZone, afterNextRender, OnDestroy, PLATFORM_ID, Injector } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -42,7 +43,7 @@ import { NostrRecord } from '../../interfaces';
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss',
 })
-export class BadgesComponent {
+export class BadgesComponent implements OnDestroy {
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -68,6 +69,27 @@ export class BadgesComponent {
     const pubkey = this.viewingPubkey();
     return this.badgeService.badgeDefinitions().filter(badge => badge.pubkey === pubkey);
   });
+
+  // Progressive rendering for large received badge lists
+  readonly receivedBatchSize = 10;
+  receivedVisibleCount = signal<number>(this.receivedBatchSize);
+  visibleReceived = computed(() => {
+    return this.received().slice(0, this.receivedVisibleCount());
+  });
+  canLoadMoreReceived = computed(() => {
+    return this.receivedVisibleCount() < this.received().length;
+  });
+
+  @ViewChild('receivedSentinel') receivedSentinel?: ElementRef<HTMLElement>;
+  private receivedObserver?: IntersectionObserver;
+  private readonly ngZone = inject(NgZone);
+  private readonly injector = inject(Injector);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  private loadedAcceptedForPubkey = '';
+  private loadedReceivedForPubkey = '';
+  private loadedIssuedForPubkey = '';
+  private loadedCreatedForPubkey = '';
 
   // Check if we're viewing our own profile
   isViewingOwnProfile = computed(() => {
@@ -125,8 +147,8 @@ export class BadgesComponent {
             // Stop showing initial loading - let individual tabs show their loading states
             this.isInitialLoading.set(false);
 
-            // Load badges in the background (non-blocking for UI)
-            await this.badgeService.loadAllBadges(targetPubkey);
+            // Load only what the active tab needs.
+            await this.ensureTabDataLoaded(this.activeTabIndex(), targetPubkey);
           } catch (err) {
             console.error('Error loading badges:', err);
             this.isInitialLoading.set(false);
@@ -134,6 +156,111 @@ export class BadgesComponent {
         });
       }
     });
+
+    // When the tab changes, lazily load that tab's data.
+    effect(() => {
+      const index = this.activeTabIndex();
+      const pubkey = this.viewingPubkey();
+
+      if (!pubkey) return;
+
+      untracked(async () => {
+        try {
+          await this.ensureTabDataLoaded(index, pubkey);
+        } catch (err) {
+          console.error('Error loading tab data:', err);
+        }
+      });
+
+      // Reset progressive rendering when entering Received.
+      if (index === 1) {
+        this.receivedVisibleCount.set(this.receivedBatchSize);
+        afterNextRender(() => this.refreshReceivedObserver(), { injector: this.injector });
+      } else {
+        this.disconnectReceivedObserver();
+      }
+    });
+
+    // Keep the sentinel observer up to date when the received list grows.
+    effect(() => {
+      this.visibleReceived();
+      this.canLoadMoreReceived();
+      if (this.activeTabIndex() === 1) {
+        afterNextRender(() => this.refreshReceivedObserver(), { injector: this.injector });
+      }
+    });
+  }
+
+  private async ensureTabDataLoaded(index: number, pubkey: string): Promise<void> {
+    if (index === 0) {
+      if (this.loadedAcceptedForPubkey === pubkey) return;
+      await this.badgeService.loadAcceptedBadges(pubkey);
+      this.loadedAcceptedForPubkey = pubkey;
+      return;
+    }
+
+    if (index === 1) {
+      if (this.loadedReceivedForPubkey === pubkey) return;
+      await this.badgeService.loadReceivedBadges(pubkey);
+      this.loadedReceivedForPubkey = pubkey;
+      this.receivedVisibleCount.set(this.receivedBatchSize);
+      return;
+    }
+
+    if (index === 2) {
+      if (this.loadedIssuedForPubkey === pubkey) return;
+      await this.badgeService.loadIssuedBadges(pubkey);
+      this.loadedIssuedForPubkey = pubkey;
+      return;
+    }
+
+    if (index === 3) {
+      if (this.loadedCreatedForPubkey === pubkey) return;
+      await this.badgeService.loadBadgeDefinitions(pubkey);
+      this.loadedCreatedForPubkey = pubkey;
+    }
+  }
+
+  loadMoreReceived(): void {
+    const next = Math.min(
+      this.receivedVisibleCount() + this.receivedBatchSize,
+      this.received().length
+    );
+    if (next !== this.receivedVisibleCount()) {
+      this.receivedVisibleCount.set(next);
+    }
+  }
+
+  private refreshReceivedObserver(): void {
+    this.disconnectReceivedObserver();
+
+    if (!this.isBrowser) return;
+    if (this.activeTabIndex() !== 1) return;
+    if (!this.canLoadMoreReceived()) return;
+    const sentinel = this.receivedSentinel?.nativeElement;
+    if (!sentinel) return;
+
+    this.receivedObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        this.ngZone.run(() => this.loadMoreReceived());
+      },
+      {
+        root: null,
+        rootMargin: '250px',
+        threshold: 0,
+      }
+    );
+
+    this.receivedObserver.observe(sentinel);
+  }
+
+  private disconnectReceivedObserver(): void {
+    if (!this.isBrowser) return;
+    if (this.receivedObserver) {
+      this.receivedObserver.disconnect();
+      this.receivedObserver = undefined;
+    }
   }
 
   // Computed getters for accessing badge service data
@@ -263,6 +390,10 @@ export class BadgesComponent {
       queryParamsHandling: 'merge',
       replaceUrl: false,
     });
+  }
+
+  ngOnDestroy(): void {
+    this.disconnectReceivedObserver();
   }
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {
