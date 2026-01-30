@@ -575,6 +575,8 @@ export class VideoControlsComponent implements OnDestroy {
   }
 
   // Touch handlers for mobile progress bar interaction
+  // On mobile, we only update the visual preview during drag and seek on touchend
+  // This avoids issues on Android where rapid currentTime changes during touch are unreliable
   onProgressTouchStart(event: TouchEvent): void {
     event.preventDefault();
     event.stopPropagation();
@@ -583,7 +585,7 @@ export class VideoControlsComponent implements OnDestroy {
 
     const touch = event.touches[0];
     this.updateSeekPreview(touch.clientX);
-    this.seekFromClientX(touch.clientX);
+    // Don't seek immediately on touch - wait for touchend (Android compatibility)
 
     // Add document-level touch handlers for tracking outside the element
     document.addEventListener('touchmove', this.boundProgressTouchMove, { passive: false });
@@ -599,10 +601,16 @@ export class VideoControlsComponent implements OnDestroy {
     event.preventDefault();
     const touch = event.touches[0];
     this.updateSeekPreview(touch.clientX);
-    this.seekFromClientX(touch.clientX);
+    // Only update visual preview during drag - don't seek until touchend (Android compatibility)
   }
 
   private onProgressTouchEnd(): void {
+    // Emit the final seek position when touch ends
+    const seekTime = this.seekPreviewTime();
+    if (seekTime !== null && this.isSeeking()) {
+      this.seek.emit(seekTime);
+    }
+
     this.isSeeking.set(false);
     this.isShowingSeekPreview.set(false);
     this.seekPreviewTime.set(null);

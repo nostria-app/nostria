@@ -18,6 +18,7 @@ import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { UtilitiesService } from '../../services/utilities.service';
 import { environment } from '../../../environments/environment';
 
 // Hardcoded Nostria Premium receiver
@@ -99,6 +100,7 @@ export class GiftPremiumDialogComponent {
   private wallets = inject(Wallets);
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
+  private utilities = inject(UtilitiesService);
 
   data!: GiftPremiumDialogData;
 
@@ -356,8 +358,7 @@ export class GiftPremiumDialogComponent {
   }
 
   truncateInvoice(invoice: string): string {
-    if (invoice.length <= 20) return invoice;
-    return `${invoice.substring(0, 10)}...${invoice.substring(invoice.length - 10)}`;
+    return this.utilities.truncateInvoice(invoice);
   }
 
   getSelectedWalletName(): string {

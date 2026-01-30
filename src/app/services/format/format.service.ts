@@ -256,23 +256,10 @@ export class FormatService {
 
   /**
    * Calculate relative time from a Nostr timestamp (seconds since epoch)
+   * Delegates to UtilitiesService for consistency across the codebase.
    */
   private getRelativeTime(timestamp: number): string {
-    const now = this.utilities.currentDate();
-    const diff = now - timestamp;
-
-    if (diff < 0) return 'in the future';
-
-    const minute = 60;
-    const hour = minute * 60;
-    const day = hour * 24;
-    const week = day * 7;
-
-    if (diff < minute) return 'just now';
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-    if (diff < week) return `${Math.floor(diff / day)}d ago`;
-    return `${Math.floor(diff / week)}w ago`;
+    return this.utilities.getRelativeTime(timestamp);
   }
 
   // Helper method to process Nostr tokens and replace them with @username

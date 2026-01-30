@@ -686,21 +686,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Helper methods for inline photo event rendering (to avoid circular dependency with PhotoEventComponent)
 
   /**
-   * Parse an imeta tag into a key-value object
+   * Parse an imeta tag into a key-value object - delegates to centralized utility
    */
   private parseImetaTag(tag: string[]): Record<string, string> {
-    const parsed: Record<string, string> = {};
-    // Skip the first element which is 'imeta'
-    for (let i = 1; i < tag.length; i++) {
-      const part = tag[i];
-      const spaceIndex = part.indexOf(' ');
-      if (spaceIndex > 0) {
-        const key = part.substring(0, spaceIndex);
-        const value = part.substring(spaceIndex + 1);
-        parsed[key] = value;
-      }
-    }
-    return parsed;
+    return this.utilities.parseImetaTag(tag);
   }
 
   /**

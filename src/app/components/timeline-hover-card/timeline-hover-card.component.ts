@@ -179,21 +179,11 @@ export class TimelineHoverCardComponent {
   }
 
   truncateContent(content: string): string {
-    if (!content) return '';
-    const maxLength = 200;
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return this.utilities.truncateContent(content, 200);
   }
 
   getTimeAgo(timestamp: number): string {
-    const now = Math.floor(Date.now() / 1000);
-    const diff = now - timestamp;
-
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return `${Math.floor(diff / 604800)}w ago`;
+    return this.utilities.getRelativeTime(timestamp);
   }
 
   navigateToEvent(eventId: string, kind: number): void {

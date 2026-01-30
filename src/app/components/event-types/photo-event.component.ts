@@ -13,6 +13,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
 import { LayoutService } from '../../services/layout.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -40,6 +41,7 @@ export class PhotoEventComponent {
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private utilities = inject(UtilitiesService);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -496,21 +498,6 @@ export class PhotoEventComponent {
   }
 
   private parseImetaTag(imetaTag: string[]): Record<string, string> {
-    const parsed: Record<string, string> = {};
-
-    for (let i = 1; i < imetaTag.length; i++) {
-      const part = imetaTag[i];
-      if (!part) continue;
-
-      // Find the first space to separate key from value
-      const spaceIndex = part.indexOf(' ');
-      if (spaceIndex > 0) {
-        const key = part.substring(0, spaceIndex);
-        const value = part.substring(spaceIndex + 1);
-        parsed[key] = value;
-      }
-    }
-
-    return parsed;
+    return this.utilities.parseImetaTag(imetaTag);
   }
 }

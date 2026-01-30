@@ -19,6 +19,7 @@ import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { ZapErrorHandlerService } from '../../services/zap-error-handler.service';
 import { DataService } from '../../services/data.service';
+import { UtilitiesService } from '../../services/utilities.service';
 import { Event } from 'nostr-tools';
 
 export interface ZapDialogData {
@@ -92,6 +93,7 @@ export class ZapDialogComponent {
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
   private dataService = inject(DataService);
+  private utilities = inject(UtilitiesService);
 
   data: ZapDialogData = inject(MAT_DIALOG_DATA);
 
@@ -504,8 +506,7 @@ export class ZapDialogComponent {
   }
 
   truncateInvoice(invoice: string): string {
-    if (invoice.length <= 20) return invoice;
-    return `${invoice.substring(0, 10)}...${invoice.substring(invoice.length - 10)}`;
+    return this.utilities.truncateInvoice(invoice);
   }
 
   getContentInfo(content: string): { type: string; icon: string; display: string } {

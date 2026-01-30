@@ -432,10 +432,7 @@ export class ProfileHoverCardComponent {
   }
 
   private truncateNpub(npub: string): string {
-    if (!npub || npub.length <= 16) {
-      return npub;
-    }
-    return `${npub.substring(0, 8)}...${npub.substring(npub.length - 8)}`;
+    return this.utilities.truncateString(npub, 8, 8);
   }
 
   getMutualFollowingText(): string {
@@ -466,21 +463,11 @@ export class ProfileHoverCardComponent {
   }
 
   truncateContent(content: string): string {
-    if (!content) return '';
-    const maxLength = 140;
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return this.utilities.truncateContent(content, 140);
   }
 
   getTimeAgo(timestamp: number): string {
-    const now = Math.floor(Date.now() / 1000);
-    const diff = now - timestamp;
-
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return `${Math.floor(diff / 604800)}w ago`;
+    return this.utilities.getRelativeTime(timestamp);
   }
 
   onMenuButtonEnter(): void {
