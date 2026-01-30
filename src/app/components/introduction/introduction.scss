@@ -31,11 +31,12 @@
   margin-top: auto;
   margin-bottom: auto;
   // Add extra top margin to push it down from perfect center
-  padding-top: 8vh;
+  padding-top: 4vh;
 
-  // On smaller screens, add more padding to clear the toolbar
+  // On smaller screens, reduce padding and gap to minimize whitespace
   @media (max-width: 599px) {
-    padding-top: 12vh;
+    padding-top: 0;
+    gap: 1rem;
   }
 }
 
@@ -48,6 +49,11 @@
 
   // Mobile-first: vertical stack (branding first, then actions)
   flex-direction: column-reverse;
+
+  // On mobile, reduce gap between branding and actions
+  @media (max-width: 599px) {
+    gap: 1rem;
+  }
 
   // Large screens: horizontal layout (actions left, branding right)
   @media (min-width: 768px) {
@@ -221,6 +227,17 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
+  // Mobile: reduce spacing
+  @media (max-width: 599px) {
+    .logo-container {
+      margin-bottom: 0.5rem;
+    }
+
+    .app-title {
+      margin: 0 0 0.25rem 0;
+    }
+  }
+
   // Large screens: align to right
   @media (min-width: 768px) {
     .logo-container .nostria-logo {
@@ -241,25 +258,30 @@
 // Responsive adjustments
 @media (max-width: 600px) {
   .introduction-container {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .introduction-content {
-    gap: 2rem;
+    gap: 1rem;
   }
 
   .branding-section {
-    .logo-container .nostria-logo {
-      width: 100px;
-      height: 100px;
+    .logo-container {
+      margin-bottom: 0.5rem;
+
+      .nostria-logo {
+        width: 80px;
+        height: 80px;
+      }
     }
 
     .app-title {
-      font-size: 2.5rem;
+      font-size: 2rem;
+      margin-bottom: 0.25rem;
     }
 
     .app-slogan {
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
   }
 
