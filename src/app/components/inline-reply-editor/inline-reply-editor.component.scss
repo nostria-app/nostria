@@ -205,6 +205,14 @@
 .textarea-container {
   position: relative;
 
+  // Override mention-autocomplete to use absolute positioning within this container
+  app-mention-autocomplete {
+    ::ng-deep .mention-autocomplete {
+      position: absolute;
+      // Reset any fixed positioning - will be positioned via top/left from component
+    }
+  }
+
   .content-field {
     width: 100%;
 

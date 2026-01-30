@@ -12,12 +12,14 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BadgeService } from '../../../services/badge.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -48,6 +50,7 @@ interface BadgeDisplayData {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
     UserProfileComponent,
   ],
   templateUrl: './badge-details.component.html',
@@ -62,6 +65,7 @@ export class BadgeDetailsComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly utilities = inject(UtilitiesService);
   private readonly layout = inject(LayoutService);
+  private readonly panelNav = inject(PanelNavigationService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -237,22 +241,8 @@ export class BadgeDetailsComponent {
   }
 
 goBack(): void {
-    const badge = this.badge();
-    if (badge && badge.creator) {
-      // Navigate to the badge creator's badges page
-      const npub = this.utilities.getNpubFromPubkey(badge.creator);
-      const identifier = npub || badge.creator;
-
-      // Include tab index if available
-      if (this.returnTabIndex() !== null) {
-        this.layout.openBadgesPage(identifier);
-        // Note: query params for tab not supported in openBadgesPage yet
-      } else {
-        this.layout.openBadgesPage(identifier);
-      }
-    } else {
-      // Fallback to generic badges page if no creator info
-      this.router.navigate(['/badges']);
-    }
+    // Use panel navigation to go back in the right panel history
+    // This will return to whatever badges page the user came from
+    this.panelNav.goBackRight();
   }
 }

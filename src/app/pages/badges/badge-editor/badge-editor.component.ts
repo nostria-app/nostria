@@ -17,6 +17,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { kinds } from 'nostr-tools';
@@ -26,6 +27,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { BadgeService } from '../../../services/badge.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -44,6 +46,7 @@ import { BadgeService } from '../../../services/badge.service';
     FormsModule,
     MatSlideToggleModule,
     MatProgressBarModule,
+    MatTooltipModule,
   ],
   templateUrl: './badge-editor.component.html',
   styleUrl: './badge-editor.component.scss',
@@ -60,6 +63,10 @@ export class BadgeEditorComponent {
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
   private badgeService = inject(BadgeService);
+  private panelNav = inject(PanelNavigationService);
+
+  // Determine if editing an existing badge
+  isEditing = signal(false);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -109,6 +116,7 @@ export class BadgeEditorComponent {
       untracked(async () => {
         const badgeId = this.route.snapshot.paramMap.get('id');
         if (badgeId) {
+          this.isEditing.set(true);
           await this.loadBadgeForEdit(badgeId);
         }
       });
@@ -398,8 +406,7 @@ export class BadgeEditorComponent {
 
   // Navigation
   cancel(): void {
-    const pubkey = this.accountState.pubkey();
-    const npub = this.utilities.getNpubFromPubkey(pubkey);
-    this.layout.openBadgesPage(npub || pubkey);
+    // Use panel navigation to go back in the right panel history
+    this.panelNav.goBackRight();
   }
 }

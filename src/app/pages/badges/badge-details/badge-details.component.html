@@ -1,11 +1,20 @@
-<div class="badge-details-container">
-  <div class="back-button">
-    <button mat-button (click)="goBack()">
-      <mat-icon>arrow_back</mat-icon>
-      Back to Badges
-    </button>
-  </div>
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
 
+  <h2 class="panel-title title-font">Badge Details</h2>
+
+  <span class="panel-header-spacer"></span>
+
+  @if (isCreator() && badge()) {
+    <button mat-icon-button (click)="editBadge()" matTooltip="Edit Badge">
+      <mat-icon>edit</mat-icon>
+    </button>
+  }
+</div>
+
+<div class="badge-details-container">
   @if (loading()) {
   <div class="loading-state">
     <mat-spinner diameter="40"></mat-spinner>
@@ -30,13 +39,9 @@
 
       @if (isCreator()) {
       <div class="badge-actions">
-        <button mat-raised-button color="primary" (click)="toggleIssueBadge()">
+        <button mat-raised-button (click)="toggleIssueBadge()">
           <mat-icon>card_giftcard</mat-icon>
           Issue Badge
-        </button>
-        <button mat-stroked-button (click)="editBadge()">
-          <mat-icon>edit</mat-icon>
-          Edit
         </button>
       </div>
       }
@@ -93,7 +98,7 @@
 
             <div class="form-actions">
               <button mat-stroked-button (click)="toggleIssueBadge()">Cancel</button>
-              <button mat-flat-button color="primary" (click)="publishBadgeReward()">
+              <button mat-flat-button (click)="publishBadgeReward()">
                 Publish Badge Reward
               </button>
             </div>

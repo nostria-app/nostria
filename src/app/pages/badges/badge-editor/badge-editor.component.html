@@ -1,8 +1,14 @@
-<div class="editor-container">
-  <div class="editor-header">
-    <h1>Badge Editor</h1>
-  </div>
+<div class="panel-header">
+  <button mat-icon-button (click)="cancel()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
 
+  <h2 class="panel-title title-font">{{ isEditing() ? 'Edit Badge' : 'Create Badge' }}</h2>
+
+  <span class="panel-header-spacer"></span>
+</div>
+
+<div class="editor-container">
   <div class="editor-content">
     <div class="editor-form">
       <!-- Changed to use ngSubmit and added novalidate attribute -->
@@ -56,7 +62,6 @@
               <span>You need to configure a media server to upload image files</span>
               <button
                 mat-flat-button
-                color="primary"
                 type="button"
                 (click)="navigateToMediaSettings()"
               >
@@ -126,7 +131,6 @@
               <span>You need to configure a media server to upload thumbnail files</span>
               <button
                 mat-flat-button
-                color="primary"
                 type="button"
                 (click)="navigateToMediaSettings()"
               >
@@ -211,8 +215,8 @@
           <button mat-button type="button" (click)="cancel()" [disabled]="isUploading()">
             Cancel
           </button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="isUploading()">
-            Publish Badge Design
+          <button mat-flat-button type="submit" [disabled]="isUploading()">
+            {{ isEditing() ? 'Update Badge' : 'Publish Badge' }}
           </button>
         </div>
       </form>

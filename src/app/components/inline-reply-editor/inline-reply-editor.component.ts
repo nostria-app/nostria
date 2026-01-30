@@ -408,76 +408,30 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private calculateMentionPosition(textarea: HTMLTextAreaElement): { top: number; left: number } {
-    const cursorCoords = this.getCaretCoordinates(textarea);
-    const textareaRect = textarea.getBoundingClientRect();
+    // Get the textarea's position relative to its offset parent (textarea-container)
+    // We need to position the autocomplete absolutely within textarea-container
     
-    // Account for textarea scroll position
-    const scrollTop = textarea.scrollTop;
-    const scrollLeft = textarea.scrollLeft;
+    // The textarea is inside mat-form-field which is inside textarea-container
+    // We want to position below the mat-form-field
+    const matFormField = textarea.closest('mat-form-field');
+    if (!matFormField) {
+      return { top: 0, left: 0 };
+    }
     
-    const cursorTop = textareaRect.top + cursorCoords.top - scrollTop;
-    const cursorLeft = textareaRect.left + cursorCoords.left - scrollLeft;
+    // Get the height of the form field to position below it
+    const formFieldRect = matFormField.getBoundingClientRect();
+    const containerElement = textarea.closest('.textarea-container');
+    if (!containerElement) {
+      return { top: 0, left: 0 };
+    }
+    const containerRect = containerElement.getBoundingClientRect();
+    
+    // Calculate position relative to the container
     const gap = 4;
-    const top = cursorTop + cursorCoords.height + gap;
-    let left = cursorLeft;
-
-    const viewportWidth = window.innerWidth;
-    const autocompleteWidth = 420;
-
-    if (left + autocompleteWidth > viewportWidth - 16) {
-      left = viewportWidth - autocompleteWidth - 16;
-    }
-    if (left < 16) {
-      left = 16;
-    }
+    const top = formFieldRect.bottom - containerRect.top + gap;
+    const left = 0; // Align with left edge of container
 
     return { top, left };
-  }
-
-  private getCaretCoordinates(element: HTMLTextAreaElement): { top: number; left: number; height: number } {
-    const div = document.createElement('div');
-    const style = getComputedStyle(element);
-    const properties = [
-      'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
-      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-      'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
-      'fontSizeAdjust', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform',
-      'textIndent', 'textDecoration', 'letterSpacing', 'wordSpacing'
-    ];
-
-    properties.forEach(prop => {
-      const key = prop as keyof CSSStyleDeclaration;
-      const value = style[key];
-      if (typeof value === 'string') {
-        (div.style as unknown as Record<string, string>)[prop] = value;
-      }
-    });
-
-    div.style.position = 'absolute';
-    div.style.visibility = 'hidden';
-    div.style.whiteSpace = 'pre-wrap';
-    div.style.wordWrap = 'break-word';
-    div.style.top = '0';
-    div.style.left = '0';
-    document.body.appendChild(div);
-
-    const position = element.selectionStart || 0;
-    const textBeforeCaret = element.value.substring(0, position);
-    div.textContent = textBeforeCaret;
-
-    const span = document.createElement('span');
-    span.textContent = element.value.substring(position) || '.';
-    div.appendChild(span);
-
-    const coordinates = {
-      top: span.offsetTop,
-      left: span.offsetLeft,
-      height: parseInt(style.lineHeight) || parseInt(style.fontSize) || 20
-    };
-
-    document.body.removeChild(div);
-    return coordinates;
   }
 
   onMentionSelected(selection: MentionSelection): void {
