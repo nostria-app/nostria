@@ -5,6 +5,7 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
+import { EventProcessorService } from '../event-processor.service';
 
 export interface Relay {
   url: string;
@@ -22,6 +23,7 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
+  protected eventProcessor = inject(EventProcessorService);
   protected useOptimizedRelays = false;
 
   // Pool instance identifier for tracking
@@ -269,7 +271,7 @@ export abstract class RelayServiceBase {
    */
   moveRelay(fromIndex: number, toIndex: number): void {
     if (fromIndex < 0 || fromIndex >= this.relayUrls.length ||
-        toIndex < 0 || toIndex >= this.relayUrls.length) {
+      toIndex < 0 || toIndex >= this.relayUrls.length) {
       this.logger.warn('Invalid relay move indices:', { fromIndex, toIndex, length: this.relayUrls.length });
       return;
     }
@@ -631,12 +633,13 @@ export abstract class RelayServiceBase {
         maxWait: timeout,
       })) as T;
 
-      // Check if event has expired according to NIP-40
-      if (event && this.utilities.isEventExpired(event)) {
+      // Process event through central event processor
+      // This handles: expiration (NIP-40), deletion (NIP-09), muting (NIP-51)
+      if (event && !this.eventProcessor.shouldAcceptEvent(event)) {
         this.logger.debug(
-          `[${this.constructor.name}] Dropping expired event from relay: ${event.id} (kind: ${event.kind})`
+          `[${this.constructor.name}] Event filtered out: ${event.id} (kind: ${event.kind})`
         );
-        return null; // Don't return expired events
+        return null;
       }
 
       // Reduced logging - removed "Received event from query" as it's too verbose
@@ -751,10 +754,9 @@ export abstract class RelayServiceBase {
           maxWait: timeout,
           onauth: authCallback,
           onevent: (event) => {
-            // Check if event has expired according to NIP-40
-            if (this.utilities.isEventExpired(event)) {
-              this.logger.debug(`Dropping expired event from relay: ${event.id} (kind: ${event.kind})`);
-              return; // Don't add expired events
+            // Process event through centralized filter (expiration, deletion, muting)
+            if (!this.eventProcessor.shouldAcceptEvent(event)) {
+              return; // Event was filtered out
             }
             // Add the received event to our collection
             events.push(event as T);
@@ -1029,12 +1031,14 @@ export abstract class RelayServiceBase {
       const sub = this.#pool.subscribeMany(urls, filter, {
         onauth: authCallback,
         onevent: (evt) => {
-          // Check if event has expired according to NIP-40
-          if (this.utilities.isEventExpired(evt)) {
+          // Process event through central event processor
+          // This handles: expiration (NIP-40), deletion (NIP-09), muting (NIP-51)
+          const result = this.eventProcessor.processEvent(evt);
+          if (!result.accepted) {
             this.logger.debug(
-              `[${this.constructor.name}] Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`
+              `[${this.constructor.name}] Event filtered out: ${evt.id} (kind: ${evt.kind}), reason: ${result.reason}`
             );
-            return; // Don't process expired events
+            return;
           }
 
           this.logger.debug(`[${this.constructor.name}] Received event of kind ${evt.kind}`, {
@@ -1160,10 +1164,9 @@ export abstract class RelayServiceBase {
       const sub = this.#pool.subscribeManyEose(urls, filter, {
         onauth: authCallback,
         onevent: (evt) => {
-          // Check if event has expired according to NIP-40
-          if (this.utilities.isEventExpired(evt)) {
-            this.logger.debug(`Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`);
-            return; // Don't process expired events
+          // Process event through centralized filter (expiration, deletion, muting)
+          if (!this.eventProcessor.shouldAcceptEvent(evt)) {
+            return; // Event was filtered out
           }
 
           this.logger.debug(`Received event of kind ${evt.kind}`);
