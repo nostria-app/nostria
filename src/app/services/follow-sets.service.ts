@@ -7,6 +7,7 @@ import { DatabaseService } from './database.service';
 import { PublishService } from './publish.service';
 import { EncryptionService } from './encryption.service';
 import { UtilitiesService } from './utilities.service';
+import { DeletionFilterService } from './deletion-filter.service';
 
 export interface FollowSet {
   id: string; // Event ID
@@ -33,6 +34,7 @@ export class FollowSetsService {
   private readonly publishService = inject(PublishService);
   private readonly encryption = inject(EncryptionService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly deletionFilter = inject(DeletionFilterService);
 
   // Signals for reactive state
   followSets = signal<FollowSet[]>([]);
@@ -138,7 +140,10 @@ export class FollowSetsService {
         await this.database.init();
 
         // First, try to load from database - parse immediately without waiting for decryption
-        const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
+        let dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
+
+        // Filter out deleted events
+        dbEvents = dbEvents.filter(event => !this.deletionFilter.isDeleted(event));
 
         let hasDbResults = false;
         if (dbEvents.length > 0) {
@@ -171,8 +176,9 @@ export class FollowSetsService {
           }
         );
 
-        // Convert all events to FollowSet objects (without decryption)
+        // Convert all events to FollowSet objects (without decryption), filtering out deleted events
         const sets = events
+          .filter(record => !this.deletionFilter.isDeleted(record.event))
           .map(record => this.parseFollowSetEventSync(record.event))
           .filter((set): set is FollowSet => set !== null);
 

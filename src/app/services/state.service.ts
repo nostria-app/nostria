@@ -15,6 +15,7 @@ import { FollowingService } from './following.service';
 import { MetricsTrackingService } from './metrics-tracking.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
+import { DeletionFilterService } from './deletion-filter.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -37,6 +38,7 @@ export class StateService implements NostriaService {
   reporting = inject(ReportingService);
   following = inject(FollowingService);
   metricsTracking = inject(MetricsTrackingService);
+  deletionFilter = inject(DeletionFilterService);
 
   constructor() {
     effect(async () => {
@@ -99,6 +101,10 @@ export class StateService implements NostriaService {
       );
     }
 
+    // Load deletion events early so we can filter out deleted content
+    // This must happen after accountRelay is initialized but before other data loading
+    await this.deletionFilter.load(pubkey);
+
     await this.accountState.load();
     await this.nostr.load();
 
@@ -129,5 +135,6 @@ export class StateService implements NostriaService {
     this.media.clear();
     this.reporting.clear();
     this.following.clear();
+    this.deletionFilter.clear();
   }
 }
