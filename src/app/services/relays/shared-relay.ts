@@ -3,6 +3,7 @@ import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
+import { EventProcessorService } from '../event-processor.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,6 +13,7 @@ export class SharedRelayService {
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
+  private readonly eventProcessor = inject(EventProcessorService);
 
   // Semaphore for controlling concurrent requests
   private readonly maxConcurrentRequests = 50; // Increased from 3 to handle many concurrent users
@@ -299,6 +301,10 @@ export class SharedRelayService {
         this.#pool!.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
           onevent: (event) => {
+            // Filter event through centralized processor (expiration, deletion, muting)
+            if (!this.eventProcessor.shouldAcceptEvent(event)) {
+              return;
+            }
             // Add the received event to our collection
             events.push(event as T);
           },

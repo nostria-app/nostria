@@ -4,6 +4,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { UtilitiesService } from './utilities.service';
+import { EventProcessorService } from './event-processor.service';
 
 export interface MigrationProgress {
   status: 'idle' | 'connecting' | 'fetching' | 'publishing' | 'completed' | 'error';
@@ -75,6 +76,7 @@ export class MigrationService {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly eventProcessor = inject(EventProcessorService);
 
   // Migration state
   private migrationPool: SimplePool | null = null;
@@ -311,8 +313,8 @@ export class MigrationService {
           filter,
           {
             onevent: (event) => {
-              // Check if event has expired according to NIP-40
-              if (!this.utilities.isEventExpired(event)) {
+              // Filter event through centralized processor (expiration, deletion, muting)
+              if (this.eventProcessor.shouldAcceptEvent(event)) {
                 events.push(event);
               }
             },
