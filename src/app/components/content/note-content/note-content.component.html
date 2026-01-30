@@ -130,16 +130,26 @@
 <a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
   (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
 } @else if (token.type === 'rss-feed') {
-<a class="rss-feed-link" tabindex="0" role="button"
-  (click)="onRssFeedClick(token.content, $event)"
-  (keydown.enter)="onRssFeedClick(token.content, $event)"
-  (keydown.space)="onRssFeedClick(token.content, $event)"
+<a class="rss-feed-link" tabindex="0" role="button" (click)="onRssFeedClick(token.content, $event)"
+  (keydown.enter)="onRssFeedClick(token.content, $event)" (keydown.space)="onRssFeedClick(token.content, $event)"
   title="Play RSS Feed">
   <mat-icon class="rss-icon">rss_feed</mat-icon>
   <span class="rss-url">{{ token.content }}</span>
   <span class="rss-action">Play</span>
 </a>
 } @else if (token.type === 'youtube') {
+@if (token.isYouTubeShort) {
+<!-- YouTube Short - render in 9:16 portrait aspect ratio -->
+<div class="media-container youtube-short-container">
+  <div class="youtube-short-frame">
+    <iframe class="youtube-short-element" [src]="token.processedUrl" frameborder="0" loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen
+      title="YouTube Short">
+    </iframe>
+  </div>
+</div>
+} @else {
+<!-- Regular YouTube video - 16:9 landscape aspect ratio -->
 <div class="media-container youtube-container">
   <div class="responsive-media-frame">
     <iframe class="responsive-media-element" [src]="token.processedUrl" frameborder="0" loading="lazy"
@@ -148,6 +158,7 @@
     </iframe>
   </div>
 </div>
+}
 } @else if (token.type === 'audio') {
 <div class="media-container">
   <app-audio-player [src]="token.content" [waveform]="token.waveform || []"
@@ -162,17 +173,14 @@
 @let videoPlaceholder = getVideoPlaceholderUrl(token);
 @let videoAspect = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
-  [class.has-aspect-ratio]="videoAspect"
-  [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
+  [class.has-aspect-ratio]="videoAspect" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.needs-rotation]="needsRotationCorrection(token)">
   @if (isVideoFormatSupported(token.content)) {
   <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined"
-    [blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
-    [autoplay]="shouldAutoPlayVideo(token)" [loop]="shouldLoopVideo(token)"
-    [inFeedsPanel]="inFeedsPanel()"
-    (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)"
-    class="main-video"
+    [blurred]="shouldBlurImages() && !isImageRevealed(token.content)" [autoplay]="shouldAutoPlayVideo(token)"
+    [loop]="shouldLoopVideo(token)" [inFeedsPanel]="inFeedsPanel()"
+    (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)" class="main-video"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
   }
   @if (!isVideoFormatSupported(token.content)) {
