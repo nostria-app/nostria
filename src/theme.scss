@@ -1,15 +1,16 @@
-// Nostria Theme - Inspired by the app icon
+// Nostria Theme - Inspired by the app icon (warm sun with concentric orange rings)
 // Primary: Warm sun glow (#FDA100 golden orange)
-// Secondary: Purple accent (#722ca1)
+// Secondary: Deep burnt orange from outer sun ring (#E86A17)
 // Neutral: Clean, minimal tones for content readability
 
 @use 'sass:map';
 @use '@angular/material' as mat;
 
-// Color palettes generated from primary: #FDA100 (sun glow), secondary: #722ca1 (purple)
+// Color palettes generated from the sun icon colors
+// Primary: golden center, Secondary: deep orange outer ring
 // Designed for clean content backgrounds with colorful accents on interactive elements
 $_palettes: (
-  // Primary: Golden orange from the glowing sun icon
+  // Primary: Golden orange from the glowing sun icon center
   primary: (
     0: #000000,
     10: #2b1700,
@@ -28,22 +29,22 @@ $_palettes: (
     99: #fffbff,
     100: #ffffff,
   ),
-  // Secondary: Rich purple accent from icon
+  // Secondary: Deep burnt orange from outer sun ring (#E86A17)
   secondary: (
     0: #000000,
-    10: #2d0048,
-    20: #4a0073,
-    25: #580d85,
-    30: #661e96,
-    35: #742ca1,  // Base purple #722ca1
-    40: #8239ae,
-    50: #9d54ca,
-    60: #b96fe6,
-    70: #d48bff,
-    80: #e5b3ff,
-    90: #f3daff,
-    95: #fbecff,
-    98: #fff7fd,
+    10: #341000,
+    20: #542100,
+    25: #652900,
+    30: #763200,
+    35: #883b00,
+    40: #9a4500,  // Base deep orange
+    50: #c05a00,
+    60: #e87117,
+    70: #ff8e42,
+    80: #ffb68a,
+    90: #ffdcc8,
+    95: #ffede4,
+    98: #fff8f5,
     99: #fffbff,
     100: #ffffff,
   ),
