@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy, untracked } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -70,6 +70,7 @@ type ViewModeType = typeof VIEW_MODES[number];
   ],
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PeopleComponent implements OnDestroy {
   private router = inject(Router);

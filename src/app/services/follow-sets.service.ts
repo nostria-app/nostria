@@ -60,6 +60,7 @@ export class FollowSetsService {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const account = this.accountState.account();
+      const initialized = this.accountState.initialized();
 
       // Only load if pubkey actually changed
       if (pubkey === this.lastEffectPubkey) {
@@ -67,7 +68,7 @@ export class FollowSetsService {
       }
 
       this.lastEffectPubkey = pubkey;
-      this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8));
+      this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8), 'initialized:', initialized);
 
       if (pubkey) {
         this.hasInitiallyLoaded.set(false);
@@ -80,6 +81,15 @@ export class FollowSetsService {
         // Clear follow sets immediately to prevent showing old account's lists
         // The new account's lists will be loaded below
         this.followSets.set([]);
+
+        // Wait for account to be initialized (relays configured) before loading
+        // This prevents race conditions where we try to fetch from relays before they're ready
+        if (!initialized) {
+          this.logger.debug('[FollowSets] Account not yet initialized, will load on next effect trigger');
+          // Reset lastEffectPubkey so the effect will re-run when initialized changes
+          this.lastEffectPubkey = null;
+          return;
+        }
 
         // For extension accounts, wait for the extension to be available before loading
         // since decryption of private follow sets requires the extension
