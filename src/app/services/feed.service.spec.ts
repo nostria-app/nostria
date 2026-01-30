@@ -1,55 +1,79 @@
-import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-
+import { signal } from '@angular/core';
 import { FeedService } from './feed.service';
-import { LocalStorageService } from './local-storage.service';
-import { LoggerService } from './logger.service';
-import { RelayServiceBase } from './relays/relay';
-import { ApplicationStateService } from './application-state.service';
-import { AccountStateService } from './account-state.service';
-import { DataService } from './data.service';
-import { UtilitiesService } from './utilities.service';
-import { ApplicationService } from './application.service';
+import { Event } from 'nostr-tools';
 
 describe('FeedService', () => {
-  let service: FeedService;
+  // FeedService has a heavy constructor with many injected deps.
+  // For these unit tests, bypass the constructor and set only the fields needed
+  // by handleFollowingIncrementalUpdate.
+  function createServiceForIncrementalFollowingTests(): FeedService {
+    const service = Object.create(FeedService.prototype) as FeedService;
 
-  // Mock services
-  const mockLocalStorageService = jasmine.createSpyObj('LocalStorageService', [
-    'getItem',
-    'setItem',
-  ]);
-  const mockLoggerService = jasmine.createSpyObj('LoggerService', ['log', 'error', 'warn']);
-  const mockRelayService = jasmine.createSpyObj('RelayService', ['getPool']);
-  const mockApplicationStateService = jasmine.createSpyObj('ApplicationStateService', ['state']);
-  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', ['state']);
-  const mockDataService = jasmine.createSpyObj('DataService', ['getData']);
-  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', ['utils']);
-  const mockApplicationService = jasmine.createSpyObj('ApplicationService', ['app']);
+    (service as any).accountState = {
+      muted: () => false,
+    };
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        FeedService,
-        { provide: LocalStorageService, useValue: mockLocalStorageService },
-        { provide: LoggerService, useValue: mockLoggerService },
-        { provide: RelayServiceBase, useValue: mockRelayService },
-        {
-          provide: ApplicationStateService,
-          useValue: mockApplicationStateService,
-        },
-        { provide: AccountStateService, useValue: mockAccountStateService },
-        { provide: DataService, useValue: mockDataService },
-        { provide: UtilitiesService, useValue: mockUtilitiesService },
-        { provide: ApplicationService, useValue: mockApplicationService },
-      ],
-    }).compileComponents();
+    const map = new Map<string, unknown>();
+    (service as any)._feedData = signal(map);
 
-    service = TestBed.inject(FeedService);
-  });
+    (service as any).saveEventToDatabase = jasmine.createSpy('saveEventToDatabase');
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
+    return service;
+  }
+
+  function makeEvent(id: string, createdAt: number): Event {
+    return {
+      id,
+      kind: 1,
+      created_at: createdAt,
+      pubkey: 'pubkey',
+      content: '',
+      tags: [],
+      sig: 'sig',
+    } as unknown as Event;
+  }
+
+  describe('handleFollowingIncrementalUpdate', () => {
+    it('renders events directly when initialLoadComplete=true and feed is empty', () => {
+      const service = createServiceForIncrementalFollowingTests();
+
+      const feedData: any = {
+        feed: { id: 'feed-following', kinds: [1] },
+        events: signal<Event[]>([]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: true,
+      };
+
+      const originalMap = (service as any)._feedData();
+      originalMap.set(feedData.feed.id, feedData);
+
+      (service as any).handleFollowingIncrementalUpdate(feedData, [
+        makeEvent('e1', 10),
+        makeEvent('e2', 20),
+      ]);
+
+      expect(feedData.events().map((e: Event) => e.id)).toEqual(['e2', 'e1']);
+      expect(feedData.pendingEvents().length).toBe(0);
+      expect((service as any)._feedData()).not.toBe(originalMap);
+    });
+
+    it('queues events when initialLoadComplete=true and feed already has events', () => {
+      const service = createServiceForIncrementalFollowingTests();
+
+      const feedData: any = {
+        feed: { id: 'feed-following', kinds: [1] },
+        events: signal<Event[]>([makeEvent('existing', 50)]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: true,
+      };
+
+      (service as any).handleFollowingIncrementalUpdate(feedData, [
+        makeEvent('newer', 100),
+        makeEvent('older', 25),
+      ]);
+
+      expect(feedData.events().map((e: Event) => e.id)).toEqual(['existing']);
+      expect(feedData.pendingEvents().map((e: Event) => e.id)).toEqual(['newer', 'older']);
+    });
   });
 });

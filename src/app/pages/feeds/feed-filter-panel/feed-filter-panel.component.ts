@@ -85,17 +85,24 @@ const CONTENT_TYPES: ContentType[] = [
       flex-direction: column;
       gap: 1rem;
       padding: 1rem;
-      min-width: 340px;
-      max-width: 400px;
+      width: calc(100vw - 2rem);
+      max-width: 340px;
       background: var(--mat-sys-surface-container);
       border-radius: 12px;
       border: 1px solid var(--mat-sys-outline-variant);
+      box-sizing: border-box;
     }
 
     .content-types-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 0.5rem;
+    }
+
+    @media (max-width: 360px) {
+      .content-types-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .content-type-chip {
@@ -157,7 +164,7 @@ const CONTENT_TYPES: ContentType[] = [
 
     .action-btn {
       flex: 1;
-      min-width: 80px;
+      min-width: 70px;
       font-size: 0.8125rem;
     }
   `]

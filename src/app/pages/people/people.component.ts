@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -364,6 +364,8 @@ export class PeopleComponent implements OnDestroy {
     });
 
     // Watch for 'setId' route parameter and select the corresponding follow set
+    // This effect ONLY handles route-driven selection (e.g., deep linking, back/forward navigation)
+    // It should NOT interfere with user-initiated selection from the dropdown menu
     effect(() => {
       const params = this.routeParams();
       const setDTag = params?.get('setId');
@@ -371,26 +373,33 @@ export class PeopleComponent implements OnDestroy {
       const hasInitiallyLoaded = this.followSetsService.hasInitiallyLoaded();
 
       // Only proceed if params have been initialized (not undefined)
-      // This prevents race condition where route reuse strategy restores component
-      // with a selectedFollowSet but routeParams hasn't emitted yet
       if (params === undefined) {
         return;
       }
 
       // Wait for follow sets to be initially loaded before making decisions
-      // This fixes the race condition where route params emit before follow sets load
       if (!hasInitiallyLoaded) {
         return;
       }
 
+      // If there's a setId in the URL, try to select that list
       if (setDTag && followSets.length > 0) {
         const matchingSet = followSets.find(s => s.dTag === setDTag);
-        if (matchingSet && this.selectedFollowSet()?.dTag !== setDTag) {
-          this.selectFollowSet(matchingSet);
+        if (matchingSet) {
+          // Only update if the selection actually needs to change
+          // Use untracked to avoid creating a dependency on selectedFollowSet
+          const currentDTag = untracked(() => this.selectedFollowSet()?.dTag);
+          if (currentDTag !== setDTag) {
+            this.selectFollowSetFromRoute(matchingSet);
+          }
         }
-      } else if (!setDTag && this.selectedFollowSet()) {
-        // Clear selection when no set parameter (navigated to /people)
-        this.selectFollowSet(null);
+      } else if (!setDTag) {
+        // No setId in URL - clear selection if we have one
+        // Use untracked to avoid creating a dependency on selectedFollowSet
+        const hasSelection = untracked(() => this.selectedFollowSet() !== null);
+        if (hasSelection) {
+          this.clearFollowSetSelection();
+        }
       }
     });
 
@@ -646,6 +655,38 @@ export class PeopleComponent implements OnDestroy {
       // Navigate back to the main people page
       this.router.navigate(['/people']);
     }
+  }
+
+  /**
+   * Select a follow set from route navigation (deep link, back/forward)
+   * This doesn't navigate since we're responding to a route change
+   */
+  private async selectFollowSetFromRoute(followSet: FollowSet) {
+    this.displayLimit.set(this.PAGE_SIZE);
+    this.updateSearch('');
+    this.selectedFollowSet.set(followSet);
+
+    // Load profiles for all pubkeys in the follow set
+    this.loadingFollowSetProfiles.set(true);
+    try {
+      const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
+      this.followSetProfiles.set(profiles);
+    } catch (error) {
+      console.error('Failed to load follow set profiles:', error);
+      this.followSetProfiles.set([]);
+    } finally {
+      this.loadingFollowSetProfiles.set(false);
+    }
+  }
+
+  /**
+   * Clear follow set selection from route navigation
+   * This doesn't navigate since we're responding to a route change
+   */
+  private clearFollowSetSelection() {
+    this.displayLimit.set(this.PAGE_SIZE);
+    this.selectedFollowSet.set(null);
+    this.followSetProfiles.set([]);
   }
 
   /**

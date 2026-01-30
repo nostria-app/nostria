@@ -83,7 +83,7 @@ export interface AddPersonDialogData {
                            tabindex="0" 
                            (click)="selectProfile(profile)"
                            (keydown.enter)="selectProfile(profile)">
-                        <app-user-profile [pubkey]="profile.event.pubkey" view="list"></app-user-profile>
+                        <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
                       </div>
                     }
                   </div>
