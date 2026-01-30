@@ -762,6 +762,34 @@ export const routes: Routes = [
     title: 'Badges',
   },
   {
+    path: 'badges/details/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent),
+    title: 'Badge Details',
+  },
+  {
+    path: 'badges/create',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent),
+    title: 'Create Badge',
+  },
+  {
+    path: 'badges/edit/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent),
+    title: 'Edit Badge',
+  },
+  {
+    path: 'b/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent),
+    title: 'Badge',
+  },
+  {
     path: 'user-following/:pubkey',
     outlet: 'right',
     loadComponent: () =>

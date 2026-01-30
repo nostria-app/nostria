@@ -527,9 +527,18 @@ export class PanelNavigationService {
       this._isBackNavigation = true;
 
       // Clear the right outlet by navigating to just the primary path
+      // URL format: /badges(right:b/...)?tab=1
+      // We need to extract: /badges and ?tab=1 separately
       const currentUrl = this.router.url;
+      
+      // Extract query params from the end of the URL (after the closing paren or after primary path)
+      const queryMatch = currentUrl.match(/\?[^(]+$/);
+      const queryString = queryMatch ? queryMatch[0] : '';
+      
+      // Extract primary path (before the opening paren)
       const primaryPath = currentUrl.split('(')[0] || '/';
-      this.router.navigateByUrl(primaryPath);
+      
+      this.router.navigateByUrl(primaryPath + queryString);
       return;
     }
 
@@ -540,9 +549,17 @@ export class PanelNavigationService {
     this._isBackNavigation = true;
     
     // Navigate to previous right panel route using navigateByUrl
+    // URL format: /badges(right:b/...)?tab=1
     const currentUrl = this.router.url;
+    
+    // Extract query params from the end of the URL
+    const queryMatch = currentUrl.match(/\?[^(]+$/);
+    const queryString = queryMatch ? queryMatch[0] : '';
+    
+    // Extract primary path (before the opening paren)
     const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:${prev.path})`;
+    
+    const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
     this.router.navigateByUrl(targetUrl);
   }
 

@@ -1,5 +1,5 @@
 .mention-autocomplete {
-  position: fixed; // Changed from absolute to fixed for viewport positioning
+  position: fixed; // Default to fixed for viewport positioning
   z-index: 2000; // Higher z-index to ensure it floats above dialog content
   background: var(--mat-sys-surface-container-high);
   border: 1px solid var(--mat-sys-outline-variant);
@@ -8,9 +8,8 @@
   overflow: hidden;
   max-width: 420px; // Increased width for better content display
   min-width: 380px; // Increased min-width
-  // Ensure proper containment and scrolling behavior
-  contain: layout style;
-  transform: translateZ(0); // Force GPU layer for better performance
+  // Note: Removed transform: translateZ(0) and contain: layout style
+  // as they can interfere with positioning when overridden to absolute
 }
 
 .mention-autocomplete-header {

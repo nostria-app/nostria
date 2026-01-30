@@ -43,6 +43,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 
 interface MediaMetadata {
   url: string;
@@ -137,6 +139,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   private router = inject(Router);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private utilities = inject(UtilitiesService);
+  private localSettings = inject(LocalSettingsService);
   private publishSubscription?: Subscription;
   private publishInitiated = signal(false);
 
@@ -408,27 +411,19 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private calculateMentionPosition(textarea: HTMLTextAreaElement): { top: number; left: number } {
-    // Get the textarea's position relative to its offset parent (textarea-container)
-    // We need to position the autocomplete absolutely within textarea-container
-    
-    // The textarea is inside mat-form-field which is inside textarea-container
-    // We want to position below the mat-form-field
-    const matFormField = textarea.closest('mat-form-field');
-    if (!matFormField) {
-      return { top: 0, left: 0 };
-    }
-    
-    // Get the height of the form field to position below it
-    const formFieldRect = matFormField.getBoundingClientRect();
+    // Position the autocomplete directly below the textarea element
+    // We use absolute positioning relative to .textarea-container
     const containerElement = textarea.closest('.textarea-container');
     if (!containerElement) {
       return { top: 0, left: 0 };
     }
+
     const containerRect = containerElement.getBoundingClientRect();
-    
-    // Calculate position relative to the container
-    const gap = 4;
-    const top = formFieldRect.bottom - containerRect.top + gap;
+    const textareaRect = textarea.getBoundingClientRect();
+
+    // Position directly below the textarea with a small gap
+    const gap = 2;
+    const top = textareaRect.bottom - containerRect.top + gap;
     const left = 0; // Align with left edge of container
 
     return { top, left };
@@ -1009,22 +1004,135 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const items = event.clipboardData?.items;
     if (!items) return;
 
-    const imageFiles: File[] = [];
+    let hasMediaFile = false;
+    const mediaFiles: File[] = [];
 
+    // Check for media files (images and videos) in clipboard
     for (const item of Array.from(items)) {
       if (item.kind === 'file') {
         const file = item.getAsFile();
-        if (file && file.type.startsWith('image/')) {
-          imageFiles.push(file);
+        if (file && this.isMediaFile(file)) {
+          hasMediaFile = true;
+          mediaFiles.push(file);
         }
       }
     }
 
-    if (imageFiles.length > 0) {
+    // If we found media files, prevent default behavior and upload them
+    if (hasMediaFile && mediaFiles.length > 0) {
       event.preventDefault();
       event.stopPropagation();
-      this.uploadFiles(imageFiles);
+      this.uploadFiles(mediaFiles);
+      return;
     }
+
+    // Check for NIP-19 identifiers in text and auto-prefix with nostr:
+    let text = event.clipboardData?.getData('text/plain');
+    if (text) {
+      // Check if tracking parameter removal is enabled and clean URLs
+      // For performance, only process text up to 10KB (most pastes are much smaller)
+      if (this.localSettings.removeTrackingParameters() && text.length < 10000) {
+        const cleanedText = cleanTrackingParametersFromText(text);
+        if (cleanedText !== text) {
+          // Text was modified, prevent default paste and insert cleaned text
+          event.preventDefault();
+          event.stopPropagation();
+          text = cleanedText;
+          this.insertCleanedText(text);
+          return;
+        }
+      }
+
+      // Check for NIP-19 identifiers and auto-prefix with nostr:
+      if (this.containsNip19Identifier(text)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.insertTextWithNostrPrefix(text);
+        return;
+      }
+    }
+
+    // If no media files or NIP-19 identifiers, allow normal text pasting
+  }
+
+  /**
+   * Check if file is a supported media file (image or video)
+   */
+  private isMediaFile(file: File): boolean {
+    // Check by MIME type first
+    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      return true;
+    }
+
+    // Additional check by file extension as fallback
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif|mp4|webm|mov|avi|mkv|m4v)$/i;
+    return mediaExtensions.test(file.name);
+  }
+
+  /**
+   * Check if text contains NIP-19 identifiers that need nostr: prefix
+   * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
+   */
+  private containsNip19Identifier(text: string): boolean {
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    return nip19Pattern.test(text);
+  }
+
+  /**
+   * Insert text with NIP-19 identifiers automatically prefixed with nostr:
+   * According to NIP-27, all references should be in the format nostr:<identifier>
+   */
+  private insertTextWithNostrPrefix(text: string): void {
+    const textarea = this.contentTextarea.nativeElement;
+    const cursorPosition = textarea.selectionStart || 0;
+    const currentContent = this.content();
+
+    // Replace NIP-19 identifiers with nostr: prefix if not already present
+    // This regex matches NIP-19 identifiers that don't already have nostr: prefix
+    // and are not part of a URL (preceded by /)
+    const processedText = text.replace(
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      'nostr:$1'
+    );
+
+    // Insert the processed text at cursor position
+    const newContent =
+      currentContent.substring(0, cursorPosition) +
+      processedText +
+      currentContent.substring(cursorPosition);
+
+    this.content.set(newContent);
+
+    // Restore cursor position after the inserted text
+    setTimeout(() => {
+      const newCursorPosition = cursorPosition + processedText.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      textarea.focus();
+    }, 0);
+  }
+
+  /**
+   * Insert cleaned text (with tracking parameters removed)
+   */
+  private insertCleanedText(text: string): void {
+    const textarea = this.contentTextarea.nativeElement;
+    const cursorPosition = textarea.selectionStart || 0;
+    const currentContent = this.content();
+
+    // Insert the cleaned text at cursor position
+    const newContent =
+      currentContent.substring(0, cursorPosition) +
+      text +
+      currentContent.substring(cursorPosition);
+
+    this.content.set(newContent);
+
+    // Restore cursor position after the inserted text
+    setTimeout(() => {
+      const newCursorPosition = cursorPosition + text.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      textarea.focus();
+    }, 0);
   }
 
   // ===============================
