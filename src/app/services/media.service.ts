@@ -422,6 +422,7 @@ export class MediaService implements NostriaService {
       '.mkv': 'video/x-matroska',
       '.avi': 'video/x-msvideo',
       '.mov': 'video/quicktime',
+      '.qt': 'video/quicktime',
     };
 
     // Get file extension

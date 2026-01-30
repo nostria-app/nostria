@@ -340,7 +340,7 @@ export class PlaylistEditorComponent implements OnInit {
       return 'YouTube';
     }
 
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.qt'];
     const lowercaseUrl = url.toLowerCase();
     if (videoExtensions.some(ext => lowercaseUrl.includes(ext))) {
       return 'Video';
