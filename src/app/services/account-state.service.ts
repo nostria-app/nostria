@@ -481,15 +481,28 @@ export class AccountStateService implements OnDestroy {
     // This ensures UI doesn't show "not following anyone" while loading
     this.followingListLoaded.set(false);
 
-    // this.accountChanging.set(account?.pubkey || '');
+    // Immediately set profile from cache if available
+    // This provides instant UI update while async load happens in background
+    if (account) {
+      const cachedProfile = this.accountProfiles().get(account.pubkey);
+      if (cachedProfile && !(cachedProfile as any).isEmpty) {
+        // Found in pre-loaded account profiles - use it immediately
+        this.profile.set(cachedProfile);
+      } else {
+        // Try the general profile cache as fallback
+        const generalCached = this.getCachedProfile(account.pubkey);
+        if (generalCached) {
+          this.profile.set(generalCached);
+        } else {
+          // Clear profile - will be loaded async
+          this.profile.set(undefined);
+        }
+      }
+    } else {
+      this.profile.set(undefined);
+    }
+
     this.account.set(account);
-
-    // if (!account) {
-    //   this.profile.set(undefined);
-    //   return;
-    // } else {
-
-    // }
   }
 
   updateAccount(account: NostrUser) {
