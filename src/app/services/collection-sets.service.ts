@@ -6,6 +6,7 @@ import { DatabaseService } from './database.service';
 import { AccountStateService } from './account-state.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
+import { DeletionFilterService } from './deletion-filter.service';
 
 /**
  * Kind 30030: Emoji sets
@@ -73,6 +74,7 @@ export class CollectionSetsService {
   private accountState = inject(AccountStateService);
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
+  private deletionFilter = inject(DeletionFilterService);
 
   /**
    * Get preferred emojis from user's emoji list (kind 10030)
@@ -347,9 +349,14 @@ export class CollectionSetsService {
       await this.database.init();
       let events = await this.database.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
 
+      // Filter out deleted events
+      events = events.filter(event => !this.deletionFilter.isDeleted(event));
+
       // If no local data, fetch from relays
       if (events.length === 0) {
-        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+        const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, INTEREST_SET_KIND);
+        // Filter out deleted events from relays
+        events = relayEvents.filter(event => !this.deletionFilter.isDeleted(event));
         // Save to local database for next time
         for (const event of events) {
           await this.database.saveEvent(event);
