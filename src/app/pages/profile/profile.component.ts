@@ -51,7 +51,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrRecord } from '../../interfaces';
-import { DataService } from '../../services/data.service';
+import { DataService, DeepDiscoveryStatus } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
@@ -172,6 +172,16 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   userMetadata = signal<NostrRecord | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
+
+  // Computed to expose deep discovery status for this profile
+  deepDiscoveryStatus = computed(() => {
+    const status = this.data.deepDiscoveryStatus();
+    // Only show status if it's for the current profile
+    if (status && status.pubkey === this.pubkey()) {
+      return status;
+    }
+    return null;
+  });
 
   // Detect if profile is rendered in the right panel outlet
   isInRightPanel = computed(() => {
@@ -634,10 +644,9 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');
     } finally {
-      // Only set loading to false if we don't have any data to show
-      if (!this.userMetadata()) {
-        this.isLoading.set(false);
-      }
+      // Always set loading to false when done - the profile may have been found
+      // via deep discovery and userMetadata was already set
+      this.isLoading.set(false);
     }
   }
 

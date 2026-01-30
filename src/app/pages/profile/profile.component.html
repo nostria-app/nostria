@@ -237,8 +237,21 @@
       <!-- Loading spinner and message -->
       <div class="loading-spinner-section">
         <mat-spinner diameter="48"></mat-spinner>
-        <p class="loading-message">Loading profile...</p>
-        <p class="loading-submessage">Fetching user data from the network</p>
+        @if (deepDiscoveryStatus(); as status) {
+          <p class="loading-message">Deep discovery in progress</p>
+          <p class="loading-submessage">{{ status.message }}</p>
+          @if (status.phase === 'observed-relays' && status.totalBatches > 0) {
+            <div class="discovery-progress">
+              <div class="discovery-progress-bar">
+                <div class="discovery-progress-fill" [style.width.%]="(status.currentBatch / status.totalBatches) * 100"></div>
+              </div>
+              <span class="discovery-progress-text">{{ status.currentBatch }} / {{ status.totalBatches }}</span>
+            </div>
+          }
+        } @else {
+          <p class="loading-message">Loading profile...</p>
+          <p class="loading-submessage">Fetching user data from the network</p>
+        }
       </div>
     </div>
   </div>
