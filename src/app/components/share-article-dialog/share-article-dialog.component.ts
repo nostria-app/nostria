@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { CustomDialogService } from '../../services/custom-dialog.service';
-import { NoteEditorDialogComponent, NoteEditorDialogData } from '../note-editor-dialog/note-editor-dialog.component';
+import type { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { kinds, nip19 } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -211,14 +211,17 @@ export class ShareArticleDialogComponent {
     return 'Article';
   }
 
-  shareAsNote() {
+  async shareAsNote() {
     const encodedId = this.getEncodedId();
     this.dialogRef?.close();
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const noteData: NoteEditorDialogData = {
         content: `nostr:${encodedId}`,
       };
+
+      // Dynamically import NoteEditorDialogComponent to avoid circular dependency
+      const { NoteEditorDialogComponent } = await import('../note-editor-dialog/note-editor-dialog.component');
 
       this.customDialog.open(NoteEditorDialogComponent, {
         title: 'Share Article',

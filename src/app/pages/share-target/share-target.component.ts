@@ -1,7 +1,6 @@
 import { Component, effect, inject, PLATFORM_ID, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
@@ -140,7 +139,7 @@ export class ShareTargetComponent {
     }
   }
 
-  private openDialog(title?: string, text?: string, url?: string, files?: File[]) {
+  private async openDialog(title?: string, text?: string, url?: string, files?: File[]) {
     let content = '';
     if (title) content += title + '\n';
     if (text) content += text + '\n';
@@ -148,6 +147,9 @@ export class ShareTargetComponent {
     content = content.trim();
 
     if (content || (files && files.length > 0)) {
+      // Dynamically import NoteEditorDialogComponent to avoid circular dependency
+      const { NoteEditorDialogComponent } = await import('../../components/note-editor-dialog/note-editor-dialog.component');
+
       this.customDialog.open(NoteEditorDialogComponent, {
         title: 'Create Note',
         headerIcon: this.accountState.profile()?.data?.picture || '',
