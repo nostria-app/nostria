@@ -147,6 +147,7 @@ export class VideoPlayerComponent {
       'mp4': 'video/mp4',
       'm4v': 'video/mp4',
       'mov': 'video/mp4', // Modern .mov files are usually MPEG-4
+      'qt': 'video/quicktime',
       'webm': 'video/webm',
       'ogg': 'video/ogg',
       'ogv': 'video/ogg',

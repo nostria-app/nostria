@@ -456,7 +456,7 @@ export class NoteContentComponent implements OnDestroy {
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
     // MP4, WebM, and modern MOV files have good cross-browser support
     // Modern .mov files are typically MPEG-4 which browsers can play
-    return extension === 'mp4' || extension === 'webm' || extension === 'mov' || extension === 'm4v';
+    return extension === 'mp4' || extension === 'webm' || extension === 'mov' || extension === 'm4v' || extension === 'qt';
   }
 
   /**

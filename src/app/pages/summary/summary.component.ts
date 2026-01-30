@@ -935,7 +935,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
    * Check if a URL is likely a video based on extension or common video hosts
    */
   isVideoUrl(url: string): boolean {
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8'];
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8', '.qt'];
     const videoHosts = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.tv'];
 
     const lowerUrl = url.toLowerCase();

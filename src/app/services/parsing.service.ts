@@ -316,7 +316,7 @@ export class ParsingService {
       /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex =
-      /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+      /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex =
       /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
     // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only

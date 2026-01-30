@@ -494,7 +494,7 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     // Check file extension if type isn't available
     if (!media.type && media.url) {
       const url = media.url.toLowerCase();
-      const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.wmv', '.mkv'];
+      const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.wmv', '.mkv', '.qt'];
       return videoExtensions.some(ext => url.endsWith(ext));
     }
 
