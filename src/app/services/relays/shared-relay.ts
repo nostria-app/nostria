@@ -1,9 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
-import { EventProcessorService } from '../event-processor.service';
+
+// Forward reference to avoid circular dependency
+let EventProcessorServiceRef: any;
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +15,18 @@ export class SharedRelayService {
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
-  private readonly eventProcessor = inject(EventProcessorService);
+  private readonly injector = inject(Injector);
+  // Lazy-loaded to avoid circular dependency
+  private _eventProcessor?: any;
+  private get eventProcessor(): any {
+    if (!this._eventProcessor) {
+      if (!EventProcessorServiceRef) {
+        EventProcessorServiceRef = require('../event-processor.service').EventProcessorService;
+      }
+      this._eventProcessor = this.injector.get(EventProcessorServiceRef);
+    }
+    return this._eventProcessor;
+  }
 
   // Semaphore for controlling concurrent requests
   private readonly maxConcurrentRequests = 50; // Increased from 3 to handle many concurrent users

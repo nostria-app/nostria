@@ -1,8 +1,10 @@
-import { inject, Injectable, signal, computed } from '@angular/core';
+import { inject, Injectable, signal, computed, Injector } from '@angular/core';
 import { Event, kinds, Filter } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DatabaseService } from './database.service';
-import { AccountRelayService } from './relays/account-relay';
+
+// Forward reference to avoid circular dependency - will be set by AccountRelayService
+let AccountRelayServiceRef: any;
 
 /**
  * Represents a parsed deletion reference from a kind 5 event.
@@ -39,7 +41,19 @@ export interface DeletionReference {
 export class DeletionFilterService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);
-  private readonly accountRelay = inject(AccountRelayService);
+  private readonly injector = inject(Injector);
+  // Lazy-loaded to avoid circular dependency
+  private _accountRelay?: any;
+  private get accountRelay(): any {
+    if (!this._accountRelay) {
+      // Dynamically import to avoid circular dependency at module load time
+      if (!AccountRelayServiceRef) {
+        AccountRelayServiceRef = require('./relays/account-relay').AccountRelayService;
+      }
+      this._accountRelay = this.injector.get(AccountRelayServiceRef);
+    }
+    return this._accountRelay;
+  }
 
   // Deletion references indexed by event ID (for 'e' tag deletions)
   private readonly _deletedEventIds = signal<Map<string, DeletionReference>>(new Map());
