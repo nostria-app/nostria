@@ -283,6 +283,8 @@
     "introduction.new-user.description": "Создайте новый аккаунт в два клика",
     "introduction.login.title": "Войти",
     "introduction.login.description": "Войдите в существующий аккаунт",
+    "introduction.preview.title": "Просмотр",
+    "introduction.preview.description": "Исследуйте Nostr в режиме только для чтения",
     "introduction.terms-of-use.prefix": "Используя Nostria, вы соглашаетесь с",
     "introduction.terms-of-use.link": "Условиями использования",
     "introduction.terms-of-use.suffix": ".",

@@ -330,6 +330,19 @@ export class LocalSettingsService {
   }
 
   /**
+   * Set locale and save immediately (bypasses debounce).
+   * Use this when you need to reload the page right after changing locale.
+   */
+  setLocaleImmediate(locale: string): void {
+    this.settings.update(current => ({
+      ...current,
+      locale,
+    }));
+    // Save immediately, bypassing the debounce
+    this.saveSettings(this.settings());
+  }
+
+  /**
    * Set max relays per user
    */
   setMaxRelaysPerUser(maxRelaysPerUser: number): void {

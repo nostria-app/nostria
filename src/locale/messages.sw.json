@@ -283,6 +283,8 @@
     "introduction.new-user.description": "Unda akaunti mpya kwa mibofyo miwili",
     "introduction.login.title": "Ingia",
     "introduction.login.description": "Ingia kwa akaunti yako iliyopo",
+    "introduction.preview.title": "Hakikisho",
+    "introduction.preview.description": "Chunguza Nostr katika hali ya kusoma tu",
     "introduction.terms-of-use.prefix": "Kwa kutumia Nostria, unakubaliana na",
     "introduction.terms-of-use.link": "Masharti ya Matumizi",
     "introduction.terms-of-use.suffix": ".",

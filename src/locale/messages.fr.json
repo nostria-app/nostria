@@ -283,6 +283,8 @@
     "introduction.new-user.description": "Créer un nouveau compte en deux clics",
     "introduction.login.title": "Connexion",
     "introduction.login.description": "Se connecter avec votre compte existant",
+    "introduction.preview.title": "Aperçu",
+    "introduction.preview.description": "Explorer Nostr en mode lecture seule",
     "introduction.terms-of-use.prefix": "En utilisant Nostria, vous acceptez nos",
     "introduction.terms-of-use.link": "Conditions d'utilisation",
     "introduction.terms-of-use.suffix": ".",
