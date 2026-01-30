@@ -667,6 +667,15 @@
         opacity: 0.8;
       }
 
+      // Custom emoji image for NIP-30 reactions
+      .notification-custom-emoji {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+
       .new-indicator {
         background: var(--mat-sys-primary);
         color: var(--mat-sys-on-primary);

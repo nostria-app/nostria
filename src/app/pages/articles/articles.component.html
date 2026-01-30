@@ -116,3 +116,7 @@
     }
   </div>
 </div>
+
+@if (showSettingsDialog()) {
+<app-articles-settings-dialog (closed)="onSettingsDialogClosed($event)" />
+}

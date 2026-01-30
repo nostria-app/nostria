@@ -506,6 +506,17 @@ export class ContentNotificationService implements OnDestroy {
         const rawContent = event.content || '+';
         const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
 
+        // Extract custom emoji URL from tags (NIP-30)
+        // Custom emojis have content in :shortcode: format and an emoji tag with the URL
+        let customEmojiUrl: string | undefined;
+        if (rawContent.startsWith(':') && rawContent.endsWith(':')) {
+          const shortcode = rawContent.slice(1, -1); // Remove colons
+          const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+          if (emojiTag?.[2]) {
+            customEmojiUrl = emojiTag[2];
+          }
+        }
+
         // Extract the event being reacted to from the 'e' tag
         const eTag = event.tags.find(tag => tag[0] === 'e');
         const reactedEventId = eTag?.[1];
@@ -543,6 +554,7 @@ export class ContentNotificationService implements OnDestroy {
           metadata: {
             reactionContent,
             reactionEventId: event.id, // Store the reaction event ID for reference
+            customEmojiUrl, // Store custom emoji URL for NIP-30 emojis
           },
         });
       }
@@ -667,6 +679,7 @@ export class ContentNotificationService implements OnDestroy {
       content?: string;
       reactionContent?: string;
       reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
+      customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)
@@ -1036,6 +1049,17 @@ export class ContentNotificationService implements OnDestroy {
         const rawContent = event.content || '+';
         const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
 
+        // Extract custom emoji URL from tags (NIP-30)
+        // Custom emojis have content in :shortcode: format and an emoji tag with the URL
+        let customEmojiUrl: string | undefined;
+        if (rawContent.startsWith(':') && rawContent.endsWith(':')) {
+          const shortcode = rawContent.slice(1, -1); // Remove colons
+          const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+          if (emojiTag?.[2]) {
+            customEmojiUrl = emojiTag[2];
+          }
+        }
+
         // Try to fetch the original event content to show in the notification
         let reactedEventContent = '';
         if (reactedEventId) {
@@ -1070,6 +1094,7 @@ export class ContentNotificationService implements OnDestroy {
           metadata: {
             reactionContent,
             reactionEventId: event.id,
+            customEmojiUrl, // Store custom emoji URL for NIP-30 emojis
           },
         });
       }

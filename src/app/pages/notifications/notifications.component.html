@@ -208,6 +208,13 @@
             </a>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
+            @if (getCustomEmojiUrl(notification)) {
+            <img 
+              [src]="getCustomEmojiUrl(notification)!" 
+              [alt]="getCustomEmojiAlt(notification)"
+              [title]="getCustomEmojiAlt(notification)"
+              class="notification-custom-emoji">
+            }
           </div>
 
           @if (notification.message && notification.type !== 'zap') {

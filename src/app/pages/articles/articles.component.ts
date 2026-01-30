@@ -3,7 +3,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
-import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -49,6 +48,7 @@ imports: [
     ArticleEventComponent,
     UserProfileComponent,
     AgoPipe,
+    ArticlesSettingsDialogComponent,
   ],
   templateUrl: './articles.component.html',
   styleUrls: ['./articles.component.scss'],
@@ -66,7 +66,6 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private userRelay = inject(UserRelayService);
   private userRelays = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
-  private dialog = inject(MatDialog);
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -98,6 +97,9 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   // Articles relay set state
   articlesRelaySet = signal<Event | null>(null);
   articlesRelays = signal<string[]>([]);
+
+  // Settings dialog visibility
+  showSettingsDialog = signal(false);
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
@@ -357,19 +359,16 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   }
 
   openSettings(): void {
-    const dialogRef = this.dialog.open(ArticlesSettingsDialogComponent, {
-      width: '500px',
-      maxWidth: '95vw',
-    });
+    this.showSettingsDialog.set(true);
+  }
 
-    dialogRef.componentInstance.closed.subscribe(async (result) => {
-      if (result?.saved) {
-        // Reload articles relay set and restart subscriptions
-        await this.loadArticlesRelaySet();
-        this.refresh();
-      }
-      dialogRef.close();
-    });
+  async onSettingsDialogClosed(result: { saved: boolean } | null): Promise<void> {
+    this.showSettingsDialog.set(false);
+    if (result?.saved) {
+      // Reload articles relay set and restart subscriptions
+      await this.loadArticlesRelaySet();
+      this.refresh();
+    }
   }
 
   /**

@@ -647,9 +647,20 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Format notification title for display after username
    * - Lowercase first character since it follows the username in a sentence
    * - Replace '+' reaction with heart emoji
+   * - For custom emojis, return text without the emoji (it will be rendered separately as an image)
    */
   getFormattedNotificationTitle(notification: Notification): string {
     if (!notification.title) return '';
+
+    // Check if this is a reaction with a custom emoji
+    if (this.isContentNotificationWithData(notification)) {
+      const contentNotif = notification as ContentNotification;
+      if (contentNotif.type === NotificationType.REACTION && contentNotif.metadata?.customEmojiUrl) {
+        // For custom emojis, return "reacted" without the emoji shortcode (image will be shown separately)
+        return 'reacted';
+      }
+    }
+
     // Replace 'Reacted +' with 'reacted ❤️' and lowercase first character
     let title = notification.title.replace(/Reacted \+/g, 'reacted ❤️');
     // Lowercase the first character since it comes after the username
@@ -657,6 +668,35 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       title = title.charAt(0).toLowerCase() + title.slice(1);
     }
     return title;
+  }
+
+  /**
+   * Get custom emoji URL from a reaction notification (NIP-30)
+   * Returns the image URL if the notification has a custom emoji, undefined otherwise
+   */
+  getCustomEmojiUrl(notification: Notification): string | undefined {
+    if (this.isContentNotificationWithData(notification)) {
+      const contentNotif = notification as ContentNotification;
+      if (contentNotif.type === NotificationType.REACTION) {
+        return contentNotif.metadata?.customEmojiUrl;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Get the alt text for a custom emoji (the shortcode)
+   * Returns the shortcode from the reaction content, e.g., ":custom_emoji:" becomes "custom_emoji"
+   */
+  getCustomEmojiAlt(notification: Notification): string {
+    if (this.isContentNotificationWithData(notification)) {
+      const contentNotif = notification as ContentNotification;
+      const reactionContent = contentNotif.metadata?.reactionContent;
+      if (reactionContent && reactionContent.startsWith(':') && reactionContent.endsWith(':')) {
+        return reactionContent.slice(1, -1); // Remove colons
+      }
+    }
+    return 'custom emoji';
   }
 
   /**
