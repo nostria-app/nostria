@@ -93,14 +93,12 @@ export class CommentComponent {
     }
 
     // Open comment dialog to reply to this comment
-    const dialogRef = this.eventService.createCommentReply(this.rootEvent(), this.event());
+    const result = await this.eventService.createCommentReply(this.rootEvent(), this.event());
 
     // Handle dialog result and emit the new reply event
-    dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
-      if (result?.published && result.event) {
-        this.replyAdded.emit(result.event);
-      }
-    });
+    if (result?.published && result.event) {
+      this.replyAdded.emit(result.event);
+    }
   }
 
   private parseCommentTags(event: Event): CommentTags {

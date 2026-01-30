@@ -329,7 +329,7 @@ export class App implements OnInit {
     return this.accountState.accountProfiles();
   });
 
-  // Computed signal for accounts with their profiles for the UI
+  // Computed signal for accounts with their profiles for the UI, sorted by last usage (most recent first)
   accountsWithProfiles = computed(() => {
     const accounts = this.accountState.accounts();
     const currentPubkey = this.accountState.account()?.pubkey;
@@ -341,7 +341,8 @@ export class App implements OnInit {
       .map(account => ({
         account,
         profile: this.accountState.getAccountProfileSync(account.pubkey)
-      }));
+      }))
+      .sort((a, b) => (b.account.lastUsed ?? 0) - (a.account.lastUsed ?? 0));
   });
 
   // Computed signal to count unread content notifications only (excludes technical/system notifications)

@@ -1,0 +1,230 @@
+<!-- Collapsed State -->
+@if (!isExpanded()) {
+<div class="inline-collapsed-state"
+  (click)="expandEditor()"
+  (keydown.enter)="expandEditor()"
+  (keydown.space)="expandEditor()"
+  tabindex="0"
+  role="button"
+  aria-label="Expand reply editor">
+  <div class="avatar-wrapper">
+    @if (currentAccountPubkey()) {
+    <app-user-profile [pubkey]="currentAccountPubkey()!" view="icon" [disableLink]="true"></app-user-profile>
+    } @else {
+    <mat-icon class="default-avatar">account_circle</mat-icon>
+    }
+  </div>
+  <span class="placeholder-text">Post your reply</span>
+  <button mat-flat-button class="reply-button" [disabled]="!isLoggedIn()">
+    Reply
+  </button>
+</div>
+}
+
+<!-- Expanded Editor -->
+@if (isExpanded()) {
+<div class="inline-editor">
+  <div class="editor-content"
+    [attr.data-drag-enabled]="true"
+    (dragenter)="onDragEnter($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    [class.drag-over]="isDragOver()">
+
+    <!-- Error display -->
+    @if (mediaService.error()) {
+    <div class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ mediaService.error() }}</p>
+      <button mat-button (click)="dismissError()">Dismiss</button>
+    </div>
+    }
+
+    <!-- Upload progress -->
+    @if (isUploading()) {
+    <div class="upload-progress">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <span class="upload-text">{{ uploadStatus() || 'Uploading...' }}</span>
+    </div>
+    }
+
+    <!-- Reply context -->
+    <div class="reply-context">
+      <span class="reply-label">Replying to</span>
+      <app-user-profile [pubkey]="replyToEvent().pubkey" view="tiny" class="reply-author"></app-user-profile>
+    </div>
+
+    <!-- Media Thumbnails -->
+    @if (mediaMetadata().length > 0) {
+    <div class="media-thumbnails">
+      @for (media of mediaMetadata(); track media.url; let i = $index) {
+      <div class="media-thumbnail">
+        <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
+          <mat-icon>close</mat-icon>
+        </button>
+        @if (media.mimeType?.startsWith('video/')) {
+        <mat-icon class="video-icon">videocam</mat-icon>
+        @if (media.image) {
+        <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
+        }
+        } @else {
+        <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
+        }
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Content textarea -->
+    <div class="textarea-container">
+      <mat-form-field appearance="outline" class="content-field">
+        <mat-label>Post your reply</mat-label>
+        <textarea matInput
+          [value]="content()"
+          (input)="onContentInput($event)"
+          (keydown)="onContentKeyDown($event)"
+          (keyup)="onContentKeyUp($event)"
+          (click)="onContentClick($event)"
+          placeholder="Write your reply... Use @ to mention someone"
+          rows="3"
+          class="content-textarea"
+          #contentTextarea>
+        </textarea>
+        <mat-hint align="end">{{ characterCount() }} characters</mat-hint>
+      </mat-form-field>
+
+      <!-- Mention Autocomplete -->
+      @if (mentionConfig()) {
+      <app-mention-autocomplete
+        [config]="mentionConfig()"
+        [position]="mentionPosition()"
+        [maxResults]="100"
+        [maxHeight]="400"
+        (mentionSelected)="onMentionSelected($event)"
+        (dismissed)="onMentionDismissed()">
+      </app-mention-autocomplete>
+      }
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*,video/*" multiple
+      class="hidden-file-input" aria-label="Upload media files" />
+
+    <!-- Mentions display -->
+    @if (mentions().length > 0) {
+    <div class="mentions-section">
+      <span class="mentions-label">Mentioning:</span>
+      <mat-chip-set class="mentions-chips">
+        @for (mention of mentions(); track mention) {
+        <mat-chip [removable]="!isReplyTargetMention(mention)" (removed)="removeMention(mention)">
+          {{ getMentionDisplayName(mention) }}
+          @if (!isReplyTargetMention(mention)) {
+          <mat-icon matChipRemove>cancel</mat-icon>
+          }
+        </mat-chip>
+        }
+      </mat-chip-set>
+    </div>
+    }
+
+    <!-- Hashtags display -->
+    @if (hashtags().length > 0) {
+    <div class="hashtags-section">
+      <span class="hashtags-label">Tags:</span>
+      <mat-chip-set class="hashtags-chips">
+        @for (hashtag of hashtags(); track hashtag) {
+        <mat-chip>
+          #{{ hashtag }}
+        </mat-chip>
+        }
+      </mat-chip-set>
+    </div>
+    }
+
+    <!-- Drag overlay -->
+    @if (isDragOver()) {
+    <div class="drag-overlay">
+      <div class="drag-message">
+        <mat-icon class="drag-icon">cloud_upload</mat-icon>
+        <span>Drop files here to upload</span>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Action bar -->
+  <div class="action-container"
+    (dragenter)="onDragEnter($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)">
+
+    <!-- Left side: Action buttons -->
+    <div class="left-actions">
+      <!-- Dictation button -->
+      <button mat-icon-button type="button"
+        (click)="toggleRecording()"
+        [color]="isRecording() ? 'warn' : ''"
+        [disabled]="isUploading() || isPublishing() || isTranscribing()"
+        [matTooltip]="isRecording() ? 'Stop listening' : 'Dictate reply'">
+        @if (isTranscribing()) {
+        <mat-icon class="spinning">sync</mat-icon>
+        } @else if (isRecording()) {
+        <mat-icon>stop</mat-icon>
+        } @else {
+        <mat-icon>mic</mat-icon>
+        }
+      </button>
+
+      <!-- Undo recording button -->
+      @if (recordingHistory.length > 0) {
+      <button mat-icon-button type="button"
+        (click)="undoLastRecording()"
+        [disabled]="isUploading() || isPublishing() || isTranscribing()"
+        matTooltip="Undo last recording">
+        <mat-icon>undo</mat-icon>
+      </button>
+      }
+
+      <!-- Media button -->
+      <button mat-icon-button type="button"
+        [matMenuTriggerFor]="mediaMenu"
+        [disabled]="isUploading() || isPublishing()"
+        matTooltip="Add media">
+        <mat-icon>perm_media</mat-icon>
+      </button>
+      <mat-menu #mediaMenu="matMenu">
+        <button mat-menu-item (click)="openFileDialog()">
+          <mat-icon>upload</mat-icon>
+          <span>Upload media</span>
+        </button>
+        <button mat-menu-item (click)="openMediaChooser()">
+          <mat-icon>photo_library</mat-icon>
+          <span>Choose from library</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    <!-- Right side: Primary actions -->
+    <div class="right-actions">
+      <button mat-flat-button
+        (click)="publishReply()"
+        [disabled]="!canPublish() || isPublishing()"
+        class="publish-button"
+        matTooltip="Ctrl+Enter">
+        @if (isPublishing()) {
+        <ng-container>
+          <mat-icon class="spinning">hourglass_empty</mat-icon>
+          Sending...
+        </ng-container>
+        } @else {
+        <ng-container>
+          Reply
+        </ng-container>
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}

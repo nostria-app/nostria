@@ -92,6 +92,11 @@ import { DatabaseService } from '../../services/database.service';
         } @else {
           @if (!isProcessing()) {
             <button 
+              mat-button  
+              (click)="attemptReload()">
+              Attempt Reload
+            </button>
+            <button 
               mat-flat-button  
               (click)="attemptDeletion()"
               [disabled]="operationStatus() === 'delete-failed'">
@@ -157,6 +162,10 @@ export class DatabaseErrorDialogComponent {
   }
 
   reloadPage(): void {
+    window.location.reload();
+  }
+
+  attemptReload(): void {
     window.location.reload();
   }
 }

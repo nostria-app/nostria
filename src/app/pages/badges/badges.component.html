@@ -56,7 +56,7 @@
         @if (accepted().length === 0) {
         <div class="no-badges-message">
           <mat-icon>verified</mat-icon>
-          <p>You haven't accepted any badges yet</p>
+          <p>No badges accepted yet</p>
         </div>
         }
       </div>
@@ -93,7 +93,7 @@
       </div>
       } @else {
       <div class="badges-list">
-        @for (badge of received(); track badge.id) {
+        @for (badge of visibleReceived(); track badge.id) {
         <app-badge [badge]="badge" layout="horizontal" [showActions]="isViewingOwnProfile()" [issuerName]="
                   badgeIssuers()[badge.pubkey]?.name ||
                   badgeIssuers()[badge.pubkey]?.display_name ||
@@ -104,10 +104,18 @@
         </app-badge>
         }
 
+        @if (canLoadMoreReceived()) {
+        <div #receivedSentinel class="received-sentinel"></div>
+        }
+
         @if (received().length === 0) {
         <div class="no-badges-message">
           <mat-icon>emoji_events</mat-icon>
+          @if (isViewingOwnProfile()) {
           <p>You haven't received any badges yet</p>
+          } @else {
+          <p>No badges received yet</p>
+          }
         </div>
         }
       </div>
@@ -137,7 +145,11 @@
         @if (issued().length === 0) {
         <div class="no-badges-message">
           <mat-icon>emoji_events</mat-icon>
+          @if (isViewingOwnProfile()) {
           <p>You haven't given any badges yet</p>
+          } @else {
+          <p>No badges given yet</p>
+          }
         </div>
         }
       </div>

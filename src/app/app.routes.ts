@@ -34,10 +34,10 @@ function createProfileChildren(): Routes {
           title: 'Timeline',
         },
         {
-          path: 'reads',
+          path: 'articles',
           loadComponent: () =>
             import('./pages/profile/profile-reads/profile-reads.component').then(m => m.ProfileReadsComponent),
-          title: 'Reads',
+          title: 'Articles',
         },
         {
           path: 'media',

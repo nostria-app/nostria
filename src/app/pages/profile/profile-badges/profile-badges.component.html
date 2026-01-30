@@ -19,31 +19,9 @@
   </div>
   } @else {
   <div class="badges-list">
-    @for (badge of parsedBadges(); track (badge.pubkey + ':' + badge.slug); let i = $index) {
+    @for (badge of acceptedBadges(); track badge.id) {
     <a class="badge-item" [routerLink]="getBadgeDetailRoute(badge)">
-      <div class="badge-image-container">
-        @if (isBadgeFailed()[i]) {
-        <div class="badge-placeholder badge-failed">
-          <mat-icon>error_outline</mat-icon>
-        </div>
-        } @else if (badge.thumb || badge.image) {
-        <img [src]="badge.thumb || badge.image" [alt]="badge.name" class="badge-image" loading="lazy" />
-        } @else if (isBadgeLoading()[i]) {
-        <div class="badge-loading">
-          <mat-spinner diameter="32"></mat-spinner>
-        </div>
-        } @else {
-        <div class="badge-placeholder">
-          <mat-icon>military_tech</mat-icon>
-        </div>
-        }
-      </div>
-      <div class="badge-info">
-        <span class="badge-name">{{ badge.name }}</span>
-        @if (badge.description) {
-        <span class="badge-description">{{ badge.description }}</span>
-        }
-      </div>
+      <app-badge [badge]="badge" layout="horizontal"></app-badge>
       <mat-icon class="chevron">chevron_right</mat-icon>
     </a>
     }

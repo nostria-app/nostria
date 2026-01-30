@@ -1,0 +1,372 @@
+// Inline Reply Editor Styles
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+// Collapsed state
+:host.collapsed {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-lowest);
+  }
+}
+
+// Collapsed state UI
+.inline-collapsed-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+
+  .avatar-wrapper {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .default-avatar {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    app-user-profile {
+      width: 36px;
+      height: 36px;
+
+      ::ng-deep {
+        .user-profile.icon {
+          .user-profile-container {
+            width: 36px;
+            height: 36px;
+          }
+
+          .user-profile-avatar {
+            width: 32px;
+            height: 32px;
+            border-width: 2px;
+          }
+
+          .default-user-avatar {
+            font-size: 32px;
+          }
+        }
+      }
+    }
+  }
+
+  .placeholder-text {
+    flex: 1;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reply-button {
+    flex-shrink: 0;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+// Expanded editor
+.inline-editor {
+  padding: 8px 0;
+
+  .editor-content {
+    position: relative;
+    padding: 8px 0;
+    overflow: visible;
+
+    &.drag-over {
+      background-color: var(--mat-sys-primary-container);
+      border-radius: 8px;
+    }
+  }
+}
+
+// Error container
+.error-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border-radius: 8px;
+  margin-bottom: 12px;
+
+  p {
+    flex: 1;
+    margin: 0;
+  }
+}
+
+// Upload progress
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+
+  .upload-text {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    text-align: center;
+  }
+}
+
+// Reply context
+.reply-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 6px;
+  font-size: 13px;
+
+  .reply-label {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .reply-author {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+// Media thumbnails
+.media-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+
+  .media-thumbnail {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--mat-sys-surface-container);
+
+    .thumbnail-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-icon {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      font-size: 16px;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .remove-media-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+    }
+  }
+}
+
+// Textarea container
+.textarea-container {
+  position: relative;
+
+  .content-field {
+    width: 100%;
+
+    .content-textarea {
+      min-height: 60px;
+      max-height: 200px;
+      overflow-y: auto;
+      resize: none;
+      field-sizing: content;
+    }
+
+    ::ng-deep {
+      .mat-mdc-form-field-infix {
+        padding-top: 14px !important;
+        padding-bottom: 4px !important;
+      }
+
+      .mat-mdc-form-field-subscript-wrapper {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// Hidden file input
+.hidden-file-input {
+  display: none;
+}
+
+// Mentions section
+.mentions-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+
+  .mentions-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .mentions-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    .mat-mdc-chip {
+      height: 24px;
+      font-size: 12px;
+    }
+  }
+}
+
+// Hashtags section
+.hashtags-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+
+  .hashtags-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .hashtags-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    .mat-mdc-chip {
+      height: 24px;
+      font-size: 12px;
+    }
+  }
+}
+
+// Drag overlay
+.drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--mat-sys-primary-rgb), 0.1);
+  border: 2px dashed var(--mat-sys-primary);
+  border-radius: 8px;
+  z-index: 10;
+
+  .drag-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--mat-sys-primary);
+
+    .drag-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
+
+// Action container
+.action-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+
+  .left-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .right-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  // Smaller buttons
+  .mat-mdc-icon-button {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+
+    .mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .publish-button {
+    min-width: unset;
+    padding: 0 16px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
+
+// Spinning animation for loading states
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

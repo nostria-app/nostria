@@ -1,0 +1,140 @@
+.bolt12-card {
+  margin: 4px 0 12px 0;
+  max-width: 450px;
+  background: linear-gradient(135deg, var(--mat-sys-tertiary-container, #fff3e0) 0%, var(--mat-sys-surface-container, #f5f5f5) 100%);
+  border: 2px solid var(--mat-sys-tertiary, #ff9800);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bolt12-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+}
+
+.bolt12-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--mat-sys-tertiary, #ff9800);
+  color: var(--mat-sys-on-tertiary, #ffffff);
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.bolt12-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; // Allow text truncation
+}
+
+.bolt12-title {
+  font-size: 1rem;
+  color: var(--mat-sys-on-surface, #000000);
+}
+
+.bolt12-link {
+  font-size: 0.875rem;
+  color: var(--mat-sys-tertiary, #ff9800);
+  text-decoration: none;
+  word-break: break-all;
+  font-family: monospace;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.bolt12-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  align-items: center;
+
+  .pay-button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--mat-sys-tertiary, #ff9800);
+    color: var(--mat-sys-on-tertiary, #ffffff);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: var(--mat-sys-tertiary, #f57c00);
+    }
+  }
+
+  .qr-button {
+    color: var(--mat-sys-on-surface-variant, #666666);
+
+    &:hover,
+    &.active {
+      color: var(--mat-sys-tertiary, #ff9800);
+      background: var(--mat-sys-tertiary-container, rgba(255, 152, 0, 0.1));
+    }
+  }
+
+  button[mat-icon-button] {
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// Dark theme support
+:host-context(.dark) {
+  .bolt12-card {
+    background: linear-gradient(135deg, var(--mat-sys-tertiary-container, #3e2723) 0%, var(--mat-sys-surface-container, #2e2e2e) 100%);
+    border-color: var(--mat-sys-tertiary, #ffb74d);
+  }
+
+  .bolt12-icon {
+    background: var(--mat-sys-tertiary, #ffb74d);
+  }
+
+  .bolt12-title {
+    color: var(--mat-sys-on-surface, #ffffff);
+  }
+
+  .bolt12-link {
+    color: var(--mat-sys-tertiary, #ffb74d);
+  }
+
+  .bolt12-actions .pay-button {
+    background: var(--mat-sys-tertiary, #ffb74d);
+    color: var(--mat-sys-on-tertiary, #000000);
+  }
+}
+
+// QR code overlay styles
+::ng-deep .qr-backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::ng-deep .cdk-overlay-pane qr-code {
+  display: block;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
