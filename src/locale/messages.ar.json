@@ -283,6 +283,8 @@
     "introduction.new-user.description": "أنشئ حساباً جديداً بنقرتين",
     "introduction.login.title": "تسجيل الدخول",
     "introduction.login.description": "سجل الدخول بحسابك الحالي",
+    "introduction.preview.title": "معاينة",
+    "introduction.preview.description": "استكشف Nostr في وضع القراءة فقط",
     "introduction.terms-of-use.prefix": "باستخدام نوستريا، فإنك توافق على",
     "introduction.terms-of-use.link": "شروط الاستخدام",
     "introduction.terms-of-use.suffix": ".",

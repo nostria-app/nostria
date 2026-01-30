@@ -38,7 +38,9 @@ export class Introduction {
     { code: 'en', name: 'English' },
     { code: 'ar', name: 'العربية' },
     { code: 'cnr', name: 'Crnogorski' },
+    { code: 'es', name: 'Español' },
     { code: 'fa', name: 'فارسی' },
+    { code: 'fr', name: 'Français' },
     { code: 'no', name: 'Norsk' },
     { code: 'ru', name: 'Русский' },
     { code: 'sw', name: 'Kiswahili' },
@@ -62,7 +64,7 @@ export class Introduction {
   }
 
   setLanguage(languageCode: string): void {
-    this.localSettings.setLocale(languageCode);
+    this.localSettings.setLocaleImmediate(languageCode);
     if (this.app.isBrowser()) {
       window.location.reload();
     }

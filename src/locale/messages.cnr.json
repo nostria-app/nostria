@@ -266,6 +266,8 @@
     "introduction.new-user.description": "Kreirajte novi nalog sa dva klika",
     "introduction.login.title": "Prijava",
     "introduction.login.description": "Prijavite se sa svojim postojećim nalogom",
+    "introduction.preview.title": "Pregled",
+    "introduction.preview.description": "Istražite Nostr u režimu samo za čitanje",
     "introduction.terms-of-use.prefix": "Korišćenjem Nostrie, slažete se sa",
     "introduction.terms-of-use.link": "Uslovima korišćenja",
     "introduction.terms-of-use.suffix": ".",

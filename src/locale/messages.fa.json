@@ -283,6 +283,8 @@
     "introduction.new-user.description": "با دو کلیک حساب کاربری جدید بسازید",
     "introduction.login.title": "ورود",
     "introduction.login.description": "با حساب کاربری موجود وارد شوید",
+    "introduction.preview.title": "پیش‌نمایش",
+    "introduction.preview.description": "Nostr را در حالت فقط خواندنی کاوش کنید",
     "introduction.terms-of-use.prefix": "با استفاده از نوستریا، شما با",
     "introduction.terms-of-use.link": "شرایط استفاده",
     "introduction.terms-of-use.suffix": "موافقت می‌کنید.",
