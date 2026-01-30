@@ -1018,9 +1018,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
 
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
-
     // Capture the event ID and author pubkey we're loading for to prevent race conditions
     const targetEventId = targetRecordData.event.id;
     // IMPORTANT: Use the EVENT AUTHOR's pubkey, not the current user's pubkey!
