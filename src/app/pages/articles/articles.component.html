@@ -53,9 +53,11 @@
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh articles">
     <mat-icon>refresh</mat-icon>
   </button>
+  @if (isAuthenticated()) {
   <button mat-icon-button (click)="openSettings()" matTooltip="Configure article relays">
     <mat-icon>settings</mat-icon>
   </button>
+  }
 </div>
 
 <div class="articles-container">

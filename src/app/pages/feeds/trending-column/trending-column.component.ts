@@ -19,6 +19,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { EventComponent } from '../../../components/event/event.component';
 import { LoggerService } from '../../../services/logger.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 export type TrendingOrder = 'replies' | 'reposts' | 'reactions' | 'zap_count' | 'zap_amount';
 export type TrendingHours = 1 | 4 | 12 | 24 | 48;
@@ -33,12 +34,6 @@ interface TrendingApiResponse {
 }
 
 const PAGE_SIZE = 5;
-
-// Relays that aggregate trending content - used to fetch events from the trending API
-const TRENDING_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://relay.primal.net',
-];
 
 @Component({
   selector: 'app-trending-column',
@@ -59,6 +54,7 @@ const TRENDING_RELAYS = [
 })
 export class TrendingColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
+  private utilities = inject(UtilitiesService);
 
   private loadMoreTriggerElement?: HTMLDivElement;
 
@@ -107,8 +103,8 @@ export class TrendingColumnComponent implements OnDestroy {
   hasEvents = computed(() => this.displayedEventIds().length > 0);
   hasMore = computed(() => this.displayCount() < this.allEventIds().length);
 
-  // Expose trending relays for the template to pass to EventComponent
-  readonly trendingRelays = TRENDING_RELAYS;
+  // Expose anonymous relays for the template to pass to EventComponent
+  readonly trendingRelays = this.utilities.anonymousRelays;
 
   private abortController: AbortController | null = null;
   private intersectionObserver?: IntersectionObserver;

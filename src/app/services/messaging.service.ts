@@ -2266,4 +2266,79 @@ export class MessagingService implements NostriaService {
       this.logger.error('Error marking all chats as read:', error);
     }
   }
+
+  /**
+   * Delete a message from a chat (local deletion only)
+   * This removes the message from local storage and memory.
+   * Note: This does not delete the message from relays - that would require
+   * publishing a NIP-09 deletion event, but gift-wrapped messages use ephemeral
+   * keys so deletion requests cannot be verified by relays.
+   * 
+   * For outgoing messages, the user can only delete their own view of the message.
+   * The recipient will still have their copy.
+   * 
+   * @param chatId The chat ID (pubkey of the other party)
+   * @param messageId The message ID to delete
+   * @returns true if the message was deleted, false otherwise
+   */
+  async deleteMessage(chatId: string, messageId: string): Promise<boolean> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot delete message: no account pubkey');
+      return false;
+    }
+
+    const chat = this.getChat(chatId);
+    if (!chat) {
+      this.logger.warn(`Cannot delete message: chat ${chatId} not found`);
+      return false;
+    }
+
+    const message = chat.messages.get(messageId);
+    if (!message) {
+      this.logger.warn(`Cannot delete message: message ${messageId} not found in chat ${chatId}`);
+      return false;
+    }
+
+    try {
+      // Delete from IndexedDB
+      await this.database.init();
+      await this.database.deleteDirectMessage(myPubkey, chatId, messageId);
+
+      // Update in-memory state
+      const currentMap = this.chatsMap();
+      const newMap = new Map(currentMap);
+      const existingChat = newMap.get(chatId);
+
+      if (existingChat) {
+        const updatedMessagesMap = new Map(existingChat.messages);
+        updatedMessagesMap.delete(messageId);
+
+        // Recalculate last message
+        const newLastMessage = this.getLatestMessage(updatedMessagesMap);
+
+        // Recalculate unread count if we deleted an unread message
+        let newUnreadCount = existingChat.unreadCount;
+        if (!message.isOutgoing && !message.read) {
+          newUnreadCount = Math.max(0, newUnreadCount - 1);
+        }
+
+        const updatedChat: Chat = {
+          ...existingChat,
+          messages: updatedMessagesMap,
+          lastMessage: newLastMessage,
+          unreadCount: newUnreadCount,
+        };
+
+        newMap.set(chatId, updatedChat);
+        this.chatsMap.set(newMap);
+      }
+
+      this.logger.info(`Deleted message ${messageId} from chat ${chatId}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Error deleting message:', error);
+      return false;
+    }
+  }
 }

@@ -112,6 +112,11 @@ type AccountStatesRoot = Record<string, AccountLocalState>;
 const ACCOUNT_STATE_KEY = 'nostria-state';
 
 /**
+ * Key used for storing state for anonymous (unauthenticated) users
+ */
+export const ANONYMOUS_PUBKEY = 'anonymous';
+
+/**
  * Service for managing per-account state in localStorage
  * This centralizes state that should be stored per-account rather than globally
  * Uses in-memory caching to avoid repeated localStorage reads

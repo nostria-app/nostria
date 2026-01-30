@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19 } from 'nostr-tools';
@@ -35,6 +36,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatTabsModule,
     MatMenuModule,
     MatSnackBarModule,
+    MatTooltipModule,
     MusicPlaylistCardComponent,
     MusicTrackDialogComponent,
     MusicTrackMenuComponent,

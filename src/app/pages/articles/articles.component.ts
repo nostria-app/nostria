@@ -194,6 +194,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         const savedShowPublic = this.accountLocalState.getArticlesShowPublic(pubkey);
         this.showFollowing.set(savedShowFollowing);
         this.showPublic.set(savedShowPublic);
+      } else {
+        // Anonymous users default to public view
+        this.showFollowing.set(false);
+        this.showPublic.set(true);
       }
     }, { allowSignalWrites: true });
 
@@ -619,19 +623,30 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       this.publicSubscription = null;
     }
 
+    // Set loading state
+    this.loading.set(true);
+
     // Get account relays
     const accountRelays = this.accountRelay.getRelayUrls();
 
     // Combine with articles-specific relays
     const customArticlesRelays = this.articlesRelays();
-    const allRelayUrls = [...new Set([...accountRelays, ...customArticlesRelays])];
+    let allRelayUrls = [...new Set([...accountRelays, ...customArticlesRelays])];
+
+    // Fallback to anonymous relays if no account relays available
+    if (allRelayUrls.length === 0) {
+      allRelayUrls = this.utilities.anonymousRelays;
+    }
 
     console.log('[Articles] Starting public subscription with relays:', allRelayUrls);
 
-    if (allRelayUrls.length === 0) {
-      console.warn('[Articles] No relays available for loading public articles');
-      return;
-    }
+    // Set a timeout to stop loading even if no events arrive
+    const loadingTimeout = setTimeout(() => {
+      if (this.loading()) {
+        console.log('[Articles] Public: No events received within timeout, stopping loading state');
+        this.loading.set(false);
+      }
+    }, 5000);
 
     const filter: Filter = {
       kinds: [kinds.LongFormArticle],
@@ -643,6 +658,12 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       filter,
       (event: Event) => {
         this.handleArticleEvent(event);
+
+        // Mark as loaded once we start receiving events
+        if (this.loading()) {
+          clearTimeout(loadingTimeout);
+          this.loading.set(false);
+        }
       }
     );
   }

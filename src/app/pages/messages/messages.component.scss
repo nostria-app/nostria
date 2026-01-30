@@ -860,14 +860,15 @@
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 
-// Message actions (reply button)
+// Message actions
 .message-actions {
   display: none;
   flex-shrink: 0;
   margin-left: 4px;
+  gap: 2px;
 
-  .reply-button,
-  .retry-button {
+  .retry-button,
+  .more-button {
     opacity: 0.7;
     transition: opacity 0.2s ease;
     width: 32px;
@@ -894,6 +895,22 @@
 
 .message-bubble-container:hover .message-actions {
   display: flex;
+}
+
+// Long press visual feedback for touch devices
+.message-bubble.long-press-active {
+  transform: scale(0.98);
+  opacity: 0.9;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+// Delete menu item styling (red text)
+.delete-menu-item {
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
 }
 
 .chat-item {

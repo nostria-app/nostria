@@ -1,6 +1,3 @@
-@if (!app.authenticated()) {
-<app-introduction></app-introduction>
-} @else {
 <div class="home-container" #homeContainer [ngClass]="columnLayout()">
 
   <!-- Feeds Container with Connected Headers and Content -->
@@ -12,7 +9,13 @@
         <!-- Feed selector dropdown/tabs -->
         <div class="feed-tabs" #feedTabsContainer>
           <div class="feed-tabs-inner" #feedTabsInner>
-            @if (!feedService.feedsLoaded()) {
+            @if (!app.authenticated()) {
+            <!-- Unauthenticated users see only Trending tab -->
+            <button class="feed-tab active" mat-button>
+              <mat-icon>trending_up</mat-icon>
+              <span>Trending</span>
+            </button>
+            } @else if (!feedService.feedsLoaded()) {
             <!-- Show loading indicator while feeds are loading -->
             <button mat-button disabled>
               <mat-icon>dynamic_feed</mat-icon>
@@ -51,8 +54,8 @@
 
         <span class="spacer"></span>
 
-        <!-- Filter button with overlay panel -->
-        @if (feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
+        <!-- Filter button with overlay panel - only for authenticated users -->
+        @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
         <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
           matTooltip="Filter content">
           <mat-icon>tune</mat-icon>
@@ -69,7 +72,8 @@
         </ng-template>
         }
 
-        <!-- Feed menu with all actions -->
+        <!-- Feed menu with all actions - only for authenticated users -->
+        @if (app.authenticated()) {
         <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
           <mat-icon>more_vert</mat-icon>
         </button>
@@ -110,6 +114,7 @@
             <span>Reset Feeds</span>
           </button>
         </mat-menu>
+        }
       </div>
       <!-- End panel-header-inner -->
     </div>
@@ -117,8 +122,18 @@
     <!-- Content wrapper to constrain width and center - scrollbar stays at panel edge -->
     <div class="feeds-content-wrapper">
 
+      <!-- Unauthenticated users see only Trending content -->
+      @if (!app.authenticated()) {
+      <div class="columns-wrapper" #columnsWrapper>
+        <div class="column-unit" [class.visible]="true">
+          <div class="column-content">
+            <app-trending-column></app-trending-column>
+          </div>
+        </div>
+      </div>
+      }
       <!-- Relay Feed View - shown when relay query param is present -->
-      @if (showRelayFeed()) {
+      @else if (showRelayFeed()) {
       <div class="relay-feed-container">
         <div class="relay-column-wrapper">
           <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
@@ -420,7 +435,6 @@
   </button>
   }
 </div>
-}
 
 <!-- New Feed Dialog -->
 @if (showNewFeedDialog()) {

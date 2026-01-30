@@ -174,7 +174,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
   showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
   showSearch = signal<boolean>(false); // Toggle search input visibility
-  
+
+  // Long-press support for touch devices
+  longPressedMessage = signal<DirectMessage | null>(null);
+  private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
+
   // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
   // This enables the same behavior as mobile (toggle between list and thread) when viewing
   // a profile or event from the messages, as the left panel shrinks to 700px
@@ -1182,6 +1187,131 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   getMessageById(messageId: string): DirectMessage | undefined {
     const messages = this.messages();
     return messages.find(m => m.id === messageId);
+  }
+
+  /**
+   * Handle touch start on message bubble (for long press detection)
+   */
+  onMessageTouchStart(event: TouchEvent, message: DirectMessage): void {
+    // Clear any existing timeout
+    this.onMessageTouchEnd();
+
+    // Start the long press timer
+    this.longPressTimeout = setTimeout(() => {
+      // Trigger haptic feedback if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
+      this.longPressedMessage.set(message);
+      this.showMessageContextMenu(message, event);
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  /**
+   * Handle touch end/move (cancel long press)
+   */
+  onMessageTouchEnd(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+    // Clear after a short delay to allow menu to show
+    setTimeout(() => {
+      this.longPressedMessage.set(null);
+    }, 300);
+  }
+
+  /**
+   * Handle right-click context menu on desktop
+   */
+  onMessageContextMenu(event: MouseEvent, message: DirectMessage): void {
+    // Only show custom context menu for messages without failed status
+    if (!message.failed) {
+      event.preventDefault();
+      this.showMessageContextMenu(message, event);
+    }
+  }
+
+  /**
+   * Show the context menu for a message (shared by touch and right-click)
+   */
+  private showMessageContextMenu(message: DirectMessage, event: TouchEvent | MouseEvent): void {
+    // The mat-menu is triggered by the more_vert button, so we need to programmatically
+    // trigger it. For simplicity, we'll use the snackbar approach for touch devices
+    // and let the mat-menu handle desktop.
+
+    // For touch devices, show a bottom sheet style menu via snackbar with action
+    if (event instanceof TouchEvent) {
+      const actions = [
+        { label: 'Reply', action: () => this.setReplyTo(message) },
+        { label: 'Copy', action: () => this.copyMessageContent(message) },
+        { label: 'Delete', action: () => this.confirmDeleteMessage(message) },
+      ];
+
+      // Show a simple action snackbar (or we could use a custom dialog)
+      const snackRef = this.snackBar.open('Message options', 'Delete', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+
+      snackRef.onAction().subscribe(() => {
+        this.confirmDeleteMessage(message);
+      });
+    }
+  }
+
+  /**
+   * Copy message content to clipboard
+   */
+  async copyMessageContent(message: DirectMessage): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      this.snackBar.open('Message copied', 'Close', { duration: 2000 });
+    } catch (err) {
+      this.logger.error('Failed to copy message:', err);
+      this.snackBar.open('Failed to copy message', 'Close', { duration: 2000 });
+    }
+  }
+
+  /**
+   * Show confirmation dialog before deleting a message
+   */
+  async confirmDeleteMessage(message: DirectMessage): Promise<void> {
+    // Show confirmation snackbar
+    const snackRef = this.snackBar.open(
+      'Delete this message? This only removes it from your device.',
+      'Delete',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    snackRef.onAction().subscribe(async () => {
+      await this.deleteMessage(message);
+    });
+  }
+
+  /**
+   * Delete a message from the current chat
+   */
+  async deleteMessage(message: DirectMessage): Promise<void> {
+    const chatId = this.selectedChatId();
+    if (!chatId) {
+      this.logger.warn('Cannot delete message: no chat selected');
+      return;
+    }
+
+    const success = await this.messaging.deleteMessage(chatId, message.id);
+
+    if (success) {
+      this.snackBar.open('Message deleted', 'Close', { duration: 2000 });
+    } else {
+      this.snackBar.open('Failed to delete message', 'Close', { duration: 3000 });
+    }
   }
 
   /**

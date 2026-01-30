@@ -565,7 +565,12 @@ export class MusicComponent implements OnInit, OnDestroy {
 
     // Combine with music-specific relays from the user's relay set
     const customMusicRelays = this.musicRelays();
-    const allRelayUrls = [...new Set([...accountRelays, ...customMusicRelays])];
+    let allRelayUrls = [...new Set([...accountRelays, ...customMusicRelays])];
+
+    // For anonymous users, use default anonymous relays
+    if (allRelayUrls.length === 0) {
+      allRelayUrls = this.utilities.anonymousRelays;
+    }
 
     console.log('[Music] Account relays:', accountRelays);
     console.log('[Music] Custom music relays:', customMusicRelays);
