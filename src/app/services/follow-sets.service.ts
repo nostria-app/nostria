@@ -72,6 +72,15 @@ export class FollowSetsService {
       if (pubkey) {
         this.hasInitiallyLoaded.set(false);
 
+        // Clear any existing loading promise when switching accounts
+        // This ensures we don't skip loading due to stale promise state
+        this.loadingPromise = null;
+        this.lastLoadedPubkey = null;
+
+        // Clear follow sets immediately to prevent showing old account's lists
+        // The new account's lists will be loaded below
+        this.followSets.set([]);
+
         // For extension accounts, wait for the extension to be available before loading
         // since decryption of private follow sets requires the extension
         if (account?.source === 'extension') {
@@ -121,6 +130,7 @@ export class FollowSetsService {
         // First, try to load from database - parse immediately without waiting for decryption
         const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
 
+        let hasDbResults = false;
         if (dbEvents.length > 0) {
           // Parse database events immediately (without decryption)
           const dbSets = dbEvents
@@ -130,12 +140,15 @@ export class FollowSetsService {
           // Deduplicate by dTag, keeping only the newest event for each dTag
           const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
 
-          // Set follow sets immediately with public data
-          this.followSets.set(deduplicatedDbSets);
-          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database (without decryption)`);
+          if (deduplicatedDbSets.length > 0) {
+            hasDbResults = true;
+            // Set follow sets immediately with public data
+            this.followSets.set(deduplicatedDbSets);
+            this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database (without decryption)`);
 
-          // Start background decryption for private lists (don't await)
-          this.decryptPrivateListsInBackground(deduplicatedDbSets);
+            // Start background decryption for private lists (don't await)
+            this.decryptPrivateListsInBackground(deduplicatedDbSets);
+          }
         }
 
         // Then fetch from relays to get any updates
@@ -156,12 +169,18 @@ export class FollowSetsService {
         // Deduplicate by dTag, keeping only the newest event for each dTag
         const deduplicatedSets = this.deduplicateByDTag(sets);
 
-        // Set follow sets immediately with public data
-        this.followSets.set(deduplicatedSets);
-        this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays (without decryption)`);
+        // Only update from relay if we got results, or if we had no db results
+        // This prevents overwriting good db data with empty relay response
+        if (deduplicatedSets.length > 0 || !hasDbResults) {
+          // Set follow sets immediately with public data
+          this.followSets.set(deduplicatedSets);
+          this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays (without decryption)`);
 
-        // Start background decryption for private lists (don't await)
-        this.decryptPrivateListsInBackground(deduplicatedSets);
+          // Start background decryption for private lists (don't await)
+          this.decryptPrivateListsInBackground(deduplicatedSets);
+        } else {
+          this.logger.debug('[FollowSets] Relay returned empty results, keeping database results');
+        }
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');
