@@ -913,6 +913,15 @@
   }
 }
 
+// Hide menu item styling (neutral/warning)
+.hide-menu-item {
+  color: var(--mat-sys-on-surface);
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .chat-item {
   height: auto;
   padding: 12px 16px;

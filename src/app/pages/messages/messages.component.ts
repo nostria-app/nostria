@@ -233,8 +233,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return pTags.some(tag => tag[1] === chat.pubkey);
     });
 
-    // Merge and sort by timestamp
-    return [...persistedMessages, ...pending].sort((a, b) => a.created_at - b.created_at);
+    // Merge, filter hidden, and sort by timestamp
+    return [...persistedMessages, ...pending]
+      .filter(m => !this.messaging.isMessageHidden(chatId, m.id, true))
+      .sort((a, b) => a.created_at - b.created_at);
   });
 
   // Computed signal for messages grouped by date
@@ -550,6 +552,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Clear local state when account changes
             this.pendingMessages.set([]);
             this.selectedChatId.set(null);
+
+            // Clear the messaging service's in-memory state to prevent data from
+            // previous account bleeding into the new account's view
+            this.messaging.clear();
 
             // Reload chats for the new account (only if user is on messages page)
             // This is component-level loading, not global
@@ -1315,6 +1321,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Hide a received message from the current chat (local only)
+   */
+  hideMessage(message: DirectMessage): void {
+    const chatId = this.selectedChatId();
+    if (!chatId) {
+      this.logger.warn('Cannot hide message: no chat selected');
+      return;
+    }
+
+    this.messaging.hideMessage(chatId, message.id);
+    this.snackBar.open('Message hidden', 'Close', { duration: 2000 });
+  }
+
+  /**
    * Start a new chat with a user
    */
   startNewChat(): void {
@@ -1814,6 +1834,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
+      // Prevent starting a chat with yourself
+      const myPubkey = this.accountState.pubkey();
+      if (pubkey === myPubkey) {
+        this.snackBar.open('You cannot message yourself', 'Close', { duration: 3000 });
+        return;
+      }
+
       // Use pubkey directly as chatId - chats are now merged regardless of encryption type
       const chatId = pubkey;
       this.logger.debug('startChatWithUser - chatId:', chatId);

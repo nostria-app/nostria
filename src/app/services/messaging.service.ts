@@ -212,6 +212,13 @@ export class MessagingService implements NostriaService {
       return;
     }
 
+    // Prevent self-chat - can't message yourself
+    const myPubkey = this.accountState.pubkey();
+    if (pubkey === myPubkey) {
+      this.logger.warn('Cannot create chat with yourself', { pubkey, messageId: message.id });
+      return;
+    }
+
     const currentMap = this.chatsMap();
     // Use pubkey directly as chatId - messages are merged regardless of encryption type
     const chatId = pubkey;
@@ -2147,6 +2154,13 @@ export class MessagingService implements NostriaService {
 
   // Helper method to add a chat directly to the chatsMap (for temporary/new chats)
   addChat(chat: Chat): void {
+    // Prevent self-chat
+    const myPubkey = this.accountState.pubkey();
+    if (chat.pubkey === myPubkey) {
+      this.logger.warn('Cannot add chat with yourself', { chatId: chat.id });
+      return;
+    }
+
     const currentMap = this.chatsMap();
     const newMap = new Map(currentMap);
     newMap.set(chat.id, chat);
@@ -2340,5 +2354,48 @@ export class MessagingService implements NostriaService {
       this.logger.error('Error deleting message:', error);
       return false;
     }
+  }
+
+  /**
+   * Hide a message in a chat (for received messages)
+   * This stores the message ID in local state so it's filtered out of display.
+   * The message remains in storage but is not shown to the user.
+   * 
+   * @param chatId The chat ID (pubkey of the other party)
+   * @param messageId The message ID to hide
+   * @returns true if the message was hidden, false otherwise
+   */
+  hideMessage(chatId: string, messageId: string): boolean {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot hide message: no account pubkey');
+      return false;
+    }
+
+    const chat = this.getChat(chatId);
+    if (!chat) {
+      this.logger.warn(`Cannot hide message: chat ${chatId} not found`);
+      return false;
+    }
+
+    const message = chat.messages.get(messageId);
+    if (!message) {
+      this.logger.warn(`Cannot hide message: message ${messageId} not found in chat ${chatId}`);
+      return false;
+    }
+
+    // Store in local state
+    this.accountLocalState.hideMessage(myPubkey, chatId, messageId);
+    this.logger.info(`Hidden message ${messageId} in chat ${chatId}`);
+    return true;
+  }
+
+  /**
+   * Check if a message is hidden
+   */
+  isMessageHidden(chatId: string, messageId: string, trackChanges = false): boolean {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) return false;
+    return this.accountLocalState.isMessageHidden(myPubkey, chatId, messageId, trackChanges);
   }
 }
