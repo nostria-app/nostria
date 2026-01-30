@@ -15,6 +15,7 @@ export interface FollowSet {
   pubkeys: string[]; // List of pubkeys in this set
   createdAt: number; // Timestamp
   isPrivate: boolean; // Whether this set is encrypted (private)
+  decryptionPending?: boolean; // Whether private content is still being decrypted
   event?: Event; // The raw Nostr event
 }
 
@@ -95,6 +96,9 @@ export class FollowSetsService {
 
   /**
    * Load follow sets for a given pubkey from database and relays
+   * Uses a two-phase approach:
+   * 1. First phase: Parse events quickly without waiting for decryption (shows public content immediately)
+   * 2. Second phase: Attempt decryption in background and update follow sets when complete
    */
   async loadFollowSets(pubkey: string): Promise<void> {
     // If already loading for the same pubkey, return existing promise
@@ -114,20 +118,24 @@ export class FollowSetsService {
         // Ensure database is initialized before querying
         await this.database.init();
 
-        // First, try to load from database
+        // First, try to load from database - parse immediately without waiting for decryption
         const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
 
         if (dbEvents.length > 0) {
-          // Parse database events and update UI immediately
-          const dbSets = (await Promise.all(
-            dbEvents.map(event => this.parseFollowSetEvent(event))
-          )).filter((set): set is FollowSet => set !== null);
+          // Parse database events immediately (without decryption)
+          const dbSets = dbEvents
+            .map(event => this.parseFollowSetEventSync(event))
+            .filter((set): set is FollowSet => set !== null);
 
           // Deduplicate by dTag, keeping only the newest event for each dTag
           const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
 
+          // Set follow sets immediately with public data
           this.followSets.set(deduplicatedDbSets);
-          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database`);
+          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database (without decryption)`);
+
+          // Start background decryption for private lists (don't await)
+          this.decryptPrivateListsInBackground(deduplicatedDbSets);
         }
 
         // Then fetch from relays to get any updates
@@ -140,16 +148,20 @@ export class FollowSetsService {
           }
         );
 
-        // Convert all events to FollowSet objects
-        const sets = (await Promise.all(
-          events.map(record => this.parseFollowSetEvent(record.event))
-        )).filter((set): set is FollowSet => set !== null);
+        // Convert all events to FollowSet objects (without decryption)
+        const sets = events
+          .map(record => this.parseFollowSetEventSync(record.event))
+          .filter((set): set is FollowSet => set !== null);
 
         // Deduplicate by dTag, keeping only the newest event for each dTag
         const deduplicatedSets = this.deduplicateByDTag(sets);
 
+        // Set follow sets immediately with public data
         this.followSets.set(deduplicatedSets);
-        this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets (from ${sets.length} events)`);
+        this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays (without decryption)`);
+
+        // Start background decryption for private lists (don't await)
+        this.decryptPrivateListsInBackground(deduplicatedSets);
       } catch (error) {
         this.logger.error('[FollowSets] Failed to load follow sets:', error);
         this.error.set('Failed to load follow sets');
@@ -164,11 +176,114 @@ export class FollowSetsService {
   }
 
   /**
+   * Decrypt private lists in background and update the follow sets when done
+   * This runs asynchronously and doesn't block the initial load
+   */
+  private async decryptPrivateListsInBackground(sets: FollowSet[]): Promise<void> {
+    const privateSets = sets.filter(set => set.isPrivate && set.decryptionPending && set.event);
+
+    if (privateSets.length === 0) {
+      return;
+    }
+
+    this.logger.debug(`[FollowSets] Starting background decryption for ${privateSets.length} private lists`);
+
+    // Process each private set one at a time to avoid overwhelming the extension
+    for (const set of privateSets) {
+      try {
+        const privatePubkeys = await this.parsePrivatePubkeys(set.event!.content);
+
+        if (privatePubkeys.length > 0) {
+          // Update the follow set with decrypted pubkeys
+          this.followSets.update(currentSets => {
+            return currentSets.map(s => {
+              if (s.dTag === set.dTag) {
+                return {
+                  ...s,
+                  pubkeys: [...s.pubkeys, ...privatePubkeys],
+                  decryptionPending: false,
+                };
+              }
+              return s;
+            });
+          });
+
+          this.logger.debug(`[FollowSets] Decrypted ${privatePubkeys.length} private pubkeys for "${set.title}"`);
+        } else {
+          // No private pubkeys found, just mark as not pending
+          this.followSets.update(currentSets => {
+            return currentSets.map(s => {
+              if (s.dTag === set.dTag) {
+                return { ...s, decryptionPending: false };
+              }
+              return s;
+            });
+          });
+        }
+      } catch (error) {
+        this.logger.debug(`[FollowSets] Background decryption failed for "${set.title}":`, error);
+        // Mark as not pending even on failure - user may have rejected
+        this.followSets.update(currentSets => {
+          return currentSets.map(s => {
+            if (s.dTag === set.dTag) {
+              return { ...s, decryptionPending: false };
+            }
+            return s;
+          });
+        });
+      }
+    }
+  }
+
+  /**
    * Get the d-tag from an event
    */
   private getDTagFromEvent(event: Event): string | null {
     const dTag = event.tags.find(tag => tag[0] === 'd');
     return dTag ? dTag[1] : null;
+  }
+
+  /**
+   * Parse a kind 30000 event into a FollowSet object synchronously (without decryption)
+   * This allows immediate rendering of lists with public content while decryption happens in background
+   */
+  private parseFollowSetEventSync(event: Event): FollowSet | null {
+    try {
+      const dTag = this.getDTagFromEvent(event);
+      if (!dTag) {
+        this.logger.warn('[FollowSets] Event missing d-tag:', event.id);
+        return null;
+      }
+
+      // Extract title from tags or use d-tag as fallback
+      const titleTag = event.tags.find(tag => tag[0] === 'title');
+      const title = titleTag ? titleTag[1] : this.formatTitle(dTag);
+
+      // Extract pubkeys from public p tags
+      const publicPubkeys = event.tags
+        .filter(tag => tag[0] === 'p')
+        .map(tag => tag[1]);
+
+      // Determine if this set is private based on whether content is encrypted
+      const isPrivate = this.encryption.isContentEncrypted(event.content);
+
+      // Mark as pending decryption if there's encrypted content
+      const decryptionPending = isPrivate && event.content.trim() !== '';
+
+      return {
+        id: event.id,
+        dTag,
+        title,
+        pubkeys: publicPubkeys, // Only public pubkeys initially
+        createdAt: event.created_at,
+        isPrivate,
+        decryptionPending,
+        event,
+      };
+    } catch (error) {
+      this.logger.error('[FollowSets] Failed to parse follow set event:', error);
+      return null;
+    }
   }
 
   /**

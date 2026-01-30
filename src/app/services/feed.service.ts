@@ -1595,6 +1595,9 @@ export class FeedService {
 
         feedData.events.set(mergedEvents);
 
+        // Trigger reactivity update for components that depend on the map reference
+        this._feedData.update(map => new Map(map));
+
         // Mark initial load as complete after first batch is shown
         feedData.initialLoadComplete = true;
 
@@ -1627,33 +1630,24 @@ export class FeedService {
           this.saveEventToDatabase(event);
         }
       }
-    } else if (hasExistingEvents) {
-      // Initial load complete and has existing events - queue ALL new relay events to pending
-      // This shows the "X new posts" button updating dynamically
+    } else {
+      // Initial load is marked complete, but there are no displayed events.
+      // This can happen when startFeedsOnLastEvent is enabled and there's no cache.
+      // In that case, show events immediately to avoid an empty feed.
       const existingIds = new Set(existingEvents.map(e => e.id));
-      const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
-
-      const trulyNewEvents = filteredEvents.filter(
-        e => !existingIds.has(e.id) && !pendingIds.has(e.id)
-      );
+      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
 
       if (trulyNewEvents.length > 0) {
-        feedData.pendingEvents?.update((pending: Event[]) => {
-          const newPending = [...pending, ...trulyNewEvents];
-          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-        });
+        const mergedEvents = [...existingEvents, ...trulyNewEvents]
+          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
-        // Trigger reactivity update for components to see the new pending count
+        feedData.events.set(mergedEvents);
         this._feedData.update(map => new Map(map));
 
-        // Save to database for Summary page queries
         for (const event of trulyNewEvents) {
           this.saveEventToDatabase(event);
         }
       }
-    } else {
-      // Should not reach here, but handle just in case
-      this.logger.warn('Unexpected state in handleFollowingIncrementalUpdate');
     }
   }
 
@@ -3649,7 +3643,9 @@ export class FeedService {
       if (updated) {
         this.saveFeeds();
       } else {
-        this.logger.warn(`Feed ${feedId} not found for lastRetrieved update`);
+        // This can happen if a background fetch finishes after a feed was removed,
+        // or if legacy/ephemeral feed ids are used.
+        this.logger.debug(`Feed ${feedId} not found for lastRetrieved update`);
       }
     } catch (error) {
       this.logger.error('Error updating lastRetrieved:', error);

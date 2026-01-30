@@ -6,8 +6,8 @@
   <!-- List Selector -->
   @if (allFollowSets().length > 0) {
   <button mat-icon-button [matMenuTriggerFor]="followSetsMenu"
-    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'Following'">
-    <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
+    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'Select List'">
+    <mat-icon>{{ selectedFollowSet()?.isPrivate ? 'lock' : 'list' }}</mat-icon>
   </button>
 
   <mat-menu #followSetsMenu="matMenu">
