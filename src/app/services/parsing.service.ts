@@ -310,8 +310,11 @@ export class ParsingService {
     // Trailing punctuation (including unbalanced parens) is handled by post-processing cleanup
     // Stops at whitespace, LINEBREAK markers, quotes, or common trailing punctuation
     const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/g;
+    // YouTube regex: matches standard, shortened, and Shorts YouTube URLs with optional query parameters
+    // Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID
+    // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
     const youtubeRegex =
-      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
+      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
       /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
@@ -785,8 +788,13 @@ export class ParsingService {
 
       if (!rawUrl) continue;
 
-      const isSpecialType = matches.some(m => m.start === start && m.end === start + rawUrl.length);
-      if (!isSpecialType) {
+      // Check if this URL overlaps with any existing match (YouTube, image, video, audio, etc.)
+      const overlapsWithExisting = matches.some(m =>
+        (start >= m.start && start < m.end) ||
+        (start + rawUrl.length > m.start && start + rawUrl.length <= m.end) ||
+        (start <= m.start && start + rawUrl.length >= m.end)
+      );
+      if (!overlapsWithExisting) {
         matches.push({
           start,
           end: start + rawUrl.length,

@@ -199,6 +199,10 @@ export class MediaQueueComponent implements OnInit {
     const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
     if (shortMatch) return shortMatch[1];
 
+    // Handle youtube.com/shorts/ format
+    const shortsMatch = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+    if (shortsMatch) return shortsMatch[1];
+
     return null;
   }
 
