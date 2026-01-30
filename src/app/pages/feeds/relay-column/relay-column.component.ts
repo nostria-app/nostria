@@ -28,6 +28,7 @@ import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { RelayFeedsService } from '../../../services/relay-feeds.service';
 import { RepostService } from '../../../services/repost.service';
+import { EventProcessorService } from '../../../services/event-processor.service';
 
 const PAGE_SIZE = 10;
 
@@ -57,6 +58,7 @@ export class RelayColumnComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private clipboard = inject(Clipboard);
   private repostService = inject(RepostService);
+  private eventProcessor = inject(EventProcessorService);
 
   // Input for the relay URL (without wss://)
   relayDomain = input<string>('');
@@ -449,6 +451,10 @@ export class RelayColumnComponent implements OnDestroy {
       const sub = this.pool.subscribeMany(urls, filter, {
         onauth: authCallback,
         onevent: (event: Event) => {
+          // Filter event through centralized processor (expiration, deletion, muting)
+          if (!this.eventProcessor.shouldAcceptEvent(event)) {
+            return;
+          }
           events.push(event);
           // Sort by created_at descending and update
           events.sort((a, b) => b.created_at - a.created_at);

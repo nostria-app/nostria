@@ -4,6 +4,7 @@ import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
+import { EventProcessorService } from '../event-processor.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,6 +15,7 @@ export class RelayPoolService {
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
   private readonly relayAuth = inject(RelayAuthService);
+  private readonly eventProcessor = inject(EventProcessorService);
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -83,7 +85,12 @@ export class RelayPoolService {
     });
 
     try {
-      const event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
+      let event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
+
+      // Filter event through centralized processor (expiration, deletion, muting)
+      if (event && !this.eventProcessor.shouldAcceptEvent(event)) {
+        event = null;
+      }
 
       // Track successful event retrieval
       if (event) {
@@ -153,7 +160,10 @@ export class RelayPoolService {
     });
 
     try {
-      const events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
+      let events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
+
+      // Filter events through centralized processor (expiration, deletion, muting)
+      events = this.eventProcessor.filterEvents(events);
 
       // Debug: Log pagination results
       if (filter.until) {
@@ -260,6 +270,11 @@ export class RelayPoolService {
     const sub = this.#pool.subscribe(filteredUrls, filter, {
       onauth: authCallback,
       onevent: (event) => {
+        // Filter event through centralized processor (expiration, deletion, muting)
+        if (!this.eventProcessor.shouldAcceptEvent(event)) {
+          return;
+        }
+
         // Track event received for all relays in this subscription
         // Note: We don't know which specific relay sent this event, so we increment all
         filteredUrls.forEach(url => {
