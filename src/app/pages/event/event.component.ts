@@ -461,16 +461,14 @@ export class EventPageComponent {
           this.replies.set(partialData.replies);
         }
 
-        if (partialData.threadedReplies !== undefined) {
+        // Only update threadedReplies when we actually have replies to show
+        // This prevents flickering from multiple empty array updates during progressive loading
+        if (partialData.threadedReplies !== undefined && partialData.threadedReplies.length > 0) {
           this.threadedReplies.set(partialData.threadedReplies);
-          // Only mark as not loading if we actually have replies OR if this is the final update
-          // This prevents showing "No replies yet" during progressive loading
-          if (partialData.threadedReplies.length > 0) {
-            this.isLoadingReplies.set(false);
-          }
+          this.isLoadingReplies.set(false);
 
           // If openThreadsExpanded is false, collapse top-level replies by default
-          if (!this.localSettings.openThreadsExpanded() && partialData.threadedReplies.length > 0) {
+          if (!this.localSettings.openThreadsExpanded()) {
             const collapsedIds = new Set<string>();
             for (const reply of partialData.threadedReplies) {
               if (reply.replies.length > 0) {

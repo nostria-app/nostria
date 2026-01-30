@@ -178,7 +178,9 @@ export class BadgeDetailsComponent {
       const badge = this.badge()!;
       // Construct the badge id in the format: kind:pubkey:slug
       const badgeId = `30009:${badge.creator}:${badge.slug}`;
-      this.router.navigate(['/badges/edit', badgeId]);
+      // Pass the tab index so we return to the correct tab
+      const tabIndex = this.returnTabIndex();
+      this.layout.openBadgeEditor(badgeId, tabIndex !== null ? tabIndex : undefined);
     }
   }
 

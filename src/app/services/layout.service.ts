@@ -1496,7 +1496,68 @@ export class LayoutService implements OnDestroy {
   }
 
   openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
-    this.router.navigate(['/b', badge], { ...extra, state: { event } });
+    // Navigate to right panel for badge details
+    const currentUrl = this.router.url;
+    // Extract primary path without query params and without right outlet
+    const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
+    const [primaryPath] = urlWithoutOutlet.split('?');
+    
+    // Merge existing query params with new ones
+    const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
+    if (extra?.queryParams) {
+      Object.entries(extra.queryParams).forEach(([k, v]) => existingParams.set(k, String(v)));
+    }
+    const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
+    
+    const targetUrl = `${primaryPath}(right:b/${badge})${queryString}`;
+    this.router.navigateByUrl(targetUrl, { state: { event } });
+  }
+
+  /**
+   * Open the badge editor in the right panel
+   * @param badgeId - Optional badge ID for editing (format: kind:pubkey:slug)
+   * @param tabIndex - Optional tab index to return to after editing
+   */
+  openBadgeEditor(badgeId?: string, tabIndex?: number): void {
+    const currentUrl = this.router.url;
+    // Extract primary path without query params and without right outlet
+    const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
+    const [primaryPath] = urlWithoutOutlet.split('?');
+    
+    // Preserve existing query params and add/update tab
+    const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
+    if (tabIndex !== undefined) {
+      existingParams.set('tab', String(tabIndex));
+    }
+    const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
+    
+    const targetUrl = badgeId
+      ? `${primaryPath}(right:badges/edit/${badgeId})${queryString}`
+      : `${primaryPath}(right:badges/create)${queryString}`;
+    this.router.navigateByUrl(targetUrl);
+  }
+
+  /**
+   * Open badge details in the right panel
+   * @param badgeId - Badge ID (format: kind:pubkey:slug)
+   * @param event - Optional badge event data
+   * @param extra - Optional navigation extras
+   */
+  openBadgeDetails(badgeId: string, event?: Event, extra?: NavigationExtras): void {
+    const currentUrl = this.router.url;
+    // Extract primary path without query params and without right outlet
+    const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
+    const [primaryPath] = urlWithoutOutlet.split('?');
+    
+    // Merge existing query params with new ones
+    const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
+    if (extra?.queryParams) {
+      Object.entries(extra.queryParams).forEach(([k, v]) => existingParams.set(k, String(v)));
+    }
+    const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
+    
+    const targetUrl = `${primaryPath}(right:badges/details/${badgeId})${queryString}`;
+    this.router.navigateByUrl(targetUrl, { state: { event } });
   }
 
   openBadgesPage(pubkeyOrNpub: string): void {

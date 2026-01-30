@@ -98,10 +98,22 @@ export class BadgesComponent implements OnDestroy {
 
   constructor() {
     // Get the active tab from query params if available
+    // Use snapshot for initial value
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     if (tabParam) {
       this.activeTabIndex.set(parseInt(tabParam, 10));
     }
+
+    // Subscribe to query param changes to handle back navigation
+    this.route.queryParamMap.subscribe(params => {
+      const tab = params.get('tab');
+      if (tab !== null) {
+        const tabIndex = parseInt(tab, 10);
+        if (!isNaN(tabIndex) && tabIndex !== this.activeTabIndex()) {
+          this.activeTabIndex.set(tabIndex);
+        }
+      }
+    });
 
     // Get pubkey from multiple possible sources:
     // 1. Route param :pubkey (new: /badges/:pubkey in right panel)
@@ -344,7 +356,7 @@ export class BadgesComponent implements OnDestroy {
   }
 
   openBadgeEditor(): void {
-    this.router.navigate(['/badges/create']);
+    this.layout.openBadgeEditor(undefined, this.activeTabIndex());
   }
 
   viewBadgeDetailsById(id: string, slug: string): void {
