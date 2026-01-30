@@ -384,10 +384,17 @@
                 <span>Copy</span>
               </button>
               <mat-divider></mat-divider>
+              @if (message.isOutgoing) {
               <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
                 <mat-icon>delete</mat-icon>
                 <span>Delete</span>
               </button>
+              } @else {
+              <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
+                <mat-icon>visibility_off</mat-icon>
+                <span>Hide</span>
+              </button>
+              }
             </mat-menu>
           </div>
           }

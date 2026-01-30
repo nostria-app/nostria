@@ -64,6 +64,7 @@ interface AccountLocalState {
   trustedMediaAuthors?: string[]; // Pubkeys of authors whose media should always be revealed (not blurred)
   unreadMessagesCount?: number; // Cached count of unread direct messages
   hiddenChatIds?: string[]; // Chat IDs that user has hidden
+  hiddenMessageIds?: Record<string, string[]>; // Hidden message IDs per chat (chatId -> messageId[])
   globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
   musicTrackLicense?: string; // Last used license for music tracks
   musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
@@ -135,6 +136,9 @@ export class AccountLocalStateService {
 
   // Signal to trigger reactivity when hidden chat IDs change
   private hiddenChatIdsVersion = signal(0);
+
+  // Signal to trigger reactivity when hidden message IDs change
+  private hiddenMessageIdsVersion = signal(0);
 
   // Signal to trigger reactivity when left panel collapsed state changes
   private leftPanelCollapsedVersion = signal(0);
@@ -830,6 +834,69 @@ export class AccountLocalStateService {
       this.hiddenChatIdsVersion();
     }
     return this.getHiddenChatIds(pubkey).includes(chatId);
+  }
+
+  /**
+   * Get hidden message IDs for a specific chat
+   */
+  getHiddenMessageIds(pubkey: string, chatId: string): string[] {
+    const state = this.getAccountState(pubkey);
+    return state.hiddenMessageIds?.[chatId] || [];
+  }
+
+  /**
+   * Set hidden message IDs for a specific chat
+   */
+  private setHiddenMessageIds(pubkey: string, chatId: string, messageIds: string[]): void {
+    const state = this.getAccountState(pubkey);
+    const currentHiddenMessages = state.hiddenMessageIds || {};
+
+    if (messageIds.length === 0) {
+      // Remove the chat entry if no hidden messages
+      const { [chatId]: _, ...rest } = currentHiddenMessages;
+      this.updateAccountState(pubkey, { hiddenMessageIds: rest });
+    } else {
+      this.updateAccountState(pubkey, {
+        hiddenMessageIds: {
+          ...currentHiddenMessages,
+          [chatId]: messageIds,
+        },
+      });
+    }
+  }
+
+  /**
+   * Hide a message in a chat
+   */
+  hideMessage(pubkey: string, chatId: string, messageId: string): void {
+    const current = this.getHiddenMessageIds(pubkey, chatId);
+    if (!current.includes(messageId)) {
+      this.setHiddenMessageIds(pubkey, chatId, [...current, messageId]);
+      this.hiddenMessageIdsVersion.update(v => v + 1);
+    }
+  }
+
+  /**
+   * Unhide a message in a chat
+   */
+  unhideMessage(pubkey: string, chatId: string, messageId: string): void {
+    const current = this.getHiddenMessageIds(pubkey, chatId);
+    this.setHiddenMessageIds(pubkey, chatId, current.filter(id => id !== messageId));
+    this.hiddenMessageIdsVersion.update(v => v + 1);
+  }
+
+  /**
+   * Check if a message is hidden in a chat
+   * @param pubkey - Current user's pubkey
+   * @param chatId - The chat ID
+   * @param messageId - The message ID to check
+   * @param trackChanges - If true, reads the version signal to trigger reactivity in computed signals
+   */
+  isMessageHidden(pubkey: string, chatId: string, messageId: string, trackChanges = false): boolean {
+    if (trackChanges) {
+      this.hiddenMessageIdsVersion();
+    }
+    return this.getHiddenMessageIds(pubkey, chatId).includes(messageId);
   }
 
   /**
