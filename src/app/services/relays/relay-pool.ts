@@ -1,10 +1,12 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector } from '@angular/core';
 import { SimplePool, Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
-import { EventProcessorService } from '../event-processor.service';
+
+// Forward reference to avoid circular dependency
+let EventProcessorServiceRef: any;
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +17,18 @@ export class RelayPoolService {
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
   private readonly relayAuth = inject(RelayAuthService);
-  private readonly eventProcessor = inject(EventProcessorService);
+  private readonly injector = inject(Injector);
+  // Lazy-loaded to avoid circular dependency
+  private _eventProcessor?: any;
+  private get eventProcessor(): any {
+    if (!this._eventProcessor) {
+      if (!EventProcessorServiceRef) {
+        EventProcessorServiceRef = require('../event-processor.service').EventProcessorService;
+      }
+      this._eventProcessor = this.injector.get(EventProcessorServiceRef);
+    }
+    return this._eventProcessor;
+  }
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

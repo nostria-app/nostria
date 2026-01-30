@@ -80,7 +80,7 @@ export class MigrationService {
 
   // Migration state
   private migrationPool: SimplePool | null = null;
-  
+
   // Progress tracking
   progress = signal<MigrationProgress>({
     status: 'idle',
@@ -154,7 +154,7 @@ export class MigrationService {
 
     // Normalize the source relay URL
     const normalizedSourceUrl = this.utilities.normalizeRelayUrl(sourceRelayUrl);
-    
+
     // Get the event kinds to migrate
     const eventKinds = this.getEventKinds(depth);
 
@@ -185,7 +185,7 @@ export class MigrationService {
       // Process each event kind
       for (let i = 0; i < eventKinds.length; i++) {
         const kind = eventKinds[i];
-        
+
         this.updateProgress({
           status: 'fetching',
           currentKind: kind,
@@ -256,9 +256,9 @@ export class MigrationService {
       if (this.migrationPool) {
         try {
           this.migrationPool.close([normalizedSourceUrl]);
-      } catch {
-        // Ignore close errors
-      }
+        } catch {
+          // Ignore close errors
+        }
         this.migrationPool = null;
       }
     }
@@ -344,7 +344,7 @@ export class MigrationService {
    */
   private async publishEventToRelays(event: Event, relayUrls: string[]): Promise<void> {
     const results = await this.accountRelay.publishToRelay(event, relayUrls);
-    
+
     if (!results || results.length === 0) {
       throw new Error('No publish results returned');
     }
@@ -352,7 +352,7 @@ export class MigrationService {
     // Wait for at least one successful publish
     const settled = await Promise.allSettled(results);
     const successful = settled.filter(r => r.status === 'fulfilled');
-    
+
     if (successful.length === 0) {
       const errors = settled
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')

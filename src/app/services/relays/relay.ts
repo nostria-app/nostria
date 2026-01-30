@@ -5,7 +5,9 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
-import { EventProcessorService } from '../event-processor.service';
+
+// Forward reference to avoid circular dependency
+let EventProcessorServiceRef: any;
 
 export interface Relay {
   url: string;
@@ -23,7 +25,17 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
-  protected eventProcessor = inject(EventProcessorService);
+  // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
+  private _eventProcessor?: any;
+  protected get eventProcessor(): any {
+    if (!this._eventProcessor) {
+      if (!EventProcessorServiceRef) {
+        EventProcessorServiceRef = require('../event-processor.service').EventProcessorService;
+      }
+      this._eventProcessor = this.injector.get(EventProcessorServiceRef);
+    }
+    return this._eventProcessor;
+  }
   protected useOptimizedRelays = false;
 
   // Pool instance identifier for tracking
