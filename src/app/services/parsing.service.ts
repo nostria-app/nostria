@@ -62,6 +62,7 @@ export interface ContentToken {
     offer: string;
     type: 'offer' | 'invoice';
   };
+  isYouTubeShort?: boolean; // True if the YouTube URL is a Short (9:16 aspect ratio)
 }
 
 @Injectable({
@@ -392,6 +393,7 @@ export class ParsingService {
         offer: string;
         type: 'offer' | 'invoice';
       };
+      isYouTubeShort?: boolean;
     }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
@@ -536,6 +538,8 @@ export class ParsingService {
       // Pre-process the YouTube URL to avoid repeated calls in template
       const youtubeUrl = match[0];
       const processedUrl = this.media.getYouTubeEmbedUrl()(youtubeUrl);
+      // Detect if this is a YouTube Short (9:16 portrait video)
+      const isYouTubeShort = /youtube\.com\/shorts\//.test(youtubeUrl);
 
       matches.push({
         start: match.index,
@@ -543,6 +547,7 @@ export class ParsingService {
         content: youtubeUrl,
         type: 'youtube',
         processedUrl: processedUrl,
+        isYouTubeShort: isYouTubeShort,
       });
     }
 
@@ -869,6 +874,10 @@ export class ParsingService {
 
       if (match.dimensions) {
         token.dimensions = match.dimensions;
+      }
+
+      if (match.isYouTubeShort) {
+        token.isYouTubeShort = match.isYouTubeShort;
       }
 
       tokens.push(token);
