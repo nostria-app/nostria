@@ -542,10 +542,10 @@
   }
 }
 
-// Alphabet Navigation Sidebar
+// Alphabet Navigation Sidebar - sticky within the left panel scroll context
 .alphabet-nav {
   position: fixed;
-  right: 6px;
+  right: 50%; // Position at the center divider when right panel is open
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -561,6 +561,15 @@
   overflow-x: visible;
   // Enable touch events on the container for swipe gestures
   touch-action: none;
+  // Offset from the center divider
+  margin-right: 6px;
+
+  // When there's no right panel (wide mode), position at right edge of content
+  // The dual-panel-layout.wide-left class is set when people is in wide mode without right panel
+  :host-context(.dual-panel-layout:not(.has-right-content)) & {
+    right: 6px;
+    margin-right: 0;
+  }
 
   &::-webkit-scrollbar {
     width: 0;
