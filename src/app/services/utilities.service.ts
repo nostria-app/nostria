@@ -568,12 +568,24 @@ export class UtilitiesService {
   }
 
   /**
+   * Check if a relay URL uses secure WebSocket protocol (wss://)
+   * Insecure ws:// URLs are rejected to prevent mixed content errors
+   * when the app is served over HTTPS
+   */
+  isSecureRelayUrl(url: string): boolean {
+    return url.startsWith('wss://');
+  }
+
+  /**
    * Normalizes relay URLs by ensuring root URLs have a trailing slash
-   * but leaves URLs with paths unchanged
+   * but leaves URLs with paths unchanged.
+   * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
    */
   normalizeRelayUrl(url: string): string {
     try {
-      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+      // Only allow secure WebSocket connections (wss://)
+      // Reject ws:// to prevent mixed content errors when served over HTTPS
+      if (!this.isSecureRelayUrl(url)) {
         return '';
       }
 
