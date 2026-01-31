@@ -492,20 +492,6 @@ mat-dialog-content {
     line-height: 1.5;
   }
 }
-
-.upload-note {
-  padding: 1rem;
-  background: var(--mat-sys-tertiary-container);
-  color: var(--mat-sys-on-tertiary-container);
-  border-radius: var(--mat-sys-corner-medium);
-  font-size: 0.875rem;
-  line-height: 1.5;
-
-  strong {
-    color: var(--mat-sys-on-tertiary-container);
-  }
-}
-
 mat-dialog-actions {
   padding-top: 1rem;
   display: flex;

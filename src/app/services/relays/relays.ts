@@ -381,11 +381,14 @@ export class RelaysService {
 
   /**
    * Load observed relays from IndexedDB (public method)
+   * Filters out insecure ws:// relays to prevent mixed content errors
    */
   async loadObservedRelays(): Promise<void> {
     try {
       const observedRelays = await this.database.getAllObservedRelays() as unknown as ObservedRelayStats[];
-      this.observedRelaysSignal.set(observedRelays);
+      // Filter out insecure ws:// relays - only allow wss://
+      const secureRelays = observedRelays.filter(relay => this.utilities.isSecureRelayUrl(relay.url));
+      this.observedRelaysSignal.set(secureRelays);
     } catch (error) {
       console.error('Failed to load observed relays from storage:', error);
     }
@@ -470,18 +473,24 @@ export class RelaysService {
 
   /**
    * Get all observed relays from storage
+   * Filters out insecure ws:// relays to prevent mixed content errors
    */
   async getAllObservedRelays(): Promise<ObservedRelayStats[]> {
-    return await this.database.getAllObservedRelays() as unknown as ObservedRelayStats[];
+    const relays = await this.database.getAllObservedRelays() as unknown as ObservedRelayStats[];
+    // Filter out insecure ws:// relays - only allow wss://
+    return relays.filter(relay => this.utilities.isSecureRelayUrl(relay.url));
   }
 
   /**
    * Get observed relays sorted by criteria
+   * Filters out insecure ws:// relays to prevent mixed content errors
    */
   async getObservedRelaysSorted(
     sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
   ): Promise<ObservedRelayStats[]> {
-    return await this.database.getObservedRelaysSorted(sortBy) as unknown as ObservedRelayStats[];
+    const relays = await this.database.getObservedRelaysSorted(sortBy) as unknown as ObservedRelayStats[];
+    // Filter out insecure ws:// relays - only allow wss://
+    return relays.filter(relay => this.utilities.isSecureRelayUrl(relay.url));
   }
 
   /**
