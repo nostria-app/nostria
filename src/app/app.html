@@ -192,7 +192,7 @@
           <span class="nav-label">{{ item.label }}</span>
           @if (item.expandable) {
           <button mat-icon-button class="expand-button"
-            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion(item.label.toLowerCase())"
+            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion(item.path)"
             [attr.aria-label]="item.expanded ? 'Collapse' : 'Expand'" tabindex="0">
             <mat-icon class="expand-icon">
               {{ item.expanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right' }}
@@ -218,7 +218,7 @@
             <mat-icon>settings</mat-icon>
           </button>
           }
-          @if (child.followSetId && item.label === 'People') {
+          @if (child.followSetId && item.path === 'people') {
           <button mat-icon-button class="feed-edit-button"
             (click)="$event.stopPropagation(); openFollowSetEditDialog(child.followSetId)"
             i18n-matTooltip="@@app.followset.edit" matTooltip="Edit people" tabindex="0">
