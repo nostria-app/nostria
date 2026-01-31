@@ -21,10 +21,11 @@
 
 .people-page {
   display: flex;
-  flex-direction: row;
-  height: calc(100vh - var(--toolbar-height) - 56px); // Account for panel-header
+  flex-direction: column;
   background-color: var(--mat-sys-surface);
   position: relative;
+  padding: 0 1rem;
+  padding-bottom: 120px; // Extra padding for media player
 
   // Override content-wrapper padding for full-width layout
   // People component should take full width, not be centered
@@ -34,20 +35,10 @@
 }
 
 .people-sidebar {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
   min-width: 0;
-  height: 100%;
-  overflow-y: visible;
-  overflow-x: hidden;
   position: relative;
-
-  // Add bottom padding for mobile navigation menu
-  @media (max-width: 599px) {
-    padding-bottom: 80px;
-  }
 }
 
 // Search bar below panel header
@@ -57,6 +48,7 @@
   padding: 8px 16px;
   background-color: var(--mat-sys-surface);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
+  margin: 0 -1rem; // Compensate for parent padding to make full-width
 
   mat-icon {
     opacity: 0.5;
@@ -85,18 +77,11 @@
 }
 
 .people-container {
-  padding: 1rem;
-
-  // Add extra bottom padding on mobile for navigation menu
-  @media (max-width: 599px) {
-    padding-bottom: 120px;
-  }
+  padding: 1rem 0;
 }
 
 .people-content {
   padding: 0;
-  flex: 1;
-  min-height: 0;
 }
 
 .loading-container,
