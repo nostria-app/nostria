@@ -72,21 +72,6 @@
 </div>
 
 <div class="people-page">
-  <!-- Alphabet Navigation Sidebar - positioned fixed relative to viewport -->
-  @if (showAlphabetNav() && sortedPeople().length > 0) {
-  <div class="alphabet-nav" #alphabetNav
-    (touchstart)="onAlphabetTouchStart($event)"
-    (touchmove)="onAlphabetTouchMove($event)"
-    (touchend)="onAlphabetTouchEnd()">
-    @for (letter of availableLetters(); track letter) {
-    <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
-      (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
-      {{ letter }}
-    </button>
-    }
-  </div>
-  }
-
   <!-- People List -->
   <div class="people-sidebar">
     <!-- Search bar -->
@@ -167,4 +152,21 @@
       }
     </div>
   </div>
+
+  <!-- Alphabet Navigation Sidebar - sticky within scroll context -->
+  @if (showAlphabetNav() && sortedPeople().length > 0) {
+  <div class="alphabet-nav-container">
+    <div class="alphabet-nav" #alphabetNav
+      (touchstart)="onAlphabetTouchStart($event)"
+      (touchmove)="onAlphabetTouchMove($event)"
+      (touchend)="onAlphabetTouchEnd()">
+      @for (letter of availableLetters(); track letter) {
+      <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
+        (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
+        {{ letter }}
+      </button>
+      }
+    </div>
+  </div>
+  }
 </div>

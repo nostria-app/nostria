@@ -765,7 +765,11 @@ export class FeedsComponent implements OnDestroy {
       } else if (relayParam) {
         // Handle relay feed
         // Normalize the relay domain (remove wss:// if present)
-        const domain = relayParam.replace(/^wss?:\/\//, '').replace(/\/$/, '');
+        // Also strip any Angular auxiliary route syntax (right:...) that may be appended
+        const domain = relayParam
+          .replace(/^wss?:\/\//, '')
+          .replace(/\/$/, '')
+          .replace(/\(right:.*$/, '');
         this.activeRelayDomain.set(domain);
         this.logger.debug(`Activated relay feed from URL: ${domain}`);
 

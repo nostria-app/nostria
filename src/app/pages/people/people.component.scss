@@ -21,7 +21,7 @@
 
 .people-page {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   background-color: var(--mat-sys-surface);
   position: relative;
   padding: 0 1rem;
@@ -39,6 +39,7 @@
   flex-direction: column;
   min-width: 0;
   position: relative;
+  flex: 1;
 }
 
 // Search bar below panel header
@@ -542,34 +543,35 @@
   }
 }
 
-// Alphabet Navigation Sidebar - sticky within the left panel scroll context
+// Alphabet Navigation Container - sticky sidebar that stays visible while scrolling
+.alphabet-nav-container {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 100;
+  pointer-events: none;
+  padding-right: 6px;
+}
+
+// Alphabet Navigation Sidebar - positioned within the sticky container
 .alphabet-nav {
-  position: fixed;
-  right: 50%; // Position at the center divider when right panel is open
-  top: 50%;
-  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.25rem;
   gap: 2px;
-  z-index: 100;
   pointer-events: none;
   max-height: calc(100vh - var(--toolbar-height) - 120px);
   overflow-y: auto;
   overflow-x: visible;
   // Enable touch events on the container for swipe gestures
   touch-action: none;
-  // Offset from the center divider
-  margin-right: 6px;
-
-  // When there's no right panel (wide mode), position at right edge of content
-  // The dual-panel-layout.wide-left class is set when people is in wide mode without right panel
-  :host-context(.dual-panel-layout:not(.has-right-content)) & {
-    right: 6px;
-    margin-right: 0;
-  }
 
   &::-webkit-scrollbar {
     width: 0;
@@ -627,7 +629,7 @@
   }
 }
 
-.people-sidebar.compact .alphabet-nav {
+.people-sidebar.compact ~ .alphabet-nav-container {
   display: none;
 }
 

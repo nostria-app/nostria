@@ -1163,9 +1163,54 @@ export class LayoutService implements OnDestroy {
    */
   navigateToRightPanel(rightPath: string, options?: { state?: Record<string, unknown> }): void {
     const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:${rightPath})`;
+    const { primaryPath, queryString } = this.parseUrlParts(currentUrl);
+    // Query params must come after auxiliary routes: /path(right:...)/?query=params
+    const targetUrl = `${primaryPath}(right:${rightPath})${queryString}`;
     this.router.navigateByUrl(targetUrl, options);
+  }
+
+  /**
+   * Parse URL to extract primary path and query string separately.
+   * Handles URLs like:
+   * - /path?query=params
+   * - /path(right:...)
+   * - /path(right:...)?query=params
+   * @returns Object with primaryPath and queryString
+   */
+  private parseUrlParts(url: string): { primaryPath: string; queryString: string } {
+    let primaryPath = '/';
+    let queryString = '';
+
+    // Find query string - it can be either before or after auxiliary routes
+    // URL formats:
+    //   /f?r=nos.lol                    -> query before aux (no aux route)
+    //   /f(right:e/id)?r=nos.lol        -> query after aux route
+    //   /f?r=nos.lol(right:e/id)        -> this shouldn't happen with our code, but handle it
+
+    // First, check if there's a query string after the auxiliary route closing paren
+    const auxEndIndex = url.lastIndexOf(')');
+    if (auxEndIndex !== -1) {
+      const afterAux = url.substring(auxEndIndex + 1);
+      if (afterAux.startsWith('?')) {
+        queryString = afterAux;
+      }
+      // Get the primary path (before the auxiliary route)
+      const auxStartIndex = url.indexOf('(');
+      if (auxStartIndex !== -1) {
+        primaryPath = url.substring(0, auxStartIndex) || '/';
+      }
+    } else {
+      // No auxiliary route, check for query string in the path
+      const queryIndex = url.indexOf('?');
+      if (queryIndex !== -1) {
+        queryString = url.substring(queryIndex);
+        primaryPath = url.substring(0, queryIndex) || '/';
+      } else {
+        primaryPath = url || '/';
+      }
+    }
+
+    return { primaryPath, queryString };
   }
 
   /**
@@ -1173,8 +1218,8 @@ export class LayoutService implements OnDestroy {
    */
   closeRightPanel(): void {
     const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    this.router.navigateByUrl(primaryPath);
+    const { primaryPath, queryString } = this.parseUrlParts(currentUrl);
+    this.router.navigateByUrl(`${primaryPath}${queryString}`);
   }
 
   /**
@@ -1190,7 +1235,7 @@ export class LayoutService implements OnDestroy {
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
 
     const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
+    const { primaryPath } = this.parseUrlParts(currentUrl);
 
     // If we're already on a profile page in primary, navigate to the new profile as primary
     // This avoids "profile in profile" routing issues with Angular's auxiliary outlets
@@ -1274,13 +1319,7 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string): void {
-    // Get current primary route to preserve it when opening right panel
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-
-    // Construct the full URL with the right outlet
-    const targetUrl = `${primaryPath}(right:e/${eventId})`;
-    this.router.navigateByUrl(targetUrl, {
+    this.navigateToRightPanel(`e/${eventId}`, {
       state: { event, trustedByPubkey }
     });
   }
@@ -1366,15 +1405,9 @@ export class LayoutService implements OnDestroy {
       slug = maybeSlug;
     }
 
-    // Get current primary route to preserve it when opening right panel
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-
-    // Construct the full URL with the right outlet (with optional slug)
-    const targetUrl = slug
-      ? `${primaryPath}(right:a/${naddr}/${slug})`
-      : `${primaryPath}(right:a/${naddr})`;
-    this.router.navigateByUrl(targetUrl, {
+    // Construct the right panel path (with optional slug)
+    const rightPath = slug ? `a/${naddr}/${slug}` : `a/${naddr}`;
+    this.navigateToRightPanel(rightPath, {
       state: { articleEvent: event }
     });
   }
@@ -1394,20 +1427,14 @@ export class LayoutService implements OnDestroy {
    * @param zapReceiptId - The zap receipt event ID (hex or nevent encoded)
    */
   openZapDetail(zapReceiptId: string): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:z/${zapReceiptId})`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel(`z/${zapReceiptId}`);
   }
 
   /**
    * Open a music playlist in the right panel
    */
   openMusicPlaylist(pubkey: string, dTag: string, event?: Event): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:music/playlist/${pubkey}/${dTag})`;
-    this.router.navigateByUrl(targetUrl, {
+    this.navigateToRightPanel(`music/playlist/${pubkey}/${dTag}`, {
       state: { playlistEvent: event }
     });
   }
@@ -1416,20 +1443,14 @@ export class LayoutService implements OnDestroy {
    * Open a music artist in the right panel
    */
   openMusicArtist(npub: string): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:music/artist/${npub})`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel(`music/artist/${npub}`);
   }
 
   /**
    * Open a song detail in the right panel
    */
   openSongDetail(pubkey: string, dTag: string, event?: Event): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:music/song/${pubkey}/${dTag})`;
-    this.router.navigateByUrl(targetUrl, {
+    this.navigateToRightPanel(`music/song/${pubkey}/${dTag}`, {
       state: { songEvent: event }
     });
   }
@@ -1438,20 +1459,14 @@ export class LayoutService implements OnDestroy {
    * Open liked songs in the right panel
    */
   openMusicLiked(): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:music/liked)`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel('music/liked');
   }
 
   /**
    * Open liked playlists in the right panel
    */
   openMusicLikedPlaylists(): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:music/liked-playlists)`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel('music/liked-playlists');
   }
 
   /**
@@ -1561,24 +1576,15 @@ export class LayoutService implements OnDestroy {
   }
 
   openBadgesPage(pubkeyOrNpub: string): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:user-badges/${pubkeyOrNpub})`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel(`user-badges/${pubkeyOrNpub}`);
   }
 
   openFollowingPage(pubkeyOrNpub: string): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:user-following/${pubkeyOrNpub})`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
   }
 
   openRelaysPage(pubkeyOrNpub: string): void {
-    const currentUrl = this.router.url;
-    const primaryPath = currentUrl.split('(')[0] || '/';
-    const targetUrl = `${primaryPath}(right:user-relays/${pubkeyOrNpub})`;
-    this.router.navigateByUrl(targetUrl);
+    this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`);
   }
 
   scrollToOptimalProfilePosition() {
