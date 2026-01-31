@@ -1,10 +1,10 @@
-import { Component, inject, input, output, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, output, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
-import { FeedConfig } from '../../../services/feed.service';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../../services/local-settings.service';
 
 /**
  * Content type definition for filter options
@@ -58,7 +58,7 @@ const CONTENT_TYPES: ContentType[] = [
       <!-- Show Replies Toggle -->
       <div class="toggle-option">
         <mat-checkbox
-          [checked]="feed()?.showReplies ?? false"
+          [checked]="localSettings.contentFilter().showReplies"
           (change)="onShowRepliesChange($event.checked)"
           color="primary">
           Show Replies
@@ -170,36 +170,27 @@ const CONTENT_TYPES: ContentType[] = [
   `]
 })
 export class FeedFilterPanelComponent {
-  feed = input<FeedConfig | null>(null);
+  readonly localSettings = inject(LocalSettingsService);
 
-  // Output events for filter changes
+  // Output events for filter changes (kept for backward compatibility but now handled internally)
   kindsChanged = output<number[]>();
   showRepliesChanged = output<boolean>();
   showRepostsChanged = output<boolean>();
 
-  // Track the original kinds for reset functionality
-  private originalKinds: number[] = [];
-
   // Compute available content types (all types for now, could be filtered based on feed type)
   availableContentTypes = computed(() => CONTENT_TYPES);
 
-  // Get current selected kinds from feed
+  // Get current selected kinds from global settings
   private currentKinds = computed(() => {
-    const f = this.feed();
-    if (!f) return [];
-    // Store original kinds when first computed
-    if (this.originalKinds.length === 0 && f.kinds.length > 0) {
-      this.originalKinds = [...f.kinds];
-    }
-    return f.kinds;
+    return this.localSettings.contentFilter().kinds;
   });
 
   /**
-   * Check if a content type is selected based on current feed kinds
+   * Check if a content type is selected based on current global filter kinds
    */
   isContentTypeSelected(type: ContentType): boolean {
     const kinds = this.currentKinds();
-    // A content type is selected if at least one of its kinds is in the feed
+    // A content type is selected if at least one of its kinds is in the filter
     return type.kinds.some(k => kinds.includes(k));
   }
 
@@ -215,16 +206,19 @@ export class FeedFilterPanelComponent {
       const newKinds = kinds.filter(k => !type.kinds.includes(k));
       // Ensure we always have at least one kind
       if (newKinds.length > 0) {
+        this.localSettings.setContentFilterKinds(newKinds);
         this.kindsChanged.emit(newKinds);
       }
     } else {
       // Add all kinds from this type
       const newKinds = [...new Set([...kinds, ...type.kinds])];
+      this.localSettings.setContentFilterKinds(newKinds);
       this.kindsChanged.emit(newKinds);
     }
 
     // Special handling for reposts - also update showReposts
     if (type.id === 'reposts') {
+      this.localSettings.setContentFilterShowReposts(!isSelected);
       this.showRepostsChanged.emit(!isSelected);
     }
   }
@@ -233,6 +227,7 @@ export class FeedFilterPanelComponent {
    * Handle show replies toggle
    */
   onShowRepliesChange(checked: boolean): void {
+    this.localSettings.setContentFilterShowReplies(checked);
     this.showRepliesChanged.emit(checked);
   }
 
@@ -242,6 +237,8 @@ export class FeedFilterPanelComponent {
   selectAll(): void {
     const allKinds = CONTENT_TYPES.flatMap(t => t.kinds);
     const uniqueKinds = [...new Set(allKinds)];
+    this.localSettings.setContentFilterKinds(uniqueKinds);
+    this.localSettings.setContentFilterShowReposts(true);
     this.kindsChanged.emit(uniqueKinds);
     this.showRepostsChanged.emit(true);
   }
@@ -251,22 +248,19 @@ export class FeedFilterPanelComponent {
    */
   clearAll(): void {
     // Keep at least posts (kind 1)
+    this.localSettings.setContentFilterKinds([1]);
+    this.localSettings.setContentFilterShowReposts(false);
     this.kindsChanged.emit([1]);
     this.showRepostsChanged.emit(false);
   }
 
   /**
-   * Reset to original feed configuration
+   * Reset to default filter configuration
    */
   reset(): void {
-    const f = this.feed();
-    if (f && this.originalKinds.length > 0) {
-      this.kindsChanged.emit([...this.originalKinds]);
-    } else if (f) {
-      // Default reset: posts and reposts
-      this.kindsChanged.emit([1, 6]);
-    }
-    this.showRepostsChanged.emit(true);
-    this.showRepliesChanged.emit(false);
+    this.localSettings.resetContentFilter();
+    this.kindsChanged.emit([...DEFAULT_CONTENT_FILTER.kinds]);
+    this.showRepostsChanged.emit(DEFAULT_CONTENT_FILTER.showReposts);
+    this.showRepliesChanged.emit(DEFAULT_CONTENT_FILTER.showReplies);
   }
 }
