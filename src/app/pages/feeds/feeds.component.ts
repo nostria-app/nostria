@@ -216,6 +216,7 @@ export class FeedsComponent implements OnDestroy {
   activeListFeed = signal<ListFeedData | null>(null);
   showListFeed = computed(() => !!this.activeListFeed());
   @ViewChild('listFeedMenu') listFeedMenu?: ListFeedMenuComponent;
+  @ViewChild('listColumn') listColumn?: ListColumnComponent;
 
   // Dynamic hashtag feed state - for viewing hashtags from Interests page
   dynamicFeed = signal<FeedConfig | null>(null);
@@ -2208,5 +2209,19 @@ export class FeedsComponent implements OnDestroy {
    */
   async refreshFeed(feed: FeedConfig): Promise<void> {
     await this.feedService.refreshFeed(feed.id);
+  }
+
+  /**
+   * Refresh the currently active feed (regular feed or list feed)
+   */
+  async refreshCurrentFeed(): Promise<void> {
+    if (this.showListFeed() && this.listColumn) {
+      await this.listColumn.refresh();
+    } else {
+      const feed = this.activeFeed();
+      if (feed) {
+        await this.refreshFeed(feed);
+      }
+    }
   }
 }

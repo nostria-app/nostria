@@ -197,6 +197,61 @@ app-user-profile {
           }
         }
       }
+
+      // List feed tab - shows when a people list is selected
+      .list-feed-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px 4px 12px;
+        background-color: var(--mat-sys-primary-container);
+        border-radius: 20px;
+        flex-shrink: 0;
+
+        >mat-icon {
+          font-size: 1.1rem;
+          width: 1.1rem;
+          height: 1.1rem;
+          color: var(--mat-sys-primary);
+        }
+
+        .list-feed-info {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+
+          .list-feed-name {
+            font-size: 0.85rem;
+            color: var(--mat-sys-on-primary-container);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+          }
+
+          .list-feed-count {
+            font-size: 0.7rem;
+            color: var(--mat-sys-on-primary-container);
+            opacity: 0.8;
+          }
+        }
+
+        .close-list-btn {
+          width: 28px;
+          height: 28px;
+          line-height: 28px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+        }
+      }
     }
   }
 
