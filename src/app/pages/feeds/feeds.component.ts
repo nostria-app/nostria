@@ -101,7 +101,7 @@ export class FeedsComponent implements OnDestroy {
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
-  private localSettings = inject(LocalSettingsService);
+  protected localSettings = inject(LocalSettingsService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
