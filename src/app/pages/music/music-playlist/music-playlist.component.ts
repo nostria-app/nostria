@@ -32,6 +32,7 @@ import {
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -554,6 +555,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   shareNative(): void {
+    this.openShareDialog();
+  }
+
+  openShareDialog(): void {
     const ev = this.playlist();
     if (!ev) return;
 
@@ -561,48 +566,35 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const npub = nip19.npubEncode(ev.pubkey);
       const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
-      const playlistTitle = this.title();
-
-      if (navigator.share) {
-        navigator.share({
-          title: playlistTitle,
-          text: `Check out ${playlistTitle}`,
-          url: link,
-        }).catch(() => {
-          // User cancelled or error - fallback to copy
-          this.clipboard.copy(link);
-          this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-        });
-      } else {
-        // Fallback for browsers without native share
-        this.clipboard.copy(link);
-        this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-      }
-    } catch {
-      this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
-    }
-  }
-
-  sharePlaylist(): void {
-    const ev = this.playlist();
-    if (!ev) return;
-
-    try {
-      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
       });
 
-      // Create content with nostr: reference to the playlist
-      const content = `nostr:${naddr}`;
+      const dialogData: ShareArticleDialogData = {
+        title: this.title(),
+        summary: this.description() || `Check out ${this.title()}`,
+        image: this.coverImage() || undefined,
+        url: link,
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        kind: ev.kind,
+        encodedId: naddr,
+      };
 
-      // Open note editor with the playlist reference
-      this.eventService.createNote({ content });
+      this.dialog.open(ShareArticleDialogComponent, {
+        data: dialogData,
+        width: '450px',
+      });
     } catch {
-      this.snackBar.open('Failed to generate playlist reference', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
     }
+  }
+
+  sharePlaylist(): void {
+    this.openShareDialog();
   }
 
   copyEventData(): void {
