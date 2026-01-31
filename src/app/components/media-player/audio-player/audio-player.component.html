@@ -35,11 +35,11 @@
           </button>
 
           @if (media.paused) {
-          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
+          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button" tabindex="-1">
             <mat-icon>play_arrow</mat-icon>
           </button>
           } @else {
-          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
+          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button" tabindex="-1">
             <mat-icon>pause</mat-icon>
           </button>
           }
@@ -62,11 +62,11 @@
           </button> -->
 
           @if (media.paused) {
-          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
+          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button" tabindex="-1">
             <mat-icon>play_arrow</mat-icon>
           </button>
           } @else {
-          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
+          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button" tabindex="-1">
             <mat-icon>pause</mat-icon>
           </button>
           }

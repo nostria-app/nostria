@@ -89,11 +89,11 @@
         </button>
 
         @if (media.paused) {
-        <button class="transport-btn play" (click)="media.resume()" matTooltip="Play">
+        <button class="transport-btn play" (click)="media.resume()" matTooltip="Play" tabindex="-1">
           <mat-icon>play_arrow</mat-icon>
         </button>
         } @else {
-        <button class="transport-btn pause" (click)="media.pause()" matTooltip="Pause">
+        <button class="transport-btn pause" (click)="media.pause()" matTooltip="Pause" tabindex="-1">
           <mat-icon>pause</mat-icon>
         </button>
         }
