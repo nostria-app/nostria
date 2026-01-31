@@ -10,6 +10,26 @@ export type TimeFormat = '12h' | '24h';
 export type HomeDestination = 'feeds' | 'home' | 'first-menu-item';
 
 /**
+ * Global content filter settings for feeds
+ * These settings apply to ALL feeds, not per-feed
+ */
+export interface ContentFilterSettings {
+  /** Array of Nostr event kinds to show */
+  kinds: number[];
+  /** Whether to show reply posts */
+  showReplies: boolean;
+  /** Whether to show reposts */
+  showReposts: boolean;
+}
+
+/** Default content filter: show posts and reposts */
+export const DEFAULT_CONTENT_FILTER: ContentFilterSettings = {
+  kinds: [1, 1111, 6, 16, 30023, 1068, 1222, 1244, 20, 21, 22, 34235, 34236],
+  showReplies: false,
+  showReposts: true,
+};
+
+/**
  * Represents a menu item configuration for the main navigation.
  * The id corresponds to the path of the navigation item.
  */
@@ -41,6 +61,8 @@ export interface LocalSettings {
   homeDestination: HomeDestination;
   /** Custom menu item order and visibility. Array order determines display order. */
   menuItems: MenuItemConfig[];
+  /** Global content filter settings for all feeds */
+  contentFilter: ContentFilterSettings;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -62,6 +84,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   timeFormat: '24h',
   homeDestination: 'feeds',
   menuItems: [], // Empty means use default order
+  contentFilter: { ...DEFAULT_CONTENT_FILTER },
 };
 
 /**
@@ -116,6 +139,7 @@ export class LocalSettingsService {
   readonly timeFormat = computed(() => this.settings().timeFormat);
   readonly homeDestination = computed(() => this.settings().homeDestination);
   readonly menuItems = computed(() => this.settings().menuItems);
+  readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [
@@ -256,6 +280,8 @@ export class LocalSettingsService {
           // Explicitly ensure autoRelayAuth defaults to false for existing users
           // who don't have this property yet (most users don't use authentication)
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
+          // Ensure contentFilter exists for existing users
+          contentFilter: stored.contentFilter ?? DEFAULT_CONTENT_FILTER,
         };
 
         this.settings.set(mergedSettings);
@@ -452,6 +478,44 @@ export class LocalSettingsService {
    */
   resetMenuItems(): void {
     this.updateSettings({ menuItems: [] });
+  }
+
+  /**
+   * Set content filter settings (global for all feeds)
+   */
+  setContentFilter(contentFilter: ContentFilterSettings): void {
+    this.updateSettings({ contentFilter });
+  }
+
+  /**
+   * Update content filter kinds
+   */
+  setContentFilterKinds(kinds: number[]): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, kinds });
+  }
+
+  /**
+   * Set content filter show replies setting
+   */
+  setContentFilterShowReplies(showReplies: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, showReplies });
+  }
+
+  /**
+   * Set content filter show reposts setting
+   */
+  setContentFilterShowReposts(showReposts: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, showReposts });
+  }
+
+  /**
+   * Reset content filter to defaults
+   */
+  resetContentFilter(): void {
+    this.setContentFilter({ ...DEFAULT_CONTENT_FILTER });
   }
 
   /**
