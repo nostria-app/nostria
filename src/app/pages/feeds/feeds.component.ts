@@ -56,6 +56,8 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
 import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
+import { ListFeedMenuComponent, ListFeedSelection } from './list-feed-menu/list-feed-menu.component';
+import { ListColumnComponent, ListFeedData } from './list-column/list-column.component';
 import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { VideoPlaybackService } from '../../services/video-playback.service';
@@ -85,6 +87,8 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
     TrendingColumnComponent,
     RelayColumnComponent,
     RelayFeedMenuComponent,
+    ListFeedMenuComponent,
+    ListColumnComponent,
     FeedFilterPanelComponent,
     OverlayModule,
   ],
@@ -97,7 +101,7 @@ export class FeedsComponent implements OnDestroy {
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
-  private localSettings = inject(LocalSettingsService);
+  protected localSettings = inject(LocalSettingsService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -207,6 +211,12 @@ export class FeedsComponent implements OnDestroy {
   });
   @ViewChild('relayFeedMenu') relayFeedMenu?: RelayFeedMenuComponent;
   private queryParamsSubscription: import('rxjs').Subscription | null = null;
+
+  // List feed state - for showing posts from people lists
+  activeListFeed = signal<ListFeedData | null>(null);
+  showListFeed = computed(() => !!this.activeListFeed());
+  @ViewChild('listFeedMenu') listFeedMenu?: ListFeedMenuComponent;
+  @ViewChild('listColumn') listColumn?: ListColumnComponent;
 
   // Dynamic hashtag feed state - for viewing hashtags from Interests page
   dynamicFeed = signal<FeedConfig | null>(null);
@@ -751,6 +761,7 @@ export class FeedsComponent implements OnDestroy {
       const queryParams = urlTree.queryParams;
       const relayParam = queryParams['r'];
       const hashtagParam = queryParams['t'];
+      const listParam = queryParams['l'];
 
       if (hashtagParam) {
         // Handle dynamic hashtag feed from Interests page
@@ -763,8 +774,9 @@ export class FeedsComponent implements OnDestroy {
         if (hashtags.length > 0) {
           this.logger.debug(`Creating dynamic hashtag feed for: ${hashtags.join(', ')}`);
 
-          // Clear relay feed if active
+          // Clear relay feed and list feed if active
           this.activeRelayDomain.set('');
+          this.activeListFeed.set(null);
 
           // Mark dynamic feed as active BEFORE clearing the active feed
           // This prevents the auto-selection effect from overriding
@@ -775,6 +787,34 @@ export class FeedsComponent implements OnDestroy {
 
           // Create and show dynamic feed
           this.dynamicFeed.set(await this.feedService.createDynamicHashtagFeed(hashtags));
+        }
+      } else if (listParam) {
+        // Handle list feed
+        this.logger.debug(`Activating list feed from URL: ${listParam}`);
+
+        // Clean up relay feed and dynamic feed
+        this.activeRelayDomain.set('');
+        this.cleanupDynamicFeed();
+
+        // Find the list by dTag from the FollowSetsService
+        const followSets = this.listFeedMenu?.followSets() || [];
+        const list = followSets.find(set => set.dTag === listParam);
+
+        if (list && list.pubkeys.length > 0) {
+          this.activeListFeed.set({
+            dTag: list.dTag,
+            title: list.title,
+            pubkeys: list.pubkeys,
+          });
+
+          // Update the list feed menu selection if available
+          if (this.listFeedMenu) {
+            this.listFeedMenu.setSelectedList(listParam);
+          }
+        } else {
+          this.logger.warn(`List not found or empty: ${listParam}`);
+          // Clear the list param since list wasn't found
+          this.activeListFeed.set(null);
         }
       } else if (relayParam) {
         // Handle relay feed
@@ -787,7 +827,8 @@ export class FeedsComponent implements OnDestroy {
         this.activeRelayDomain.set(domain);
         this.logger.debug(`Activated relay feed from URL: ${domain}`);
 
-        // Clean up any dynamic feed
+        // Clean up list feed and dynamic feed
+        this.activeListFeed.set(null);
         this.cleanupDynamicFeed();
 
         // Update the relay feed menu selection if it's available
@@ -795,8 +836,9 @@ export class FeedsComponent implements OnDestroy {
           this.relayFeedMenu.setSelectedRelay(domain);
         }
       } else {
-        // Clear relay feed and dynamic feed when no query params
+        // Clear relay feed, list feed, and dynamic feed when no query params
         this.activeRelayDomain.set('');
+        this.activeListFeed.set(null);
         this.cleanupDynamicFeed();
       }
     };
@@ -1406,6 +1448,45 @@ export class FeedsComponent implements OnDestroy {
     this.activeRelayDomain.set('');
     this.router.navigate(['/f'], {
       queryParams: { r: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /**
+   * Handle list selection from the list feed menu
+   */
+  onListSelected(selection: ListFeedSelection | null): void {
+    if (selection) {
+      // Clear the active feed selection when viewing a list feed
+      this.feedsCollectionService.clearActiveFeed();
+      // Clear relay feed if active
+      this.activeRelayDomain.set('');
+
+      // Set the list feed data
+      this.activeListFeed.set({
+        dTag: selection.dTag,
+        title: selection.title,
+        pubkeys: selection.pubkeys,
+      });
+
+      // Navigate with list query param
+      this.router.navigate(['/f'], {
+        queryParams: { l: selection.dTag, r: null },
+        queryParamsHandling: 'merge',
+      });
+    } else {
+      this.closeListFeed();
+    }
+  }
+
+  /**
+   * Close the list feed view
+   */
+  closeListFeed(): void {
+    this.activeListFeed.set(null);
+    this.listFeedMenu?.clearSelection();
+    this.router.navigate(['/f'], {
+      queryParams: { l: null },
       queryParamsHandling: 'merge',
     });
   }
@@ -2128,5 +2209,19 @@ export class FeedsComponent implements OnDestroy {
    */
   async refreshFeed(feed: FeedConfig): Promise<void> {
     await this.feedService.refreshFeed(feed.id);
+  }
+
+  /**
+   * Refresh the currently active feed (regular feed or list feed)
+   */
+  async refreshCurrentFeed(): Promise<void> {
+    if (this.showListFeed() && this.listColumn) {
+      await this.listColumn.refresh();
+    } else {
+      const feed = this.activeFeed();
+      if (feed) {
+        await this.refreshFeed(feed);
+      }
+    }
   }
 }

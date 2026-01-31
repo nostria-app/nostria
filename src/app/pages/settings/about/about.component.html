@@ -29,7 +29,7 @@
           }
           @if (commitShort() && commitSha()) {
           <p class="build-info">
-            <span i18n="@@settings.about.commit">Commit:</span> <a
+            <span i18n="@@settings.about.commit">Commit:</span>&nbsp;<a
               [href]="'https://github.com/nostria-app/nostria/commit/' + commitSha()" target="_blank"
               rel="noopener noreferrer">{{ commitShort() }}</a>
           </p>
