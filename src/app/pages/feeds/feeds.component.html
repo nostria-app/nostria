@@ -24,6 +24,9 @@
                 <span class="list-feed-name">{{ listFeed?.title || 'List Feed' }}</span>
                 <span class="list-feed-count">{{ listFeed?.pubkeys?.length || 0 }} people</span>
               </div>
+              @if (listColumn?.isLoadingFromRelays()) {
+              <mat-spinner diameter="20" class="relay-loading-spinner"></mat-spinner>
+              }
               <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="close-list-btn">
                 <mat-icon>close</mat-icon>
               </button>
