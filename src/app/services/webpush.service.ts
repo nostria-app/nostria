@@ -170,7 +170,10 @@ export class WebPushService {
       this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
 
       if (result && result.settings) {
-        const settings = JSON.parse(result.settings);
+        // result.settings is already parsed by fetchJson, use it directly
+        const settings = typeof result.settings === 'string'
+          ? JSON.parse(result.settings)
+          : result.settings;
         this.devicePreferences.set(settings);
 
         // Update settings in cache
