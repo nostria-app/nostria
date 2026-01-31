@@ -343,7 +343,13 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Opens a settings section in the right panel
+   * Opens a settings section in the right panel.
+   * NOTE: We intentionally do NOT pass the section.route URL to rightPanel.open()
+   * because using window.history.pushState to change the URL without Angular Router
+   * knowing about it causes the router state tree to get corrupted. When the user
+   * navigates away and back to settings, Angular's setRouterState enters infinite
+   * recursion trying to reconcile the browser URL with its internal state.
+   * See: https://github.com/angular/angular/issues - Maximum call stack size exceeded
    */
   async openSectionInRightPanel(sectionId: string): Promise<void> {
     const section = this.registry.sections.find(s => s.id === sectionId);
@@ -357,7 +363,7 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
       this.rightPanel.open({
         component,
         title: section.title,
-      }, section.route);
+      });
     } catch (error) {
       console.error(`Failed to load settings section component: ${sectionId}`, error);
     }
@@ -365,7 +371,7 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
 
   async navigateToItem(item: SettingsItem): Promise<void> {
     // Extract section from route (e.g., /settings/general -> general)
-    const sectionMatch = item.route.match(/\/settings\/([^?#\/]+)/);
+    const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
     if (sectionMatch && sectionMatch[1]) {
       await this.openSectionInRightPanel(sectionMatch[1]);
     }

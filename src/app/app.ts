@@ -677,20 +677,6 @@ export class App implements OnInit {
       this.layout.closeRightPanel();
     });
 
-    // Track route changes for cache clearing
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event) => {
-      // Clear route cache when navigating to root pages
-      const navEvent = event as NavigationEnd;
-      const url = navEvent.urlAfterRedirects || navEvent.url;
-      const primaryPath = url.split('(')[0].split('/')[1] || '';
-
-      if (this.customReuseStrategy.isRootNavigation(primaryPath)) {
-        this.customReuseStrategy.clearCache(true);
-      }
-    });
-
     // Track sidenav size changes to update floating toolbar position
     effect(() => {
       // Read signals to establish dependency
