@@ -18,6 +18,7 @@ import { EventComponent } from '../../../components/event/event.component';
 import { LoggerService } from '../../../services/logger.service';
 import { RepostService } from '../../../services/repost.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
+import { DatabaseService } from '../../../services/database.service';
 import { Event } from 'nostr-tools';
 
 const PAGE_SIZE = 10;
@@ -122,9 +123,13 @@ export class ListColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private repostService = inject(RepostService);
   private sharedRelayService = inject(SharedRelayService);
+  private database = inject(DatabaseService);
 
   // Input for the list data
   listData = input<ListFeedData | null>(null);
+
+  // Track the current list dTag to detect changes
+  private currentListDTag = '';
 
   private loadMoreTriggerElement?: HTMLDivElement;
 
@@ -185,10 +190,18 @@ export class ListColumnComponent implements OnDestroy {
     effect(() => {
       const data = this.listData();
       if (data && data.pubkeys.length > 0) {
+        // Check if this is a different list
+        if (this.currentListDTag !== data.dTag) {
+          // Clear existing events immediately when switching lists
+          this.allEvents.set([]);
+          this.displayCount.set(PAGE_SIZE);
+          this.currentListDTag = data.dTag;
+        }
         this.loadEventsFromList(data);
       } else {
         this.allEvents.set([]);
         this.displayCount.set(PAGE_SIZE);
+        this.currentListDTag = '';
       }
     });
   }
@@ -218,7 +231,8 @@ export class ListColumnComponent implements OnDestroy {
   }
 
   /**
-   * Load events from users in the list using outbox model
+   * Load events from users in the list
+   * First loads from local database for instant display, then fetches from relays
    */
   private async loadEventsFromList(data: ListFeedData): Promise<void> {
     this.isLoading.set(true);
@@ -228,45 +242,81 @@ export class ListColumnComponent implements OnDestroy {
     this.logger.info(`[ListColumn] Loading events for ${pubkeys.length} users from list "${data.title}"`);
 
     try {
-      const allLoadedEvents: Event[] = [];
-      const eventsPerUser = 15;
-
-      // Process users in parallel batches to avoid overwhelming relays
-      const batchSize = 10;
-      for (let i = 0; i < pubkeys.length; i += batchSize) {
-        const batch = pubkeys.slice(i, i + batchSize);
-
-        const batchPromises = batch.map(async (pubkey) => {
-          try {
-            const events = await this.sharedRelayService.getMany(pubkey, {
-              authors: [pubkey],
-              kinds: [1, 6, 30023], // Notes, reposts, articles
-              limit: eventsPerUser,
-            }, { timeout: 5000 });
-
-            return events;
-          } catch (err) {
-            this.logger.debug(`[ListColumn] Failed to fetch events for ${pubkey.slice(0, 8)}:`, err);
-            return [];
-          }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-        batchResults.forEach(events => {
-          allLoadedEvents.push(...events);
-        });
-
-        // Update UI incrementally after each batch
-        this.updateEventsState(allLoadedEvents);
+      // Step 1: Load cached events from database immediately
+      const cachedEvents = await this.loadEventsFromDatabase(pubkeys);
+      if (cachedEvents.length > 0) {
+        this.logger.info(`[ListColumn] Loaded ${cachedEvents.length} cached events from database`);
+        this.updateEventsState(cachedEvents);
       }
 
-      this.logger.info(`[ListColumn] Loaded ${allLoadedEvents.length} total events from list`);
+      // Step 2: Fetch fresh events from relays in the background
+      await this.loadEventsFromRelays(pubkeys, cachedEvents);
     } catch (err) {
       this.logger.error('[ListColumn] Error loading events:', err);
       this.error.set('Failed to load events from list');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Load events from local database for the given pubkeys
+   */
+  private async loadEventsFromDatabase(pubkeys: string[]): Promise<Event[]> {
+    const allCachedEvents: Event[] = [];
+
+    // Query database for each kind we're interested in
+    const kinds = [1, 6, 30023]; // Notes, reposts, articles
+
+    for (const kind of kinds) {
+      try {
+        const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kind);
+        allCachedEvents.push(...events);
+      } catch (err) {
+        this.logger.debug(`[ListColumn] Failed to load kind ${kind} from database:`, err);
+      }
+    }
+
+    return allCachedEvents;
+  }
+
+  /**
+   * Fetch events from relays using the outbox model
+   */
+  private async loadEventsFromRelays(pubkeys: string[], existingEvents: Event[]): Promise<void> {
+    const allLoadedEvents: Event[] = [...existingEvents];
+    const eventsPerUser = 15;
+
+    // Process users in parallel batches to avoid overwhelming relays
+    const batchSize = 10;
+    for (let i = 0; i < pubkeys.length; i += batchSize) {
+      const batch = pubkeys.slice(i, i + batchSize);
+
+      const batchPromises = batch.map(async (pubkey) => {
+        try {
+          const events = await this.sharedRelayService.getMany(pubkey, {
+            authors: [pubkey],
+            kinds: [1, 6, 30023], // Notes, reposts, articles
+            limit: eventsPerUser,
+          }, { timeout: 5000 });
+
+          return events;
+        } catch (err) {
+          this.logger.debug(`[ListColumn] Failed to fetch events for ${pubkey.slice(0, 8)}:`, err);
+          return [];
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(events => {
+        allLoadedEvents.push(...events);
+      });
+
+      // Update UI incrementally after each batch
+      this.updateEventsState(allLoadedEvents);
+    }
+
+    this.logger.info(`[ListColumn] Loaded ${allLoadedEvents.length} total events from list`);
   }
 
   private updateEventsState(events: Event[]): void {
