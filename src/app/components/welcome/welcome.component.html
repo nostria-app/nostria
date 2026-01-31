@@ -1,5 +1,12 @@
-<div class="welcome">
+<div class="welcome" [attr.data-step]="currentWizardStep()">
   <div class="welcome-backdrop">
+    <!-- Animated background elements -->
+    <div class="bg-decoration">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-circle bg-circle-3"></div>
+    </div>
+
     <div class="welcome-top">
       <button class="welcome-theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
         @if (themeService.darkMode()) {
@@ -17,28 +24,48 @@
       <div class="welcome-content-container">
         @let currentStep = getCurrentStep();
 
-        <!-- Step Icon and Visual -->
-        <div class="welcome-logo-container">
-          <div class="wizard-step-icon">
+        <!-- Step Icon Card -->
+        <div class="welcome-icon-section">
+          <div class="icon-card" [attr.data-color]="currentStep.color">
+            <div class="icon-glow"></div>
             <mat-icon class="step-icon">{{ currentStep.icon }}</mat-icon>
+          </div>
+          
+          <!-- Step Progress Dots -->
+          <div class="step-dots">
+            @for (step of wizardSteps(); track step.id) {
+              <button 
+                class="step-dot" 
+                [class.active]="step.id === currentWizardStep()"
+                [class.completed]="step.id < currentWizardStep()"
+                (click)="goToStep(step.id)"
+                [attr.data-color]="step.color">
+              </button>
+            }
           </div>
         </div>
 
         <!-- Step Content -->
         <div class="wizard-step-content">
-          <h1>{{ currentStep.title }}</h1>
-          <div class="step-subtitle">{{ currentStep.subtitle }}</div>
+          <div class="step-header">
+            <h1>{{ currentStep.title }}</h1>
+            <div class="step-subtitle">{{ currentStep.subtitle }}</div>
+          </div>
 
-          @for (paragraph of currentStep.content; track $index) {
-            <p>{{ paragraph }}</p>
-          }
+          <div class="step-body">
+            @for (paragraph of currentStep.content; track $index) {
+              <p>{{ paragraph }}</p>
+            }
+          </div>
 
-          <!-- Features List -->
+          <!-- Features Grid -->
           @if (currentStep.features.length > 0) {
-            <div class="step-features">
+            <div class="features-grid">
               @for (feature of currentStep.features; track feature.icon) {
-                <div class="feature-item">
-                  <mat-icon class="feature-icon">{{ feature.icon }}</mat-icon>
+                <div class="feature-card" [attr.data-color]="currentStep.color">
+                  <div class="feature-icon-wrapper">
+                    <mat-icon class="feature-icon">{{ feature.icon }}</mat-icon>
+                  </div>
                   <span class="feature-text">{{ feature.text }}</span>
                 </div>
               }
@@ -50,23 +77,35 @@
 
     <div class="welcome-footer">
       <div class="step-indicator">
-        @if (currentWizardStep() <= totalWizardSteps()) {
-          Step {{ currentWizardStep() }} of {{ totalWizardSteps() }}
-        }
+        <span class="step-current">{{ currentWizardStep() }}</span>
+        <span class="step-separator">/</span>
+        <span class="step-total">{{ totalWizardSteps() }}</span>
       </div>
 
       <div class="welcome-actions">
         @if (currentWizardStep() === 1) {
-          <!-- First step actions -->
-          <button mat-flat-button (click)="nextStep()">Continue</button>
+          <button mat-flat-button class="action-btn primary-btn" (click)="nextStep()">
+            <span>Get Started</span>
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
         } @else if (currentWizardStep() === totalWizardSteps()) {
-          <!-- Last step actions -->
-          <button mat-button (click)="previousStep()">Back</button>&nbsp;
-          <button mat-flat-button (click)="completeWizard()">Start Using Nostria</button>
+          <button mat-button class="action-btn back-btn" (click)="previousStep()">
+            <mat-icon>arrow_back</mat-icon>
+            <span>Back</span>
+          </button>
+          <button mat-flat-button class="action-btn primary-btn" (click)="completeWizard()">
+            <span>Start Using Nostria</span>
+            <mat-icon>rocket_launch</mat-icon>
+          </button>
         } @else {
-          <!-- Middle steps actions -->
-          <button mat-button (click)="previousStep()">Back</button>&nbsp;
-          <button mat-flat-button (click)="nextStep()">Continue</button>
+          <button mat-button class="action-btn back-btn" (click)="previousStep()">
+            <mat-icon>arrow_back</mat-icon>
+            <span>Back</span>
+          </button>
+          <button mat-flat-button class="action-btn primary-btn" (click)="nextStep()">
+            <span>Continue</span>
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
         }
       </div>
     </div>

@@ -67,9 +67,9 @@ export class HomeComponent {
 
   getGreeting(): string {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return $localize`:@@home.greeting.morning:Good Morning`;
+    if (hour < 18) return $localize`:@@home.greeting.afternoon:Good Afternoon`;
+    return $localize`:@@home.greeting.evening:Good Evening`;
   }
 
   openCommandPalette(): void {
@@ -103,5 +103,9 @@ export class HomeComponent {
 
   openShoutouts(): void {
     this.layout.openShoutouts();
+  }
+
+  openWelcomeWizard(): void {
+    this.layout.showWelcomeDialog();
   }
 }

@@ -57,6 +57,21 @@
       </div>
     </div>
 
+    <!-- Learn more card -->
+    <mat-card class="learn-more-card" (click)="showWelcomeDialog()">
+      <mat-card-content>
+        <div class="learn-more-content">
+          <div class="question-icon">
+            <mat-icon>help</mat-icon>
+          </div>
+          <div class="learn-more-text">
+            <span i18n="@@introduction.learn-more">What is Nostr?</span>
+          </div>
+          <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
     <!-- Footer section: terms and language -->
     <div class="footer-section">
       <div class="terms-of-use-notice">
