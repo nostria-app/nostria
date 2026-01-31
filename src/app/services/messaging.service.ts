@@ -120,14 +120,21 @@ export class MessagingService implements NostriaService {
 
     // Effect to auto-start DM subscription when user is logged in
     // This ensures we receive incoming messages even when not on the Messages page
+    // Skip for preview accounts - they cannot decrypt DMs
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      const account = this.accountState.account();
 
-      if (pubkey) {
-        // User is logged in - start the subscription
+      if (pubkey && account?.source !== 'preview') {
+        // User is logged in with a non-preview account - start the subscription
         untracked(() => {
           this.logger.info('Auto-starting DM subscription for logged in user');
           this.startDmSubscriptionWithRetry();
+        });
+      } else if (account?.source === 'preview') {
+        // Preview account - skip DM subscription (cannot decrypt)
+        untracked(() => {
+          this.logger.info('Skipping DM subscription for preview account - cannot decrypt messages');
         });
       } else {
         // User logged out - close the subscription

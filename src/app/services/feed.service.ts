@@ -3497,6 +3497,13 @@ export class FeedService {
    */
   private syncFeedsToSettingsTimeout: ReturnType<typeof setTimeout> | null = null;
   private syncFeedsToSettings(feeds: FeedConfig[]): void {
+    // Skip sync for preview accounts - they cannot sign events
+    const account = this.accountState.account();
+    if (account?.source === 'preview') {
+      this.logger.debug('Skipping feed sync for preview account');
+      return;
+    }
+
     // Debounce sync to prevent excessive publishes during rapid changes
     if (this.syncFeedsToSettingsTimeout) {
       clearTimeout(this.syncFeedsToSettingsTimeout);
@@ -3593,6 +3600,13 @@ export class FeedService {
    * Useful for explicit user actions like "Sync Now" button.
    */
   async forceSyncFeeds(): Promise<void> {
+    // Skip sync for preview accounts - they cannot sign events
+    const account = this.accountState.account();
+    if (account?.source === 'preview') {
+      this.logger.debug('Skipping force feed sync for preview account');
+      return;
+    }
+
     // Clear any pending debounced sync
     if (this.syncFeedsToSettingsTimeout) {
       clearTimeout(this.syncFeedsToSettingsTimeout);
