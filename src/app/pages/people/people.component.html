@@ -23,23 +23,24 @@
       <span class="set-count"> ({{ set.pubkeys.length }})</span>
     </button>
     }
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="createNewList()">
-      <mat-icon>add_circle</mat-icon>
-      <span>Create new list</span>
-    </button>
   </mat-menu>
-  } @else {
-  <!-- Create List button when no lists exist -->
-  <button mat-icon-button (click)="createNewList()" matTooltip="Create List">
-    <mat-icon>playlist_add</mat-icon>
-  </button>
   }
 
-  <!-- Add Person button -->
-  <button mat-icon-button (click)="openAddPersonDialog()" matTooltip="Add Person">
-    <mat-icon>person_add</mat-icon>
+  <!-- Add button with dropdown menu -->
+  <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add">
+    <mat-icon>add</mat-icon>
   </button>
+
+  <mat-menu #addMenu="matMenu">
+    <button mat-menu-item (click)="createNewList()">
+      <mat-icon>playlist_add</mat-icon>
+      <span>New list</span>
+    </button>
+    <button mat-menu-item (click)="openAddPersonDialog()">
+      <mat-icon>person_add</mat-icon>
+      <span>Add person</span>
+    </button>
+  </mat-menu>
 
   <!-- Edit List button (only when a list is selected) -->
   @if (selectedFollowSet()) {
