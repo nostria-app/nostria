@@ -945,6 +945,45 @@
   }
 }
 
+.tile-more-learn {
+  background: linear-gradient(160deg, rgba(0, 188, 212, 0.15) 0%, rgba(103, 58, 183, 0.08) 100%);
+  border: 2px solid rgba(0, 188, 212, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  .tile-icon {
+    color: #00BCD4;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(103, 58, 183, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    border-color: rgba(0, 188, 212, 0.6);
+    box-shadow: 0 8px 24px rgba(0, 188, 212, 0.2);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
 // Section Labels
 .section-label {
   font-size: 0.85rem;

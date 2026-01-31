@@ -98,8 +98,9 @@
 <mat-menu #copyMenu="matMenu">
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
-    URL
+    Note Link
   </button>
+  <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">
     <mat-icon>content_copy</mat-icon>
     ID

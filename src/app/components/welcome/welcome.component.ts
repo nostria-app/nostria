@@ -19,7 +19,7 @@ export class WelcomeComponent {
 
   // Wizard state
   currentWizardStep = signal(1);
-  totalWizardSteps = signal(4);
+  totalWizardSteps = signal(5);
 
   // Introduction content for each step
   wizardSteps = signal([
@@ -38,6 +38,7 @@ export class WelcomeComponent {
         { icon: 'groups', text: 'Connect without intermediaries' },
         { icon: 'block', text: 'Censorship-resistant communication' },
       ],
+      color: 'orange',
     },
     {
       id: 2,
@@ -54,6 +55,7 @@ export class WelcomeComponent {
         { icon: 'dns', text: 'Distributed relay network' },
         { icon: 'language', text: 'Global, open protocol' },
       ],
+      color: 'purple',
     },
     {
       id: 3,
@@ -70,11 +72,29 @@ export class WelcomeComponent {
         { icon: 'auto_awesome', text: 'Automatic relay discovery' },
         { icon: 'devices', text: 'Seamless cross-platform sync' },
       ],
+      color: 'cyan',
     },
     {
       id: 4,
+      icon: 'favorite',
+      title: 'Our Manifesto',
+      subtitle: 'Your Social Network, built for human connection',
+      content: [
+        'Humans are social beings. We thrive when we connect, share, and build relationships. Social media has the power to bring us closer together - but too often, that natural drive is taken advantage of. Nostria exists to change that dynamic.',
+        'Nostria is a platform built on the decentralized Nostr protocol, created to serve people - not exploit them. Our purpose is simple: to be a tool for good. We empower individuals to form new connections and strengthen existing ones, offering features that enrich lives rather than distract from them.',
+        'We reject the model where users are treated as the product. Growth will come not from manipulation, but from people genuinely enjoying Nostria because it enhances their lives and relationships.',
+      ],
+      features: [
+        { icon: 'lock_open', text: 'Own your data, control your profile' },
+        { icon: 'record_voice_over', text: 'Freedom and transparency at the core' },
+        { icon: 'diversity_3', text: 'Meaning, utility, and community' },
+      ],
+      color: 'pink',
+    },
+    {
+      id: 5,
       icon: 'rocket_launch',
-      title: 'Ready to Learn More',
+      title: 'Ready to Begin',
       subtitle: 'Start your Nostr journey',
       content: [
         'You now understand the basics of Nostr and why Nostria is the best way to experience it.',
@@ -86,6 +106,7 @@ export class WelcomeComponent {
         { icon: 'explore', text: 'Discover communities' },
         { icon: 'connect_without_contact', text: 'Connect authentically' },
       ],
+      color: 'green',
     },
   ]);
 
@@ -107,6 +128,12 @@ export class WelcomeComponent {
   previousStep(): void {
     if (this.currentWizardStep() > 1) {
       this.currentWizardStep.update(step => step - 1);
+    }
+  }
+
+  goToStep(stepId: number): void {
+    if (stepId >= 1 && stepId <= this.totalWizardSteps()) {
+      this.currentWizardStep.set(stepId);
     }
   }
 

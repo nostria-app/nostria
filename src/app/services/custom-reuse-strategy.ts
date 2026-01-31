@@ -2,140 +2,53 @@ import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from '@angular/router';
 
 /**
- * Custom route reuse strategy that keeps components alive when navigating.
- * Components are only destroyed when navigating to root pages.
+ * Custom route reuse strategy.
  * 
- * Root pages that clear the cache:
- * - Music, Summary, Messages, Discover, People, Collections, Streams
+ * This strategy does NOT cache/reuse any routes. All components are destroyed
+ * and recreated on navigation. The only customization is to prevent route reuse
+ * in the 'right' auxiliary outlet to avoid Angular router state tree issues.
  * 
- * Special handling:
- * - Feeds is always kept alive and never destroyed
+ * Note: FeedsComponent is embedded directly in app.html (not routed), so it
+ * stays alive regardless of this strategy.
  */
 @Injectable({
   providedIn: 'root'
 })
 export class CustomReuseStrategy implements RouteReuseStrategy {
-  private handlers = new Map<string, DetachedRouteHandle>();
-
-  // Root paths that should clear the navigation cache (except feeds)
-  private readonly rootPaths = new Set([
-    'music',
-    'summary',
-    'messages',
-    'discover',
-    'people',
-    'collections',
-    'streams',
-  ]);
-
-  // Paths that should never be destroyed
-  private readonly persistentPaths = new Set([
-    'feeds',
-    '', // home/feeds
-  ]);
-
-  // Paths that should be cached
-  private readonly cacheablePaths = new Set([
-    'feeds',
-    '',
-    'summary',
-    'notifications',
-    'search',
-    'bookmarks',
-    'music',
-    'discover',
-    'messages',
-    'people',
-    'collections',
-    'streams',
-    'settings',
-  ]);
-
   /**
-   * Get the route key for caching
+   * Never detach routes - don't cache any components
    */
-  private getRouteKey(route: ActivatedRouteSnapshot): string {
-    // Build the full path from root
-    const segments: string[] = [];
-    let current: ActivatedRouteSnapshot | null = route;
-
-    while (current) {
-      if (current.routeConfig?.path) {
-        segments.unshift(current.routeConfig.path);
-      }
-      current = current.parent;
-    }
-
-    // Include outlet name for named outlets
-    const outlet = route.outlet;
-    const path = segments.join('/');
-
-    return outlet === 'primary' ? path : `${outlet}:${path}`;
-  }
-
-  /**
-   * Get the root path from a route
-   */
-  private getRootPath(route: ActivatedRouteSnapshot): string {
-    let root = route;
-    while (root.parent && root.parent.routeConfig) {
-      root = root.parent;
-    }
-    return root.routeConfig?.path || '';
-  }
-
-  /**
-   * Determine if the route should be detached and stored
-   */
-  shouldDetach(route: ActivatedRouteSnapshot): boolean {
-    const path = route.routeConfig?.path || '';
-
-    // Always detach cacheable routes
-    if (this.cacheablePaths.has(path)) {
-      return true;
-    }
-
-    // Don't detach dynamic routes like e/:id, p/:id, a/:naddr
-    if (path.includes(':')) {
-      return false;
-    }
-
+  shouldDetach(_route: ActivatedRouteSnapshot): boolean {
     return false;
   }
 
   /**
-   * Store the detached route handle
+   * Never store anything
    */
-  store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {
-    if (handle) {
-      const key = this.getRouteKey(route);
-      this.handlers.set(key, handle);
-    }
+  store(_route: ActivatedRouteSnapshot, _handle: DetachedRouteHandle | null): void {
+    // No-op
   }
 
   /**
-   * Determine if we should attach a stored route
+   * Never attach stored routes
    */
-  shouldAttach(route: ActivatedRouteSnapshot): boolean {
-    const key = this.getRouteKey(route);
-    return this.handlers.has(key);
+  shouldAttach(_route: ActivatedRouteSnapshot): boolean {
+    return false;
   }
 
   /**
-   * Retrieve the stored route handle
+   * Never retrieve stored routes
    */
-  retrieve(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
-    const key = this.getRouteKey(route);
-    return this.handlers.get(key) || null;
+  retrieve(_route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
+    return null;
   }
 
   /**
-   * Determine if the route should be reused
+   * Determine if the route should be reused.
+   * Never reuse routes in the 'right' auxiliary outlet to prevent
+   * Angular's router state tree from getting confused.
    */
   shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
-    // Never reuse routes in the 'right' auxiliary outlet
-    // This prevents Angular's router state tree from getting confused
-    // when the same profile route config is used in both primary and auxiliary outlets
     if (future.outlet === 'right' || curr.outlet === 'right') {
       return false;
     }
@@ -143,34 +56,9 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
   }
 
   /**
-   * Clear all cached routes except persistent ones (like feeds)
-   * Called when navigating to a root page
+   * Clear cache - no-op since we don't cache anything
    */
-  clearCache(keepPersistent = true): void {
-    if (keepPersistent) {
-      // Keep only persistent paths
-      for (const [key] of this.handlers) {
-        const path = key.includes(':') ? key.split(':')[1] : key;
-        if (!this.persistentPaths.has(path)) {
-          this.handlers.delete(key);
-        }
-      }
-    } else {
-      this.handlers.clear();
-    }
-  }
-
-  /**
-   * Check if navigating to a root path that should clear cache
-   */
-  isRootNavigation(path: string): boolean {
-    return this.rootPaths.has(path);
-  }
-
-  /**
-   * Get the number of cached routes (for debugging)
-   */
-  getCacheSize(): number {
-    return this.handlers.size;
+  clearCache(): void {
+    // No-op
   }
 }

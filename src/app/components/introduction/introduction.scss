@@ -31,11 +31,12 @@
   margin-top: auto;
   margin-bottom: auto;
   // Add extra top margin to push it down from perfect center
-  padding-top: 8vh;
+  padding-top: 4vh;
 
-  // On smaller screens, add more padding to clear the toolbar
+  // On smaller screens, reduce padding and gap to minimize whitespace
   @media (max-width: 599px) {
-    padding-top: 12vh;
+    padding-top: 0;
+    gap: 1rem;
   }
 }
 
@@ -49,6 +50,11 @@
   // Mobile-first: vertical stack (branding first, then actions)
   flex-direction: column-reverse;
 
+  // On mobile, reduce gap between branding and actions
+  @media (max-width: 599px) {
+    gap: 1rem;
+  }
+
   // Large screens: horizontal layout (actions left, branding right)
   @media (min-width: 768px) {
     flex-direction: row;
@@ -61,6 +67,86 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+}
+
+.learn-more-card {
+  cursor: pointer;
+  background: linear-gradient(135deg,
+      var(--mat-sys-tertiary-container) 0%,
+      var(--mat-sys-secondary-container) 100%);
+  border: 2px solid var(--mat-sys-tertiary);
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(var(--mat-sys-tertiary), 0.3);
+  animation: pulse-glow 2s ease-in-out infinite;
+
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(var(--mat-sys-tertiary), 0.4);
+
+    .arrow-icon {
+      transform: translateX(4px);
+    }
+  }
+
+  mat-card-content {
+    padding: 0.75rem 1.5rem;
+  }
+
+  .learn-more-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--mat-sys-on-tertiary-container);
+
+    .question-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--mat-sys-tertiary);
+      color: var(--mat-sys-on-tertiary);
+      animation: bounce 1s ease-in-out infinite;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .learn-more-text {
+      font-size: 1rem;
+    }
+
+    .arrow-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      opacity: 0.7;
+      transition: transform 0.2s ease;
+    }
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.25);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 .actions-section {
@@ -221,6 +307,17 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
+  // Mobile: reduce spacing
+  @media (max-width: 599px) {
+    .logo-container {
+      margin-bottom: 0.5rem;
+    }
+
+    .app-title {
+      margin: 0 0 0.25rem 0;
+    }
+  }
+
   // Large screens: align to right
   @media (min-width: 768px) {
     .logo-container .nostria-logo {
@@ -241,25 +338,55 @@
 // Responsive adjustments
 @media (max-width: 600px) {
   .introduction-container {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .introduction-content {
-    gap: 2rem;
+    gap: 1rem;
+  }
+
+  .learn-more-card {
+    mat-card-content {
+      padding: 0.5rem 1rem;
+    }
+
+    .learn-more-content {
+      gap: 0.5rem;
+
+      .question-icon {
+        width: 30px;
+        height: 30px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      .learn-more-text {
+        font-size: 0.9rem;
+      }
+    }
   }
 
   .branding-section {
-    .logo-container .nostria-logo {
-      width: 100px;
-      height: 100px;
+    .logo-container {
+      margin-bottom: 0.5rem;
+
+      .nostria-logo {
+        width: 80px;
+        height: 80px;
+      }
     }
 
     .app-title {
-      font-size: 2.5rem;
+      font-size: 2rem;
+      margin-bottom: 0.25rem;
     }
 
     .app-slogan {
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
   }
 
@@ -304,6 +431,29 @@
 
   .introduction-content {
     gap: 1.5rem;
+  }
+
+  .learn-more-card {
+    mat-card-content {
+      padding: 0.5rem 1rem;
+    }
+
+    .learn-more-content {
+      .question-icon {
+        width: 28px;
+        height: 28px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      .learn-more-text {
+        font-size: 0.85rem;
+      }
+    }
   }
 
   .branding-section {
@@ -373,6 +523,37 @@
 
   .introduction-content {
     gap: 1rem;
+  }
+
+  .learn-more-card {
+    mat-card-content {
+      padding: 0.4rem 0.75rem;
+    }
+
+    .learn-more-content {
+      gap: 0.4rem;
+
+      .question-icon {
+        width: 24px;
+        height: 24px;
+
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+        }
+      }
+
+      .learn-more-text {
+        font-size: 0.8rem;
+      }
+
+      .arrow-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
   }
 
   .branding-section {

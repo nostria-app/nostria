@@ -76,6 +76,7 @@ import { AccountService } from '../../api/services';
 import { PublicAccount } from '../../api/models';
 import { firstValueFrom } from 'rxjs';
 import { ProfileHomeComponent } from './profile-home/profile-home.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 
 @Component({
   selector: 'app-profile',
@@ -257,9 +258,9 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     return this.reportingService.isUserBlocked(pubkey);
   });
 
-  // Computed to get available follow sets
+  // Computed to get available follow sets (sorted alphabetically)
   availableFollowSets = computed(() => {
-    return this.followSetsService.followSets();
+    return [...this.followSetsService.followSets()].sort((a, b) => a.title.localeCompare(b.title));
   });
 
   // Convert route params to a signal
@@ -751,10 +752,26 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
   copyNprofile(): void {
     try {
-      // For simplicity, just using npub here. In a real implementation,
-      // would need to create a proper nprofile URI with relays
-      const npub = this.getFormattedNpub();
-      this.copyToClipboard(npub, 'nprofile');
+      const pubkey = this.pubkey();
+      if (!this.utilities.isValidPubkey(pubkey)) {
+        throw new Error('Invalid pubkey');
+      }
+
+      const hexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+      if (!hexPubkey) {
+        throw new Error('Failed to get hex pubkey');
+      }
+
+      // Get relay hints from account relays
+      const relays = this.accountRelay.getRelayUrls();
+
+      // Encode nprofile with pubkey and relay hints
+      const nprofile = nip19.nprofileEncode({
+        pubkey: hexPubkey,
+        relays: relays.slice(0, 5), // Include up to 5 relays
+      });
+
+      this.copyToClipboard(nprofile, 'nprofile');
     } catch (error) {
       console.warn('Failed to copy nprofile:', error);
       this.snackBar.open('Unable to copy invalid pubkey', 'Close', { duration: 3000 });
@@ -789,7 +806,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
         .share({
           title: `${this.getFormattedName()}'s Nostr Profile`,
           text: `Check out ${this.getFormattedName()} on Nostr`,
-          url: this.getCurrentUrl(),
+          url: this.getCanonicalProfileUrl(),
         })
         .then(() => {
           this.logger.debug('Profile shared successfully');
@@ -799,8 +816,58 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
         });
     } else {
       // Fallback if Web Share API is not available
-      this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
+      this.copyToClipboard(this.getCanonicalProfileUrl(), 'profile URL');
     }
+  }
+
+  /**
+   * Opens the share dialog for the current profile with multiple sharing options
+   */
+  openShareProfileDialog(): void {
+    const pubkey = this.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const metadata = this.userMetadata();
+    const displayName = this.getFormattedName();
+
+    const dialogData: ShareArticleDialogData = {
+      title: `${displayName}'s Profile`,
+      summary: metadata?.data?.about || undefined,
+      image: metadata?.data?.picture || undefined,
+      url: this.getCanonicalProfileUrl(),
+      eventId: metadata?.event?.id || '',
+      pubkey: pubkey,
+      kind: kinds.Metadata, // Profile is kind 0
+    };
+
+    this.dialog.open(ShareArticleDialogComponent, {
+      data: dialogData,
+      width: '450px',
+    });
+  }
+
+  /**
+   * Get the canonical URL for the profile (using username or nprofile with relays)
+   */
+  private getCanonicalProfileUrl(): string {
+    const pubkey = this.pubkey();
+    const username = this.profileUsername();
+
+    // If user has a username, use that
+    if (username) {
+      return `https://nostria.app/u/${username}`;
+    }
+
+    // Otherwise, use nprofile with relay hints for better discoverability
+    const relays = this.accountRelay.getRelayUrls();
+    const nprofile = nip19.nprofileEncode({
+      pubkey: pubkey,
+      relays: relays.slice(0, 3), // Include up to 3 relays
+    });
+
+    return `https://nostria.app/p/${nprofile}`;
   }
 
   shareProfileUrl(): void {
@@ -1023,7 +1090,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   }
 
   copyProfileUrl(): void {
-    this.layoutService.copyProfileUrl(this.getFormattedNpub(), this.profileUsername());
+    this.copyToClipboard(this.getCanonicalProfileUrl(), 'profile URL');
   }
 
   /**
@@ -1076,6 +1143,60 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       }
     } catch (err) {
       this.logger.error('Failed to generate invite link', err);
+      this.snackBar.open('Failed to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  /**
+   * Opens the share dialog for invitation link with multiple sharing options
+   */
+  openShareInviteDialog(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Unable to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      const metadata = this.userMetadata();
+      const displayName = this.getFormattedName();
+
+      // Get the logged-in user's account relays
+      const relays = this.accountRelay.getRelayUrls();
+
+      // Encode nprofile with pubkey and relays
+      const nprofile = nip19.nprofileEncode({
+        pubkey: pubkey,
+        relays: relays.slice(0, 5), // Include up to 5 relays
+      });
+
+      // Generate the invite URL
+      const inviteUrl = `https://nostria.app/invite/${nprofile}`;
+
+      const dialogData: ShareArticleDialogData = {
+        title: `Join ${displayName} on Nostria!`,
+        summary: `${displayName} invited you to join Nostria - Your Social Network, Your Control`,
+        image: metadata?.data?.picture || undefined,
+        url: inviteUrl,
+        eventId: '',
+        pubkey: pubkey,
+        kind: kinds.Metadata,
+      };
+
+      this.dialog.open(ShareArticleDialogComponent, {
+        data: dialogData,
+        width: '450px',
+      });
+    } catch (err) {
+      this.logger.error('Failed to open invite dialog', err);
       this.snackBar.open('Failed to generate invite link', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',

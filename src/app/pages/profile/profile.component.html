@@ -102,10 +102,17 @@
         <span>Copy</span>
       </button>
 
-      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+      <button mat-menu-item (click)="openShareProfileDialog()">
         <mat-icon>share</mat-icon>
         <span>Share</span>
       </button>
+
+      @if (isOwnProfile()) {
+      <button mat-menu-item (click)="openShareInviteDialog()">
+        <mat-icon>person_add</mat-icon>
+        <span>Invitation</span>
+      </button>
+      }
 
       <button mat-menu-item [matMenuTriggerFor]="publishEventMenu">
         <mat-icon>publish</mat-icon>
@@ -138,38 +145,19 @@
     </mat-menu>
 
     <mat-menu #copyMenu="matMenu">
-      <button mat-menu-item (click)="copyNpub()">
-        <span>Identifier (npub)</span>
-      </button>
-      <button mat-menu-item (click)="copyHex()">
-        <span>Identifier (hex)</span>
-      </button>
-      <button mat-menu-item (click)="copyNprofile()">
-        <span>Identifier (nprofile)</span>
-      </button>
-      <button mat-menu-item (click)="copyProfileData()">
-        <span>Profile Data</span>
-      </button>
       <button mat-menu-item (click)="copyProfileUrl()">
         <mat-icon>link</mat-icon>
-        <span>Profile URL</span>
+        <span>Profile Link</span>
       </button>
-      <button mat-menu-item (click)="copyFollowingList()">
-        <span>Following List</span>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="copyNpub()">
+        <span>ID</span>
       </button>
-      <button mat-menu-item (click)="copyRelayList()">
-        <span>Relay List</span>
+      <button mat-menu-item (click)="copyHex()">
+        <span>ID (hex)</span>
       </button>
-    </mat-menu>
-
-    <mat-menu #shareMenu="matMenu">
-      <button mat-menu-item (click)="shareInviteLink()">
-        <mat-icon>person_add</mat-icon>
-        <span>Invitation</span>
-      </button>
-      <button mat-menu-item (click)="shareProfile()">
-        <mat-icon>share</mat-icon>
-        <span>Profile</span>
+      <button mat-menu-item (click)="copyNprofile()">
+        <span>ID (nprofile)</span>
       </button>
     </mat-menu>
 

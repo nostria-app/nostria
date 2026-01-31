@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
-import { RouterModule, ActivatedRoute, ParamMap } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { PeopleFilterPanelComponent } from './people-filter-panel/people-filter-panel.component';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -52,6 +52,7 @@ type ViewModeType = typeof VIEW_MODES[number];
 
 @Component({
   selector: 'app-people',
+  host: { 'class': 'panel-with-sticky-header' },
   imports: [
     CommonModule,
     MatButtonModule,
@@ -166,7 +167,7 @@ export class PeopleComponent implements OnDestroy {
   sortOption = signal<SortOption>('default');
 
   // Follow set selection
-  selectedFollowSet = signal<FollowSet | null>(null);
+  selectedFollowSetDTag = signal<string | null>(null);
   followSetProfiles = signal<FollowingProfile[]>([]);
   loadingFollowSetProfiles = signal(false);
 
@@ -174,6 +175,14 @@ export class PeopleComponent implements OnDestroy {
   allFollowSets = computed(() => {
     const sets = this.followSetsService.followSets();
     return [...sets].sort((a, b) => a.title.localeCompare(b.title));
+  });
+
+  // Computed: Get the selected follow set reactively from the service
+  // This ensures we always have the latest version with updated pubkeys
+  selectedFollowSet = computed(() => {
+    const dTag = this.selectedFollowSetDTag();
+    if (!dTag) return null;
+    return this.followSetsService.getFollowSetByDTag(dTag) ?? null;
   });
 
   // Read route parameters for setId
@@ -406,6 +415,27 @@ export class PeopleComponent implements OnDestroy {
         }
       }
     });
+
+    // Effect to watch for changes in the selected follow set's pubkeys
+    // This enables instant UI updates when a user is added to or removed from a list
+    effect(() => {
+      const selectedSet = this.selectedFollowSet();
+      if (!selectedSet) return;
+
+      // Track pubkeys - when these change, we need to reload profiles
+      const pubkeys = selectedSet.pubkeys;
+      const currentProfiles = untracked(() => this.followSetProfiles());
+      const currentPubkeys = new Set(currentProfiles.map(p => p.pubkey));
+
+      // Check if pubkeys have changed
+      const pubkeysChanged = pubkeys.length !== currentPubkeys.size ||
+        pubkeys.some(pk => !currentPubkeys.has(pk));
+
+      if (pubkeysChanged) {
+        this.logger.debug('[People] Follow set pubkeys changed, reloading profiles');
+        untracked(() => this.loadFollowSetProfiles(pubkeys));
+      }
+    }, { allowSignalWrites: true });
 
     // Setup infinite scroll when sentinel becomes available
     effect(() => {
@@ -683,28 +713,18 @@ export class PeopleComponent implements OnDestroy {
     if (followSet) {
       this.updateSearch('');
 
-      // Set the selected follow set immediately to prevent the route effect
+      // Set the selected follow set dTag immediately to prevent the route effect
       // from re-triggering selectFollowSet when the URL changes
-      this.selectedFollowSet.set(followSet);
+      this.selectedFollowSetDTag.set(followSet.dTag);
 
       // Update URL to the clean path format (do this early so URL reflects selection)
       this.router.navigate(['/people/list', followSet.dTag]);
 
       // Load profiles for all pubkeys in the follow set
-      this.loadingFollowSetProfiles.set(true);
-      try {
-        const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
-        this.followSetProfiles.set(profiles);
-      } catch (error) {
-        console.error('Failed to load follow set profiles:', error);
-        // On error, set empty profiles
-        this.followSetProfiles.set([]);
-      } finally {
-        this.loadingFollowSetProfiles.set(false);
-      }
+      await this.loadFollowSetProfiles(followSet.pubkeys);
     } else {
       // When clearing selection, update immediately
-      this.selectedFollowSet.set(null);
+      this.selectedFollowSetDTag.set(null);
       this.followSetProfiles.set([]);
 
       // Navigate back to the main people page
@@ -719,19 +739,10 @@ export class PeopleComponent implements OnDestroy {
   private async selectFollowSetFromRoute(followSet: FollowSet) {
     this.displayLimit.set(this.PAGE_SIZE);
     this.updateSearch('');
-    this.selectedFollowSet.set(followSet);
+    this.selectedFollowSetDTag.set(followSet.dTag);
 
     // Load profiles for all pubkeys in the follow set
-    this.loadingFollowSetProfiles.set(true);
-    try {
-      const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
-      this.followSetProfiles.set(profiles);
-    } catch (error) {
-      console.error('Failed to load follow set profiles:', error);
-      this.followSetProfiles.set([]);
-    } finally {
-      this.loadingFollowSetProfiles.set(false);
-    }
+    await this.loadFollowSetProfiles(followSet.pubkeys);
   }
 
   /**
@@ -740,8 +751,24 @@ export class PeopleComponent implements OnDestroy {
    */
   private clearFollowSetSelection() {
     this.displayLimit.set(this.PAGE_SIZE);
-    this.selectedFollowSet.set(null);
+    this.selectedFollowSetDTag.set(null);
     this.followSetProfiles.set([]);
+  }
+
+  /**
+   * Load profiles for a list of pubkeys
+   */
+  private async loadFollowSetProfiles(pubkeys: string[]): Promise<void> {
+    this.loadingFollowSetProfiles.set(true);
+    try {
+      const profiles = await this.followingService.loadProfilesForPubkeys(pubkeys);
+      this.followSetProfiles.set(profiles);
+    } catch (error) {
+      console.error('Failed to load follow set profiles:', error);
+      this.followSetProfiles.set([]);
+    } finally {
+      this.loadingFollowSetProfiles.set(false);
+    }
   }
 
   /**
@@ -787,16 +814,8 @@ export class PeopleComponent implements OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.logger.info('Person added:', result);
-        // FollowingService will automatically reload when following list changes
-        // If a follow set was selected, reload it with fresh data from the service
-        const currentSelectedSet = this.selectedFollowSet();
-        if (currentSelectedSet) {
-          // Get the updated follow set from the service (with new pubkeys)
-          const updatedSet = this.followSetsService.getFollowSetByDTag(currentSelectedSet.dTag);
-          if (updatedSet) {
-            this.selectFollowSet(updatedSet);
-          }
-        }
+        // The effect watching selectedFollowSet pubkeys will automatically
+        // reload profiles when the follow set is updated in the service
       }
     });
   }

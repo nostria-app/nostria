@@ -722,6 +722,18 @@ export class UtilitiesService {
     }
   }
 
+  /**
+   * Relays that should be excluded from optimal relay selection.
+   * These are discovery/indexer relays that only serve relay lists and following data,
+   * not normal user events like notes, profiles, etc.
+   */
+  readonly excludedFromOptimalSelection: string[] = [
+    'wss://purplepag.es/',
+    'wss://discovery.eu.nostria.app/',
+    'wss://discovery.us.nostria.app/',
+    'wss://indexer.coracle.social/',
+  ];
+
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     // Filter out malformed URLs first
@@ -742,6 +754,9 @@ export class UtilitiesService {
 
     const normalizedUrls = this.normalizeRelayUrls(validUrls);
 
+    // Filter out discovery/indexer relays that only serve relay lists and following data
+    const filteredUrls = normalizedUrls.filter(url => !this.excludedFromOptimalSelection.includes(url));
+
     // Helper function to check if a URL is IP-based or localhost
     const isIpOrLocalhost = (url: string): boolean => {
       try {
@@ -755,17 +770,17 @@ export class UtilitiesService {
     };
 
     // 1. First tier: Preferred relays
-    const preferredRelays = normalizedUrls.filter(
+    const preferredRelays = filteredUrls.filter(
       url => this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 2. Second tier: Normal domain relays (not IP or localhost)
-    const normalDomainRelays = normalizedUrls.filter(
+    const normalDomainRelays = filteredUrls.filter(
       url => !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 3. Third tier: IP-based and localhost relays
-    const ipAndLocalhostRelays = normalizedUrls.filter(url => isIpOrLocalhost(url));
+    const ipAndLocalhostRelays = filteredUrls.filter(url => isIpOrLocalhost(url));
 
     // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
     const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
