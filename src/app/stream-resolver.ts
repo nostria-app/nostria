@@ -56,12 +56,6 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
 
     pool.close(relays);
 
-    if (event) {
-      console.log('[SSR] StreamResolver: Event found (kind:', event.kind, ')');
-    } else {
-      console.log('[SSR] StreamResolver: Event not found on relays');
-    }
-
     return event;
   } catch (error) {
     console.error('[SSR] StreamResolver: Error fetching event:', error);
@@ -109,12 +103,6 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
     ]);
 
     pool.close(relays);
-
-    if (event) {
-      console.log('[SSR] StreamResolver: Event found by address (kind:', event.kind, ')');
-    } else {
-      console.log('[SSR] StreamResolver: Event not found by address');
-    }
 
     return event;
   } catch (error) {
@@ -165,7 +153,6 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
   }
 
   const encodedEvent = route.params['encodedEvent'];
-  console.log('[SSR] StreamResolver: Processing stream:', encodedEvent?.substring(0, 30) + '...');
 
   const defaultData: StreamData = {
     title: 'Live Stream',
@@ -210,7 +197,6 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
 
       // Fallback to metadata API if relay fetch fails
       if (!event) {
-        console.log('[SSR] StreamResolver: Falling back to metadata API...');
         try {
           const metadataResponse = await metaService.loadSocialMetadata(encodedEvent);
 
@@ -226,8 +212,6 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
             const description = summaryTag?.[1] || metadataResponse.content || 'Watch this live stream on Nostria';
             const image = imageTag?.[1];
             const streamUrl = streamingTag?.[1];
-
-            console.log('[SSR] StreamResolver: Loaded from API:', title);
 
             data.title = title;
             data.description = description;
@@ -248,8 +232,6 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         }
 
         // If metadata API also failed, set default meta tags
-        console.log('[SSR] StreamResolver: Using default meta tags (event not found)');
-
         metaService.updateSocialMetadata({
           title: 'Live Stream - Nostria',
           description: 'Watch live streams on Nostria, your decentralized social network',
@@ -270,8 +252,6 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       const description = summaryTag?.[1] || 'Watch this live stream on Nostria';
       const image = imageTag?.[1];
       const streamUrl = streamingTag?.[1];
-
-      console.log('[SSR] StreamResolver: Loaded from relay:', title);
 
       data.title = title;
       data.description = description;

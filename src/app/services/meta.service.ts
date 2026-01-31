@@ -83,24 +83,30 @@ export class MetaService {
     if (config.title) this.setTitle(config.title);
     if (config.description) this.setDescription(config.description);
 
-    // Open Graph
-    if (config.title) this.meta.updateTag({ property: 'og:title', content: config.title });
-    if (config.description)
-      this.meta.updateTag({
-        property: 'og:description',
-        content: config.description,
-      });
-    if (config.image) this.meta.updateTag({ property: 'og:image', content: config.image });
-    if (config.url) this.meta.updateTag({ property: 'og:url', content: config.url });
+    // Open Graph - use addTag with explicit selector to ensure tags are created/updated
+    if (config.title) {
+      this.meta.updateTag({ property: 'og:title', content: config.title }, 'property="og:title"');
+    }
+    if (config.description) {
+      this.meta.updateTag({ property: 'og:description', content: config.description }, 'property="og:description"');
+    }
+    if (config.image) {
+      this.meta.updateTag({ property: 'og:image', content: config.image }, 'property="og:image"');
+    }
+    if (config.url) {
+      this.meta.updateTag({ property: 'og:url', content: config.url }, 'property="og:url"');
+    }
 
-    // Twitter Card
-    if (config.title) this.meta.updateTag({ name: 'twitter:title', content: config.title });
-    if (config.description)
-      this.meta.updateTag({
-        name: 'twitter:description',
-        content: config.description,
-      });
-    if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
+    // Twitter Card - use explicit selector
+    if (config.title) {
+      this.meta.updateTag({ name: 'twitter:title', content: config.title }, 'name="twitter:title"');
+    }
+    if (config.description) {
+      this.meta.updateTag({ name: 'twitter:description', content: config.description }, 'name="twitter:description"');
+    }
+    if (config.image) {
+      this.meta.updateTag({ name: 'twitter:image', content: config.image }, 'name="twitter:image"');
+    }
   }
 
   /**

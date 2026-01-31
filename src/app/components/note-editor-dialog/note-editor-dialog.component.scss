@@ -298,7 +298,7 @@
 
     .content-textarea {
       resize: none;
-      overflow-y: hidden;
+      overflow-y: auto;
       min-height: 200px;
       max-height: 500px;
       height: auto;
@@ -1201,7 +1201,7 @@
       .content-textarea {
         min-height: 60px;
         max-height: 200px;
-        overflow-y: hidden;
+        overflow-y: auto;
         height: auto;
         width: 100% !important;
         max-width: 100% !important;
