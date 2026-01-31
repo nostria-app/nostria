@@ -84,6 +84,7 @@ interface AccountLocalState {
   zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
   threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', or follow set d-tag
   recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
+  streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
 }
 
 /**
@@ -1184,6 +1185,25 @@ export class AccountLocalStateService {
    */
   clearRecentEmojis(pubkey: string): void {
     this.updateAccountState(pubkey, { recentEmojis: [] });
+  }
+
+  /**
+   * Get streams list filter for an account
+   * Returns 'all' if not set (shows all streams)
+   */
+  getStreamsListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.streamsListFilter || 'all';
+  }
+
+  /**
+   * Set streams list filter for an account
+   * @param filter - 'all', 'following', or a follow set d-tag
+   */
+  setStreamsListFilter(pubkey: string, filter: string): void {
+    // Only store non-default values
+    const value = filter === 'all' ? undefined : filter;
+    this.updateAccountState(pubkey, { streamsListFilter: value });
   }
 
   /**
