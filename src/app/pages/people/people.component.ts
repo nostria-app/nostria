@@ -52,6 +52,7 @@ type ViewModeType = typeof VIEW_MODES[number];
 
 @Component({
   selector: 'app-people',
+  host: { 'class': 'panel-with-sticky-header' },
   imports: [
     CommonModule,
     MatButtonModule,
