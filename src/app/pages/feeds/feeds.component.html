@@ -15,6 +15,22 @@
               <mat-icon>trending_up</mat-icon>
               <span>Trending</span>
             </button>
+            } @else if (showListFeed()) {
+            <!-- List Feed selected - show list info with close button -->
+            @let listFeed = activeListFeed();
+            <div class="list-feed-tab">
+              <mat-icon>people</mat-icon>
+              <div class="list-feed-info">
+                <span class="list-feed-name">{{ listFeed?.title || 'List Feed' }}</span>
+                <span class="list-feed-count">{{ listFeed?.pubkeys?.length || 0 }} people</span>
+              </div>
+              @if (listColumn?.isLoadingFromRelays()) {
+              <mat-spinner diameter="20" class="relay-loading-spinner"></mat-spinner>
+              }
+              <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="close-list-btn">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
             } @else if (!feedService.feedsLoaded()) {
             <!-- Show loading indicator while feeds are loading -->
             <button mat-button disabled>
@@ -50,12 +66,18 @@
 
         <span class="spacer"></span>
 
+        <!-- List Feeds Menu - People Lists -->
+        @if (app.authenticated()) {
+        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)">
+        </app-list-feed-menu>
+        }
+
         <!-- Public Relay Feeds Menu -->
         <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
         </app-relay-feed-menu>
 
         <!-- Filter button with overlay panel - only for authenticated users -->
-        @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
+        @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
         <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
           matTooltip="Filter content">
           <mat-icon>tune</mat-icon>
@@ -64,8 +86,7 @@
         <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
           [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
           [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
-          [cdkConnectedOverlayPositions]="filterPanelPositions"
-          [cdkConnectedOverlayPush]="true">
+          [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
           <app-feed-filter-panel (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
           </app-feed-filter-panel>
@@ -81,8 +102,8 @@
         <mat-menu #feedManagementMenu="matMenu">
           @let feed = activeFeed();
           <!-- Refresh -->
-          @if (feed && !showRelayFeed()) {
-          <button mat-menu-item (click)="refreshFeed(feed)">
+          @if ((feed || showListFeed()) && !showRelayFeed()) {
+          <button mat-menu-item (click)="refreshCurrentFeed()">
             <mat-icon>refresh</mat-icon>
             <span>Refresh Content</span>
           </button>
@@ -128,6 +149,19 @@
         <div class="column-unit" [class.visible]="true">
           <div class="column-content">
             <app-trending-column></app-trending-column>
+          </div>
+        </div>
+      </div>
+      }
+      <!-- List Feed View - shown when list query param is present -->
+      @else if (showListFeed()) {
+      <div class="columns-wrapper" #columnsWrapper>
+        <div class="column-unit list-feed-unit" [class.visible]="true">
+          <div class="column-content">
+            <app-list-column #listColumn [listData]="activeListFeed()"
+              [showReplies]="localSettings.contentFilter().showReplies"
+              [showReposts]="localSettings.contentFilter().showReposts">
+            </app-list-column>
           </div>
         </div>
       </div>
