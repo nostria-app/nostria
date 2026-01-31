@@ -1602,6 +1602,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   /**
    * Auto-resize the textarea based on its content.
    * Adjusts the height to fit the content while respecting min/max constraints.
+   * Scrollbar will automatically appear when content exceeds max height (via CSS overflow-y: auto).
    */
   private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     // Reset height to auto to get the correct scrollHeight
@@ -1617,9 +1618,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Set the new height
     textarea.style.height = `${newHeight}px`;
-
-    // Enable scrolling if content exceeds max height
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   /**
@@ -2037,12 +2035,32 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Preview functionality
   togglePreview(): void {
+    const wasInPreview = this.showPreview();
     this.showPreview.update(current => !current);
+    
+    // If coming back from preview, re-trigger textarea auto-resize after it renders
+    if (wasInPreview) {
+      setTimeout(() => {
+        if (this.contentTextarea) {
+          this.autoResizeTextarea(this.contentTextarea.nativeElement);
+        }
+      }, 0);
+    }
   }
 
   // Advanced options functionality
   toggleAdvancedOptions(): void {
+    const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
+    
+    // If coming back from advanced options, re-trigger textarea auto-resize after it renders
+    if (wasInAdvancedOptions) {
+      setTimeout(() => {
+        if (this.contentTextarea) {
+          this.autoResizeTextarea(this.contentTextarea.nativeElement);
+        }
+      }, 0);
+    }
   }
 
   onExpirationToggle(enabled: boolean): void {

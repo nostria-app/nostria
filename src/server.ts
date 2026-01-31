@@ -314,14 +314,10 @@ app.use(async (req, res, next) => {
   const path = req.path;
   const isSSR = isSSRRoute(path);
 
-  console.log(`[SSR] Handling request: ${req.url} | Bot: ${isBotRequest} | SSR Route: ${isSSR}`);
-
   // Check cache for bot requests on SSR routes
   if (isBotRequest && isSSR) {
     const cached = ssrCache.get(path);
     if (cached && (Date.now() - cached.timestamp) < SSR_CACHE_MAX_AGE_MS) {
-      console.log(`[SSR] Cache hit for bot request: ${path}`);
-
       // Set cached headers
       for (const [key, value] of Object.entries(cached.headers)) {
         res.setHeader(key, value);
@@ -340,8 +336,6 @@ app.use(async (req, res, next) => {
     const response = await angularApp.handle(req);
 
     if (response) {
-      console.log(`[SSR] Rendered: ${req.url}`);
-
       // For bot requests on SSR routes, cache the response
       if (isBotRequest && isSSR) {
         // Read the response body
@@ -359,7 +353,6 @@ app.use(async (req, res, next) => {
           headers: headersToCache,
           timestamp: Date.now(),
         });
-        console.log(`[SSR] Cached response for: ${path}. Cache size: ${ssrCache.size}`);
 
         // Set Cache-Control headers for bots (allow CDN/proxy caching)
         res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
@@ -390,7 +383,6 @@ app.use(async (req, res, next) => {
 
     // For bot requests, try to serve a basic fallback with meta tags
     if (isBotRequest && isSSR) {
-      console.log(`[SSR] Serving fallback for bot after error: ${path}`);
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
       res.status(200).send(`<!DOCTYPE html>
