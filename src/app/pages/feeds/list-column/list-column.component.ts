@@ -149,6 +149,7 @@ export class ListColumnComponent implements OnDestroy {
   isLoading = signal(false);
   isRefreshing = signal(false);
   isLoadingMore = signal(false);
+  isLoadingFromRelays = signal(false);
   error = signal<string | null>(null);
 
   // Events
@@ -250,7 +251,12 @@ export class ListColumnComponent implements OnDestroy {
       }
 
       // Step 2: Fetch fresh events from relays in the background
-      await this.loadEventsFromRelays(pubkeys, cachedEvents);
+      this.isLoadingFromRelays.set(true);
+      try {
+        await this.loadEventsFromRelays(pubkeys, cachedEvents);
+      } finally {
+        this.isLoadingFromRelays.set(false);
+      }
     } catch (err) {
       this.logger.error('[ListColumn] Error loading events:', err);
       this.error.set('Failed to load events from list');

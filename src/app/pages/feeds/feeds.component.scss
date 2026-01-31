@@ -236,6 +236,10 @@ app-user-profile {
           }
         }
 
+        .relay-loading-spinner {
+          flex-shrink: 0;
+        }
+
         .close-list-btn {
           width: 28px;
           height: 28px;
