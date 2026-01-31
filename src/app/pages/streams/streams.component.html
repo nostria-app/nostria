@@ -1,8 +1,41 @@
 <div class="streams-container">
   <!-- Panel Header -->
   <div class="panel-header">
-    <h2 class="panel-title title-font">Streams</h2>
+    <h2 class="panel-title title-font">{{ filterTitle() }}</h2>
     <span class="panel-header-spacer"></span>
+
+    <!-- People List Selector -->
+    @if (isAuthenticated()) {
+    <button mat-icon-button [matMenuTriggerFor]="listFilterMenu"
+      [matTooltip]="'Filter by: ' + filterTitle()">
+      <mat-icon>{{ selectedFollowSet()?.isPrivate ? 'lock' : (selectedListFilter() === 'all' ? 'filter_list' : 'people') }}</mat-icon>
+    </button>
+
+    <mat-menu #listFilterMenu="matMenu">
+      <button mat-menu-item (click)="selectListFilter('all')"
+        [class.selected]="selectedListFilter() === 'all'">
+        <mat-icon>public</mat-icon>
+        <span>All Streams</span>
+      </button>
+      <button mat-menu-item (click)="selectListFilter('following')"
+        [class.selected]="selectedListFilter() === 'following'">
+        <mat-icon>people</mat-icon>
+        <span>Following</span>
+      </button>
+      @if (allFollowSets().length > 0) {
+      <mat-divider></mat-divider>
+      @for (set of allFollowSets(); track set.id) {
+      <button mat-menu-item (click)="selectListFilter(set)"
+        [class.selected]="selectedListFilter() === set.dTag">
+        <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
+        <span>{{ set.title }}</span>
+        <span class="set-count"> ({{ set.pubkeys.length }})</span>
+      </button>
+      }
+      }
+    </mat-menu>
+    }
+
     <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">
       <mat-icon>refresh</mat-icon>
     </button>
