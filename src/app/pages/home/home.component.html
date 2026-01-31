@@ -10,7 +10,7 @@
           class="user-name">, {{
           account.profile()?.data?.display_name || account.profile()?.data?.name }}</span>}
       </h1>
-      <p class="tagline" i18n="@@home.tagline">Welcome to Nostria. Your home for everything Nostr.</p>
+      <p class="tagline" i18n="@@home.tagline">Welcome to Nostria. Built for human connections.</p>
     </div>
   </header>
 
@@ -76,7 +76,7 @@
         <mat-icon class="tile-icon">explore</mat-icon>
         <div class="tile-text">
           <h3 i18n="@@home.discover">Discover</h3>
-          <p>Explore new content and trends</p>
+          <p i18n="@@home.discover.description">Explore new content and trends</p>
         </div>
       </div>
     </a>
@@ -87,7 +87,7 @@
       <div class="tile-content">
         <mat-icon class="tile-icon">people</mat-icon>
         <h3 i18n="@@home.people">People</h3>
-        <p>Your network</p>
+        <p i18n="@@home.people.description">Your network</p>
       </div>
     </a>
 
@@ -107,7 +107,7 @@
       <div class="tile-content">
         <mat-icon class="tile-icon">photo_library</mat-icon>
         <h3 i18n="@@home.media">Media</h3>
-        <p>Photos & videos</p>
+        <p i18n="@@home.media.description">Photos & videos</p>
       </div>
     </a>
 
@@ -127,7 +127,7 @@
       <div class="tile-content">
         <mat-icon class="tile-icon">collections_bookmark</mat-icon>
         <h3 i18n="@@home.collections">Collections</h3>
-        <p>Your saved items</p>
+        <p i18n="@@home.collections.description">Your saved items</p>
       </div>
     </a>
 
@@ -180,7 +180,7 @@
           <mat-icon class="tile-icon">psychology</mat-icon>
           <div class="tile-text">
             <h3 i18n="@@home.ai.models">AI Models</h3>
-            <p>Chat with AI assistants</p>
+            <p i18n="@@home.ai.models.description">Chat with AI assistants</p>
           </div>
         </div>
       </a>
@@ -201,7 +201,7 @@
         <div class="tile-content">
           <mat-icon class="tile-icon">photo_library</mat-icon>
           <h3 i18n="@@home.collections.media">Media</h3>
-          <p>Your saved media</p>
+          <p i18n="@@home.collections.media.description">Your saved media</p>
         </div>
       </a>
       <a routerLink="/collections/bookmarks" class="bento-tile tile-col-bookmarks tile-section-medium" mat-ripple>
@@ -209,7 +209,7 @@
         <div class="tile-content">
           <mat-icon class="tile-icon">bookmarks</mat-icon>
           <h3 i18n="@@home.bookmarks">Bookmarks</h3>
-          <p>Saved for later</p>
+          <p i18n="@@home.bookmarks.description">Saved for later</p>
         </div>
       </a>
       <a routerLink="/collections/relays" class="bento-tile tile-col-relays tile-section-small" mat-ripple>
@@ -240,7 +240,7 @@
         <div class="tile-content">
           <mat-icon class="tile-icon">bar_chart</mat-icon>
           <h3 i18n="@@home.analytics">Analytics</h3>
-          <p>Track your stats</p>
+          <p i18n="@@home.analytics.description">Track your stats</p>
         </div>
       </a>
       <a routerLink="/settings/backup" class="bento-tile tile-premium-backup tile-section-medium" mat-ripple>
@@ -248,7 +248,7 @@
         <div class="tile-content">
           <mat-icon class="tile-icon">cloud_upload</mat-icon>
           <h3 i18n="@@home.backup">Backup</h3>
-          <p>Cloud storage</p>
+          <p i18n="@@home.backup.description">Cloud storage</p>
         </div>
       </a>
       <a routerLink="/memos" class="bento-tile tile-premium-memos tile-section-small" mat-ripple>
@@ -297,7 +297,7 @@
           <mat-icon class="tile-icon">terminal</mat-icon>
           <div class="tile-text">
             <h3 i18n="@@home.commands">Commands</h3>
-            <p>Quick actions & shortcuts</p>
+            <p i18n="@@home.commands.description">Quick actions & shortcuts</p>
           </div>
         </div>
       </button>
@@ -318,6 +318,10 @@
       <button class="bento-tile tile-more-whatsnew tile-section-small" mat-ripple (click)="openWhatsNewDialog()">
         <mat-icon class="tile-icon">campaign</mat-icon>
         <span i18n="@@home.whats-new">What's New</span>
+      </button>
+      <button class="bento-tile tile-more-learn tile-section-small" mat-ripple (click)="openWelcomeWizard()">
+        <mat-icon class="tile-icon">help</mat-icon>
+        <span i18n="@@home.what-is-nostr">What is Nostr?</span>
       </button>
     </div>
   </section>

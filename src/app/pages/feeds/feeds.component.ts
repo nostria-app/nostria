@@ -459,15 +459,26 @@ export class FeedsComponent implements OnDestroy {
   scrollCheckCleanup: (() => void) | null = null;
 
   /**
-   * Helper method to filter events based on feed's showReplies and showReposts settings
+   * Helper method to filter events based on GLOBAL content filter settings
+   * These settings apply to ALL feeds, not per-feed
    * Filters out reply events when showReplies is false
    * Filters out repost events when showReposts is false
+   * Filters events by kinds based on global content filter
    */
-  private filterEventsByFeedSettings(events: Event[], feed: FeedConfig): Event[] {
-    const showReplies = feed.showReplies ?? false;
-    const showReposts = feed.showReposts ?? true; // Default to true for reposts
+  private filterEventsByFeedSettings(events: Event[]): Event[] {
+    const contentFilter = this.localSettings.contentFilter();
+    const showReplies = contentFilter.showReplies;
+    const showReposts = contentFilter.showReposts;
+    const allowedKinds = contentFilter.kinds;
 
     return events.filter(event => {
+      // Filter by kinds if specified
+      if (allowedKinds && allowedKinds.length > 0) {
+        if (!allowedKinds.includes(event.kind)) {
+          return false;
+        }
+      }
+
       // Check if it's a repost (kind 6 or kind 16)
       const isRepost = this.repostService.isRepostEvent(event);
 
@@ -518,8 +529,9 @@ export class FeedsComponent implements OnDestroy {
 
     const rawEventCount = events.length;
 
-    // Filter based on feed showReplies and showReposts settings
-    events = this.filterEventsByFeedSettings(events, feed);
+    // Filter based on GLOBAL content filter settings (applies to ALL feeds)
+    const contentFilter = this.localSettings.contentFilter();
+    events = this.filterEventsByFeedSettings(events);
 
     // Always log for debugging
     console.log(`[allColumnEvents] Feed "${feed.label}" (${feed.id}):`, {
@@ -528,8 +540,11 @@ export class FeedsComponent implements OnDestroy {
       feedDataExists: feedDataMap.has(feed.id),
       rawEvents: rawEventCount,
       filteredEvents: events.length,
-      showReplies: feed.showReplies,
-      showReposts: feed.showReposts,
+      globalFilter: {
+        showReplies: contentFilter.showReplies,
+        showReposts: contentFilter.showReposts,
+        kinds: contentFilter.kinds,
+      },
       isDragging,
       isDynamic: !!dynFeed
     });
@@ -613,8 +628,7 @@ export class FeedsComponent implements OnDestroy {
     const feedData = feedDataMap.get(feed.id);
     if (feedData && feedData.pendingEvents) {
       const pendingEvents = this.filterEventsByFeedSettings(
-        feedData.pendingEvents(),
-        feed
+        feedData.pendingEvents()
       );
 
       // Only count events newer than the most recent displayed event
@@ -765,7 +779,11 @@ export class FeedsComponent implements OnDestroy {
       } else if (relayParam) {
         // Handle relay feed
         // Normalize the relay domain (remove wss:// if present)
-        const domain = relayParam.replace(/^wss?:\/\//, '').replace(/\/$/, '');
+        // Also strip any Angular auxiliary route syntax (right:...) that may be appended
+        const domain = relayParam
+          .replace(/^wss?:\/\//, '')
+          .replace(/\/$/, '')
+          .replace(/\(right:.*$/, '');
         this.activeRelayDomain.set(domain);
         this.logger.debug(`Activated relay feed from URL: ${domain}`);
 
@@ -1477,32 +1495,30 @@ export class FeedsComponent implements OnDestroy {
 
   /**
    * Handle kinds changed from filter panel
+   * Note: The filter panel now manages global settings directly via LocalSettingsService.
+   * This handler is kept for backward compatibility but doesn't need to update per-feed settings.
    */
-  onKindsChanged(kinds: number[]): void {
-    const feed = this.activeFeed();
-    if (feed) {
-      this.feedService.updateFeed(feed.id, { kinds });
-    }
+  onKindsChanged(_kinds: number[]): void {
+    // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
+    // No per-feed update needed
   }
 
   /**
    * Handle show replies changed from filter panel
+   * Note: The filter panel now manages global settings directly via LocalSettingsService.
    */
-  onShowRepliesChanged(showReplies: boolean): void {
-    const feed = this.activeFeed();
-    if (feed) {
-      this.feedsCollectionService.updateFeed(feed.id, { showReplies });
-    }
+  onShowRepliesChanged(_showReplies: boolean): void {
+    // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
+    // No per-feed update needed
   }
 
   /**
    * Handle show reposts changed from filter panel
+   * Note: The filter panel now manages global settings directly via LocalSettingsService.
    */
-  onShowRepostsChanged(showReposts: boolean): void {
-    const feed = this.activeFeed();
-    if (feed) {
-      this.feedsCollectionService.updateFeed(feed.id, { showReposts });
-    }
+  onShowRepostsChanged(_showReposts: boolean): void {
+    // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
+    // No per-feed update needed
   }
 
   /**
@@ -1562,8 +1578,7 @@ export class FeedsComponent implements OnDestroy {
     const feedData = feedDataMap.get(feedId);
     if (feedData && feedData.pendingEvents) {
       const pendingEvents = this.filterEventsByFeedSettings(
-        feedData.pendingEvents(),
-        feed
+        feedData.pendingEvents()
       );
 
       // Only count events newer than the most recent displayed event

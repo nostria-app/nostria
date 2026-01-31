@@ -473,7 +473,7 @@ export class App implements OnInit {
       }
 
       // For the Feeds item, add feed boards as children
-      if (item.label === 'Feeds') {
+      if (item.path === '/f') {
         const feedChildren: NavItem[] = feeds.map(feed => ({
           path: `/?feed=${feed.id}`, // Add feed parameter to navigate to specific feed
           label: feed.label,
@@ -485,13 +485,13 @@ export class App implements OnInit {
         return {
           ...item,
           expandable: true,
-          expanded: expandedItems['feeds'] || false,
+          expanded: expandedItems['/f'] || false,
           children: feedChildren,
         };
       }
 
       // For the People item, add follow sets as children
-      if (item.label === 'People') {
+      if (item.path === 'people') {
         // Sort follow sets alphabetically by title for user control (users can prefix with numbers)
         const sortedFollowSets = [...followSets]
           .sort((a, b) => a.title.localeCompare(b.title));
@@ -513,7 +513,7 @@ export class App implements OnInit {
       }
 
       // For the Collections item, add collection types as children
-      if (item.label === 'Collections') {
+      if (item.path === 'collections') {
         const collectionChildren: NavItem[] = [
 
           {
@@ -675,20 +675,6 @@ export class App implements OnInit {
       this.panelActions.clearRightPanelActions();
       // Navigate to clear the right outlet, preserving query params (e.g., /f?t=bitcoin for dynamic hashtag feeds)
       this.layout.closeRightPanel();
-    });
-
-    // Track route changes for cache clearing
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event) => {
-      // Clear route cache when navigating to root pages
-      const navEvent = event as NavigationEnd;
-      const url = navEvent.urlAfterRedirects || navEvent.url;
-      const primaryPath = url.split('(')[0].split('/')[1] || '';
-
-      if (this.customReuseStrategy.isRootNavigation(primaryPath)) {
-        this.customReuseStrategy.clearCache(true);
-      }
     });
 
     // Track sidenav size changes to update floating toolbar position

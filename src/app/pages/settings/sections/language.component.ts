@@ -59,7 +59,7 @@ export class SettingLanguageComponent {
   ];
 
   setLanguage(languageCode: string): void {
-    this.localSettings.setLocale(languageCode);
+    this.localSettings.setLocaleImmediate(languageCode);
     if (this.app.isBrowser()) {
       window.location.reload();
     }

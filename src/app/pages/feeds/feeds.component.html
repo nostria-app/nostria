@@ -46,13 +46,13 @@
             }
             }
           </div>
-
-          <!-- Public Relay Feeds Menu -->
-          <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
-          </app-relay-feed-menu>
         </div>
 
         <span class="spacer"></span>
+
+        <!-- Public Relay Feeds Menu -->
+        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+        </app-relay-feed-menu>
 
         <!-- Filter button with overlay panel - only for authenticated users -->
         @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
@@ -66,7 +66,7 @@
           [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
           [cdkConnectedOverlayPositions]="filterPanelPositions"
           [cdkConnectedOverlayPush]="true">
-          <app-feed-filter-panel [feed]="activeFeed()" (kindsChanged)="onKindsChanged($event)"
+          <app-feed-filter-panel (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
           </app-feed-filter-panel>
         </ng-template>

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect } from '@angular/core';
 
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,6 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -19,6 +20,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { DatabaseService } from '../../services/database.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
@@ -34,6 +37,7 @@ import { StreamsSettingsDialogComponent } from './streams-settings-dialog/stream
     MatCardModule,
     MatMenuModule,
     MatTooltipModule,
+    MatDividerModule,
     LiveEventComponent,
     StreamsSettingsDialogComponent,
   ],
@@ -51,6 +55,8 @@ export class StreamsComponent implements OnInit, OnDestroy {
   private app = inject(ApplicationService);
   private database = inject(DatabaseService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private accountLocalState = inject(AccountLocalStateService);
+  followSetsService = inject(FollowSetsService);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -63,6 +69,9 @@ export class StreamsComponent implements OnInit, OnDestroy {
   streamsRelaySet = signal<Event | null>(null);
   streamsRelays = signal<string[]>([]);
 
+  // People list filter state
+  selectedListFilter = signal<string>('all'); // 'all', 'following', or follow set d-tag
+
   // Relay set constants
   private readonly RELAY_SET_KIND = 30002;
   private readonly STREAMS_RELAY_SET_D_TAG = 'streams';
@@ -71,15 +80,66 @@ export class StreamsComponent implements OnInit, OnDestroy {
   private currentPubkey = computed(() => this.accountState.pubkey());
   isAuthenticated = computed(() => this.app.authenticated());
 
+  // Computed: get all follow sets for the dropdown
+  allFollowSets = computed(() => this.followSetsService.followSets());
+
+  // Computed: get the currently selected follow set (if any)
+  selectedFollowSet = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all' || filter === 'following') {
+      return null;
+    }
+    return this.allFollowSets().find(set => set.dTag === filter) || null;
+  });
+
+  // Computed: get the pubkeys to filter by based on current selection
+  private filterPubkeys = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all') {
+      return null; // No filtering
+    }
+    if (filter === 'following') {
+      return this.accountState.followingList();
+    }
+    // Filter by a specific follow set
+    const followSet = this.selectedFollowSet();
+    return followSet?.pubkeys || [];
+  });
+
+  // Computed: get the display title for the current filter
+  filterTitle = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all') return 'All Streams';
+    if (filter === 'following') return 'Following';
+    const followSet = this.selectedFollowSet();
+    return followSet?.title || 'All Streams';
+  });
+
   private subscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
 
-  // Computed signals for filtering
+  // Computed signals for filtering (now includes people list filter)
   currentStreams = computed(() => {
     const index = this.selectedTabIndex();
-    if (index === 0) return this.liveStreams();
-    if (index === 1) return this.plannedStreams();
-    return this.endedStreams();
+    let streams: Event[];
+    if (index === 0) streams = this.liveStreams();
+    else if (index === 1) streams = this.plannedStreams();
+    else streams = this.endedStreams();
+
+    // Apply people list filter
+    const pubkeys = this.filterPubkeys();
+    if (pubkeys === null) {
+      return streams; // No filtering
+    }
+    if (pubkeys.length === 0) {
+      return []; // Filter is active but no pubkeys to match
+    }
+
+    // Filter by host p tag
+    return streams.filter(event => {
+      const hostPubkey = this.getHostPubkey(event);
+      return hostPubkey && pubkeys.includes(hostPubkey);
+    });
   });
 
   hasStreams = computed(() => {
@@ -91,6 +151,15 @@ export class StreamsComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Load saved filter preference
+    effect(() => {
+      const pubkey = this.currentPubkey();
+      if (pubkey) {
+        const savedFilter = this.accountLocalState.getStreamsListFilter(pubkey);
+        this.selectedListFilter.set(savedFilter);
+      }
+    }, { allowSignalWrites: true });
+
     this.initializeStreams();
   }
 
@@ -348,6 +417,43 @@ export class StreamsComponent implements OnInit, OnDestroy {
       // Reload the streams relay set and restart subscription with new relays
       await this.loadStreamsRelaySet();
       this.refresh();
+    }
+  }
+
+  /**
+   * Get the host pubkey from a stream event's p tags
+   * The host is identified by a p tag with "host" as the 4th element:
+   * ["p", "pubkey", "", "host"]
+   */
+  private getHostPubkey(event: Event): string | null {
+    const hostTag = event.tags.find(
+      (tag: string[]) => tag[0] === 'p' && tag[3] === 'host'
+    );
+    return hostTag?.[1] || null;
+  }
+
+  /**
+   * Select a people list filter
+   * @param filter - 'all', 'following', or a FollowSet
+   */
+  selectListFilter(filter: string | FollowSet | null): void {
+    let filterValue: string;
+    if (filter === null || filter === 'all') {
+      filterValue = 'all';
+    } else if (filter === 'following') {
+      filterValue = 'following';
+    } else if (typeof filter === 'object') {
+      filterValue = filter.dTag;
+    } else {
+      filterValue = filter;
+    }
+
+    this.selectedListFilter.set(filterValue);
+
+    // Save preference
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setStreamsListFilter(pubkey, filterValue);
     }
   }
 }

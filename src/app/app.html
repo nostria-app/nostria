@@ -192,7 +192,7 @@
           <span class="nav-label">{{ item.label }}</span>
           @if (item.expandable) {
           <button mat-icon-button class="expand-button"
-            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion(item.label.toLowerCase())"
+            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion(item.path)"
             [attr.aria-label]="item.expanded ? 'Collapse' : 'Expand'" tabindex="0">
             <mat-icon class="expand-icon">
               {{ item.expanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right' }}
@@ -218,7 +218,7 @@
             <mat-icon>settings</mat-icon>
           </button>
           }
-          @if (child.followSetId && item.label === 'People') {
+          @if (child.followSetId && item.path === 'people') {
           <button mat-icon-button class="feed-edit-button"
             (click)="$event.stopPropagation(); openFollowSetEditDialog(child.followSetId)"
             i18n-matTooltip="@@app.followset.edit" matTooltip="Edit people" tabindex="0">
@@ -317,7 +317,8 @@
           </div>
         </div>
 
-        <!-- Right section: action buttons and notifications -->
+        <!-- Right section: action buttons and notifications (only when authenticated) -->
+        @if (app.authenticated()) {
         <div class="toolbar-section toolbar-right"
           [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
           <!-- Right panel actions (when right panel has content) -->
@@ -345,14 +346,13 @@
           </button>
           }
 
-          @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
+          @if (accountState.profileProcessingState().isProcessing) {
           <button mat-icon-button class="profile-cache-button" [matTooltip]="cachingTooltip()"
             i18n-aria-label="@@app.tooltip.caching-aria" aria-label="Profile caching progress">
             <mat-icon class="spinning-icon">cached</mat-icon>
             <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
           </button>
           }
-          @if (app.authenticated()) {
           <!-- Create new content button - hidden on mobile (there's one in mobile nav) -->
           <button mat-icon-button class="create-button hide-on-mobile" (click)="openCreateMenu($event)"
             i18n-matTooltip="@@app.create.tooltip" matTooltip="Create" i18n-aria-label="@@app.create.aria"
@@ -373,8 +373,8 @@
               [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
           </button>
           }
-          }
         </div>
+        }
       </mat-toolbar>
 
       <!-- Floating Offline Indicator -->
