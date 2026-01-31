@@ -17,6 +17,7 @@ import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 import { MediaItem } from '../../interfaces';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 
 const MUSIC_KIND = 36787;
 
@@ -55,7 +56,7 @@ const MUSIC_KIND = 36787;
         <mat-icon>content_copy</mat-icon>
         <span>Copy</span>
       </button>
-      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+      <button mat-menu-item (click)="openShareDialog()">
         <mat-icon>share</mat-icon>
         <span>Share</span>
       </button>
@@ -77,17 +78,6 @@ const MUSIC_KIND = 36787;
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
         <span>Copy Event Data</span>
-      </button>
-    </mat-menu>
-    
-    <mat-menu #shareMenu="matMenu">
-      <button mat-menu-item (click)="shareNative()">
-        <mat-icon>ios_share</mat-icon>
-        <span>Share via...</span>
-      </button>
-      <button mat-menu-item (click)="shareAsNote()">
-        <mat-icon>edit_note</mat-icon>
-        <span>Share as Note</span>
       </button>
     </mat-menu>
     
@@ -292,10 +282,12 @@ export class MusicTrackMenuComponent {
     }
   }
 
-  shareNative(): void {
+  openShareDialog(): void {
+    const ev = this.track();
     const npub = this.getArtistNpub();
     const id = this.getIdentifier();
     const title = this.getTitle();
+    const image = this.getImage();
 
     if (!npub || !id) {
       this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
@@ -304,35 +296,31 @@ export class MusicTrackMenuComponent {
 
     const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(id)}`;
 
-    if (navigator.share) {
-      navigator.share({
-        title: title,
-        text: `Listen to ${title}`,
-        url: link,
-      }).catch(() => {
-        // User cancelled or error - fallback to copy
-        this.clipboard.copy(link);
-        this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-      });
-    } else {
-      // Fallback for browsers without native share
-      this.clipboard.copy(link);
-      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-    }
-  }
-
-  shareAsNote(): void {
-    const ev = this.track();
-    const dTag = this.getIdentifier();
     try {
       const naddr = nip19.naddrEncode({
         kind: MUSIC_KIND,
         pubkey: ev.pubkey,
-        identifier: dTag,
+        identifier: id,
       });
-      this.eventService.createNote({ content: `nostr:${naddr}` });
+
+      const dialogData: ShareArticleDialogData = {
+        title: title,
+        summary: `Listen to ${title}`,
+        image: image || undefined,
+        url: link,
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: id,
+        kind: MUSIC_KIND,
+        encodedId: naddr,
+      };
+
+      this.dialog.open(ShareArticleDialogComponent, {
+        data: dialogData,
+        width: '450px',
+      });
     } catch {
-      this.snackBar.open('Failed to generate track reference', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to open share dialog', 'Close', { duration: 3000 });
     }
   }
 

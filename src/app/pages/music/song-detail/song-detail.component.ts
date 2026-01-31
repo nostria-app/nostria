@@ -37,6 +37,7 @@ import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.compo
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 
 interface TopZapper {
   pubkey: string;
@@ -739,8 +740,25 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         identifier: dTag,
       });
 
-      // Open note editor with the track reference
-      this.eventService.createNote({ content: `nostr:${naddr}` });
+      const npub = this.artistNpub();
+      const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(dTag)}`;
+
+      const dialogData: ShareArticleDialogData = {
+        title: this.title(),
+        summary: `Listen to ${this.title()} by ${this.artistName()}`,
+        image: this.image() || undefined,
+        url: link,
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        kind: ev.kind,
+        encodedId: naddr,
+      };
+
+      this.dialog.open(ShareArticleDialogComponent, {
+        data: dialogData,
+        width: '450px',
+      });
     } catch {
       this.snackBar.open('Failed to share track', 'Close', { duration: 2000 });
     }
