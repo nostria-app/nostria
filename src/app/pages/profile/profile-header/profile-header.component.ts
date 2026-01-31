@@ -326,9 +326,9 @@ export class ProfileHeaderComponent implements OnDestroy {
   // Computed to check if trust is enabled
   trustEnabled = computed(() => this.trustService.isEnabled());
 
-  // Computed to get available follow sets
+  // Computed to get available follow sets (sorted alphabetically)
   availableFollowSets = computed(() => {
-    return this.followSetsService.followSets();
+    return [...this.followSetsService.followSets()].sort((a, b) => a.title.localeCompare(b.title));
   });
 
   // Computed to check if user has premium subscription

@@ -196,8 +196,14 @@ export class ShareArticleDialogComponent {
   private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
 
-  /** Generate clean canonical URL for sharing (always nostria.app with clean path) */
+  /** Generate clean canonical URL for sharing (uses data.url if provided, otherwise generates from event) */
   private getShareUrl(): string {
+    // If a URL is explicitly provided and it's a nostria.app URL, use it directly
+    if (this.data.url && this.data.url.includes('nostria.app')) {
+      return this.data.url;
+    }
+
+    // Otherwise, generate URL from event data
     const encodedId = this.getEncodedId();
     const prefix = this.data.kind === kinds.LongFormArticle ? 'a' : 'e';
     return `https://nostria.app/${prefix}/${encodedId}`;

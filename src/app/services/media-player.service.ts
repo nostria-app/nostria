@@ -51,6 +51,8 @@ export class MediaPlayerService implements OnInitialized {
   current = signal<MediaItem | undefined>(undefined);
   // Cache podcast positions to avoid excessive localStorage reads
   private podcastPositions = signal<Record<string, PodcastProgress>>({});
+  // Track current blob URL for cleanup to prevent memory leaks
+  private currentBlobUrl?: string;
   // make index a signal-backed property so computed signals can react to changes
   private _index = signal<number>(0);
   get index(): number {
@@ -636,6 +638,67 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   /**
+   * Resolve an audio URL by following redirects and creating a blob URL with proper MIME type.
+   * This fixes issues where servers redirect to URLs with generic extensions like .bin,
+   * which browsers can't identify as audio files.
+   * @param url The original audio URL
+   * @returns A blob URL with proper MIME type, or the original URL if resolution fails
+   */
+  private async resolveAudioUrl(url: string): Promise<string> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+        return url;
+      }
+
+      // Get the content-type from headers
+      const contentType = response.headers.get('content-type');
+      console.log(`Resolved audio URL, content-type: ${contentType}, final URL: ${response.url}`);
+
+      // If we have a valid audio content-type, create a blob URL
+      if (contentType && (contentType.startsWith('audio/') || contentType === 'application/ogg')) {
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        this.currentBlobUrl = blobUrl; // Track for cleanup
+        console.log(`Created blob URL for audio with MIME type: ${blob.type}`);
+        return blobUrl;
+      }
+
+      // If content-type is generic (like application/octet-stream) but URL suggests audio,
+      // try to infer the type from the original URL extension
+      const originalExt = url.split('?')[0].split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        'mp3': 'audio/mpeg',
+        'ogg': 'audio/ogg',
+        'oga': 'audio/ogg',
+        'opus': 'audio/opus',
+        'wav': 'audio/wav',
+        'flac': 'audio/flac',
+        'm4a': 'audio/mp4',
+        'aac': 'audio/aac',
+        'webm': 'audio/webm',
+      };
+
+      if (originalExt && mimeTypes[originalExt]) {
+        const blob = await response.blob();
+        // Create a new blob with the correct MIME type
+        const typedBlob = new Blob([blob], { type: mimeTypes[originalExt] });
+        const blobUrl = URL.createObjectURL(typedBlob);
+        this.currentBlobUrl = blobUrl; // Track for cleanup
+        console.log(`Created blob URL with inferred MIME type: ${mimeTypes[originalExt]}`);
+        return blobUrl;
+      }
+
+      // Fallback: return the final URL after redirects
+      return response.url;
+    } catch (error) {
+      console.error('Error resolving audio URL:', error);
+      return url;
+    }
+  }
+
+  /**
    * Save the current playback position for a podcast
    * @param url The media file URL used as unique identifier
    * @param position The current playback position in seconds
@@ -1077,6 +1140,16 @@ export class MediaPlayerService implements OnInitialized {
         }
       }
 
+      // For podcasts and other audio, resolve redirects and get actual content-type
+      // This fixes issues where URLs redirect to files with generic extensions like .bin
+      if (file.type === 'Podcast' || file.type === 'Music') {
+        try {
+          audioSource = await this.resolveAudioUrl(audioSource);
+        } catch (err) {
+          console.warn('Failed to resolve audio URL, using original source:', err);
+        }
+      }
+
       if (!this.audio) {
         this.audio = new Audio();
         // Set crossOrigin BEFORE setting src to allow Web Audio API (equalizer) to process the audio
@@ -1282,6 +1355,12 @@ export class MediaPlayerService implements OnInitialized {
 
     // Reset initialization flag
     this.videoPlaybackInitialized = false;
+
+    // Cleanup blob URL to prevent memory leaks
+    if (this.currentBlobUrl) {
+      URL.revokeObjectURL(this.currentBlobUrl);
+      this.currentBlobUrl = undefined;
+    }
 
     // Stop and cleanup audio
     if (this.audio) {
