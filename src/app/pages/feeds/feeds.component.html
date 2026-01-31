@@ -50,12 +50,18 @@
 
         <span class="spacer"></span>
 
+        <!-- List Feeds Menu - People Lists -->
+        @if (app.authenticated()) {
+        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)">
+        </app-list-feed-menu>
+        }
+
         <!-- Public Relay Feeds Menu -->
         <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
         </app-relay-feed-menu>
 
         <!-- Filter button with overlay panel - only for authenticated users -->
-        @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed()) {
+        @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed() && !showListFeed()) {
         <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
           matTooltip="Filter content">
           <mat-icon>tune</mat-icon>
@@ -64,8 +70,7 @@
         <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
           [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
           [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
-          [cdkConnectedOverlayPositions]="filterPanelPositions"
-          [cdkConnectedOverlayPush]="true">
+          [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
           <app-feed-filter-panel (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
           </app-feed-filter-panel>
@@ -129,6 +134,14 @@
           <div class="column-content">
             <app-trending-column></app-trending-column>
           </div>
+        </div>
+      </div>
+      }
+      <!-- List Feed View - shown when list query param is present -->
+      @else if (showListFeed()) {
+      <div class="list-feed-container">
+        <div class="list-column-wrapper">
+          <app-list-column [listData]="activeListFeed()" [closeCallback]="closeListFeed.bind(this)"></app-list-column>
         </div>
       </div>
       }
