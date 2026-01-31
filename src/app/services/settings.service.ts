@@ -192,6 +192,13 @@ export class SettingsService {
     console.log('New settings after merge:', newSettings);
     this.settings.set(newSettings);
 
+    // Skip publishing for preview accounts - they cannot sign events
+    const account = this.accountState.account();
+    if (account?.source === 'preview') {
+      this.logger.info('Skipping settings publish for preview account - cannot sign events');
+      return;
+    }
+
     // Create and publish the event
     try {
       const content = JSON.stringify(newSettings);
