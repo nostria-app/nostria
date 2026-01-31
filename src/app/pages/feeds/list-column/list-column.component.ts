@@ -14,12 +14,9 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { EventComponent } from '../../../components/event/event.component';
 import { LoggerService } from '../../../services/logger.service';
-import { AccountStateService } from '../../../services/account-state.service';
 import { RepostService } from '../../../services/repost.service';
-import { EventProcessorService } from '../../../services/event-processor.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { Event } from 'nostr-tools';
 
@@ -38,30 +35,10 @@ export interface ListFeedData {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatTooltipModule,
     EventComponent,
   ],
   template: `
     <div class="list-column">
-      <!-- Header -->
-      <div class="list-header">
-        <div class="header-info">
-          <mat-icon>people</mat-icon>
-          <div class="header-text">
-            <span class="list-name">{{ listData()?.title || 'List Feed' }}</span>
-            <span class="list-count">{{ listData()?.pubkeys?.length || 0 }} people</span>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isRefreshing()">
-            <mat-icon [class.spinning]="isRefreshing()">refresh</mat-icon>
-          </button>
-          <button mat-icon-button (click)="onClose()" matTooltip="Close">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-      </div>
-
       <!-- Content -->
       <div class="list-content" #listContent>
         @if (isLoading() && displayedEvents().length === 0) {
@@ -143,16 +120,11 @@ export interface ListFeedData {
 })
 export class ListColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
-  private accountState = inject(AccountStateService);
   private repostService = inject(RepostService);
-  private eventProcessor = inject(EventProcessorService);
   private sharedRelayService = inject(SharedRelayService);
 
   // Input for the list data
   listData = input<ListFeedData | null>(null);
-
-  // Close event callback
-  closeCallback = input<(() => void) | null>(null);
 
   private loadMoreTriggerElement?: HTMLDivElement;
 
@@ -327,12 +299,5 @@ export class ListColumnComponent implements OnDestroy {
 
   loadMore(): void {
     this.displayCount.update(count => count + PAGE_SIZE);
-  }
-
-  onClose(): void {
-    const callback = this.closeCallback();
-    if (callback) {
-      callback();
-    }
   }
 }
