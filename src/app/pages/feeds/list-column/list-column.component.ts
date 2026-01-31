@@ -13,7 +13,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EventComponent } from '../../../components/event/event.component';
@@ -38,7 +37,6 @@ export interface ListFeedData {
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     EventComponent,
@@ -58,19 +56,6 @@ export interface ListFeedData {
           <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isRefreshing()">
             <mat-icon [class.spinning]="isRefreshing()">refresh</mat-icon>
           </button>
-          <button mat-icon-button [matMenuTriggerFor]="optionsMenu" matTooltip="Options">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #optionsMenu="matMenu">
-            <button mat-menu-item (click)="toggleShowReplies()">
-              <mat-icon>{{ showReplies() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-              <span>Show Replies</span>
-            </button>
-            <button mat-menu-item (click)="toggleShowReposts()">
-              <mat-icon>{{ showReposts() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-              <span>Show Reposts</span>
-            </button>
-          </mat-menu>
           <button mat-icon-button (click)="onClose()" matTooltip="Close">
             <mat-icon>close</mat-icon>
           </button>
@@ -179,13 +164,15 @@ export class ListColumnComponent implements OnDestroy {
     }
   }
 
+  // Filter inputs from parent
+  showReplies = input(false);
+  showReposts = input(true);
+
   // State
   isLoading = signal(false);
   isRefreshing = signal(false);
   isLoadingMore = signal(false);
   error = signal<string | null>(null);
-  showReplies = signal(false);
-  showReposts = signal(true);
 
   // Events
   private allEvents = signal<Event[]>([]);
@@ -340,14 +327,6 @@ export class ListColumnComponent implements OnDestroy {
 
   loadMore(): void {
     this.displayCount.update(count => count + PAGE_SIZE);
-  }
-
-  toggleShowReplies(): void {
-    this.showReplies.update(v => !v);
-  }
-
-  toggleShowReposts(): void {
-    this.showReposts.update(v => !v);
   }
 
   onClose(): void {

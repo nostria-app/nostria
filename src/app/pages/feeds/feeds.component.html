@@ -61,7 +61,7 @@
         </app-relay-feed-menu>
 
         <!-- Filter button with overlay panel - only for authenticated users -->
-        @if (app.authenticated() && feedService.feedsLoaded() && activeFeed() && !showRelayFeed() && !showListFeed()) {
+        @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
         <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
           matTooltip="Filter content">
           <mat-icon>tune</mat-icon>
@@ -141,7 +141,10 @@
       @else if (showListFeed()) {
       <div class="list-feed-container">
         <div class="list-column-wrapper">
-          <app-list-column [listData]="activeListFeed()" [closeCallback]="closeListFeed.bind(this)"></app-list-column>
+          <app-list-column [listData]="activeListFeed()" [closeCallback]="closeListFeed.bind(this)"
+            [showReplies]="localSettings.contentFilter().showReplies"
+            [showReposts]="localSettings.contentFilter().showReposts">
+          </app-list-column>
         </div>
       </div>
       }
