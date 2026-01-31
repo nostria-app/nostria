@@ -1582,8 +1582,9 @@ export class App implements OnInit {
       target.isContentEditable ||
       target.closest('mat-form-field') !== null;
 
-    // Video playback shortcuts (only when media player is active and not typing)
-    if (this.layout.showMediaPlayer() && !isInputField) {
+    // Video playback shortcuts (only when media player is active in footer/mini mode and not typing)
+    // Skip when fullscreen audio player is active - it has its own keyboard handler
+    if (this.layout.showMediaPlayer() && !this.layout.fullscreenMediaPlayer() && !isInputField) {
       // Space or K to toggle play/pause
       if (event.code === 'Space' || event.key.toLowerCase() === 'k') {
         event.preventDefault();
