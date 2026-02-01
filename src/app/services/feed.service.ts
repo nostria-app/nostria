@@ -332,6 +332,44 @@ export class FeedService {
     }
   }
 
+  /**
+   * Prefetch profiles for a list of events.
+   * This extracts unique author pubkeys and uses batch loading to populate the cache.
+   * Runs in background - does not block the caller.
+   * @param events Events to prefetch profiles for
+   */
+  private prefetchProfilesForEvents(events: Event[]): void {
+    if (!events || events.length === 0) return;
+
+    // Extract unique author pubkeys
+    const authorPubkeys = new Set<string>();
+    for (const event of events) {
+      if (event.pubkey) {
+        authorPubkeys.add(event.pubkey);
+      }
+      // Also extract pubkeys from repost events (kind 6) - the original author
+      if (event.kind === 6 && event.tags) {
+        for (const tag of event.tags) {
+          if (tag[0] === 'p' && tag[1]) {
+            authorPubkeys.add(tag[1]);
+          }
+        }
+      }
+    }
+
+    const pubkeysArray = Array.from(authorPubkeys);
+    if (pubkeysArray.length === 0) return;
+
+    this.logger.debug(`[Prefetch] Prefetching ${pubkeysArray.length} profiles for ${events.length} events`);
+
+    // Fire and forget - don't await, let it run in background
+    this.dataService.batchLoadProfiles(pubkeysArray).then((results) => {
+      this.logger.debug(`[Prefetch] Completed: ${results.size}/${pubkeysArray.length} profiles loaded`);
+    }).catch((err) => {
+      this.logger.error('[Prefetch] Error prefetching profiles:', err);
+    });
+  }
+
   // Track pending cache saves to prevent duplicates
   private pendingCacheSaves = new Map<string, Promise<void>>();
 
@@ -626,6 +664,9 @@ export class FeedService {
         const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
         item.lastCheckTimestamp = mostRecentTimestamp;
         this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+        
+        // Prefetch profiles for cached events in background
+        this.prefetchProfilesForEvents(cachedEvents);
       }
     }
 
@@ -856,6 +897,9 @@ export class FeedService {
       item.lastCheckTimestamp = mostRecentTimestamp;
 
       this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+      
+      // Prefetch profiles for cached events in background
+      this.prefetchProfilesForEvents(cachedEvents);
     }
 
     // Build filter based on feed configuration
@@ -3160,6 +3204,9 @@ export class FeedService {
 
     const pending = feedData.pendingEvents();
     if (pending.length === 0) return;
+
+    // Prefetch profiles for pending events before displaying
+    this.prefetchProfilesForEvents(pending);
 
     const currentEvents = feedData.events();
     const allEvents = [...pending, ...currentEvents];

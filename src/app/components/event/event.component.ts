@@ -55,6 +55,7 @@ import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.c
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
 import { PlaylistService } from '../../services/playlist.service';
+import { IntersectionObserverService } from '../../services/intersection-observer.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -122,10 +123,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions
-  private intersectionObserver?: IntersectionObserver;
   private hasLoadedInteractions = signal<boolean>(false);
   private elementRef = inject(ElementRef);
   private observedEventId?: string; // Track which event we're observing for
+  private readonly intersectionObserverService = inject(IntersectionObserverService);
 
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
@@ -669,11 +670,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // This ensures each new event loads its own interactions
         this.hasLoadedInteractions.set(false);
 
-        // Recreate IntersectionObserver if it exists
+        // Re-register with shared IntersectionObserver when event changes
         // This ensures we observe the correct event when component is reused
-        if (this.intersectionObserver) {
-          this.setupIntersectionObserver();
-        }
+        this.setupIntersectionObserver();
 
         // Interactions will be loaded lazily via IntersectionObserver in ngAfterViewInit
         // No longer loading immediately to reduce relay requests for off-screen events
@@ -864,34 +863,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * This method can be called when the component initializes or when the event changes
    */
   private setupIntersectionObserver(): void {
-    // Clean up existing observer if present
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-      this.intersectionObserver = undefined;
-    }
+    // Unregister from shared observer first (in case this is a re-setup)
+    this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
 
-    // Set up IntersectionObserver to lazy load interactions when event becomes visible
-    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
-    const options: IntersectionObserverInit = {
-      root: null, // Use viewport as root
-      rootMargin: '200px', // Start loading 200px before entering viewport
-      threshold: 0.01, // Trigger when at least 1% is visible
-    };
-
-    this.intersectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && !this.hasLoadedInteractions()) {
+    // Use shared IntersectionObserver service instead of per-component observer
+    this.intersectionObserverService.observe(
+      this.elementRef.nativeElement,
+      (isIntersecting) => {
+        if (isIntersecting && !this.hasLoadedInteractions()) {
           // CRITICAL: Capture the current event at the moment of intersection
           // This prevents loading interactions for the wrong event
           const currentRecord = this.record();
           const currentEventId = currentRecord?.event.id;
 
           if (!currentRecord || !currentEventId) {
-            console.warn('⚠️ [Lazy Load] No record available when event became visible');
+            console.warn('[Lazy Load] No record available when event became visible');
             return;
           }
 
-          console.log('👁️ [Lazy Load] Event became visible:', currentEventId.substring(0, 8));
+          console.log('[Lazy Load] Event became visible:', currentEventId.substring(0, 8));
 
           // Store which event we're loading for to prevent cross-contamination
           this.observedEventId = currentEventId;
@@ -902,7 +892,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           if (this.supportsReactions()) {
             // Get the target record (reposted event for reposts, regular event otherwise)
             const targetRecordData = this.targetRecord();
-            console.log('🚀 [Lazy Load] Loading interactions for visible event:',
+            console.log('[Lazy Load] Loading interactions for visible event:',
               targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
 
             // Double-check event ID before loading to prevent race conditions
@@ -911,18 +901,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               this.loadAllInteractions();
               this.loadZaps();
             } else {
-              console.warn('⚠️ [Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+              console.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
             }
           }
         }
-      });
-    }, options);
-
-    // Start observing the component's root element
-    const element = this.elementRef.nativeElement;
-    if (element) {
-      this.intersectionObserver.observe(element);
-    }
+      },
+      {
+        rootMargin: '200px', // Start loading 200px before entering viewport
+        threshold: 0.01, // Trigger when at least 1% is visible
+      }
+    );
   }
 
   /**
@@ -975,11 +963,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Clean up IntersectionObserver to prevent memory leaks
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-      this.intersectionObserver = undefined;
-    }
+    // Unregister from shared IntersectionObserver service
+    this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
   }
 
   /**

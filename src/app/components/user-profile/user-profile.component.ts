@@ -35,6 +35,7 @@ import { ProfileDisplayNameComponent } from './display-name/profile-display-name
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 import { TrustService } from '../../services/trust.service';
 import { MatBadgeModule } from '@angular/material/badge';
+import { IntersectionObserverService } from '../../services/intersection-observer.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -70,6 +71,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private readonly imageCacheService = inject(ImageCacheService);
   private hoverCardService = inject(ProfileHoverCardService);
   private trustService = inject(TrustService);
+  private readonly intersectionObserverService = inject(IntersectionObserverService);
   layout = inject(LayoutService);
 
   publicKey = '';
@@ -114,7 +116,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   // Flag to track if component is visible
   private isVisible = signal(false);
-  private intersectionObserver?: IntersectionObserver;
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
@@ -300,15 +301,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private setupIntersectionObserver(): void {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
 
-    // Create IntersectionObserver instance
-    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
-    this.intersectionObserver = new IntersectionObserver(
-      entries => {
+    // Use the shared IntersectionObserver service instead of creating per-component observer
+    this.intersectionObserverService.observe(
+      this.elementRef.nativeElement,
+      (isIntersecting) => {
         // Update visibility state
-        const isVisible = entries.some(entry => entry.isIntersecting);
-        this.isVisible.set(isVisible);
+        this.isVisible.set(isIntersecting);
 
-        if (isVisible && !this.layout.isScrolling()) {
+        if (isIntersecting && !this.layout.isScrolling()) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
             this.debouncedLoadProfileData(this.pubkey());
@@ -317,20 +317,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       },
       {
         threshold: 0.01, // Trigger when at least 1% is visible
-        root: null, // Use viewport as root
         rootMargin: '200px', // Start loading 200px before entering viewport
       }
     );
-
-    // Start observing this component
-    this.intersectionObserver.observe(this.elementRef.nativeElement);
   }
 
   private disconnectObserver(): void {
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-      this.intersectionObserver = undefined;
-    }
+    this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
   }
 
   /**
