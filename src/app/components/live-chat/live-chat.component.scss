@@ -69,10 +69,10 @@
   grid-row: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   scroll-behavior: smooth;
   min-height: 0;
 
@@ -159,8 +159,8 @@
 
 .chat-message {
   display: flex;
-  gap: 12px;
-  padding: 4px 0;
+  gap: 10px;
+  padding: 2px 0;
   animation: fadeIn 0.2s ease-out;
 
   &.reply {
@@ -171,11 +171,10 @@
 
   &.zap-message {
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
-    margin: 8px 0;
+    gap: 4px;
+    padding: 8px 10px;
     border: 1px solid #ff9800;
-    border-radius: 12px;
+    border-radius: 8px;
     background: rgba(255, 152, 0, 0.05);
 
     .zap-header {

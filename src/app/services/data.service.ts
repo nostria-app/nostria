@@ -204,13 +204,24 @@ export class DataService {
     return relayUrls;
   }
 
-  async getProfiles(pubkey: string[]): Promise<NostrRecord[] | undefined> {
-    const metadataList: NostrRecord[] = [];
+  /**
+   * Get multiple profiles efficiently using batch loading.
+   * Uses batchLoadProfiles internally for optimal performance.
+   */
+  async getProfiles(pubkeys: string[]): Promise<NostrRecord[] | undefined> {
+    if (!pubkeys || pubkeys.length === 0) {
+      return [];
+    }
 
-    for (const p of pubkey) {
-      const metadata = await this.getProfile(p);
-      if (metadata) {
-        metadataList.push(metadata);
+    // Use batch loading for efficient fetching
+    const profilesMap = await this.batchLoadProfiles(pubkeys);
+    
+    // Convert map to array, preserving order of input pubkeys
+    const metadataList: NostrRecord[] = [];
+    for (const pubkey of pubkeys) {
+      const profile = profilesMap.get(pubkey);
+      if (profile) {
+        metadataList.push(profile);
       }
     }
 

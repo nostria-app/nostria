@@ -11,10 +11,11 @@
   flex-direction: row;
   gap: 1.5rem; // Space between the two divs
 
-  // First div (avatar wrapper) should always be 168px width
+  // First div (avatar wrapper) should preferably be 168px but can shrink
   >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
+    max-width: 168px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -23,6 +24,19 @@
   // Second div should take remaining space
   >div:last-child {
     flex: 1;
+    min-width: 0; // Allow content to shrink below min-content
+    overflow: hidden; // Prevent overflow
+  }
+
+  // When container is narrow (for side panels), allow avatar to shrink
+  @media (max-width: 500px) {
+    gap: 1rem;
+
+    >div:first-child {
+      flex: 0 0 auto;
+      width: auto;
+      max-width: 120px;
+    }
   }
 
   &.mobile {
@@ -39,6 +53,7 @@
       /* Center badges vertically with avatar */
       gap: 12px;
       width: auto;
+      max-width: none;
       /* Allow wrapper to expand for badges */
       flex: 0 0 auto;
       /* Don't grow or shrink based on content */
@@ -94,6 +109,13 @@
     }
   }
 
+  // Allow smaller avatar in narrow containers
+  @media (max-width: 500px) {
+    width: 120px;
+    height: 120px;
+    top: -40px;
+  }
+
   .mobile & {
     top: 0px;
     flex-shrink: 0;
@@ -140,6 +162,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap; // Allow wrapping on narrow containers
+  overflow-wrap: break-word;
+  word-break: break-word;
+
+  // Smaller font on narrow containers
+  @media (max-width: 500px) {
+    font-size: 1.5rem;
+  }
 
   .favorite-indicator {
     color: var(--mat-sys-color-primary);

@@ -26,15 +26,14 @@
 .notes-list-container {
   width: 100%;
   padding: 0;
-  // max-width: 680px; // Fixed width for the note container to match note-card
   // Ensure list container appears second on small screens
   order: 2;
 
   @media (min-width: 960px) {
     order: 1; // On larger screens, make it first
-    width: 680px; // Fixed width on larger screens
-    flex-shrink: 0; // Prevent this from shrinking
-    min-width: 680px; // Ensure minimum width is maintained
+    max-width: 680px; // Maximum width on larger screens
+    flex-shrink: 1; // Allow shrinking when container is smaller
+    min-width: 0; // Allow shrinking below default min-content
   }
 }
 
@@ -72,9 +71,15 @@
   grid-template-columns: 1fr;
   gap: 0.75rem;
 
-  @media (min-width: 768px) {
+  // Use auto-fill with minmax for responsive columns that adapt to container width
+  @media (min-width: 500px) {
     gap: 1rem;
-    grid-template-columns: repeat(3, 1fr); // Default to 3 columns
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  // At larger widths, cap at 3 columns max for visual consistency
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 
     // If only 1 item, take full width
     &:has(.pinned-note-wrapper:only-child) {
@@ -85,8 +90,6 @@
     &:has(.pinned-note-wrapper:nth-child(2):last-child) {
       grid-template-columns: repeat(2, 1fr);
     }
-
-    // If 3 or more items, divide by 3 (already set as default)
   }
 }
 
@@ -198,17 +201,17 @@
     margin-left: 1rem;
     position: sticky;
     top: 1rem;
-    flex: 1; // Make it take remaining space
-    min-width: 200px; // Minimum width before it starts wrapping
-    max-width: calc(100% - 680px - 2rem); // Maximum width based on container minus note width and gap
+    flex: 0 1 auto; // Don't grow, can shrink, auto basis
+    min-width: 180px; // Minimum width before it starts wrapping
+    max-width: 300px; // Cap the maximum width
     height: fit-content; // Ensure it doesn't stretch vertically more than needed
 
     // At breakpoints where the note-card and options can't fit side by side
     @media (max-width: 1100px) {
       order: 1; // Move options to first position
       width: 100%; // Full width
+      max-width: none; // Remove max-width constraint
       padding: 0;
-      // max-width: 680px; // Match the width of note-card
       margin-left: 0; // Remove the left margin
     }
   }
