@@ -4,6 +4,16 @@
     <h2 class="panel-title title-font">{{ filterTitle() }}</h2>
     <span class="panel-header-spacer"></span>
 
+    <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Start streaming">
+      <mat-icon>add</mat-icon>
+    </button>
+    <mat-menu #addMenu="matMenu">
+      <button mat-menu-item (click)="openStreamingAppsDialog()">
+        <mat-icon>videocam</mat-icon>
+        <span i18n="@@streams.wantToStream">Want to stream?</span>
+      </button>
+    </mat-menu>
+
     <!-- People List Selector -->
     @if (isAuthenticated()) {
     <button mat-icon-button [matMenuTriggerFor]="listFilterMenu"
@@ -39,21 +49,11 @@
     <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">
       <mat-icon>refresh</mat-icon>
     </button>
-    <button mat-icon-button [matMenuTriggerFor]="headerActionsMenu" matTooltip="More options">
-      <mat-icon>more_vert</mat-icon>
+    @if (isAuthenticated()) {
+    <button mat-icon-button (click)="openSettings()" matTooltip="Streams settings">
+      <mat-icon>settings</mat-icon>
     </button>
-    <mat-menu #headerActionsMenu="matMenu">
-      <button mat-menu-item (click)="openStreamingAppsDialog()">
-        <mat-icon>videocam</mat-icon>
-        <span i18n="@@streams.wantToStream">Want to stream?</span>
-      </button>
-      @if (isAuthenticated()) {
-      <button mat-menu-item (click)="openSettings()">
-        <mat-icon>settings</mat-icon>
-        <span i18n="@@streams.settings.label">Settings</span>
-      </button>
-      }
-    </mat-menu>
+    }
   </div>
 
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">

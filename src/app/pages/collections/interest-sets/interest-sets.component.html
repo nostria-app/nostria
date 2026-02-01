@@ -1,23 +1,17 @@
-<div class="interest-sets-container">
-  <div class="page-header">
-    <h1 i18n="@@interest-sets.title">Interests</h1>
-    <p class="page-description" i18n="@@interest-sets.description">
-      Manage your hashtag interests. Click a hashtag to open it as a feed, or view all hashtags from a list together.
-    </p>
-  </div>
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font" i18n="@@interest-sets.title">Interests</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="startCreatingNew()" matTooltip="Create new interest list">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
 
+<div class="interest-sets-container">
   @if (isLoading()) {
   <div class="loading-container">
     <mat-spinner diameter="40"></mat-spinner>
   </div>
-  }
-
-  <!-- Create New List Button -->
-  @if (!isCreatingNew()) {
-  <button mat-flat-button class="create-list-button" (click)="startCreatingNew()">
-    <mat-icon>add</mat-icon>
-    Create New Interest List
-  </button>
   }
 
   <!-- Create New List Form -->

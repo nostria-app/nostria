@@ -1003,8 +1003,8 @@ export abstract class RelayServiceBase {
       // Still return a valid subscription object but log the duplication
     }
 
-    // Try to register the subscription
-    const registered = this.subscriptionManager.registerSubscription(
+    // Try to register the subscription - returns available relays (those not at limit)
+    const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,
       filter,
       urls,
@@ -1012,9 +1012,9 @@ export abstract class RelayServiceBase {
       this.poolInstanceId
     );
 
-    if (!registered) {
+    if (availableRelays.length === 0) {
       this.logger.error(
-        `[${this.constructor.name}] Cannot create subscription: limits reached or relay constraints violated`,
+        `[${this.constructor.name}] Cannot create subscription: all relays at limit`,
         {
           subscriptionId,
           filter,
@@ -1035,12 +1035,13 @@ export abstract class RelayServiceBase {
       this.logger.info(`[${this.constructor.name}] Creating subscription`, {
         subscriptionId,
         poolInstance: this.poolInstanceId,
-        relayCount: urls.length,
+        relayCount: availableRelays.length,
+        originalRelayCount: urls.length,
         filter,
       });
 
-      // Create the subscription with auth support
-      const sub = this.#pool.subscribeMany(urls, filter, {
+      // Create the subscription with auth support, using only available relays
+      const sub = this.#pool.subscribeMany(availableRelays, filter, {
         onauth: authCallback,
         onevent: (evt) => {
           // Process event through central event processor
@@ -1058,8 +1059,8 @@ export abstract class RelayServiceBase {
             eventId: evt.id,
           });
 
-          // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          urls.forEach((url) => {
+          // Update the lastUsed timestamp for available relays
+          availableRelays.forEach((url) => {
             this.updateRelayLastUsed(url);
             // Track relay statistics: mark as connected and increment event count
             this.relaysService.updateRelayConnection(url, true);

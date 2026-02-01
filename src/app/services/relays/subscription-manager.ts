@@ -63,7 +63,11 @@ export class SubscriptionManagerService {
   private pendingConnectionUpdates = new Map<string, NodeJS.Timeout>();
 
   /**
+   * Result of attempting to register a subscription
+   */
+  /**
    * Register a new subscription
+   * Returns the list of relays that can accept the subscription, or empty array if none can
    */
   registerSubscription(
     subscriptionId: string,
@@ -71,7 +75,7 @@ export class SubscriptionManagerService {
     relayUrls: string[],
     source: string,
     poolInstance: string
-  ): boolean {
+  ): string[] {
     // Check if we're at the global limit
     if (this.subscriptions.size >= this.MAX_TOTAL_SUBSCRIPTIONS) {
       this.logger.warn(
@@ -83,40 +87,64 @@ export class SubscriptionManagerService {
           relayUrls,
         }
       );
-      return false;
+      return [];
     }
 
-    // Check per-relay limits
+    // Filter out relays that are at capacity
+    const availableRelays: string[] = [];
+    const excludedRelays: string[] = [];
+
     for (const relayUrl of relayUrls) {
       const conn = this.connections.get(relayUrl);
       if (conn && conn.activeSubscriptions >= this.MAX_CONCURRENT_SUBS_PER_RELAY) {
-        this.logger.warn(
-          `[SubscriptionManager] Cannot register subscription: relay ${relayUrl} at limit of ${this.MAX_CONCURRENT_SUBS_PER_RELAY}`,
-          {
-            subscriptionId,
-            source,
-            relayUrl,
-            currentSubs: conn.activeSubscriptions,
-          }
-        );
-        return false;
+        excludedRelays.push(relayUrl);
+      } else {
+        availableRelays.push(relayUrl);
       }
+    }
+
+    // Log excluded relays if any
+    if (excludedRelays.length > 0) {
+      this.logger.warn(
+        `[SubscriptionManager] Excluded ${excludedRelays.length} relay(s) at subscription limit`,
+        {
+          subscriptionId,
+          source,
+          excludedRelays,
+          availableRelays,
+          limit: this.MAX_CONCURRENT_SUBS_PER_RELAY,
+        }
+      );
+    }
+
+    // If no relays have capacity, fail the subscription
+    if (availableRelays.length === 0) {
+      this.logger.error(
+        `[SubscriptionManager] Cannot register subscription: all relays at limit`,
+        {
+          subscriptionId,
+          source,
+          relayUrls,
+          limit: this.MAX_CONCURRENT_SUBS_PER_RELAY,
+        }
+      );
+      return [];
     }
 
     const now = Date.now();
 
-    // Register the subscription
+    // Register the subscription with only the available relays
     this.subscriptions.set(subscriptionId, {
       id: subscriptionId,
       filter,
-      relayUrls,
+      relayUrls: availableRelays,
       createdAt: now,
       source,
       active: true,
     });
 
-    // Update connection info for each relay
-    for (const relayUrl of relayUrls) {
+    // Update connection info for each available relay
+    for (const relayUrl of availableRelays) {
       const conn = this.connections.get(relayUrl) || {
         url: relayUrl,
         isConnected: false,
@@ -137,15 +165,16 @@ export class SubscriptionManagerService {
     this.logger.debug(`[SubscriptionManager] Registered subscription`, {
       subscriptionId,
       source,
-      relayCount: relayUrls.length,
-      relayUrls,
+      relayCount: availableRelays.length,
+      originalRelayCount: relayUrls.length,
+      relayUrls: availableRelays,
       filter,
       poolInstance,
       totalSubscriptions: this.subscriptions.size,
     });
 
     this.updateMetrics();
-    return true;
+    return availableRelays;
   }
 
   /**
