@@ -15,7 +15,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private database = inject(DatabaseService);
   private initialized = false;
 
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://purplepag.es/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
 
   constructor() {
     super(new SimplePool());
@@ -139,16 +139,22 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         return;
       }
 
-      this.save(validRelays);
+      // Ensure the required relay is always included
+      const relaysWithRequired = this.ensureRequiredRelay(validRelays);
 
-      this.logger.debug(`Saved ${validRelays.length} discovery relays to storage`);
+      this.save(relaysWithRequired);
+
+      this.logger.debug(`Saved ${relaysWithRequired.length} discovery relays to storage`);
 
       // Reinitialize the service with new relays
-      this.init(validRelays);
+      this.init(relaysWithRequired);
     } catch (error) {
       this.logger.error('Error saving discovery relays to storage', error);
     }
   }
+
+  // This relay MUST always be included for profile discovery to work well
+  private readonly REQUIRED_DISCOVERY_RELAY = 'wss://indexer.coracle.social/';
 
   /**
    * Loads bootstrap relays from local storage
@@ -160,12 +166,31 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays) && parsedRelays.length > 0) {
           this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
-          return parsedRelays;
+          // Always ensure indexer.coracle.social is included for profile discovery
+          return this.ensureRequiredRelay(parsedRelays);
         }
       }
     } catch (error) {
       this.logger.error('Error loading discovery relays from storage', error);
     }
     return this.DEFAULT_BOOTSTRAP_RELAYS;
+  }
+
+  /**
+   * Ensures the required discovery relay (indexer.coracle.social) is always included
+   * This relay is essential for profile discovery to work well
+   */
+  private ensureRequiredRelay(relays: string[]): string[] {
+    const normalizedRequired = this.REQUIRED_DISCOVERY_RELAY.replace(/\/$/, '');
+    const hasRequired = relays.some(relay =>
+      relay.replace(/\/$/, '') === normalizedRequired
+    );
+
+    if (!hasRequired) {
+      this.logger.debug(`Adding required discovery relay: ${this.REQUIRED_DISCOVERY_RELAY}`);
+      return [...relays, this.REQUIRED_DISCOVERY_RELAY];
+    }
+
+    return relays;
   }
 }

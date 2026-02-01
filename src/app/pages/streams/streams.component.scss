@@ -122,3 +122,17 @@ mat-tab-group {
     }
   }
 }
+
+// Scroll sentinel for infinite loading (invisible trigger element)
+.scroll-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+// Load more indicator shown while loading more items
+.load-more-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}

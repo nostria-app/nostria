@@ -120,7 +120,7 @@
     }
     <!-- Profile events (kind 0) -->
     @else if (targetItem.event.kind === 0) {
-    <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
+    <app-profile-update-event [event]="targetItem.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="repostedRecord()?.data" [event]="repostedEvent" [trustedByPubkey]="item.event.pubkey"
@@ -217,7 +217,7 @@
           }
           <!-- Profile events (kind 0) -->
           @else if (rootRecordData.event.kind === 0) {
-          <app-user-profile [view]="'details'" [event]="rootRecordData.event"></app-user-profile>
+          <app-profile-update-event [event]="rootRecordData.event"></app-profile-update-event>
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
@@ -309,7 +309,7 @@
           }
           <!-- Profile events (kind 0) -->
           @else if (parentRecordData.event.kind === 0) {
-          <app-user-profile [view]="'details'" [event]="parentRecordData.event"></app-user-profile>
+          <app-profile-update-event [event]="parentRecordData.event"></app-profile-update-event>
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
@@ -395,8 +395,7 @@
     }
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
-    {{ item.data.about }}
-    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+    <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
@@ -484,8 +483,7 @@
     }
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
-    {{ item.data.about }}
-    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+    <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
@@ -24,6 +24,7 @@ import { RouterModule } from '@angular/router';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { Router } from '@angular/router';
 import { ContentNotification } from '../../services/database.service';
+import { NostrRecord } from '../../interfaces';
 import { nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { LocalStorageService } from '../../services/local-storage.service';
@@ -148,6 +149,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     [NotificationType.WARNING]: true,
   });
 
+// Cache for prefetched profiles - updated when batch loading completes
+  private prefetchedProfiles = signal<Map<string, NostrRecord>>(new Map());
+
   constructor() {
     this.twoColumnLayout.setSplitView();
     // Save notification filters to localStorage whenever they change
@@ -155,6 +159,65 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       const filters = this.notificationFilters();
       this.localStorage.setItem(NOTIFICATION_FILTERS_KEY, JSON.stringify(filters));
     });
+
+    // Batch preload profiles when notifications change
+    // This ensures profiles are loaded efficiently in a single request
+    // instead of individual requests per notification
+    effect(() => {
+      const notifications = this.contentNotifications();
+      
+      // Use untracked to avoid circular dependency with prefetchedProfiles
+      untracked(() => {
+        this.batchPreloadProfiles(notifications as ContentNotification[]);
+      });
+    });
+  }
+
+  /**
+   * Batch preload profiles for all notification authors
+   * This triggers a single batched relay request instead of individual requests
+   */
+  private async batchPreloadProfiles(notifications: ContentNotification[]): Promise<void> {
+    if (notifications.length === 0) {
+      return;
+    }
+
+    // Extract unique author pubkeys
+    const pubkeys = [...new Set(
+      notifications
+        .map(n => (n as ContentNotification).authorPubkey)
+        .filter((p): p is string => !!p)
+    )];
+
+    if (pubkeys.length === 0) {
+      return;
+    }
+
+    // Batch load profiles - this checks cache first, then storage, then relays
+    const profiles = await this.dataService.batchLoadProfiles(pubkeys);
+    
+    // Update the prefetched profiles signal to trigger UI updates
+    this.prefetchedProfiles.set(profiles);
+  }
+
+  /**
+   * Get a cached/prefetched profile for a notification author
+   * Used by the template to pass prefetched profiles to child components
+   */
+  getPrefetchedProfile(notification: Notification): NostrRecord | null {
+    const contentNotif = notification as ContentNotification;
+    if (!contentNotif.authorPubkey) {
+      return null;
+    }
+
+    // First check our prefetched profiles map (from batch loading)
+    const prefetched = this.prefetchedProfiles().get(contentNotif.authorPubkey);
+    if (prefetched) {
+      return prefetched;
+    }
+
+    // Fall back to DataService cache (might have been loaded elsewhere)
+    return this.dataService.getCachedProfile(contentNotif.authorPubkey) ?? null;
   }
 
   // Helper to check if notification is a system notification (technical)

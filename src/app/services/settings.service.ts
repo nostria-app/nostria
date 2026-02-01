@@ -4,6 +4,7 @@ import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
+import { DatabaseService } from './database.service';
 
 export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
 
@@ -114,6 +115,7 @@ export class SettingsService {
   private nostrService = inject(NostrService);
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);
+  private database = inject(DatabaseService);
   private logger = inject(LoggerService);
 
   settings = signal<UserSettings>({ ...DEFAULT_SETTINGS });
@@ -128,6 +130,11 @@ export class SettingsService {
       const initialized = this.accountState.initialized();
 
       if (account && initialized) {
+        // Skip if settings are already loaded for this account
+        // (StateService loads settings directly for faster startup)
+        if (this.settingsLoaded()) {
+          return;
+        }
         // Mark settings as not loaded while we fetch
         this.settingsLoaded.set(false);
         // Reset to defaults first to ensure clean state
@@ -146,6 +153,79 @@ export class SettingsService {
 
   async loadSettings(pubkey: string): Promise<void> {
     try {
+      // FAST PATH: Try to load from local database first (instant)
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+        pubkey,
+        kinds.Application,
+        'nostria:settings'
+      );
+
+      if (cachedEvent && cachedEvent.content) {
+        try {
+          const parsedContent = JSON.parse(cachedEvent.content);
+          const mergedSettings = {
+            ...DEFAULT_SETTINGS,
+            ...parsedContent,
+          };
+          this.settings.set(mergedSettings);
+          this.logger.info('Settings loaded from cache', this.settings());
+
+          // Refresh from relay in background (don't await)
+          this.refreshSettingsFromRelay(pubkey);
+          return;
+        } catch (error) {
+          this.logger.warn('Failed to parse cached settings, will fetch from relay', error);
+        }
+      }
+
+      // No cache or invalid cache - fetch from relay
+      await this.fetchSettingsFromRelay(pubkey);
+    } catch (error) {
+      this.logger.error('Failed to load settings', error);
+      this.settings.set({ ...DEFAULT_SETTINGS });
+    }
+  }
+
+  /**
+   * Fetch settings from relay and save to cache
+   */
+  private async fetchSettingsFromRelay(pubkey: string): Promise<void> {
+    const filter = {
+      kinds: [kinds.Application],
+      '#d': ['nostria:settings'],
+      authors: [pubkey],
+      limit: 1,
+    };
+
+    const event = await this.accountRelay.get(filter);
+
+    if (event && event.content) {
+      try {
+        const parsedContent = JSON.parse(event.content);
+        const mergedSettings = {
+          ...DEFAULT_SETTINGS,
+          ...parsedContent,
+        };
+        this.settings.set(mergedSettings);
+        this.logger.info('Settings loaded successfully', this.settings());
+
+        // Save to cache for next time
+        await this.database.saveEvent(event);
+      } catch (error) {
+        this.logger.error('Failed to parse settings content', error);
+        this.settings.set({ ...DEFAULT_SETTINGS });
+      }
+    } else {
+      this.logger.info('No settings found, using defaults', DEFAULT_SETTINGS);
+      this.settings.set({ ...DEFAULT_SETTINGS });
+    }
+  }
+
+  /**
+   * Refresh settings from relay in background and update if newer
+   */
+  private async refreshSettingsFromRelay(pubkey: string): Promise<void> {
+    try {
       const filter = {
         kinds: [kinds.Application],
         '#d': ['nostria:settings'],
@@ -156,26 +236,32 @@ export class SettingsService {
       const event = await this.accountRelay.get(filter);
 
       if (event && event.content) {
-        try {
-          const parsedContent = JSON.parse(event.content);
-          // Merge in correct order: defaults first, then loaded settings
-          const mergedSettings = {
-            ...DEFAULT_SETTINGS,
-            ...parsedContent,
-          };
-          this.settings.set(mergedSettings);
-          this.logger.info('Settings loaded successfully', this.settings());
-        } catch (error) {
-          this.logger.error('Failed to parse settings content', error);
-          this.settings.set({ ...DEFAULT_SETTINGS });
+        // Check if relay version is newer than cached
+        const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+          pubkey,
+          kinds.Application,
+          'nostria:settings'
+        );
+
+        if (!cachedEvent || event.created_at > cachedEvent.created_at) {
+          try {
+            const parsedContent = JSON.parse(event.content);
+            const mergedSettings = {
+              ...DEFAULT_SETTINGS,
+              ...parsedContent,
+            };
+            this.settings.set(mergedSettings);
+            this.logger.info('Settings refreshed from relay', this.settings());
+
+            // Update cache
+            await this.database.saveEvent(event);
+          } catch (error) {
+            this.logger.warn('Failed to parse refreshed settings', error);
+          }
         }
-      } else {
-        this.logger.info('No settings found, using defaults', DEFAULT_SETTINGS);
-        this.settings.set({ ...DEFAULT_SETTINGS });
       }
     } catch (error) {
-      this.logger.error('Failed to load settings', error);
-      this.settings.set({ ...DEFAULT_SETTINGS });
+      this.logger.debug('Background settings refresh failed', error);
     }
   }
 

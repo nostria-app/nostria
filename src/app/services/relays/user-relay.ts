@@ -141,7 +141,7 @@ export class UserRelayService {
       return [];
     }
 
-    return this.getEventsWithSubscription(relayUrls, { authors: validPubkeys, kinds: [kind], limit: 1000 });
+    return this.getEventsWithSubscription(relayUrls, { authors: validPubkeys, kinds: [kind], limit: 500 });
   }
 
   /**

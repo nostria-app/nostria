@@ -306,18 +306,30 @@ export class AccountStateService implements OnDestroy {
       this.loadData();
     } else if (account.source === 'extension') {
       // Check for window.nostr availability with interval
+      // Extensions typically inject window.nostr within 100-500ms of page load
+      let dataLoaded = false;
       const checkNostrInterval = setInterval(() => {
         if (window.nostr) {
           clearInterval(checkNostrInterval);
-          this.loadData();
+          if (!dataLoaded) {
+            dataLoaded = true;
+            this.loadData();
+          }
         }
-      }, 100); // Check every 100ms
+      }, 50); // Check every 50ms for faster detection
 
-      // Optional: Add a timeout to prevent infinite checking
+      // Timeout after 1 second - if extension isn't available by then, proceed anyway
+      // The user may not have a NIP-07 extension installed
       setTimeout(() => {
         clearInterval(checkNostrInterval);
-        console.warn('Timeout waiting for window.nostr to become available');
-      }, 10000); // Stop checking after 10 seconds
+        if (!dataLoaded) {
+          dataLoaded = true;
+          if (!window.nostr) {
+            console.debug('window.nostr not available - extension may not be installed');
+          }
+          this.loadData();
+        }
+      }, 2000);
     } else {
       // Remote signing, readonly, etc.
       this.loadData();
@@ -1087,6 +1099,8 @@ export class AccountStateService implements OnDestroy {
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       console.log(`⏭️ [Profile Loading] Skipping storage load - discovery not done for ${pubkey.substring(0, 8)}...`);
+      // Still mark as loaded so FollowingService and DataService don't wait forever
+      this.profileCacheLoaded.set(true);
       return; // Don't load if discovery hasn't been done
     }
 
@@ -1094,6 +1108,8 @@ export class AccountStateService implements OnDestroy {
       const followingList = this.followingList();
       if (followingList.length === 0) {
         console.log('⏭️ [Profile Loading] Skipping storage load - no following list');
+        // Still mark as loaded so FollowingService and DataService don't wait forever
+        this.profileCacheLoaded.set(true);
         return; // No following list to load profiles for
       }
 

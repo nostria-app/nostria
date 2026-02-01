@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect, viewChild, ElementRef } from '@angular/core';
 
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -65,6 +65,14 @@ export class StreamsComponent implements OnInit, OnDestroy {
   selectedTabIndex = signal(0);
   showSettingsDialog = signal(false);
 
+  // Pagination for ended streams (continuous scrolling)
+  private readonly PAGE_SIZE = 20;
+  endedDisplayLimit = signal(this.PAGE_SIZE);
+  
+  // Scroll sentinel for infinite loading
+  scrollSentinel = viewChild<ElementRef>('scrollSentinel');
+  private scrollObserver?: IntersectionObserver;
+
   // Streams relay set state
   streamsRelaySet = signal<Event | null>(null);
   streamsRelays = signal<string[]>([]);
@@ -118,15 +126,49 @@ export class StreamsComponent implements OnInit, OnDestroy {
   private subscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
 
+  // Computed: filtered ended streams (applies people list filter)
+  private filteredEndedStreams = computed(() => {
+    const streams = this.endedStreams();
+    const pubkeys = this.filterPubkeys();
+    if (pubkeys === null) {
+      return streams; // No filtering
+    }
+    if (pubkeys.length === 0) {
+      return []; // Filter is active but no pubkeys to match
+    }
+    return streams.filter(event => {
+      const hostPubkey = this.getHostPubkey(event);
+      return hostPubkey && pubkeys.includes(hostPubkey);
+    });
+  });
+
+  // Computed: visible ended streams (paginated for performance)
+  visibleEndedStreams = computed(() => {
+    const filtered = this.filteredEndedStreams();
+    const limit = this.endedDisplayLimit();
+    return filtered.slice(0, limit);
+  });
+
+  // Computed: whether there are more ended streams to load
+  hasMoreEndedStreams = computed(() => {
+    return this.filteredEndedStreams().length > this.endedDisplayLimit();
+  });
+
   // Computed signals for filtering (now includes people list filter)
   currentStreams = computed(() => {
     const index = this.selectedTabIndex();
     let streams: Event[];
-    if (index === 0) streams = this.liveStreams();
-    else if (index === 1) streams = this.plannedStreams();
-    else streams = this.endedStreams();
+    
+    if (index === 0) {
+      streams = this.liveStreams();
+    } else if (index === 1) {
+      streams = this.plannedStreams();
+    } else {
+      // For ended tab, use the paginated visible streams
+      return this.visibleEndedStreams();
+    }
 
-    // Apply people list filter
+    // Apply people list filter for live and planned streams
     const pubkeys = this.filterPubkeys();
     if (pubkeys === null) {
       return streams; // No filtering
@@ -160,6 +202,16 @@ export class StreamsComponent implements OnInit, OnDestroy {
       }
     }, { allowSignalWrites: true });
 
+    // Setup infinite scroll when sentinel becomes available and we're on the ended tab
+    effect(() => {
+      const sentinel = this.scrollSentinel();
+      const tabIndex = this.selectedTabIndex();
+      if (sentinel && tabIndex === 2) {
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => this.setupInfiniteScroll(), 100);
+      }
+    });
+
     this.initializeStreams();
   }
 
@@ -178,6 +230,9 @@ export class StreamsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.subscription) {
       this.subscription.close();
+    }
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
     }
   }
 
@@ -393,12 +448,56 @@ export class StreamsComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+    // Reset display limit when switching to ended tab
+    if (index === 2) {
+      this.endedDisplayLimit.set(this.PAGE_SIZE);
+    }
+  }
+
+  /**
+   * Load more ended streams (pagination)
+   */
+  loadMoreEndedStreams(): void {
+    this.endedDisplayLimit.update(limit => limit + this.PAGE_SIZE);
+  }
+
+  /**
+   * Setup IntersectionObserver for infinite scroll on ended streams
+   */
+  private setupInfiniteScroll(): void {
+    const sentinel = this.scrollSentinel();
+    if (!sentinel) return;
+
+    // Disconnect existing observer
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+    }
+
+    // Create intersection observer for infinite scrolling
+    this.scrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && this.hasMoreEndedStreams() && !this.loading()) {
+          this.loadMoreEndedStreams();
+        }
+      },
+      {
+        root: null, // Use viewport as root
+        rootMargin: '400px', // Load more when user is 400px from the bottom
+        threshold: 0,
+      }
+    );
+
+    // Observe the sentinel element
+    this.scrollObserver.observe(sentinel.nativeElement);
   }
 
   refresh(): void {
     // Clear existing data and restart subscription
     this.eventMap.clear();
     this.loading.set(true);
+    // Reset pagination for ended streams
+    this.endedDisplayLimit.set(this.PAGE_SIZE);
 
     if (this.subscription) {
       this.subscription.close();

@@ -158,7 +158,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   ];
 
   // Secondary discovery relay - purplepag.es is a popular discovery relay
-  // that can be included alongside the regional Nostria relay for better lookup performance
+  // that can be optionally included via a checkbox in the relay selection dialog
   readonly PURPLEPAGES_RELAY = 'wss://purplepag.es/';
 
   // Nostria relay regions for setup

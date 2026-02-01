@@ -262,7 +262,7 @@
         <button class="app-loading-reload-btn" onclick="clearCachesAndReload()">Clear Cache & Reload</button>
       </div>
       <script>
-        // Show reload button after 5 seconds if still loading
+        // Show reload button after 10 seconds if still loading
         setTimeout(function () {
           var reloadEl = document.getElementById('app-loading-reload');
           var loadingEl = document.getElementById('app-loading');
@@ -270,7 +270,7 @@
           if (reloadEl && loadingEl && loadingEl.offsetParent !== null) {
             reloadEl.classList.add('visible');
           }
-        }, 5000);
+        }, 10000);
       </script>
     </div>
   </app-root>

@@ -37,9 +37,11 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
 
   private linkElement: HTMLElement | null = null;
 
-  publicKey = '';
+publicKey = '';
   pubkey = input<string>('');
   event = input<Event | undefined>(undefined);
+  // Optional prefetched profile passed from parent to avoid duplicate fetches
+  prefetchedProfile = input<unknown | null>(null);
   disableLink = input<boolean>(false);
   profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   isLoading = signal(false);
@@ -105,7 +107,18 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
     return npub ? `/p/${npub}` : '';
   });
 
-  constructor() {
+constructor() {
+    // If a prefetched profile is provided, initialize local profile with it
+    // This prevents redundant fetches when parent has already loaded the profile
+    effect(() => {
+      const pref = this.prefetchedProfile();
+      if (pref) {
+        this.profile.set(pref as unknown as Record<string, unknown>);
+        // Mark as loaded to prevent redundant fetches
+        this.isLoading.set(false);
+      }
+    });
+
     // Effect to trigger load when scrolling stops if the component is visible but not loaded
     effect(() => {
       const isScrolling = this.scrollState.isScrolling();

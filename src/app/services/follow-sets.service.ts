@@ -84,29 +84,33 @@ export class FollowSetsService {
         // The new account's lists will be loaded below
         this.followSets.set([]);
 
-        // Wait for account to be initialized (relays configured) before loading
-        // This prevents race conditions where we try to fetch from relays before they're ready
+        // FAST PATH: Load from database immediately, don't wait for initialized
+        // This makes follow sets available faster for UI rendering
+        // Relay fetch will happen when initialized becomes true
+        this.loadFollowSetsFromCache(pubkey);
+
+        // For relay fetch, we need to wait for initialization
         if (!initialized) {
-          this.logger.debug('[FollowSets] Account not yet initialized, will load on next effect trigger');
+          this.logger.debug('[FollowSets] Account not yet initialized, cached data loaded, will fetch from relays when ready');
           // Reset lastEffectPubkey so the effect will re-run when initialized changes
           this.lastEffectPubkey = null;
           return;
         }
 
-        // For extension accounts, wait for the extension to be available before loading
+        // For extension accounts, wait for the extension to be available before loading from relays
         // since decryption of private follow sets requires the extension
         if (account?.source === 'extension') {
           this.utilities.waitForNostrExtension().then(available => {
             if (available) {
-              this.logger.debug('[FollowSets] Extension available, loading follow sets');
-              this.loadFollowSets(pubkey);
+              this.logger.debug('[FollowSets] Extension available, fetching follow sets from relays');
+              this.loadFollowSetsFromRelays(pubkey);
             } else {
-              this.logger.warn('[FollowSets] Extension not available, loading follow sets anyway (private sets may fail to decrypt)');
-              this.loadFollowSets(pubkey);
+              this.logger.warn('[FollowSets] Extension not available, fetching from relays anyway (private sets may fail to decrypt)');
+              this.loadFollowSetsFromRelays(pubkey);
             }
           });
         } else {
-          this.loadFollowSets(pubkey);
+          this.loadFollowSetsFromRelays(pubkey);
         }
       } else {
         this.followSets.set([]);
@@ -116,15 +120,59 @@ export class FollowSetsService {
   }
 
   /**
-   * Load follow sets for a given pubkey from database and relays
-   * Uses a two-phase approach:
-   * 1. First phase: Parse events quickly without waiting for decryption (shows public content immediately)
-   * 2. Second phase: Attempt decryption in background and update follow sets when complete
+   * FAST PATH: Load follow sets from local database only (no network).
+   * This is called immediately when account changes to show cached data quickly.
    */
-  async loadFollowSets(pubkey: string): Promise<void> {
+  async loadFollowSetsFromCache(pubkey: string): Promise<boolean> {
+    try {
+      const startTime = Date.now();
+      this.logger.debug('[FollowSets] Loading follow sets from cache for pubkey:', pubkey?.substring(0, 8));
+
+      // Ensure database is initialized before querying
+      await this.database.init();
+
+      // Load from database - parse immediately without waiting for decryption
+      let dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
+
+      // Filter out deleted events
+      dbEvents = dbEvents.filter(event => !this.deletionFilter.isDeleted(event));
+
+      if (dbEvents.length > 0) {
+        // Parse database events immediately (without decryption)
+        const dbSets = dbEvents
+          .map(event => this.parseFollowSetEventSync(event))
+          .filter((set): set is FollowSet => set !== null);
+
+        // Deduplicate by dTag, keeping only the newest event for each dTag
+        const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
+
+        if (deduplicatedDbSets.length > 0) {
+          // Set follow sets immediately with public data
+          this.followSets.set(deduplicatedDbSets);
+          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from cache in ${Date.now() - startTime}ms`);
+
+          // Start background decryption for private lists (don't await)
+          this.decryptPrivateListsInBackground(deduplicatedDbSets);
+          return true;
+        }
+      }
+
+      this.logger.debug(`[FollowSets] No cached follow sets found in ${Date.now() - startTime}ms`);
+      return false;
+    } catch (error) {
+      this.logger.error('[FollowSets] Failed to load follow sets from cache:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load follow sets from relays (network operation).
+   * This is called after account is initialized and relays are ready.
+   */
+  async loadFollowSetsFromRelays(pubkey: string): Promise<void> {
     // If already loading for the same pubkey, return existing promise
     if (this.loadingPromise && this.lastLoadedPubkey === pubkey) {
-      this.logger.debug('[FollowSets] Already loading for this pubkey, reusing existing load');
+      this.logger.debug('[FollowSets] Already loading from relays for this pubkey, reusing existing load');
       return this.loadingPromise;
     }
 
@@ -132,41 +180,15 @@ export class FollowSetsService {
     this.isLoading.set(true);
     this.error.set(null);
 
+    // Remember if we had cached data
+    const hadCachedData = this.followSets().length > 0;
+
     this.loadingPromise = (async () => {
       try {
-        this.logger.debug('[FollowSets] Loading follow sets for pubkey:', pubkey);
+        const startTime = Date.now();
+        this.logger.debug('[FollowSets] Fetching follow sets from relays for pubkey:', pubkey?.substring(0, 8));
 
-        // Ensure database is initialized before querying
-        await this.database.init();
-
-        // First, try to load from database - parse immediately without waiting for decryption
-        let dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
-
-        // Filter out deleted events
-        dbEvents = dbEvents.filter(event => !this.deletionFilter.isDeleted(event));
-
-        let hasDbResults = false;
-        if (dbEvents.length > 0) {
-          // Parse database events immediately (without decryption)
-          const dbSets = dbEvents
-            .map(event => this.parseFollowSetEventSync(event))
-            .filter((set): set is FollowSet => set !== null);
-
-          // Deduplicate by dTag, keeping only the newest event for each dTag
-          const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
-
-          if (deduplicatedDbSets.length > 0) {
-            hasDbResults = true;
-            // Set follow sets immediately with public data
-            this.followSets.set(deduplicatedDbSets);
-            this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from database (without decryption)`);
-
-            // Start background decryption for private lists (don't await)
-            this.decryptPrivateListsInBackground(deduplicatedDbSets);
-          }
-        }
-
-        // Then fetch from relays to get any updates
+        // Fetch from relays to get any updates
         const events = await this.dataService.getEventsByPubkeyAndKind(
           pubkey,
           30000,
@@ -185,20 +207,20 @@ export class FollowSetsService {
         // Deduplicate by dTag, keeping only the newest event for each dTag
         const deduplicatedSets = this.deduplicateByDTag(sets);
 
-        // Only update from relay if we got results, or if we had no db results
-        // This prevents overwriting good db data with empty relay response
-        if (deduplicatedSets.length > 0 || !hasDbResults) {
-          // Set follow sets immediately with public data
+        // Only update from relay if we got results, or if we had no cached data
+        // This prevents overwriting good cached data with empty relay response
+        if (deduplicatedSets.length > 0 || !hadCachedData) {
+          // Set follow sets with relay data
           this.followSets.set(deduplicatedSets);
-          this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays (without decryption)`);
+          this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays in ${Date.now() - startTime}ms`);
 
           // Start background decryption for private lists (don't await)
           this.decryptPrivateListsInBackground(deduplicatedSets);
         } else {
-          this.logger.debug('[FollowSets] Relay returned empty results, keeping database results');
+          this.logger.debug(`[FollowSets] Relay returned empty results in ${Date.now() - startTime}ms, keeping cached data`);
         }
       } catch (error) {
-        this.logger.error('[FollowSets] Failed to load follow sets:', error);
+        this.logger.error('[FollowSets] Failed to load follow sets from relays:', error);
         this.error.set('Failed to load follow sets');
       } finally {
         this.isLoading.set(false);
@@ -208,6 +230,18 @@ export class FollowSetsService {
     })();
 
     return this.loadingPromise;
+  }
+
+  /**
+   * Load follow sets for a given pubkey from database and relays
+   * Uses a two-phase approach:
+   * 1. First phase: Parse events quickly without waiting for decryption (shows public content immediately)
+   * 2. Second phase: Attempt decryption in background and update follow sets when complete
+   * @deprecated Use loadFollowSetsFromCache() and loadFollowSetsFromRelays() for better startup performance
+   */
+  async loadFollowSets(pubkey: string): Promise<void> {
+    await this.loadFollowSetsFromCache(pubkey);
+    await this.loadFollowSetsFromRelays(pubkey);
   }
 
   /**

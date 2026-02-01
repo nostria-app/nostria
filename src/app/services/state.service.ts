@@ -16,6 +16,7 @@ import { MetricsTrackingService } from './metrics-tracking.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { DeletionFilterService } from './deletion-filter.service';
+import { SettingsService } from './settings.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -39,12 +40,24 @@ export class StateService implements NostriaService {
   following = inject(FollowingService);
   metricsTracking = inject(MetricsTrackingService);
   deletionFilter = inject(DeletionFilterService);
+  settingsService = inject(SettingsService);
 
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
       if (account) {
         try {
+          // Clear previous account state first
+          this.clear();
+
+          // FAST PATH: Load cached data IMMEDIATELY (before waiting for extension)
+          // This makes following list, profile, and mute list available immediately
+          // Cached data is just database reads - no signing/extension needed
+          const startTime = Date.now();
+          this.logger.info('[StateService] Loading cached data from storage (fast path)');
+          await this.nostr.loadCachedData();
+          this.logger.info(`[StateService] Cached data loaded in ${Date.now() - startTime}ms`);
+
           // For extension-based accounts, wait for the browser extension to be available
           // before loading data that may require signing or decryption
           if (account.source === 'extension') {
@@ -58,7 +71,6 @@ export class StateService implements NostriaService {
             }
           }
 
-          this.clear();
           await this.load();
         } catch (error) {
           console.error('Error during account change:', error);
@@ -74,11 +86,18 @@ export class StateService implements NostriaService {
 
   async load() {
     const pubkey = this.accountState.pubkey();
+    const startTime = Date.now();
+    this.logger.info('[StateService] Starting relay and settings load sequence');
+
+    // NOTE: Cached data (following list, profile, mute list) was already loaded
+    // in the constructor effect before waiting for extension - see loadCachedData() call above
 
     // This is never called for anonymous accounts.
     await this.discoveryRelay.load();
     // Destroy old connections before setting up new ones
+    const relayStartTime = Date.now();
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
+    this.logger.info(`[StateService] Account relay setup completed in ${Date.now() - relayStartTime}ms`);
 
     // Check if user has a malformed relay list or no relays configured
     if (relayStatus.hasMalformedRelayList || relayStatus.relayUrls.length === 0) {
@@ -101,23 +120,61 @@ export class StateService implements NostriaService {
       );
     }
 
-    // Load deletion events early so we can filter out deleted content
-    // This must happen after accountRelay is initialized but before other data loading
-    await this.deletionFilter.load(pubkey);
+    // OPTIMIZATION: Run independent operations in parallel after relay setup
+    // These operations don't depend on each other and can load simultaneously
+    this.logger.info('[StateService] Starting parallel load operations');
+    const parallelStartTime = Date.now();
 
-    await this.accountState.load();
-    await this.nostr.load();
+    const settingsPromise = (async () => {
+      const settingsStartTime = Date.now();
+      await this.settingsService.loadSettings(pubkey);
+      this.settingsService.settingsLoaded.set(true);
+      this.logger.info(`[StateService] Settings loaded in ${Date.now() - settingsStartTime}ms`);
+    })();
 
-    // Load notifications from storage
-    if (!this.notification.notificationsLoaded()) {
-      await this.notification.loadNotifications();
-    }
+    const deletionPromise = (async () => {
+      const deletionStartTime = Date.now();
+      await this.deletionFilter.load(pubkey);
+      this.logger.info(`[StateService] Deletion filter loaded in ${Date.now() - deletionStartTime}ms`);
+    })();
 
+    const accountStatePromise = (async () => {
+      const accountStartTime = Date.now();
+      await this.accountState.load();
+      this.logger.info(`[StateService] Account state loaded in ${Date.now() - accountStartTime}ms`);
+    })();
+
+    const notificationPromise = (async () => {
+      if (!this.notification.notificationsLoaded()) {
+        const notifStartTime = Date.now();
+        await this.notification.loadNotifications();
+        this.logger.info(`[StateService] Notifications loaded in ${Date.now() - notifStartTime}ms`);
+      }
+    })();
+
+    // Wait for all parallel operations to complete
+    await Promise.all([
+      settingsPromise,
+      deletionPromise,
+      accountStatePromise,
+      notificationPromise,
+    ]);
+    this.logger.info(`[StateService] Parallel operations completed in ${Date.now() - parallelStartTime}ms`);
+
+    // Start relay subscriptions (this will fetch fresh data in background)
+    // Note: nostr.loadCachedData() was already called above for fast startup
+    // This can run after other parallel operations since it's for background refresh
+    await this.nostr.loadFromRelays();
+
+    // Media load can also be parallelized but let's keep it sequential for now
+    // as it's lower priority and depends on media servers being available
     await this.media.load();
 
     // Schedule historical events scan for engagement metrics
     // Uses built-in timeout management to prevent duplicate scans
     this.metricsTracking.scheduleHistoricalScan();
+
+    this.logger.info(`[StateService] Full load sequence completed in ${Date.now() - startTime}ms`);
 
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page

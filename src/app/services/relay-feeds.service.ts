@@ -23,18 +23,12 @@ const RELAY_SET_KIND = 30002;
 
 const DEFAULT_RELAYS: string[] = [
   'trending.relays.land',
-  'nostrelites.org',
   'wot.nostr.net',
-  'wotr.relatr.xyz',
   'primus.nostr1.com',
   'nostr.land',
   'nos.lol',
   'nostr.wine',
   'news.utxo.one',
-  '140.f7z.io',
-  'pyramid.fiatjaf.com',
-  'relay.damus.io',
-  'relay.primal.net',
   'nostr21.com',
   'ribo.eu.nostria.app',
   'ribo.us.nostria.app',

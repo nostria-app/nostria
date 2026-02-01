@@ -33,6 +33,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -104,6 +105,7 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../compo
     ProfileViewOptionsInlineComponent,
     ZapButtonComponent,
     ProfileHomeComponent,
+    OverlayModule,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -213,6 +215,14 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
   followingList = signal<string[]>([]); // This would be dynamically updated with real data
+
+  // Filter panel state for view options
+  filterPanelOpen = signal(false);
+  filterPanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
 
   // Signal to track the premium status
   premiumTier = signal<string | null>(null);
@@ -556,6 +566,20 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
    */
   preventMenuClose(event: MouseEvent): void {
     event.stopPropagation();
+  }
+
+  /**
+   * Toggle the filter panel open/closed
+   */
+  toggleFilterPanel(): void {
+    this.filterPanelOpen.update(v => !v);
+  }
+
+  /**
+   * Close the filter panel
+   */
+  closeFilterPanel(): void {
+    this.filterPanelOpen.set(false);
   }
 
   /**

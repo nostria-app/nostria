@@ -9,3 +9,4 @@ export { AudioEventComponent } from './audio-event.component';
 export { MusicEventComponent } from './music-event.component';
 export { EmojiSetEventComponent } from './emoji-set-event.component';
 export { PeopleSetEventComponent } from './people-set-event.component';
+export { ProfileUpdateEventComponent } from './profile-update-event.component';

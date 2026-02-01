@@ -15,6 +15,7 @@ import { NotificationService } from '../../services/notification.service';
 import { ContentNotificationService } from '../../services/content-notification.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationService } from '../../services/application.service';
 
 export type CacheType = 'all' | 'events' | 'notifications' | 'messages' | 'relays' | 'images' | 'ai-models';
 
@@ -44,6 +45,7 @@ export class StorageStatsComponent implements OnInit {
   private contentNotificationService = inject(ContentNotificationService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
+  private app = inject(ApplicationService);
 
   isClearing = signal(false);
   stats = signal({
@@ -110,8 +112,9 @@ export class StorageStatsComponent implements OnInit {
             this.accountLocalState.setMessagesLastCheck(allPubkey, 0);
           }
           localStorage.removeItem('nostria-notification-filters');
-          successMessage = 'All cache cleared successfully';
-          break;
+          // Reload the app to ensure all in-memory caches are released
+          this.app.reload();
+          return; // The reload will refresh the page, so we don't need to continue
         }
         case 'events':
           await this.database.clearEvents();

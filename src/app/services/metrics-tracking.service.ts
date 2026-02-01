@@ -119,7 +119,7 @@ export class MetricsTrackingService {
       const reactions = await this.accountRelay.getMany({
         kinds: [kinds.Reaction, 17],
         authors: [currentPubkey],
-        limit: 1000,
+        limit: 500,
       });
       this.logger.debug(`Found ${reactions.length} historical reactions`);
 
@@ -127,7 +127,7 @@ export class MetricsTrackingService {
       const reposts = await this.accountRelay.getMany({
         kinds: [kinds.Repost, 16],
         authors: [currentPubkey],
-        limit: 1000,
+        limit: 500,
       });
       this.logger.debug(`Found ${reposts.length} historical reposts`);
 
@@ -135,7 +135,7 @@ export class MetricsTrackingService {
       const zapRequests = await this.accountRelay.getMany({
         kinds: [9734],
         authors: [currentPubkey],
-        limit: 1000,
+        limit: 500,
       });
       this.logger.debug(`Found ${zapRequests.length} historical zap requests`);
 
@@ -143,7 +143,7 @@ export class MetricsTrackingService {
       const notes = await this.accountRelay.getMany({
         kinds: [kinds.ShortTextNote],
         authors: [currentPubkey],
-        limit: 1000,
+        limit: 500,
       });
       // Filter to only replies (have e tag with reply/root marker)
       const replies = notes.filter(event =>

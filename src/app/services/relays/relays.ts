@@ -79,6 +79,11 @@ export class RelaysService {
   // Stores both successful results and failed attempts (null means fetch was attempted but failed)
   private nip11Cache = new Map<string, Nip11RelayInfo | null>();
   private nip11FetchInProgress = new Map<string, Promise<Nip11RelayInfo | null>>();
+  
+  // LocalStorage key for NIP-11 cache
+  private readonly NIP11_STORAGE_KEY = 'nostria_nip11_cache';
+  // Cache expiry time (24 hours in milliseconds)
+  private readonly NIP11_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
   // Signals for reactive updates
   readonly relayStatsSignal = signal<Map<string, RelayStats>>(new Map());
@@ -93,6 +98,9 @@ export class RelaysService {
   constructor() {
     // Initialize with preferred relays
     this.initializePreferredRelays();
+    
+    // Load NIP-11 cache from localStorage
+    this.loadNip11CacheFromStorage();
 
     // Load observed relays and save initial stats when the storage is initialized
     effect(() => {
@@ -110,6 +118,54 @@ export class RelaysService {
     this.utilities.preferredRelays.forEach(url => {
       this.addRelay(url);
     });
+  }
+
+  /**
+   * Load NIP-11 cache from localStorage
+   */
+  private loadNip11CacheFromStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.NIP11_STORAGE_KEY);
+      if (!stored) return;
+
+      const data = JSON.parse(stored) as { 
+        entries: Array<{ url: string; info: Nip11RelayInfo | null; timestamp: number }>;
+      };
+
+      const now = Date.now();
+      
+      // Load entries that haven't expired
+      for (const entry of data.entries) {
+        if (now - entry.timestamp < this.NIP11_CACHE_EXPIRY_MS) {
+          this.nip11Cache.set(entry.url, entry.info);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load NIP-11 cache from localStorage:', error);
+      // Clear corrupted cache
+      localStorage.removeItem(this.NIP11_STORAGE_KEY);
+    }
+  }
+
+  /**
+   * Save NIP-11 cache to localStorage
+   */
+  private saveNip11CacheToStorage(): void {
+    try {
+      const now = Date.now();
+      const entries: Array<{ url: string; info: Nip11RelayInfo | null; timestamp: number }> = [];
+
+      // Only save successful fetches to localStorage (not failed ones)
+      for (const [url, info] of this.nip11Cache) {
+        if (info !== null) {
+          entries.push({ url, info, timestamp: now });
+        }
+      }
+
+      localStorage.setItem(this.NIP11_STORAGE_KEY, JSON.stringify({ entries }));
+    } catch (error) {
+      console.warn('Failed to save NIP-11 cache to localStorage:', error);
+    }
   }
 
   /**
@@ -570,6 +626,10 @@ export class RelaysService {
       const result = await fetchPromise;
       // Cache the result (even if null/failed)
       this.nip11Cache.set(normalizedUrl, result);
+      // Save successful fetches to localStorage
+      if (result !== null) {
+        this.saveNip11CacheToStorage();
+      }
       return result;
     } finally {
       // Clean up in-progress tracking

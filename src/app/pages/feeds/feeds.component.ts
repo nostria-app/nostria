@@ -469,17 +469,17 @@ export class FeedsComponent implements OnDestroy {
   scrollCheckCleanup: (() => void) | null = null;
 
   /**
-   * Helper method to filter events based on GLOBAL content filter settings
-   * These settings apply to ALL feeds, not per-feed
+   * Helper method to filter events based on feed-specific settings
+   * Each feed has its own kinds, showReplies, and showReposts settings
    * Filters out reply events when showReplies is false
    * Filters out repost events when showReposts is false
-   * Filters events by kinds based on global content filter
+   * Filters events by kinds based on the feed's configuration
    */
-  private filterEventsByFeedSettings(events: Event[]): Event[] {
-    const contentFilter = this.localSettings.contentFilter();
-    const showReplies = contentFilter.showReplies;
-    const showReposts = contentFilter.showReposts;
-    const allowedKinds = contentFilter.kinds;
+  private filterEventsByFeedSettings(events: Event[], feed: FeedConfig): Event[] {
+    // Use feed-specific settings
+    const showReplies = feed.showReplies ?? false;
+    const showReposts = feed.showReposts ?? true;
+    const allowedKinds = feed.kinds || [];
 
     return events.filter(event => {
       // Filter by kinds if specified
@@ -539,9 +539,8 @@ export class FeedsComponent implements OnDestroy {
 
     const rawEventCount = events.length;
 
-    // Filter based on GLOBAL content filter settings (applies to ALL feeds)
-    const contentFilter = this.localSettings.contentFilter();
-    events = this.filterEventsByFeedSettings(events);
+    // Filter based on feed-specific settings (each feed has its own kinds, showReplies, showReposts)
+    events = this.filterEventsByFeedSettings(events, feed);
 
     // Always log for debugging
     console.log(`[allColumnEvents] Feed "${feed.label}" (${feed.id}):`, {
@@ -550,10 +549,10 @@ export class FeedsComponent implements OnDestroy {
       feedDataExists: feedDataMap.has(feed.id),
       rawEvents: rawEventCount,
       filteredEvents: events.length,
-      globalFilter: {
-        showReplies: contentFilter.showReplies,
-        showReposts: contentFilter.showReposts,
-        kinds: contentFilter.kinds,
+      feedFilter: {
+        showReplies: feed.showReplies ?? false,
+        showReposts: feed.showReposts ?? true,
+        kinds: feed.kinds,
       },
       isDragging,
       isDynamic: !!dynFeed
@@ -638,7 +637,8 @@ export class FeedsComponent implements OnDestroy {
     const feedData = feedDataMap.get(feed.id);
     if (feedData && feedData.pendingEvents) {
       const pendingEvents = this.filterEventsByFeedSettings(
-        feedData.pendingEvents()
+        feedData.pendingEvents(),
+        feed
       );
 
       // Only count events newer than the most recent displayed event
@@ -907,6 +907,38 @@ export class FeedsComponent implements OnDestroy {
         this.setupFeedTabsResizeObserver();
         this.checkFeedTabsOverflow();
       }, 200);
+    });
+
+    // Reset rendered event counts when the active feed changes or when its kinds change
+    // This fixes the "stuck" feed issue when switching feeds or when the feed's filter changes.
+    // Without this reset, the virtual scroll limit stays low and new content doesn't appear.
+    // Note: The feed service handles resubscription when kinds change via updateFeed().
+    let previousFeedId: string | null = null;
+    let previousFeedKinds: number[] | null = null;
+    effect(() => {
+      const feed = this.activeFeed();
+      if (!feed) return;
+
+      const currentFeedId = feed.id;
+      const currentKinds = feed.kinds || [];
+
+      // Reset rendered counts when feed changes or when its kinds change
+      const feedChanged = previousFeedId !== null && previousFeedId !== currentFeedId;
+      const kindsChanged = previousFeedKinds !== null && 
+        JSON.stringify([...previousFeedKinds].sort()) !== JSON.stringify([...currentKinds].sort());
+
+      if (feedChanged || kindsChanged) {
+        untracked(() => {
+          this.renderedEventCounts.update(counts => ({
+            ...counts,
+            [feed.id]: this.INITIAL_RENDER_COUNT,
+          }));
+        });
+      }
+
+      // Store current values for next comparison
+      previousFeedId = currentFeedId;
+      previousFeedKinds = [...currentKinds];
     });
 
     // Set up scroll listener for header auto-hide
@@ -1659,7 +1691,8 @@ export class FeedsComponent implements OnDestroy {
     const feedData = feedDataMap.get(feedId);
     if (feedData && feedData.pendingEvents) {
       const pendingEvents = this.filterEventsByFeedSettings(
-        feedData.pendingEvents()
+        feedData.pendingEvents(),
+        feed
       );
 
       // Only count events newer than the most recent displayed event

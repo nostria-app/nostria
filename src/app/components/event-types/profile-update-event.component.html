@@ -1,0 +1,89 @@
+<div class="profile-update-container" (click)="navigateToProfile()" (keyup.enter)="navigateToProfile()"
+  tabindex="0" role="button" aria-label="View profile">
+
+  <!-- Banner Section -->
+  @if (banner()) {
+  <div class="profile-banner">
+    <img [src]="banner()" alt="Profile banner" class="banner-image" loading="lazy" (error)="onBannerError($event)" />
+  </div>
+  } @else {
+  <div class="profile-banner-placeholder"></div>
+  }
+
+  <!-- Profile Info Section -->
+  <div class="profile-info">
+    <!-- Avatar -->
+    <div class="profile-avatar-container">
+      @if (picture()) {
+      <img [src]="picture()" alt="Profile picture" class="profile-avatar" loading="lazy"
+        (error)="onPictureError($event)" />
+      } @else {
+      <div class="profile-avatar-placeholder">
+        <mat-icon>person</mat-icon>
+      </div>
+      }
+    </div>
+
+    <!-- Follow Button -->
+    <div class="profile-actions">
+      @if (!isFollowing()) {
+      <button mat-mini-fab color="primary" class="follow-button" (click)="followUser($event)"
+        aria-label="Follow user" matTooltip="Follow">
+        <mat-icon>person_add</mat-icon>
+      </button>
+      } @else {
+      <button mat-mini-fab color="accent" class="follow-button following" (click)="unfollowUser($event)"
+        aria-label="Unfollow user" matTooltip="Following">
+        <mat-icon>check</mat-icon>
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Profile Details -->
+  <div class="profile-details">
+    <!-- Name and Username -->
+    <div class="profile-name-section">
+      @if (displayName()) {
+      <h3 class="profile-display-name">{{ displayName() }}</h3>
+      }
+      @if (username() && username() !== displayName()) {
+      <span class="profile-username">&#64;{{ username() }}</span>
+      }
+    </div>
+
+    <!-- NIP-05 Verification -->
+    @if (nip05()) {
+    <div class="profile-nip05">
+      <mat-icon class="nip05-icon">verified</mat-icon>
+      <span class="nip05-text">{{ nip05() }}</span>
+    </div>
+    }
+
+    <!-- Bio/About -->
+    @if (about(); as aboutText) {
+    <div class="profile-about">
+      <app-content [content]="aboutText" [disableExpansion]="true"></app-content>
+    </div>
+    }
+
+    <!-- Additional Info -->
+    <div class="profile-meta">
+      @if (website()) {
+      <div class="meta-item">
+        <mat-icon>link</mat-icon>
+        <a [href]="website()" target="_blank" rel="noopener noreferrer" class="website-link"
+          (click)="$event.stopPropagation()">
+          {{ website() }}
+        </a>
+      </div>
+      }
+      @if (lightningAddress()) {
+      <div class="meta-item">
+        <mat-icon>bolt</mat-icon>
+        <span class="lightning-address">{{ lightningAddress() }}</span>
+      </div>
+      }
+    </div>
+  </div>
+</div>
