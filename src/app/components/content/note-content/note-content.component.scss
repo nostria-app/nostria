@@ -886,3 +886,261 @@
     padding: 3px 8px;
   }
 }
+
+// Event mention card styling (inline nevent/note embeds)
+.event-mention-card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin: 0.5rem 0;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary, #6200ea);
+    outline-offset: 2px;
+  }
+
+  // Loading state for event mentions
+  &.loading-card {
+    cursor: default;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+
+    .loading-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px 0;
+    }
+  }
+
+  // Not found state for event mentions
+  &.not-found-card {
+    cursor: default;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+  }
+
+  // Collapsed state for long content
+  mat-card-content.collapsed {
+    max-height: 300px;
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3em;
+      background: linear-gradient(to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low));
+      pointer-events: none;
+    }
+  }
+
+  // Show more/less buttons
+  .show-more-btn,
+  .show-less-btn {
+    width: 100%;
+    margin-top: 4px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+
+// Dark mode adjustments for event mention collapsed content
+:host-context(.dark) .event-mention-card {
+  mat-card-content.collapsed::after {
+    background: linear-gradient(to bottom,
+        transparent,
+        var(--mat-sys-surface-container-low)) !important;
+  }
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+// Skeleton loading animation
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Skeleton elements for loading state
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg,
+      var(--mat-sys-surface-container-high) 0%,
+      var(--mat-sys-surface-container-highest) 50%,
+      var(--mat-sys-surface-container-high) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.skeleton-text {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+      var(--mat-sys-surface-container-high) 0%,
+      var(--mat-sys-surface-container-highest) 50%,
+      var(--mat-sys-surface-container-high) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+
+  &.skeleton-name {
+    width: 120px;
+    height: 14px;
+  }
+
+  &.skeleton-date {
+    width: 80px;
+    height: 10px;
+  }
+
+  &.skeleton-line {
+    width: 100%;
+    height: 14px;
+
+    &.short {
+      width: 60%;
+    }
+  }
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+// Event not found placeholder
+.event-not-found-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    color: var(--mat-sys-outline);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .not-found-text {
+    font-size: 0.875rem;
+  }
+}
+
+// Video mention card styling
+.video-mention-card {
+  .media-mention-content {
+    padding: 0 !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+// Video placeholder for inline video mentions
+.video-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  width: 100%;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 0 0 8px 8px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  span {
+    font-size: 0.875rem;
+  }
+}
+
+// Badge reference styling
+.badge-reference {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Nostr reference link styling
+.nostr-reference {
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:active {
+    color: var(--mat-sys-primary-container);
+  }
+}
+
+// Date link in event headers
+.date-link {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: 8px;
+}

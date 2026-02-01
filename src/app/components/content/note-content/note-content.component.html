@@ -244,31 +244,123 @@
   (mouseleave)="onMentionMouseLeave()" title="{{ token.content }}">@...</a>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
 {
-@if (getEventLoadingState(token.id) === 'loading') {
-<div class="nostr-event-placeholder loading">
-  <div class="placeholder-content">
-    <mat-spinner diameter="20"></mat-spinner>
-    <span class="placeholder-text">Loading referenced event...</span>
-  </div>
-</div>
-} @else if (getEventLoadingState(token.id) === 'failed') {
-<div class="nostr-event-placeholder failed">
-  <div class="placeholder-content">
-    <mat-icon>error_outline</mat-icon>
-    <span class="placeholder-text">Unable to load referenced event</span>
-  </div>
-</div>
-} @else if (isPhotoEvent(token.id)) {
-<!-- Render kind 20 photo events using PhotoEventComponent for full carousel/blurhash support -->
+<!-- Inline event mention (nevent/note) -->
+@let mention = getEventMention(token.id);
+@if (mention?.loading) {
+<!-- Loading placeholder for event mention -->
+<mat-card appearance="outlined" class="event-mention-card loading-card">
+  <mat-card-header class="loading-header">
+    <div class="skeleton-avatar"></div>
+    <div class="skeleton-text-container">
+      <div class="skeleton-text skeleton-name"></div>
+      <div class="skeleton-text skeleton-date"></div>
+    </div>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="skeleton-content">
+      <div class="skeleton-text skeleton-line"></div>
+      <div class="skeleton-text skeleton-line short"></div>
+    </div>
+  </mat-card-content>
+</mat-card>
+} @else if (mention?.event) {
+@if (mention!.event!.event.kind === 8) {
+<!-- Badge Award (kind 8) - show as simple link for now -->
+<a class="nostr-reference badge-reference" (click)="onEventMentionClick($event, mention!.event!.event)">
+  <mat-icon>military_tech</mat-icon>
+  Badge Award
+</a>
+} @else if (mention!.event!.event.kind === 20) {
+<!-- Photo Event (kind 20, NIP-68) -->
 <div class="embedded-photo-event">
-  <app-event-header [event]="getEventData(token.id)!" [compact]="true"></app-event-header>
-  <app-photo-event [event]="getEventData(token.id)!" [hideComments]="true"
+  <app-event-header [event]="mention!.event!.event" [compact]="true"></app-event-header>
+  <app-photo-event [event]="mention!.event!.event" [hideComments]="true"
     [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
 </div>
-} @else if (getEventPreview(token.id); as preview) {
-<div class="nostr-event-preview" [innerHTML]="preview"></div>
+} @else if (mention!.event!.event.kind === 21 || mention!.event!.event.kind === 22 || mention!.event!.event.kind === 34235 || mention!.event!.event.kind === 34236) {
+<!-- Video Event (kind 21/22/34235/34236, NIP-71) - show as clickable card -->
+<mat-card appearance="outlined" class="event-mention-card video-mention-card" tabindex="0" role="button"
+  (click)="onEventMentionClick($event, mention!.event!.event)"
+  (keydown.enter)="onEventMentionClick($event, mention!.event!.event)"
+  (keydown.space)="onEventMentionClick($event, mention!.event!.event)">
+  <mat-card-header>
+    <app-user-profile [pubkey]="mention!.event!.event.pubkey" view="compact">
+      <span class="date-link" [matTooltip]="mention!.event!.event.created_at | timestamp: 'medium'"
+        matTooltipPosition="below">
+        {{ mention!.event!.event.created_at | ago }}
+      </span>
+    </app-user-profile>
+  </mat-card-header>
+  <mat-card-content class="media-mention-content">
+    <div class="video-placeholder">
+      <mat-icon>videocam</mat-icon>
+      <span>Video</span>
+    </div>
+  </mat-card-content>
+</mat-card>
 } @else {
-<a class="nostr-reference">{{ token.nostrData?.displayName }}</a>
+<!-- Regular event mention (kind 1, etc.) -->
+<mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
+  (click)="onEventMentionClick($event, mention!.event!.event)"
+  (keydown.enter)="onEventMentionClick($event, mention!.event!.event)"
+  (keydown.space)="onEventMentionClick($event, mention!.event!.event)">
+  <mat-card-header>
+    <app-user-profile [pubkey]="mention!.event!.event.pubkey" view="compact">
+      <span class="date-link" [matTooltip]="mention!.event!.event.created_at | timestamp: 'medium'"
+        matTooltipPosition="below">
+        {{ mention!.event!.event.created_at | ago }}
+      </span>
+    </app-user-profile>
+  </mat-card-header>
+  <mat-card-content [class.collapsed]="isMentionContentLong(token.id) && !mention!.expanded">
+    <div class="content-container">
+      <app-note-content [contentTokens]="mention!.contentTokens" [authorPubkey]="mention!.event!.event.pubkey"
+        [trustedByPubkey]="trustedByPubkey() || authorPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-note-content>
+    </div>
+  </mat-card-content>
+  @if (isMentionContentLong(token.id)) {
+  @if (!mention!.expanded) {
+  <button mat-button class="show-more-btn" (click)="toggleMentionExpand(token.id, $event)">
+    <mat-icon>expand_more</mat-icon>
+    Show more
+  </button>
+  } @else {
+  <button mat-button class="show-less-btn" (click)="toggleMentionExpand(token.id, $event)">
+    <mat-icon>expand_less</mat-icon>
+    Show less
+  </button>
+  }
+  }
+</mat-card>
+}
+} @else {
+<!-- Event not found placeholder -->
+<mat-card appearance="outlined" class="event-mention-card not-found-card">
+  <mat-card-content>
+    <div class="event-not-found-placeholder">
+      <mat-icon>link_off</mat-icon>
+      <span class="not-found-text">Referenced event not found</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+}
+} @else if (token.type === 'nostr-mention' && token.nostrData?.type === 'naddr') {
+<!-- Inline naddr mention (articles, music, emoji sets) -->
+@let naddrData = getNaddrData(token);
+@if (naddrData) {
+@if (isMusicMention(token)) {
+<!-- Music embed (track or playlist) -->
+<app-music-embed [identifier]="naddrData.identifier" [pubkey]="naddrData.pubkey" [kind]="naddrData.kind"
+  [relayHints]="naddrData.relayHints"></app-music-embed>
+} @else if (isEmojiSetMention(token)) {
+<!-- Emoji set -->
+<app-emoji-set-mention [identifier]="naddrData.identifier" [pubkey]="naddrData.pubkey"></app-emoji-set-mention>
+} @else {
+<!-- Article -->
+<app-article [slug]="naddrData.identifier" [pubkey]="naddrData.pubkey" [kind]="naddrData.kind"
+  [relayHints]="naddrData.relayHints" mode="compact" [showAuthor]="true" [showMetadata]="true"
+  [clickable]="true"></app-article>
+}
 }
 } @else if (token.type === 'hashtag') {
 <a class="hashtag-link" [routerLink]="['/search']" [queryParams]="{q: '#' + token.content}">#{{ token.content }}</a>
