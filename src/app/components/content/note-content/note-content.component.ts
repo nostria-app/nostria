@@ -6,6 +6,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPreviewDialogComponent } from '../../media-preview-dialog/media-preview.component';
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
@@ -29,6 +31,22 @@ import { ExternalLinkHandlerService } from '../../../services/external-link-hand
 import { LayoutService } from '../../../services/layout.service';
 import { RssParserService } from '../../../services/rss-parser.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
+import { ArticleComponent } from '../../article/article.component';
+import { MusicEmbedComponent } from '../../music-embed/music-embed.component';
+import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-mention.component';
+import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { DataService } from '../../../services/data.service';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { UserRelayService } from '../../../services/relays/user-relay';
+import { NostrRecord } from '../../../interfaces';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
+import { ParsingService } from '../../../services/parsing.service';
+
+// Music event kinds
+const MUSIC_TRACK_KIND = 36787;
+const MUSIC_PLAYLIST_KIND = 34139;
+const EMOJI_SET_KIND = 30030;
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -41,7 +59,26 @@ export interface DisplayItem {
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, Bolt12OfferComponent, AudioPlayerComponent, InlineVideoPlayerComponent, PhotoEventComponent, EventHeaderComponent, RouterLink],
+  imports: [
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatButtonModule,
+    MatCardModule,
+    MatTooltipModule,
+    CashuTokenComponent,
+    Bolt12OfferComponent,
+    AudioPlayerComponent,
+    InlineVideoPlayerComponent,
+    PhotoEventComponent,
+    EventHeaderComponent,
+    RouterLink,
+    ArticleComponent,
+    MusicEmbedComponent,
+    EmojiSetMentionComponent,
+    UserProfileComponent,
+    AgoPipe,
+    TimestampPipe,
+  ],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
@@ -69,6 +106,10 @@ export class NoteContentComponent implements OnDestroy {
   private externalLinkHandler = inject(ExternalLinkHandlerService);
   private rssParser = inject(RssParserService);
   private mediaPlayer = inject(MediaPlayerService);
+  private data = inject(DataService);
+  private relayPool = inject(RelayPoolService);
+  private userRelayService = inject(UserRelayService);
+  private parsing = inject(ParsingService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -78,6 +119,18 @@ export class NoteContentComponent implements OnDestroy {
 
   // Track loading state for each event preview
   private eventLoadingMap = signal<Map<number, 'loading' | 'loaded' | 'failed'>>(new Map());
+
+  // Store full event data for inline event mention cards (nevent/note)
+  eventMentionsMap = signal<Map<number, {
+    event: NostrRecord | null;
+    contentTokens: ContentToken[];
+    loading: boolean;
+    eventId: string;
+    expanded: boolean;
+  }>>(new Map());
+
+  // Content length threshold for showing "Show more" button (in characters)
+  private readonly CONTENT_LENGTH_THRESHOLD = 500;
 
   // Track last processed tokens to prevent redundant re-execution
   private lastProcessedTokens: ContentToken[] = [];
@@ -275,24 +328,39 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   private async loadEventPreviews(tokens: ContentToken[]): Promise<void> {
-    const previewsMap = new Map<number, SafeHtml>();
     const eventDataMap = new Map<number, NostrEvent>();
     const loadingMap = new Map<number, 'loading' | 'loaded' | 'failed'>();
+    const eventMentionsMap = new Map<number, {
+      event: NostrRecord | null;
+      contentTokens: ContentToken[];
+      loading: boolean;
+      eventId: string;
+      expanded: boolean;
+    }>();
 
-    // Mark all event previews as loading
+    // Mark all event mentions as loading
     for (const token of tokens) {
       if (token.type === 'nostr-mention' && token.nostrData) {
-        const { type } = token.nostrData;
+        const { type, data } = token.nostrData;
         if (type === 'nevent' || type === 'note') {
+          const eventId = type === 'nevent' ? data.id : data;
           loadingMap.set(token.id, 'loading');
+          eventMentionsMap.set(token.id, {
+            event: null,
+            contentTokens: [],
+            loading: true,
+            eventId: eventId as string,
+            expanded: false,
+          });
         }
       }
     }
 
     // Update loading state immediately
-    this.eventLoadingMap.set(loadingMap);
+    this.eventLoadingMap.set(new Map(loadingMap));
+    this.eventMentionsMap.set(new Map(eventMentionsMap));
 
-    // Fetch previews
+    // Fetch events
     for (const token of tokens) {
       if (token.type === 'nostr-mention' && token.nostrData) {
         const { type, data } = token.nostrData;
@@ -303,45 +371,85 @@ export class NoteContentComponent implements OnDestroy {
             const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
             const relayHints = type === 'nevent' ? data.relays : undefined;
 
-            // First, fetch the raw event to check its kind
-            const event = await this.formatService.fetchEvent(
-              eventId,
-              authorPubkey,
-              relayHints
-            );
+            let eventData: NostrRecord | null = null;
 
-            if (event) {
-              // For kind 20 (photo) events, store the raw event for PhotoEventComponent rendering
-              if (event.kind === 20) {
-                eventDataMap.set(token.id, event);
-                loadingMap.set(token.id, 'loaded');
-              } else {
-                // For other kinds, generate HTML preview
-                const previewHtml = await this.formatService.fetchEventPreview(
-                  eventId,
-                  authorPubkey,
-                  relayHints
-                );
-
-                if (previewHtml) {
-                  previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
-                  loadingMap.set(token.id, 'loaded');
-                } else {
-                  loadingMap.set(token.id, 'failed');
+            // Try relay hints first
+            if (relayHints && relayHints.length > 0) {
+              try {
+                const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
+                if (relayEvent) {
+                  eventData = this.data.toRecord(relayEvent);
                 }
+              } catch {
+                console.debug(`Relay hints fetch failed for ${eventId}, trying regular fetch`);
               }
+            }
+
+            // If relay hints didn't work, fall back to regular fetch
+            if (!eventData) {
+              eventData = await this.data.getEventById(eventId, { save: true });
+            }
+
+            // If still not found, try fetching from author's relays
+            if (!eventData && authorPubkey) {
+              try {
+                const authorEvent = await this.userRelayService.getEventById(authorPubkey, eventId);
+                if (authorEvent) {
+                  eventData = this.data.toRecord(authorEvent);
+                }
+              } catch (err) {
+                console.warn(`Failed to fetch event ${eventId} from author ${authorPubkey} relays`, err);
+              }
+            }
+
+            if (eventData) {
+              // Store raw event for kind 20 photo events
+              if (eventData.event.kind === 20) {
+                eventDataMap.set(token.id, eventData.event);
+              }
+
+              // Parse content tokens for the nested event
+              const contentTokens = await this.parsing.parseContent(
+                eventData.data,
+                eventData.event.tags,
+                eventData.event.pubkey
+              );
+
+              loadingMap.set(token.id, 'loaded');
+              eventMentionsMap.set(token.id, {
+                event: eventData,
+                contentTokens,
+                loading: false,
+                eventId: eventId as string,
+                expanded: false,
+              });
             } else {
               loadingMap.set(token.id, 'failed');
+              eventMentionsMap.set(token.id, {
+                event: null,
+                contentTokens: [],
+                loading: false,
+                eventId: eventId as string,
+                expanded: false,
+              });
             }
           } catch (error) {
-            console.error(`[NoteContent] Error loading preview for token ${token.id}:`, error);
+            console.error(`[NoteContent] Error loading event for token ${token.id}:`, error);
+            const eventId = type === 'nevent' ? data.id : data;
             loadingMap.set(token.id, 'failed');
+            eventMentionsMap.set(token.id, {
+              event: null,
+              contentTokens: [],
+              loading: false,
+              eventId: eventId as string,
+              expanded: false,
+            });
           }
 
-          // Update state after each preview attempt
-          this.eventPreviewsMap.set(new Map(previewsMap));
+          // Update state after each event attempt
           this.eventDataMap.set(new Map(eventDataMap));
           this.eventLoadingMap.set(new Map(loadingMap));
+          this.eventMentionsMap.set(new Map(eventMentionsMap));
         }
       }
     }
@@ -362,6 +470,108 @@ export class NoteContentComponent implements OnDestroy {
 
   getEventLoadingState(tokenId: number): 'loading' | 'loaded' | 'failed' | undefined {
     return this.eventLoadingMap().get(tokenId);
+  }
+
+  /**
+   * Get event mention data for a token (nevent/note)
+   */
+  getEventMention(tokenId: number) {
+    return this.eventMentionsMap().get(tokenId);
+  }
+
+  /**
+   * Check if an event mention has long content that should be collapsible
+   */
+  isMentionContentLong(tokenId: number): boolean {
+    const mention = this.eventMentionsMap().get(tokenId);
+    if (!mention?.event) return false;
+    // Only apply to text notes (kind 1)
+    if (mention.event.event.kind !== 1) return false;
+    const content = mention.event.event.content || '';
+    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+  }
+
+  /**
+   * Toggle expansion state for an event mention
+   */
+  toggleMentionExpand(tokenId: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.eventMentionsMap.update(map => {
+      const newMap = new Map(map);
+      const mention = newMap.get(tokenId);
+      if (mention) {
+        newMap.set(tokenId, { ...mention, expanded: !mention.expanded });
+      }
+      return newMap;
+    });
+  }
+
+  /**
+   * Handle click on an event mention card
+   */
+  onEventMentionClick(event: Event, nostrEvent: NostrEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openEvent(nostrEvent.id, nostrEvent, this.trustedByPubkey());
+  }
+
+  /**
+   * Get naddr data from a token for inline rendering
+   */
+  getNaddrData(token: ContentToken): { pubkey: string; identifier: string; kind: number; relayHints?: string[] } | null {
+    if (token.type !== 'nostr-mention' || token.nostrData?.type !== 'naddr') {
+      return null;
+    }
+    const data = token.nostrData.data as { pubkey: string; identifier: string; kind: number; relays?: string[] };
+    return {
+      pubkey: data.pubkey,
+      identifier: data.identifier,
+      kind: data.kind,
+      relayHints: data.relays,
+    };
+  }
+
+  /**
+   * Check if an naddr token is a music mention (track or playlist)
+   */
+  isMusicMention(token: ContentToken): boolean {
+    const data = this.getNaddrData(token);
+    return data !== null && (data.kind === MUSIC_TRACK_KIND || data.kind === MUSIC_PLAYLIST_KIND);
+  }
+
+  /**
+   * Check if an naddr token is an emoji set mention
+   */
+  isEmojiSetMention(token: ContentToken): boolean {
+    const data = this.getNaddrData(token);
+    return data !== null && data.kind === EMOJI_SET_KIND;
+  }
+
+  /**
+   * Check if an naddr token is an article (not music or emoji set)
+   */
+  isArticleMention(token: ContentToken): boolean {
+    const data = this.getNaddrData(token);
+    if (!data) return false;
+    return data.kind !== MUSIC_TRACK_KIND && data.kind !== MUSIC_PLAYLIST_KIND && data.kind !== EMOJI_SET_KIND;
+  }
+
+  /**
+   * Check if an event mention is a video event (kind 21/22/34235/34236)
+   */
+  isVideoEventMention(tokenId: number): boolean {
+    const mention = this.eventMentionsMap().get(tokenId);
+    if (!mention?.event) return false;
+    const kind = mention.event.event.kind;
+    return kind === 21 || kind === 22 || kind === 34235 || kind === 34236;
+  }
+
+  /**
+   * Check if an event mention is a badge award (kind 8)
+   */
+  isBadgeAwardMention(tokenId: number): boolean {
+    const mention = this.eventMentionsMap().get(tokenId);
+    return mention?.event?.event.kind === 8;
   }
 
   onNostrMentionClick(token: ContentToken) {
