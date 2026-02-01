@@ -1,0 +1,248 @@
+.profile-update-container {
+  position: relative;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container);
+  transition: all 0.2s ease;
+  margin-top: 16px;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+// Banner Section
+.profile-banner {
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+
+  .banner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.profile-banner-placeholder {
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+}
+
+// Profile Info Section
+.profile-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 16px;
+  margin-top: -40px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-avatar-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid var(--mat-sys-surface-container);
+  overflow: hidden;
+  background: var(--mat-sys-surface-variant);
+  flex-shrink: 0;
+
+  .profile-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.profile-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.profile-actions {
+  margin-top: 48px; // Push down below the avatar overlap area
+
+  .follow-button {
+    width: 36px;
+    height: 36px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &.following {
+      background-color: var(--mat-sys-surface-variant);
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+// Profile Details
+.profile-details {
+  padding: 12px 16px 16px;
+}
+
+.profile-name-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.profile-display-name {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.3;
+}
+
+.profile-username {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.profile-nip05 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+
+  .nip05-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--mat-sys-primary);
+  }
+
+  .nip05-text {
+    font-size: 0.875rem;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.profile-about {
+  margin-bottom: 12px;
+  font-size: 0.9375rem;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.5;
+
+  // Limit the about section height with ellipsis
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  // Override content component styles for compact display
+  ::ng-deep {
+    .content-text {
+      margin: 0;
+    }
+  }
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .website-link {
+      color: var(--mat-sys-primary);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .lightning-address {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Responsive Styles
+@media (max-width: 480px) {
+  .profile-banner {
+    height: 100px;
+  }
+
+  .profile-banner-placeholder {
+    height: 60px;
+  }
+
+  .profile-info {
+    margin-top: -32px;
+  }
+
+  .profile-avatar-container {
+    width: 64px;
+    height: 64px;
+    border-width: 3px;
+  }
+
+  .profile-avatar-placeholder {
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  .profile-actions {
+    margin-top: 36px;
+  }
+
+  .profile-display-name {
+    font-size: 1rem;
+  }
+
+  .profile-about {
+    -webkit-line-clamp: 3;
+  }
+}

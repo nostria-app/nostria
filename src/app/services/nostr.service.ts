@@ -327,6 +327,7 @@ export class NostrService implements NostriaService {
 
   async initialize() {
     try {
+      const startTime = Date.now();
       const accounts = await this.getAccountsFromStorage();
 
       if (accounts.length === 0) {
@@ -364,25 +365,26 @@ export class NostrService implements NostriaService {
       // Mark accounts as initialized to enable auto-save
       this.accountsInitialized = true;
 
-      // We keep an in-memory copy of the user metadata and relay list for all accounts,
-      // they won't take up too much memory space.
-      const accountsMetadata = await this.getAccountsMetadata();
+      // OPTIMIZATION: Get the current account EARLY and trigger the account change
+      // This allows other services to start loading cached data immediately
+      // Metadata/relay fetching will happen in the background
+      const account = this.getAccountFromStorage();
 
-      const accountsMetadataRecords = this.data.toRecords(accountsMetadata);
+      // Load cached metadata from database FIRST (fast, synchronous to database)
+      // This provides immediate profile data without waiting for network
+      const pubkeys = migratedAccounts.map(user => user.pubkey);
+      const cachedMetadata = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+      const cachedRelays = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
 
+      // Set cached data immediately
+      const accountsMetadataRecords = this.data.toRecords(cachedMetadata);
       for (const metadata of accountsMetadataRecords) {
         this.accountState.addToAccounts(metadata.event.pubkey, metadata);
         this.accountState.addToCache(metadata.event.pubkey, metadata);
       }
+      this.accountsRelays.set(cachedRelays);
 
-      // Also make it available in the general cache.
-      // this.accountState.setCachedProfiles(accountsMetadata);
-      // this.accountsMetadata.set(accountsMetadata);
-
-      const accountsRelays = await this.getAccountsRelays();
-      this.accountsRelays.set(accountsRelays);
-
-      const account = this.getAccountFromStorage();
+      this.logger.info(`[NostrService] Loaded cached account data in ${Date.now() - startTime}ms`);
 
       // If no account, finish the loading.
       if (!account) {
@@ -390,14 +392,102 @@ export class NostrService implements NostriaService {
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
       } else {
+        // TRIGGER ACCOUNT CHANGE NOW - don't wait for network fetches
         this.accountState.changeAccount(account);
       }
+
+      // BACKGROUND: Fetch any missing metadata/relay lists from discovery relays
+      // This runs after the account is set, so the UI can start immediately
+      this.fetchMissingAccountDataInBackground(pubkeys, cachedMetadata, cachedRelays);
+
     } catch (err) {
       this.logger.error('Failed to load data during initialization', err);
     }
   }
 
-  async load() {
+  /**
+   * Fetch missing account metadata and relay lists from discovery relays in the background.
+   * This doesn't block initialization - the UI can show cached data while this runs.
+   */
+  private async fetchMissingAccountDataInBackground(
+    pubkeys: string[],
+    cachedMetadata: Event[],
+    cachedRelays: Event[]
+  ): Promise<void> {
+    const startTime = Date.now();
+
+    // Find pubkeys without cached metadata
+    const metadataFoundPubkeys = new Set(cachedMetadata.map(e => e.pubkey));
+    const missingMetadataPubkeys = pubkeys.filter(pk => !metadataFoundPubkeys.has(pk));
+
+    // Find pubkeys without cached relay lists
+    const relaysFoundPubkeys = new Set(cachedRelays.map(e => e.pubkey));
+    const missingRelaysPubkeys = pubkeys.filter(pk => !relaysFoundPubkeys.has(pk));
+
+    // Only fetch if there's missing data
+    if (missingMetadataPubkeys.length === 0 && missingRelaysPubkeys.length === 0) {
+      this.logger.debug('[NostrService] All account data cached, no background fetch needed');
+      return;
+    }
+
+    this.logger.info(`[NostrService] Background fetch: ${missingMetadataPubkeys.length} missing profiles, ${missingRelaysPubkeys.length} missing relay lists`);
+
+    // Ensure discovery relay is initialized
+    await this.discoveryRelay.load();
+
+    const fetchPromises: Promise<void>[] = [];
+
+    // Fetch missing metadata
+    if (missingMetadataPubkeys.length > 0) {
+      fetchPromises.push((async () => {
+        try {
+          const fetchedMetadata = await this.discoveryRelay.getEventsByPubkeyAndKind(missingMetadataPubkeys, kinds.Metadata);
+          if (fetchedMetadata.length > 0) {
+            this.logger.info(`[NostrService] Fetched ${fetchedMetadata.length} profiles from discovery relays`);
+            const records = this.data.toRecords(fetchedMetadata);
+            for (const metadata of records) {
+              this.accountState.addToAccounts(metadata.event.pubkey, metadata);
+              this.accountState.addToCache(metadata.event.pubkey, metadata);
+              await this.database.saveEvent(metadata.event);
+            }
+          }
+        } catch (error) {
+          this.logger.warn('[NostrService] Failed to fetch profiles in background:', error);
+        }
+      })());
+    }
+
+    // Fetch missing relay lists
+    if (missingRelaysPubkeys.length > 0) {
+      fetchPromises.push((async () => {
+        try {
+          const fetchedRelays = await this.discoveryRelay.getEventsByPubkeyAndKind(missingRelaysPubkeys, kinds.RelayList);
+          if (fetchedRelays.length > 0) {
+            this.logger.info(`[NostrService] Fetched ${fetchedRelays.length} relay lists from discovery relays`);
+            const currentRelays = this.accountsRelays();
+            this.accountsRelays.set([...currentRelays, ...fetchedRelays]);
+            for (const relayList of fetchedRelays) {
+              await this.database.saveEvent(relayList);
+            }
+          }
+        } catch (error) {
+          this.logger.warn('[NostrService] Failed to fetch relay lists in background:', error);
+        }
+      })());
+    }
+
+    await Promise.all(fetchPromises);
+    this.logger.info(`[NostrService] Background fetch completed in ${Date.now() - startTime}ms`);
+  }
+
+  /**
+   * Load cached account data from storage immediately.
+   * This is fast (database only) and should run early in the startup sequence
+   * to make cached following list, profile, etc. available immediately.
+   *
+   * Call loadFromRelays() separately after relay setup is complete.
+   */
+  async loadCachedData() {
     const account = this.accountState.account();
 
     if (!account) {
@@ -406,15 +496,12 @@ export class NostrService implements NostriaService {
 
     try {
       const pubkey = account.pubkey;
-      this.logger.info('Account changed, loading data for new account', { pubkey });
+      this.logger.info('[NostrService] Loading cached account data from storage', { pubkey });
 
       let info: any = await this.database.getInfo(pubkey, 'user');
       if (!info) {
         info = {};
       }
-
-      // Load cached data from storage immediately for instant display
-      this.logger.info('Loading cached account data from storage', { pubkey });
 
       const storedMetadata = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
       if (storedMetadata) {
@@ -429,7 +516,6 @@ export class NostrService implements NostriaService {
           this.accountState.addToCache(metadata.event.pubkey, metadata);
           this.accountState.profile.set(metadata);
         }
-        // Removed loading message to improve perceived performance
       }
 
       const storedFollowing = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
@@ -437,6 +523,7 @@ export class NostrService implements NostriaService {
         const followingTags = this.getTags(storedFollowing, 'p');
         this.accountState.followingList.set(followingTags);
         this.accountState.followingListLoaded.set(true);
+        this.logger.info(`[NostrService] Loaded ${followingTags.length} following from cache`);
       }
       // Note: If no stored following found, we wait for background relay fetch before marking as loaded
 
@@ -453,6 +540,31 @@ export class NostrService implements NostriaService {
       }
 
       await this.database.saveInfo(pubkey, 'user', info);
+    } catch (error) {
+      this.logger.error('[NostrService] Error loading cached data', error);
+
+      if (!this.initialized()) {
+        this.initialized.set(true);
+      }
+      this.accountState.initialized.set(true);
+    }
+  }
+
+  /**
+   * Start relay subscriptions and fetch fresh data from relays.
+   * This requires accountRelay to be initialized first.
+   * Should be called after relay setup is complete.
+   */
+  async loadFromRelays() {
+    const account = this.accountState.account();
+
+    if (!account) {
+      return;
+    }
+
+    try {
+      const pubkey = account.pubkey;
+      this.logger.info('[NostrService] Starting relay subscriptions for account', { pubkey });
 
       // Start live subscription - this will fetch fresh data from relays
       // and keep us updated with any changes in real-time (runs in background)
@@ -466,13 +578,17 @@ export class NostrService implements NostriaService {
 
       // The subscription will handle setting loading state in its EOSE handler
     } catch (error) {
-      this.logger.error('Error during account data loading', error);
-
-      if (!this.initialized()) {
-        this.initialized.set(true);
-      }
-      this.accountState.initialized.set(true);
+      this.logger.error('[NostrService] Error starting relay subscriptions', error);
     }
+  }
+
+  /**
+   * Load all account data - both cached and from relays.
+   * This is the original load() method for backwards compatibility.
+   */
+  async load() {
+    await this.loadCachedData();
+    await this.loadFromRelays();
   }
 
   reset() {
@@ -1715,7 +1831,36 @@ export class NostrService implements NostriaService {
     // Get metadata for all accounts from storage using new DatabaseService
     await this.database.init();
     const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
-    // const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+
+    // Find pubkeys that don't have metadata in storage
+    const foundPubkeys = new Set(events.map(e => e.pubkey));
+    const missingPubkeys = pubkeys.filter(pk => !foundPubkeys.has(pk));
+
+    // If some profiles are missing (e.g., after cache wipe), fetch from discovery relays in batch
+    if (missingPubkeys.length > 0) {
+      this.logger.info(`[NostrService] Batch fetching ${missingPubkeys.length} missing account profiles from discovery relays`);
+
+      // Ensure discovery relay is initialized
+      await this.discoveryRelay.load();
+
+      try {
+        // Batch fetch all missing profiles in a single query
+        const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(missingPubkeys, kinds.Metadata);
+
+        if (fetchedEvents.length > 0) {
+          this.logger.info(`[NostrService] Fetched ${fetchedEvents.length} profiles from discovery relays`);
+
+          // Save all fetched events to database in parallel
+          await Promise.all(fetchedEvents.map(async (metadata) => {
+            events.push(metadata);
+            await this.database.saveEvent(metadata);
+          }));
+        }
+      } catch (error) {
+        this.logger.warn(`[NostrService] Failed to batch fetch profiles:`, error);
+      }
+    }
+
     return events;
   }
 
@@ -1725,6 +1870,36 @@ export class NostrService implements NostriaService {
     // Use new DatabaseService for relay queries
     await this.database.init();
     const relays = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
+
+    // Find pubkeys that don't have relay list in storage
+    const foundPubkeys = new Set(relays.map(e => e.pubkey));
+    const missingPubkeys = pubkeys.filter(pk => !foundPubkeys.has(pk));
+
+    // If some relay lists are missing (e.g., after cache wipe), fetch from discovery relays in batch
+    if (missingPubkeys.length > 0) {
+      this.logger.info(`[NostrService] Batch fetching ${missingPubkeys.length} missing account relay lists from discovery relays`);
+
+      // Ensure discovery relay is initialized
+      await this.discoveryRelay.load();
+
+      try {
+        // Batch fetch all missing relay lists in a single query
+        const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(missingPubkeys, kinds.RelayList);
+
+        if (fetchedEvents.length > 0) {
+          this.logger.info(`[NostrService] Fetched ${fetchedEvents.length} relay lists from discovery relays`);
+
+          // Save all fetched events to database in parallel
+          await Promise.all(fetchedEvents.map(async (relayList) => {
+            relays.push(relayList);
+            await this.database.saveEvent(relayList);
+          }));
+        }
+      } catch (error) {
+        this.logger.warn(`[NostrService] Failed to batch fetch relay lists:`, error);
+      }
+    }
+
     return relays;
   }
 
@@ -1916,9 +2091,9 @@ export class NostrService implements NostriaService {
     const accountRegion = region || user.region || 'us';
 
     // Configure the discovery relays based on the user's region
-    // Use both regional Nostria relay and purplepag.es for better lookup performance
+    // Use both regional Nostria relay and indexer.coracle.social for better lookup performance
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(accountRegion);
-    const discoveryRelays = [regionalDiscoveryRelay, 'wss://purplepag.es/'];
+    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
     this.logger.info('Setting discovery relays for new user based on region', {
       region: accountRegion,
       discoveryRelays,

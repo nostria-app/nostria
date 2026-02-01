@@ -262,7 +262,15 @@ export class ContentNotificationService implements OnDestroy {
       let since = await this.getLastCheckTimestamp();
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
 
-      // If limitDays is specified, use it to limit how far back we look
+      // Default to 7 days back maximum to avoid loading too much history
+      // This applies when: since is 0 (first time), since is very old, or cache was cleared
+      const defaultMaxDays = 7;
+      const defaultLimitTimestamp = Math.floor((Date.now() - defaultMaxDays * 24 * 60 * 60 * 1000) / 1000);
+      
+      // Always ensure we don't go further back than the default limit
+      since = Math.max(since, defaultLimitTimestamp);
+
+      // If limitDays is specified and is more restrictive, use it instead
       // This is useful for first-time users to avoid loading too much history
       if (limitDays !== undefined && limitDays > 0) {
         const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);

@@ -297,6 +297,9 @@ export class RelayFeedMenuComponent {
   private relayInfoCache = new Map<string, Nip11RelayInfo>();
   private lastLoadedPubkey = '';
   private initialRelaysFetched = false;
+  private nip11FetchDelay: ReturnType<typeof setTimeout> | null = null;
+  // Delay before starting NIP-11 fetches (in ms)
+  private readonly NIP11_FETCH_DELAY_MS = 2000;
   newRelayInput = '';
 
   constructor() {
@@ -310,16 +313,25 @@ export class RelayFeedMenuComponent {
       }
     });
 
-    // Fetch info for relays only once on initialization
+    // Fetch info for relays only once on initialization, with a delay
     effect(() => {
       const relays = this.savedRelays();
       if (!this.initialRelaysFetched && relays.length > 0) {
         this.initialRelaysFetched = true;
-        relays.forEach(relay => {
-          if (!this.relayInfoCache.has(relay)) {
-            this.fetchRelayInfo(relay);
-          }
-        });
+        
+        // Clear any pending fetch
+        if (this.nip11FetchDelay) {
+          clearTimeout(this.nip11FetchDelay);
+        }
+        
+        // Delay NIP-11 fetches to avoid blocking initial render
+        this.nip11FetchDelay = setTimeout(() => {
+          relays.forEach(relay => {
+            if (!this.relayInfoCache.has(relay)) {
+              this.fetchRelayInfo(relay);
+            }
+          });
+        }, this.NIP11_FETCH_DELAY_MS);
       }
     });
   }

@@ -47,6 +47,7 @@ interface DirectMessage {
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
+  giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
 }
 
 @Injectable({
@@ -330,6 +331,7 @@ export class MessagingService implements NostriaService {
         received: message.received || false,
         pending: message.pending,
         failed: message.failed,
+        giftWrapId: message.giftWrapId, // Store gift wrap ID for NIP-44 messages
       };
 
       await this.database.saveDirectMessage(storedMessage);
@@ -674,6 +676,13 @@ export class MessagingService implements NostriaService {
   private async processIncomingEvent(event: NostrEvent, myPubkey: string): Promise<void> {
     try {
       if (event.kind === kinds.GiftWrap) {
+        // Check if this gift wrap has already been processed to avoid re-decryption
+        const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+        if (alreadyProcessed) {
+          this.logger.debug('Gift wrap already processed, skipping decryption (processIncomingEvent)', { eventId: event.id });
+          return;
+        }
+
         const unwrappedMessage = await this.unwrapMessageInternal(event);
         if (!unwrappedMessage) return;
 
@@ -710,6 +719,7 @@ export class MessagingService implements NostriaService {
           read: false,
           encryptionType: 'nip44',
           replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+          giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
         };
 
         this.addMessageToChat(targetPubkey, directMessage);
@@ -824,6 +834,13 @@ export class MessagingService implements NostriaService {
             // Push the async processing to pending array so we can wait for it
             const processPromise = (async () => {
               try {
+                // Check if this gift wrap has already been processed to avoid re-decryption
+                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+                if (alreadyProcessed) {
+                  this.logger.debug('Gift wrap already processed, skipping decryption', { eventId: event.id });
+                  return;
+                }
+
                 const wrappedevent = await this.unwrapMessageInternal(event);
 
                 if (!wrappedevent) {
@@ -845,6 +862,7 @@ export class MessagingService implements NostriaService {
                   read: false,
                   encryptionType: 'nip44', // Gift-wrapped messages are NIP-44
                   replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                  giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
                 };
 
                 let targetPubkey = wrappedevent.pubkey;
@@ -965,6 +983,13 @@ export class MessagingService implements NostriaService {
           if (event.kind === kinds.GiftWrap) {
             const processPromise = (async () => {
               try {
+                // Check if this gift wrap has already been processed to avoid re-decryption
+                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+                if (alreadyProcessed) {
+                  this.logger.debug('Gift wrap already processed, skipping decryption (sub2)', { eventId: event.id });
+                  return;
+                }
+
                 const wrappedevent = await this.unwrapMessageInternal(event);
 
                 if (!wrappedevent) {
@@ -986,6 +1011,7 @@ export class MessagingService implements NostriaService {
                   read: false,
                   encryptionType: 'nip44',
                   replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                  giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
                 };
 
                 let targetPubkey = wrappedevent.pubkey;
@@ -1150,6 +1176,13 @@ export class MessagingService implements NostriaService {
       for (const event of events) {
         try {
           if (event.kind === kinds.GiftWrap) {
+            // Check if this gift wrap has already been processed to avoid re-decryption
+            const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+            if (alreadyProcessed) {
+              this.logger.debug('Gift wrap already processed, skipping decryption (queryDmRelays)', { eventId: event.id });
+              continue;
+            }
+
             const unwrappedMessage = await this.unwrapMessageInternal(event);
             if (!unwrappedMessage) continue;
 
@@ -1180,6 +1213,7 @@ export class MessagingService implements NostriaService {
               read: false,
               encryptionType: 'nip44',
               replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+              giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
             };
 
             this.addMessageToChat(targetPubkey, directMessage);
@@ -1344,6 +1378,13 @@ export class MessagingService implements NostriaService {
 
       try {
         if (event.kind === kinds.GiftWrap) {
+          // Check if this gift wrap has already been processed to avoid re-decryption
+          const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+          if (alreadyProcessed) {
+            this.logger.debug('Gift wrap already processed, skipping decryption (live subscription)', { eventId: event.id });
+            return;
+          }
+
           // Handle NIP-44 gift-wrapped message
           const unwrappedMessage = await this.unwrapMessageInternal(event);
           if (!unwrappedMessage) {
@@ -1385,6 +1426,7 @@ export class MessagingService implements NostriaService {
             read: false,
             encryptionType: 'nip44',
             replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+            giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
           };
 
           this.addMessageToChat(targetPubkey, directMessage);
@@ -1660,13 +1702,21 @@ export class MessagingService implements NostriaService {
               }
 
               let decryptedMessage: any = null;
+              let giftWrapId: string | undefined = undefined;
 
               if (event.kind === kinds.EncryptedDirectMessage) {
                 // Handle NIP-04 messages
                 decryptedMessage = await this.unwrapNip04MessageInternal(event);
               } else if (event.kind === kinds.GiftWrap) {
+                // Check if this gift wrap has already been processed to avoid re-decryption
+                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+                if (alreadyProcessed) {
+                  this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages)', { eventId: event.id });
+                  return;
+                }
                 // Handle NIP-44 wrapped messages
                 decryptedMessage = await this.unwrapMessageInternal(event);
+                giftWrapId = event.id;
               }
 
               if (decryptedMessage) {
@@ -1697,6 +1747,7 @@ export class MessagingService implements NostriaService {
                   received: true,
                   read: false,
                   encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
+                  giftWrapId: giftWrapId, // Store gift wrap ID for NIP-44 messages
                 };
 
                 loadedMessages.push(directMessage);
@@ -1731,13 +1782,21 @@ export class MessagingService implements NostriaService {
               }
 
               let decryptedMessage: any = null;
+              let giftWrapId: string | undefined = undefined;
 
               if (event.kind === kinds.EncryptedDirectMessage) {
                 // Handle NIP-04 messages
                 decryptedMessage = await this.unwrapNip04MessageInternal(event);
               } else if (event.kind === kinds.GiftWrap) {
+                // Check if this gift wrap has already been processed to avoid re-decryption
+                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+                if (alreadyProcessed) {
+                  this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages sub2)', { eventId: event.id });
+                  return;
+                }
                 // Handle NIP-44 wrapped messages
                 decryptedMessage = await this.unwrapMessageInternal(event);
+                giftWrapId = event.id;
               }
 
               if (decryptedMessage) {
@@ -1768,6 +1827,7 @@ export class MessagingService implements NostriaService {
                   received: true,
                   read: false,
                   encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
+                  giftWrapId: giftWrapId, // Store gift wrap ID for NIP-44 messages
                 };
 
                 loadedMessages.push(directMessage);
@@ -1883,6 +1943,15 @@ export class MessagingService implements NostriaService {
           try {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
+              // Check if this gift wrap has already been processed to avoid re-decryption
+              const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+              if (alreadyProcessed) {
+                this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub1)', { eventId: event.id });
+                completedDecryptions++;
+                checkCompletion();
+                return;
+              }
+
               const wrappedevent = await this.unwrapMessageInternal(event);
 
               if (!wrappedevent) {
@@ -1906,6 +1975,7 @@ export class MessagingService implements NostriaService {
                 read: false,
                 encryptionType: 'nip44',
                 replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
               };
 
               // Determine target pubkey for the chat
@@ -2025,6 +2095,15 @@ export class MessagingService implements NostriaService {
           try {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
+              // Check if this gift wrap has already been processed to avoid re-decryption
+              const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+              if (alreadyProcessed) {
+                this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub2)', { eventId: event.id });
+                completedDecryptions++;
+                checkCompletion();
+                return;
+              }
+
               const wrappedevent = await this.unwrapMessageInternal(event);
 
               if (!wrappedevent) {
@@ -2048,6 +2127,7 @@ export class MessagingService implements NostriaService {
                 read: false,
                 encryptionType: 'nip44',
                 replyTo: this.getReplyToFromTags(wrappedevent.tags || []),
+                giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
               };
 
               // Determine target pubkey for the chat

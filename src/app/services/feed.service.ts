@@ -2776,6 +2776,86 @@ export class FeedService {
     this.logger.info(`Feed refreshed: ${feed.label}`);
   }
 
+  /**
+   * Update the active feed's subscription when content filter kinds change.
+   * This refreshes the feed to fetch events matching the new filter kinds.
+   * Called when user changes the content filter (e.g., switches from "Photos only" to "All posts").
+   * 
+   * @param newKinds The new kinds from the content filter
+   */
+  async updateActiveSubscriptionKinds(newKinds: number[]): Promise<void> {
+    const activeFeedId = this._activeFeedId();
+    if (!activeFeedId) {
+      this.logger.debug('No active feed to update subscription kinds');
+      return;
+    }
+
+    const feed = this.getFeedById(activeFeedId);
+    if (!feed) {
+      this.logger.warn(`Cannot update subscription kinds: feed ${activeFeedId} not found`);
+      return;
+    }
+
+    // Skip for trending feeds - they use external API and don't use kinds
+    if (feed.source === 'trending') {
+      this.logger.debug('Skipping subscription update for trending feed');
+      return;
+    }
+
+    const feedData = this.data.get(activeFeedId);
+    if (!feedData) {
+      this.logger.debug('No feed data found, will subscribe with new kinds on next activation');
+      return;
+    }
+
+    // Check if the kinds have actually changed from what we're currently fetching
+    const currentKinds = feedData.filter?.kinds || feed.kinds || [1];
+    const kindsChanged = JSON.stringify([...currentKinds].sort()) !== JSON.stringify([...newKinds].sort());
+
+    if (!kindsChanged) {
+      this.logger.debug('Content filter kinds unchanged, skipping resubscription');
+      return;
+    }
+
+    this.logger.info(`Content filter kinds changed for feed ${feed.label}: ${currentKinds.join(',')} -> ${newKinds.join(',')}`);
+
+    // Update the feed's filter to use the new kinds
+    // We temporarily override the feed's kinds with the content filter kinds
+    feedData.filter = {
+      ...feedData.filter,
+      kinds: newKinds,
+      limit: feedData.filter?.limit || 60,
+    };
+
+    // Clear existing events since they may not match the new filter
+    const existingEvents = feedData.events();
+    if (existingEvents.length > 0) {
+      this.logger.debug(`Clearing ${existingEvents.length} existing events for re-fetch with new kinds`);
+      feedData.events.set([]);
+    }
+
+    // For following/for-you feeds, clear the FollowingDataService cache
+    // This forces a fresh fetch with the new kinds instead of returning stale cached data
+    if (feed.source === 'following' || feed.source === 'for-you') {
+      this.logger.debug('Clearing FollowingDataService cache to force re-fetch with new kinds');
+      this.followingData.clearCache();
+    }
+
+    // Unsubscribe from current subscription
+    this.unsubscribeFromFeed(activeFeedId);
+
+    // Create a temporary feed config with the new kinds for subscription
+    const feedWithNewKinds: FeedConfig = {
+      ...feed,
+      kinds: newKinds,
+    };
+
+    // Resubscribe with new kinds
+    await this.subscribeToFeed(feedWithNewKinds);
+
+    this.logger.info(`Feed ${feed.label} resubscribed with new content filter kinds`);
+  }
+
   // Helper method to get events for a specific feed
   getEventsForFeed(feedId: string): Signal<Event[]> {
     const feedData = this.data.get(feedId);

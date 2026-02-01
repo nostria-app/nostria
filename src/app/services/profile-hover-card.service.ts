@@ -92,8 +92,9 @@ export class ProfileHoverCardService implements OnDestroy {
     }
 
     // If already showing a different profile, close it immediately
+    // Use internal close to avoid resetting isMouseOverTrigger since we're about to show a new card
     if (this.overlayRef) {
-      this.closeHoverCard();
+      this.closeOverlay();
     }
 
     // Show hover card after delay
@@ -393,9 +394,10 @@ export class ProfileHoverCardService implements OnDestroy {
   }
 
   /**
-   * Closes and cleans up the hover card
+   * Internal method to close overlay without resetting mouse state.
+   * Used when switching between profiles to avoid race conditions.
    */
-  closeHoverCard(): void {
+  private closeOverlay(): void {
     if (this.hoverTimeout) {
       window.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = undefined;
@@ -406,10 +408,6 @@ export class ProfileHoverCardService implements OnDestroy {
       this.closeTimeout = undefined;
     }
 
-    // Reset mouse state signals to prevent stuck states
-    this.isMouseOverTrigger.set(false);
-    this.isMouseOverCard.set(false);
-
     // Remove scroll listener
     window.removeEventListener('scroll', this.scrollListener, { capture: true });
 
@@ -419,6 +417,17 @@ export class ProfileHoverCardService implements OnDestroy {
       this.hoverCardComponentRef = null;
       this.currentPubkey = null;
     }
+  }
+
+  /**
+   * Closes and cleans up the hover card
+   */
+  closeHoverCard(): void {
+    // Reset mouse state signals to prevent stuck states
+    this.isMouseOverTrigger.set(false);
+    this.isMouseOverCard.set(false);
+
+    this.closeOverlay();
   }
 
   /**

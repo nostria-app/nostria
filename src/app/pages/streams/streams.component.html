@@ -124,6 +124,14 @@
       </mat-card>
       }
     </div>
+    
+    <!-- Scroll sentinel for infinite loading (only for ended tab) -->
+    @if (selectedTabIndex() === 2 && hasMoreEndedStreams()) {
+    <div class="scroll-sentinel" #scrollSentinel aria-hidden="true"></div>
+    <div class="load-more-indicator">
+      <mat-spinner diameter="24"></mat-spinner>
+    </div>
+    }
     }
   </div>
 </div>

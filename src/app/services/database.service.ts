@@ -216,6 +216,7 @@ export interface StoredDirectMessage {
   received: boolean; // Whether the message was successfully received
   pending?: boolean; // Whether the message is still being sent
   failed?: boolean; // Whether the message failed to send
+  giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
 }
 
 /**
@@ -408,51 +409,10 @@ export class DatabaseService {
   }
 
   /**
-   * Perform initialization - clean up old database and open new one
+   * Perform initialization - open the database
    */
   private async performInit(): Promise<void> {
-    // First, delete the old database if it exists (from before the refactor)
-    // This ensures a clean slate for users updating from the old version
-    await this.deleteOldDatabase();
-
-    // Now open the new database
     await this.openDatabase();
-  }
-
-  /**
-   * Delete the old 'nostria' database if it exists
-   * This handles migration from the old StorageService that used 'idb' library
-   */
-  private deleteOldDatabase(): Promise<void> {
-    return new Promise((resolve) => {
-      this.logger.info(`Checking for old database: ${this.OLD_DB_NAME}`);
-
-      const deleteRequest = indexedDB.deleteDatabase(this.OLD_DB_NAME);
-
-      deleteRequest.onsuccess = () => {
-        this.logger.info(`Old database '${this.OLD_DB_NAME}' deleted or did not exist`);
-        resolve();
-      };
-
-      deleteRequest.onerror = () => {
-        // Don't fail if we can't delete - just log and continue
-        this.logger.warn(`Could not delete old database '${this.OLD_DB_NAME}':`, deleteRequest.error);
-        resolve();
-      };
-
-      deleteRequest.onblocked = () => {
-        // Old database is blocked by another tab - log but continue
-        // The user may need to close other tabs
-        this.logger.warn(`Old database '${this.OLD_DB_NAME}' deletion blocked - another tab may be using it`);
-        resolve();
-      };
-
-      // Timeout to prevent hanging
-      setTimeout(() => {
-        this.logger.warn(`Old database deletion timed out - continuing anyway`);
-        resolve();
-      }, 3000);
-    });
   }
 
   /**
@@ -1702,6 +1662,30 @@ export class DatabaseService {
       const request = store.get(id);
 
       request.onsuccess = () => resolve(!!request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Check if a gift wrap event has already been processed (message already decrypted and stored)
+   * This is used to skip re-decryption of NIP-44 messages that were already processed.
+   */
+  async giftWrapExists(accountPubkey: string, giftWrapId: string): Promise<boolean> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      // Get all messages for this account and check if any have this giftWrapId
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const messages = request.result || [];
+        const exists = messages.some(msg => msg.giftWrapId === giftWrapId);
+        resolve(exists);
+      };
       request.onerror = () => reject(request.error);
     });
   }

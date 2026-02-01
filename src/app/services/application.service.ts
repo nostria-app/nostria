@@ -76,8 +76,19 @@ export class ApplicationService {  /** Application version */
       console.log(`🔍 [Profile Loading Effect] Triggered - Account: ${pubkey?.substring(0, 8) || 'none'}..., Following: ${followingList.length}`);
 
       // Don't process if there's no account
-      if (!this.accountState.account() || !pubkey || followingList.length === 0) {
-        console.log('⏭️ [Profile Loading Effect] Skipping - no account or empty following list');
+      if (!this.accountState.account() || !pubkey) {
+        console.log('⏭️ [Profile Loading Effect] Skipping - no account');
+        return;
+      }
+
+      // Handle empty following list case
+      if (followingList.length === 0) {
+        console.log('⏭️ [Profile Loading Effect] Empty following list');
+        // For returning users with empty following list, still mark cache as loaded
+        // so FollowingService and DataService don't wait forever
+        if (this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+          this.accountState.profileCacheLoaded.set(true);
+        }
         return;
       }
 
@@ -290,7 +301,7 @@ export class ApplicationService {  /** Application version */
 
   /**
    * Check if this is the first time loading notifications for this account
-   * and trigger a 30-day limited fetch if so.
+   * and trigger a 7-day limited fetch if so.
    * This is called after profile pre-caching completes.
    */
   private checkFirstTimeNotifications(): void {
@@ -305,7 +316,9 @@ export class ApplicationService {  /** Application version */
       this.logger.info(
         '[ApplicationService] Profile processing complete - triggering first-time notification check (7 days)'
       );
-      this.contentNotificationService.checkForNewNotifications(2).catch(error => {
+      // Note: checkForNewNotifications already has a default 7-day limit,
+      // so we don't need to pass limitDays here
+      this.contentNotificationService.checkForNewNotifications().catch(error => {
         this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
       });
     } else {

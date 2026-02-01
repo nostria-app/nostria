@@ -185,8 +185,8 @@
         <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()"
           style="cursor: pointer">
           @if (getAuthorPubkey(notification)) {
-          <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'"
-            [disableLink]="true"></app-user-profile>
+<app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'"
+            [disableLink]="true" [prefetchedProfile]="getPrefetchedProfile(notification)"></app-user-profile>
           } @else {
           <div class="notification-default-avatar">
             <mat-icon>account_circle</mat-icon>
@@ -204,7 +204,7 @@
           <div class="notification-header">
             @if (getAuthorPubkey(notification)) {
             <a class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
-              <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!"></app-profile-display-name>
+              <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!" [prefetchedProfile]="getPrefetchedProfile(notification)"></app-profile-display-name>
             </a>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>

@@ -50,7 +50,7 @@ export abstract class RelayServiceBase {
   protected relaysModified = signal<string[]>([]);
 
   // Basic concurrency control for base class
-  protected readonly maxConcurrentRequests = 2;
+  protected readonly maxConcurrentRequests = 10;
   protected currentRequests = 0;
   protected requestQueue: (() => void)[] = [];
 
@@ -417,7 +417,7 @@ export abstract class RelayServiceBase {
     return this.getMany({
       authors,
       kinds: [kind],
-      limit: 1000,
+      limit: 500, // Max limit allowed by most relays
     });
   }
 

@@ -26,23 +26,23 @@
     }
     }
 
-    <button mat-icon-button [matMenuTriggerFor]="viewOptionsMenu" matTooltip="Display options">
+    <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
+      matTooltip="Display options">
       <mat-icon>tune</mat-icon>
     </button>
+
+    <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
+      [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
+      [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
+      [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
+      <app-profile-view-options-inline></app-profile-view-options-inline>
+    </ng-template>
 
     @if (!isLoading() && !error()) {
     <button mat-icon-button [matMenuTriggerFor]="profileMenu" matTooltip="More options">
       <mat-icon>more_vert</mat-icon>
     </button>
     }
-
-    <mat-menu #viewOptionsMenu="matMenu" class="view-options-menu" [overlapTrigger]="false">
-      <div class="view-options-header" (click)="preventMenuClose($event)">
-        <span>Display Options</span>
-      </div>
-      <mat-divider></mat-divider>
-      <app-profile-view-options-inline></app-profile-view-options-inline>
-    </mat-menu>
 
     <!-- Profile Menu (moved from profile-header) -->
     <mat-menu #profileMenu="matMenu">

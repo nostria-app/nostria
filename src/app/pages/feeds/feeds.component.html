@@ -87,7 +87,7 @@
           [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
           [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
           [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
-          <app-feed-filter-panel (kindsChanged)="onKindsChanged($event)"
+          <app-feed-filter-panel [feed]="activeFeed() ?? undefined" (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
           </app-feed-filter-panel>
         </ng-template>

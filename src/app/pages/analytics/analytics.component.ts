@@ -407,7 +407,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         '#e': eventIds,
         since: range.start,
         until: range.end,
-        limit: 1000,
+        limit: 500,
       });
 
       // Fetch reposts
@@ -539,7 +539,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         '#p': [pubkey],
         since: range.start,
         until: range.end,
-        limit: 1000,
+        limit: 500,
       });
 
       // Count unique followers from the period
@@ -549,7 +549,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       const allFollowers = await this.accountRelay.getMany({
         kinds: [kinds.Contacts],
         '#p': [pubkey],
-        limit: 5000,
+        limit: 500,
       });
 
       const totalFollowers = new Set(allFollowers.map(e => e.pubkey)).size;
@@ -608,28 +608,28 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 2000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [kinds.Repost, 16],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [kinds.ShortTextNote],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [9735],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
       ]);
 
@@ -713,28 +713,28 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 2000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [kinds.Repost, 16],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [kinds.ShortTextNote],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
         this.accountRelay.getMany({
           kinds: [9735],
           '#e': eventIds,
           since: range.start,
           until: range.end,
-          limit: 1000,
+          limit: 500,
         }),
       ]);
 

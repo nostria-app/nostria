@@ -29,12 +29,26 @@ export class ImageCacheService {
   });
 
   /**
+   * Check if a URL is a valid full URL (http/https) that can be proxied
+   */
+  private isValidProxyableUrl(url: string): boolean {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  /**
    * Gets the optimized image URL with proper cache headers
    * Uses standard size 96x96 for all profile images
    * Dynamically uses the user's selected proxy region
+   * Only proxies full URLs (http/https) - relative paths and data URLs are returned as-is
    */
   getOptimizedImageUrl(originalUrl: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
+      return originalUrl;
+    }
+
+    // Only proxy full URLs - relative paths, data URLs, etc. cannot be proxied
+    if (!this.isValidProxyableUrl(originalUrl)) {
       return originalUrl;
     }
 
@@ -45,12 +59,18 @@ export class ImageCacheService {
   /**
    * Gets the optimized image URL with custom dimensions
    * Useful for album art and other images that need different sizes
+   * Only proxies full URLs (http/https) - relative paths and data URLs are returned as-is
    * @param originalUrl The original image URL
    * @param width The desired width
    * @param height The desired height
    */
   getOptimizedImageUrlWithSize(originalUrl: string, width: number, height: number): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
+      return originalUrl;
+    }
+
+    // Only proxy full URLs - relative paths, data URLs, etc. cannot be proxied
+    if (!this.isValidProxyableUrl(originalUrl)) {
       return originalUrl;
     }
 
