@@ -89,30 +89,7 @@
 }
 
 .badge-drag-container {
-  cursor: grab;
-
-  &:active {
-    cursor: grabbing;
-  }
-
-  &.cdk-drag-preview {
-    opacity: 0.9;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    transform: rotate(2deg);
-    z-index: 1000;
-
-    app-badge {
-      pointer-events: none;
-    }
-  }
-
-  &.cdk-drag-animating {
-    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  &.cdk-drag-dragging {
-    opacity: 0.5;
-  }
+  // Default container when not in reorder mode (no longer draggable)
 }
 
 // Non-draggable container for viewing other users' badges
@@ -330,4 +307,128 @@
 button mat-spinner {
   margin: 0 8px 0 0;
   display: inline-block;
+}
+
+// Reorder toggle styles
+.reorder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+
+  .reorder-hint {
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
+  }
+}
+
+// Drag handle styles
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  cursor: grab;
+  color: var(--mat-sys-on-surface-variant);
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+// Updated drag container for reorder mode
+.badges-list.reorder-active {
+  .badge-drag-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--mat-sys-surface-container-low);
+    border-radius: 12px;
+    padding-left: 4px;
+    margin-bottom: 8px;
+
+    app-badge {
+      flex: 1;
+    }
+
+    &.cdk-drag-preview {
+      opacity: 0.9;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transform: rotate(1deg);
+      z-index: 1000;
+      background: var(--mat-sys-surface-container);
+      border-radius: 12px;
+
+      app-badge {
+        pointer-events: none;
+      }
+    }
+
+    &.cdk-drag-animating {
+      transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &.cdk-drag-dragging {
+      opacity: 0.4;
+    }
+  }
+}
+
+// Mobile responsive styles
+@media (max-width: 599px) {
+  .badges-container {
+    padding: 12px;
+  }
+
+  .reorder-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .badges-list {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .drag-handle {
+    padding: 4px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .badges-list.reorder-active .badge-drag-container {
+    padding-left: 2px;
+  }
+
+  .badge-drag-placeholder {
+    min-height: 80px;
+  }
+
+  .no-badges-message {
+    padding: 32px 16px;
+
+    mat-icon {
+      font-size: 36px;
+      height: 36px;
+      width: 36px;
+    }
+
+    p {
+      font-size: 16px;
+    }
+  }
 }

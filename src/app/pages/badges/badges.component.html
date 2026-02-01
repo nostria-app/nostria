@@ -40,16 +40,44 @@
         <p>Loading accepted badges...</p>
       </div>
       } @else {
-      <!-- Enable drag-and-drop only for own profile -->
+      <!-- Enable drag-and-drop only for own profile when reorder mode is enabled -->
       @if (isViewingOwnProfile()) {
-      <div class="badges-list" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
+      <!-- Reorder toggle for own profile -->
+      @if (accepted().length > 1) {
+      <div class="reorder-toggle">
+        <button mat-button [color]="reorderMode() ? 'accent' : 'primary'" (click)="toggleReorderMode()">
+          <mat-icon>{{ reorderMode() ? 'check' : 'swap_vert' }}</mat-icon>
+          {{ reorderMode() ? 'Done Reordering' : 'Reorder Badges' }}
+        </button>
+        @if (reorderMode()) {
+        <span class="reorder-hint">Drag badges to reorder them</span>
+        }
+      </div>
+      }
+
+      @if (reorderMode()) {
+      <div class="badges-list reorder-active" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
         @for (badge of accepted(); track badge.aTag) {
         <div cdkDrag class="badge-drag-container">
+          <div class="drag-handle" cdkDragHandle>
+            <mat-icon>drag_indicator</mat-icon>
+          </div>
           <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
             [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
             (removeClicked)="removeBadge(badge)">
           </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="badges-list">
+        @for (badge of accepted(); track badge.aTag) {
+        <div class="badge-container">
+          <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
+            (removeClicked)="removeBadge(badge)">
+          </app-badge>
         </div>
         }
 
@@ -60,6 +88,7 @@
         </div>
         }
       </div>
+      }
       } @else {
       <!-- No drag-and-drop for other users' profiles -->
       <div class="badges-list no-drag">

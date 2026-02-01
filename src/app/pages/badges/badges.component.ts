@@ -63,6 +63,7 @@ export class BadgesComponent implements OnDestroy {
   activeTabIndex = signal<number>(0);
   viewingPubkey = signal<string>(''); // Track which pubkey's badges we're viewing
   viewingProfile = signal<NostrRecord | undefined>(undefined); // Profile data for the viewing user
+  reorderMode = signal<boolean>(false); // Toggle for enabling drag-and-drop reordering
 
   // Computed signal to get badge definitions for the viewing user
   viewingUserDefinitions = computed(() => {
@@ -357,6 +358,10 @@ export class BadgesComponent implements OnDestroy {
 
   openBadgeEditor(): void {
     this.layout.openBadgeEditor(undefined, this.activeTabIndex());
+  }
+
+  toggleReorderMode(): void {
+    this.reorderMode.update(v => !v);
   }
 
   viewBadgeDetailsById(id: string, slug: string): void {
