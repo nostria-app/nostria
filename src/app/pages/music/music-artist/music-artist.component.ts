@@ -18,6 +18,7 @@ import { ReportingService } from '../../../services/reporting.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LayoutService } from '../../../services/layout.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
@@ -55,6 +56,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private mediaPlayer = inject(MediaPlayerService);
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
+  private panelNav = inject(PanelNavigationService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
   private dialog = inject(MatDialog);
@@ -250,7 +252,12 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    // Use panel navigation for proper right panel back navigation
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
+    } else {
+      this.router.navigate(['/music']);
+    }
   }
 
   goToProfile(): void {

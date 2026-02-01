@@ -1,5 +1,7 @@
 :host {
   display: block;
+  container-type: inline-size;
+  container-name: playlist;
 }
 
 .panel-header {
@@ -344,7 +346,17 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
 
-  @media (max-width: 768px) {
+  // First breakpoint: hide Date Added (container width < 600px)
+  @container playlist (max-width: 600px) {
+    grid-template-columns: 48px 1fr 60px 48px;
+
+    .track-date-header {
+      display: none;
+    }
+  }
+
+  // Second breakpoint: hide Duration as well, keep only #, title, menu
+  @container playlist (max-width: 400px) {
     grid-template-columns: 40px 1fr 48px;
 
     .track-date-header,
@@ -380,7 +392,17 @@
   border-radius: var(--mat-sys-corner-small);
   transition: background-color 0.15s ease;
 
-  @media (max-width: 768px) {
+  // First breakpoint: hide Date Added (container width < 600px)
+  @container playlist (max-width: 600px) {
+    grid-template-columns: 48px 1fr 60px 48px;
+
+    .track-date {
+      display: none;
+    }
+  }
+
+  // Second breakpoint: hide Duration as well, keep only #, title, menu
+  @container playlist (max-width: 400px) {
     grid-template-columns: 40px 1fr 48px;
 
     .track-date,
