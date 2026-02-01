@@ -124,3 +124,103 @@ button mat-spinner {
   font-style: italic;
   margin-top: 8px;
 }
+
+// Mobile responsive styles
+@media (max-width: 599px) {
+  .badge-card {
+    margin: 4px 0;
+
+    &.horizontal {
+      margin: 4px 0;
+
+      .badge-card-content {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge-thumbnail {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        margin-right: 8px;
+      }
+
+      .badge-details {
+        flex: 1;
+        min-width: 0;
+
+        h3 {
+          font-size: 14px;
+          margin: 0 0 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        p {
+          font-size: 13px;
+          margin: 0 0 8px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
+
+      .badge-metadata {
+        font-size: 12px;
+        margin-bottom: 2px;
+
+        mat-icon {
+          font-size: 14px;
+          height: 14px;
+          width: 14px;
+          margin-right: 4px;
+        }
+      }
+
+      .badge-actions {
+        width: 100%;
+        flex-direction: row;
+        justify-content: flex-end;
+        margin-left: 0;
+        margin-top: 4px;
+        gap: 4px;
+
+        button {
+          font-size: 12px;
+          padding: 0 8px;
+          min-width: auto;
+        }
+      }
+    }
+
+    &.vertical {
+      mat-card-header {
+        .mat-mdc-card-avatar {
+          width: 40px;
+          height: 40px;
+        }
+      }
+
+      img[mat-card-image] {
+        height: 150px;
+        padding: 12px;
+      }
+
+      mat-card-content {
+        p {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+
+  .placeholder-thumbnail {
+    mat-icon {
+      font-size: 24px;
+      height: 24px;
+      width: 24px;
+    }
+  }
+}
