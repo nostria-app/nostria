@@ -24,6 +24,7 @@ import { EventService } from '../../../services/event';
 import { LayoutService } from '../../../services/layout.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { ZapService } from '../../../services/zap.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -73,6 +74,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private imageCache = inject(ImageCacheService);
   private dialog = inject(MatDialog);
   private zapService = inject(ZapService);
+  private panelNav = inject(PanelNavigationService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -518,7 +520,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    // Use panel navigation for proper right panel back navigation
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
+    } else {
+      this.router.navigate(['/music']);
+    }
   }
 
   copyEventLink(): void {

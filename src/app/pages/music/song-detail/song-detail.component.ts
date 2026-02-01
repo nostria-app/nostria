@@ -27,6 +27,7 @@ import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { MusicPlaylistService } from '../../../services/music-playlist.service';
 import { LayoutService } from '../../../services/layout.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
 import { NostrService } from '../../../services/nostr.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
@@ -82,6 +83,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private layout = inject(LayoutService);
+  private panelNav = inject(PanelNavigationService);
   private offlineMusicService = inject(OfflineMusicService);
   private nostrService = inject(NostrService);
   private imageCache = inject(ImageCacheService);
@@ -623,9 +625,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    // Use browser history to go back to where user came from
-    if (window.history.length > 1) {
-      window.history.back();
+    // Use panel navigation for proper right panel back navigation
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
     } else {
       this.router.navigate(['/music']);
     }
