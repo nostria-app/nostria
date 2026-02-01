@@ -25,7 +25,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   private readonly DEFAULT_SEARCH_RELAYS = ['wss://search.nos.today/', 'wss://nostr.polyserv.xyz', 'wss://relay.ditto.pub'];
 
   constructor() {
-    super(new SimplePool());
+    super(new SimplePool({ enablePing: true, enableReconnect: true }));
   }
 
   async load() {

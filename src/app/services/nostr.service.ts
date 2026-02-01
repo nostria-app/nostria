@@ -1113,7 +1113,7 @@ export class NostrService implements NostriaService {
           throw new Error('No client key available for remote signing. Please re-connect your remote signer.');
         }
 
-        const pool = new SimplePool();
+        const pool = new SimplePool({ enablePing: true, enableReconnect: true });
         const bunker = BunkerSigner.fromBunker(
           clientKey,
           this.accountState.account()!.bunker!,
@@ -1329,7 +1329,7 @@ export class NostrService implements NostriaService {
     let userPool = this.discoveryUserPool;
 
     if (!userPool) {
-      userPool = new SimplePool();
+      userPool = new SimplePool({ enablePing: true, enableReconnect: true });
     }
 
     try {
@@ -1495,7 +1495,7 @@ export class NostrService implements NostriaService {
         userPool = this.accountRelay.getPool();
         relayUrls = this.accountRelay.getRelayUrls();
       } else {
-        userPool = new SimplePool();
+        userPool = new SimplePool({ enablePing: true, enableReconnect: true });
       }
 
       try {
@@ -1563,11 +1563,11 @@ export class NostrService implements NostriaService {
 
     try {
       if (!this.discoveryPool) {
-        this.discoveryPool = new SimplePool();
+        this.discoveryPool = new SimplePool({ enablePing: true, enableReconnect: true });
       }
 
       if (!this.discoveryUserPool) {
-        this.discoveryUserPool = new SimplePool();
+        this.discoveryUserPool = new SimplePool({ enablePing: true, enableReconnect: true });
       }
 
       // Process all items sequentially
@@ -1654,7 +1654,7 @@ export class NostrService implements NostriaService {
       const privateKey = generateSecretKey();
       const clientPubkey = getPublicKey(privateKey);
 
-      const pool = new SimplePool();
+      const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
       // Create a promise that rejects if we receive an error response
       let errorListener: (reason?: any) => void;

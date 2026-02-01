@@ -1646,6 +1646,14 @@ export class App implements OnInit {
       event.preventDefault();
       this.openShortcutsDialog();
     }
+
+    // Alt+B (Windows/Linux) or Option+B (Mac) to toggle left panel (sidebar)
+    if (this.platformService.hasModifierKey(event) && event.key.toLowerCase() === 'b') {
+      event.preventDefault();
+      if (this.hasRightContent()) {
+        this.toggleLeftPanelCollapse();
+      }
+    }
   }
 
   openCommandPalette(listening = false): void {

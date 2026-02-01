@@ -22,7 +22,7 @@ export class UserRelayService {
   private injector = inject(Injector);
 
   // Private SimplePool instance for publishing with notification support
-  private publishPool = new SimplePool();
+  private publishPool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   private useOptimizedRelays = true;
 

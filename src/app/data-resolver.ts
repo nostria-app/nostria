@@ -40,7 +40,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
   (globalThis as any).WebSocket = WS;
 
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool();
+  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   // Combine relay hints with popular relays for better discovery
   const relays = relayHints && relayHints.length > 0
@@ -74,7 +74,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
   (globalThis as any).WebSocket = WS;
 
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool();
+  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   const relays = relayHints && relayHints.length > 0
     ? [...new Set([...relayHints, ...POPULAR_RELAYS])]

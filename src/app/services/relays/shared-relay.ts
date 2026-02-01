@@ -11,7 +11,7 @@ let EventProcessorServiceRef: any;
   providedIn: 'root',
 })
 export class SharedRelayService {
-  #pool = new SimplePool();
+  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);

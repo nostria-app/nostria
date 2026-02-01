@@ -15,7 +15,7 @@ export class NwcRelayService extends RelayServiceBase {
   private connectionPools = new Map<string, SimplePool>();
 
   constructor() {
-    super(new SimplePool());
+    super(new SimplePool({ enablePing: true, enableReconnect: true }));
   }
 
   /**
@@ -25,7 +25,7 @@ export class NwcRelayService extends RelayServiceBase {
     const key = relayUrls.sort().join(',');
 
     if (!this.connectionPools.has(key)) {
-      const pool = new SimplePool();
+      const pool = new SimplePool({ enablePing: true, enableReconnect: true });
       this.connectionPools.set(key, pool);
       this.logger.debug('Created new NWC pool for relays:', relayUrls);
     }

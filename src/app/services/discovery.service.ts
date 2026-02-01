@@ -203,7 +203,7 @@ export class DiscoveryService {
    */
   private getDiscoveryPool(): SimplePool {
     if (!this.discoveryPool) {
-      this.discoveryPool = new SimplePool();
+      this.discoveryPool = new SimplePool({ enablePing: true, enableReconnect: true });
     }
     return this.discoveryPool;
   }
