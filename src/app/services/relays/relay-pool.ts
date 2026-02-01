@@ -12,7 +12,7 @@ let EventProcessorServiceRef: any;
   providedIn: 'root'
 })
 export class RelayPoolService {
-  #pool = new SimplePool();
+  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
   private readonly relaysService = inject(RelaysService);
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);

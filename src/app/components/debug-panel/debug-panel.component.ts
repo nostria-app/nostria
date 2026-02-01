@@ -1,0 +1,275 @@
+import { Component, inject, computed, signal, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { SubscriptionManagerService, RelayMetrics, SubscriptionInfo, ConnectionInfo } from '../../services/relays/subscription-manager';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
+
+interface RelayStatus {
+  url: string;
+  isConnected: boolean;
+  subscriptions: number;
+  pendingRequests: number;
+  lastActivity: string;
+  poolInstance: string;
+  health: 'good' | 'warning' | 'error';
+}
+
+interface SubscriptionGroup {
+  source: string;
+  count: number;
+  subscriptions: SubscriptionInfo[];
+  expanded: boolean;
+}
+
+@Component({
+  selector: 'app-debug-panel',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTabsModule,
+    MatChipsModule,
+    MatTooltipModule,
+    MatBadgeModule,
+    MatProgressBarModule,
+  ],
+  templateUrl: './debug-panel.component.html',
+  styleUrls: ['./debug-panel.component.scss'],
+})
+export class DebugPanelComponent implements OnInit, OnDestroy {
+  private subscriptionManager = inject(SubscriptionManagerService);
+  dialogRef = inject(CustomDialogRef);
+
+  // Auto-refresh interval
+  private refreshInterval?: ReturnType<typeof setInterval>;
+  autoRefresh = signal(true);
+  refreshRate = signal(2000); // 2 seconds
+
+  // Get metrics signal from subscription manager
+  metrics = this.subscriptionManager.metricsSignal;
+
+  // Current time for relative calculations
+  currentTime = signal(Date.now());
+
+  // Expanded subscription groups
+  expandedGroups = signal<Set<string>>(new Set());
+
+  // Computed relay statuses sorted by subscription count
+  relayStatuses = computed<RelayStatus[]>(() => {
+    const connections = this.metrics().connectionsByRelay;
+    const statuses: RelayStatus[] = [];
+    
+    connections.forEach((conn, url) => {
+      statuses.push({
+        url: this.shortenUrl(url),
+        isConnected: conn.isConnected,
+        subscriptions: conn.activeSubscriptions,
+        pendingRequests: conn.pendingRequests,
+        lastActivity: this.formatTimeAgo(conn.lastActivity),
+        poolInstance: conn.poolInstance,
+        health: this.getRelayHealth(conn),
+      });
+    });
+
+    // Sort by subscription count (descending) then by connected status
+    return statuses.sort((a, b) => {
+      if (a.isConnected !== b.isConnected) return a.isConnected ? -1 : 1;
+      return b.subscriptions - a.subscriptions;
+    });
+  });
+
+  // Computed subscription groups
+  subscriptionGroups = computed<SubscriptionGroup[]>(() => {
+    const bySource = new Map<string, SubscriptionInfo[]>();
+    const expanded = this.expandedGroups();
+
+    for (const sub of this.metrics().subscriptions) {
+      if (!sub.active) continue;
+      const subs = bySource.get(sub.source) || [];
+      subs.push(sub);
+      bySource.set(sub.source, subs);
+    }
+
+    const groups: SubscriptionGroup[] = [];
+    bySource.forEach((subs, source) => {
+      groups.push({
+        source,
+        count: subs.length,
+        subscriptions: subs.sort((a, b) => b.createdAt - a.createdAt),
+        expanded: expanded.has(source),
+      });
+    });
+
+    // Sort by count descending
+    return groups.sort((a, b) => b.count - a.count);
+  });
+
+  // Summary stats
+  totalSubs = computed(() => this.metrics().totalSubscriptions);
+  totalPending = computed(() => this.metrics().totalPendingRequests);
+  totalConnections = computed(() => this.metrics().connectionsByRelay.size);
+  connectedCount = computed(() => {
+    let count = 0;
+    this.metrics().connectionsByRelay.forEach(conn => {
+      if (conn.isConnected) count++;
+    });
+    return count;
+  });
+  poolCount = computed(() => this.metrics().poolInstances.size);
+
+  // Health indicators
+  subscriptionHealth = computed(() => {
+    const total = this.totalSubs();
+    const max = this.subscriptionManager.MAX_TOTAL_SUBSCRIPTIONS;
+    const ratio = total / max;
+    if (ratio >= 0.9) return 'critical';
+    if (ratio >= 0.7) return 'warning';
+    return 'good';
+  });
+
+  subscriptionUsagePercent = computed(() => {
+    return (this.totalSubs() / this.subscriptionManager.MAX_TOTAL_SUBSCRIPTIONS) * 100;
+  });
+
+  ngOnInit() {
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy() {
+    this.stopAutoRefresh();
+  }
+
+  private startAutoRefresh() {
+    if (this.refreshInterval) return;
+    this.refreshInterval = setInterval(() => {
+      if (this.autoRefresh()) {
+        this.currentTime.set(Date.now());
+      }
+    }, this.refreshRate());
+  }
+
+  private stopAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = undefined;
+    }
+  }
+
+  toggleAutoRefresh() {
+    this.autoRefresh.update(v => !v);
+  }
+
+  refresh() {
+    this.currentTime.set(Date.now());
+  }
+
+  toggleGroup(source: string) {
+    this.expandedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(source)) {
+        newSet.delete(source);
+      } else {
+        newSet.add(source);
+      }
+      return newSet;
+    });
+  }
+
+  logMetrics() {
+    this.subscriptionManager.logMetrics();
+    console.log('Metrics logged to console');
+  }
+
+  cleanupStale() {
+    const cleaned = this.subscriptionManager.cleanupStaleSubscriptions();
+    console.log(`Cleaned up ${cleaned} stale subscriptions`);
+  }
+
+  copyMetricsReport() {
+    const report = this.subscriptionManager.getMetricsReport();
+    navigator.clipboard.writeText(report).then(() => {
+      console.log('Metrics report copied to clipboard');
+    });
+  }
+
+  private getRelayHealth(conn: ConnectionInfo): 'good' | 'warning' | 'error' {
+    if (!conn.isConnected) return 'error';
+    const maxPerRelay = this.subscriptionManager.MAX_CONCURRENT_SUBS_PER_RELAY;
+    if (conn.activeSubscriptions >= maxPerRelay) return 'error';
+    if (conn.activeSubscriptions >= maxPerRelay * 0.7) return 'warning';
+    return 'good';
+  }
+
+  private shortenUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      return u.hostname;
+    } catch {
+      return url.replace(/^wss?:\/\//, '').split('/')[0];
+    }
+  }
+
+  private formatTimeAgo(timestamp: number): string {
+    const now = this.currentTime();
+    const diff = Math.round((now - timestamp) / 1000);
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.round(diff / 60)}m`;
+    return `${Math.round(diff / 3600)}h`;
+  }
+
+  formatFilter(filter: object): string {
+    const f = filter as Record<string, unknown>;
+    const parts: string[] = [];
+    
+    if (f['kinds']) parts.push(`k:${(f['kinds'] as number[]).join(',')}`);
+    if (f['authors']) {
+      const authors = f['authors'] as string[];
+      parts.push(`a:${authors.length > 2 ? `${authors.length} authors` : authors.map(a => a.slice(0, 8)).join(',')}`);
+    }
+    if (f['#p']) {
+      const ps = f['#p'] as string[];
+      parts.push(`#p:${ps.length > 2 ? `${ps.length}` : ps.map(p => p.slice(0, 8)).join(',')}`);
+    }
+    if (f['#e']) {
+      const es = f['#e'] as string[];
+      parts.push(`#e:${es.length > 2 ? `${es.length}` : es.map(e => e.slice(0, 8)).join(',')}`);
+    }
+    if (f['#t']) parts.push(`#t:${(f['#t'] as string[]).join(',')}`);
+    if (f['since']) parts.push(`since:${new Date((f['since'] as number) * 1000).toLocaleDateString()}`);
+    if (f['until']) parts.push(`until:${new Date((f['until'] as number) * 1000).toLocaleDateString()}`);
+    if (f['limit']) parts.push(`lim:${f['limit']}`);
+    if (f['ids']) parts.push(`ids:${(f['ids'] as string[]).length}`);
+    
+    return parts.join(' ') || JSON.stringify(filter);
+  }
+
+  getSubscriptionAge(createdAt: number): string {
+    return this.formatTimeAgo(createdAt);
+  }
+
+  getSubscriptionRelays(relayUrls: string[]): string {
+    if (relayUrls.length <= 2) {
+      return relayUrls.map(u => this.shortenUrl(u)).join(', ');
+    }
+    return `${relayUrls.length} relays`;
+  }
+
+  trackBySource(index: number, group: SubscriptionGroup): string {
+    return group.source;
+  }
+
+  trackById(index: number, sub: SubscriptionInfo): string {
+    return sub.id;
+  }
+
+  trackByUrl(index: number, relay: RelayStatus): string {
+    return relay.url;
+  }
+}

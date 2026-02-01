@@ -435,7 +435,7 @@ export class RelayColumnComponent implements OnDestroy {
     this.abortController = new AbortController();
 
     try {
-      this.pool = new SimplePool();
+      this.pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
       const filter: Filter = {
         kinds: [1], // Text notes

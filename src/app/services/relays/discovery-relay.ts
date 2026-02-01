@@ -18,7 +18,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
 
   constructor() {
-    super(new SimplePool());
+    super(new SimplePool({ enablePing: true, enableReconnect: true }));
   }
 
   async getUserRelayUrls(pubkey: string): Promise<string[]> {

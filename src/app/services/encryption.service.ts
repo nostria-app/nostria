@@ -227,7 +227,7 @@ export class EncryptionService {
     }
 
     this.logger.debug('Creating new BunkerSigner for remote account');
-    this.cachedBunkerPool = new SimplePool();
+    this.cachedBunkerPool = new SimplePool({ enablePing: true, enableReconnect: true });
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
 

@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material/input';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from '../../services/event';
@@ -13,6 +13,7 @@ import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
 import { SpeechService } from '../../services/speech.service';
+import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
 
 export interface Command {
   id: string;
@@ -44,6 +45,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private settings = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
   private accountState = inject(AccountStateService);
+  private customDialog = inject(CustomDialogService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -360,7 +362,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['premium', 'subscription', 'upgrade', 'pro']
     },
 
-    // Navigation - AI Features
+// Navigation - AI Features
     {
       id: 'nav-ai',
       label: 'Open AI Features',
@@ -374,6 +376,16 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'psychology_alt',
       action: () => this.router.navigate(['/ai/settings']),
       keywords: ['ai settings', 'ai config', 'models', 'transformers']
+    },
+
+    // Developer & Debug Tools
+    {
+      id: 'debug-panel',
+      label: 'Debug: Relay Diagnostics',
+      icon: 'bug_report',
+      action: () => this.openDebugPanel(),
+      keywords: ['debug', 'relay', 'diagnostics', 'subscriptions', 'connections', 'pool', 'developer', 'devtools', 'troubleshoot'],
+      description: 'View relay connections, subscriptions, and queries'
     },
 
     // Actions - Content Creation
@@ -453,8 +465,17 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     cmd.action();
   }
 
-  openNoteEditor() {
+openNoteEditor() {
     this.eventService.createNote();
+  }
+
+  openDebugPanel() {
+    this.customDialog.open(DebugPanelComponent, {
+      title: 'Debug: Relay Diagnostics',
+      headerIcon: 'bug_report',
+      width: '900px',
+      maxWidth: '95vw',
+    });
   }
 
   // Voice Command Implementation

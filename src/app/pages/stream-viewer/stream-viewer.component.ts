@@ -175,7 +175,7 @@ export class StreamViewerComponent implements OnInit {
     }
 
     const { SimplePool } = await import('nostr-tools/pool');
-    const pool = new SimplePool();
+    const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
     try {
       console.log('[StreamViewer] Fetching event from relays...');
@@ -219,7 +219,7 @@ export class StreamViewerComponent implements OnInit {
   private async fetchEventDirectly(eventId: string, relays: string[]): Promise<Event | null> {
     // Simple pool-based fetch
     const { SimplePool } = await import('nostr-tools/pool');
-    const pool = new SimplePool();
+    const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
     try {
       const event = await pool.get(relays, { ids: [eventId] });

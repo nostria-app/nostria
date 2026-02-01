@@ -28,7 +28,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
 
   // Import SimplePool dynamically
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool();
+  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   // Expand relay list - combine hints with popular relays for better discovery
   const popularRelays = [
@@ -74,7 +74,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
   (globalThis as any).WebSocket = WS;
 
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool();
+  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   const popularRelays = [
     'wss://relay.damus.io',

@@ -706,7 +706,7 @@ export class LoginDialogComponent implements OnDestroy {
 
   private startListeningForNostrConnectResponse(clientPubkey: string, relays: string[], expectedSecret: string): void {
     this.nostrConnectError.set(null);
-    this.remoteSignerPool = new SimplePool();
+    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: true });
 
     // Subscribe to kind 24133 responses addressed to our client pubkey
     this.remoteSignerPool.subscribeMany(

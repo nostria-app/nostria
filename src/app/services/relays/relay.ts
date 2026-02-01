@@ -115,9 +115,9 @@ export abstract class RelayServiceBase {
 
     // Assign new pool if required
     if (shouldRecreate) {
-      this.#pool = new SimplePool();
+      this.#pool = new SimplePool({ enablePing: true, enableReconnect: true });
       this._destroyed = false; // Reset destroyed flag for new pool lifecycle
-      this.logger.debug(`[${this.constructor.name}] Created new SimplePool (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
+      this.logger.debug(`[${this.constructor.name}] Created new SimplePool with ping and reconnect enabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
     this.relayUrls = secureUrls;
