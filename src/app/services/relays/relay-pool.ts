@@ -249,8 +249,8 @@ export class RelayPoolService {
     // Generate subscription ID
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Try to register the subscription
-    const registered = this.subscriptionManager.registerSubscription(
+    // Try to register the subscription - returns available relays (those not at limit)
+    const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,
       filter,
       filteredUrls,
@@ -258,8 +258,8 @@ export class RelayPoolService {
       this.poolInstanceId
     );
 
-    if (!registered) {
-      this.logger.error('[RelayPoolService] Cannot create subscription: limits reached', {
+    if (availableRelays.length === 0) {
+      this.logger.error('[RelayPoolService] Cannot create subscription: all relays at limit', {
         subscriptionId,
         filter,
         relayUrls: filteredUrls,
@@ -273,14 +273,16 @@ export class RelayPoolService {
 
     this.logger.info('[RelayPoolService] Creating subscription', {
       subscriptionId,
-      relayCount: filteredUrls.length,
+      relayCount: availableRelays.length,
+      originalRelayCount: filteredUrls.length,
       filter,
     });
 
     // Get auth callback for NIP-42 authentication
     const authCallback = this.relayAuth.getAuthCallback();
 
-    const sub = this.#pool.subscribe(filteredUrls, filter, {
+    // Use only the available relays (those not at the subscription limit)
+    const sub = this.#pool.subscribe(availableRelays, filter, {
       onauth: authCallback,
       onevent: (event) => {
         // Filter event through centralized processor (expiration, deletion, muting)
@@ -290,7 +292,7 @@ export class RelayPoolService {
 
         // Track event received for all relays in this subscription
         // Note: We don't know which specific relay sent this event, so we increment all
-        filteredUrls.forEach(url => {
+        availableRelays.forEach(url => {
           this.relaysService.incrementEventCount(url);
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });

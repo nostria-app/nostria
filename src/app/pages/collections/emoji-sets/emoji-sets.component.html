@@ -1,11 +1,16 @@
-<div class="emoji-sets-container">
-  <div class="page-header">
-    <h1 i18n="@@emoji-sets.title">Emojis</h1>
-    <p class="page-description" i18n="@@emoji-sets.description">
-      Manage your custom emoji collections.
-    </p>
-  </div>
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font" i18n="@@emoji-sets.title">Emojis</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="startCreatingSet()" matTooltip="Create new emoji collection">
+    <mat-icon>add</mat-icon>
+  </button>
+  <button mat-icon-button (click)="findEmojis()" matTooltip="Find emojis">
+    <mat-icon>search</mat-icon>
+  </button>
+</div>
 
+<div class="emoji-sets-container">
   @if (isLoading()) {
   <div class="loading-container">
     <mat-spinner diameter="40"></mat-spinner>
@@ -51,18 +56,6 @@
       <div class="section-title">
         <mat-icon>emoji_emotions</mat-icon>
         <h2 i18n="@@emoji-sets.sets.title">Emoji Collections</h2>
-      </div>
-      <div class="header-actions">
-        @if (!isEditingSet()) {
-        <button mat-button (click)="findEmojis()" i18n="@@emoji-sets.find">
-          <mat-icon>search</mat-icon>
-          Find Emojis
-        </button>
-        <button mat-flat-button (click)="startCreatingSet()" i18n="@@emoji-sets.create">
-          <mat-icon>add</mat-icon>
-          Create Collection
-        </button>
-        }
       </div>
     </div>
 

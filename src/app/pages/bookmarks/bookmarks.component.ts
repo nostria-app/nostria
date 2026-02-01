@@ -281,6 +281,10 @@ export class BookmarksComponent implements OnInit {
     this.viewMode.set(mode);
   }
 
+  toggleViewMode(): void {
+    this.viewMode.set(this.viewMode() === 'content' ? 'tiles' : 'content');
+  }
+
   getViewIcon(): string {
     switch (this.viewMode()) {
       case 'tiles':
