@@ -221,13 +221,6 @@ export class MessagingService implements NostriaService {
       return;
     }
 
-    // Prevent self-chat - can't message yourself
-    const myPubkey = this.accountState.pubkey();
-    if (pubkey === myPubkey) {
-      this.logger.warn('Cannot create chat with yourself', { pubkey, messageId: message.id });
-      return;
-    }
-
     const currentMap = this.chatsMap();
     // Use pubkey directly as chatId - messages are merged regardless of encryption type
     const chatId = pubkey;
@@ -699,7 +692,7 @@ export class MessagingService implements NostriaService {
           targetPubkey = unwrappedMessage.pubkey;
         }
 
-        if (!targetPubkey || targetPubkey === myPubkey) return;
+        if (!targetPubkey) return;
 
         // Check if message already exists to prevent duplicates
         if (this.hasMessage(targetPubkey, unwrappedMessage.id)) {
@@ -880,7 +873,7 @@ export class MessagingService implements NostriaService {
                   }
                 } else {
                   // For incoming messages, validate that the sender pubkey is valid
-                  if (!targetPubkey || targetPubkey === myPubkey) {
+                  if (!targetPubkey) {
                     this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
                     return;
                   }
@@ -1027,7 +1020,7 @@ export class MessagingService implements NostriaService {
                     return;
                   }
                 } else {
-                  if (!targetPubkey || targetPubkey === myPubkey) {
+                  if (!targetPubkey) {
                     this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
                     return;
                   }
@@ -1199,7 +1192,7 @@ export class MessagingService implements NostriaService {
               targetPubkey = unwrappedMessage.pubkey;
             }
 
-            if (!targetPubkey || targetPubkey === myPubkey) continue;
+            if (!targetPubkey) continue;
 
             const directMessage: DirectMessage = {
               id: unwrappedMessage.id,
@@ -1997,7 +1990,7 @@ export class MessagingService implements NostriaService {
               } else {
                 messagesReceivedFound++;
                 // For incoming messages, validate sender pubkey
-                if (!targetPubkey || targetPubkey === myPubkey) {
+                if (!targetPubkey) {
                   this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
                   completedDecryptions++;
                   checkCompletion();
@@ -2149,7 +2142,7 @@ export class MessagingService implements NostriaService {
               } else {
                 messagesReceivedFound++;
                 // For incoming messages, validate sender pubkey
-                if (!targetPubkey || targetPubkey === myPubkey) {
+                if (!targetPubkey) {
                   this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
                   completedDecryptions++;
                   checkCompletion();
@@ -2242,13 +2235,6 @@ export class MessagingService implements NostriaService {
 
   // Helper method to add a chat directly to the chatsMap (for temporary/new chats)
   addChat(chat: Chat): void {
-    // Prevent self-chat
-    const myPubkey = this.accountState.pubkey();
-    if (chat.pubkey === myPubkey) {
-      this.logger.warn('Cannot add chat with yourself', { chatId: chat.id });
-      return;
-    }
-
     const currentMap = this.chatsMap();
     const newMap = new Map(currentMap);
     newMap.set(chat.id, chat);

@@ -55,6 +55,11 @@
           mat-chip {
             font-size: 0.75rem;
             height: 24px;
+            cursor: pointer;
+
+            &:hover {
+              opacity: 0.8;
+            }
           }
         }
       }
@@ -162,6 +167,11 @@
           font-size: 0.7rem;
           height: 22px;
           padding: 0 8px;
+          cursor: pointer;
+
+          &:hover {
+            opacity: 0.8;
+          }
         }
       }
     }

@@ -216,7 +216,7 @@
   <section class="article-tags">
     <mat-chip-set>
       @for (hashtag of uniqueHashtags(); track hashtag) {
-      <mat-chip highlighted>
+      <mat-chip highlighted (click)="openHashtagFeed(hashtag)">
         {{ hashtag }}
       </mat-chip>
       }

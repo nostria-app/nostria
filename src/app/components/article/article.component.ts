@@ -1,4 +1,5 @@
 import { Component, inject, input, signal, effect, computed, untracked } from '@angular/core';
+import { Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { nip19 } from 'nostr-tools';
 import { NostrRecord, ViewMode } from '../../interfaces';
@@ -50,6 +51,7 @@ export class ArticleComponent {
   private accountState = inject(AccountStateService);
   private cache = inject(Cache);
   private relayPool = inject(RelayPoolService);
+  private router = inject(Router);
 
   // State
   record = signal<NostrRecord | null>(null);
@@ -227,5 +229,12 @@ export class ArticleComponent {
     });
 
     this.layout.openArticle(naddr, this.record()?.event);
+  }
+
+  openHashtagFeed(hashtag: string, event: MouseEvent): void {
+    event.stopPropagation(); // Prevent opening the article when clicking hashtag
+    this.router.navigate(['/f'], {
+      queryParams: { t: hashtag },
+    });
   }
 }
