@@ -367,10 +367,14 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     const f = filter as Record<string, unknown>;
     const parts: string[] = [];
     
-    if (f['kinds']) parts.push(`k:${(f['kinds'] as number[]).join(',')}`);
+    if (f['kinds']) {
+      const kinds = f['kinds'] as number[];
+      const kindNames = kinds.map(k => this.getKindName(k));
+      parts.push(`kinds:${kindNames.join(',')}`);
+    }
     if (f['authors']) {
       const authors = f['authors'] as string[];
-      parts.push(`a:${authors.length > 2 ? `${authors.length} authors` : authors.map(a => a.slice(0, 8)).join(',')}`);
+      parts.push(`authors:${authors.length > 2 ? `${authors.length}` : authors.map(a => a.slice(0, 8)).join(',')}`);
     }
     if (f['#p']) {
       const ps = f['#p'] as string[];
@@ -380,13 +384,46 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
       const es = f['#e'] as string[];
       parts.push(`#e:${es.length > 2 ? `${es.length}` : es.map(e => e.slice(0, 8)).join(',')}`);
     }
+    if (f['#d']) {
+      const ds = f['#d'] as string[];
+      parts.push(`#d:${ds.length > 2 ? `${ds.length}` : ds.join(',')}`);
+    }
     if (f['#t']) parts.push(`#t:${(f['#t'] as string[]).join(',')}`);
     if (f['since']) parts.push(`since:${new Date((f['since'] as number) * 1000).toLocaleDateString()}`);
     if (f['until']) parts.push(`until:${new Date((f['until'] as number) * 1000).toLocaleDateString()}`);
-    if (f['limit']) parts.push(`lim:${f['limit']}`);
+    if (f['limit']) parts.push(`limit:${f['limit']}`);
     if (f['ids']) parts.push(`ids:${(f['ids'] as string[]).length}`);
     
     return parts.join(' ') || JSON.stringify(filter);
+  }
+
+  private getKindName(kind: number): string {
+    const kindNames: Record<number, string> = {
+      0: 'meta',
+      1: 'note',
+      2: 'relay',
+      3: 'contacts',
+      4: 'dm',
+      5: 'delete',
+      6: 'repost',
+      7: 'reaction',
+      8: 'badge',
+      10: 'mute',
+      30: 'profile',
+      40: 'ch-create',
+      41: 'ch-meta',
+      42: 'ch-msg',
+      1984: 'report',
+      9735: 'zap',
+      10000: 'mute-list',
+      10001: 'pin-list',
+      10002: 'relay-list',
+      30000: 'list',
+      30001: 'list',
+      30023: 'article',
+      30078: 'app-data',
+    };
+    return kindNames[kind] || kind.toString();
   }
 
   formatFilterFull(filter: object): string {
