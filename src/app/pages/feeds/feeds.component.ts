@@ -774,6 +774,19 @@ export class FeedsComponent implements OnDestroy {
           .filter((h: string) => h.length > 0);
 
         if (hashtags.length > 0) {
+          // Check if we already have a dynamic feed with the same hashtags
+          // This prevents unnecessary recreation when opening events in the right panel
+          const currentDynamicFeed = this.dynamicFeed();
+          const currentHashtags = currentDynamicFeed?.customInterestHashtags || [];
+          const hashtagsMatch = hashtags.length === currentHashtags.length &&
+            hashtags.every((h: string) => currentHashtags.includes(h));
+
+          if (hashtagsMatch) {
+            // Same hashtags, no need to recreate the feed
+            this.logger.debug(`Dynamic hashtag feed already active for: ${hashtags.join(', ')}`);
+            return;
+          }
+
           this.logger.debug(`Creating dynamic hashtag feed for: ${hashtags.join(', ')}`);
 
           // Clear relay feed and list feed if active
@@ -792,6 +805,14 @@ export class FeedsComponent implements OnDestroy {
         }
       } else if (listParam) {
         // Handle list feed
+        // Check if we already have the same list feed active
+        const currentListFeed = this.activeListFeed();
+        if (currentListFeed?.dTag === listParam) {
+          // Same list feed, no need to recreate
+          this.logger.debug(`List feed already active for: ${listParam}`);
+          return;
+        }
+
         this.logger.debug(`Activating list feed from URL: ${listParam}`);
 
         // Clean up relay feed and dynamic feed
@@ -826,6 +847,14 @@ export class FeedsComponent implements OnDestroy {
           .replace(/^wss?:\/\//, '')
           .replace(/\/$/, '')
           .replace(/\(right:.*$/, '');
+
+        // Check if we already have the same relay feed active
+        if (this.activeRelayDomain() === domain) {
+          // Same relay feed, no need to recreate
+          this.logger.debug(`Relay feed already active for: ${domain}`);
+          return;
+        }
+
         this.activeRelayDomain.set(domain);
         this.logger.debug(`Activated relay feed from URL: ${domain}`);
 
