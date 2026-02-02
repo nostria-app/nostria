@@ -86,9 +86,8 @@ export class RelayPoolService {
     // Register the request
     const requestId = this.subscriptionManager.registerRequest(
       filteredUrls,
-      'RelayPoolService.get',
-      this.poolInstanceId,
-      filter
+      'RelayPoolService',
+      this.poolInstanceId
     );
 
     this.logger.debug('[RelayPoolService] Executing get request', {
@@ -162,9 +161,8 @@ export class RelayPoolService {
     // Register the request
     const requestId = this.subscriptionManager.registerRequest(
       filteredUrls,
-      'RelayPoolService.query',
-      this.poolInstanceId,
-      filter
+      'RelayPoolService',
+      this.poolInstanceId
     );
 
     this.logger.debug('[RelayPoolService] Executing query request', {
