@@ -70,8 +70,8 @@
     min-width: 420px;
   }
 
-  // On mobile, take full width
-  @media (max-width: 599px) {
+  // On smaller screens, take full width and enable single-pane view
+  @media (max-width: 699px) {
     flex: 1;
     width: 100%;
     min-width: 100%;
@@ -360,8 +360,8 @@
     }
   }
 
-  // On mobile, hide when showing list
-  @media (max-width: 599px) {
+  // On smaller screens, hide when showing list
+  @media (max-width: 699px) {
     &.mobile-hidden {
       display: none;
     }
@@ -435,15 +435,15 @@
   padding-bottom: 80px; // Space for floating input
   min-height: 0;
 
-  // On mobile, add padding for the fixed input at the bottom (where mobile nav would be)
-  @media (max-width: 599px) {
+  // On smaller screens, add padding for the fixed input at the bottom (where mobile nav would be)
+  @media (max-width: 699px) {
     padding-left: 4px;
     padding-right: 4px;
     padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
   // Android standalone PWA - add extra bottom padding for navigation bar
-  @media (max-width: 599px) and (display-mode: standalone) {
+  @media (max-width: 699px) and (display-mode: standalone) {
     padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
 }
@@ -472,8 +472,8 @@
     0px 2px 8px rgba(17, 17, 26, 0.1),
     0px 4px 16px rgba(17, 17, 26, 0.08);
 
-  // On mobile, position where the mobile nav would be and stretch wider
-  @media (max-width: 599px) {
+  // On smaller screens, position where the mobile nav would be and stretch wider
+  @media (max-width: 699px) {
     position: fixed;
     bottom: max(8px, calc(8px + env(safe-area-inset-bottom, 0px)));
     left: 8px;
@@ -486,7 +486,7 @@
   }
 
   // Android standalone PWA - add extra bottom padding for navigation bar
-  @media (max-width: 599px) and (display-mode: standalone) {
+  @media (max-width: 699px) and (display-mode: standalone) {
     bottom: max(32px, calc(8px + env(safe-area-inset-bottom, 0px)));
   }
 }
@@ -685,7 +685,7 @@
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
-  @media (max-width: 599px) {
+  @media (max-width: 699px) {
     font-size: 0.65rem;
     min-width: 36px;
   }
@@ -695,6 +695,7 @@
   display: flex;
   align-items: flex-end;
   margin-bottom: 4px;
+  gap: 6px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   min-width: 0;
@@ -719,7 +720,7 @@
   }
 
   .message-bubble {
-    max-width: calc(100% - 50px);
+    max-width: calc(100% - 56px);
     min-width: 0;
     padding: 10px 14px;
     border-radius: 18px;
@@ -733,7 +734,7 @@
     overflow: hidden;
 
     @media (max-width: 599px) {
-      max-width: calc(100% - 44px);
+      max-width: calc(100% - 50px);
       padding: 8px 12px;
     }
 
