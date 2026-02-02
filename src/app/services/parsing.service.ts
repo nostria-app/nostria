@@ -39,6 +39,7 @@ export interface ContentToken {
   | 'cashu'
   | 'hashtag'
   | 'rss-feed'
+  | 'bolt11'
   | 'bolt12';
   content: string;
   nostrData?: NostrData;
@@ -57,6 +58,9 @@ export interface ContentToken {
     mint?: string;
     amount?: number;
     unit?: string;
+  };
+  bolt11Data?: {
+    invoice: string;
   };
   bolt12Data?: {
     offer: string;
@@ -341,6 +345,11 @@ export class ParsingService {
     // Supports both with and without https:// prefix (e.g., podcast.example.com/rss.xml)
     const rssFeedRegex = /((?:https?:\/\/)?[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/[^\s##"<>]*)?(?:rss\.xml|\.rss|feed\.xml|\/feed(?:\/|$)|\/rss(?:\/|$)|atom\.xml|\.atom))(?=\s|##LINEBREAK##|$|[),;!?])/gi;
 
+    // BOLT11 regex - matches lightning invoices (lnbc, lntb, lnbcrt, etc.)
+    // BOLT11 invoices start with "ln" followed by network prefix (bc, tb, bcrt)
+    // They use bech32 encoding with only lowercase letters and digits (no 1, b, i, o)
+    const bolt11Regex = /(lnbc[a-z0-9]+|lntb[a-z0-9]+|lnbcrt[a-z0-9]+)(?=\s|##LINEBREAK##|$|[),;!?])/gi;
+
     // BOLT12 regex - matches lightning offers (lno1...) and invoices (lni1...)
     // BOLT12 offers start with "lno1" and invoices start with "lni1"
     // They use bech32 encoding with only lowercase letters and digits (no 1, b, i, o)
@@ -388,6 +397,9 @@ export class ParsingService {
         mint?: string;
         amount?: number;
         unit?: string;
+      };
+      bolt11Data?: {
+        invoice: string;
       };
       bolt12Data?: {
         offer: string;
@@ -495,6 +507,22 @@ export class ParsingService {
         console.warn('Error parsing cashu token:', match[0], error);
         // If parsing fails, treat it as regular text
       }
+    }
+
+    // Find BOLT11 invoices
+    bolt11Regex.lastIndex = 0;
+    while ((match = bolt11Regex.exec(processedContent)) !== null) {
+      const bolt11String = match[0].toLowerCase();
+
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: bolt11String,
+        type: 'bolt11',
+        bolt11Data: {
+          invoice: bolt11String,
+        },
+      });
     }
 
     // Find BOLT12 offers and invoices
@@ -846,6 +874,10 @@ export class ParsingService {
 
       if (match.cashuData) {
         token.cashuData = match.cashuData;
+      }
+
+      if (match.bolt11Data) {
+        token.bolt11Data = match.bolt11Data;
       }
 
       if (match.bolt12Data) {

@@ -16,6 +16,7 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
 import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
+import { Bolt11InvoiceComponent } from '../../bolt11-invoice/bolt11-invoice.component';
 import { Bolt12OfferComponent } from '../../bolt12-offer/bolt12-offer.component';
 import { AudioPlayerComponent } from '../../audio-player/audio-player.component';
 import { InlineVideoPlayerComponent } from '../../inline-video-player/inline-video-player.component';
@@ -66,6 +67,7 @@ export interface DisplayItem {
     MatCardModule,
     MatTooltipModule,
     CashuTokenComponent,
+    Bolt11InvoiceComponent,
     Bolt12OfferComponent,
     AudioPlayerComponent,
     InlineVideoPlayerComponent,

@@ -1,0 +1,32 @@
+<mat-card class="bolt11-card">
+  <div class="bolt11-header">
+    <div class="bolt11-icon">
+      <mat-icon>{{ getTypeIcon() }}</mat-icon>
+    </div>
+    <div class="bolt11-info">
+      <div class="bolt11-title">{{ getTypeLabel() }}</div>
+      <a class="bolt11-link" [href]="getLightningUrl()" [matTooltip]="invoice()">
+        {{ getTruncatedInvoice() }}
+      </a>
+    </div>
+  </div>
+
+  <div class="bolt11-actions">
+    <a mat-raised-button [href]="getLightningUrl()" class="pay-button" matTooltip="Pay with Lightning wallet">
+      <mat-icon>bolt</mat-icon>
+      <span>Pay Invoice</span>
+    </a>
+    <button
+      mat-icon-button
+      class="qr-button"
+      (click)="toggleQrCode($event)"
+      (mouseenter)="onQrButtonMouseEnter($event)"
+      (mouseleave)="onQrButtonMouseLeave()"
+      [class.active]="showQrCode()">
+      <mat-icon>qr_code_2</mat-icon>
+    </button>
+    <button mat-icon-button (click)="copyInvoice()" matTooltip="Copy invoice to clipboard">
+      <mat-icon>content_copy</mat-icon>
+    </button>
+  </div>
+</mat-card>

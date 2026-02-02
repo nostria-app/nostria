@@ -1,30 +1,39 @@
 <!-- Panel Header -->
 <div class="panel-header">
-  <h2 class="panel-title title-font">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</h2>
-  <span class="panel-header-spacer"></span>
-
-  <!-- List Selector -->
+  <!-- Interactive List Selector -->
   @if (allFollowSets().length > 0) {
-  <button mat-icon-button [matMenuTriggerFor]="followSetsMenu"
-    [matTooltip]="selectedFollowSet() ? selectedFollowSet()!.title : 'Select List'">
-    <mat-icon>{{ selectedFollowSet()?.isPrivate ? 'lock' : 'list' }}</mat-icon>
+  <button 
+    class="list-selector-button" 
+    mat-button 
+    [matMenuTriggerFor]="followSetsMenu"
+    [class.has-selection]="selectedFollowSet()">
+    <mat-icon class="selector-icon">{{ selectedFollowSet()?.isPrivate ? 'lock' : (selectedFollowSet() ? 'list' : 'people') }}</mat-icon>
+    <span class="selector-label">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</span>
+    @if (selectedFollowSet()) {
+    <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
+    }
+    <mat-icon class="selector-arrow">expand_more</mat-icon>
   </button>
 
-  <mat-menu #followSetsMenu="matMenu">
-    <button mat-menu-item (click)="selectFollowSet(null)">
+  <mat-menu #followSetsMenu="matMenu" class="list-selector-menu">
+    <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
       <mat-icon>people</mat-icon>
       <span>Following</span>
     </button>
     <mat-divider></mat-divider>
     @for (set of allFollowSets(); track set.id) {
-    <button mat-menu-item (click)="selectFollowSet(set)">
+    <button mat-menu-item (click)="selectFollowSet(set)" [class.active]="selectedFollowSet()?.dTag === set.dTag">
       <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
       <span>{{ set.title }}</span>
-      <span class="set-count"> ({{ set.pubkeys.length }})</span>
+      <span class="menu-item-count">{{ set.pubkeys.length }}</span>
     </button>
     }
   </mat-menu>
+  } @else {
+  <h2 class="panel-title-static title-font">Following</h2>
   }
+
+  <span class="panel-header-spacer"></span>
 
   <!-- Add button with dropdown menu -->
   <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add">

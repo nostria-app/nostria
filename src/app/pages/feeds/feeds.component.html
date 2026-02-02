@@ -3,65 +3,63 @@
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
 
-    <!-- Panel Header - sticky, always visible, constrained width -->
+      <!-- Panel Header - sticky, always visible, constrained width -->
     <div class="panel-header">
       <div class="panel-header-inner">
-        <!-- Feed selector dropdown/tabs -->
-        <div class="feed-tabs" #feedTabsContainer>
-          <div class="feed-tabs-inner" #feedTabsInner>
-            @if (!app.authenticated()) {
-            <!-- Unauthenticated users see only Trending tab -->
-            <button class="feed-tab active" mat-button>
-              <mat-icon>trending_up</mat-icon>
-              <span>Trending</span>
-            </button>
-            } @else if (showListFeed()) {
-            <!-- List Feed selected - show list info with close button -->
-            @let listFeed = activeListFeed();
-            <div class="list-feed-tab">
-              <mat-icon>people</mat-icon>
-              <div class="list-feed-info">
-                <span class="list-feed-name">{{ listFeed?.title || 'List Feed' }}</span>
-                <span class="list-feed-count">{{ listFeed?.pubkeys?.length || 0 }} people</span>
-              </div>
-              @if (listColumn?.isLoadingFromRelays()) {
-              <mat-spinner diameter="20" class="relay-loading-spinner"></mat-spinner>
-              }
-              <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="close-list-btn">
-                <mat-icon>close</mat-icon>
-              </button>
+        <!-- Feed selector with new impressive style -->
+        <div class="feed-selector-container">
+          @if (!app.authenticated()) {
+          <!-- Unauthenticated users see only Trending as static -->
+          <div class="feed-selector-static">
+            <mat-icon class="selector-icon">trending_up</mat-icon>
+            <span class="selector-label">Trending</span>
+          </div>
+          } @else if (showListFeed()) {
+          <!-- List Feed selected - show with close button -->
+          @let listFeed = activeListFeed();
+          <div class="feed-selector-active list-feed-active">
+            <mat-icon class="selector-icon">people</mat-icon>
+            <div class="selector-content">
+              <span class="selector-label">{{ listFeed?.title || 'List Feed' }}</span>
+              <span class="selector-meta">{{ listFeed?.pubkeys?.length || 0 }} people</span>
             </div>
-            } @else if (!feedService.feedsLoaded()) {
-            <!-- Show loading indicator while feeds are loading -->
-            <button mat-button disabled>
-              <mat-icon>dynamic_feed</mat-icon>
-              Loading...
+            @if (listColumn?.isLoadingFromRelays()) {
+            <mat-spinner diameter="20" class="selector-spinner"></mat-spinner>
+            }
+            <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="selector-close">
+              <mat-icon>close</mat-icon>
             </button>
-            } @else if (useDropdownSelector()) {
-            <button mat-button [matMenuTriggerFor]="feedMenu">
-              <mat-icon>{{ feedIcon() }}</mat-icon>
-              {{ feedLabel() }}
-            </button>
+          </div>
+          } @else if (!feedService.feedsLoaded()) {
+          <!-- Show loading indicator while feeds are loading -->
+          <div class="feed-selector-loading">
+            <mat-icon class="selector-icon">dynamic_feed</mat-icon>
+            <span class="selector-label">Loading...</span>
+          </div>
+          } @else {
+          <!-- Feed Selector Button -->
+          <button 
+            class="feed-selector-button" 
+            mat-button 
+            [matMenuTriggerFor]="feedMenu"
+            [class.has-selection]="activeFeed()">
+            <mat-icon class="selector-icon">{{ feedIcon() }}</mat-icon>
+            <span class="selector-label">{{ feedLabel() }}</span>
+            <mat-icon class="selector-arrow">expand_more</mat-icon>
+          </button>
 
-            <mat-menu #feedMenu="matMenu">
-              @for (feed of feeds(); track feed.id) {
-              <button mat-menu-item (click)="selectFeed(feed.id)">
-                <mat-icon>{{ feed.icon }}</mat-icon>
-                <span>{{ feed.label }}</span>
-              </button>
-              }
-            </mat-menu>
-            } @else {
+          <mat-menu #feedMenu="matMenu" class="feed-selector-menu">
             @for (feed of feeds(); track feed.id) {
-            <button class="feed-tab" mat-button
-              [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
-              (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
+            <button 
+              mat-menu-item 
+              (click)="selectFeed(feed.id)"
+              [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
               <mat-icon>{{ feed.icon }}</mat-icon>
               <span>{{ feed.label }}</span>
             </button>
             }
-            }
-          </div>
+          </mat-menu>
+          }
         </div>
 
         <span class="spacer"></span>

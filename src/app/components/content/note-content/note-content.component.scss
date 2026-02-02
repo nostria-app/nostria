@@ -343,6 +343,18 @@
   display: block;
 }
 
+// BOLT11 invoice container
+.bolt11-container {
+  margin: 12px 0;
+  display: block;
+}
+
+// BOLT12 offer container
+.bolt12-container {
+  margin: 12px 0;
+  display: block;
+}
+
 // Responsive embedded media (e.g., YouTube iframes)
 // Uses modern aspect-ratio to keep layout stable and prevent distortion.
 .youtube-container {

@@ -152,6 +152,22 @@
       height: 20px;
       font-size: 10px;
     }
+
+    &.trust-rank-comfortable {
+      top: 1px;
+      right: 1px;
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
+    }
+
+    &.trust-rank-details {
+      top: 0px;
+      right: 0px;
+      width: 18px;
+      height: 18px;
+      font-size: 9px;
+    }
   }
 
   // Custom tooltip for touch devices (doesn't interfere with scrolling)
