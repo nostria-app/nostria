@@ -4,11 +4,12 @@
     <div class="stat" [class.critical]="subscriptionHealth() === 'critical'" [class.warning]="subscriptionHealth() === 'warning'">
       <span class="stat-value">{{ totalSubs() }}</span>
       <span class="stat-label">Subs</span>
-      <span class="stat-max">/{{ subscriptionManager.MAX_TOTAL_SUBSCRIPTIONS }}</span>
+      <span class="stat-max">/{{ maxTotalSubscriptions }}</span>
     </div>
     <div class="stat">
-      <span class="stat-value">{{ totalPending() }}</span>
-      <span class="stat-label">Pending</span>
+      <span class="stat-value">{{ activeQueries() }}</span>
+      <span class="stat-label">Active</span>
+      <span class="stat-max">/{{ totalQueries() }} queries</span>
     </div>
     <div class="stat">
       <span class="stat-value">{{ connectedCount() }}/{{ totalConnections() }}</span>
@@ -36,15 +37,25 @@
       <div class="panel-header">
         <mat-icon>dns</mat-icon>
         <span>Relays</span>
+        @if (selectedRelay()) {
+          <button mat-icon-button class="clear-selection" (click)="clearRelaySelection()" matTooltip="Clear selection">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
       </div>
       <div class="relays-list">
         @for (relay of relayStatuses(); track trackByUrl($index, relay)) {
-          <div class="relay-item" [class.disconnected]="!relay.isConnected" [class.warning]="relay.health === 'warning'" [class.error]="relay.health === 'error'">
+          <div class="relay-item" 
+               [class.disconnected]="!relay.isConnected" 
+               [class.warning]="relay.health === 'warning'" 
+               [class.error]="relay.health === 'error'"
+               [class.selected]="selectedRelay() === relay.fullUrl"
+               (click)="selectRelay(relay.fullUrl)">
             <div class="relay-status">
               <span class="status-dot" [class.connected]="relay.isConnected" [class.disconnected]="!relay.isConnected"></span>
             </div>
             <div class="relay-info">
-              <span class="relay-url" [matTooltip]="relay.url">{{ relay.url }}</span>
+              <span class="relay-url" [matTooltip]="relay.fullUrl">{{ relay.url }}</span>
               <span class="relay-meta">
                 <span class="sub-count" [matTooltip]="'Active subscriptions'">{{ relay.subscriptions }}s</span>
                 @if (relay.pendingRequests > 0) {
@@ -64,7 +75,10 @@
     <div class="panel subscriptions-panel">
       <div class="panel-header">
         <mat-icon>sync</mat-icon>
-        <span>Subscriptions by Source</span>
+        <span>Subscriptions</span>
+        @if (selectedRelay()) {
+          <span class="filter-badge">filtered</span>
+        }
       </div>
       <div class="subscriptions-list">
         @for (group of subscriptionGroups(); track trackBySource($index, group)) {
@@ -95,6 +109,57 @@
           </div>
         } @empty {
           <div class="empty-state">No active subscriptions</div>
+        }
+      </div>
+    </div>
+
+    <!-- Queries Column -->
+    <div class="panel queries-panel">
+      <div class="panel-header">
+        <mat-icon>query_stats</mat-icon>
+        <span>Queries</span>
+        <span class="query-history-label">recent history</span>
+        @if (selectedRelay()) {
+          <span class="filter-badge">filtered</span>
+        }
+      </div>
+      <div class="queries-list">
+        @for (group of queryGroups(); track trackByQuerySource($index, group)) {
+          <div class="query-group">
+            <div class="group-header" (click)="toggleQueryGroup(group.source)">
+              <mat-icon class="expand-icon" [class.expanded]="group.expanded">
+                chevron_right
+              </mat-icon>
+              <span class="source-name">{{ group.source }}</span>
+              <mat-chip class="count-chip">{{ group.count }}</mat-chip>
+            </div>
+            @if (group.expanded) {
+              <div class="group-queries">
+                @for (query of group.queries; track trackByQueryId($index, query)) {
+                  <div class="query-item" [class.completed]="query.status === 'completed'" [class.active]="query.status === 'active'">
+                    <div class="query-header">
+                      <span class="query-status-dot" [class.active]="query.status === 'active'" [class.completed]="query.status === 'completed'"></span>
+                      <span class="query-id" [matTooltip]="query.id">{{ query.id.slice(0, 12) }}...</span>
+                      <span class="query-duration" [matTooltip]="query.status === 'active' ? 'Running for' : 'Took'">{{ getQueryDuration(query) }}</span>
+                    </div>
+                    <div class="query-details">
+                      @if (query.filter) {
+                        <span class="query-filter" [matTooltip]="formatFilter(query.filter)">{{ formatFilter(query.filter) }}</span>
+                      } @else {
+                        <span class="query-filter no-filter">No filter info</span>
+                      }
+                      <span class="query-meta">
+                        <span class="query-relays">{{ getSubscriptionRelays(query.relayUrls) }}</span>
+                        <span class="query-age">{{ getQueryTimeAgo(query) }} ago</span>
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="empty-state">No query history</div>
         }
       </div>
     </div>

@@ -310,6 +310,7 @@ export class FeedsCollectionService {
 
 
 
+
   /**
    * Refresh the active feed if it has 'following' or 'for-you' source
    * This should be called after the user's following list changes to reload content

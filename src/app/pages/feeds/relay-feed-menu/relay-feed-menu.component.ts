@@ -469,6 +469,13 @@ export class RelayFeedMenuComponent {
 
   async onResetRelays(): Promise<void> {
     const defaults = this.relayFeedsService.getDefaultRelays();
+    
+    // Clear the relay info cache for old relays
+    this.relayInfoCache.clear();
+    
+    // Reset the initial fetch flag so NIP-11 info will be fetched for default relays
+    this.initialRelaysFetched = false;
+    
     this.savedRelays.set(defaults);
     await this.saveSavedRelays();
 

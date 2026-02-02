@@ -763,6 +763,8 @@ export class FeedsComponent implements OnDestroy {
       const hashtagParam = queryParams['t'];
       const listParam = queryParams['l'];
 
+      // Only process query params if they're present
+      // If no params, preserve the current state (don't reset when navigating back to /f)
       if (hashtagParam) {
         // Handle dynamic hashtag feed from Interests page
         // Parse hashtags - can be comma-separated
@@ -835,12 +837,9 @@ export class FeedsComponent implements OnDestroy {
         if (this.relayFeedMenu) {
           this.relayFeedMenu.setSelectedRelay(domain);
         }
-      } else {
-        // Clear relay feed, list feed, and dynamic feed when no query params
-        this.activeRelayDomain.set('');
-        this.activeListFeed.set(null);
-        this.cleanupDynamicFeed();
       }
+      // No else clause - if no query params, preserve current state
+      // State is only cleared by explicit user actions (close button, selecting different feed)
     };
 
     // Track if we've handled the initial URL query params
@@ -1456,10 +1455,8 @@ export class FeedsComponent implements OnDestroy {
    */
   onRelaySelected(domain: string): void {
     if (domain) {
-      // Clear the active feed selection when viewing a public relay feed
-      this.feedsCollectionService.clearActiveFeed();
-
       // Navigate with relay query param (keeping nice URL without wss://)
+      // Don't clear the active feed - we just overlay the relay feed view
       this.router.navigate(['/f'], {
         queryParams: { r: domain },
         queryParamsHandling: 'merge',
@@ -1478,6 +1475,7 @@ export class FeedsComponent implements OnDestroy {
    */
   closeRelayFeed(): void {
     this.activeRelayDomain.set('');
+    
     this.router.navigate(['/f'], {
       queryParams: { r: null },
       queryParamsHandling: 'merge',
@@ -1489,8 +1487,6 @@ export class FeedsComponent implements OnDestroy {
    */
   onListSelected(selection: ListFeedSelection | null): void {
     if (selection) {
-      // Clear the active feed selection when viewing a list feed
-      this.feedsCollectionService.clearActiveFeed();
       // Clear relay feed if active
       this.activeRelayDomain.set('');
 
@@ -1502,6 +1498,7 @@ export class FeedsComponent implements OnDestroy {
       });
 
       // Navigate with list query param
+      // Don't clear the active feed - we just overlay the list feed view
       this.router.navigate(['/f'], {
         queryParams: { l: selection.dTag, r: null },
         queryParamsHandling: 'merge',
@@ -1517,6 +1514,7 @@ export class FeedsComponent implements OnDestroy {
   closeListFeed(): void {
     this.activeListFeed.set(null);
     this.listFeedMenu?.clearSelection();
+    
     this.router.navigate(['/f'], {
       queryParams: { l: null },
       queryParamsHandling: 'merge',
@@ -1892,10 +1890,11 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Close the dynamic feed and navigate back to normal feeds
+   * Close the dynamic feed and navigate back to the previously selected feed
    */
   closeDynamicFeed(): void {
     this.cleanupDynamicFeed();
+    
     // Clear the hashtag query param from URL
     this.router.navigate([], {
       queryParams: { t: null },
