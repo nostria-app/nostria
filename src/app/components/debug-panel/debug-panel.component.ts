@@ -2,16 +2,15 @@ import { Component, inject, computed, signal, OnDestroy, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { SubscriptionManagerService, RelayMetrics, SubscriptionInfo, ConnectionInfo } from '../../services/relays/subscription-manager';
+import { SubscriptionManagerService, SubscriptionInfo, ConnectionInfo, QueryInfo } from '../../services/relays/subscription-manager';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 interface RelayStatus {
   url: string;
+  fullUrl: string;
   isConnected: boolean;
   subscriptions: number;
   pendingRequests: number;
@@ -27,6 +26,13 @@ interface SubscriptionGroup {
   expanded: boolean;
 }
 
+interface QueryGroup {
+  source: string;
+  count: number;
+  queries: QueryInfo[];
+  expanded: boolean;
+}
+
 @Component({
   selector: 'app-debug-panel',
   standalone: true,
@@ -34,10 +40,8 @@ interface SubscriptionGroup {
     CommonModule,
     MatIconModule,
     MatButtonModule,
-    MatTabsModule,
     MatChipsModule,
     MatTooltipModule,
-    MatBadgeModule,
     MatProgressBarModule,
   ],
   templateUrl: './debug-panel.component.html',
@@ -46,6 +50,10 @@ interface SubscriptionGroup {
 export class DebugPanelComponent implements OnInit, OnDestroy {
   private subscriptionManager = inject(SubscriptionManagerService);
   dialogRef = inject(CustomDialogRef);
+
+  // Public constants for template access
+  readonly maxTotalSubscriptions = 50; // Mirror the service constant
+  readonly maxSubsPerRelay = 10; // Mirror the service constant
 
   // Auto-refresh interval
   private refreshInterval?: ReturnType<typeof setInterval>;
@@ -61,6 +69,12 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   // Expanded subscription groups
   expandedGroups = signal<Set<string>>(new Set());
 
+  // Expanded query groups
+  expandedQueryGroups = signal<Set<string>>(new Set());
+
+  // Selected relay for filtering subscriptions
+  selectedRelay = signal<string | null>(null);
+
   // Computed relay statuses sorted by subscription count
   relayStatuses = computed<RelayStatus[]>(() => {
     const connections = this.metrics().connectionsByRelay;
@@ -69,6 +83,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     connections.forEach((conn, url) => {
       statuses.push({
         url: this.shortenUrl(url),
+        fullUrl: url,
         isConnected: conn.isConnected,
         subscriptions: conn.activeSubscriptions,
         pendingRequests: conn.pendingRequests,
@@ -85,13 +100,20 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     });
   });
 
-  // Computed subscription groups
+  // Computed subscription groups (filtered by selected relay if any)
   subscriptionGroups = computed<SubscriptionGroup[]>(() => {
     const bySource = new Map<string, SubscriptionInfo[]>();
     const expanded = this.expandedGroups();
+    const selectedRelayUrl = this.selectedRelay();
 
     for (const sub of this.metrics().subscriptions) {
       if (!sub.active) continue;
+      
+      // Filter by selected relay if one is selected
+      if (selectedRelayUrl && !sub.relayUrls.includes(selectedRelayUrl)) {
+        continue;
+      }
+      
       const subs = bySource.get(sub.source) || [];
       subs.push(sub);
       bySource.set(sub.source, subs);
@@ -111,9 +133,42 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return groups.sort((a, b) => b.count - a.count);
   });
 
+  // Computed query groups (filtered by selected relay if any)
+  queryGroups = computed<QueryGroup[]>(() => {
+    const bySource = new Map<string, QueryInfo[]>();
+    const expanded = this.expandedQueryGroups();
+    const selectedRelayUrl = this.selectedRelay();
+
+    for (const query of this.metrics().queries) {
+      // Filter by selected relay if one is selected
+      if (selectedRelayUrl && !query.relayUrls.includes(selectedRelayUrl)) {
+        continue;
+      }
+      
+      const queries = bySource.get(query.source) || [];
+      queries.push(query);
+      bySource.set(query.source, queries);
+    }
+
+    const groups: QueryGroup[] = [];
+    bySource.forEach((queries, source) => {
+      groups.push({
+        source,
+        count: queries.length,
+        queries: queries.sort((a, b) => b.createdAt - a.createdAt),
+        expanded: expanded.has(source),
+      });
+    });
+
+    // Sort by count descending
+    return groups.sort((a, b) => b.count - a.count);
+  });
+
   // Summary stats
   totalSubs = computed(() => this.metrics().totalSubscriptions);
   totalPending = computed(() => this.metrics().totalPendingRequests);
+  totalQueries = computed(() => this.metrics().queries.length);
+  activeQueries = computed(() => this.metrics().queries.filter(q => q.status === 'active').length);
   totalConnections = computed(() => this.metrics().connectionsByRelay.size);
   connectedCount = computed(() => {
     let count = 0;
@@ -127,7 +182,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   // Health indicators
   subscriptionHealth = computed(() => {
     const total = this.totalSubs();
-    const max = this.subscriptionManager.MAX_TOTAL_SUBSCRIPTIONS;
+    const max = this.maxTotalSubscriptions;
     const ratio = total / max;
     if (ratio >= 0.9) return 'critical';
     if (ratio >= 0.7) return 'warning';
@@ -135,7 +190,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   });
 
   subscriptionUsagePercent = computed(() => {
-    return (this.totalSubs() / this.subscriptionManager.MAX_TOTAL_SUBSCRIPTIONS) * 100;
+    return (this.totalSubs() / this.maxTotalSubscriptions) * 100;
   });
 
   ngOnInit() {
@@ -182,6 +237,30 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     });
   }
 
+  toggleQueryGroup(source: string) {
+    this.expandedQueryGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(source)) {
+        newSet.delete(source);
+      } else {
+        newSet.add(source);
+      }
+      return newSet;
+    });
+  }
+
+  selectRelay(fullUrl: string) {
+    if (this.selectedRelay() === fullUrl) {
+      this.selectedRelay.set(null);
+    } else {
+      this.selectedRelay.set(fullUrl);
+    }
+  }
+
+  clearRelaySelection() {
+    this.selectedRelay.set(null);
+  }
+
   logMetrics() {
     this.subscriptionManager.logMetrics();
     console.log('Metrics logged to console');
@@ -201,13 +280,13 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
 
   private getRelayHealth(conn: ConnectionInfo): 'good' | 'warning' | 'error' {
     if (!conn.isConnected) return 'error';
-    const maxPerRelay = this.subscriptionManager.MAX_CONCURRENT_SUBS_PER_RELAY;
+    const maxPerRelay = this.maxSubsPerRelay;
     if (conn.activeSubscriptions >= maxPerRelay) return 'error';
     if (conn.activeSubscriptions >= maxPerRelay * 0.7) return 'warning';
     return 'good';
   }
 
-  private shortenUrl(url: string): string {
+  shortenUrl(url: string): string {
     try {
       const u = new URL(url);
       return u.hostname;
@@ -254,6 +333,24 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return this.formatTimeAgo(createdAt);
   }
 
+  getQueryDuration(query: QueryInfo): string {
+    if (query.status === 'active') {
+      return this.formatTimeAgo(query.createdAt);
+    }
+    // For completed queries, show how long they took
+    if (query.completedAt) {
+      const duration = query.completedAt - query.createdAt;
+      if (duration < 1000) return `${duration}ms`;
+      return `${(duration / 1000).toFixed(1)}s`;
+    }
+    return this.formatTimeAgo(query.createdAt);
+  }
+
+  getQueryTimeAgo(query: QueryInfo): string {
+    // Show when the query was created
+    return this.formatTimeAgo(query.createdAt);
+  }
+
   getSubscriptionRelays(relayUrls: string[]): string {
     if (relayUrls.length <= 2) {
       return relayUrls.map(u => this.shortenUrl(u)).join(', ');
@@ -265,8 +362,16 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return group.source;
   }
 
+  trackByQuerySource(index: number, group: QueryGroup): string {
+    return group.source;
+  }
+
   trackById(index: number, sub: SubscriptionInfo): string {
     return sub.id;
+  }
+
+  trackByQueryId(index: number, query: QueryInfo): string {
+    return query.id;
   }
 
   trackByUrl(index: number, relay: RelayStatus): string {

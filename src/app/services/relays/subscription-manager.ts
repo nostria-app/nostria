@@ -11,6 +11,17 @@ export interface SubscriptionInfo {
   active: boolean;
 }
 
+export interface QueryInfo {
+  id: string;
+  filter?: Filter;
+  relayUrls: string[];
+  createdAt: number;
+  completedAt?: number;
+  source: string;
+  poolInstance: string;
+  status: 'active' | 'completed';
+}
+
 export interface ConnectionInfo {
   url: string;
   isConnected: boolean;
@@ -27,6 +38,7 @@ export interface RelayMetrics {
   subscriptionsBySource: Map<string, number>;
   connectionsByRelay: Map<string, ConnectionInfo>;
   subscriptions: SubscriptionInfo[];
+  queries: QueryInfo[];
   poolInstances: Set<string>;
 }
 
@@ -43,6 +55,13 @@ export class SubscriptionManagerService {
 
   // Track all active subscriptions
   private subscriptions = new Map<string, SubscriptionInfo>();
+
+  // Track all active queries (one-time requests) - Map for quick lookup
+  private activeQueries = new Map<string, QueryInfo>();
+
+  // Keep a rolling history of recent queries (including completed ones)
+  private queryHistory: QueryInfo[] = [];
+  private readonly MAX_QUERY_HISTORY = 100;
 
   // Track connections per relay
   private connections = new Map<string, ConnectionInfo>();
@@ -218,9 +237,31 @@ export class SubscriptionManagerService {
   /**
    * Register a pending request (for one-time queries)
    */
-  registerRequest(relayUrls: string[], source: string, poolInstance: string): string {
+  registerRequest(relayUrls: string[], source: string, poolInstance: string, filter?: Filter): string {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = Date.now();
+
+    // Create query info
+    const queryInfo: QueryInfo = {
+      id: requestId,
+      filter,
+      relayUrls,
+      createdAt: now,
+      source,
+      poolInstance,
+      status: 'active',
+    };
+
+    // Store in active queries map
+    this.activeQueries.set(requestId, queryInfo);
+
+    // Add to history
+    this.queryHistory.unshift(queryInfo);
+
+    // Trim history if needed
+    if (this.queryHistory.length > this.MAX_QUERY_HISTORY) {
+      this.queryHistory = this.queryHistory.slice(0, this.MAX_QUERY_HISTORY);
+    }
 
     // Update connection info for each relay
     for (const relayUrl of relayUrls) {
@@ -253,6 +294,16 @@ export class SubscriptionManagerService {
    */
   unregisterRequest(requestId: string, relayUrls: string[]): void {
     const now = Date.now();
+
+    // Mark query as completed in history (don't remove, just update status)
+    const query = this.activeQueries.get(requestId);
+    if (query) {
+      query.status = 'completed';
+      query.completedAt = now;
+    }
+
+    // Remove from active queries
+    this.activeQueries.delete(requestId);
 
     // Update connection info for each relay
     for (const relayUrl of relayUrls) {
@@ -385,6 +436,7 @@ export class SubscriptionManagerService {
       subscriptionsBySource,
       connectionsByRelay: new Map(this.connections),
       subscriptions: Array.from(this.subscriptions.values()),
+      queries: [...this.queryHistory],
       poolInstances: new Set(this.poolInstances),
     };
   }
@@ -439,6 +491,20 @@ export class SubscriptionManagerService {
             `    Age: ${Math.round((Date.now() - sub.createdAt) / 1000)}s`
           );
         }
+      }
+    }
+
+    if (metrics.queries.length > 0) {
+      lines.push('', '=== Active Queries (One-time Requests) ===');
+      for (const query of metrics.queries) {
+        lines.push(
+          `  ${query.id}:`,
+          `    Source: ${query.source}`,
+          `    Pool: ${query.poolInstance}`,
+          `    Relays: ${query.relayUrls.join(', ')}`,
+          `    Filter: ${query.filter ? JSON.stringify(query.filter) : 'N/A'}`,
+          `    Age: ${Math.round((Date.now() - query.createdAt) / 1000)}s`
+        );
       }
     }
 
@@ -500,6 +566,8 @@ export class SubscriptionManagerService {
   reset(): void {
     this.logger.warn('[SubscriptionManager] Resetting all subscription tracking');
     this.subscriptions.clear();
+    this.activeQueries.clear();
+    this.queryHistory = [];
     this.connections.clear();
     this.poolInstances.clear();
     this.updateMetrics();
