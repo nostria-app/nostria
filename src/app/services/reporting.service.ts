@@ -133,11 +133,60 @@ export class ReportingService {
 
     // Check for muted words in content
     const content = event.content?.toLowerCase() || '';
-    if (this.mutedWords().some(word => content.includes(word.toLowerCase()))) {
+    const mutedWords = this.mutedWords();
+    if (mutedWords.some(word => content.includes(word.toLowerCase()))) {
+      return true;
+    }
+
+    // Check for muted words in the author's profile (name, display_name, nip05)
+    // This uses cached profiles only to keep the check synchronous
+    if (this.checkProfileForMutedWords(event.pubkey, mutedWords)) {
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Check if an author's profile contains any muted words.
+   * Checks name, display_name, and nip05 fields.
+   * Only checks cached profiles to keep the operation synchronous.
+   * 
+   * @param pubkey The author's pubkey
+   * @param mutedWords Array of muted words to check against
+   * @returns true if any muted word is found in the profile
+   */
+  private checkProfileForMutedWords(pubkey: string, mutedWords: string[]): boolean {
+    if (mutedWords.length === 0) {
+      return false;
+    }
+
+    // Get cached profile (synchronous, doesn't trigger async fetch)
+    const profile = this.data.getCachedProfile(pubkey);
+    if (!profile?.data) {
+      return false;
+    }
+
+    const profileData = profile.data;
+    
+    // Build a list of profile fields to check
+    const fieldsToCheck: string[] = [];
+    
+    if (profileData.name) {
+      fieldsToCheck.push(profileData.name.toLowerCase());
+    }
+    if (profileData.display_name) {
+      fieldsToCheck.push(profileData.display_name.toLowerCase());
+    }
+    if (profileData.nip05) {
+      fieldsToCheck.push(profileData.nip05.toLowerCase());
+    }
+
+    // Check if any muted word appears in any of the profile fields
+    return mutedWords.some(word => {
+      const lowerWord = word.toLowerCase();
+      return fieldsToCheck.some(field => field.includes(lowerWord));
+    });
   }
 
   /**
@@ -146,6 +195,21 @@ export class ReportingService {
   isUserBlocked(pubkey: string): boolean {
     if (!pubkey) return false;
     return this.mutedPubkeys().includes(pubkey);
+  }
+
+  /**
+   * Check if a user's profile is blocked by muted words.
+   * This is a public method that can be called from components to check
+   * if a profile should be hidden based on muted words matching the
+   * user's name, display_name, or nip05 fields.
+   * 
+   * @param pubkey The user's pubkey to check
+   * @returns true if any muted word matches the user's profile
+   */
+  isProfileBlockedByMutedWord(pubkey: string): boolean {
+    if (!pubkey) return false;
+    const mutedWords = this.mutedWords();
+    return this.checkProfileForMutedWords(pubkey, mutedWords);
   }
 
   /**

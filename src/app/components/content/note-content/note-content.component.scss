@@ -1080,6 +1080,38 @@
   }
 }
 
+// Event blocked placeholder (for muted content)
+.event-blocked-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    color: var(--mat-sys-outline);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .blocked-text {
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+}
+
+// Blocked card state
+.blocked-card {
+  cursor: default;
+  opacity: 0.7;
+
+  &:hover {
+    box-shadow: none;
+    transform: none;
+  }
+}
+
 // Video mention card styling
 .video-mention-card {
   .media-mention-content {

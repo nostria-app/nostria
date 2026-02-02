@@ -218,7 +218,17 @@
 {
 <!-- Inline event mention (nevent/note) -->
 @let mention = getEventMention(token.id);
-@if (mention?.loading) {
+@if (isEventMentionBlocked(token.id)) {
+<!-- Event mention is blocked by mute rules - hide it -->
+<mat-card appearance="outlined" class="event-mention-card blocked-card">
+  <mat-card-content>
+    <div class="event-blocked-placeholder">
+      <mat-icon>visibility_off</mat-icon>
+      <span class="blocked-text">Content hidden (muted)</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+} @else if (mention?.loading) {
 <!-- Loading placeholder for event mention -->
 <mat-card appearance="outlined" class="event-mention-card loading-card">
   <mat-card-header class="loading-header">
