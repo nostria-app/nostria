@@ -24,9 +24,9 @@
       {{ pinned.getPinIcon(event().id) }}
     </mat-icon>
     @if (pinned.isPinned(event().id)) {
-    Unpin Note
+    Unpin
     } @else {
-    Pin Note
+    Pin
     }
   </button>
   }
@@ -43,7 +43,7 @@
   }
   <button mat-menu-item (click)="shareEventDialog()">
     <mat-icon>share</mat-icon>
-    Share Event
+    Share
   </button>
   <button mat-menu-item (click)="onBookmarkClick($event)">
     <mat-icon
@@ -59,7 +59,7 @@
   </button>
   <button mat-menu-item (click)="layout.publishEvent(event())">
     <mat-icon>publish</mat-icon>
-    Publish Event
+    Publish
   </button>
   @if (hasMedia()) {
   <mat-divider></mat-divider>
@@ -80,7 +80,7 @@
   @if (isOurEvent()) {
   <button mat-menu-item (click)="deleteEvent()">
     <mat-icon>delete</mat-icon>
-    Delete Event
+    Delete
   </button>
   }
   <button mat-menu-item (click)="reportContent()">
@@ -98,7 +98,7 @@
 <mat-menu #copyMenu="matMenu">
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
-    Note Link
+    Link
   </button>
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">

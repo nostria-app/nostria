@@ -335,7 +335,7 @@
 }
 }
 } @else if (token.type === 'hashtag') {
-<a class="hashtag-link" [routerLink]="['/search']" [queryParams]="{q: '#' + token.content}">#{{ token.content }}</a>
+<a class="hashtag-link" [routerLink]="['/f']" [queryParams]="{t: token.content}">#{{ token.content }}</a>
 }
 }
 }

@@ -402,7 +402,7 @@
         }
         }
       </div>
-      <div class="message-input-container">
+      <div class="message-input-container" [class.has-reply]="replyingToMessage()">
         @if (replyingToMessage()) {
         <div class="reply-preview">
           <div class="reply-preview-content">
@@ -414,9 +414,10 @@
           </button>
         </div>
         }
-        <input #messageInput class="message-input" [ngModel]="newMessageText()"
+        <div class="message-input-row">
+        <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
           (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
-          (keyup.enter)="sendMessage()" />
+          (keydown)="onMessageKeydown($event)" rows="1" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6"></textarea>
         @if (isVoiceListening()) {
         <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
           [disabled]="isSending()" matTooltip="Stop recording">
@@ -440,6 +441,7 @@
           <mat-icon>send</mat-icon>
           }
         </button>
+        </div>
       </div>
     </div>
 
