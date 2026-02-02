@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonModule } from '@angular/material/button';
 import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
@@ -25,6 +26,8 @@ import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 import { ArticleComponent } from '../article/article.component';
 import { EmojiSetMentionComponent } from '../emoji-set-mention/emoji-set-mention.component';
 import { NoteContentComponent } from '../content/note-content/note-content.component';
+import { PhotoEventComponent } from '../event-types/photo-event.component';
+import { EventHeaderComponent } from '../event/header/header.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
@@ -66,12 +69,15 @@ interface EventMention {
     MatCardModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatButtonModule,
     ProfileDisplayNameComponent,
     UserProfileComponent,
     MusicEmbedComponent,
     ArticleComponent,
     EmojiSetMentionComponent,
     NoteContentComponent,
+    PhotoEventComponent,
+    EventHeaderComponent,
     AgoPipe,
     TimestampPipe,
   ],
@@ -106,38 +112,46 @@ interface EventMention {
             </mat-card-content>
           </mat-card>
         } @else if (mention?.event) {
-          <!-- Regular event mention -->
-          <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
-            (click)="onEventMentionClick($event, mention!.event!.event)"
-            (keydown.enter)="onEventMentionClick($event, mention!.event!.event)"
-            (keydown.space)="onEventMentionClick($event, mention!.event!.event)">
-            <mat-card-header>
-              <app-user-profile [pubkey]="mention!.event!.event.pubkey" view="compact">
-                <span class="date-link" [matTooltip]="mention!.event!.event.created_at | timestamp: 'medium'"
-                  matTooltipPosition="below">
-                  {{ mention!.event!.event.created_at | ago }}
-                </span>
-              </app-user-profile>
-            </mat-card-header>
-            <mat-card-content [class.collapsed]="isMentionContentLong(part.id) && !mention!.expanded">
-              <div class="content-container">
-                <app-note-content [contentTokens]="mention!.contentTokens" [authorPubkey]="mention!.event!.event.pubkey"></app-note-content>
-              </div>
-            </mat-card-content>
-            @if (isMentionContentLong(part.id)) {
-              @if (!mention!.expanded) {
-                <button mat-button class="show-more-btn" (click)="toggleMentionExpand(part.id, $event)">
-                  <mat-icon>expand_more</mat-icon>
-                  Show more
-                </button>
-              } @else {
-                <button mat-button class="show-less-btn" (click)="toggleMentionExpand(part.id, $event)">
-                  <mat-icon>expand_less</mat-icon>
-                  Show less
-                </button>
+          @if (mention!.event!.event.kind === 20) {
+            <!-- Photo Event (kind 20, NIP-68) -->
+            <div class="embedded-photo-event" (click)="onEventMentionClick($event, mention!.event!.event)">
+              <app-event-header [event]="mention!.event!.event" [compact]="true"></app-event-header>
+              <app-photo-event [event]="mention!.event!.event" [hideComments]="true"></app-photo-event>
+            </div>
+          } @else {
+            <!-- Regular event mention -->
+            <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
+              (click)="onEventMentionClick($event, mention!.event!.event)"
+              (keydown.enter)="onEventMentionClick($event, mention!.event!.event)"
+              (keydown.space)="onEventMentionClick($event, mention!.event!.event)">
+              <mat-card-header>
+                <app-user-profile [pubkey]="mention!.event!.event.pubkey" view="compact">
+                  <span class="date-link" [matTooltip]="mention!.event!.event.created_at | timestamp: 'medium'"
+                    matTooltipPosition="below">
+                    {{ mention!.event!.event.created_at | ago }}
+                  </span>
+                </app-user-profile>
+              </mat-card-header>
+              <mat-card-content [class.collapsed]="isMentionContentLong(part.id) && !mention!.expanded">
+                <div class="content-container">
+                  <app-note-content [contentTokens]="mention!.contentTokens" [authorPubkey]="mention!.event!.event.pubkey"></app-note-content>
+                </div>
+              </mat-card-content>
+              @if (isMentionContentLong(part.id)) {
+                @if (!mention!.expanded) {
+                  <button mat-button class="show-more-btn" (click)="toggleMentionExpand(part.id, $event)">
+                    <mat-icon>expand_more</mat-icon>
+                    Show more
+                  </button>
+                } @else {
+                  <button mat-button class="show-less-btn" (click)="toggleMentionExpand(part.id, $event)">
+                    <mat-icon>expand_less</mat-icon>
+                    Show less
+                  </button>
+                }
               }
-            }
-          </mat-card>
+            </mat-card>
+          }
         } @else {
           <!-- Event not found placeholder -->
           <mat-card appearance="outlined" class="event-mention-card not-found-card">
@@ -254,21 +268,26 @@ interface EventMention {
           left: 0;
           right: 0;
           height: 3em;
-          background: linear-gradient(to bottom, transparent, var(--mat-sys-surface-container-low));
+          background: linear-gradient(to bottom, transparent, var(--mat-sys-surface-container));
           pointer-events: none;
         }
       }
       
-      // Show more/less buttons
+      // Show more/less buttons - use on-surface color for readability in both modes
       .show-more-btn,
       .show-less-btn {
         width: 100%;
         margin-top: 4px;
-        color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-surface);
         justify-content: center;
         
         mat-icon {
           margin-right: 4px;
+          color: var(--mat-sys-on-surface);
+        }
+        
+        &:hover {
+          background-color: var(--mat-sys-surface-container-highest);
         }
       }
     }
@@ -277,6 +296,38 @@ interface EventMention {
       font-size: 0.8rem;
       color: var(--mat-sys-on-surface-variant);
       margin-left: 8px;
+    }
+    
+    // Embedded photo event styling
+    .embedded-photo-event {
+      margin: 0.5rem 0;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--mat-sys-surface-container-low);
+      cursor: pointer;
+      
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      
+      app-event-header {
+        display: block;
+        padding: 10px 12px 0;
+      }
+      
+      app-photo-event {
+        display: block;
+        
+        ::ng-deep .photo-carousel-container {
+          margin: 0.5rem 0 0 0;
+          max-width: 100%;
+        }
+        
+        ::ng-deep .media-title {
+          display: none;
+        }
+      }
     }
     
     // Skeleton loading styles
