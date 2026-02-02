@@ -7,7 +7,7 @@
     mat-button 
     [matMenuTriggerFor]="followSetsMenu"
     [class.has-selection]="selectedFollowSet()">
-    <mat-icon class="selector-icon">{{ selectedFollowSet()?.isPrivate ? 'lock' : (selectedFollowSet() ? 'list' : 'people') }}</mat-icon>
+    <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' : (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : 'group')) : 'people' }}</mat-icon>
     <span class="selector-label">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</span>
     @if (selectedFollowSet()) {
     <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
@@ -17,14 +17,14 @@
 
   <mat-menu #followSetsMenu="matMenu" class="list-selector-menu">
     <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
-      <mat-icon>people</mat-icon>
-      <span>Following</span>
+      <mat-icon class="list-item-icon">people</mat-icon>
+      <span class="list-item-name">Following</span>
     </button>
     <mat-divider></mat-divider>
     @for (set of allFollowSets(); track set.id) {
     <button mat-menu-item (click)="selectFollowSet(set)" [class.active]="selectedFollowSet()?.dTag === set.dTag">
-      <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
-      <span>{{ set.title }}</span>
+      <mat-icon class="list-item-icon">{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
+      <span class="list-item-name">{{ set.title }}</span>
       <span class="menu-item-count">{{ set.pubkeys.length }}</span>
     </button>
     }

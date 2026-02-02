@@ -1875,6 +1875,13 @@ export class App implements OnInit {
   }
 
   /**
+   * Navigate to notifications, clearing right panel if already on notifications
+   */
+  navigateToNotifications(): void {
+    this.twoColumnLayout.resetNavigation('/notifications');
+  }
+
+  /**
    * Go back in left panel navigation stack.
    * Navigates to previous entry or shows feeds if at root.
    */

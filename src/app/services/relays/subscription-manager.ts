@@ -282,9 +282,6 @@ export class SubscriptionManagerService {
     // Track pool instance
     this.poolInstances.add(poolInstance);
 
-    // Reduced logging - only log summary periodically instead of every request
-    // this.logger.debug(`[SubscriptionManager] Registered request`, {...});
-
     this.updateMetrics();
     return requestId;
   }
@@ -320,9 +317,6 @@ export class SubscriptionManagerService {
         }
       }
     }
-
-    // Reduced logging - only log summary periodically instead of every unregister
-    // this.logger.debug(`[SubscriptionManager] Unregistered request`, {...});
 
     this.updateMetrics();
   }

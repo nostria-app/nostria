@@ -156,11 +156,18 @@ export interface ListFeedSelection {
 
       ::ng-deep .list-feed-selector-menu .mat-mdc-menu-item {
         position: relative;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 16px;
-        min-height: 44px;
+        padding: 10px 16px !important;
+        min-height: 44px !important;
+        height: auto !important;
+
+        // Force horizontal layout
+        .mat-mdc-menu-item-text {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 12px !important;
+          width: 100% !important;
+        }
 
         &.active {
           background-color: var(--mat-sys-primary-container);
@@ -196,6 +203,7 @@ export interface ListFeedSelection {
         overflow: hidden;
         text-overflow: ellipsis;
         flex: 1;
+        min-width: 0;
       }
 
       .menu-item-count {
@@ -210,7 +218,7 @@ export interface ListFeedSelection {
         font-size: 0.7rem;
         font-weight: 700;
         color: var(--mat-sys-on-surface);
-        margin-left: auto;
+        flex-shrink: 0;
       }
     `,
   ],
