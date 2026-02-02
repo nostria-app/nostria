@@ -1,6 +1,6 @@
 // Component-specific panel-header nested styles
 .panel-header {
-  .panel-title {
+  .panel-title-static {
     margin: 0;
     font-size: 1.25rem;
     white-space: nowrap;
@@ -12,10 +12,138 @@
     flex: 1;
   }
 
-  .set-count {
-    margin-left: auto;
-    opacity: 0.6;
-    font-size: 0.85em;
+  // Interactive List Selector Button - Prominent and Clear
+  .list-selector-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 10px;
+    border-radius: 10px;
+    background-color: var(--mat-sys-surface-container-high);
+    border: 1.5px solid var(--mat-sys-outline-variant);
+    font-size: 1.0rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 40px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-highest);
+      border-color: var(--mat-sys-primary);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+
+    &.has-selection {
+      background-color: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary-container);
+
+      .selector-icon {
+        color: var(--mat-sys-primary);
+      }
+
+      .selector-count {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+      }
+    }
+
+    .selector-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-on-surface-variant);
+      transition: color 0.2s ease;
+    }
+
+    .selector-label {
+      font-size: 1.0rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .selector-count {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background-color: var(--mat-sys-surface-container-highest);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .selector-arrow {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-left: -2px;
+      opacity: 0.7;
+      transition: transform 0.2s ease;
+    }
+
+    &[aria-expanded="true"] {
+      .selector-arrow {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  // Menu styling
+  ::ng-deep .list-selector-menu {
+    min-width: 280px;
+    max-height: 500px;
+    margin-top: 8px;
+
+    .mat-mdc-menu-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      min-height: 44px;
+
+      &.active {
+        background-color: var(--mat-sys-primary-container);
+
+        mat-icon:first-child {
+          color: var(--mat-sys-primary);
+        }
+
+        span:not(.menu-item-count) {
+          color: var(--mat-sys-on-primary-container);
+          font-weight: 500;
+        }
+
+        .menu-item-count {
+          background-color: var(--mat-sys-primary);
+          color: var(--mat-sys-on-primary);
+        }
+      }
+
+      .menu-item-count {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background-color: var(--mat-sys-surface-container-highest);
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--mat-sys-on-surface);
+        margin-left: auto;
+      }
+    }
   }
 }
 

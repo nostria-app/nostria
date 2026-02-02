@@ -44,7 +44,7 @@ export interface ListFeedSelection {
       <mat-icon>people</mat-icon>
     </button>
 
-    <mat-menu #listMenu="matMenu" class="list-feed-menu">
+    <mat-menu #listMenu="matMenu" class="list-feed-selector-menu">
       <div class="menu-header" role="presentation">
         <mat-icon>people</mat-icon>
         <span>List Feeds</span>
@@ -71,18 +71,11 @@ export interface ListFeedSelection {
               (click)="onSelectList(list)"
               [class.active]="list.dTag === selectedList()"
             >
-              <div class="list-item">
-                <mat-icon class="list-item-icon">
-                  {{ list.isPrivate ? 'lock' : 'people' }}
-                </mat-icon>
-                <div class="list-item-info">
-                  <span class="list-item-name">{{ list.title }}</span>
-                  <span class="list-item-count">{{ list.pubkeys.length }} {{ list.pubkeys.length === 1 ? 'person' : 'people' }}</span>
-                </div>
-                @if (list.dTag === selectedList()) {
-                  <mat-icon class="active-check">check</mat-icon>
-                }
-              </div>
+              <mat-icon class="list-item-icon">
+                {{ list.isPrivate ? 'lock' : 'people' }}
+              </mat-icon>
+              <span class="list-item-name">{{ list.title }}</span>
+              <span class="menu-item-count">{{ list.pubkeys.length }}</span>
             </button>
           }
         </div>
@@ -103,9 +96,10 @@ export interface ListFeedSelection {
         margin-left: 8px;
       }
 
-      ::ng-deep .list-feed-menu {
+      ::ng-deep .list-feed-selector-menu {
         min-width: 280px;
         max-height: 500px;
+        margin-top: 8px;
       }
 
       .menu-header {
@@ -114,13 +108,19 @@ export interface ListFeedSelection {
         gap: 12px;
         padding: 12px 16px;
         cursor: default;
+        background-color: var(--mat-sys-surface-container-low);
 
         mat-icon:first-child {
           color: var(--mat-sys-primary);
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
         }
 
         span {
           color: var(--mat-sys-on-surface);
+          font-size: 1rem;
+          font-weight: 600;
           flex: 1;
         }
       }
@@ -154,25 +154,39 @@ export interface ListFeedSelection {
         overflow-y: auto;
       }
 
-      .list-item {
+      ::ng-deep .list-feed-selector-menu .mat-mdc-menu-item {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 12px;
-        width: 100%;
+        padding: 10px 16px;
+        min-height: 44px;
+
+        &.active {
+          background-color: var(--mat-sys-primary-container);
+
+          .list-item-icon {
+            color: var(--mat-sys-primary);
+          }
+
+          .list-item-name {
+            color: var(--mat-sys-on-primary-container);
+            font-weight: 500;
+          }
+
+          .menu-item-count {
+            background-color: var(--mat-sys-primary);
+            color: var(--mat-sys-on-primary);
+          }
+        }
       }
 
       .list-item-icon {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
         color: var(--mat-sys-on-surface-variant);
         flex-shrink: 0;
-      }
-
-      .list-item-info {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 0;
       }
 
       .list-item-name {
@@ -181,20 +195,22 @@ export interface ListFeedSelection {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        flex: 1;
       }
 
-      .list-item-count {
-        font-size: 11px;
-        color: var(--mat-sys-on-surface-variant);
-      }
-
-      .active-check {
-        color: var(--mat-sys-primary);
-        flex-shrink: 0;
-      }
-
-      button.active {
-        background-color: var(--mat-sys-surface-container-high);
+      .menu-item-count {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background-color: var(--mat-sys-surface-container-highest);
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--mat-sys-on-surface);
+        margin-left: auto;
       }
     `,
   ],

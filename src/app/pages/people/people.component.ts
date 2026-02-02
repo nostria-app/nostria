@@ -169,7 +169,6 @@ export class PeopleComponent implements OnDestroy {
   // Follow set selection
   selectedFollowSetDTag = signal<string | null>(null);
   followSetProfiles = signal<FollowingProfile[]>([]);
-  loadingFollowSetProfiles = signal(false);
 
   // All follow sets (no limit for dropdown in People component)
   allFollowSets = computed(() => {
@@ -260,8 +259,9 @@ export class PeopleComponent implements OnDestroy {
   });
 
   // Loading and error states from FollowingService
-  // Include loadingFollowSetProfiles to show loading state when switching lists
-  isLoading = computed(() => this.followingService.isLoading() || this.loadingFollowSetProfiles());
+  // Note: Follow set list loading is non-blocking - the list renders immediately with pubkeys,
+  // and individual user-profile components load their own data via intersection observer
+  isLoading = computed(() => this.followingService.isLoading());
   error = signal<string | null>(null);
 
   // Virtual scrolling settings
@@ -433,7 +433,12 @@ export class PeopleComponent implements OnDestroy {
 
       if (pubkeysChanged) {
         this.logger.debug('[People] Follow set pubkeys changed, reloading profiles');
-        untracked(() => this.loadFollowSetProfiles(pubkeys));
+        untracked(() => {
+          // Immediately update with minimal profiles for new pubkeys
+          this.setMinimalFollowSetProfiles(pubkeys);
+          // Background load full profile data
+          this.loadFollowSetProfilesInBackground(pubkeys);
+        });
       }
     }, { allowSignalWrites: true });
 
@@ -720,8 +725,12 @@ export class PeopleComponent implements OnDestroy {
       // Update URL to the clean path format (do this early so URL reflects selection)
       this.router.navigate(['/people/list', followSet.dTag]);
 
-      // Load profiles for all pubkeys in the follow set
-      await this.loadFollowSetProfiles(followSet.pubkeys);
+      // Immediately set minimal profiles from pubkeys so the UI renders instantly
+      // The individual user-profile components will load their own data via intersection observer
+      this.setMinimalFollowSetProfiles(followSet.pubkeys);
+
+      // Background load full profile data for sorting/filtering purposes (non-blocking)
+      this.loadFollowSetProfilesInBackground(followSet.pubkeys);
     } else {
       // When clearing selection, update immediately
       this.selectedFollowSetDTag.set(null);
@@ -741,8 +750,11 @@ export class PeopleComponent implements OnDestroy {
     this.updateSearch('');
     this.selectedFollowSetDTag.set(followSet.dTag);
 
-    // Load profiles for all pubkeys in the follow set
-    await this.loadFollowSetProfiles(followSet.pubkeys);
+    // Immediately set minimal profiles from pubkeys so the UI renders instantly
+    this.setMinimalFollowSetProfiles(followSet.pubkeys);
+
+    // Background load full profile data for sorting/filtering purposes (non-blocking)
+    this.loadFollowSetProfilesInBackground(followSet.pubkeys);
   }
 
   /**
@@ -756,19 +768,40 @@ export class PeopleComponent implements OnDestroy {
   }
 
   /**
-   * Load profiles for a list of pubkeys
+   * Set minimal profiles from pubkeys for immediate UI rendering.
+   * This allows the list to render instantly without waiting for profile data.
+   * The individual user-profile components will load their own data via intersection observer.
    */
-  private async loadFollowSetProfiles(pubkeys: string[]): Promise<void> {
-    this.loadingFollowSetProfiles.set(true);
-    try {
-      const profiles = await this.followingService.loadProfilesForPubkeys(pubkeys);
-      this.followSetProfiles.set(profiles);
-    } catch (error) {
-      console.error('Failed to load follow set profiles:', error);
-      this.followSetProfiles.set([]);
-    } finally {
-      this.loadingFollowSetProfiles.set(false);
-    }
+  private setMinimalFollowSetProfiles(pubkeys: string[]): void {
+    const minimalProfiles: FollowingProfile[] = pubkeys.map(pubkey => ({
+      pubkey,
+      event: null,
+      profile: null,
+      info: null,
+      trust: null,
+      metric: null,
+      lastUpdated: Date.now(),
+    }));
+    this.followSetProfiles.set(minimalProfiles);
+  }
+
+  /**
+   * Background load full profile data for sorting/filtering purposes.
+   * This runs in the background without blocking the UI.
+   */
+  private loadFollowSetProfilesInBackground(pubkeys: string[]): void {
+    // Don't await - let it run in background
+    this.followingService.loadProfilesForPubkeys(pubkeys).then(profiles => {
+      // Only update if the profiles are for the currently selected set
+      // (user might have navigated away)
+      const currentProfiles = this.followSetProfiles();
+      if (currentProfiles.length === pubkeys.length &&
+          currentProfiles[0]?.pubkey === pubkeys[0]) {
+        this.followSetProfiles.set(profiles);
+      }
+    }).catch(error => {
+      console.error('Failed to load follow set profiles in background:', error);
+    });
   }
 
   /**

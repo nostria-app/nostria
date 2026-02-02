@@ -1,0 +1,145 @@
+.bolt11-card {
+  margin: 4px 0 12px 0;
+  max-width: 450px;
+  background: linear-gradient(135deg, #fff9c4 0%, var(--mat-sys-surface-container, #f5f5f5) 100%);
+  border: 2px solid #fdd835;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bolt11-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+}
+
+.bolt11-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fdd835;
+  color: #000000;
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.bolt11-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; // Allow text truncation
+}
+
+.bolt11-title {
+  font-size: 1rem;
+  color: var(--mat-sys-on-surface, #000000);
+}
+
+.bolt11-link {
+  font-size: 0.875rem;
+  color: #f9a825;
+  text-decoration: none;
+  word-break: break-all;
+  font-family: monospace;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.bolt11-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  align-items: center;
+
+  .pay-button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fdd835;
+    color: #000000;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: #f9a825;
+    }
+  }
+
+  .qr-button {
+    color: var(--mat-sys-on-surface-variant, #666666);
+
+    &:hover,
+    &.active {
+      color: #f9a825;
+      background: rgba(253, 216, 53, 0.1);
+    }
+  }
+
+  button[mat-icon-button] {
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// Dark theme support
+:host-context(.dark) {
+  .bolt11-card {
+    background: linear-gradient(135deg, #3e3a1f 0%, var(--mat-sys-surface-container, #2e2e2e) 100%);
+    border-color: #fdd835;
+  }
+
+  .bolt11-icon {
+    background: #fdd835;
+    color: #000000;
+  }
+
+  .bolt11-title {
+    color: var(--mat-sys-on-surface, #ffffff);
+  }
+
+  .bolt11-link {
+    color: #fdd835;
+  }
+
+  .bolt11-actions .pay-button {
+    background: #fdd835;
+    color: #000000;
+
+    &:hover {
+      background: #f9a825;
+    }
+  }
+}
+
+// QR code overlay styles
+::ng-deep .qr-backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::ng-deep .cdk-overlay-pane qr-code {
+  display: block;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
