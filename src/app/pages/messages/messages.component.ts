@@ -41,6 +41,7 @@ import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { LinkifyPipe } from '../../pipes/linkify.pipe';
+import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import {
   StartChatDialogComponent,
   StartChatDialogResult,
@@ -132,6 +133,7 @@ interface MessageGroup {
     TimestampPipe,
     AgoPipe,
     LinkifyPipe,
+    MessageContentComponent,
     NamePipe,
   ],
   templateUrl: './messages.component.html',

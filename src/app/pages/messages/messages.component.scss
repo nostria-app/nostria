@@ -1290,6 +1290,33 @@
   }
 }
 
+// Message content component styling
+app-message-content {
+  display: inline;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  
+  // Ensure embedded content stays within bubble bounds
+  ::ng-deep {
+    .event-mention-card {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    app-music-embed {
+      max-width: 100%;
+    }
+    
+    app-article {
+      max-width: 100%;
+    }
+    
+    .nostr-mention {
+      word-break: break-word;
+    }
+  }
+}
+
 // Chat Details Sidepanel
 .chat-details-panel {
   width: 300px;

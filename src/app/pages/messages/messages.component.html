@@ -409,7 +409,7 @@
             </div>
             }
             }
-            <span class="message-content" [innerHTML]="message.content | linkify"></span>
+            <app-message-content [content]="message.content"></app-message-content>
             <span class="message-inline-meta">
               <!-- Encryption status indicator -->
               @if (message.encryptionType === 'nip44') {
