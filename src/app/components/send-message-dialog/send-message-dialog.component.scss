@@ -1,0 +1,226 @@
+.send-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+
+  .sending-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--mat-sys-surface-rgb), 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+    border-radius: 8px;
+
+    .sending-text {
+      font-size: 14px;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .content-preview {
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    .preview-card {
+      background: var(--mat-sys-surface-container);
+      border-radius: 8px;
+      overflow: hidden;
+
+      .preview-image {
+        width: 100%;
+        max-height: 120px;
+        object-fit: cover;
+      }
+
+      .preview-title {
+        display: block;
+        padding: 12px;
+        font-size: 14px;
+        color: var(--mat-sys-on-surface);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  .selected-recipients {
+    .recipients-header {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .recipients-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .recipient-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px 4px 4px;
+        background-color: var(--mat-sys-surface-container-high);
+        border-radius: 20px;
+        font-size: 14px;
+
+        .recipient-name {
+          max-width: 120px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .remove-btn {
+          width: 20px;
+          height: 20px;
+          font-size: 14px;
+
+          mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+          }
+        }
+      }
+    }
+  }
+
+  .search-section {
+    .full-width {
+      width: 100%;
+    }
+
+    .npub-valid-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .add-icon {
+        margin-left: auto;
+      }
+    }
+
+    .search-results {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 8px;
+      margin-top: 8px;
+
+      .results-header {
+        padding: 12px 16px 8px;
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+      }
+
+      .results-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .search-result-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: var(--mat-sys-surface-container);
+        }
+      }
+    }
+
+    .no-results {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        margin-bottom: 12px;
+        opacity: 0.6;
+      }
+
+      p {
+        margin: 0 0 8px;
+      }
+
+      small {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .comment-section {
+    .full-width {
+      width: 100%;
+    }
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}

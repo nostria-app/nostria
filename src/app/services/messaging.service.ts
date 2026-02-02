@@ -65,6 +65,7 @@ export class MessagingService implements NostriaService {
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private userRelayService: any = null; // Lazy loaded to avoid circular dependency
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
@@ -2484,5 +2485,161 @@ export class MessagingService implements NostriaService {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return false;
     return this.accountLocalState.isMessageHidden(myPubkey, chatId, messageId, trackChanges);
+  }
+
+  /**
+   * Lazy load UserRelayService to avoid circular dependency
+   */
+  private async getUserRelayService() {
+    if (!this.userRelayService) {
+      const { UserRelayService } = await import('./relays/user-relay');
+      const injector = await import('@angular/core').then(m => m.inject);
+      // Use dynamic import workaround
+      this.userRelayService = (window as any).__injector?.get(UserRelayService);
+      if (!this.userRelayService) {
+        // Fallback: create instance via inject in a different way
+        const { Injector } = await import('@angular/core');
+        this.userRelayService = Injector.create({
+          providers: [],
+        }).get(UserRelayService, null);
+      }
+    }
+    return this.userRelayService;
+  }
+
+  /**
+   * Send a direct message using NIP-17 (NIP-44 encryption with gift wrapping)
+   * This method can be called from anywhere in the app to send DMs
+   * 
+   * @param messageText The message content to send
+   * @param receiverPubkey The recipient's public key
+   * @returns Promise<DirectMessage> The sent message object
+   */
+  async sendDirectMessage(messageText: string, receiverPubkey: string): Promise<DirectMessage> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      throw new Error('You need to be logged in to send messages');
+    }
+
+    const isNoteToSelf = receiverPubkey === myPubkey;
+
+    try {
+      // Step 1: Create the message (unsigned event) - kind 14
+      const tags: string[][] = [['p', receiverPubkey]];
+
+      const unsignedMessage = {
+        kind: kinds.PrivateDirectMessage,
+        pubkey: myPubkey,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: tags,
+        content: messageText,
+      };
+
+      // Calculate the message ID (but don't sign it)
+      const rumorId = getEventHash(unsignedMessage);
+      const rumorWithId = { ...unsignedMessage, id: rumorId };
+      const eventText = JSON.stringify(rumorWithId);
+
+      // Step 2: Create the seal (kind 13) - encrypt the rumor
+      const sealedContent = await this.encryption.encryptNip44(eventText, receiverPubkey);
+
+      const sealedMessage = {
+        kind: kinds.Seal,
+        pubkey: myPubkey,
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        tags: [],
+        content: sealedContent,
+      };
+
+      // Sign the sealed message
+      const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
+
+      // Step 3: Create the gift wrap (kind 1059) - encrypt with ephemeral key
+      const ephemeralKey = generateSecretKey();
+      const ephemeralPubkey = getPublicKey(ephemeralKey);
+
+      // Encrypt the sealed message using the ephemeral key and recipient's pubkey
+      const giftWrapContent = await this.encryption.encryptNip44WithKey(
+        JSON.stringify(signedSealedMessage),
+        bytesToHex(ephemeralKey),
+        receiverPubkey
+      );
+
+      const giftWrap = {
+        kind: kinds.GiftWrap,
+        pubkey: ephemeralPubkey,
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        tags: [['p', receiverPubkey]],
+        content: giftWrapContent,
+      };
+
+      // Sign the gift wrap with the ephemeral key
+      const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
+
+      // For Note to Self: Only publish one gift wrap to self
+      // For regular messages: Create and publish two gift wraps (one for recipient, one for self)
+      if (isNoteToSelf) {
+        // Note to Self: Only one gift wrap needed
+        await Promise.allSettled([
+          this.relay.publish(signedGiftWrap), // Gift wrap → account relays (for sync across devices)
+          this.discoveryRelay.publish(signedGiftWrap), // Gift wrap → discovery relays
+        ]);
+      } else {
+        // Regular message: Create second gift wrap for self
+        const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
+
+        const sealedMessage2 = {
+          kind: kinds.Seal,
+          pubkey: myPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [],
+          content: sealedContent2,
+        };
+
+        const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
+
+        const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
+          JSON.stringify(signedSealedMessage2),
+          bytesToHex(ephemeralKey),
+          myPubkey
+        );
+
+        const giftWrap2 = {
+          kind: kinds.GiftWrap,
+          pubkey: ephemeralPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [['p', myPubkey]],
+          content: giftWrapContent2,
+        };
+
+        const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
+
+        // Publish both gift wraps
+        await Promise.allSettled([
+          this.relay.publish(signedGiftWrap), // Gift wrap for receiver → account relays
+          this.discoveryRelay.publish(signedGiftWrap), // Gift wrap for receiver → discovery relays
+          this.relay.publish(signedGiftWrap2), // Gift wrap for sender (self) → account relays
+        ]);
+      }
+
+      // Create the message object
+      const message: DirectMessage = {
+        id: rumorId,
+        pubkey: myPubkey,
+        created_at: unsignedMessage.created_at,
+        content: messageText,
+        isOutgoing: true,
+        tags: unsignedMessage.tags,
+        encryptionType: 'nip44',
+      };
+
+      // Add message to local chat state
+      this.addMessageToChat(receiverPubkey, message);
+
+      return message;
+    } catch (error) {
+      this.logger.error('Failed to send NIP-44 message', error);
+      throw error;
+    }
   }
 }

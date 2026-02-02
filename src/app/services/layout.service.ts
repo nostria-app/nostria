@@ -206,8 +206,8 @@ export class LayoutService implements OnDestroy {
   readonly scrollMonitoringReady = this.isScrollMonitoringReady.asReadonly();
 
   constructor() {
-    // Monitor only mobile devices (not tablets)
-    this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
+    // Monitor smaller screens (single-pane view threshold)
+    this.breakpointObserver.observe('(max-width: 699px)').subscribe(result => {
       this.logger.debug('Breakpoint observer update', {
         isMobile: result.matches,
       });
