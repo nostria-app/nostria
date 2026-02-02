@@ -27,6 +27,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -124,6 +125,7 @@ interface MessageGroup {
     MatSnackBarModule,
     MatTabsModule,
     MatSidenavModule,
+    TextFieldModule,
     RouterModule,
     LoadingOverlayComponent,
     UserProfileComponent,
@@ -413,7 +415,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ViewChild for message input to auto-focus
   @ViewChild('messageInput', { static: false })
-  messageInput?: ElementRef<HTMLInputElement>;
+  messageInput?: ElementRef<HTMLTextAreaElement>;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
@@ -1049,6 +1051,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   stopVoiceRecording(): void {
     this.speechService.stopRecording();
+  }
+
+  /**
+   * Handle keyboard events in the message input
+   * Desktop: Enter sends message, Shift+Enter adds newline
+   * Mobile: Enter adds newline (must use send button to send)
+   */
+  onMessageKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      // Check if this is a mobile/touch device
+      const isTouchDevice = this.layout.isHandset() || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+      if (isTouchDevice) {
+        // On mobile, Enter always creates a newline (let default behavior happen)
+        // User must use the send button to send
+        return;
+      } else {
+        // On desktop
+        if (event.shiftKey) {
+          // Shift+Enter: allow newline (let default behavior happen)
+          return;
+        } else {
+          // Enter without Shift: send the message
+          event.preventDefault();
+          this.sendMessage();
+        }
+      }
+    }
   }
 
   /**
