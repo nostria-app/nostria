@@ -513,4 +513,13 @@ export class ArticleDisplayComponent {
       return [];
     }
   }
+
+  /**
+   * Open hashtag feed for a specific tag
+   */
+  openHashtagFeed(hashtag: string): void {
+    this.router.navigate(['/f'], {
+      queryParams: { t: hashtag },
+    });
+  }
 }

@@ -25,7 +25,7 @@
         @if (hashtags().length > 0) {
         <mat-chip-set>
           @for (hashtag of hashtags().slice(0, 3); track hashtag) {
-          <mat-chip>{{ hashtag }}</mat-chip>
+          <mat-chip (click)="openHashtagFeed(hashtag, $event)">{{ hashtag }}</mat-chip>
           }
         </mat-chip-set>
         }
@@ -60,7 +60,7 @@
         @if (showMetadata() && hashtags().length > 0) {
         <mat-chip-set class="card-tags">
           @for (hashtag of hashtags().slice(0, 4); track hashtag) {
-          <mat-chip>{{ hashtag }}</mat-chip>
+          <mat-chip (click)="openHashtagFeed(hashtag, $event)">{{ hashtag }}</mat-chip>
           }
         </mat-chip-set>
         }
