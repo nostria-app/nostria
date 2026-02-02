@@ -625,7 +625,8 @@ export abstract class RelayServiceBase {
     const requestId = this.subscriptionManager.registerRequest(
       urls,
       this.constructor.name,
-      this.poolInstanceId
+      this.poolInstanceId,
+      filter
     );
 
     await this.acquireSemaphore();

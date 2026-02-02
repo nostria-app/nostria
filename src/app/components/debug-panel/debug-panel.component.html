@@ -21,6 +21,41 @@
     </div>
   </div>
 
+  <!-- Query Stats Bar -->
+  <div class="query-stats-bar">
+    <div class="query-stat" matTooltip="Average query completion time">
+      <mat-icon>timer</mat-icon>
+      <span class="query-stat-value">{{ formatDuration(queryStats().avgDuration) }}</span>
+      <span class="query-stat-label">avg</span>
+    </div>
+    <div class="query-stat" matTooltip="Minimum query time">
+      <span class="query-stat-value">{{ formatDuration(queryStats().minDuration) }}</span>
+      <span class="query-stat-label">min</span>
+    </div>
+    <div class="query-stat" matTooltip="Maximum query time">
+      <span class="query-stat-value">{{ formatDuration(queryStats().maxDuration) }}</span>
+      <span class="query-stat-label">max</span>
+    </div>
+    <div class="query-stat-divider"></div>
+    <div class="query-stat" matTooltip="Queries per second (last 10s)">
+      <mat-icon>speed</mat-icon>
+      <span class="query-stat-value">{{ formatRate(queryStats().queriesPerSecond) }}</span>
+      <span class="query-stat-label">q/s</span>
+    </div>
+    <div class="query-stat" matTooltip="Completed queries">
+      <mat-icon>check_circle</mat-icon>
+      <span class="query-stat-value">{{ queryStats().totalCompleted }}</span>
+      <span class="query-stat-label">done</span>
+    </div>
+    @if (queryStats().slowQueries > 0) {
+      <div class="query-stat slow" matTooltip="Queries taking more than 2 seconds">
+        <mat-icon>hourglass_top</mat-icon>
+        <span class="query-stat-value">{{ queryStats().slowQueries }}</span>
+        <span class="query-stat-label">slow</span>
+      </div>
+    }
+  </div>
+
   <!-- Usage Bar -->
   <div class="usage-bar">
     <mat-progress-bar 
@@ -118,45 +153,28 @@
       <div class="panel-header">
         <mat-icon>query_stats</mat-icon>
         <span>Queries</span>
-        <span class="query-history-label">recent history</span>
+        <span class="query-history-label">last {{ totalQueries() }}</span>
         @if (selectedRelay()) {
           <span class="filter-badge">filtered</span>
         }
       </div>
       <div class="queries-list">
-        @for (group of queryGroups(); track trackByQuerySource($index, group)) {
-          <div class="query-group">
-            <div class="group-header" (click)="toggleQueryGroup(group.source)">
-              <mat-icon class="expand-icon" [class.expanded]="group.expanded">
-                chevron_right
-              </mat-icon>
-              <span class="source-name">{{ group.source }}</span>
-              <mat-chip class="count-chip">{{ group.count }}</mat-chip>
+        @for (query of filteredQueries(); track trackByQueryId($index, query)) {
+          <div class="query-item" [class.completed]="query.status === 'completed'" [class.active]="query.status === 'active'">
+            <div class="query-row">
+              <span class="query-status-dot" [class.active]="query.status === 'active'" [class.completed]="query.status === 'completed'"></span>
+              <span class="query-source">{{ query.source }}</span>
+              <span class="query-duration" [matTooltip]="query.status === 'active' ? 'Running for' : 'Completed in'">{{ getQueryDuration(query) }}</span>
+              <span class="query-age">{{ getQueryTimeAgo(query) }}</span>
             </div>
-            @if (group.expanded) {
-              <div class="group-queries">
-                @for (query of group.queries; track trackByQueryId($index, query)) {
-                  <div class="query-item" [class.completed]="query.status === 'completed'" [class.active]="query.status === 'active'">
-                    <div class="query-header">
-                      <span class="query-status-dot" [class.active]="query.status === 'active'" [class.completed]="query.status === 'completed'"></span>
-                      <span class="query-id" [matTooltip]="query.id">{{ query.id.slice(0, 12) }}...</span>
-                      <span class="query-duration" [matTooltip]="query.status === 'active' ? 'Running for' : 'Took'">{{ getQueryDuration(query) }}</span>
-                    </div>
-                    <div class="query-details">
-                      @if (query.filter) {
-                        <span class="query-filter" [matTooltip]="formatFilter(query.filter)">{{ formatFilter(query.filter) }}</span>
-                      } @else {
-                        <span class="query-filter no-filter">No filter info</span>
-                      }
-                      <span class="query-meta">
-                        <span class="query-relays">{{ getSubscriptionRelays(query.relayUrls) }}</span>
-                        <span class="query-age">{{ getQueryTimeAgo(query) }} ago</span>
-                      </span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
+            <div class="query-row query-details-row">
+              @if (query.filter) {
+                <span class="query-filter" [matTooltip]="formatFilterFull(query.filter)">{{ formatFilter(query.filter) }}</span>
+              } @else {
+                <span class="query-filter no-filter">No filter</span>
+              }
+              <span class="query-relays" [matTooltip]="query.relayUrls.join(', ')">{{ getSubscriptionRelays(query.relayUrls) }}</span>
+            </div>
           </div>
         } @empty {
           <div class="empty-state">No query history</div>

@@ -360,14 +360,14 @@
             <mat-icon>add</mat-icon>
           </button>
           @if (appState.isPublishing() || ai.processingState().isProcessing) {
-          <button mat-icon-button class="profile-cache-button" routerLink="/notifications"
+          <button mat-icon-button class="profile-cache-button" (click)="navigateToNotifications()"
             [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
             i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
             <mat-icon class="spinning-icon">sync</mat-icon>
           </button>
           }
           @else {
-          <button class="notification-toolbar" mat-icon-button routerLink="/notifications"
+          <button class="notification-toolbar" mat-icon-button (click)="navigateToNotifications()"
             i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
             <mat-icon
               [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>

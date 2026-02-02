@@ -19,12 +19,10 @@
           @let listFeed = activeListFeed();
           <div class="feed-selector-active list-feed-active">
             <mat-icon class="selector-icon">people</mat-icon>
-            <div class="selector-content">
-              <span class="selector-label">{{ listFeed?.title || 'List Feed' }}</span>
-              <span class="selector-meta">{{ listFeed?.pubkeys?.length || 0 }} people</span>
-            </div>
+            <span class="selector-label">{{ listFeed?.title || 'List Feed' }}</span>
+            <span class="selector-count">{{ listFeed?.pubkeys?.length || 0 }}</span>
             @if (listColumn?.isLoadingFromRelays()) {
-            <mat-spinner diameter="20" class="selector-spinner"></mat-spinner>
+            <mat-spinner diameter="18" class="selector-spinner"></mat-spinner>
             }
             <button mat-icon-button (click)="closeListFeed()" matTooltip="Close list feed" class="selector-close">
               <mat-icon>close</mat-icon>

@@ -472,7 +472,7 @@ openNoteEditor() {
   openDebugPanel() {
     this.customDialog.open(DebugPanelComponent, {
       title: 'Debug: Relay Diagnostics',
-      width: '900px',
+      width: '1400px',
       maxWidth: '95vw',
     });
   }

@@ -218,7 +218,7 @@ app-user-profile {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 10px 6px 10px;
+      padding: 6px 10px;
       border-radius: 10px;
       background-color: var(--mat-sys-primary-container);
       border: 1.5px solid var(--mat-sys-primary);
@@ -233,13 +233,6 @@ app-user-profile {
         flex-shrink: 0;
       }
 
-      .selector-content {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        flex: 1;
-      }
-
       .selector-label {
         font-size: 1.0rem;
         font-weight: 600;
@@ -248,12 +241,23 @@ app-user-profile {
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 200px;
+        flex: 1;
+        min-width: 0;
       }
 
-      .selector-meta {
+      .selector-count {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background-color: var(--mat-sys-primary);
         font-size: 0.7rem;
-        color: var(--mat-sys-on-primary-container);
-        opacity: 0.8;
+        font-weight: 700;
+        color: var(--mat-sys-on-primary);
+        flex-shrink: 0;
       }
 
       .selector-spinner {

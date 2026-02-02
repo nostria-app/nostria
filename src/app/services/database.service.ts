@@ -320,6 +320,10 @@ export class DatabaseService {
    * @returns The d-tag value or null if not found
    */
   private extractDTag(event: Event): string | null {
+    // Check if event and tags exist
+    if (!event || !event.tags || !Array.isArray(event.tags)) {
+      return null;
+    }
     const dTag = event.tags.find(tag => tag[0] === 'd');
     return dTag && dTag.length > 1 ? dTag[1] : null;
   }
@@ -330,6 +334,11 @@ export class DatabaseService {
    * @returns true if the event has expired, false otherwise
    */
   private isEventExpired(event: Event): boolean {
+    // Check if event and tags exist
+    if (!event || !event.tags || !Array.isArray(event.tags)) {
+      return false; // No tags means the event doesn't expire
+    }
+
     const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
 
     if (!expirationTag || expirationTag.length < 2) {
@@ -356,6 +365,11 @@ export class DatabaseService {
     const expiredEventIds: string[] = [];
 
     for (const event of events) {
+      // Skip null/undefined events
+      if (!event) {
+        continue;
+      }
+      
       if (this.isEventExpired(event)) {
         expiredEventIds.push(event.id);
       } else {
@@ -599,6 +613,17 @@ export class DatabaseService {
    * Skips saving if the event has already expired (NIP-40)
    */
   async saveEvent(event: Event & { dTag?: string }): Promise<void> {
+    // Validate event structure
+    if (!event || !event.id || typeof event.kind !== 'number') {
+      this.logger.warn('Attempted to save malformed event:', event);
+      return;
+    }
+
+    // Ensure tags array exists
+    if (!event.tags) {
+      event.tags = [];
+    }
+
     // Don't save expired events
     if (this.isEventExpired(event)) {
       this.logger.debug(`Skipping save for expired event: ${event.id}`);
@@ -638,6 +663,17 @@ export class DatabaseService {
    * @returns true if the event was saved, false if a newer event already exists
    */
   async saveReplaceableEvent(event: Event & { dTag?: string }): Promise<boolean> {
+    // Validate event structure
+    if (!event || !event.id || typeof event.kind !== 'number' || !event.pubkey) {
+      this.logger.warn('Attempted to save malformed replaceable event:', event);
+      return false;
+    }
+
+    // Ensure tags array exists
+    if (!event.tags) {
+      event.tags = [];
+    }
+
     // Don't save expired events
     if (this.isEventExpired(event)) {
       this.logger.debug(`Skipping save for expired event: ${event.id}`);
@@ -682,13 +718,27 @@ export class DatabaseService {
    * Filters out expired events (NIP-40) before saving
    */
   async saveEvents(events: (Event & { dTag?: string })[]): Promise<void> {
-    // Filter out expired events
-    const validEvents = events.filter(event => !this.isEventExpired(event));
+    // Filter out malformed and expired events
+    const validEvents = events.filter(event => {
+      // Check if event is valid
+      if (!event || !event.id || typeof event.kind !== 'number') {
+        this.logger.warn('Skipping malformed event in batch save:', event);
+        return false;
+      }
+      
+      // Ensure tags array exists
+      if (!event.tags) {
+        event.tags = [];
+      }
+      
+      // Check if event is expired
+      return !this.isEventExpired(event);
+    });
 
     if (validEvents.length === 0) return;
 
     if (validEvents.length !== events.length) {
-      this.logger.debug(`Filtered out ${events.length - validEvents.length} expired events before saving`);
+      this.logger.debug(`Filtered out ${events.length - validEvents.length} invalid/expired events before saving`);
     }
 
     const db = this.ensureInitialized();

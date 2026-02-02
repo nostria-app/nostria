@@ -164,11 +164,25 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return groups.sort((a, b) => b.count - a.count);
   });
 
+  // Flat list of queries filtered by selected relay
+  filteredQueries = computed<QueryInfo[]>(() => {
+    const selectedRelayUrl = this.selectedRelay();
+    let queries = this.metrics().queries;
+    
+    if (selectedRelayUrl) {
+      queries = queries.filter(q => q.relayUrls.includes(selectedRelayUrl));
+    }
+    
+    // Already sorted by createdAt descending (newest first) from the service
+    return queries;
+  });
+
   // Summary stats
   totalSubs = computed(() => this.metrics().totalSubscriptions);
   totalPending = computed(() => this.metrics().totalPendingRequests);
   totalQueries = computed(() => this.metrics().queries.length);
   activeQueries = computed(() => this.metrics().queries.filter(q => q.status === 'active').length);
+  completedQueries = computed(() => this.metrics().queries.filter(q => q.status === 'completed').length);
   totalConnections = computed(() => this.metrics().connectionsByRelay.size);
   connectedCount = computed(() => {
     let count = 0;
@@ -178,6 +192,52 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return count;
   });
   poolCount = computed(() => this.metrics().poolInstances.size);
+
+  // Query statistics
+  queryStats = computed(() => {
+    const queries = this.metrics().queries;
+    const completedQueries = queries.filter(q => q.status === 'completed' && q.completedAt);
+    
+    // Calculate durations for completed queries
+    const durations = completedQueries
+      .map(q => q.completedAt! - q.createdAt)
+      .filter(d => d > 0);
+    
+    // Average duration
+    const avgDuration = durations.length > 0 
+      ? durations.reduce((a, b) => a + b, 0) / durations.length 
+      : 0;
+    
+    // Min/Max duration
+    const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
+    const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
+    
+    // Queries per second (based on queries in last 10 seconds)
+    const now = this.currentTime();
+    const recentWindow = 10000; // 10 seconds
+    const recentQueries = queries.filter(q => now - q.createdAt < recentWindow);
+    const queriesPerSecond = recentQueries.length / (recentWindow / 1000);
+    
+    // Success rate (completed out of total non-active)
+    const totalFinished = completedQueries.length;
+    const activeCount = queries.filter(q => q.status === 'active').length;
+    const totalAttempted = queries.length - activeCount + totalFinished;
+    const successRate = totalAttempted > 0 ? (totalFinished / totalAttempted) * 100 : 100;
+    
+    // Slow queries (> 2 seconds)
+    const slowQueryThreshold = 2000;
+    const slowQueries = completedQueries.filter(q => (q.completedAt! - q.createdAt) > slowQueryThreshold).length;
+    
+    return {
+      avgDuration,
+      minDuration,
+      maxDuration,
+      queriesPerSecond,
+      successRate,
+      slowQueries,
+      totalCompleted: totalFinished,
+    };
+  });
 
   // Health indicators
   subscriptionHealth = computed(() => {
@@ -329,6 +389,10 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     return parts.join(' ') || JSON.stringify(filter);
   }
 
+  formatFilterFull(filter: object): string {
+    return JSON.stringify(filter, null, 2);
+  }
+
   getSubscriptionAge(createdAt: number): string {
     return this.formatTimeAgo(createdAt);
   }
@@ -376,5 +440,18 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
 
   trackByUrl(index: number, relay: RelayStatus): string {
     return relay.url;
+  }
+
+  formatDuration(ms: number): string {
+    if (ms === 0) return '-';
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    if (ms < 10000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${Math.round(ms / 1000)}s`;
+  }
+
+  formatRate(rate: number): string {
+    if (rate < 0.1) return rate.toFixed(2);
+    if (rate < 1) return rate.toFixed(1);
+    return Math.round(rate).toString();
   }
 }

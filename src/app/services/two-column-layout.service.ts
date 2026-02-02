@@ -437,9 +437,74 @@ export class TwoColumnLayoutService {
   }
 
   /**
-   * Reset navigation (clear both panels) and navigate to a root route
+   * Reset navigation (clear both panels) and navigate to a root route.
+   * 
+   * If the user is already on the same section (e.g., clicking Notifications when already on /notifications)
+   * and there's content in the right panel, this will clear the right panel without a full navigation reset.
+   * This allows users to use the main nav icons as a "back to list" action.
    */
   resetNavigation(route: string): void {
+    // Normalize the route for comparison (remove leading slashes)
+    const normalizedTarget = route.replace(/^\/+/, '');
+    
+    // Get the current left panel route (the primary route, without right panel or query params)
+    const currentUrl = this.router.url;
+    const currentPrimaryPath = currentUrl.split('(')[0].split('?')[0].replace(/^\/+/, '');
+    
+    // Check if we're already on the same section
+    const isSameSection = currentPrimaryPath === normalizedTarget || 
+      currentPrimaryPath.startsWith(normalizedTarget + '/') ||
+      (normalizedTarget === '' && currentPrimaryPath === '') ||
+      (normalizedTarget === '/' && currentPrimaryPath === '') ||
+      (normalizedTarget === 'f' && currentPrimaryPath === 'f');
+    
+    // Check if there's right panel content
+    const hasRightContent = this.panelNav.hasRightContent() || this.rightPanel.hasContent();
+    
+    console.log('[resetNavigation]', {
+      route,
+      normalizedTarget,
+      currentUrl,
+      currentPrimaryPath,
+      isSameSection,
+      hasRightContent,
+      panelNavHasRight: this.panelNav.hasRightContent(),
+      rightPanelHasContent: this.rightPanel.hasContent()
+    });
+    
+    // If re-opening the same section and there's right panel content, just clear the right panel
+    if (isSameSection && hasRightContent) {
+      console.log('[resetNavigation] Same section with right content - clearing right panel only');
+      // Clear right panel navigation stack and component stack
+      this.panelNav.clearRightStack();
+      this.rightPanel.clearHistory();
+      this.panelActions.clearRightPanelActions();
+      
+      // Reset internal state
+      this.rightPanelRoute.set(null);
+      this._viewMode.set('fixed');
+      
+      // Navigate to clear the right outlet but preserve query params
+      // Query params can appear before or after the auxiliary outlet: 
+      // /notifications?tab=1(right:...) or /notifications(right:...)?tab=1
+      // Use Angular's UrlTree to properly extract query params
+      const tree = this.router.parseUrl(currentUrl);
+      const queryParams = tree.queryParams;
+      const hasQueryParams = Object.keys(queryParams).length > 0;
+      
+      // Navigate to the same route without the right outlet
+      const targetUrl = '/' + normalizedTarget;
+      console.log('[resetNavigation] Navigating to:', targetUrl, 'with queryParams:', queryParams);
+      if (hasQueryParams) {
+        this.router.navigate([targetUrl], { queryParams });
+      } else {
+        this.router.navigateByUrl(targetUrl);
+      }
+      return;
+    }
+    
+    console.log('[resetNavigation] Full reset - different section or no right content');
+    // Full reset for different sections
     this.panelNav.clearHistory();
     // Clear right panel component stack (RightPanelService manages component instances)
     this.rightPanel.clearHistory();
