@@ -152,18 +152,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Computed to check if event author is muted/blocked
   // CRITICAL: Filter out muted content from rendering
+  // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
   isAuthorMuted = computed<boolean>(() => {
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return false;
 
+    // Check pubkey-based muting
     const mutedAccounts = this.accountState.mutedAccounts();
-    const isMuted = mutedAccounts.includes(currentEvent.pubkey);
-
-    if (isMuted) {
-      console.log('[EventComponent] Event author is muted:', currentEvent.pubkey.substring(0, 8));
+    if (mutedAccounts.includes(currentEvent.pubkey)) {
+      console.log('[EventComponent] Event author is muted (pubkey):', currentEvent.pubkey.substring(0, 8));
+      return true;
     }
 
-    return isMuted;
+    // Check if profile fields match any muted words
+    if (this.reportingService.isProfileBlockedByMutedWord(currentEvent.pubkey)) {
+      console.log('[EventComponent] Event author is muted (profile word match):', currentEvent.pubkey.substring(0, 8));
+      return true;
+    }
+
+    return false;
   });
 
   // Loading states
@@ -434,9 +441,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const repostedContent = this.repostService.decodeRepost(event);
 
     if (repostedContent?.event) {
-      // CRITICAL: Filter out reposted content from muted accounts
+      // CRITICAL: Filter out reposted content from muted accounts (pubkey-based)
       const mutedAccounts = this.accountState.mutedAccounts();
       if (mutedAccounts.includes(repostedContent.event.pubkey)) {
+        return null;
+      }
+      // CRITICAL: Filter out reposted content from authors matching muted words
+      if (this.reportingService.isProfileBlockedByMutedWord(repostedContent.event.pubkey)) {
+        return null;
+      }
+      // CRITICAL: Filter out reposted content that contains muted words
+      if (this.reportingService.isContentBlocked(repostedContent.event)) {
         return null;
       }
       return repostedContent;
@@ -445,15 +460,54 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // If no embedded content, check for async-loaded event
     const asyncEvent = this.asyncRepostedEvent();
     if (asyncEvent) {
-      // CRITICAL: Filter out reposted content from muted accounts
+      // CRITICAL: Filter out reposted content from muted accounts (pubkey-based)
       const mutedAccounts = this.accountState.mutedAccounts();
       if (mutedAccounts.includes(asyncEvent.pubkey)) {
+        return null;
+      }
+      // CRITICAL: Filter out reposted content from authors matching muted words
+      if (this.reportingService.isProfileBlockedByMutedWord(asyncEvent.pubkey)) {
+        return null;
+      }
+      // CRITICAL: Filter out reposted content that contains muted words
+      if (this.reportingService.isContentBlocked(asyncEvent)) {
         return null;
       }
       return this.data.toRecord(asyncEvent);
     }
 
     return null;
+  });
+
+  // Check if reposted content is filtered by mute rules (author muted or content blocked)
+  // This helps distinguish between "couldn't load" vs "filtered/hidden" in the template
+  isRepostedContentFiltered = computed<boolean>(() => {
+    const event = this.event();
+    if (!event || !this.repostService.isRepostEvent(event)) return false;
+
+    // Try to get the reposted content to check if it should be filtered
+    const repostedContent = this.repostService.decodeRepost(event);
+    const repostedEvent = repostedContent?.event || this.asyncRepostedEvent();
+    
+    if (!repostedEvent) return false; // No content to check
+
+    // Check pubkey-based muting
+    const mutedAccounts = this.accountState.mutedAccounts();
+    if (mutedAccounts.includes(repostedEvent.pubkey)) {
+      return true;
+    }
+    
+    // Check profile word-based muting
+    if (this.reportingService.isProfileBlockedByMutedWord(repostedEvent.pubkey)) {
+      return true;
+    }
+    
+    // Check content-based muting (muted words in content, hashtags, etc.)
+    if (this.reportingService.isContentBlocked(repostedEvent)) {
+      return true;
+    }
+
+    return false;
   });
 
   // Target record: for reposts, use the reposted content; otherwise use the regular record

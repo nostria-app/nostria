@@ -43,6 +43,7 @@ import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { ParsingService } from '../../../services/parsing.service';
+import { ReportingService } from '../../../services/reporting.service';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
@@ -112,6 +113,7 @@ export class NoteContentComponent implements OnDestroy {
   private relayPool = inject(RelayPoolService);
   private userRelayService = inject(UserRelayService);
   private parsing = inject(ParsingService);
+  private reportingService = inject(ReportingService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -506,6 +508,35 @@ export class NoteContentComponent implements OnDestroy {
       }
       return newMap;
     });
+  }
+
+  /**
+   * Check if an event mention should be blocked/hidden.
+   * Checks both author-based muting (pubkey and profile words) and content-based muting.
+   */
+  isEventMentionBlocked(tokenId: number): boolean {
+    const mention = this.eventMentionsMap().get(tokenId);
+    if (!mention?.event) return false;
+
+    const event = mention.event.event;
+
+    // Check if author is muted by pubkey
+    const mutedAccounts = this.accountState.mutedAccounts();
+    if (mutedAccounts.includes(event.pubkey)) {
+      return true;
+    }
+
+    // Check if author's profile matches muted words
+    if (this.reportingService.isProfileBlockedByMutedWord(event.pubkey)) {
+      return true;
+    }
+
+    // Check if the event content itself is blocked (muted words, hashtags, etc.)
+    if (this.reportingService.isContentBlocked(event)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

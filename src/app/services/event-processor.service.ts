@@ -4,6 +4,7 @@ import { LoggerService } from './logger.service';
 import { DeletionFilterService } from './deletion-filter.service';
 import { ReportingService } from './reporting.service';
 import { UtilitiesService } from './utilities.service';
+import { DataService } from './data.service';
 
 /**
  * Result of event processing
@@ -53,6 +54,7 @@ export class EventProcessorService {
   private readonly deletionFilter = inject(DeletionFilterService);
   private readonly reportingService = inject(ReportingService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly dataService = inject(DataService);
 
   // Statistics tracking
   private readonly _stats = signal<EventProcessingStats>({
@@ -261,7 +263,55 @@ export class EventProcessorService {
       return 'muted_word';
     }
 
+    // Check for muted words in the author's profile (name, display_name, nip05)
+    // This uses cached profiles only to keep the check synchronous
+    if (this.checkProfileForMutedWords(event.pubkey, mutedWords)) {
+      return 'muted_word';
+    }
+
     return null;
+  }
+
+  /**
+   * Check if an author's profile contains any muted words.
+   * Checks name, display_name, and nip05 fields.
+   * Only checks cached profiles to keep the operation synchronous.
+   * 
+   * @param pubkey The author's pubkey
+   * @param mutedWords Array of muted words to check against
+   * @returns true if any muted word is found in the profile
+   */
+  private checkProfileForMutedWords(pubkey: string, mutedWords: string[]): boolean {
+    if (mutedWords.length === 0) {
+      return false;
+    }
+
+    // Get cached profile (synchronous, doesn't trigger async fetch)
+    const profile = this.dataService.getCachedProfile(pubkey);
+    if (!profile?.data) {
+      return false;
+    }
+
+    const profileData = profile.data;
+    
+    // Build a combined string of profile fields to check
+    const fieldsToCheck: string[] = [];
+    
+    if (profileData.name) {
+      fieldsToCheck.push(profileData.name.toLowerCase());
+    }
+    if (profileData.display_name) {
+      fieldsToCheck.push(profileData.display_name.toLowerCase());
+    }
+    if (profileData.nip05) {
+      fieldsToCheck.push(profileData.nip05.toLowerCase());
+    }
+
+    // Check if any muted word appears in any of the profile fields
+    return mutedWords.some(word => {
+      const lowerWord = word.toLowerCase();
+      return fieldsToCheck.some(field => field.includes(lowerWord));
+    });
   }
 
   /**

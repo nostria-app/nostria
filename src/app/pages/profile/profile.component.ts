@@ -196,14 +196,26 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   });
 
   // Check if current profile user is blocked
+  // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
   isProfileBlocked = computed(() => {
     const currentPubkey = this.pubkey();
     if (!currentPubkey || this.isOwnProfile()) return false;
 
+    // Check pubkey-based blocking
     const isBlocked = this.reportingService.isUserBlocked(currentPubkey);
-    this.logger.debug('Profile blocked check:', { currentPubkey, isBlocked });
+    if (isBlocked) {
+      this.logger.debug('Profile blocked (pubkey):', { currentPubkey });
+      return true;
+    }
 
-    return isBlocked;
+    // Check if profile fields match any muted words
+    const isBlockedByWord = this.reportingService.isProfileBlockedByMutedWord(currentPubkey);
+    if (isBlockedByWord) {
+      this.logger.debug('Profile blocked (word match):', { currentPubkey });
+      return true;
+    }
+
+    return false;
   });
 
   // Signal to control whether blocked profile is revealed

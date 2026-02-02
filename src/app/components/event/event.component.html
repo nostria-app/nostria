@@ -11,6 +11,8 @@
 </div>
 } @else if (isAuthorMuted()) {
 <!-- Don't render events from muted/blocked accounts at all -->
+} @else if (isRepostEvent() && isRepostedContentFiltered()) {
+<!-- Don't render reposts where the original content is muted/blocked -->
 } @else if (isRepostEvent() && !repostedEvent && isLoadingRepostedEvent()) {
 <!-- Loading reposted event from relay hint -->
 <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
