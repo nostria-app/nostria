@@ -9,6 +9,7 @@ import type { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { kinds, nip19 } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
+import type { SendMessageDialogData } from '../send-message-dialog/send-message-dialog.component';
 
 export interface ShareArticleDialogData {
   title: string;
@@ -303,12 +304,31 @@ export class ShareArticleDialogComponent {
     this.dialogRef?.close();
   }
 
-  sendAsMessage() {
+  async sendAsMessage() {
     const encodedId = this.getEncodedId();
     this.dialogRef?.close();
 
-    // TODO: Open message composer with encodedId
-    this.snackBar.open('Send as message - Coming soon!', 'Close', { duration: 2000 });
+    setTimeout(async () => {
+      const dialogData: SendMessageDialogData = {
+        encodedId,
+        title: this.data.title,
+        image: this.data.image,
+      };
+
+      // Dynamically import SendMessageDialogComponent to avoid circular dependency
+      const { SendMessageDialogComponent } = await import('../send-message-dialog/send-message-dialog.component');
+
+      // Open the dialog - it handles sending messages directly
+      this.customDialog.open(
+        SendMessageDialogComponent,
+        {
+          title: 'Send as Message',
+          data: dialogData,
+          width: '500px',
+          maxWidth: '95vw',
+        }
+      );
+    }, 100);
   }
 
   copyEmbed() {

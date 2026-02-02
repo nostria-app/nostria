@@ -1,0 +1,139 @@
+<div dialog-content class="send-message-content">
+  <!-- Sending Progress Overlay -->
+  @if (isSending()) {
+  <div class="sending-overlay">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span class="sending-text">{{ sendProgress() }}</span>
+  </div>
+  }
+
+  <!-- Content Preview -->
+  @if (data.title || data.image) {
+  <div class="content-preview">
+    <div class="preview-header">
+      <mat-icon>share</mat-icon>
+      <span>Sharing</span>
+    </div>
+    <div class="preview-card">
+      @if (data.image) {
+      <img [src]="data.image" [alt]="data.title || 'Content preview'" class="preview-image" />
+      }
+      @if (data.title) {
+      <span class="preview-title">{{ data.title }}</span>
+      }
+    </div>
+  </div>
+  <mat-divider></mat-divider>
+  }
+
+  <!-- Selected Recipients -->
+  @if (selectedRecipients().length > 0) {
+  <div class="selected-recipients">
+    <div class="recipients-header">
+      <span>Recipients ({{ selectedRecipients().length }})</span>
+    </div>
+    <div class="recipients-chips">
+      @for (recipient of selectedRecipients(); track recipient.event.pubkey) {
+      <div class="recipient-chip">
+        <app-user-profile [pubkey]="recipient.event.pubkey" view="tiny" [disableLink]="true"></app-user-profile>
+        <span class="recipient-name">
+          @if (recipient.data.display_name || recipient.data.name) {
+          {{ recipient.data.display_name || recipient.data.name }}
+          } @else {
+          {{ recipient.event.pubkey | npub }}
+          }
+        </span>
+        <button mat-icon-button class="remove-btn" (click)="removeRecipient(recipient.event.pubkey)"
+          matTooltip="Remove" [disabled]="isSending()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+  <mat-divider></mat-divider>
+  }
+
+  <!-- Search Section -->
+  @if (!isSending()) {
+  <div class="search-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Add recipients</mat-label>
+      <input matInput [(ngModel)]="searchInput" placeholder="Search by name or paste npub1..." autocomplete="off"
+        (keydown.enter)="hasValidNpub() ? addNpubAsRecipient() : null" />
+      @if (isNpubInput()) {
+      <mat-icon matSuffix>key</mat-icon>
+      } @else {
+      <mat-icon matSuffix>search</mat-icon>
+      }
+      @if (npubError()) {
+      <mat-error>{{ npubError() }}</mat-error>
+      }
+    </mat-form-field>
+
+    <!-- Show npub validation when detected -->
+    @if (isNpubInput() && hasValidNpub()) {
+    <div class="npub-valid-indicator" (click)="addNpubAsRecipient()" tabindex="0"
+      (keydown.enter)="addNpubAsRecipient()">
+      <mat-icon>check_circle</mat-icon>
+      <span>Valid npub detected - Click to add</span>
+      <mat-icon class="add-icon">add</mat-icon>
+    </div>
+    }
+
+    <!-- Search results / Following list -->
+    @if (!isNpubInput()) {
+    <div class="search-results">
+      @if (searchResults().length > 0) {
+      <div class="results-header">
+        @if (searchInput()) {
+        <span>Search results</span>
+        } @else {
+        <span>People you follow</span>
+        }
+      </div>
+      <div class="results-list">
+        @for (profile of searchResults(); track profile.event.pubkey) {
+        <div class="search-result-item" tabindex="0" (click)="selectProfile(profile)"
+          (keydown.enter)="selectProfile(profile)" (keydown.space)="selectProfile(profile)">
+          <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
+        </div>
+        }
+      </div>
+      } @else if (searchInput()) {
+      <div class="no-results">
+        <mat-icon>person_search</mat-icon>
+        <p>No profiles found</p>
+        <small>Try entering their npub directly (starts with npub1...)</small>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <mat-divider></mat-divider>
+  }
+
+  <!-- Comment Section -->
+  <div class="comment-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Add a comment (optional)</mat-label>
+      <textarea matInput [(ngModel)]="comment" placeholder="Say something about what you're sharing..."
+        cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5" [disabled]="isSending()"></textarea>
+      <mat-hint>Your comment will appear above the shared content</mat-hint>
+    </mat-form-field>
+  </div>
+</div>
+
+<div dialog-actions class="dialog-actions">
+  <button mat-button (click)="close()" [disabled]="isSending()">Cancel</button>
+  <button mat-flat-button (click)="send()" [disabled]="!canSend()">
+    @if (isSending()) {
+    <mat-spinner diameter="18"></mat-spinner>
+    <span>Sending...</span>
+    } @else {
+    <mat-icon>send</mat-icon>
+    <span>Send to {{ selectedRecipients().length }} {{ selectedRecipients().length === 1 ? 'person' : 'people' }}</span>
+    }
+  </button>
+</div>

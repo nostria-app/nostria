@@ -289,8 +289,8 @@ export class LocalSettingsService {
       } else {
         // New installation - set menuOpen based on device type
         // Desktop (not mobile): menu should be open
-        // Mobile: menu should be closed
-        const isHandset = this.breakpointObserver.isMatched('(max-width: 599px)');
+        // Mobile/smaller screens: menu should be closed
+        const isHandset = this.breakpointObserver.isMatched('(max-width: 699px)');
         const defaultSettings = {
           ...DEFAULT_LOCAL_SETTINGS,
           menuOpen: !isHandset, // Open on desktop, closed on mobile

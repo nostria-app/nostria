@@ -285,6 +285,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
 
+  // Check if the selected chat is a "Note to Self" chat
+  isNoteToSelf = computed(() => {
+    const chat = this.selectedChat();
+    const myPubkey = this.accountState.pubkey();
+    return chat?.pubkey === myPubkey;
+  });
+
   // Chat details computed signals
   chatMessageCount = computed(() => this.messages().length);
 
@@ -372,12 +379,38 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.accountLocalState.isChatHidden(pubkey, chatId, true);
   }
 
-  // Filtered chats based on selected tab and search query
+  // Helper to check if a chat is "Note to Self"
+  isChatNoteToSelf(chat: Chat): boolean {
+    const myPubkey = this.accountState.pubkey();
+    return chat.pubkey === myPubkey;
+  }
+
+  // Computed signal for "Note to Self" chat (shown separately at top)
+  noteToSelfChat = computed(() => {
+    const myPubkey = this.accountState.pubkey();
+    const query = this.chatSearchQuery();
+    const showHidden = this.showHiddenChats();
+    
+    const noteToSelf = this.messaging.sortedChats().find(item => item.chat.pubkey === myPubkey);
+    if (!noteToSelf) return null;
+    
+    // Apply search filter
+    if (query && !this.chatMatchesSearch(noteToSelf.chat, query)) return null;
+    
+    // Apply hidden filter
+    if (!showHidden && this.isChatHidden(noteToSelf.chat.id)) return null;
+    
+    return noteToSelf;
+  });
+
+  // Filtered chats based on selected tab and search query (excluding Note to Self)
   followingChats = computed(() => {
     const followingList = this.accountState.followingList();
+    const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
+      .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
       .filter(item => followingList.includes(item.chat.pubkey))
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
@@ -385,9 +418,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   otherChats = computed(() => {
     const followingList = this.accountState.followingList();
+    const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
+      .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
       .filter(item => !followingList.includes(item.chat.pubkey))
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
@@ -398,7 +433,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return tabIndex === 0 ? this.followingChats() : this.otherChats();
   });
 
-  hasFollowingChats = computed(() => this.followingChats().length > 0);
+  hasFollowingChats = computed(() => this.followingChats().length > 0 || this.noteToSelfChat() !== null);
   hasOtherChats = computed(() => this.otherChats().length > 0);
 
   // Subscription management
@@ -1121,6 +1156,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const selectedChat = this.selectedChat()!;
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
+      // Send to the primary recipient (currently selected chat)
       let finalMessage: DirectMessage;
 
       if (useModernEncryption) {
@@ -1673,6 +1709,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     replyToId?: string
   ): Promise<DirectMessage> {
     try {
+      const isNoteToSelf = receiverPubkey === myPubkey;
+
       // Step 1: Create the message (unsigned event) - kind 14
       const tags: string[][] = [['p', receiverPubkey]];
 
@@ -1694,10 +1732,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const rumorWithId = { ...unsignedMessage, id: rumorId };
       const eventText = JSON.stringify(rumorWithId);
 
-      // Step 2: Create the seal (kind 13) - encrypt the rumor with sender's key
+      // Step 2: Create the seal (kind 13) - encrypt the rumor
+      // For Note to Self, we only need one seal encrypted to ourselves
       const sealedContent = await this.encryption.encryptNip44(eventText, receiverPubkey);
-
-      const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
 
       const sealedMessage = {
         kind: kinds.Seal,
@@ -1707,21 +1744,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         content: sealedContent,
       };
 
-      const sealedMessage2 = {
-        kind: kinds.Seal,
-        pubkey: myPubkey,
-        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-        tags: [],
-        content: sealedContent2,
-      };
-
       // Sign the sealed message
       const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
-      const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
 
       // Step 3: Create the gift wrap (kind 1059) - encrypt with ephemeral key
-      // Generate a random ephemeral key for the gift wrap.
-      // TODO: Figure out if we should use a different ephemeral key for self and recipient.
       const ephemeralKey = generateSecretKey();
       const ephemeralPubkey = getPublicKey(ephemeralKey);
 
@@ -1732,12 +1758,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         receiverPubkey
       );
 
-      const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
-        JSON.stringify(signedSealedMessage2),
-        bytesToHex(ephemeralKey),
-        myPubkey
-      );
-
       const giftWrap = {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
@@ -1746,43 +1766,58 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         content: giftWrapContent,
       };
 
-      const giftWrap2 = {
-        kind: kinds.GiftWrap,
-        pubkey: ephemeralPubkey,
-        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-        tags: [['p', myPubkey]],
-        content: giftWrapContent2,
-      };
-
       // Sign the gift wrap with the ephemeral key
       const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
-      const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
 
-      // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
-      // Should we use different ephemeral key for self? The content is the same anyway,
-      // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
-      // const giftWrapSelf = {
-      //     kind: kinds.GiftWrap,
-      //     pubkey: ephemeralPubkey,
-      //     created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-      //     tags: [['p', myPubkey]],
-      //     content: giftWrapContent
-      // };
+      // For Note to Self: Only publish one gift wrap to self
+      // For regular messages: Create and publish two gift wraps (one for recipient, one for self)
+      if (isNoteToSelf) {
+        // Note to Self: Only one gift wrap needed
+        await Promise.allSettled([
+          this.publishToUserDmRelays(signedGiftWrap, myPubkey), // Gift wrap → own DM relays
+          this.publishToAccountRelays(signedGiftWrap), // Gift wrap → account relays (for sync across devices)
+        ]);
+      } else {
+        // Regular message: Create second gift wrap for self
+        const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
 
-      // Sign the gift wrap with the ephemeral key
-      // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
+        const sealedMessage2 = {
+          kind: kinds.Seal,
+          pubkey: myPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [],
+          content: sealedContent2,
+        };
 
-      // Publish both gift wraps:
-      // - Recipient's gift wrap → recipient's DM relays + account relays + discovery relays (fallback)
-      // - Sender's gift wrap (self) → sender's DM relays + account relays (for sync across devices)
-      // Discovery relays ensure the message reaches recipients whose DM relays we couldn't discover
-      await Promise.allSettled([
-        this.publishToUserDmRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's DM relays
-        this.publishToAccountRelays(signedGiftWrap), // Gift wrap for receiver → account relays (backup)
-        this.publishToDiscoveryRelays(signedGiftWrap), // Gift wrap for receiver → discovery relays (fallback)
-        this.publishToUserDmRelays(signedGiftWrap2, myPubkey), // Gift wrap for sender → sender's DM relays (for other devices)
-        this.publishToAccountRelays(signedGiftWrap2), // Gift wrap for sender (self) → account relays
-      ]);
+        const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
+
+        const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
+          JSON.stringify(signedSealedMessage2),
+          bytesToHex(ephemeralKey),
+          myPubkey
+        );
+
+        const giftWrap2 = {
+          kind: kinds.GiftWrap,
+          pubkey: ephemeralPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [['p', myPubkey]],
+          content: giftWrapContent2,
+        };
+
+        const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
+
+        // Publish both gift wraps:
+        // - Recipient's gift wrap → recipient's DM relays + account relays + discovery relays (fallback)
+        // - Sender's gift wrap (self) → sender's DM relays + account relays (for sync across devices)
+        await Promise.allSettled([
+          this.publishToUserDmRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's DM relays
+          this.publishToAccountRelays(signedGiftWrap), // Gift wrap for receiver → account relays (backup)
+          this.publishToDiscoveryRelays(signedGiftWrap), // Gift wrap for receiver → discovery relays (fallback)
+          this.publishToUserDmRelays(signedGiftWrap2, myPubkey), // Gift wrap for sender → sender's DM relays (for other devices)
+          this.publishToAccountRelays(signedGiftWrap2), // Gift wrap for sender (self) → account relays
+        ]);
+      }
 
       // Return the message object based on the original rumor
       return {
@@ -1864,12 +1899,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
-      // Prevent starting a chat with yourself
       const myPubkey = this.accountState.pubkey();
-      if (pubkey === myPubkey) {
-        this.snackBar.open('You cannot message yourself', 'Close', { duration: 3000 });
-        return;
-      }
+      const isNoteToSelf = pubkey === myPubkey;
 
       // Use pubkey directly as chatId - chats are now merged regardless of encryption type
       const chatId = pubkey;
@@ -1925,6 +1956,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       console.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
     }
+  }
+
+  /**
+   * Start or open the "Note to Self" chat
+   */
+  async startNoteToSelf(): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.snackBar.open('Please log in first', 'Close', { duration: 3000 });
+      return;
+    }
+    await this.startChatWithUser(myPubkey, false);
   }
 
   /**

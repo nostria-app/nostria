@@ -38,6 +38,11 @@
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #messagesMenu="matMenu">
+        <button mat-menu-item (click)="startNoteToSelf()">
+          <mat-icon>bookmark</mat-icon>
+          <span>Note to Self</span>
+        </button>
+        <mat-divider></mat-divider>
         <button mat-menu-item (click)="toggleShowHiddenChats()">
           <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
           <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
@@ -75,10 +80,16 @@
       <div class="empty-chats">
         <mat-icon>forum</mat-icon>
         <p>No messages yet</p>
-        <button mat-flat-button color="primary" (click)="startNewChat()">
-          <mat-icon>add</mat-icon>
-          Start a conversation
-        </button>
+        <div class="empty-tab-actions">
+          <button mat-flat-button color="primary" (click)="startNewChat()">
+            <mat-icon>add</mat-icon>
+            Start a conversation
+          </button>
+          <button mat-stroked-button (click)="startNoteToSelf()">
+            <mat-icon>bookmark</mat-icon>
+            Note to Self
+          </button>
+        </div>
       </div>
       } @else {
       <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)" class="chat-tabs">
@@ -86,6 +97,43 @@
           @if (hasFollowingChats()) {
           <div class="tab-content">
             <mat-nav-list class="chat-list">
+              <!-- Note to Self - always shown at top if it exists -->
+              @if (noteToSelfChat(); as noteToSelf) {
+              @let chat = noteToSelf.chat;
+              <a mat-list-item class="chat-item note-to-self-item" [class.active]="selectedChat()?.id === chat.id"
+                (click)="selectChat(chat)">
+                <div class="chat-item-content">
+                  <div class="chat-avatar">
+                    <mat-icon inline="true" class="chat-encryption-icon secure"
+                      matTooltip="Encrypted notes to yourself">bookmark</mat-icon>
+
+                    <div class="note-to-self-avatar">
+                      <mat-icon>bookmark</mat-icon>
+                    </div>
+
+                    <div class="chat-info">
+                      <div class="chat-name-row">
+                        <span class="chat-name">Note to Self</span>
+                        @if (chat.unreadCount > 0) {
+                        <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                        }
+                        @if (chat.lastMessage?.created_at) {
+                        <span class="message-time-chats">{{ chat.lastMessage?.created_at | ago }}</span>
+                        }
+                      </div>
+                      <div class="chat-preview">
+                        @if (chat.lastMessage) {
+                        <span class="message-preview">{{ chat.lastMessage.content }}</span>
+                        } @else {
+                        <span class="message-preview empty-message">Save private notes</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              }
+
               @for (item of followingChats(); track item.chat.id) {
               @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
@@ -159,10 +207,16 @@
           <div class="empty-tab-content">
             <mat-icon>people</mat-icon>
             <p>No messages from people you follow</p>
-            <button mat-flat-button color="primary" (click)="startNewChat()">
-              <mat-icon>add</mat-icon>
-              Start a conversation
-            </button>
+            <div class="empty-tab-actions">
+              <button mat-flat-button color="primary" (click)="startNewChat()">
+                <mat-icon>add</mat-icon>
+                Start a conversation
+              </button>
+              <button mat-stroked-button (click)="startNoteToSelf()">
+                <mat-icon>bookmark</mat-icon>
+                Note to Self
+              </button>
+            </div>
           </div>
           }
         </mat-tab>
@@ -241,10 +295,16 @@
           <div class="empty-tab-content">
             <mat-icon>forum</mat-icon>
             <p>No messages from others</p>
-            <button mat-flat-button color="primary" (click)="startNewChat()">
-              <mat-icon>add</mat-icon>
-              Start a conversation
-            </button>
+            <div class="empty-tab-actions">
+              <button mat-flat-button color="primary" (click)="startNewChat()">
+                <mat-icon>add</mat-icon>
+                Start a conversation
+              </button>
+              <button mat-stroked-button (click)="startNoteToSelf()">
+                <mat-icon>bookmark</mat-icon>
+                Note to Self
+              </button>
+            </div>
           </div>
           }
         </mat-tab>
@@ -271,12 +331,22 @@
             <mat-icon>arrow_back</mat-icon>
           </button>
           }
+          @if (isNoteToSelf()) {
+          <div class="note-to-self-header">
+            <div class="note-to-self-avatar header-avatar">
+              <mat-icon>bookmark</mat-icon>
+            </div>
+            <span class="note-to-self-title">Note to Self</span>
+          </div>
+          } @else {
           <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
+          }
         </div>
         <div class="chat-header-actions">
           <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
             <mat-icon>info</mat-icon>
           </button>
+          @if (!isNoteToSelf()) {
           <button mat-icon-button [matMenuTriggerFor]="chatOptionsMenu" matTooltip="More options">
             <mat-icon>more_vert</mat-icon>
           </button>
@@ -297,6 +367,7 @@
             </button>
             }
           </mat-menu>
+          }
         </div>
       </div>
 

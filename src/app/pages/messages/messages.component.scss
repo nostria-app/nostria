@@ -267,6 +267,14 @@
   }
 }
 
+.empty-tab-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
 .no-chat-selected {
   display: flex;
   flex-direction: column;
@@ -733,7 +741,7 @@
     white-space: pre-wrap;
     overflow: hidden;
 
-    @media (max-width: 599px) {
+    @media (max-width: 699px) {
       max-width: calc(100% - 50px);
       padding: 8px 12px;
     }
@@ -1023,6 +1031,58 @@
   text-size-adjust: 100%;
 }
 
+// Note to Self styles
+.note-to-self-item {
+  // Subtle highlight to distinguish from regular chats
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:host-context(.dark) .note-to-self-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.note-to-self-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-right: 12px;
+  
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.note-to-self-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  .header-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  .note-to-self-title {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+}
+
 .chat-name-row {
   display: flex;
   align-items: center;
@@ -1055,10 +1115,10 @@
   height: 16px;
 }
 
-@media (max-width: 599px) {
+@media (max-width: 699px) {
   .messages {
 
-    // On mobile, make sure full width is used
+    // On smaller screens, make sure full width is used
     .messages-left,
     .messages-right {
       width: 100%;
