@@ -419,36 +419,7 @@
   border-radius: 12px; // Rounded corners for card-like appearance
   border: 1px solid var(--mat-sys-outline-variant);
 
-  // Unread notifications - white/bright background with emphasis
-  &:not(.read) {
-    background: var(--mat-sys-surface);
-    border-color: var(--mat-sys-primary);
-    border-left-width: 3px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
-
-  // Read notifications - significantly muted
-  &.read {
-    background: var(--mat-sys-surface-container);
-    opacity: 0.6;
-    border-color: transparent;
-
-    .notification-content {
-      .notification-header .notification-author-name {
-        color: var(--mat-sys-on-surface-variant);
-      }
-
-      .notification-message {
-        opacity: 0.7;
-      }
-    }
-
-    .notification-avatar-wrapper {
-      opacity: 0.7;
-    }
-  }
-
-  // Left accent border based on notification type
+  // Left accent bar for visual type identification
   &::before {
     content: '';
     position: absolute;
@@ -456,21 +427,11 @@
     top: 0;
     bottom: 0;
     width: 4px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
     border-radius: 12px 0 0 12px; // Match container border radius
+    transition: opacity 0.3s ease;
   }
 
-  &:hover {
-    background: var(--mat-sys-surface-container-high);
-    opacity: 1;
-
-    &::before {
-      opacity: 1;
-    }
-  }
-
-  // Type-specific accent colors
+  // Type-specific accent colors for the left bar
   &[data-notification-type="zap"]::before {
     background: linear-gradient(180deg, #f7931a 0%, #ffb347 100%);
   }
@@ -493,6 +454,52 @@
 
   &[data-notification-type="reaction"]::before {
     background: linear-gradient(180deg, #ec4899 0%, #f472b6 100%);
+  }
+
+  // Unread notifications - show the accent bar, white/bright background
+  &:not(.read) {
+    background: var(--mat-sys-surface);
+    border-color: var(--mat-sys-outline-variant);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  // Read notifications - hide the accent bar, significantly muted
+  &.read {
+    background: var(--mat-sys-surface-container);
+    opacity: 0.6;
+    border-color: transparent;
+
+    &::before {
+      opacity: 0;
+    }
+
+    .notification-content {
+      .notification-header .notification-author-name {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .notification-message {
+        opacity: 0.7;
+      }
+    }
+
+    .notification-avatar-wrapper {
+      opacity: 0.7;
+    }
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+    opacity: 1;
+
+    // Show accent bar on hover even for read notifications
+    &::before {
+      opacity: 1;
+    }
   }
 
   &.clickable .notification-content {
@@ -1075,7 +1082,6 @@
     // Unread notifications in dark mode - brighter surface with emphasis
     &:not(.read) {
       background: var(--mat-sys-surface-container-high);
-      border-color: var(--mat-sys-primary);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
