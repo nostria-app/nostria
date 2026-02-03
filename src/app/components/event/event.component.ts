@@ -23,7 +23,7 @@ import { ReactionButtonComponent } from './reaction-button/reaction-button.compo
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
-import { EventService, ReactionEvents } from '../../services/event';
+import { EventService, ReactionEvents, ThreadedEvent } from '../../services/event';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { ReactionService } from '../../services/reaction.service';
@@ -123,6 +123,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Optional: reply count passed from parent (e.g., event page) to avoid duplicate relay queries
   // When provided, this value is used instead of loading reply count via loadAllInteractions
   replyCountFromParent = input<number | undefined>(undefined);
+  // Optional: threaded replies passed from parent (e.g., event page) for instant rendering when opening thread
+  // When clicking this event, these replies are passed through router state for instant display
+  repliesFromParent = input<ThreadedEvent[] | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions
@@ -563,6 +566,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isReply = computed<boolean>(() => {
     const event = this.event() || this.record()?.event;
     if (!event) return false;
+
+    // Reposts (kind 6 and 16) are NOT replies - they have e-tags pointing to the
+    // reposted event, but should not render as replies with parent events above
+    if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) return false;
 
     // Quote-only events are NOT replies - they render their context inline
     if (this.isQuoteOnly()) return false;
@@ -1834,10 +1841,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     // Navigate to the target event (reposted event for reposts, regular event otherwise)
-    // Pass reply count and parent event for instant rendering in the thread view
+    // Pass reply count, replies, and parent event for instant rendering in the thread view
     this.layout.openEvent(targetEvent.id, targetEvent, undefined, {
       replyCount: this.replyCount(),
-      parentEvent: this.parentEvent() ?? undefined
+      parentEvent: this.parentEvent() ?? undefined,
+      replies: this.repliesFromParent()
     });
   }
 

@@ -40,6 +40,13 @@ export interface MenuItemConfig {
   visible: boolean;
 }
 
+/**
+ * Threshold for filtering notifications from events with too many tagged accounts.
+ * This helps prevent spam notifications from mass-tagging attacks.
+ * 'none' means no filtering (allow any number of tags).
+ */
+export type MaxTaggedAccountsFilter = 'none' | 10 | 50 | 100 | 200;
+
 export interface LocalSettings {
   menuOpen: boolean;
   menuExpanded: boolean;
@@ -63,6 +70,12 @@ export interface LocalSettings {
   menuItems: MenuItemConfig[];
   /** Global content filter settings for all feeds */
   contentFilter: ContentFilterSettings;
+  /**
+   * Maximum number of tagged accounts allowed in an event for notifications.
+   * Events with more tags than this threshold will not generate notifications.
+   * 'none' means no filtering (default).
+   */
+  maxTaggedAccountsFilter: MaxTaggedAccountsFilter;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -85,6 +98,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   homeDestination: 'feeds',
   menuItems: [], // Empty means use default order
   contentFilter: { ...DEFAULT_CONTENT_FILTER },
+  maxTaggedAccountsFilter: 'none', // No filtering by default
 };
 
 /**
@@ -140,6 +154,7 @@ export class LocalSettingsService {
   readonly homeDestination = computed(() => this.settings().homeDestination);
   readonly menuItems = computed(() => this.settings().menuItems);
   readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
+  readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 'none');
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [
@@ -516,6 +531,14 @@ export class LocalSettingsService {
    */
   resetContentFilter(): void {
     this.setContentFilter({ ...DEFAULT_CONTENT_FILTER });
+  }
+
+  /**
+   * Set max tagged accounts filter for notifications
+   * This filters out notifications from events with too many tagged accounts (spam prevention)
+   */
+  setMaxTaggedAccountsFilter(maxTaggedAccountsFilter: MaxTaggedAccountsFilter): void {
+    this.updateSettings({ maxTaggedAccountsFilter });
   }
 
   /**

@@ -39,6 +39,14 @@ import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
 import { RightPanelService } from './right-panel.service';
 import { PanelNavigationService } from './panel-navigation.service';
+import { ThreadedEvent } from './event';
+
+/** Options for passing pre-loaded data when opening an event */
+export interface OpenEventOptions {
+  replyCount?: number;
+  parentEvent?: Event;
+  replies?: ThreadedEvent[];
+}
 import { SearchActionService } from './search-action.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
@@ -1257,7 +1265,7 @@ export class LayoutService implements OnDestroy {
     this.router.navigateByUrl(`/p/${npub}`);
   }
 
-  openEvent(eventId: string, event: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
+  openEvent(eventId: string, event: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
     // Handle live event comments (kind 1311) - extract and open the referenced stream
     if (event.kind === 1311) {
       const aTag = event.tags.find((tag: string[]) => tag[0] === 'a');
@@ -1318,9 +1326,9 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
+  openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
     this.navigateToRightPanel(`e/${eventId}`, {
-      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent }
+      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent, replies: options?.replies }
     });
   }
 
@@ -1328,9 +1336,9 @@ export class LayoutService implements OnDestroy {
    * Open an event in the primary (left) panel, clearing both panels.
    * Used when navigating from search to make the event the main focus.
    */
-  openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
+  openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
     this.router.navigateByUrl(`/e/${eventId}`, {
-      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent }
+      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent, replies: options?.replies }
     });
   }
 
@@ -2750,9 +2758,11 @@ export class LayoutService implements OnDestroy {
   scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
+    console.log('[LayoutService] scrollLayoutToTop called with panel:', panel);
     const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
     const panelContainer = document.querySelector(panelSelector);
     if (panelContainer) {
+      console.log('[LayoutService] Scrolling', panelSelector, 'to top');
       panelContainer.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'instant' });
     }
   }

@@ -431,6 +431,7 @@ export class PanelNavigationService {
       // Clear the page title when left panel route actually changes (not just when right panel opens)
       // Components that want a custom title will set it in their ngOnInit
       const leftPathActuallyChanged = !currentLeft || currentLeft.path !== leftPath;
+      console.log('[PanelNav] leftPathActuallyChanged:', leftPathActuallyChanged, 'currentLeft:', currentLeft?.path, 'leftPath:', leftPath, 'rightPath:', rightPath);
       if (leftPathActuallyChanged) {
         this.panelActions.clearPageTitle();
         this.panelActions.clearLeftPanelActions();
@@ -439,6 +440,7 @@ export class PanelNavigationService {
         // Feeds route ('/f') should preserve scroll position as users navigate feeds
         const isFeedsRoute = leftPath === 'f' || leftPath === '/f';
         if (!this._isBackNavigation && !isFeedsRoute) {
+          console.log('[PanelNav] Scrolling left panel to top');
           this.scrollLeftPanelToTop();
         }
       }
