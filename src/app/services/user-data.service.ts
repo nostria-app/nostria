@@ -736,40 +736,49 @@ export class UserDataService {
       }
     }
 
-    // Check if this kind is replaceable - if not, we can use cached events
+    // Check if this kind is replaceable - if so, we need to fetch from relays for latest version
     const isReplaceable = this.utilities.shouldAlwaysFetchFromRelay(kind);
-    let loadedFromDb = false;
+    let dbEvents: Event[] = [];
 
-    // If invalidateCache is true, skip storage and fetch directly from relays
-    // Otherwise, check storage first if save option is enabled and event is not replaceable
-    if (events.length === 0 && options?.save && !options?.invalidateCache && !isReplaceable) {
+    // Load from database first if save option is enabled and event is not replaceable
+    // (replaceable events need latest version from relays)
+    if (options?.save && !options?.invalidateCache && !isReplaceable) {
       // Use efficient cursor-based query that filters by e-tag without loading all events
-      events = await this.database.getEventsByKindAndEventTag(kind, eventTag);
+      dbEvents = await this.database.getEventsByKindAndEventTag(kind, eventTag);
 
-      if (events.length > 0) {
-        loadedFromDb = true;
-        console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
-        this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
+      if (dbEvents.length > 0) {
+        console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
+        this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
       }
     }
 
-    // Fetch from relays if:
-    // 1. No events found in storage, OR
-    // 2. Kind is replaceable (need latest version), OR
-    // 3. invalidateCache is true
-    if (events.length === 0 || isReplaceable || options?.invalidateCache) {
-      console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${events.length}, replaceable: ${isReplaceable}, invalidate: ${options?.invalidateCache})`);
-      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
-        pubkey,
-        kind,
-        eventTag,
-        options?.includeAccountRelays
-      );
-      if (relayEvents && relayEvents.length > 0) {
-        console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kind ${kind}`);
-        events = relayEvents;
+    // Always fetch from relays to get potentially newer events
+    // Database results supplement relay results but don't replace them
+    console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
+    const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
+      pubkey,
+      kind,
+      eventTag,
+      options?.includeAccountRelays
+    );
+
+    // Merge database and relay events, deduplicated by event ID
+    const eventMap = new Map<string, Event>();
+    
+    // Add database events first
+    for (const event of dbEvents) {
+      eventMap.set(event.id, event);
+    }
+    
+    // Add/update with relay events (relay events take precedence if same ID)
+    if (relayEvents && relayEvents.length > 0) {
+      console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kind ${kind}`);
+      for (const event of relayEvents) {
+        eventMap.set(event.id, event);
       }
     }
+
+    events = Array.from(eventMap.values());
 
     if (events.length === 0) {
       return [];
@@ -781,9 +790,15 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    // Save to database in background if events came from relays (not already in DB)
-    if (options?.save && !loadedFromDb) {
-      this.saveEventsInBackground(events, `kind ${kind}`);
+    // Save new relay events to database in background
+    // Only save events that came from relays (not already in DB)
+    if (options?.save && relayEvents && relayEvents.length > 0) {
+      // Filter to only save events that weren't in the database
+      const dbEventIds = new Set(dbEvents.map(e => e.id));
+      const newRelayEvents = relayEvents.filter(e => !dbEventIds.has(e.id));
+      if (newRelayEvents.length > 0) {
+        this.saveEventsInBackground(newRelayEvents, `kind ${kind}`);
+      }
     }
 
     return records;
@@ -812,39 +827,48 @@ export class UserDataService {
 
     // Check if any of these kinds are replaceable
     const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
-    let loadedFromDb = false;
+    let dbEvents: Event[] = [];
 
-    // If invalidateCache is true, skip storage and fetch directly from relays
-    // Otherwise, check storage first if save option is enabled and no kinds are replaceable
-    if (events.length === 0 && options?.save && !options?.invalidateCache && !hasReplaceableKind) {
+    // Load from database first if save option is enabled and no kinds are replaceable
+    // (replaceable events need latest version from relays)
+    if (options?.save && !options?.invalidateCache && !hasReplaceableKind) {
       // Use efficient cursor-based query that filters by e-tag without loading all events
-      events = await this.database.getEventsByKindsAndEventTag(kinds, eventTag);
+      dbEvents = await this.database.getEventsByKindsAndEventTag(kinds, eventTag);
 
-      if (events.length > 0) {
-        loadedFromDb = true;
-        console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
-        this.logger.debug(`Using ${events.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
+      if (dbEvents.length > 0) {
+        console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
+        this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
       }
     }
 
-    // Fetch from relays if:
-    // 1. No events found in storage, OR
-    // 2. Any kind is replaceable (need latest version), OR
-    // 3. invalidateCache is true
-    if (events.length === 0 || hasReplaceableKind || options?.invalidateCache) {
-      console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${events.length}, hasReplaceable: ${hasReplaceableKind}, invalidate: ${options?.invalidateCache})`);
-      const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(
-        pubkey,
-        kinds,
-        eventTag,
-        options?.includeAccountRelays
-      );
-      if (relayEvents && relayEvents.length > 0) {
-        console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kinds [${kinds.join(',')}]`);
-        events = relayEvents;
+    // Always fetch from relays to get potentially newer events
+    // Database results supplement relay results but don't replace them
+    console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
+    const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(
+      pubkey,
+      kinds,
+      eventTag,
+      options?.includeAccountRelays
+    );
+
+    // Merge database and relay events, deduplicated by event ID
+    const eventMap = new Map<string, Event>();
+    
+    // Add database events first
+    for (const event of dbEvents) {
+      eventMap.set(event.id, event);
+    }
+    
+    // Add/update with relay events (relay events take precedence if same ID)
+    if (relayEvents && relayEvents.length > 0) {
+      console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kinds [${kinds.join(',')}]`);
+      for (const event of relayEvents) {
+        eventMap.set(event.id, event);
       }
     }
 
+    events = Array.from(eventMap.values());
+    
     if (events.length === 0) {
       return [];
     }
@@ -855,9 +879,15 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    // Save to database in background if events came from relays (not already in DB)
-    if (options?.save && !loadedFromDb) {
-      this.saveEventsInBackground(events, `kinds [${kinds.join(',')}]`);
+    // Save new relay events to database in background
+    // Only save events that came from relays (not already in DB)
+    if (options?.save && relayEvents && relayEvents.length > 0) {
+      // Filter to only save events that weren't in the database
+      const dbEventIds = new Set(dbEvents.map(e => e.id));
+      const newRelayEvents = relayEvents.filter(e => !dbEventIds.has(e.id));
+      if (newRelayEvents.length > 0) {
+        this.saveEventsInBackground(newRelayEvents, `kinds [${kinds.join(',')}]`);
+      }
     }
 
     return records;
