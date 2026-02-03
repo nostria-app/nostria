@@ -129,7 +129,7 @@ export class RelaysService {
       if (!stored) return;
 
       const data = JSON.parse(stored) as { 
-        entries: Array<{ url: string; info: Nip11RelayInfo | null; timestamp: number }>;
+        entries: { url: string; info: Nip11RelayInfo | null; timestamp: number }[];
       };
 
       const now = Date.now();
@@ -153,7 +153,7 @@ export class RelaysService {
   private saveNip11CacheToStorage(): void {
     try {
       const now = Date.now();
-      const entries: Array<{ url: string; info: Nip11RelayInfo | null; timestamp: number }> = [];
+      const entries: { url: string; info: Nip11RelayInfo | null; timestamp: number }[] = [];
 
       // Only save successful fetches to localStorage (not failed ones)
       for (const [url, info] of this.nip11Cache) {

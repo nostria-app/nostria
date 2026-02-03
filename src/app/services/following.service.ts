@@ -136,7 +136,7 @@ export class FollowingService {
 
       // PHASE 1: Check in-memory cache and local database for all profiles
       const missingPubkeys: string[] = [];
-      const cachedProfiles: Map<string, NostrRecord> = new Map();
+      const cachedProfiles = new Map<string, NostrRecord>();
 
       // First, check the in-memory cache
       for (const pk of pubkeys) {
@@ -297,7 +297,7 @@ export class FollowingService {
 
     try {
       const now = Math.floor(Date.now() / 1000);
-      const cachedProfiles: Map<string, NostrRecord> = new Map();
+      const cachedProfiles = new Map<string, NostrRecord>();
 
       // PHASE 1: Check in-memory cache and local database
       for (const pk of pubkeys) {
@@ -360,7 +360,7 @@ export class FollowingService {
       }
 
       // PHASE 3: Build profiles with metadata and add to map
-      const newProfiles: Map<string, FollowingProfile> = new Map();
+      const newProfiles = new Map<string, FollowingProfile>();
 
       // Process all profiles in parallel (database queries are fast)
       await Promise.all(
@@ -714,7 +714,7 @@ export class FollowingService {
     try {
       const now = Math.floor(Date.now() / 1000);
       const results: FollowingProfile[] = [];
-      const cachedProfiles: Map<string, NostrRecord> = new Map();
+      const cachedProfiles = new Map<string, NostrRecord>();
       const missingPubkeys: string[] = [];
 
       // PHASE 1: Check following cache, in-memory cache, and local database
