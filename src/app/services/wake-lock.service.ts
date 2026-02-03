@@ -73,6 +73,12 @@ export class WakeLockService {
       return;
     }
 
+    // Wake Lock API requires the page to be visible
+    if (document.visibilityState !== 'visible') {
+      this.logger.debug('[WakeLock] Page not visible, deferring wake lock acquisition');
+      return;
+    }
+
     try {
       this.wakeLock = await navigator.wakeLock.request('screen');
       this.logger.debug('[WakeLock] Wake lock acquired');
