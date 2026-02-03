@@ -25,6 +25,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UnsignedEvent } from 'nostr-tools';
 import { DatabaseService } from './database.service';
 import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
+import { RepostService } from './repost.service';
 
 export interface Reaction {
   emoji: string;
@@ -110,6 +111,7 @@ export class EventService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly mediaService = inject(MediaService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly repostService = inject(RepostService);
 
   /**
    * Parse event tags to extract thread information
@@ -1231,6 +1233,13 @@ export class EventService {
   async loadParentEvents(event: Event, eventTags?: EventTags): Promise<Event[]> {
     const parents: Event[] = [];
 
+    // Only load parent events for kind 1 (ShortTextNote) - replies in threads
+    // Other kinds like reposts (kind 6/16) have e-tags but should not show parent events
+    // as they render the referenced event via their own repost display logic
+    if (event.kind !== kinds.ShortTextNote) {
+      return parents;
+    }
+
     const tags = eventTags ?? this.getEventTags(event);
     const { author: initialAuthor, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, intermediates } = tags;
 
@@ -1534,6 +1543,30 @@ export class EventService {
       throw new Error('Event not found');
     }
 
+    // Check if this is a repost event - if so, we need to load reactions/replies
+    // for the reposted content, not the repost event itself
+    const isRepost = this.repostService.isRepostEvent(event);
+    let targetEventId = event.id;
+    let targetEventPubkey = event.pubkey;
+
+    if (isRepost) {
+      // Try to get the reposted event from embedded content first
+      const repostedRecord = this.repostService.decodeRepost(event);
+      if (repostedRecord?.event) {
+        targetEventId = repostedRecord.event.id;
+        targetEventPubkey = repostedRecord.event.pubkey;
+      } else {
+        // Fallback to e-tag reference
+        const reference = this.repostService.getRepostReference(event);
+        if (reference) {
+          targetEventId = reference.eventId;
+          if (reference.pubkey) {
+            targetEventPubkey = reference.pubkey;
+          }
+        }
+      }
+    }
+
     const eventTags = this.getEventTags(event);
     const { rootId, replyId } = eventTags;
     const isThreadRoot = !rootId && !replyId;
@@ -1552,9 +1585,9 @@ export class EventService {
     // Load parent events in the background (pass eventTags to avoid parsing twice)
     const parentsPromise = this.loadParentEvents(event, eventTags);
 
-    // Start loading replies and reactions for the current event initially
-    const currentEventRepliesPromise = this.loadReplies(event.id, event.pubkey);
-    const currentEventReactionsPromise = this.loadReactions(event.id, event.pubkey);
+    // Start loading replies and reactions for the target event (reposted content for reposts)
+    const currentEventRepliesPromise = this.loadReplies(targetEventId, targetEventPubkey);
+    const currentEventReactionsPromise = this.loadReactions(targetEventId, targetEventPubkey);
 
     // Wait for parents first and yield updated data
     try {
@@ -1574,6 +1607,7 @@ export class EventService {
       };
 
       // Determine which replies to load:
+      // - For reposts: just load replies for the reposted content (targetEventId)
       // - If this is the thread root, just load direct replies
       // - If this is a nested event, load replies from BOTH the thread root AND the current event
       //   This ensures we catch:
@@ -1582,7 +1616,10 @@ export class EventService {
       let finalReactionsPromise = currentEventReactionsPromise;
       let replies: Event[] = [];
 
-      if (!isThreadRoot && threadRootId !== event.id) {
+      if (isRepost) {
+        // For reposts, just load replies for the reposted content
+        replies = await currentEventRepliesPromise;
+      } else if (!isThreadRoot && threadRootId !== event.id) {
         // Load replies from both thread root and current event in parallel
         const [threadRootReplies, currentEventReplies] = await Promise.all([
           this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey),
@@ -1606,13 +1643,21 @@ export class EventService {
       // Only filter out parent events and current event from the flat replies list
       const parentEventIds = new Set(parents.map((p) => p.id));
       parentEventIds.add(event.id);
+      // For reposts, also filter out the repost event itself from replies
+      if (isRepost) {
+        parentEventIds.add(targetEventId);
+      }
 
       const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
-      // Build thread tree starting from the current event
-      // This will only include downstream descendants of the current event
+      // Prefetch profiles for all reply authors - await to ensure cache is populated
+      // before components try to render. This loads from storage quickly.
+      await this.prefetchProfilesForReplies(filteredReplies, parents);
+
+      // Build thread tree starting from the target event (reposted content for reposts)
+      // This will only include downstream descendants of the target event
       // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
-      const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
+      const threadedReplies = this.buildThreadTree(filteredReplies, targetEventId, isRepost || isThreadRoot);
 
       yield {
         event,
@@ -1646,6 +1691,10 @@ export class EventService {
 
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);
+
+        // Prefetch profiles for reply authors - await to ensure cache is populated
+        await this.prefetchProfilesForReplies(filteredReplies, []);
+
         // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
         const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
 
@@ -2032,5 +2081,48 @@ export class EventService {
       created_at: now,
       pubkey,
     };
+  }
+
+  /**
+   * Prefetch profiles for all reply authors and parent authors.
+   * This loads profiles from cache/storage into memory cache BEFORE rendering,
+   * ensuring instant display for all thread participants.
+   * 
+   * The method awaits loading from cache/storage (fast) but fetches from relays
+   * in background (slow) to avoid blocking thread display.
+   * 
+   * @param replies All reply events in the thread
+   * @param parents Parent events in the thread chain
+   */
+  private async prefetchProfilesForReplies(replies: Event[], parents: Event[]): Promise<void> {
+    // Collect unique pubkeys from replies and parents
+    const authorPubkeys = new Set<string>();
+
+    for (const reply of replies) {
+      if (reply.pubkey) {
+        authorPubkeys.add(reply.pubkey);
+      }
+    }
+
+    for (const parent of parents) {
+      if (parent.pubkey) {
+        authorPubkeys.add(parent.pubkey);
+      }
+    }
+
+    const pubkeysArray = Array.from(authorPubkeys);
+    if (pubkeysArray.length === 0) return;
+
+    this.logger.debug(`[Thread Prefetch] Prefetching ${pubkeysArray.length} profiles for thread participants`);
+
+    try {
+      // Load from cache/storage quickly, fetch missing from relays in background
+      // skipRelayFetch=true means we return immediately after cache/storage check
+      // and relay fetch happens in background (non-blocking)
+      const results = await this.data.batchLoadProfiles(pubkeysArray, undefined, true);
+      this.logger.debug(`[Thread Prefetch] Loaded ${results.size}/${pubkeysArray.length} profiles from cache/storage`);
+    } catch (err) {
+      this.logger.error('[Thread Prefetch] Error prefetching profiles:', err);
+    }
   }
 }

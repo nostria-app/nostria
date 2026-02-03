@@ -234,11 +234,13 @@ export class DataService {
    * 
    * @param pubkeys Array of pubkeys to load profiles for
    * @param onProgress Optional callback for progress updates
+   * @param skipRelayFetch If true, only load from cache/storage and skip relay fetch (faster)
    * @returns Map of pubkey to NostrRecord for all loaded profiles
    */
   async batchLoadProfiles(
     pubkeys: string[],
-    onProgress?: (loaded: number, total: number, pubkey: string) => void
+    onProgress?: (loaded: number, total: number, pubkey: string) => void,
+    skipRelayFetch = false
   ): Promise<Map<string, NostrRecord>> {
     const results = new Map<string, NostrRecord>();
     const missingPubkeys: string[] = [];
@@ -282,47 +284,112 @@ export class DataService {
 
     // Step 4: Batch fetch missing profiles from relays
     if (missingPubkeys.length > 0) {
-      // Fetch in batches of 100 to avoid overwhelming relays
-      const batchSize = 100;
+      if (skipRelayFetch) {
+        // Fire and forget - fetch in background without blocking
+        this.fetchProfilesFromRelaysInBackground(missingPubkeys, onProgress);
+      } else {
+        // Await the relay fetch (original behavior)
+        await this.fetchProfilesFromRelays(missingPubkeys, results, onProgress);
+      }
+    }
+
+    this.logger.info(`[BatchLoad] Completed: ${results.size}/${pubkeys.length} profiles loaded from cache/storage`);
+    return results;
+  }
+
+  /**
+   * Fetch profiles from relays and update results map (blocking)
+   */
+  private async fetchProfilesFromRelays(
+    missingPubkeys: string[],
+    results: Map<string, NostrRecord>,
+    onProgress?: (loaded: number, total: number, pubkey: string) => void
+  ): Promise<void> {
+    const batchSize = 100;
+    for (let i = 0; i < missingPubkeys.length; i += batchSize) {
+      const batch = missingPubkeys.slice(i, i + batchSize);
+
+      try {
+        const events = await this.sharedRelayEx.getMany<Event>(
+          batch[0],
+          {
+            authors: batch,
+            kinds: [kinds.Metadata],
+          },
+          { timeout: 10000 }
+        );
+
+        for (const event of events) {
+          const record = this.toRecord(event);
+          const cacheKey = `metadata-${event.pubkey}`;
+          this.cache.set(cacheKey, record, { persistent: true });
+          results.set(event.pubkey, record);
+
+          await this.database.saveEvent(event);
+          await this.saveEventToDatabase(event);
+          await this.processEventForRelayHints(event);
+
+          onProgress?.(results.size, missingPubkeys.length, event.pubkey);
+        }
+
+        this.logger.debug(`[BatchLoad] Fetched ${events.length} profiles from relays (batch ${Math.floor(i / batchSize) + 1})`);
+      } catch (error) {
+        this.logger.error(`[BatchLoad] Failed to fetch batch ${Math.floor(i / batchSize) + 1}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Fetch profiles from relays in background (non-blocking)
+   * Results are added to cache as they arrive, so subsequent getCachedProfile calls will find them
+   */
+  private fetchProfilesFromRelaysInBackground(
+    missingPubkeys: string[],
+    onProgress?: (loaded: number, total: number, pubkey: string) => void
+  ): void {
+    const batchSize = 100;
+    let loaded = 0;
+
+    // Process batches sequentially in background
+    const processBatches = async () => {
       for (let i = 0; i < missingPubkeys.length; i += batchSize) {
         const batch = missingPubkeys.slice(i, i + batchSize);
 
         try {
-          // Use getMany with all authors in a single request
           const events = await this.sharedRelayEx.getMany<Event>(
-            batch[0], // Use first pubkey for relay discovery
+            batch[0],
             {
               authors: batch,
               kinds: [kinds.Metadata],
             },
-            { timeout: 10000 } // Longer timeout for batch requests
+            { timeout: 10000 }
           );
 
-          // Process received events
           for (const event of events) {
             const record = this.toRecord(event);
             const cacheKey = `metadata-${event.pubkey}`;
             this.cache.set(cacheKey, record, { persistent: true });
-            results.set(event.pubkey, record);
+            loaded++;
 
-            // Save to storage
             await this.database.saveEvent(event);
             await this.saveEventToDatabase(event);
             await this.processEventForRelayHints(event);
 
-            // Report progress
-            onProgress?.(results.size, pubkeys.length, event.pubkey);
+            onProgress?.(loaded, missingPubkeys.length, event.pubkey);
           }
 
-          this.logger.debug(`[BatchLoad] Fetched ${events.length} profiles from relays (batch ${Math.floor(i / batchSize) + 1})`);
+          this.logger.debug(`[BatchLoad Background] Fetched ${events.length} profiles from relays (batch ${Math.floor(i / batchSize) + 1})`);
         } catch (error) {
-          this.logger.error(`[BatchLoad] Failed to fetch batch ${Math.floor(i / batchSize) + 1}:`, error);
+          this.logger.error(`[BatchLoad Background] Failed to fetch batch ${Math.floor(i / batchSize) + 1}:`, error);
         }
       }
-    }
+      this.logger.debug(`[BatchLoad Background] Completed: ${loaded}/${missingPubkeys.length} profiles fetched from relays`);
+    };
 
-    this.logger.info(`[BatchLoad] Completed: ${results.size}/${pubkeys.length} profiles loaded`);
-    return results;
+    // Fire and forget
+    processBatches().catch(err => {
+      this.logger.error('[BatchLoad Background] Error in background fetch:', err);
+    });
   }
 
   /**
