@@ -1419,8 +1419,32 @@ export class EventService {
     const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
     const threadRootId = rootEvent?.id || event.id;
 
-    // Load replies and reactions for the thread root
-    const { replies, reactions } = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
+    // Load replies and reactions
+    // For nested events, load from BOTH thread root AND current event to catch:
+    // 1. Proper NIP-10 replies (with root marker pointing to thread root)
+    // 2. Simple replies (with just an e-tag pointing to current event, no root marker)
+    let replies: Event[];
+    let reactions: Reaction[];
+
+    if (!isThreadRoot && threadRootId !== event.id) {
+      const [threadRootData, currentEventReplies] = await Promise.all([
+        this.loadRepliesAndReactions(threadRootId, rootEvent?.pubkey || event.pubkey),
+        this.loadReplies(event.id, event.pubkey),
+      ]);
+
+      // Merge and deduplicate replies by event ID
+      const seenIds = new Set<string>();
+      replies = [...threadRootData.replies, ...currentEventReplies].filter((reply) => {
+        if (seenIds.has(reply.id)) return false;
+        seenIds.add(reply.id);
+        return true;
+      });
+      reactions = threadRootData.reactions;
+    } else {
+      const data = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
+      replies = data.replies;
+      reactions = data.reactions;
+    }
 
     // Filter out parent events from replies to avoid duplication
     const parentEventIds = new Set(parents.map((p) => p.id));
@@ -1498,19 +1522,33 @@ export class EventService {
 
       // Determine which replies to load:
       // - If this is the thread root, just load direct replies
-      // - If this is a nested event, load all replies to the thread root so we can
-      //   build the complete downstream tree from the current event
-      let finalRepliesPromise = currentEventRepliesPromise;
+      // - If this is a nested event, load replies from BOTH the thread root AND the current event
+      //   This ensures we catch:
+      //   1. Proper NIP-10 replies (with root marker pointing to thread root)
+      //   2. Simple replies (with just an e-tag pointing to current event, no root marker)
       let finalReactionsPromise = currentEventReactionsPromise;
+      let replies: Event[] = [];
 
       if (!isThreadRoot && threadRootId !== event.id) {
-        // Load replies to the thread root to get the full thread tree
-        finalRepliesPromise = this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey);
-        finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
-      }
+        // Load replies from both thread root and current event in parallel
+        const [threadRootReplies, currentEventReplies] = await Promise.all([
+          this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey),
+          currentEventRepliesPromise,
+        ]);
 
-      // Load replies and yield them as soon as available
-      const replies = await finalRepliesPromise;
+        // Merge and deduplicate replies by event ID
+        const seenIds = new Set<string>();
+        replies = [...threadRootReplies, ...currentEventReplies].filter((reply) => {
+          if (seenIds.has(reply.id)) return false;
+          seenIds.add(reply.id);
+          return true;
+        });
+
+        finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
+      } else {
+        // Thread root - just load direct replies
+        replies = await currentEventRepliesPromise;
+      }
 
       // Only filter out parent events and current event from the flat replies list
       const parentEventIds = new Set(parents.map((p) => p.id));
