@@ -146,8 +146,9 @@ export class ArticleComponent implements OnDestroy {
         // Stop speech when navigating to a new article
         this.stopSpeech();
         this.loadArticle(addrParam, params);
-        // Scroll to top when navigating to a new article
-        setTimeout(() => this.layout.scrollMainContentToTop(), 100);
+        // Scroll to top when navigating to a new article - use panel-aware scrolling
+        const panel = this.isInRightPanel() ? 'right' : 'left';
+        setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
       }
     });
 
@@ -279,8 +280,9 @@ export class ArticleComponent implements OnDestroy {
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
       this.isLoading.set(false);
-      // Scroll to top when article is received from navigation state
-      setTimeout(() => this.layout.scrollMainContentToTop(), 50);
+      // Scroll to top when article is received from navigation state - use panel-aware scrolling
+      const panel = this.isInRightPanel() ? 'right' : 'left';
+      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 50);
       return;
     } else if (naddr.startsWith('naddr1')) {
       this.link = naddr;
@@ -463,8 +465,9 @@ export class ArticleComponent implements OnDestroy {
       this.error.set('Failed to load article');
     } finally {
       this.isLoading.set(false);
-      // Scroll to top after article loads (whether successful or not)
-      setTimeout(() => this.layout.scrollMainContentToTop(), 100);
+      // Scroll to top after article loads (whether successful or not) - use panel-aware scrolling
+      const panel = this.isInRightPanel() ? 'right' : 'left';
+      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
   }
 

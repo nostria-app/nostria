@@ -1257,7 +1257,7 @@ export class LayoutService implements OnDestroy {
     this.router.navigateByUrl(`/p/${npub}`);
   }
 
-  openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
+  openEvent(eventId: string, event: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
     // Handle live event comments (kind 1311) - extract and open the referenced stream
     if (event.kind === 1311) {
       const aTag = event.tags.find((tag: string[]) => tag[0] === 'a');
@@ -1314,13 +1314,13 @@ export class LayoutService implements OnDestroy {
     if (event.kind === kinds.LongFormArticle) {
       this.openArticle(neventId, event);
     } else {
-      this.openGenericEvent(neventId, event, trustedByPubkey);
+      this.openGenericEvent(neventId, event, trustedByPubkey, options);
     }
   }
 
-  openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string): void {
+  openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
     this.navigateToRightPanel(`e/${eventId}`, {
-      state: { event, trustedByPubkey }
+      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent }
     });
   }
 
@@ -1328,9 +1328,9 @@ export class LayoutService implements OnDestroy {
    * Open an event in the primary (left) panel, clearing both panels.
    * Used when navigating from search to make the event the main focus.
    */
-  openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string): void {
+  openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string, options?: { replyCount?: number; parentEvent?: Event }): void {
     this.router.navigateByUrl(`/e/${eventId}`, {
-      state: { event, trustedByPubkey }
+      state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent }
     });
   }
 
