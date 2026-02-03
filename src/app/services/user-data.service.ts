@@ -718,6 +718,7 @@ export class UserDataService {
 
     // Check if this kind is replaceable - if not, we can use cached events
     const isReplaceable = this.utilities.shouldAlwaysFetchFromRelay(kind);
+    let loadedFromDb = false;
 
     // If invalidateCache is true, skip storage and fetch directly from relays
     // Otherwise, check storage first if save option is enabled and event is not replaceable
@@ -726,6 +727,7 @@ export class UserDataService {
       events = await this.database.getEventsByKindAndEventTag(kind, eventTag);
 
       if (events.length > 0) {
+        loadedFromDb = true;
         console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
       }
@@ -759,7 +761,8 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    if (options?.save) {
+    // Only save to database if events came from relays (not already in DB)
+    if (options?.save && !loadedFromDb) {
       console.log(`💾 [DB Save] Saving ${events.length} events to database for kind ${kind}`);
       for (const event of events) {
         await this.database.saveEvent(event);
@@ -792,6 +795,7 @@ export class UserDataService {
 
     // Check if any of these kinds are replaceable
     const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
+    let loadedFromDb = false;
 
     // If invalidateCache is true, skip storage and fetch directly from relays
     // Otherwise, check storage first if save option is enabled and no kinds are replaceable
@@ -800,6 +804,7 @@ export class UserDataService {
       events = await this.database.getEventsByKindsAndEventTag(kinds, eventTag);
 
       if (events.length > 0) {
+        loadedFromDb = true;
         console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
       }
@@ -833,7 +838,8 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    if (options?.save) {
+    // Only save to database if events came from relays (not already in DB)
+    if (options?.save && !loadedFromDb) {
       console.log(`💾 [DB Save] Saving ${events.length} events to database for kinds [${kinds.join(',')}]`);
       for (const event of events) {
         await this.database.saveEvent(event);
