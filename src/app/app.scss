@@ -381,7 +381,7 @@ nav {
 .premium-expires {
   margin-top: 0.4rem;
   opacity: 0.7;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .sidenav-container {
@@ -715,7 +715,7 @@ mat-sidenav-content {
 }
 
 .sidenav-profile-name {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -724,7 +724,7 @@ mat-sidenav-content {
 }
 
 .sidenav-premium-badge {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   padding: 2px 6px;
   background-color: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
@@ -808,7 +808,7 @@ mat-sidenav-content {
 }
 
 .sidenav-account-name {
-  font-size: 14px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -869,14 +869,14 @@ mat-sidenav-content {
   }
 
   .wallet-label {
-    font-size: 11px;
+    font-size: var(--text-xs);
     color: var(--mat-sys-on-surface-variant);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .wallet-balance {
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: var(--mat-sys-on-surface);
   }
 }
@@ -1683,14 +1683,14 @@ mat-sidenav-content {
 
   .panel-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--text-xl);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .panel-subtitle {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     opacity: 0.7;
     white-space: nowrap;
   }
@@ -1909,7 +1909,7 @@ mat-sidenav-content {
 }
 
 .mobile-nav-label {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   line-height: 1;
   text-align: center;
   white-space: nowrap;
@@ -2117,7 +2117,7 @@ mat-sidenav-content {
 }
 
 .child-label {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   opacity: 0.8;
 }
 
@@ -2208,7 +2208,7 @@ mat-sidenav-content {
 }
 
 .account-name {
-  font-size: 14px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2306,7 +2306,7 @@ mat-sidenav-content {
 }
 
 .account-source {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--mat-subtitle-text-color);
 }
 

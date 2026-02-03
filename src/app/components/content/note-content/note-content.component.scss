@@ -22,7 +22,7 @@
     p {
       margin: 0 0 1rem;
       color: #666;
-      font-size: 0.9rem;
+      font-size: var(--text-sm);
     }
 
     .download-link {
@@ -270,7 +270,7 @@
     }
 
     .embed-time {
-      font-size: 0.8rem;
+      font-size: var(--text-xs);
       color: var(--mat-sys-on-surface-variant, #666666);
       margin-left: 6px;
     }
@@ -316,7 +316,7 @@
     }
 
     .placeholder-text {
-      font-size: 0.875rem;
+      font-size: var(--text-sm);
       flex: 1;
     }
   }
@@ -867,7 +867,7 @@
   color: white;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   z-index: 10;
 }
@@ -900,7 +900,7 @@
   .carousel-counter {
     top: 8px;
     right: 8px;
-    font-size: 11px;
+    font-size: var(--text-2xs);
     padding: 3px 8px;
   }
 }
@@ -1082,7 +1082,7 @@
   }
 
   .not-found-text {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 }
 
@@ -1102,7 +1102,7 @@
   }
 
   .blocked-text {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-style: italic;
   }
 }
@@ -1148,7 +1148,7 @@
   }
 
   span {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 }
 
@@ -1190,7 +1190,7 @@
 
 // Date link in event headers
 .date-link {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--mat-sys-on-surface-variant);
   margin-left: 8px;
 }

@@ -32,13 +32,48 @@
 </head>
 
 <body class="mat-typography">
-  <script>
-    // Apply saved theme immediately to prevent flash
+<script>
+    // Apply saved theme and text scale immediately to prevent flash
     (function () {
       var theme = localStorage.getItem('nostria-theme');
       var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.body.style.backgroundColor = isDark ? '#121212' : '#fafafa';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+      // Apply saved text scale immediately (accessibility)
+      var textScale = localStorage.getItem('nostria-text-scale');
+      if (textScale) {
+        var scale = parseFloat(textScale);
+        if (!isNaN(scale) && scale >= 0.85 && scale <= 1.3) {
+          document.documentElement.style.setProperty('--nostria-text-scale', scale);
+        }
+      }
+
+      // Apply saved font preference immediately to prevent flash
+      var savedFont = localStorage.getItem('nostria-font');
+      if (savedFont) {
+        var fontFamilies = {
+          'roboto': 'Roboto, "Helvetica Neue", sans-serif',
+          'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+          'sora': 'Sora, "Helvetica Neue", sans-serif',
+          'inter': 'Inter, "Helvetica Neue", sans-serif'
+        };
+        var fontUrls = {
+          'sora': 'https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap',
+          'inter': 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap'
+        };
+        if (fontFamilies[savedFont]) {
+          document.documentElement.style.setProperty('--nostria-font-family', fontFamilies[savedFont]);
+          // Load Google Font if needed
+          if (fontUrls[savedFont]) {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = fontUrls[savedFont];
+            link.setAttribute('data-font-loader', 'nostria-early');
+            document.head.appendChild(link);
+          }
+        }
+      }
 
       // Detect Android and set platform attribute for CSS targeting
       var isAndroid = /android/i.test(navigator.userAgent);

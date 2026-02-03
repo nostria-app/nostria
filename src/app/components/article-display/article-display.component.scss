@@ -276,7 +276,8 @@
     margin-bottom: 24px;
   }
 
-  .markdown-content {
+.markdown-content {
+    font-size: var(--text-base);
     line-height: 1.7;
     color: var(--mat-sys-on-surface);
 

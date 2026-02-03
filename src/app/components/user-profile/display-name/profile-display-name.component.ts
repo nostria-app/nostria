@@ -142,12 +142,14 @@ constructor() {
         // If the pubkey changed, reset the profile data to force reload
         if (this.publicKey && this.publicKey !== pubkey) {
           untracked(() => {
+            // Clear old profile immediately so we don't show stale data
             this.profile.set(null);
             this.isLoading.set(false);
             this.error.set('');
           });
         }
 
+        // Update publicKey AFTER the comparison but BEFORE trying to load
         this.publicKey = pubkey;
 
         untracked(() => {
@@ -156,11 +158,9 @@ constructor() {
           if (cachedProfile) {
             this.profile.set(cachedProfile);
             this.isLoading.set(false);
-          } else {
+          } else if (this.isVisible() && !this.scrollState.isScrolling()) {
             // Only load profile data when the component is visible and not scrolling
-            if (this.isVisible() && !this.scrollState.isScrolling() && !this.profile()) {
-              this.debouncedLoadProfileData(pubkey);
-            }
+            this.debouncedLoadProfileData(pubkey);
           }
         });
       }
@@ -266,9 +266,9 @@ constructor() {
       this.debouncedLoadTimer = undefined;
     }
   }
-  private async loadProfileData(npubValue: string): Promise<void> {
-    // Don't reload if we already have data
-    if (this.profile()) {
+  private async loadProfileData(pubkeyToLoad: string): Promise<void> {
+    // Don't reload if we already have data for THIS pubkey
+    if (this.profile() && this.publicKey === pubkeyToLoad) {
       this.logger.debug('Profile data already loaded, skipping reload');
       return;
     }
@@ -279,36 +279,43 @@ constructor() {
       return;
     }
 
+    // Capture the current pubkey - this is what we're loading for
+    // We'll check against this after the async operation completes
+    const targetPubkey = pubkeyToLoad;
+
     this.isLoading.set(true);
     this.error.set('');
 
     try {
-      this.logger.debug('Loading profile data for:', npubValue);
-      this.logger.time('Loading profile data in user profile' + npubValue);
+      this.logger.debug('Loading profile data for:', targetPubkey);
+      this.logger.time('Loading profile data in user profile' + targetPubkey);
 
-      const data = await this.data.getProfile(npubValue);
-      this.logger.timeEnd('Loading profile data in user profile' + npubValue);
+      const data = await this.data.getProfile(targetPubkey);
+      this.logger.timeEnd('Loading profile data in user profile' + targetPubkey);
 
       this.logger.debug('Profile data loaded:', data);
 
-      // Only update if we're still loading the same pubkey
-      if (this.publicKey === npubValue) {
+      // Only update if the component is still showing the same pubkey we loaded for
+      // Use normalizedPubkey() signal to get the CURRENT pubkey value
+      if (this.normalizedPubkey() === targetPubkey) {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
+      } else {
+        this.logger.debug('Pubkey changed during load, discarding result for:', targetPubkey);
       }
     } catch (error) {
       this.logger.error('Failed to load profile data:', error);
 
-      // Only update error if we're still loading the same pubkey
-      if (this.publicKey === npubValue) {
+      // Only update error if the component is still showing the same pubkey
+      if (this.normalizedPubkey() === targetPubkey) {
         this.error.set('Failed to load profile data: ' + error);
         // Set profile to empty object to indicate we tried loading but failed
         this.profile.set({ isEmpty: true });
       }
     } finally {
-      // Only update loading state if we're still loading the same pubkey
-      if (this.publicKey === npubValue) {
+      // Only update loading state if the component is still showing the same pubkey
+      if (this.normalizedPubkey() === targetPubkey) {
         this.isLoading.set(false);
       }
     }

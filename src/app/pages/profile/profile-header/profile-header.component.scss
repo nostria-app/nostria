@@ -158,7 +158,7 @@
 .profile-name {
   margin-top: 0.4rem;
   margin-bottom: 8px;
-  font-size: 2rem;
+  font-size: var(--text-3xl);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -168,7 +168,7 @@
 
   // Smaller font on narrow containers
   @media (max-width: 500px) {
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
 
   .favorite-indicator {
@@ -223,7 +223,7 @@
     padding: 4px 12px;
     background: var(--surface-variant);
     border-radius: 16px;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--text-primary);
 
@@ -337,7 +337,7 @@
   }
 
   span {
-    font-size: 14px;
+    font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -368,7 +368,7 @@
 .profile-bio {
   margin: 16px 0;
   white-space: pre-wrap;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 
@@ -429,7 +429,7 @@
 .muted-you-label {
   display: inline-block;
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--mat-sys-on-surface-variant);
   background-color: var(--mat-sys-surface-container);
   border-radius: var(--mat-sys-corner-small);
