@@ -827,6 +827,27 @@ export class LoginDialogComponent implements OnDestroy {
     this.generateNostrConnectQR();
   }
 
+  async copyNostrConnectUrl(): Promise<void> {
+    const url = this.nostrConnectQrUrl();
+    if (!url) return;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      this.snackBar.open('Connection string copied to clipboard', 'Dismiss', {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } catch (error) {
+      this.logger.error('Failed to copy connection string:', error);
+      this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
   scanQrCodeForNostrConnect(): void {
     this.logger.debug('Opening QR code scanner for Nostr Connect');
 

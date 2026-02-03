@@ -1132,6 +1132,19 @@
       }
     }
   }
+
+  .copy-qr-button {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
 }
 
 .connect-steps {
