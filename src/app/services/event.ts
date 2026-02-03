@@ -1269,6 +1269,38 @@ export class EventService {
     };
 
     try {
+      // Special case: Single unmarked e-tag (deprecated NIP-10 positional format)
+      // When rootId === replyId, this is a direct reply to that single event.
+      // Some clients don't follow NIP-10 marked format and only include one e-tag.
+      // We need to load that event as the parent.
+      if (rootId && rootId === replyId) {
+        const singleParentHints = collectRelayHints([...rootRelays, ...replyRelays], author);
+
+        this.logger.info(`[loadParentEvents] Loading single parent event ${rootId.slice(0, 16)} (deprecated NIP-10 format) with author ${author?.slice(0, 8)} and hints:`, singleParentHints);
+
+        const singleParentEvent = await this.loadParentEvent(rootId, author, singleParentHints);
+
+        if (singleParentEvent) {
+          this.logger.info(`[loadParentEvents] Successfully loaded single parent event ${rootId.slice(0, 16)}`);
+          parents.unshift(singleParentEvent);
+
+          // Recursively load parents of this event to get the full thread chain
+          const grandParents = await this.loadParentEvents(singleParentEvent);
+          parents.unshift(...grandParents);
+        } else {
+          this.logger.warn(`[loadParentEvents] Failed to load single parent event ${rootId.slice(0, 16)}`);
+        }
+
+        // Sort parents by created_at to ensure proper chronological order
+        parents.sort((a, b) => a.created_at - b.created_at);
+
+        this.logger.info(`[loadParentEvents] Returning ${parents.length} parent events (single parent case):`,
+          parents.map(p => ({ id: p.id.slice(0, 16), created_at: p.created_at }))
+        );
+
+        return parents;
+      }
+
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
         // Use replyAuthor if available, otherwise fall back to author
