@@ -14,6 +14,7 @@ import { SettingDangerZoneComponent } from './danger-zone.component';
 import { SettingStorageComponent } from './storage.component';
 import { SettingMenuEditorComponent } from './menu-editor.component';
 import { SettingHomeDestinationComponent } from './home-destination.component';
+import { SettingNotificationSpamFilterComponent } from './notification-spam-filter.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
@@ -59,6 +60,9 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
 
   // Danger zone
   'wipe-data': SettingDangerZoneComponent,
+
+  // Notification spam filter
+  'notification-spam-filter': SettingNotificationSpamFilterComponent,
 };
 
 /**

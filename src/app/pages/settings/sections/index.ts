@@ -14,3 +14,4 @@ export { SettingDangerZoneComponent } from './danger-zone.component';
 export { SettingStorageComponent } from './storage.component';
 export { SettingMenuEditorComponent } from './menu-editor.component';
 export { SettingHomeDestinationComponent } from './home-destination.component';
+export { SettingNotificationSpamFilterComponent } from './notification-spam-filter.component';

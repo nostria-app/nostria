@@ -45,15 +45,6 @@
     <p class="loading-text">Loading thread...</p>
   </div>
   } @else {
-  <!-- Loading indicator for parent events when they're still loading -->
-  @if (isLoadingParents()) {
-  <div class="parent-events">
-    <div class="section-loading">
-      <mat-spinner diameter="16"></mat-spinner>
-      <p class="loading-text">Loading thread context...</p>
-    </div>
-  </div>
-  }
 
   <!-- Display parent events in thread (if any) with proper indentation -->
   @if (threadedParents()) {
@@ -76,13 +67,11 @@
   </div>
   }
 
-  <!-- Loading status indicator - shows thread loading -->
-  @if (isLoadingParents()) {
-  <div class="loading-status">
-    <div class="status-item">
-      <mat-spinner diameter="14"></mat-spinner>
-      <span>Loading thread...</span>
-    </div>
+  <!-- Unified loading indicator for thread context (parents/replies) -->
+  @if (isLoadingParents() || isLoadingReplies()) {
+  <div class="loading-status" [style.margin-left.px]="parentEvents().length * 16">
+    <mat-spinner diameter="14"></mat-spinner>
+    <span>Loading thread...</span>
   </div>
   }
 
@@ -196,7 +185,8 @@
     </div>
     <div class="thread-content">
       <app-event [event]="threadedEvent.event" mode="thread"
-        [replyCountFromParent]="countReplies(threadedEvent)"></app-event>
+        [replyCountFromParent]="countReplies(threadedEvent)"
+        [repliesFromParent]="threadedEvent.replies"></app-event>
 
       @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
       <button class="expand-collapsed-btn" mat-button (click)="toggleThreadCollapse(threadedEvent.event.id)">

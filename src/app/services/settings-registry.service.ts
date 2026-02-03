@@ -213,6 +213,17 @@ export class SettingsRegistryService {
       priority: 17,
     },
     {
+      id: 'notification-spam-filter',
+      title: $localize`:@@settings.notification-spam-filter.title:Notification Spam Filter`,
+      description: $localize`:@@settings.notification-spam-filter.description:Filter out notifications from events that tag too many accounts`,
+      keywords: ['notification', 'spam', 'filter', 'tag', 'mass', 'tagged', 'accounts', 'block', 'mentions'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'filter_alt',
+      route: '/settings/general',
+      priority: 18,
+    },
+    {
       id: 'external-links',
       title: $localize`:@@settings.external-links.title:External Links`,
       description: $localize`:@@settings.external-links.description:Configure which external domains should open within the app`,

@@ -7,6 +7,7 @@ import {
   untracked,
   computed,
   input,
+  ElementRef,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
@@ -70,6 +71,9 @@ export const REPLY_FILTER_FOLLOWING = 'following';
   }
 })
 export class EventPageComponent {
+  // Unique instance ID for debugging
+  private instanceId = Math.random().toString(36).substring(7);
+  
   // Input for dialog mode - when provided, uses this instead of route params
   dialogEventId = input<string | undefined>(undefined);
   dialogEvent = input<Event | undefined>(undefined);
@@ -81,7 +85,12 @@ export class EventPageComponent {
 
   // Detect if event is rendered in the right panel outlet
   isInRightPanel = computed(() => {
-    return this.route.outlet === 'right';
+    // Check both the route outlet property AND the current URL structure
+    // The URL contains "(right:e/..." when the event is in the right panel
+    const outletCheck = this.route.outlet === 'right';
+    const urlCheck = this.router.url.includes('(right:');
+    console.log('[EventPage] isInRightPanel check - outlet:', this.route.outlet, 'outletCheck:', outletCheck, 'urlCheck:', urlCheck);
+    return outletCheck || urlCheck;
   });
 
   event = signal<Event | undefined>(undefined);
@@ -104,6 +113,7 @@ export class EventPageComponent {
   followSetsService = inject(FollowSetsService);
   accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private elementRef = inject(ElementRef);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -318,6 +328,7 @@ export class EventPageComponent {
   // Initial data from router state (pre-loaded from feed for instant rendering)
   private initialReplyCount = signal<number | undefined>(undefined);
   private initialParentEvent = signal<Event | undefined>(undefined);
+  private initialReplies = signal<ThreadedEvent[] | undefined>(undefined);
 
   /**
    * Converts flat parent events array into a nested ThreadedEvent structure
@@ -362,6 +373,7 @@ export class EventPageComponent {
   deletionReason = signal<string | null>(null);
 
   constructor() {
+    console.log('[EventPage]', this.instanceId, 'constructor - outlet:', this.route.outlet, 'url:', this.router.url);
     // this.item = this.route.snapshot.data['data'];
     console.log('EventPageComponent initialized with data:', this.item);
 
@@ -393,6 +405,11 @@ export class EventPageComponent {
       console.log('Router state parent event:', navigation.extras.state['parentEvent']);
       this.initialParentEvent.set(navigation.extras.state['parentEvent'] as Event);
     }
+    // Check for pre-loaded replies from thread view (for instant rendering)
+    if (navigation?.extras.state?.['replies']) {
+      console.log('Router state replies:', navigation.extras.state['replies']);
+      this.initialReplies.set(navigation.extras.state['replies'] as ThreadedEvent[]);
+    }
 
     // Effect to load event when in dialog mode with direct event ID input
     effect(() => {
@@ -421,6 +438,7 @@ export class EventPageComponent {
             // Scroll to top when navigating to a new event
             // Use panel-aware scrolling to avoid scrolling the wrong panel
             const panel = this.isInRightPanel() ? 'right' : 'left';
+            console.log('[EventPage]', this.instanceId, 'effect scroll - isInRightPanel:', this.isInRightPanel(), 'outlet:', this.route.outlet, 'panel:', panel);
             setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
           }
         });
@@ -481,9 +499,20 @@ export class EventPageComponent {
         // Note: isLoadingParents stays true because we still want to fully resolve the parent chain
       }
 
+      // Use pre-loaded replies from router state for instant rendering
+      const initialRepliesData = this.initialReplies();
+      if (initialRepliesData && initialRepliesData.length > 0) {
+        // Set initial replies immediately for instant UI
+        this.threadedReplies.set(initialRepliesData);
+        // Mark loading as complete for replies since we have data
+        // The progressive loader will update with fresh data from relays
+        this.isLoadingReplies.set(false);
+      }
+
       // Clear initial values after using them (only used once per navigation)
       this.initialParentEvent.set(undefined);
-      this.initialReplyCount.set(undefined);
+      this.initialReplies.set(undefined);
+      // Note: Don't clear initialReplyCount here - it's used by totalReplyCount computed signal
 
       // Use progressive loading to show content as it becomes available
       const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
@@ -525,6 +554,8 @@ export class EventPageComponent {
         if (partialData.threadedReplies !== undefined && partialData.threadedReplies.length > 0) {
           this.threadedReplies.set(partialData.threadedReplies);
           this.isLoadingReplies.set(false);
+          // Clear initial reply count since we now have actual data
+          this.initialReplyCount.set(undefined);
 
           // If openThreadsExpanded is false, collapse top-level replies by default
           if (!this.localSettings.openThreadsExpanded()) {
@@ -579,45 +610,64 @@ export class EventPageComponent {
 
       // Scroll to top after loading - use panel-aware scrolling
       const panel = this.isInRightPanel() ? 'right' : 'left';
+      console.log('[EventPage] loadEvent finally scroll - isInRightPanel:', this.isInRightPanel(), 'outlet:', this.route.outlet, 'panel:', panel);
       setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
   }
 
   /**
    * Scrolls to the main event after thread context has been loaded
+   * Uses the component's own DOM to avoid affecting other panels
    * The CSS scroll-margin-top on #main-event handles the toolbar offset
    */
   private scrollToMainEvent(): void {
-    const mainEventElement = document.getElementById('main-event');
+    // Query within component's own DOM to avoid finding element in wrong panel
+    const mainEventElement = this.elementRef.nativeElement.querySelector('#main-event');
     if (mainEventElement) {
-      mainEventElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest',
-      });
+      // Find the scrollable container (panel) for this component
+      const scrollContainer = this.findScrollContainer(mainEventElement);
+      if (scrollContainer) {
+        // Calculate the offset to scroll to
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = mainEventElement.getBoundingClientRect();
+        const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top);
+        scrollContainer.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth',
+        });
+      }
     }
   }
 
   /**
    * Scrolls to the main event with retry logic to handle async content loading
    * Retries multiple times with increasing delays to ensure DOM is fully rendered
+   * Uses the component's own DOM to avoid affecting other panels
    * The CSS scroll-margin-top on #main-event handles the toolbar offset
    */
   private scrollToMainEventWithRetry(attempt = 0, maxAttempts = 5): void {
-    const mainEventElement = document.getElementById('main-event');
+    // Query within component's own DOM to avoid finding element in wrong panel
+    const mainEventElement = this.elementRef.nativeElement.querySelector('#main-event') as HTMLElement | null;
 
     if (mainEventElement) {
       // Wait for next animation frame to ensure rendering is complete
       requestAnimationFrame(() => {
         // Additional timeout to ensure all content (including images) has loaded
         setTimeout(() => {
-          const mainEventElement = document.getElementById('main-event');
+          const mainEventElement = this.elementRef.nativeElement.querySelector('#main-event') as HTMLElement | null;
           if (mainEventElement) {
-            mainEventElement.scrollIntoView({
-              behavior: attempt === 0 ? 'auto' : 'smooth',
-              block: 'start',
-              inline: 'nearest',
-            });
+            // Find the scrollable container (panel) for this component
+            const scrollContainer = this.findScrollContainer(mainEventElement);
+            if (scrollContainer) {
+              // Calculate the offset to scroll to
+              const containerRect = scrollContainer.getBoundingClientRect();
+              const elementRect = mainEventElement.getBoundingClientRect();
+              const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top);
+              scrollContainer.scrollTo({
+                top: scrollTop,
+                behavior: attempt === 0 ? 'instant' : 'smooth',
+              });
+            }
           }
         }, 250);
       });
@@ -628,6 +678,21 @@ export class EventPageComponent {
         this.scrollToMainEventWithRetry(attempt + 1, maxAttempts);
       }, delay);
     }
+  }
+
+  /**
+   * Find the scrollable container (panel) for an element
+   * Returns the .left-panel or .right-panel element that contains this component
+   */
+  private findScrollContainer(element: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = element;
+    while (current) {
+      if (current.classList.contains('left-panel') || current.classList.contains('right-panel')) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
   }
 
   async startDeepResolution() {

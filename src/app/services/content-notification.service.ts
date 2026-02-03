@@ -5,9 +5,10 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './database.service';
 import { DatabaseService } from './database.service';
-import { kinds, nip57 } from 'nostr-tools';
+import { kinds, nip57, Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { LocalSettingsService } from './local-settings.service';
 
 /**
  * Query limits for fetching notifications from relays
@@ -44,6 +45,7 @@ export class ContentNotificationService implements OnDestroy {
   private accountState = inject(AccountStateService);
   private database = inject(DatabaseService);
   private platformId = inject(PLATFORM_ID);
+  private localSettings = inject(LocalSettingsService);
 
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -102,6 +104,31 @@ export class ContentNotificationService implements OnDestroy {
     } catch (error) {
       this.logger.error('Failed to initialize ContentNotificationService', error);
     }
+  }
+
+  /**
+   * Check if an event should be filtered out due to having too many tagged accounts.
+   * This is a spam prevention measure - mass-tagging events are often spam.
+   * @param event The Nostr event to check
+   * @returns true if the event should be filtered out (not create notification)
+   */
+  private shouldFilterMassTaggedEvent(event: Event): boolean {
+    const maxTags = this.localSettings.maxTaggedAccountsFilter();
+
+    // If no filter is set, allow all events
+    if (maxTags === 'none') {
+      return false;
+    }
+
+    // Count the number of 'p' tags (tagged accounts) in the event
+    const pTagCount = event.tags.filter(tag => tag[0] === 'p').length;
+
+    if (pTagCount > maxTags) {
+      this.logger.debug(`Filtering notification from mass-tagged event: ${event.id} (${pTagCount} tags, limit: ${maxTags})`);
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -376,6 +403,11 @@ export class ContentNotificationService implements OnDestroy {
           continue;
         }
 
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) {
+          continue;
+        }
+
         // Filter out replies (which have 'e' tags referencing the original note)
         // and only keep pure mentions
         const hasReplyTag = event.tags.some(
@@ -425,6 +457,11 @@ export class ContentNotificationService implements OnDestroy {
           continue;
         }
 
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) {
+          continue;
+        }
+
         await this.createContentNotification({
           type: NotificationType.REPOST,
           title: 'Reposted your note',
@@ -459,6 +496,11 @@ export class ContentNotificationService implements OnDestroy {
       for (const event of events) {
         // Skip if the replier is the current user (don't notify yourself)
         if (event.pubkey === pubkey) {
+          continue;
+        }
+
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) {
           continue;
         }
 
@@ -507,6 +549,11 @@ export class ContentNotificationService implements OnDestroy {
       for (const event of events) {
         // Skip if the reactor is the current user (don't notify yourself)
         if (event.pubkey === pubkey) {
+          continue;
+        }
+
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) {
           continue;
         }
 
@@ -588,6 +635,11 @@ export class ContentNotificationService implements OnDestroy {
       this.logger.debug(`Found ${events.length} zap events`);
 
       for (const event of events) {
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) {
+          continue;
+        }
+
         // Extract the zap sender's pubkey from the description tag (zap request)
         const descriptionTag = event.tags.find(tag => tag[0] === 'description');
         let zapperPubkey = event.pubkey; // Fallback to LNURL service pubkey
@@ -947,6 +999,7 @@ export class ContentNotificationService implements OnDestroy {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
+        if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
         if (isReply) continue;
@@ -982,6 +1035,7 @@ export class ContentNotificationService implements OnDestroy {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
+        if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         const eTag = event.tags.find(tag => tag[0] === 'e');
         await this.createContentNotification({
@@ -1015,6 +1069,7 @@ export class ContentNotificationService implements OnDestroy {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
+        if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
         if (!isReply) continue;
@@ -1051,6 +1106,7 @@ export class ContentNotificationService implements OnDestroy {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
+        if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         const eTag = event.tags.find(tag => tag[0] === 'e');
         const reactedEventId = eTag?.[1];
@@ -1125,6 +1181,9 @@ export class ContentNotificationService implements OnDestroy {
       });
 
       for (const event of events) {
+        // Skip events with too many tagged accounts (spam prevention)
+        if (this.shouldFilterMassTaggedEvent(event)) continue;
+
         // Parse the zap request from the description tag
         const descriptionTag = event.tags.find(tag => tag[0] === 'description');
         let zapperPubkey = event.pubkey;
