@@ -723,10 +723,15 @@ export class UserDataService {
     // Otherwise, check storage first if save option is enabled and event is not replaceable
     if (events.length === 0 && options?.save && !options?.invalidateCache && !isReplaceable) {
       const allEvents = await this.database.getEventsByKind(kind);
-      events = allEvents.filter((e: Event) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      console.log(`🔍 [DB Query] getEventsByKind(${kind}) returned ${allEvents.length} total events`);
+      // Filter by e-tag - note: use 'e' not '#e' since we're reading tags, not building relay filters
+      events = allEvents.filter((e: Event) => this.utilities.getTagValues('e', e.tags).includes(eventTag));
 
       if (events.length > 0) {
+        console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
+      } else {
+        console.log(`🔍 [DB Query] After filtering by e-tag ${eventTag.substring(0, 8)}..., found 0 matching events`);
       }
     }
 
@@ -735,6 +740,7 @@ export class UserDataService {
     // 2. Kind is replaceable (need latest version), OR
     // 3. invalidateCache is true
     if (events.length === 0 || isReplaceable || options?.invalidateCache) {
+      console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${events.length}, replaceable: ${isReplaceable}, invalidate: ${options?.invalidateCache})`);
       const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
         pubkey,
         kind,
@@ -742,6 +748,7 @@ export class UserDataService {
         options?.includeAccountRelays
       );
       if (relayEvents && relayEvents.length > 0) {
+        console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kind ${kind}`);
         events = relayEvents;
       }
     }
@@ -757,6 +764,7 @@ export class UserDataService {
     }
 
     if (options?.save) {
+      console.log(`💾 [DB Save] Saving ${events.length} events to database for kind ${kind}`);
       for (const event of events) {
         await this.database.saveEvent(event);
       }
@@ -794,9 +802,11 @@ export class UserDataService {
     if (events.length === 0 && options?.save && !options?.invalidateCache && !hasReplaceableKind) {
       // Fetch from storage for all requested kinds
       const kindEvents = await Promise.all(kinds.map(kind => this.database.getEventsByKind(kind)));
-      events = kindEvents.flat().filter((e: Event) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      // Filter by e-tag - note: use 'e' not '#e' since we're reading tags, not building relay filters
+      events = kindEvents.flat().filter((e: Event) => this.utilities.getTagValues('e', e.tags).includes(eventTag));
 
       if (events.length > 0) {
+        console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
       }
     }
@@ -806,6 +816,7 @@ export class UserDataService {
     // 2. Any kind is replaceable (need latest version), OR
     // 3. invalidateCache is true
     if (events.length === 0 || hasReplaceableKind || options?.invalidateCache) {
+      console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${events.length}, hasReplaceable: ${hasReplaceableKind}, invalidate: ${options?.invalidateCache})`);
       const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(
         pubkey,
         kinds,
@@ -813,6 +824,7 @@ export class UserDataService {
         options?.includeAccountRelays
       );
       if (relayEvents && relayEvents.length > 0) {
+        console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kinds [${kinds.join(',')}]`);
         events = relayEvents;
       }
     }
@@ -828,6 +840,7 @@ export class UserDataService {
     }
 
     if (options?.save) {
+      console.log(`💾 [DB Save] Saving ${events.length} events to database for kinds [${kinds.join(',')}]`);
       for (const event of events) {
         await this.database.saveEvent(event);
       }
