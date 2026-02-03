@@ -323,7 +323,8 @@
 
 .empty-state,
 .error-state,
-.loading-state {
+.loading-state,
+.hidden-replies-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -473,4 +474,85 @@
 
 .no-more-indicator {
   opacity: 0.7;
+
+  .show-replies-link {
+    background: none;
+    border: none;
+    color: var(--mat-sys-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    font-size: inherit;
+    font-style: inherit;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+      opacity: 0.8;
+    }
+  }
+}
+
+// Hidden replies state - when user has replies but filter hides them
+.hidden-replies-state {
+  padding: 2rem 1rem;
+  text-align: center;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border-radius: 12px;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  margin: 1rem 0;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    opacity: 0.7;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 1.5rem 0;
+    color: var(--mat-sys-on-surface-variant);
+    max-width: 400px;
+  }
+
+  .hidden-replies-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+
+    @media (min-width: 480px) {
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        margin-bottom: 0;
+        opacity: 1;
+      }
+
+      mat-spinner {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .no-more-hint {
+    margin-top: 1rem;
+    margin-bottom: 0;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
+  }
 }

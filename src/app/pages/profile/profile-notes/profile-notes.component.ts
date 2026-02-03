@@ -42,6 +42,7 @@ export class ProfileNotesComponent {
   error = signal<string | null>(null);
   pinnedNotes = signal<NostrRecord[]>([]);
   isLoadingPinned = signal<boolean>(false);
+  isSearchingForPosts = signal<boolean>(false);
 
   // Cooldown to prevent rapid-fire relay loading
   private lastLoadTime = 0;
@@ -334,6 +335,62 @@ export class ProfileNotesComponent {
     } catch (err) {
       this.logger.error('Failed to load more timeline content', err);
       this.error.set('Failed to load older timeline content. Please try again.');
+    }
+  }
+
+  /**
+   * Show replies by enabling the replies filter.
+   * Called when user clicks "Show replies" in the hidden-replies state.
+   */
+  showReplies(): void {
+    this.logger.info('User requested to show replies');
+    this.profileState.updateTimelineFilter({ showReplies: true });
+  }
+
+  /**
+   * Search for more posts by loading additional pages from relays.
+   * Called when user clicks "Search for more posts" in the hidden-replies state.
+   * This keeps loading batches until we find at least one original post or run out of events.
+   */
+  async loadMoreToFindPosts(): Promise<void> {
+    if (this.isSearchingForPosts() || !this.profileState.hasMoreNotes()) {
+      return;
+    }
+
+    this.isSearchingForPosts.set(true);
+    this.logger.info('Searching for original posts by loading more events...');
+
+    const MAX_ATTEMPTS = 5; // Limit attempts to avoid infinite loading
+    let attempts = 0;
+
+    try {
+      while (attempts < MAX_ATTEMPTS && this.profileState.hasMoreNotes()) {
+        attempts++;
+        this.logger.debug(`Search attempt ${attempts}/${MAX_ATTEMPTS}`);
+
+        await this.profileState.loadMoreNotes();
+
+        // Check if we found any original posts now
+        const filteredTimeline = this.profileState.sortedTimeline();
+        if (filteredTimeline.length > 0) {
+          this.logger.info(`Found ${filteredTimeline.length} posts after ${attempts} attempts`);
+          break;
+        }
+
+        // Small delay between attempts to avoid hammering relays
+        if (this.profileState.hasMoreNotes() && attempts < MAX_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (this.profileState.sortedTimeline().length === 0) {
+        this.logger.info(`No original posts found after ${attempts} attempts`);
+      }
+    } catch (err) {
+      this.logger.error('Error while searching for posts', err);
+      this.error.set('Failed to search for posts. Please try again.');
+    } finally {
+      this.isSearchingForPosts.set(false);
     }
   }
 }
