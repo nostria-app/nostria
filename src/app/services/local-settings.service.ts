@@ -69,7 +69,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuOpen: false,
   menuExpanded: true,
   locale: 'en',
-  maxRelaysPerUser: 3,
+  maxRelaysPerUser: 4,
   autoRelayAuth: false,
   addClientTag: true,
   showClientTag: true,
