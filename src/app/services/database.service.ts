@@ -885,6 +885,84 @@ export class DatabaseService {
   }
 
   /**
+   * Get events by kind that have a specific e-tag
+   * Uses a cursor to filter efficiently without loading all events into memory
+   * Filters out expired events (NIP-40)
+   */
+  async getEventsByKindAndEventTag(kind: number, eventTag: string): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    const events = await new Promise<Event[]>((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const index = store.index(EVENT_INDEXES.BY_KIND);
+
+      const results: Event[] = [];
+      const request = index.openCursor(IDBKeyRange.only(kind));
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          const eventData = cursor.value as Event;
+          // Check if event has the target e-tag
+          if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
+            results.push(eventData);
+          }
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+
+    return this.filterAndDeleteExpiredEvents(events);
+  }
+
+  /**
+   * Get events by multiple kinds that have a specific e-tag
+   * Uses cursors to filter efficiently without loading all events into memory
+   * Filters out expired events (NIP-40)
+   */
+  async getEventsByKindsAndEventTag(kinds: number[], eventTag: string): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    // Query each kind in parallel using cursors
+    const kindPromises = kinds.map(kind => {
+      return new Promise<Event[]>((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index(EVENT_INDEXES.BY_KIND);
+
+        const results: Event[] = [];
+        const request = index.openCursor(IDBKeyRange.only(kind));
+
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+          if (cursor) {
+            const eventData = cursor.value as Event;
+            // Check if event has the target e-tag
+            if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
+              results.push(eventData);
+            }
+            cursor.continue();
+          } else {
+            resolve(results);
+          }
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    });
+
+    const allResults = await Promise.all(kindPromises);
+    const events = allResults.flat();
+
+    return this.filterAndDeleteExpiredEvents(events);
+  }
+
+  /**
    * Get events by pubkey
    * Filters out expired events (NIP-40) and deletes them from the database
    */
