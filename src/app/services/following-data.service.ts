@@ -43,9 +43,10 @@ export class FollowingDataService {
   // This is the size of each "page" when infinite scrolling
   readonly TIME_WINDOW_SECONDS = 6 * 60 * 60;
 
-  // Maximum lookback period for DATABASE queries (90 days in seconds)
-  // This matches the column cache max age and allows showing all locally stored events
-  private readonly MAX_DATABASE_LOOKBACK_SECONDS = 90 * 24 * 60 * 60;
+  // Maximum lookback period for initial cache loading (7 days in seconds)
+  // This limits how many events are loaded at startup for the feed display
+  // Older events can still be loaded via infinite scroll pagination
+  private readonly MAX_INITIAL_CACHE_SECONDS = 7 * 24 * 60 * 60;
 
   // Loading state
   readonly isLoading = signal(false);
@@ -118,26 +119,26 @@ export class FollowingDataService {
   }
 
   /**
-   * Calculate the 'since' timestamp for DATABASE queries.
-   * Uses a longer lookback (1 week) to show all locally cached events.
+   * Calculate the 'since' timestamp for initial cache loading.
+   * Uses a 7-day lookback for the feed display - older events are loaded via pagination.
    */
-  private calculateDatabaseSinceTimestamp(): number {
+  private calculateInitialCacheSinceTimestamp(): number {
     const now = Math.floor(Date.now() / 1000);
-    return now - this.MAX_DATABASE_LOOKBACK_SECONDS;
+    return now - this.MAX_INITIAL_CACHE_SECONDS;
   }
 
   /**
    * Get events from the database cache.
    * This provides immediate data while fresh data is being fetched.
-   * Uses a 1-week lookback by default to show all locally stored events.
+   * Uses a 7-day lookback by default - older events are loaded via infinite scroll.
    */
   async getCachedEvents(kinds: number[], since?: number): Promise<Event[]> {
     const pubkey = this.accountState.pubkey();
     const followingList = this.accountState.followingList();
     if (!pubkey || followingList.length === 0) return [];
 
-    // Use provided since timestamp, or default to 1 week lookback for database queries
-    const sinceTimestamp = since ?? this.calculateDatabaseSinceTimestamp();
+    // Use provided since timestamp, or default to 7-day lookback for initial cache loading
+    const sinceTimestamp = since ?? this.calculateInitialCacheSinceTimestamp();
 
     try {
       // Fetch events for each kind and combine
