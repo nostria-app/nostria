@@ -112,9 +112,23 @@ export class EventPageComponent {
   threadedReplies = signal<ThreadedEvent[]>([]);
 
   // Total reply count (including nested replies) - passed to app-event to avoid duplicate relay queries
+  // Uses initial reply count from router state for instant display until thread is fully loaded
   totalReplyCount = computed<number>(() => {
     const replies = this.threadedReplies();
-    return this.countAllReplies(replies);
+    const countFromReplies = this.countAllReplies(replies);
+
+    // If we have actual replies loaded, use that count
+    if (countFromReplies > 0) {
+      return countFromReplies;
+    }
+
+    // Otherwise use the initial reply count from router state (if available)
+    const initialCount = this.initialReplyCount();
+    if (initialCount !== undefined) {
+      return initialCount;
+    }
+
+    return 0;
   });
 
   /**
@@ -301,6 +315,10 @@ export class EventPageComponent {
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);
 
+  // Initial data from router state (pre-loaded from feed for instant rendering)
+  private initialReplyCount = signal<number | undefined>(undefined);
+  private initialParentEvent = signal<Event | undefined>(undefined);
+
   /**
    * Converts flat parent events array into a nested ThreadedEvent structure
    * so parents display with the same indentation as thread replies.
@@ -365,6 +383,16 @@ export class EventPageComponent {
       console.log('Router state event data:', navigation.extras.state['event']);
       this.event.set(navigation.extras.state['event'] as Event);
     }
+    // Check for pre-loaded reply count from feed
+    if (navigation?.extras.state?.['replyCount'] !== undefined) {
+      console.log('Router state reply count:', navigation.extras.state['replyCount']);
+      this.initialReplyCount.set(navigation.extras.state['replyCount'] as number);
+    }
+    // Check for pre-loaded parent event from feed
+    if (navigation?.extras.state?.['parentEvent']) {
+      console.log('Router state parent event:', navigation.extras.state['parentEvent']);
+      this.initialParentEvent.set(navigation.extras.state['parentEvent'] as Event);
+    }
 
     // Effect to load event when in dialog mode with direct event ID input
     effect(() => {
@@ -391,7 +419,9 @@ export class EventPageComponent {
             await this.loadEvent(id);
 
             // Scroll to top when navigating to a new event
-            setTimeout(() => this.layout.scrollMainContentToTop(), 100);
+            // Use panel-aware scrolling to avoid scrolling the wrong panel
+            const panel = this.isInRightPanel() ? 'right' : 'left';
+            setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
           }
         });
       }
@@ -442,6 +472,18 @@ export class EventPageComponent {
       this.reactions.set([]);
       this.isDeleted.set(false);
       this.deletionReason.set(null);
+
+      // Use pre-loaded parent event from router state for instant rendering
+      const initialParent = this.initialParentEvent();
+      if (initialParent) {
+        // Set initial parent immediately for instant UI
+        this.parentEvents.set([initialParent]);
+        // Note: isLoadingParents stays true because we still want to fully resolve the parent chain
+      }
+
+      // Clear initial values after using them (only used once per navigation)
+      this.initialParentEvent.set(undefined);
+      this.initialReplyCount.set(undefined);
 
       // Use progressive loading to show content as it becomes available
       const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
@@ -535,8 +577,9 @@ export class EventPageComponent {
         setTimeout(() => this.showCompletionStatus.set(false), 3000);
       }
 
-      // Scroll to top after loading
-      setTimeout(() => this.layout.scrollMainContentToTop(), 100);
+      // Scroll to top after loading - use panel-aware scrolling
+      const panel = this.isInRightPanel() ? 'right' : 'left';
+      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
   }
 

@@ -1834,7 +1834,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     // Navigate to the target event (reposted event for reposts, regular event otherwise)
-    this.layout.openEvent(targetEvent.id, targetEvent);
+    // Pass reply count and parent event for instant rendering in the thread view
+    this.layout.openEvent(targetEvent.id, targetEvent, undefined, {
+      replyCount: this.replyCount(),
+      parentEvent: this.parentEvent() ?? undefined
+    });
   }
 
   /**
