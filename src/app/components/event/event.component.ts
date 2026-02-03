@@ -120,6 +120,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   relayHints = input<string[] | undefined>(undefined);
   // Whether this event is rendered inside the Feeds panel (for video auto-play control)
   inFeedsPanel = input<boolean>(false);
+  // Optional: reply count passed from parent (e.g., event page) to avoid duplicate relay queries
+  // When provided, this value is used instead of loading reply count via loadAllInteractions
+  replyCountFromParent = input<number | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions
@@ -416,7 +419,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Reposts and quotes state
   reposts = signal<NostrRecord[]>([]);
   quotes = signal<NostrRecord[]>([]);
-  replyCount = signal<number>(0);
+  private _replyCountInternal = signal<number>(0);
+
+  // Reply count - uses parent-provided value if available, otherwise uses internally loaded value
+  replyCount = computed<number>(() => {
+    const fromParent = this.replyCountFromParent();
+    if (fromParent !== undefined) {
+      return fromParent;
+    }
+    return this._replyCountInternal();
+  });
 
   // Combined count of reposts + quotes for display
   repostCount = computed<number>(() => {
@@ -488,7 +500,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Try to get the reposted content to check if it should be filtered
     const repostedContent = this.repostService.decodeRepost(event);
     const repostedEvent = repostedContent?.event || this.asyncRepostedEvent();
-    
+
     if (!repostedEvent) return false; // No content to check
 
     // Check pubkey-based muting
@@ -496,12 +508,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (mutedAccounts.includes(repostedEvent.pubkey)) {
       return true;
     }
-    
+
     // Check profile word-based muting
     if (this.reportingService.isProfileBlockedByMutedWord(repostedEvent.pubkey)) {
       return true;
     }
-    
+
     // Check content-based muting (muted words in content, hashtags, etc.)
     if (this.reportingService.isContentBlocked(repostedEvent)) {
       return true;
@@ -1131,7 +1143,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         events: filteredReportEvents,
         data: filteredReportData
       });
-      this.replyCount.set(interactions.replyCount);
+      this._replyCountInternal.set(interactions.replyCount);
     } catch (error) {
       console.error('Error loading event interactions:', error);
     } finally {

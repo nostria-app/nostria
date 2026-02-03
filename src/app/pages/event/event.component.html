@@ -10,21 +10,18 @@
 
   <!-- Reply Filter Button -->
   <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu"
-    [matTooltip]="'Filter replies: ' + selectedFollowSetName()"
-    [class.filter-active]="isReplyFilterActive()">
+    [matTooltip]="'Filter replies: ' + selectedFollowSetName()" [class.filter-active]="isReplyFilterActive()">
     <mat-icon>{{ isReplyFilterActive() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
   </button>
 </div>
 
 <!-- Reply Filter Menu -->
 <mat-menu #replyFilterMenu="matMenu">
-  <button mat-menu-item (click)="setReplyFilter('everyone')"
-    [class.selected]="selectedReplyFilter() === 'everyone'">
+  <button mat-menu-item (click)="setReplyFilter('everyone')" [class.selected]="selectedReplyFilter() === 'everyone'">
     <mat-icon>public</mat-icon>
     <span>Everyone</span>
   </button>
-  <button mat-menu-item (click)="setReplyFilter('following')"
-    [class.selected]="selectedReplyFilter() === 'following'">
+  <button mat-menu-item (click)="setReplyFilter('following')" [class.selected]="selectedReplyFilter() === 'following'">
     <mat-icon>people</mat-icon>
     <span>Following</span>
   </button>
@@ -70,7 +67,7 @@
   @if (event()) {
   <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="parentEvents().length * 16">
     <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
-      [trustedByPubkey]="trustedByPubkey()"></app-event>
+      [trustedByPubkey]="trustedByPubkey()" [replyCountFromParent]="totalReplyCount()"></app-event>
   </div>
 
   <!-- Inline Reply Editor -->
@@ -171,7 +168,8 @@
     }
 
     <!-- Show "No matching replies" when filter is active but no results -->
-    @if (isReplyFilterActive() && threadedReplies().length > 0 && filteredThreadedReplies().length === 0 && !isLoadingReplies()) {
+    @if (isReplyFilterActive() && threadedReplies().length > 0 && filteredThreadedReplies().length === 0 &&
+    !isLoadingReplies()) {
     <div class="no-replies">
       <mat-icon>filter_alt_off</mat-icon>
       <p>No replies from {{ selectedFollowSetName() }}</p>
@@ -197,7 +195,8 @@
       [attr.aria-label]="threadedEvent.replies.length > 0 ? 'Toggle replies visibility' : null">
     </div>
     <div class="thread-content">
-      <app-event [event]="threadedEvent.event" mode="thread"></app-event>
+      <app-event [event]="threadedEvent.event" mode="thread"
+        [replyCountFromParent]="countReplies(threadedEvent)"></app-event>
 
       @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
       <button class="expand-collapsed-btn" mat-button (click)="toggleThreadCollapse(threadedEvent.event.id)">
@@ -219,8 +218,7 @@
 <ng-template #parentTemplate let-threadedEvent="threadedEvent">
   <div class="threaded-reply threaded-parent" [class.has-replies]="threadedEvent.replies.length > 0"
     [class.lines-hidden]="!localSettings.showThreadLines()">
-    <div class="thread-line-clickable"
-      [class.no-replies]="threadedEvent.replies.length === 0">
+    <div class="thread-line-clickable" [class.no-replies]="threadedEvent.replies.length === 0">
     </div>
     <div class="thread-content">
       <app-event [event]="threadedEvent.event" appearance="plain" mode="thread"></app-event>
