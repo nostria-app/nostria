@@ -16,11 +16,18 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { FollowSetsService, FollowSet } from '../../../services/follow-sets.service';
+import { CollectionSetsService, InterestSet } from '../../../services/collection-sets.service';
 
 export interface ListFeedSelection {
   dTag: string;
   title: string;
   pubkeys: string[];
+}
+
+export interface InterestFeedSelection {
+  dTag: string;
+  title: string;
+  hashtags: string[];
 }
 
 @Component({
@@ -45,9 +52,10 @@ export interface ListFeedSelection {
     </button>
 
     <mat-menu #listMenu="matMenu" class="list-feed-selector-menu">
+      <!-- People Lists Section -->
       <div class="menu-header" role="presentation">
         <mat-icon>people</mat-icon>
-        <span>List Feeds</span>
+        <span>People Lists</span>
       </div>
 
       <mat-divider></mat-divider>
@@ -81,7 +89,44 @@ export interface ListFeedSelection {
         </div>
       }
 
-      @if (selectedList()) {
+      <!-- Interests Section -->
+      <mat-divider></mat-divider>
+      
+      <div class="menu-header" role="presentation">
+        <mat-icon>tag</mat-icon>
+        <span>Interests</span>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      @if (isLoadingInterests()) {
+        <div class="loading-state" role="presentation">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Loading interests...</span>
+        </div>
+      } @else if (interestSets().length === 0) {
+        <div class="empty-state" role="presentation">
+          <mat-icon>tag</mat-icon>
+          <span>No interests found</span>
+          <span class="empty-hint">Add interests in Collections → Interests</span>
+        </div>
+      } @else {
+        <div class="list-items">
+          @for (interest of interestSets(); track interest.identifier) {
+            <button
+              mat-menu-item
+              (click)="onSelectInterest(interest)"
+              [class.active]="interest.identifier === selectedInterest()"
+            >
+              <mat-icon class="list-item-icon">tag</mat-icon>
+              <span class="list-item-name">{{ interest.title }}</span>
+              <span class="menu-item-count">{{ interest.hashtags.length }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      @if (selectedList() || selectedInterest()) {
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="onClearSelection()">
           <mat-icon>close</mat-icon>
@@ -228,28 +273,52 @@ export class ListFeedMenuComponent {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private followSetsService = inject(FollowSetsService);
+  private collectionSetsService = inject(CollectionSetsService);
 
   // Outputs
   listSelected = output<ListFeedSelection | null>();
+  interestSelected = output<InterestFeedSelection | null>();
 
   // State
   selectedList = signal<string>('');
+  selectedInterest = signal<string>('');
   private lastLoadedPubkey = '';
 
-  // Expose service signals
+  // Expose service signals for people lists
   followSets = this.followSetsService.followSets;
   isLoading = this.followSetsService.isLoading;
 
+  // Interest sets state
+  interestSets = signal<InterestSet[]>([]);
+  isLoadingInterests = signal(false);
+
   constructor() {
-    // Load follow sets when account changes
+    // Load follow sets and interest sets when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey && pubkey !== this.lastLoadedPubkey) {
         this.lastLoadedPubkey = pubkey;
         // Follow sets are loaded automatically by the service when account changes
         this.logger.debug('[ListFeedMenu] Account changed, follow sets will be loaded by service');
+        
+        // Load interest sets
+        this.loadInterestSets(pubkey);
       }
     });
+  }
+
+  private async loadInterestSets(pubkey: string): Promise<void> {
+    this.isLoadingInterests.set(true);
+    try {
+      const sets = await this.collectionSetsService.getInterestSets(pubkey);
+      this.interestSets.set(sets);
+      this.logger.debug('[ListFeedMenu] Loaded interest sets:', sets.length);
+    } catch (error) {
+      this.logger.error('[ListFeedMenu] Error loading interest sets:', error);
+      this.interestSets.set([]);
+    } finally {
+      this.isLoadingInterests.set(false);
+    }
   }
 
   onSelectList(list: FollowSet): void {
@@ -258,6 +327,8 @@ export class ListFeedMenuComponent {
       return;
     }
 
+    // Clear interest selection when selecting a list
+    this.selectedInterest.set('');
     this.selectedList.set(list.dTag);
     this.listSelected.emit({
       dTag: list.dTag,
@@ -266,16 +337,41 @@ export class ListFeedMenuComponent {
     });
   }
 
+  onSelectInterest(interest: InterestSet): void {
+    if (interest.hashtags.length === 0) {
+      this.logger.warn('[ListFeedMenu] Selected interest has no hashtags');
+      return;
+    }
+
+    // Clear list selection when selecting an interest
+    this.selectedList.set('');
+    this.selectedInterest.set(interest.identifier);
+    this.interestSelected.emit({
+      dTag: interest.identifier,
+      title: interest.title,
+      hashtags: interest.hashtags,
+    });
+  }
+
   onClearSelection(): void {
     this.selectedList.set('');
+    this.selectedInterest.set('');
     this.listSelected.emit(null);
+    this.interestSelected.emit(null);
   }
 
   setSelectedList(dTag: string): void {
     this.selectedList.set(dTag);
+    this.selectedInterest.set('');
+  }
+
+  setSelectedInterest(dTag: string): void {
+    this.selectedInterest.set(dTag);
+    this.selectedList.set('');
   }
 
   clearSelection(): void {
     this.selectedList.set('');
+    this.selectedInterest.set('');
   }
 }

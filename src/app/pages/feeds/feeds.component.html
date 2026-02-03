@@ -62,9 +62,9 @@
 
         <span class="spacer"></span>
 
-        <!-- List Feeds Menu - People Lists -->
+        <!-- List Feeds Menu - People Lists and Interests -->
         @if (app.authenticated()) {
-        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)">
+        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)" (interestSelected)="onInterestSelected($event)">
         </app-list-feed-menu>
         }
 
