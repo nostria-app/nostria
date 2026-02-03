@@ -831,10 +831,12 @@ export class EventService {
     try {
       // Load replies (kind 1 events that reference this event)
       // Include account relays to discover replies that may not be on the profile's relays
+      // Use save: true to persist to database for faster subsequent loads
       const replyRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.ShortTextNote, eventId, {
         cache: true,
         ttl: minutes.five,
         includeAccountRelays: true,
+        save: true, // Persist to database for faster loading next time
       });
 
       // Extract events and filter to actual thread participants
@@ -885,8 +887,9 @@ export class EventService {
     eventKind: number,
     pubkey: string,
     invalidateCache = false,
+    skipReplies = false,
   ): Promise<EventInteractions> {
-    this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey);
+    this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey, 'skipReplies:', skipReplies);
 
     // Handle cache invalidation if requested
     if (invalidateCache) {
@@ -894,7 +897,8 @@ export class EventService {
     }
 
     // Use subscription cache to prevent duplicate subscriptions
-    const cacheKey = `interactions-${eventId}-${pubkey}`;
+    // Include skipReplies in cache key since different queries return different data
+    const cacheKey = `interactions-${eventId}-${pubkey}-${skipReplies ? 'no-replies' : 'with-replies'}`;
     const cachedResult = await this.subscriptionCache.getOrCreateSubscription<EventInteractions>(
       cacheKey,
       [eventId], // eventIds array
@@ -904,17 +908,25 @@ export class EventService {
           // Determine the repost kind based on the event kind
           const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
-          // Fetch all interaction types including replies in a single query
+          // Build the list of kinds to query
+          // Skip ShortTextNote (replies) if the caller already has reply count from parent
+          const kindsToQuery = skipReplies
+            ? [kinds.Reaction, repostKind, kinds.Report]
+            : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote];
+
+          // Fetch all interaction types in a single query
           // Include account relays to discover interactions that may not be on the profile's relays
+          // Use save: true to persist to database for faster subsequent loads
           const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
             pubkey,
-            [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote],
+            kindsToQuery,
             eventId,
             {
               cache: true,
               ttl: minutes.five,
               invalidateCache,
               includeAccountRelays: true,
+              save: true, // Persist to database for faster loading next time
             },
           );
 
@@ -922,27 +934,34 @@ export class EventService {
           const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
           const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
           const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
-          // Count replies (kind 1 events that are actual thread replies to this event)
-          // IMPORTANT: An event having an e-tag referencing this event doesn't mean it's a reply!
-          // It could be a mention, quote, or reply to a different event in the thread.
-          // We must use getEventTags to determine if this event actually REPLIES to this specific event.
-          const replyRecords = allRecords.filter((r) => {
-            if (r.event.kind !== kinds.ShortTextNote) return false;
 
-            // Filter out events with empty content (same as loadReplies)
-            if (!r.event.content || !r.event.content.trim()) return false;
+          // Count replies only if we didn't skip them
+          // When skipReplies is true, the caller already has the reply count from parent
+          let replyCount = 0;
+          if (!skipReplies) {
+            // Count replies (kind 1 events that are actual thread replies to this event)
+            // IMPORTANT: An event having an e-tag referencing this event doesn't mean it's a reply!
+            // It could be a mention, quote, or reply to a different event in the thread.
+            // We must use getEventTags to determine if this event actually REPLIES to this specific event.
+            const replyRecords = allRecords.filter((r) => {
+              if (r.event.kind !== kinds.ShortTextNote) return false;
 
-            // Use getEventTags to properly parse the thread relationship
-            const eventTags = this.getEventTags(r.event);
-            const { rootId, replyId } = eventTags;
+              // Filter out events with empty content (same as loadReplies)
+              if (!r.event.content || !r.event.content.trim()) return false;
 
-            // An event is a direct reply to this event if:
-            // 1. replyId matches this event (explicit reply marker), OR
-            // 2. rootId matches this event AND no replyId (direct reply to root with no explicit reply marker)
-            // Note: If replyId is set to a DIFFERENT event, this is NOT a direct reply to us,
-            // it's a reply to that other event (even if rootId matches us as the thread root)
-            return replyId === eventId || (rootId === eventId && !replyId);
-          });
+              // Use getEventTags to properly parse the thread relationship
+              const eventTags = this.getEventTags(r.event);
+              const { rootId, replyId } = eventTags;
+
+              // An event is a direct reply to this event if:
+              // 1. replyId matches this event (explicit reply marker), OR
+              // 2. rootId matches this event AND no replyId (direct reply to root with no explicit reply marker)
+              // Note: If replyId is set to a DIFFERENT event, this is NOT a direct reply to us,
+              // it's a reply to that other event (even if rootId matches us as the thread root)
+              return replyId === eventId || (rootId === eventId && !replyId);
+            });
+            replyCount = replyRecords.length;
+          }
 
           // Process reactions
           const reactionCounts = new Map<string, number>();
@@ -990,7 +1009,7 @@ export class EventService {
             reportRecords.length - validReportRecords.length,
             'invalid)',
             'replies:',
-            replyRecords.length,
+            skipReplies ? 'skipped' : replyCount,
           );
 
           // Note: Quotes are loaded separately via loadQuotes() since they use 'q' tag, not 'e' tag
@@ -1004,7 +1023,7 @@ export class EventService {
               events: validReportRecords,
               data: reportCounts,
             },
-            replyCount: replyRecords.length,
+            replyCount, // 0 if skipReplies was true (caller should use replyCountFromParent)
             quotes: [], // Quotes are loaded separately
           };
         } catch (error) {
@@ -1058,6 +1077,7 @@ export class EventService {
             eventId,
             {
               cache: true,
+              save: true,
               ttl: minutes.five,
               invalidateCache,
               includeAccountRelays: true,
@@ -1129,6 +1149,7 @@ export class EventService {
       // Include account relays to discover reports that may not be on the profile's relays
       const reportRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.Report, eventId, {
         cache: true,
+        save: true,
         ttl: minutes.five,
         invalidateCache,
         includeAccountRelays: true,

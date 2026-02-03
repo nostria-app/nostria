@@ -1078,7 +1078,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // This matches what loadReplies does in loadThreadProgressively.
     const eventAuthorPubkey = targetRecordData.event.pubkey;
 
-    console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8));
+    // If reply count is provided from parent (e.g., event page that already loaded all replies),
+    // skip loading replies from relays to avoid duplicate queries
+    const skipReplies = this.replyCountFromParent() !== undefined;
+
+    console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8), 'skipReplies:', skipReplies);
 
     this.isLoadingReactions.set(true);
     try {
@@ -1088,7 +1092,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           targetEventId,
           targetRecordData.event.kind,
           eventAuthorPubkey,  // Use event author's pubkey for consistent relay queries
-          invalidateCache
+          invalidateCache,
+          skipReplies  // Skip loading replies when count is already known from parent
         ),
         this.eventService.loadQuotes(
           targetEventId,
@@ -1143,7 +1148,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         events: filteredReportEvents,
         data: filteredReportData
       });
-      this._replyCountInternal.set(interactions.replyCount);
+      // Only update internal reply count if we actually loaded it (not skipped)
+      if (!skipReplies) {
+        this._replyCountInternal.set(interactions.replyCount);
+      }
     } catch (error) {
       console.error('Error loading event interactions:', error);
     } finally {
