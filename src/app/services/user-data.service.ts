@@ -48,7 +48,7 @@ export class UserDataService {
    */
   private saveEventsInBackground(events: Event[], context: string): void {
     if (events.length === 0) return;
-    
+
     // Fire and forget - don't await
     this.database.saveEvents(events).catch((error) => {
       this.logger.error(`Background save failed for ${context}:`, error);
@@ -764,12 +764,12 @@ export class UserDataService {
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
-    
+
     // Add database events first
     for (const event of dbEvents) {
       eventMap.set(event.id, event);
     }
-    
+
     // Add/update with relay events (relay events take precedence if same ID)
     if (relayEvents && relayEvents.length > 0) {
       console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kind ${kind}`);
@@ -853,12 +853,12 @@ export class UserDataService {
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
-    
+
     // Add database events first
     for (const event of dbEvents) {
       eventMap.set(event.id, event);
     }
-    
+
     // Add/update with relay events (relay events take precedence if same ID)
     if (relayEvents && relayEvents.length > 0) {
       console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kinds [${kinds.join(',')}]`);
@@ -868,7 +868,7 @@ export class UserDataService {
     }
 
     events = Array.from(eventMap.values());
-    
+
     if (events.length === 0) {
       return [];
     }

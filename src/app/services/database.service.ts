@@ -369,7 +369,7 @@ export class DatabaseService {
       if (!event) {
         continue;
       }
-      
+
       if (this.isEventExpired(event)) {
         expiredEventIds.push(event.id);
       } else {
@@ -725,12 +725,12 @@ export class DatabaseService {
         this.logger.warn('Skipping malformed event in batch save:', event);
         return false;
       }
-      
+
       // Ensure tags array exists
       if (!event.tags) {
         event.tags = [];
       }
-      
+
       // Check if event is expired
       return !this.isEventExpired(event);
     });
