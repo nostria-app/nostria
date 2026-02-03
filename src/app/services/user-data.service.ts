@@ -722,16 +722,12 @@ export class UserDataService {
     // If invalidateCache is true, skip storage and fetch directly from relays
     // Otherwise, check storage first if save option is enabled and event is not replaceable
     if (events.length === 0 && options?.save && !options?.invalidateCache && !isReplaceable) {
-      const allEvents = await this.database.getEventsByKind(kind);
-      console.log(`🔍 [DB Query] getEventsByKind(${kind}) returned ${allEvents.length} total events`);
-      // Filter by e-tag - note: use 'e' not '#e' since we're reading tags, not building relay filters
-      events = allEvents.filter((e: Event) => this.utilities.getTagValues('e', e.tags).includes(eventTag));
+      // Use efficient cursor-based query that filters by e-tag without loading all events
+      events = await this.database.getEventsByKindAndEventTag(kind, eventTag);
 
       if (events.length > 0) {
         console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
-      } else {
-        console.log(`🔍 [DB Query] After filtering by e-tag ${eventTag.substring(0, 8)}..., found 0 matching events`);
       }
     }
 
@@ -800,10 +796,8 @@ export class UserDataService {
     // If invalidateCache is true, skip storage and fetch directly from relays
     // Otherwise, check storage first if save option is enabled and no kinds are replaceable
     if (events.length === 0 && options?.save && !options?.invalidateCache && !hasReplaceableKind) {
-      // Fetch from storage for all requested kinds
-      const kindEvents = await Promise.all(kinds.map(kind => this.database.getEventsByKind(kind)));
-      // Filter by e-tag - note: use 'e' not '#e' since we're reading tags, not building relay filters
-      events = kindEvents.flat().filter((e: Event) => this.utilities.getTagValues('e', e.tags).includes(eventTag));
+      // Use efficient cursor-based query that filters by e-tag without loading all events
+      events = await this.database.getEventsByKindsAndEventTag(kinds, eventTag);
 
       if (events.length > 0) {
         console.log(`📀 [DB Cache] Loaded ${events.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
