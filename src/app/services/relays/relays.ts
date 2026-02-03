@@ -1,4 +1,5 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { Injectable, inject, signal, effect, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { UtilitiesService } from '../utilities.service';
 import { ObservedRelayStats, Nip11Info } from '../database.service';
 import { DatabaseService } from '../database.service';
@@ -64,6 +65,8 @@ export interface Nip11RelayInfo {
 })
 export class RelaysService {
   private utilities = inject(UtilitiesService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   private readonly database = inject(DatabaseService);
 
@@ -79,7 +82,7 @@ export class RelaysService {
   // Stores both successful results and failed attempts (null means fetch was attempted but failed)
   private nip11Cache = new Map<string, Nip11RelayInfo | null>();
   private nip11FetchInProgress = new Map<string, Promise<Nip11RelayInfo | null>>();
-  
+
   // LocalStorage key for NIP-11 cache
   private readonly NIP11_STORAGE_KEY = 'nostria_nip11_cache';
   // Cache expiry time (24 hours in milliseconds)
@@ -98,7 +101,7 @@ export class RelaysService {
   constructor() {
     // Initialize with preferred relays
     this.initializePreferredRelays();
-    
+
     // Load NIP-11 cache from localStorage
     this.loadNip11CacheFromStorage();
 
@@ -124,16 +127,18 @@ export class RelaysService {
    * Load NIP-11 cache from localStorage
    */
   private loadNip11CacheFromStorage(): void {
+    if (!this.isBrowser) return;
+
     try {
       const stored = localStorage.getItem(this.NIP11_STORAGE_KEY);
       if (!stored) return;
 
-      const data = JSON.parse(stored) as { 
+      const data = JSON.parse(stored) as {
         entries: { url: string; info: Nip11RelayInfo | null; timestamp: number }[];
       };
 
       const now = Date.now();
-      
+
       // Load entries that haven't expired
       for (const entry of data.entries) {
         if (now - entry.timestamp < this.NIP11_CACHE_EXPIRY_MS) {
@@ -151,6 +156,8 @@ export class RelaysService {
    * Save NIP-11 cache to localStorage
    */
   private saveNip11CacheToStorage(): void {
+    if (!this.isBrowser) return;
+
     try {
       const now = Date.now();
       const entries: { url: string; info: Nip11RelayInfo | null; timestamp: number }[] = [];
