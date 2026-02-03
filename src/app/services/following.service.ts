@@ -677,7 +677,8 @@ export class FollowingService {
     return this.profiles().filter((profile) => {
       const name = profile.profile?.data?.name?.toLowerCase() || '';
       const displayName = profile.profile?.data?.display_name?.toLowerCase() || '';
-      const nip05 = profile.profile?.data?.nip05?.toLowerCase() || '';
+      const nip05Value = profile.profile?.data?.nip05;
+      const nip05 = (Array.isArray(nip05Value) ? nip05Value[0] : nip05Value)?.toLowerCase() || '';
       const about = profile.profile?.data?.about?.toLowerCase() || '';
 
       return (

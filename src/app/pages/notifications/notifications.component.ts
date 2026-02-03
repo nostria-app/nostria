@@ -347,7 +347,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         if (profileData.display_name?.toLowerCase().includes(query)) {
           return true;
         }
-        if (profileData.nip05?.toLowerCase().includes(query)) {
+        const nip05Value = profileData.nip05;
+        const nip05 = Array.isArray(nip05Value) ? nip05Value[0] : nip05Value;
+        if (nip05?.toLowerCase().includes(query)) {
           return true;
         }
       }

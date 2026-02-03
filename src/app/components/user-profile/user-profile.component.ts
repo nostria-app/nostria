@@ -505,12 +505,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     // Show NIP-05 if available (first priority)
     if (profile.data.nip05) {
-      return this.utilities.parseNip05(profile.data.nip05);
+      const parsed = this.utilities.parseNip05(profile.data.nip05);
+      if (parsed) return parsed;
     }
 
     // Show LUD16 if available and no NIP-05 (second priority)
     if (profile.data.lud16) {
-      return profile.data.lud16;
+      const lud16 = profile.data.lud16;
+      return Array.isArray(lud16) ? lud16[0] || this.npub() : lud16;
     }
 
     // Fallback to npub if neither NIP-05 nor LUD16 is available

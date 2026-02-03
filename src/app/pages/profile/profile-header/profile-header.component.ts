@@ -920,6 +920,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       if (!nip05 || typeof nip05 !== 'string') continue;
 
       const value = this.utilities.parseNip05(nip05);
+      if (!value) continue; // Skip if parseNip05 returns null
 
       if (isNip05(nip05)) {
         try {

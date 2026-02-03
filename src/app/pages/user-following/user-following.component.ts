@@ -106,7 +106,9 @@ export class UserFollowingComponent {
         if (profileData?.display_name?.toLowerCase().includes(search)) {
           return true;
         }
-        if (profileData?.nip05?.toLowerCase().includes(search)) {
+        const nip05Value = profileData?.nip05;
+        const nip05 = Array.isArray(nip05Value) ? nip05Value[0] : nip05Value;
+        if (nip05?.toLowerCase().includes(search)) {
           return true;
         }
         return false;

@@ -2925,7 +2925,8 @@ export class DatabaseService {
         const data = JSON.parse(event.content);
         const name = data.name?.toLowerCase() || '';
         const displayName = data.display_name?.toLowerCase() || '';
-        const nip05 = data.nip05?.toLowerCase() || '';
+        const nip05Value = data.nip05;
+        const nip05 = (Array.isArray(nip05Value) ? nip05Value[0] : nip05Value)?.toLowerCase() || '';
         const about = data.about?.toLowerCase() || '';
 
         return (
