@@ -179,7 +179,13 @@ export class ReportingService {
       fieldsToCheck.push(profileData.display_name.toLowerCase());
     }
     if (profileData.nip05) {
-      fieldsToCheck.push(profileData.nip05.toLowerCase());
+      const nip05Data = profileData.nip05;
+      const nip05Values = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
+      nip05Values.forEach(v => {
+        if (v && typeof v === 'string') {
+          fieldsToCheck.push(v.toLowerCase());
+        }
+      });
     }
 
     // Check if any muted word appears in any of the profile fields

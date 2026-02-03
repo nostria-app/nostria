@@ -155,7 +155,8 @@ export class ShoutoutOverlayComponent {
       const profile = r.profile?.data;
       const name = profile?.name?.toLowerCase() || '';
       const displayName = profile?.display_name?.toLowerCase() || '';
-      const nip05 = profile?.nip05?.toLowerCase() || '';
+      const nip05Value = profile?.nip05;
+      const nip05 = (Array.isArray(nip05Value) ? nip05Value[0] : nip05Value)?.toLowerCase() || '';
 
       return (
         name.includes(search) ||

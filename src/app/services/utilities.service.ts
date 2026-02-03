@@ -288,8 +288,32 @@ export class UtilitiesService {
     );
   }
 
-  parseNip05(nip05: string) {
-    return nip05.startsWith('_@') ? nip05.substring(1) : nip05;
+  /**
+   * Parse NIP-05 identifier to clean format.
+   * Handles both single string and array values (returns first value for arrays).
+   * @param nip05 The NIP-05 value (string or string[])
+   * @returns Cleaned NIP-05 string, or null if empty
+   */
+  parseNip05(nip05: string | string[] | undefined | null): string | null {
+    if (!nip05) return null;
+
+    // Handle array - use first value
+    const value = Array.isArray(nip05) ? nip05[0] : nip05;
+    if (!value || typeof value !== 'string') return null;
+
+    return value.startsWith('_@') ? value.substring(1) : value;
+  }
+
+  /**
+   * Get first value from a string or string array field.
+   * Useful for fields that can be single or multi-value (nip05, website, lud16).
+   * @param value The field value (string, string[], or undefined)
+   * @returns First string value or empty string
+   */
+  getFirstValue(value: string | string[] | undefined | null): string {
+    if (!value) return '';
+    if (Array.isArray(value)) return value[0] || '';
+    return value;
   }
 
   // ============================================================================

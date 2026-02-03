@@ -127,7 +127,7 @@ export class ContactCardComponent {
     const metadata = this.userMetadata();
     if (!metadata || !metadata.data.nip05) return null;
 
-    return this.utilities.parseNip05(metadata.data.nip05 as string);
+    return this.utilities.parseNip05(metadata.data.nip05);
   }
 
   closeContact(): void {
