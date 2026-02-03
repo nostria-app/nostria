@@ -3,6 +3,10 @@
 @use './app/components/whats-new-dialog/whats-new-dialog-global.scss';
 
 html {
+  // Ensure browser/system font size is respected (accessibility)
+  // This is the foundation for text scaling - DO NOT set a fixed px value here
+  font-size: 100%;
+
   scroll-behavior: smooth;
   --mat-success-color: #4caf50;
   /* Bitcoin / zap color used across the app */
@@ -12,6 +16,36 @@ html {
   --nostria-bitcoin-10: rgba(var(--nostria-bitcoin-rgb), 0.1);
   --mat-success-lighter: #c8e6c9;
   --mat-success-darker: #2e7d32;
+
+  // ============================================
+  // FONT FAMILY SYSTEM
+  // ============================================
+  // Font family - controlled by FontService
+  // Default is Roboto (best with Angular Material)
+  // Users can change via Settings > Layout > Font
+  --nostria-font-family: Roboto, 'Helvetica Neue', sans-serif;
+
+  // ============================================
+  // TEXT SCALING SYSTEM
+  // ============================================
+  // Text scale multiplier - controlled by TextScaleService
+  // Default 1.0 = 100%, respects system/browser font settings
+  // Users can adjust via Settings > Layout > Text Size
+  --nostria-text-scale: 1;
+
+  // Typography scale using calc() for text scale support
+  // These values multiply with both system font size AND user's text scale preference
+  // Usage: font-size: var(--text-sm); instead of font-size: 14px;
+  --text-2xs: calc(0.625rem * var(--nostria-text-scale));  // 10px at default
+  --text-xs: calc(0.75rem * var(--nostria-text-scale));    // 12px at default
+  --text-sm: calc(0.875rem * var(--nostria-text-scale));   // 14px at default
+  --text-base: calc(1rem * var(--nostria-text-scale));     // 16px at default
+  --text-lg: calc(1.125rem * var(--nostria-text-scale));   // 18px at default
+  --text-xl: calc(1.25rem * var(--nostria-text-scale));    // 20px at default
+  --text-2xl: calc(1.5rem * var(--nostria-text-scale));    // 24px at default
+  --text-3xl: calc(1.875rem * var(--nostria-text-scale));  // 30px at default
+  --text-4xl: calc(2.25rem * var(--nostria-text-scale));   // 36px at default
+  --text-5xl: calc(3rem * var(--nostria-text-scale));      // 48px at default
 
   // Safe area inset with fallback for Android devices
   // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
@@ -60,7 +94,7 @@ html,
 body {
   height: 100dvh;
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: var(--nostria-font-family);
   overscroll-behavior: none;
   overflow: hidden;
 }
@@ -83,14 +117,14 @@ body {
 // Arabic locale font styling
 html.locale-ar,
 html.locale-ar body {
-  font-family: 'Noto Sans Arabic', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: 'Noto Sans Arabic', var(--nostria-font-family);
   direction: rtl;
 }
 
 // Persian/Farsi locale font styling
 html.locale-fa,
 html.locale-fa body {
-  font-family: 'Vazirmatn', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: 'Vazirmatn', var(--nostria-font-family);
   direction: rtl;
 }
 
@@ -334,11 +368,24 @@ h6 {
 }
 
 h1 {
-  font-size: 2.0rem;
+  font-size: var(--text-4xl);
 }
 
 h2 {
-  font-size: 1.6rem;
+  font-size: var(--text-2xl);
+}
+
+h3 {
+  font-size: var(--text-xl);
+}
+
+h4 {
+  font-size: var(--text-lg);
+}
+
+h5,
+h6 {
+  font-size: var(--text-base);
 }
 
 a:hover {
@@ -378,7 +425,7 @@ a:hover {
 // Main theme-related styles
 body {
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: var(--nostria-font-family);
   height: 100dvh;
   transition: background-color 0.3s ease;
 }
@@ -471,7 +518,7 @@ body {
 }
 
 .description {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 500;
   margin: 16px 0;
 }
@@ -536,7 +583,7 @@ mat-card-content li {
 }
 
 .date-link {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: var(--mat-sys-outline);
 }
 
@@ -671,7 +718,7 @@ mat-card-content li {
 
 /* Following count styles */
 .following-count {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   padding: 4px 12px 4px 0px;
 
   &:hover {
@@ -788,7 +835,7 @@ mat-card-content li {
   }
 
   span {
-    font-size: 14px;
+    font-size: var(--text-sm);
   }
 }
 
@@ -853,7 +900,7 @@ mat-card-content li {
 }
 
 .settings-section-header {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 500;
   margin-bottom: 12px;
 }
@@ -1111,7 +1158,7 @@ app-media-queue {
 }
 
 .time-label {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: var(--mat-sys-on-surface-variant);
 }
 
@@ -1281,7 +1328,7 @@ app-media-queue {
 .terms-of-use-notice {
   margin-top: 20px;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 
   a {
     color: var(--mat-sys-primary);
@@ -1586,7 +1633,7 @@ app-media-queue {
 
 .panel-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
 }
 
 .panel-header-spacer {

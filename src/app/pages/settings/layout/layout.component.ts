@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
+import { SettingTextSizeComponent } from '../sections/text-size.component';
+import { SettingFontSelectorComponent } from '../sections/font-selector.component';
 import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
@@ -15,6 +17,8 @@ import { RightPanelService } from '../../../services/right-panel.service';
     MatIconModule,
     MatTooltipModule,
     SettingMenuEditorComponent,
+    SettingTextSizeComponent,
+    SettingFontSelectorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './layout.component.scss',
@@ -29,6 +33,12 @@ import { RightPanelService } from '../../../services/right-panel.service';
     </div>
 
     <div class="content-medium">
+      <div>
+        <h2 i18n="@@settings.display.title">Display</h2>
+        <app-setting-text-size></app-setting-text-size>
+        <app-setting-font-selector></app-setting-font-selector>
+      </div>
+
       <div>
         <h2 i18n="@@settings.navigation.title">Navigation</h2>
 

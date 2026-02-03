@@ -620,7 +620,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.875rem; // 14px on desktop
+  font-size: var(--text-sm); // 14px on desktop
   opacity: 0.7;
   flex: 1;
   min-width: 0;
@@ -630,7 +630,7 @@
 
   // On mobile/touch devices, use 16px minimum to prevent iOS auto-zoom
   @media (pointer: coarse) {
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
 
   &.empty-message {
@@ -645,7 +645,7 @@
 .message-time {
   flex-shrink: 0;
   margin-left: 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   // Prevent iOS Safari from auto-zooming text
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -655,7 +655,7 @@
   flex-shrink: 0;
   margin-left: auto;
   padding-left: 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   opacity: 0.7;
   white-space: nowrap;
   // Prevent iOS Safari from auto-zooming text
@@ -672,7 +672,7 @@
   margin: 8px 0;
 
   .date-label {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: var(--mat-sys-on-surface);
     opacity: 0.7;
     padding: 4px 12px;
@@ -684,7 +684,7 @@
 // Time displayed on the side of message bubbles
 .message-time-side {
   flex-shrink: 0;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   opacity: 0.5;
   align-self: center;
   white-space: nowrap;
@@ -694,7 +694,7 @@
   text-size-adjust: 100%;
 
   @media (max-width: 699px) {
-    font-size: 0.65rem;
+    font-size: var(--text-2xs);
     min-width: 36px;
   }
 }
@@ -830,7 +830,7 @@
 
     .reply-text {
       display: block;
-      font-size: 0.875rem;
+      font-size: var(--text-sm);
       opacity: 0.8;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -876,7 +876,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: 0.9rem;
+      font-size: var(--text-sm);
       opacity: 0.8;
     }
   }
@@ -1078,7 +1078,7 @@
   }
   
   .note-to-self-title {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 500;
   }
 }
@@ -1091,7 +1091,7 @@
 }
 
 .chat-name {
-  font-size: 1rem; // 16px - iOS Safari won't auto-zoom at 16px or above
+  font-size: var(--text-base); // 16px - iOS Safari won't auto-zoom at 16px or above
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1153,7 +1153,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 10px;
+  font-size: var(--text-2xs);
   opacity: 0.6;
   margin-left: 6px;
   vertical-align: bottom;
@@ -1220,7 +1220,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   opacity: 0.6;
   margin-top: 4px;
   padding: 0 4px;
@@ -1355,7 +1355,7 @@ app-message-content {
 
   h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
   }
 }
 
@@ -1390,11 +1390,11 @@ app-message-content {
   flex-direction: column;
 
   .stat-value {
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
 
   .stat-label {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     opacity: 0.6;
   }
 }
@@ -1408,7 +1408,7 @@ app-message-content {
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   opacity: 0.8;
 
   mat-icon {
@@ -1422,7 +1422,7 @@ app-message-content {
     background: var(--mat-sys-surface-variant);
     padding: 2px 8px;
     border-radius: 12px;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
   }
 }
 
@@ -1457,7 +1457,7 @@ app-message-content {
   }
 
   .link-text {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1473,7 +1473,7 @@ app-message-content {
 }
 
 .see-all-hint {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   opacity: 0.6;
   text-align: center;
   padding: 8px;
@@ -1497,7 +1497,7 @@ app-message-content {
 
   p {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
   }
 }
 
@@ -1522,11 +1522,11 @@ app-message-content {
   }
 
   span {
-    font-size: 0.95rem;
+    font-size: var(--text-sm);
   }
 
   .hint {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     opacity: 0.6;
     margin-top: 8px;
   }
