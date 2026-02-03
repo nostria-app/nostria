@@ -31,10 +31,35 @@
       }
 
       @if (profileState.displayedTimeline().length === 0) {
-      <div class="empty-state">
-        <mat-icon>timeline</mat-icon>
-        <p>No timeline content to display yet</p>
-      </div>
+        @if (profileState.hasHiddenRepliesButNoContent()) {
+        <div class="hidden-replies-state">
+          <mat-icon>chat_bubble_outline</mat-icon>
+          <h3>No original posts found</h3>
+          <p>This user has {{ profileState.hiddenRepliesCount() }} {{ profileState.hiddenRepliesCount() === 1 ? 'reply' : 'replies' }} that {{ profileState.hiddenRepliesCount() === 1 ? 'is' : 'are' }} currently hidden by your display options.</p>
+          <div class="hidden-replies-actions">
+            <button mat-flat-button (click)="showReplies()">
+              <mat-icon>visibility</mat-icon>
+              Show replies
+            </button>
+            <button mat-stroked-button (click)="loadMoreToFindPosts()" [disabled]="isSearchingForPosts() || !profileState.hasMoreNotes()">
+              @if (isSearchingForPosts()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>search</mat-icon>
+              }
+              Search for more posts
+            </button>
+          </div>
+          @if (!profileState.hasMoreNotes()) {
+          <p class="no-more-hint">No more events available from relays</p>
+          }
+        </div>
+        } @else {
+        <div class="empty-state">
+          <mat-icon>timeline</mat-icon>
+          <p>No timeline content to display yet</p>
+        </div>
+        }
       } @else {
 
       <div class="notes-list">
@@ -50,11 +75,15 @@
         </div>
         }
 
-        <!-- No more notes indicator -->
+        <!-- No more notes indicator - with hidden replies hint if applicable -->
         @if (!profileState.hasMoreNotes() && !profileState.hasMoreToDisplay() && profileState.displayedTimeline().length > 0) {
         <div class="no-more-indicator">
           <mat-icon>inbox</mat-icon>
+          @if (profileState.hiddenRepliesCount() > 0 && !profileState.timelineFilter().showReplies) {
+          <p>You've reached the end. {{ profileState.hiddenRepliesCount() }} {{ profileState.hiddenRepliesCount() === 1 ? 'reply is' : 'replies are' }} hidden. <button class="show-replies-link" (click)="showReplies()">Show replies</button></p>
+          } @else {
           <p>You've reached the end</p>
+          }
         </div>
         }
       </div>

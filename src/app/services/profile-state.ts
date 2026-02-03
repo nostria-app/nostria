@@ -287,6 +287,43 @@ export class ProfileState {
     return this.sortedTimeline().length > this.displayLimit();
   });
 
+  /**
+   * Detects the scenario where:
+   * - The filtered timeline is empty (no posts/reposts showing)
+   * - But there ARE replies loaded that could be shown
+   * - The replies filter is currently OFF
+   * 
+   * This commonly happens for users who reply a lot but don't post original content.
+   * Since we can't know from the relay query if events are posts or replies,
+   * we may fetch many events that are all filtered out as replies.
+   */
+  hasHiddenRepliesButNoContent = computed(() => {
+    const filter = this.timelineFilter();
+    const filteredTimeline = this.sortedTimeline();
+    const replies = this.replies();
+    const isLoading = this.isInitiallyLoading();
+    const cachedLoaded = this.cachedEventsLoaded();
+
+    // Only show this state when:
+    // 1. Not currently loading initial data
+    // 2. Cached events have been loaded (so we have a complete picture)
+    // 3. The filtered timeline is empty
+    // 4. Replies filter is OFF
+    // 5. There are actually replies that could be shown
+    return !isLoading && 
+           cachedLoaded && 
+           filteredTimeline.length === 0 && 
+           !filter.showReplies && 
+           replies.length > 0;
+  });
+
+  /**
+   * Returns the count of hidden replies when hasHiddenRepliesButNoContent is true
+   */
+  hiddenRepliesCount = computed(() => {
+    return this.replies().length;
+  });
+
   sortedReplies = computed(() =>
     [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
@@ -1046,8 +1083,11 @@ export class ProfileState {
         `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, ${newReposts.length} more reposts, ${newReactions.length} more reactions, ${newAudio.length} more audio, ${newMedia.length} more video`
       );
 
-      // Track if we added any new content
+      // Track if we added any new content (for caching/state purposes)
       let addedAnyContent = false;
+      // Track if we added content that's VISIBLE in the current filter
+      // This is critical for determining if we should keep loading
+      let addedVisibleContent = false;
 
       // Add new notes to the existing ones with final deduplication check
       if (newNotes.length > 0) {
@@ -1062,6 +1102,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Notes are visible when showNotes is enabled
+            if (currentFilter.showNotes) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1081,6 +1125,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Replies are visible when showReplies is enabled
+            if (currentFilter.showReplies) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1100,6 +1148,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Reposts are visible when showReposts is enabled
+            if (currentFilter.showReposts) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1119,6 +1171,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Reactions are visible when showReactions is enabled
+            if (currentFilter.showReactions) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1137,6 +1193,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Audio is visible when showAudio is enabled
+            if (currentFilter.showAudio) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1155,6 +1215,10 @@ export class ProfileState {
 
           if (filtered.length > 0) {
             addedAnyContent = true;
+            // Video is visible when showVideo is enabled
+            if (currentFilter.showVideo) {
+              addedVisibleContent = true;
+            }
           }
 
           return [...existing, ...filtered];
@@ -1210,10 +1274,17 @@ export class ProfileState {
         this.logger.info(`Reached end of notes for ${pubkey}: relay returned 0 events`);
         this.hasMoreNotes.set(false);
         this.consecutiveSmallBatches.set(0);
-      } else if (addedAnyContent) {
-        // We got new content - there might be more
+      } else if (addedVisibleContent) {
+        // We got new VISIBLE content (based on current filter) - there might be more
+        // Reset the counter since we're making progress in the user's view
         this.hasMoreNotes.set(true);
         this.consecutiveSmallBatches.set(0);
+      } else if (addedAnyContent) {
+        // We got new content but it's NOT visible (e.g., replies when filter hides them)
+        // Keep loading but don't reset the counter - we need to find visible content
+        this.hasMoreNotes.set(true);
+        // Don't reset consecutiveSmallBatches - the user isn't seeing progress
+        this.logger.debug(`Added content but not visible in current filter, continuing search`);
       } else if (eventsFromRelay < LOAD_LIMIT) {
         // Small batch with no new content - increment counter
         const newCount = this.consecutiveSmallBatches() + 1;
