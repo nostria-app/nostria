@@ -344,6 +344,23 @@
             <span>Processing payment...</span>
           </div>
           }
+
+          @if (errorMessage() && selectedPaymentMethod() === 'nwc') {
+          <div class="error-container" [class.recoverable]="isErrorRecoverable()">
+            <div class="error-message">
+              <mat-icon>{{ isErrorRecoverable() ? 'warning' : 'error' }}</mat-icon>
+              <span class="error-text">{{ errorMessage() }}</span>
+            </div>
+            @if (isErrorRecoverable()) {
+            <div class="error-actions">
+              <button mat-stroked-button (click)="retryZap()" [disabled]="isProcessing()">
+                <mat-icon>refresh</mat-icon>
+                Retry
+              </button>
+            </div>
+            }
+          </div>
+          }
           }
 
           <!-- Native (Open Lightning) Content -->

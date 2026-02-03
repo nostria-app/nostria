@@ -389,9 +389,14 @@ constructor() {
       ];
 
       // Check if this is a custom emoji and add emoji tag for NIP-30
-      const customEmoji = this.customEmojis().find(e => e.shortcode === emoji);
-      if (customEmoji) {
-        baseTags.push(['emoji', customEmoji.shortcode, customEmoji.url]);
+      // emoji format is :shortcode:, so extract the shortcode without colons
+      const isCustomEmoji = emoji.startsWith(':') && emoji.endsWith(':');
+      if (isCustomEmoji) {
+        const shortcode = emoji.slice(1, -1);
+        const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+        if (customEmoji) {
+          baseTags.push(['emoji', shortcode, customEmoji.url]);
+        }
       }
 
       const tempReactionEvent = {

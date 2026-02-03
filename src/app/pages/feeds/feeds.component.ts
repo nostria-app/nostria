@@ -56,7 +56,7 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
 import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
-import { ListFeedMenuComponent, ListFeedSelection } from './list-feed-menu/list-feed-menu.component';
+import { ListFeedMenuComponent, ListFeedSelection, InterestFeedSelection } from './list-feed-menu/list-feed-menu.component';
 import { ListColumnComponent, ListFeedData } from './list-column/list-column.component';
 import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
@@ -1548,6 +1548,34 @@ export class FeedsComponent implements OnDestroy {
       queryParams: { l: null },
       queryParamsHandling: 'merge',
     });
+  }
+
+  /**
+   * Handle interest selection from the list feed menu
+   */
+  async onInterestSelected(selection: InterestFeedSelection | null): Promise<void> {
+    if (selection) {
+      // Clear relay feed and list feed if active
+      this.activeRelayDomain.set('');
+      this.activeListFeed.set(null);
+
+      // Mark dynamic feed as active BEFORE clearing the active feed
+      this.feedsCollectionService.setDynamicFeedActive(true);
+
+      // Clear the active feed selection to show dynamic feed
+      this.feedsCollectionService.clearActiveFeed();
+
+      // Create and show dynamic feed with the interest hashtags
+      this.dynamicFeed.set(await this.feedService.createDynamicHashtagFeed(selection.hashtags));
+
+      // Navigate with hashtag query param
+      this.router.navigate(['/f'], {
+        queryParams: { t: selection.hashtags.join(','), l: null, r: null },
+        queryParamsHandling: 'merge',
+      });
+    } else {
+      this.closeDynamicFeed();
+    }
   }
 
   toggleTagFilter(tag: string): void {

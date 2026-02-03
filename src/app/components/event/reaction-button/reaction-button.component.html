@@ -200,11 +200,11 @@
       [matTooltip]="group.count + ' reaction' + (group.count > 1 ? 's' : '')"
       (click)="addReaction(group.content); $event.stopPropagation()">
       @if (group.content.startsWith(':') && group.content.endsWith(':')) {
-      @for (reaction of reactions().events; track reaction.event.id) {
-      @if (reaction.event.content === group.content && getCustomEmojiUrl(reaction.event)) {
-      <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="group.content" class="reaction-emoji-img">
-      }
-      }
+        @if (getCustomEmojiUrlForGroup(group.content); as emojiUrl) {
+          <img [src]="emojiUrl" [alt]="group.content" class="reaction-emoji-img">
+        } @else {
+          <span class="reaction-emoji">{{ group.content }}</span>
+        }
       } @else {
       <span class="reaction-emoji">{{ getReactionDisplay(group.content) }}</span>
       }

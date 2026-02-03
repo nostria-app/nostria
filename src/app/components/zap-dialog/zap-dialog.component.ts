@@ -101,6 +101,7 @@ export class ZapDialogComponent {
   currentState = signal<DialogState>('input');
   isProcessing = signal(false);
   errorMessage = signal<string | null>(null);
+  isErrorRecoverable = signal(false);
   selectedPaymentMethod = signal<PaymentMethod>('nwc');
   invoiceUrl = signal<string | null>(null);
   isMobile = signal(false);
@@ -411,6 +412,17 @@ export class ZapDialogComponent {
     this.invoiceUrl.set(null);
     this.isProcessing.set(false);
     this.errorMessage.set(null);
+    this.isErrorRecoverable.set(false);
+  }
+
+  clearError(): void {
+    this.errorMessage.set(null);
+    this.isErrorRecoverable.set(false);
+  }
+
+  retryZap(): void {
+    this.clearError();
+    this.confirmNwcPayment();
   }
 
   formatAmount(amount: number): string {
@@ -655,6 +667,7 @@ export class ZapDialogComponent {
       console.error('Failed to send zap:', error);
       const zapError = this.errorHandler.handleZapError(error);
       this.errorMessage.set(zapError.message);
+      this.isErrorRecoverable.set(zapError.recoverable);
     } finally {
       this.isProcessing.set(false);
     }

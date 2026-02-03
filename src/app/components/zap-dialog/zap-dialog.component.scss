@@ -438,13 +438,77 @@
 
 .error-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   color: var(--mat-sys-error);
   background: var(--mat-sys-error-container);
   padding: 12px;
   border-radius: 4px;
   margin-top: 16px;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+
+  .error-text {
+    flex: 1;
+    line-height: 1.4;
+  }
+}
+
+.error-container {
+  margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+
+  .error-message {
+    margin-top: 0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .error-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 12px;
+    background: var(--mat-sys-error-container);
+    border-top: 1px solid var(--mat-sys-error);
+
+    button {
+      color: var(--mat-sys-error);
+      border-color: var(--mat-sys-error);
+
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  &.recoverable {
+    .error-message {
+      background: var(--mat-sys-tertiary-container);
+      color: var(--mat-sys-on-tertiary-container);
+
+      mat-icon {
+        color: var(--mat-sys-tertiary);
+      }
+    }
+
+    .error-actions {
+      background: var(--mat-sys-tertiary-container);
+      border-top-color: var(--mat-sys-tertiary);
+
+      button {
+        color: var(--mat-sys-tertiary);
+        border-color: var(--mat-sys-tertiary);
+      }
+    }
+  }
+
+  &:not(.recoverable) {
+    .error-message {
+      border-radius: 8px;
+    }
+  }
 }
 
 h2[mat-dialog-title] {
