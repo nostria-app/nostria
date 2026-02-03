@@ -218,6 +218,28 @@ export class UtilitiesService {
   }
 
   toRecord(event: Event): NostrRecord {
+    // For kind 0 (profile metadata), check for tag-based format first
+    if (event.kind === 0 && this.hasProfileTags(event.tags)) {
+      const fromTags = this.parseProfileFromTags(event.tags);
+
+      // If content exists, parse it and merge (tags take priority)
+      if (event.content && event.content.trim() !== '') {
+        const fromContent = this.parseContent(event.content);
+        if (typeof fromContent === 'object' && fromContent !== null) {
+          return {
+            event,
+            data: this.mergeProfileData(fromTags, fromContent),
+          };
+        }
+      }
+
+      // Tags only - no JSON parsing needed (optimization)
+      return {
+        event,
+        data: fromTags,
+      };
+    }
+
     return {
       event,
       data: this.parseContent(event.content),
@@ -268,6 +290,148 @@ export class UtilitiesService {
 
   parseNip05(nip05: string) {
     return nip05.startsWith('_@') ? nip05.substring(1) : nip05;
+  }
+
+  // ============================================================================
+  // Profile Tag Parsing Utilities (Kind 0 optimization)
+  // ============================================================================
+
+  /**
+   * Profile tag names that indicate tag-based profile format.
+   * These are specific to kind 0 (profile metadata) events.
+   * Note: 'i' tags (external identities) are NOT included as they existed before.
+   */
+  private readonly PROFILE_TAG_NAMES = [
+    'name',
+    'display_name',
+    'about',
+    'picture',
+    'banner',
+    'website',
+    'nip05',
+    'lud16',
+    'lud06',
+  ];
+
+  /**
+   * Tags that can have multiple values in a profile.
+   */
+  private readonly MULTI_VALUE_PROFILE_TAGS = ['website', 'nip05', 'lud16'];
+
+  /**
+   * Check if an event's tags contain profile-specific tags.
+   * This is used to detect if a kind 0 event uses the new tag-based format.
+   * @param tags The event's tags array
+   * @returns True if any profile-specific tag is found
+   */
+  hasProfileTags(tags: string[][]): boolean {
+    return tags.some(
+      tag => tag.length >= 2 && this.PROFILE_TAG_NAMES.includes(tag[0])
+    );
+  }
+
+  /**
+   * Parse profile data from tags array.
+   * Handles multiple values for website, nip05, and lud16 tags.
+   * @param tags The event's tags array
+   * @returns ProfileData object extracted from tags
+   */
+  parseProfileFromTags(tags: string[][]): Record<string, string | string[]> {
+    const profile: Record<string, string | string[]> = {};
+
+    for (const tag of tags) {
+      if (tag.length < 2) continue;
+
+      const [tagName, tagValue] = tag;
+
+      // Skip non-profile tags
+      if (!this.PROFILE_TAG_NAMES.includes(tagName)) continue;
+
+      // Handle multi-value tags
+      if (this.MULTI_VALUE_PROFILE_TAGS.includes(tagName)) {
+        const existing = profile[tagName];
+        if (existing === undefined) {
+          profile[tagName] = tagValue;
+        } else if (Array.isArray(existing)) {
+          existing.push(tagValue);
+        } else {
+          profile[tagName] = [existing, tagValue];
+        }
+      } else {
+        // Single value tags - first occurrence wins (maintain insertion order)
+        if (profile[tagName] === undefined) {
+          profile[tagName] = tagValue;
+        }
+      }
+    }
+
+    return profile;
+  }
+
+  /**
+   * Merge profile data from tags with profile data from JSON content.
+   * Tags take priority over content for fields that exist in both.
+   * @param fromTags Profile data parsed from tags
+   * @param fromContent Profile data parsed from JSON content
+   * @returns Merged profile data
+   */
+  mergeProfileData(
+    fromTags: Record<string, string | string[]>,
+    fromContent: Record<string, unknown>
+  ): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...fromContent };
+
+    // Tags take priority - overwrite content values with tag values
+    for (const [key, value] of Object.entries(fromTags)) {
+      if (value !== undefined && value !== '') {
+        // For multi-value fields, merge arrays if both exist
+        if (this.MULTI_VALUE_PROFILE_TAGS.includes(key)) {
+          const contentValue = fromContent[key];
+          if (Array.isArray(value)) {
+            merged[key] = value;
+          } else if (contentValue && !Array.isArray(contentValue) && value !== contentValue) {
+            // Tag has single value different from content - tag wins
+            merged[key] = value;
+          } else {
+            merged[key] = value;
+          }
+        } else {
+          merged[key] = value;
+        }
+      }
+    }
+
+    return merged;
+  }
+
+  /**
+   * Convert profile data to Nostr event tags.
+   * @param profileData The profile data to convert
+   * @returns Array of tags for the event
+   */
+  profileDataToTags(profileData: Record<string, unknown>): string[][] {
+    const tags: string[][] = [];
+
+    // Process each profile field
+    for (const [key, value] of Object.entries(profileData)) {
+      if (value === undefined || value === null || value === '') continue;
+
+      // Skip non-profile fields
+      if (!this.PROFILE_TAG_NAMES.includes(key)) continue;
+
+      if (Array.isArray(value)) {
+        // Multi-value field - create multiple tags
+        for (const v of value) {
+          if (v && typeof v === 'string' && v.trim() !== '') {
+            tags.push([key, v]);
+          }
+        }
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        tags.push([key, value]);
+      }
+    }
+
+    return tags;
   }
 
   // Get a-tag value from an event

@@ -126,52 +126,52 @@
       }
 
       @if (profile()) {
-      @let verifiedId = verifiedIdentifier();
-
-      @if (verifiedId.value) {
+      <!-- Multiple NIP-05 identifiers -->
+      @for (verifiedId of verifiedIdentifiers(); track verifiedId.value; let i = $index) {
       <div class="profile-item pointer" title="{{ verifiedId.status }}">
         @if (verifiedId.valid) {
         <mat-icon class="verified-icon">verified</mat-icon>
         } @else {
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
-        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard()"
-          (keydown.enter)="copyNip05ToClipboard()" (keydown.space)="copyNip05ToClipboard()" tabindex="0" role="button"
+        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard(verifiedId.value)"
+          (keydown.enter)="copyNip05ToClipboard(verifiedId.value)" (keydown.space)="copyNip05ToClipboard(verifiedId.value)" tabindex="0" role="button"
           [attr.aria-label]="'Copy ' + verifiedId.value + ' to clipboard'">{{ verifiedId.value }}</span>
 
-        @if (verifiedFaviconUrl() && faviconVisible()) {
-        <img [src]="verifiedFaviconUrl()" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
+        @if (verifiedFaviconUrls()[i] && faviconVisible()) {
+        <img [src]="verifiedFaviconUrls()[i]" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
         }
       </div>
       }
 
-      @let lightningAddress = profile()?.data.lud16 || profile()?.data.lud06;
+      @let primaryLightningAddress = lightningAddress();
 
-      @if (lightningAddress) {
+      @if (primaryLightningAddress) {
       <div class="profile-item lightning-item">
         <mat-icon>⚡️</mat-icon>
         <span (mouseenter)="showQrCodeHandler()" (mouseleave)="hideQrCodeHandler()"
           (click)="copyLightningAddressToClipboard()" (keydown.enter)="copyLightningAddressToClipboard()"
           (keydown.space)="copyLightningAddressToClipboard()" tabindex="0" role="button"
-          [attr.aria-label]="'Copy ' + lightningAddress + ' to clipboard'">{{ lightningAddress }}</span>
+          [attr.aria-label]="'Copy ' + primaryLightningAddress + ' to clipboard'">{{ primaryLightningAddress }}</span>
       </div>
 
       @if (showQrCode()) {
       <div class="qr-code-container" (click)="copyLightningAddressToClipboard()"
         (keydown.enter)="copyLightningAddressToClipboard()" (keydown.space)="copyLightningAddressToClipboard()"
         tabindex="0" role="button" title="Click to copy lightning address to clipboard"
-        [attr.aria-label]="'Copy ' + lightningAddress + ' to clipboard'">
-        <qr-code [qrdata]="lightningAddress" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
+        [attr.aria-label]="'Copy ' + primaryLightningAddress + ' to clipboard'">
+        <qr-code [qrdata]="primaryLightningAddress" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
       </div>
       }
       }
       }
 
-      @if (profile()?.data.website) {
-      <div class="profile-item" title="{{ websiteUrl() }}">
+      <!-- Multiple websites -->
+      @for (website of websites(); track website) {
+      <div class="profile-item" title="{{ getWebsiteUrl(website) }}">
         <mat-icon>link</mat-icon>
-        <span><a [href]="websiteUrl()" target="_blank" rel="noopener noreferrer">{{
-            profile()!.data.website
+        <span><a [href]="getWebsiteUrl(website)" target="_blank" rel="noopener noreferrer">{{
+            website
             }}</a></span>
       </div>
       }

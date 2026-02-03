@@ -85,6 +85,10 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   newIdentityProof = signal<string>('');
   editingIdentityIndex = signal<number>(-1);
 
+  // Multiple values support for NIP-05 and websites
+  nip05List = signal<string[]>(['']);
+  websiteList = signal<string[]>(['']);
+
   constructor() {
     effect(() => {
       const account = this.accountState.account();
@@ -122,6 +126,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
         this.previewBanner.set(profileClone.banner);
       }
 
+      // Initialize multi-value lists from existing profile data
+      this.initializeMultiValueLists(profileClone);
+
       // Load external identities from existing metadata tags
       this.loadExternalIdentities(metadata.event.tags);
     } else {
@@ -138,6 +145,33 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
         lud16: '',
         nip05: '',
       });
+
+      // Initialize with empty lists
+      this.nip05List.set(['']);
+      this.websiteList.set(['']);
+    }
+  }
+
+  /**
+   * Initialize multi-value lists from profile data
+   */
+  private initializeMultiValueLists(profileData: ProfileData): void {
+    // Initialize NIP-05 list
+    const nip05Data = profileData.nip05;
+    if (nip05Data) {
+      const nip05Values = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
+      this.nip05List.set(nip05Values.length > 0 ? nip05Values : ['']);
+    } else {
+      this.nip05List.set(['']);
+    }
+
+    // Initialize website list
+    const websiteData = profileData.website;
+    if (websiteData) {
+      const websiteValues = Array.isArray(websiteData) ? websiteData : [websiteData];
+      this.websiteList.set(websiteValues.length > 0 ? websiteValues : ['']);
+    } else {
+      this.websiteList.set(['']);
     }
   }
 
@@ -196,7 +230,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   get website(): string {
-    return this.profile()?.website || '';
+    const websiteData = this.profile()?.website;
+    if (!websiteData) return '';
+    return Array.isArray(websiteData) ? websiteData[0] || '' : websiteData;
   }
 
   set website(value: string) {
@@ -204,7 +240,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   get nip05(): string {
-    return this.profile()?.nip05 || '';
+    const nip05Data = this.profile()?.nip05;
+    if (!nip05Data) return '';
+    return Array.isArray(nip05Data) ? nip05Data[0] || '' : nip05Data;
   }
 
   set nip05(value: string) {
@@ -212,7 +250,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   get lud16(): string {
-    return this.profile()?.lud16 || '';
+    const lud16Data = this.profile()?.lud16;
+    if (!lud16Data) return '';
+    return Array.isArray(lud16Data) ? lud16Data[0] || '' : lud16Data;
   }
 
   set lud16(value: string) {
@@ -254,16 +294,25 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     try {
       const currentProfile = this.profile()!;
 
-      // Create cleaned profile data
+      // Filter out empty values from multi-value lists
+      const nip05Values = this.nip05List().filter(v => v && v.trim() !== '');
+      const websiteValues = this.websiteList().filter(v => v && v.trim() !== '');
+
+      // Get lud16 - keep as single value since we only render the first one
+      const lud16Value = currentProfile.lud16;
+      const lud16 = Array.isArray(lud16Value) ? lud16Value[0] || '' : lud16Value || '';
+
+      // Create cleaned profile data with multi-value support
       const profileData: ProfileData = {
         display_name: currentProfile.display_name || '',
         name: currentProfile.name || '',
         about: currentProfile.about || '',
         picture: currentProfile.picture || '',
         banner: currentProfile.banner || '',
-        website: currentProfile.website || '',
-        lud16: currentProfile.lud16 || '',
-        nip05: currentProfile.nip05 || '',
+        // Use array if multiple values, single string if one or none
+        website: websiteValues.length > 1 ? websiteValues : (websiteValues[0] || ''),
+        lud16: lud16,
+        nip05: nip05Values.length > 1 ? nip05Values : (nip05Values[0] || ''),
       };
 
       // Create update options
@@ -539,5 +588,45 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   selectPlatformPreset(platform: string): void {
     this.newIdentityPlatform.set(platform);
+  }
+
+  // Multi-value NIP-05 management methods
+  addNip05(): void {
+    this.nip05List.update(list => [...list, '']);
+  }
+
+  removeNip05(index: number): void {
+    this.nip05List.update(list => {
+      if (list.length <= 1) return list; // Keep at least one entry
+      return list.filter((_, i) => i !== index);
+    });
+  }
+
+  updateNip05(index: number, value: string): void {
+    this.nip05List.update(list => {
+      const updated = [...list];
+      updated[index] = value;
+      return updated;
+    });
+  }
+
+  // Multi-value website management methods
+  addWebsite(): void {
+    this.websiteList.update(list => [...list, '']);
+  }
+
+  removeWebsite(index: number): void {
+    this.websiteList.update(list => {
+      if (list.length <= 1) return list; // Keep at least one entry
+      return list.filter((_, i) => i !== index);
+    });
+  }
+
+  updateWebsite(index: number, value: string): void {
+    this.websiteList.update(list => {
+      const updated = [...list];
+      updated[index] = value;
+      return updated;
+    });
   }
 }

@@ -216,39 +216,64 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   // Computed to get website URL with protocol prefix
   websiteUrl = computed(() => {
-    const website = this.profile()?.data.website;
+    const websiteData = this.profile()?.data.website;
+    if (!websiteData) {
+      return '';
+    }
+
+    // Get the first website if it's an array
+    const website = Array.isArray(websiteData) ? websiteData[0] : websiteData;
     if (!website) {
       return '';
     }
 
-    // Check if the website already has a protocol prefix
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(website)) {
-      return website;
-    }
-
-    // If no protocol prefix, add https:// as default
-    return `https://${website}`;
+    return this.getWebsiteUrl(website);
   });
 
-  // Add signal for verified identifier
-  verifiedIdentifier = signal<{
+  // Computed to get all websites as an array
+  websites = computed(() => {
+    const websiteData = this.profile()?.data.website;
+    if (!websiteData) {
+      return [];
+    }
+    return Array.isArray(websiteData) ? websiteData : [websiteData];
+  });
+
+  // Add signal for verified identifiers (supports multiple NIP-05 addresses)
+  verifiedIdentifiers = signal<Array<{
     value: string;
     valid: boolean;
     status: string;
-  }>({ value: '', valid: false, status: '' });
+  }>>([]);
 
-  // Computed favicon URL for the verified NIP-05 identifier (tries /favicon.ico)
+  // Legacy signal for backwards compatibility - returns first identifier
+  verifiedIdentifier = computed(() => {
+    const identifiers = this.verifiedIdentifiers();
+    return identifiers.length > 0
+      ? identifiers[0]
+      : { value: '', valid: false, status: '' };
+  });
+
+  // Computed favicon URLs for all verified NIP-05 identifiers
+  verifiedFaviconUrls = computed(() => {
+    return this.verifiedIdentifiers().map(identifier => {
+      const value = identifier.value;
+      if (!value) return '';
+
+      // Extract domain from possible formats like 'user@domain.com' or 'domain.com'
+      const domain = value.includes('@') ? value.split('@')[1] : value;
+      if (!domain) return '';
+
+      // Normalize domain and remove any path fragments
+      const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+      return this.getFaviconUrl(clean);
+    });
+  });
+
+  // Legacy computed for backwards compatibility - returns first favicon URL
   verifiedFaviconUrl = computed(() => {
-    const value = this.verifiedIdentifier().value;
-    if (!value) return '';
-
-    // Extract domain from possible formats like 'user@domain.com' or 'domain.com'
-    const domain = value.includes('@') ? value.split('@')[1] : value;
-    if (!domain) return '';
-
-    // Normalize domain and remove any path fragments
-    const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
-    return this.getFaviconUrl(clean);
+    const urls = this.verifiedFaviconUrls();
+    return urls.length > 0 ? urls[0] : '';
   });
 
   // Track favicon visibility to hide if loading fails
@@ -350,6 +375,21 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.zapService.getLightningAddress(profileData) !== null;
   });
 
+  // Computed to get the primary lightning address (first one if multiple exist)
+  lightningAddress = computed(() => {
+    const profileData = this.profile()?.data;
+    if (!profileData) return null;
+
+    const lud16 = profileData.lud16;
+    const lud06 = profileData.lud06;
+
+    // lud16 takes priority over lud06, use first value if array
+    if (lud16) {
+      return Array.isArray(lud16) ? lud16[0] : lud16;
+    }
+    return lud06 || null;
+  });
+
   constructor() {
     effect(() => {
       const currentPubkey = this.pubkey();
@@ -419,21 +459,17 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // Add effect to verify identifier when profile changes
+    // Add effect to verify identifiers when profile changes
     effect(async () => {
       const currentProfile = this.profile();
       if (currentProfile?.data.nip05) {
-        const result = await this.getVerifiedIdentifier();
+        const results = await this.getVerifiedIdentifiers();
         untracked(() => {
-          this.verifiedIdentifier.set(result);
+          this.verifiedIdentifiers.set(results);
         });
       } else {
         untracked(() => {
-          this.verifiedIdentifier.set({
-            value: '',
-            valid: false,
-            status: 'No NIP-05 value',
-          });
+          this.verifiedIdentifiers.set([]);
         });
       }
     });
@@ -845,34 +881,74 @@ export class ProfileHeaderComponent implements OnDestroy {
     return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(base)}&sz=64`;
   }
 
-  private async getVerifiedIdentifier(): Promise<{
+  /**
+   * Get website URL with protocol prefix
+   */
+  getWebsiteUrl(website: string): string {
+    if (!website) {
+      return '';
+    }
+
+    // Check if the website already has a protocol prefix
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(website)) {
+      return website;
+    }
+
+    // If no protocol prefix, add https:// as default
+    return `https://${website}`;
+  }
+
+  /**
+   * Verify all NIP-05 identifiers for the profile
+   */
+  private async getVerifiedIdentifiers(): Promise<Array<{
     value: string;
     valid: boolean;
     status: string;
-  }> {
+  }>> {
     const metadata = this.profile();
-    if (!metadata || !metadata.data.nip05)
-      return { value: '', valid: false, status: 'No NIP-05 value' };
+    if (!metadata || !metadata.data.nip05) {
+      return [];
+    }
 
-    const value = this.utilities.parseNip05(metadata.data.nip05);
+    const nip05Data = metadata.data.nip05;
+    const nip05List = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
 
-    if (isNip05(metadata.data.nip05)) {
-      const profile = await queryProfile(metadata.data.nip05);
+    const results: Array<{ value: string; valid: boolean; status: string }> = [];
 
-      if (profile) {
-        if (profile.pubkey === metadata.event.pubkey) {
-          return { value, valid: true, status: 'Verified valid' };
-        } else {
-          this.logger.warn(
-            'NIP-05 profile pubkey mismatch:',
-            profile.pubkey,
-            metadata.event.pubkey
-          );
+    for (const nip05 of nip05List) {
+      if (!nip05 || typeof nip05 !== 'string') continue;
+
+      const value = this.utilities.parseNip05(nip05);
+
+      if (isNip05(nip05)) {
+        try {
+          const profile = await queryProfile(nip05);
+
+          if (profile) {
+            if (profile.pubkey === metadata.event.pubkey) {
+              results.push({ value, valid: true, status: 'Verified valid' });
+            } else {
+              this.logger.warn(
+                'NIP-05 profile pubkey mismatch:',
+                profile.pubkey,
+                metadata.event.pubkey
+              );
+              results.push({ value, valid: false, status: 'Pubkey mismatch' });
+            }
+          } else {
+            results.push({ value, valid: false, status: 'Profile not found' });
+          }
+        } catch (error) {
+          this.logger.warn('Error verifying NIP-05:', nip05, error);
+          results.push({ value, valid: false, status: 'Verification failed' });
         }
+      } else {
+        results.push({ value, valid: false, status: 'Invalid NIP-05 format' });
       }
     }
 
-    return { value, valid: false, status: 'Invalid NIP-05' };
+    return results;
   }
 
   // Add methods for QR code visibility
@@ -909,14 +985,19 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   copyLightningAddressToClipboard(): void {
     const profile = this.profile();
-    const lightningAddress = profile?.data.lud16 || profile?.data.lud06;
+    const lud16 = profile?.data.lud16;
+    const lud06 = profile?.data.lud06;
+    // Get first lightning address (lud16 takes priority)
+    const lightningAddress = lud16
+      ? (Array.isArray(lud16) ? lud16[0] : lud16)
+      : lud06;
     if (lightningAddress) {
       this.layout.copyToClipboard(lightningAddress, 'lightning address');
     }
   }
 
-  copyNip05ToClipboard(): void {
-    const nip05Value = this.verifiedIdentifier().value;
+  copyNip05ToClipboard(value?: string): void {
+    const nip05Value = value || this.verifiedIdentifier().value;
     if (nip05Value) {
       this.layout.copyToClipboard(nip05Value, 'NIP-05');
     }
