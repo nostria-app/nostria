@@ -44,6 +44,12 @@ export type ClearCacheCallback = () => void;
 export type ClearRightPanelCallback = () => void;
 
 /**
+ * Callback to check if right panel has any content (router or dynamic)
+ * and optionally handle back navigation. Returns true if handled.
+ */
+export type RightPanelBackCallback = () => boolean;
+
+/**
  * Service to manage dual-panel navigation with independent history stacks
  * and clean URLs.
  * 
@@ -77,6 +83,12 @@ export class PanelNavigationService {
   // Track if navigation is from back button (don't clear history)
   private _isBackNavigation = false;
 
+  // Track if we're handling a popstate event ourselves (to prevent double handling)
+  private _handlingPopstate = false;
+
+  // Store the URL before popstate for restoration if needed
+  private _urlBeforePopstate: string | null = null;
+
   // Track if we should preserve the right panel on the next navigation
   private _preserveRightPanelOnNextNavigation = false;
 
@@ -85,6 +97,10 @@ export class PanelNavigationService {
 
   // Callback to clear right panel (set by RightPanelService)
   private _clearRightPanelCallback: ClearRightPanelCallback | null = null;
+
+  // Callback to handle right panel back navigation (set by app component)
+  // Returns true if the back was handled by RightPanelService
+  private _rightPanelBackCallback: RightPanelBackCallback | null = null;
 
   // Public readonly signals
   leftStack = this._leftStack.asReadonly();
@@ -228,6 +244,12 @@ export class PanelNavigationService {
       this.isMobile.set(result.matches);
     });
 
+    // Setup popstate interceptor for touch device back navigation
+    // This must run BEFORE Angular's router processes the popstate
+    if (this.isBrowser) {
+      this.setupPopstateInterceptor();
+    }
+
     // Listen to NavigationStart to detect browser back/forward (popstate)
     // This sets the _isBackNavigation flag BEFORE handleNavigation runs
     this.router.events.pipe(
@@ -235,7 +257,8 @@ export class PanelNavigationService {
     ).subscribe((event) => {
       const navStart = event as NavigationStart;
       // navigationTrigger is 'popstate' for browser back/forward buttons
-      if (navStart.navigationTrigger === 'popstate') {
+      // Skip if we're handling this navigation ourselves (via interceptor)
+      if (navStart.navigationTrigger === 'popstate' && !this._handlingPopstate) {
         this._isBackNavigation = true;
       }
     });
@@ -338,6 +361,14 @@ export class PanelNavigationService {
    */
   setClearRightPanelCallback(callback: ClearRightPanelCallback): void {
     this._clearRightPanelCallback = callback;
+  }
+
+  /**
+   * Set callback for handling right panel back navigation.
+   * The callback should return true if it handled the back (e.g., RightPanelService had content).
+   */
+  setRightPanelBackCallback(callback: RightPanelBackCallback): void {
+    this._rightPanelBackCallback = callback;
   }
 
   /**
@@ -476,6 +507,17 @@ export class PanelNavigationService {
 
       this._currentRoute.set(entry);
       this._currentRoutePanel.set('right');
+    } else if (!rightPath && !clearingRightPanel && this._isBackNavigation) {
+      // Back navigation to a URL without a right panel - clear the right stack
+      // This happens when user presses back and browser history goes to a URL
+      // that didn't have right panel content (e.g., the initial left panel route)
+      const rightStack = this._rightStack();
+      if (rightStack.length > 0) {
+        this._rightStack.set([]);
+        if (this._clearRightPanelCallback) {
+          this._clearRightPanelCallback();
+        }
+      }
     }
 
     // Reset flags
@@ -713,5 +755,135 @@ export class PanelNavigationService {
         rightPanel.scrollTop = 0;
       }
     }, 0);
+  }
+
+  /**
+   * Setup popstate interceptor to handle touch device back navigation.
+   * On mobile/touch devices, swiping back should:
+   * 1. First close/go back in the right panel if it has content (both router and dynamic)
+   * 2. Then go back in the left panel
+   * 
+   * This interceptor runs BEFORE Angular's router processes the popstate event.
+   */
+  private setupPopstateInterceptor(): void {
+    // Track the current URL for restoration purposes
+    // Update this on every navigation
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event) => {
+      const navEnd = event as NavigationEnd;
+      this._urlBeforePopstate = navEnd.urlAfterRedirects;
+    });
+
+    // Listen to popstate events at the window level
+    // This fires BEFORE Angular's router processes the navigation
+    window.addEventListener('popstate', (event: PopStateEvent) => {
+      // Check if we have router-based right panel content
+      const rightStack = this._rightStack();
+      const hasRouterRightContent = rightStack.length > 0;
+      
+      // Check what URL the browser is trying to navigate to
+      const newPath = window.location.pathname + window.location.search;
+      
+      // Parse the new URL to see if it has a right outlet
+      const tree = this.router.parseUrl(newPath);
+      const rightGroup = tree.root.children['right'];
+      const newRightPath = rightGroup ? rightGroup.toString() : '';
+
+      // Case 1: Browser navigating to URL without right panel, but we have router-based right content
+      if (!newRightPath && hasRouterRightContent) {
+        // Browser is navigating to a URL without right panel content,
+        // but we still have router-based right panel content to close.
+        // 
+        // This means the user is trying to go back past the point where
+        // they opened the right panel. We should:
+        // 1. Restore the browser history to prevent the navigation
+        // 2. Close our right panel manually (go back in right stack)
+        
+        if (this._urlBeforePopstate) {
+          this._handlingPopstate = true;
+          
+          // Push the current URL back to cancel the browser's back navigation
+          window.history.pushState(null, '', this._urlBeforePopstate);
+          
+          // First check if there's dynamic RightPanelService content to handle
+          if (this._rightPanelBackCallback) {
+            const handled = this._rightPanelBackCallback();
+            if (handled) {
+              // RightPanelService handled the back navigation
+              this._handlingPopstate = false;
+              return;
+            }
+          }
+          
+          // Now handle router-based right panel back navigation
+          this.handleGoBackRight(this._urlBeforePopstate);
+          
+          this._handlingPopstate = false;
+        }
+      } else if (newRightPath && hasRouterRightContent) {
+        // Both old and new URLs have right panel content
+        // This is a normal back navigation within the right panel stack
+        // Let Angular handle it normally - the handleNavigation method will
+        // properly update the stacks based on the new URL
+      } else if (!hasRouterRightContent && this._rightPanelBackCallback) {
+        // No router-based right content, but might have RightPanelService content
+        // Let the callback check and handle if needed
+        // Note: The popstate event state might indicate RightPanelService content
+        const state = event.state;
+        if (state && state.rightPanel) {
+          // This popstate was triggered by RightPanelService history
+          // The callback will handle it
+          if (this._urlBeforePopstate) {
+            this._handlingPopstate = true;
+            window.history.pushState(null, '', this._urlBeforePopstate);
+            
+            const handled = this._rightPanelBackCallback();
+            this._handlingPopstate = false;
+            
+            if (!handled) {
+              // Not handled, restore browser state and let navigation proceed
+              window.history.back();
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Internal method to go back in right panel history using a specific URL as reference.
+   * Used by the popstate interceptor when router.url may not be reliable.
+   */
+  private handleGoBackRight(currentUrl: string): void {
+    const stack = this._rightStack();
+
+    if (stack.length <= 1) {
+      // No history to go back to - close right panel
+      this._rightStack.set([]);
+      this._isBackNavigation = true;
+
+      // Clear the right outlet by navigating to just the primary path
+      const queryMatch = currentUrl.match(/\?[^(]+$/);
+      const queryString = queryMatch ? queryMatch[0] : '';
+      const primaryPath = currentUrl.split('(')[0] || '/';
+      
+      this.router.navigateByUrl(primaryPath + queryString);
+      return;
+    }
+
+    // Pop current entry and navigate to previous
+    const newStack = stack.slice(0, -1);
+    const prev = newStack[newStack.length - 1];
+    this._rightStack.set(newStack);
+    this._isBackNavigation = true;
+    
+    // Navigate to previous right panel route
+    const queryMatch = currentUrl.match(/\?[^(]+$/);
+    const queryString = queryMatch ? queryMatch[0] : '';
+    const primaryPath = currentUrl.split('(')[0] || '/';
+    
+    const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
+    this.router.navigateByUrl(targetUrl);
   }
 }

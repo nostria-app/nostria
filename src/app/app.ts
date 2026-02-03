@@ -677,6 +677,17 @@ export class App implements OnInit {
       this.layout.closeRightPanel();
     });
 
+    // Wire up right panel back navigation callback for popstate handling
+    // This handles the case where RightPanelService has dynamic content that should be
+    // closed first before the router-based right panel content
+    this.panelNav.setRightPanelBackCallback(() => {
+      if (this.rightPanel.hasContent()) {
+        this.rightPanel.goBack();
+        return true; // Handled
+      }
+      return false; // Not handled, let PanelNavigationService handle it
+    });
+
     // Track sidenav size changes to update floating toolbar position
     effect(() => {
       // Read signals to establish dependency
