@@ -31,19 +31,19 @@ export class MetaService {
   #metadataUrl = environment.metadataUrl;
 
   /**
-   * Sets the page title with consistent " - Nostria" suffix
-   * @param title The title to set (will have " - Nostria" appended if not already)
+   * Sets the page title with consistent "Nostria – " prefix
+   * @param title The title to set (will have "Nostria – " prepended if not already)
    */
   setTitle(title: string): void {
-    // Ensure consistent " - Nostria" suffix format
+    // Ensure consistent "Nostria – " prefix format
     let formattedTitle = title;
-    // Remove old "Nostria: " prefix if present
-    if (formattedTitle.startsWith('Nostria: ')) {
-      formattedTitle = formattedTitle.slice(9);
+    // Remove old " - Nostria" suffix if present
+    if (formattedTitle.endsWith(' - Nostria')) {
+      formattedTitle = formattedTitle.slice(0, -10);
     }
-    // Add suffix if not already present
-    if (!formattedTitle.endsWith(' - Nostria')) {
-      formattedTitle = `${formattedTitle} - Nostria`;
+    // Add prefix if not already present
+    if (!formattedTitle.startsWith('Nostria – ')) {
+      formattedTitle = `Nostria – ${formattedTitle}`;
     }
     this.title.setTitle(formattedTitle);
   }

@@ -451,9 +451,9 @@ export class EventPageComponent {
       const event = this.event();
 
       if (event) {
-        this.titleService.setTitle(isLoading ? '⏳ Thread - Nostria' : 'Thread - Nostria');
+        this.titleService.setTitle(isLoading ? 'Nostria – ⏳ Thread' : 'Nostria – Thread');
       } else if (isLoading) {
-        this.titleService.setTitle('⏳ Loading... - Nostria');
+        this.titleService.setTitle('Nostria – ⏳ Loading...');
       }
     });
 
