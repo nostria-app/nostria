@@ -43,8 +43,14 @@
 
 // URL styling - allows long URLs to wrap properly
 .url-link {
+  color: var(--mat-sys-primary);
+  text-decoration: none;
   overflow-wrap: break-word;
   word-break: break-word;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 // RSS feed link styling

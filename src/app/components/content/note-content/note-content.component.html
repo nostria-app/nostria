@@ -346,6 +346,8 @@
 }
 } @else if (token.type === 'hashtag') {
 <a class="hashtag-link" [routerLink]="['/f']" [queryParams]="{t: token.content}">#{{ token.content }}</a>
+} @else if (token.type === 'url') {
+<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>
 }
 }
 }
