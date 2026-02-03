@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -36,9 +37,28 @@ export class UserDataService {
   private readonly cache = inject(Cache);
   private readonly relaysService = inject(RelaysService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly snackBar = inject(MatSnackBar);
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
+
+  /**
+   * Save events to database in background (non-blocking)
+   * Uses batch save for efficiency and shows toast on error
+   */
+  private saveEventsInBackground(events: Event[], context: string): void {
+    if (events.length === 0) return;
+    
+    // Fire and forget - don't await
+    this.database.saveEvents(events).catch((error) => {
+      this.logger.error(`Background save failed for ${context}:`, error);
+      this.snackBar.open(
+        `Failed to cache ${events.length} events locally. They may need to be re-fetched.`,
+        'Dismiss',
+        { duration: 5000 }
+      );
+    });
+  }
 
   toRecord(event: Event) {
     return this.utilities.toRecord(event);
@@ -761,12 +781,9 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    // Only save to database if events came from relays (not already in DB)
+    // Save to database in background if events came from relays (not already in DB)
     if (options?.save && !loadedFromDb) {
-      console.log(`💾 [DB Save] Saving ${events.length} events to database for kind ${kind}`);
-      for (const event of events) {
-        await this.database.saveEvent(event);
-      }
+      this.saveEventsInBackground(events, `kind ${kind}`);
     }
 
     return records;
@@ -838,12 +855,9 @@ export class UserDataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    // Only save to database if events came from relays (not already in DB)
+    // Save to database in background if events came from relays (not already in DB)
     if (options?.save && !loadedFromDb) {
-      console.log(`💾 [DB Save] Saving ${events.length} events to database for kinds [${kinds.join(',')}]`);
-      for (const event of events) {
-        await this.database.saveEvent(event);
-      }
+      this.saveEventsInBackground(events, `kinds [${kinds.join(',')}]`);
     }
 
     return records;
