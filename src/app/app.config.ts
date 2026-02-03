@@ -8,7 +8,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, RouteReuseStrategy, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, TitleStrategy, withInMemoryScrolling, withNavigationErrorHandler } from '@angular/router';
+import { NostriaTitleStrategy } from './services/nostria-title-strategy.service';
 import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -58,6 +59,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: appLang },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: RouteReuseStrategy, useClass: CustomReuseStrategy },
+    { provide: TitleStrategy, useClass: NostriaTitleStrategy },
     {
       provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
       useValue: { touchGestures: 'off' },

@@ -31,11 +31,21 @@ export class MetaService {
   #metadataUrl = environment.metadataUrl;
 
   /**
-   * Sets the page title
-   * @param title The title to set
+   * Sets the page title with consistent " - Nostria" suffix
+   * @param title The title to set (will have " - Nostria" appended if not already)
    */
   setTitle(title: string): void {
-    this.title.setTitle(title);
+    // Ensure consistent " - Nostria" suffix format
+    let formattedTitle = title;
+    // Remove old "Nostria: " prefix if present
+    if (formattedTitle.startsWith('Nostria: ')) {
+      formattedTitle = formattedTitle.slice(9);
+    }
+    // Add suffix if not already present
+    if (!formattedTitle.endsWith(' - Nostria')) {
+      formattedTitle = `${formattedTitle} - Nostria`;
+    }
+    this.title.setTitle(formattedTitle);
   }
 
   /**
