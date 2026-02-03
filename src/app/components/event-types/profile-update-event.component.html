@@ -53,10 +53,14 @@
     </div>
 
     <!-- NIP-05 Verification -->
-    @if (nip05()) {
-    <div class="profile-nip05">
-      <mat-icon class="nip05-icon">verified</mat-icon>
-      <span class="nip05-text">{{ nip05() }}</span>
+    @if (nip05List().length > 0) {
+    <div class="profile-nip05-list">
+      @for (nip05 of nip05List(); track nip05) {
+      <div class="profile-nip05">
+        <mat-icon class="nip05-icon">verified</mat-icon>
+        <span class="nip05-text">{{ nip05 }}</span>
+      </div>
+      }
     </div>
     }
 
@@ -69,12 +73,12 @@
 
     <!-- Additional Info -->
     <div class="profile-meta">
-      @if (website()) {
+      @for (website of websiteList(); track website) {
       <div class="meta-item">
         <mat-icon>link</mat-icon>
-        <a [href]="website()" target="_blank" rel="noopener noreferrer" class="website-link"
+        <a [href]="website" target="_blank" rel="noopener noreferrer" class="website-link"
           (click)="$event.stopPropagation()">
-          {{ website() }}
+          {{ website }}
         </a>
       </div>
       }
