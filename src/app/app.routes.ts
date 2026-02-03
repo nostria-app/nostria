@@ -531,7 +531,7 @@ export const routes: Routes = [
     path: 'premium',
     loadComponent: () =>
       import('./pages/premium/premium.component').then(m => m.PremiumComponent),
-    title: 'Nostria Premium',
+    title: 'Premium',
     data: { isRoot: true },
   },
   {
@@ -648,7 +648,7 @@ export const routes: Routes = [
     path: 'invite/:nprofile',
     loadComponent: () =>
       import('./pages/invite/invite.component').then(m => m.InviteComponent),
-    title: 'Join Nostria',
+    title: 'Join',
   },
 
   // Right panel routes (named outlet)

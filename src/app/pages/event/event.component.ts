@@ -451,8 +451,7 @@ export class EventPageComponent {
       const event = this.event();
 
       if (event) {
-        const baseTitle = `Note by ${event.pubkey.slice(0, 8)}... - Nostria`;
-        this.titleService.setTitle(isLoading ? `⏳ ${baseTitle}` : baseTitle);
+        this.titleService.setTitle(isLoading ? '⏳ Thread - Nostria' : 'Thread - Nostria');
       } else if (isLoading) {
         this.titleService.setTitle('⏳ Loading... - Nostria');
       }
