@@ -519,4 +519,27 @@ constructor() {
     const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
     return customEmoji?.url;
   }
+
+  /**
+   * Get the URL for a custom emoji in reaction groups display.
+   * First checks if any reaction event has the emoji tag, then falls back to user's custom emojis.
+   */
+  getCustomEmojiUrlForGroup(content: string): string | null {
+    if (!content.startsWith(':') || !content.endsWith(':')) {
+      return null;
+    }
+
+    // First, try to find a reaction event with the emoji tag
+    const reactionWithTag = this.reactions().events.find(
+      r => r.event.content === content && this.getCustomEmojiUrl(r.event)
+    );
+    if (reactionWithTag) {
+      return this.getCustomEmojiUrl(reactionWithTag.event);
+    }
+
+    // Fallback: check user's loaded custom emojis
+    const shortcode = content.slice(1, -1);
+    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+    return customEmoji?.url || null;
+  }
 }

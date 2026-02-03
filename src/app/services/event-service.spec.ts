@@ -196,5 +196,29 @@ describe('EventService getEventTags', () => {
       expect(result.pTags).toEqual(['user1-pubkey', 'user2-pubkey', 'user3-pubkey']);
       expect(result.pTagRelays.size).toBe(0);
     });
+
+    it('should handle single unmarked e-tag (simple reply format)', () => {
+      // This tests the deprecated/simple reply format where a reply only has
+      // a single e-tag without root/reply markers pointing to the parent event
+      const mockEvent: Event = {
+        id: 'reply-event-id',
+        pubkey: 'replier-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'A simple reply',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'parent-event-id'],
+          ['p', 'parent-author-pubkey'],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      // Single unmarked e-tag should be treated as both root and reply
+      expect(result.rootId).toBe('parent-event-id');
+      expect(result.replyId).toBe('parent-event-id');
+      expect(result.pTags).toEqual(['parent-author-pubkey']);
+    });
   });
 });
