@@ -123,14 +123,6 @@
   }
 
   <div class="replies-section" [style.margin-left.px]="parentEvents().length * 16">
-    <!-- Always show loading indicator when replies are being fetched -->
-    @if (isLoadingReplies()) {
-    <div class="replies-loading-header">
-      <mat-spinner diameter="16"></mat-spinner>
-      <p class="loading-text">Loading replies...</p>
-    </div>
-    }
-
     <!-- Filter indicator when filter is active -->
     @if (isReplyFilterActive() && !isLoadingReplies()) {
     <div class="filter-indicator">
@@ -148,18 +140,10 @@
       [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
     }
 
-    <!-- Only show "No replies yet" when loading is complete AND there are no replies -->
-    @if (threadedReplies().length === 0 && !isLoadingReplies()) {
-    <div class="no-replies">
-      <mat-icon>chat_bubble_outline</mat-icon>
-      <p>No replies yet</p>
-    </div>
-    }
-
     <!-- Show "No matching replies" when filter is active but no results -->
     @if (isReplyFilterActive() && threadedReplies().length > 0 && filteredThreadedReplies().length === 0 &&
     !isLoadingReplies()) {
-    <div class="no-replies">
+    <div class="no-matching-replies">
       <mat-icon>filter_alt_off</mat-icon>
       <p>No replies from {{ selectedFollowSetName() }}</p>
       <button mat-stroked-button (click)="setReplyFilter('everyone')">Show all replies</button>
