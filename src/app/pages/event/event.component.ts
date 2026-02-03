@@ -111,6 +111,23 @@ export class EventPageComponent {
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
 
+  // Total reply count (including nested replies) - passed to app-event to avoid duplicate relay queries
+  totalReplyCount = computed<number>(() => {
+    const replies = this.threadedReplies();
+    return this.countAllReplies(replies);
+  });
+
+  /**
+   * Recursively count all replies (including nested)
+   */
+  private countAllReplies(replies: ThreadedEvent[]): number {
+    let count = replies.length;
+    for (const reply of replies) {
+      count += this.countAllReplies(reply.replies);
+    }
+    return count;
+  }
+
   // Reply filter state
   // 'everyone' = no filter, 'following' = main contact list, or d-tag of a custom follow set
   selectedReplyFilter = signal<string>(REPLY_FILTER_EVERYONE);
