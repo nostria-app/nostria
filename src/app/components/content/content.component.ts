@@ -59,6 +59,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Whether this content is rendered inside the Feeds panel (for video auto-play control)
   inFeedsPanel = input<boolean>(false);
 
+  // Hide social previews (when parent component is handling preview rendering)
+  hideSocialPreviews = input<boolean>(false);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
