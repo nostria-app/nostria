@@ -868,6 +868,62 @@ export class PeopleComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Navigate to Summary page filtered by the selected list
+   */
+  goToSummary(): void {
+    const selectedSet = this.selectedFollowSet();
+    if (selectedSet) {
+      this.router.navigate(['/summary'], {
+        queryParams: { list: selectedSet.dTag }
+      });
+    } else {
+      this.router.navigate(['/summary']);
+    }
+  }
+
+  /**
+   * Navigate to Feeds page with the list feed
+   */
+  goToFeeds(): void {
+    const selectedSet = this.selectedFollowSet();
+    if (selectedSet) {
+      this.router.navigate(['/f'], {
+        queryParams: { l: selectedSet.dTag }
+      });
+    } else {
+      this.router.navigate(['/f']);
+    }
+  }
+
+  /**
+   * Navigate to Streams page filtered by the selected list
+   */
+  goToStreams(): void {
+    const selectedSet = this.selectedFollowSet();
+    if (selectedSet) {
+      this.router.navigate(['/streams'], {
+        queryParams: { list: selectedSet.dTag }
+      });
+    } else {
+      this.router.navigate(['/streams']);
+    }
+  }
+
+  /**
+   * Navigate to Articles page filtered by the selected list
+   */
+  goToArticles(): void {
+    const selectedSet = this.selectedFollowSet();
+    if (selectedSet) {
+      this.router.navigate(['/articles'], {
+        queryParams: { list: selectedSet.dTag }
+      });
+    } else {
+      this.router.navigate(['/articles']);
+    }
+  }
+
   openAddPersonDialog() {
     const selectedSet = this.selectedFollowSet();
     this.logger.debug('[People] Opening add person dialog with follow set:', selectedSet?.title ?? 'None (All Following)');

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Location } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -104,6 +104,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   protected readonly layout = inject(LayoutService);
 
   // ViewChild for load more sentinel
@@ -351,6 +352,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Handle URL query params for list filter
+    effect(() => {
+      const queryParams = this.route.snapshot.queryParams;
+      if (queryParams['list']) {
+        // Find the matching follow set
+        const list = this.followSets().find(s => s.dTag === queryParams['list']);
+        if (list) {
+          this.selectedList.set(list);
+        }
+      }
+    });
+
     // Load data when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
