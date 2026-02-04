@@ -593,14 +593,12 @@ export class EventMenuComponent {
       this.snackBar.open('Generating screenshot...', undefined, { duration: 2000 });
 
       // Create a container for rendering the screenshot component
-      // Position it at 0,0 and make it visible so IntersectionObserver works
-      // The brief flash is acceptable for screenshot generation
+      // Position it mostly off-screen but with 1px in viewport so IntersectionObserver triggers
       const container = document.createElement('div');
       container.style.position = 'fixed';
-      container.style.left = '0';
+      container.style.left = '-499px'; // 500px wide, so 1px is visible at left edge
       container.style.top = '0';
       container.style.width = '500px';
-      container.style.zIndex = '9999';
       container.style.background = 'var(--mat-sys-surface)';
       // Ensure the container inherits theme styles
       container.className = document.body.className;
