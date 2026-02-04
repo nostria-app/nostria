@@ -9,9 +9,15 @@
       </app-user-profile>
     </mat-card-header>
 
-    <!-- Content - simple text rendering for screenshot -->
+    <!-- Content - with parsed nostr mentions -->
     <mat-card-content>
-      <div class="content-text">{{ content() }}</div>
+      <div class="content-text">@for (segment of contentSegments(); track $index) {<!--
+        -->@if (segment.type === 'text') {<!--
+          -->{{ segment.content }}<!--
+        -->} @else {<!--
+          --><span class="mention">{{ segment.displayName }}</span><!--
+        -->}<!--
+      -->}</div>
     </mat-card-content>
 
     <!-- Branding footer with event ID -->

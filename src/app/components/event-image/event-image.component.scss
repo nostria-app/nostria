@@ -69,6 +69,10 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  
+  .mention {
+    color: var(--mat-sys-primary);
+  }
 }
 
 .nostria-logo {
