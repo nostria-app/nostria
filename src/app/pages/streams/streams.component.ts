@@ -11,6 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { Event, Filter } from 'nostr-tools';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -56,6 +57,8 @@ export class StreamsComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private accountLocalState = inject(AccountLocalStateService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   followSetsService = inject(FollowSetsService);
 
   liveStreams = signal<Event[]>([]);
@@ -193,12 +196,25 @@ export class StreamsComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Handle URL query params for list filter
+    effect(() => {
+      const queryParams = this.route.snapshot.queryParams;
+      if (queryParams['list']) {
+        // Set list filter from URL - can be 'all', 'following', or a follow set d-tag
+        this.selectedListFilter.set(queryParams['list']);
+      }
+    });
+
     // Load saved filter preference
     effect(() => {
       const pubkey = this.currentPubkey();
       if (pubkey) {
-        const savedFilter = this.accountLocalState.getStreamsListFilter(pubkey);
-        this.selectedListFilter.set(savedFilter);
+        // Only load saved filter if no URL param is set
+        const queryParams = this.route.snapshot.queryParams;
+        if (!queryParams['list']) {
+          const savedFilter = this.accountLocalState.getStreamsListFilter(pubkey);
+          this.selectedListFilter.set(savedFilter);
+        }
       }
     }, { allowSignalWrites: true });
 
@@ -553,6 +569,21 @@ export class StreamsComponent implements OnInit, OnDestroy {
     const pubkey = this.currentPubkey();
     if (pubkey) {
       this.accountLocalState.setStreamsListFilter(pubkey, filterValue);
+    }
+
+    // Update URL with list param or clear it
+    if (filterValue !== 'all') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { list: filterValue },
+        queryParamsHandling: 'merge'
+      });
+    } else {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {},
+        queryParamsHandling: ''
+      });
     }
   }
 }

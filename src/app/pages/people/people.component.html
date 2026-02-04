@@ -56,6 +56,30 @@
   <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List">
     <mat-icon>edit</mat-icon>
   </button>
+  
+  <!-- Shortcuts menu (only when a list is selected) -->
+  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in...">
+    <mat-icon>open_in_new</mat-icon>
+  </button>
+  
+  <mat-menu #shortcutsMenu="matMenu">
+    <button mat-menu-item (click)="goToSummary()">
+      <mat-icon>summarize</mat-icon>
+      <span>Summary</span>
+    </button>
+    <button mat-menu-item (click)="goToFeeds()">
+      <mat-icon>dynamic_feed</mat-icon>
+      <span>Feeds</span>
+    </button>
+    <button mat-menu-item (click)="goToStreams()">
+      <mat-icon>live_tv</mat-icon>
+      <span>Streams</span>
+    </button>
+    <button mat-menu-item (click)="goToArticles()">
+      <mat-icon>article</mat-icon>
+      <span>Articles</span>
+    </button>
+  </mat-menu>
   }
 
   <!-- View toggle button - cycles through modes -->

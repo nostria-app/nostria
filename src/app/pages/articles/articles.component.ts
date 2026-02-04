@@ -8,7 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDividerModule } from '@angular/material/divider';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -22,6 +22,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -66,6 +67,9 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private userRelay = inject(UserRelayService);
   private userRelays = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  followSetsService = inject(FollowSetsService);
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -75,10 +79,34 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   showFollowing = signal(true);
   showPublic = signal(false);
 
+  // People list filter state - 'following', 'public', or follow set d-tag
+  selectedListFilter = signal<string>('following');
+
   // Computed feed source based on what's enabled (for toggle UI)
   feedSource = computed(() => {
     if (this.showFollowing()) return 'following';
     return 'public';
+  });
+
+  // Computed: get all follow sets for the dropdown
+  allFollowSets = computed(() => this.followSetsService.followSets());
+
+  // Computed: get the currently selected follow set (if any)
+  selectedFollowSet = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'following' || filter === 'public') {
+      return null;
+    }
+    return this.allFollowSets().find(set => set.dTag === filter) || null;
+  });
+
+  // Computed: get the display title for the current filter
+  filterTitle = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'following') return 'Following';
+    if (filter === 'public') return 'Public';
+    const followSet = this.selectedFollowSet();
+    return followSet?.title || 'Following';
   });
 
   // Pagination state
@@ -106,15 +134,29 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     return this.accountState.followingList() || [];
   });
 
+  // Computed: get the pubkeys to filter by based on current selection
+  private filterPubkeys = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'public') {
+      return null; // No filtering for public
+    }
+    if (filter === 'following') {
+      return this.followingPubkeys();
+    }
+    // Filter by a specific follow set
+    const followSet = this.selectedFollowSet();
+    return followSet?.pubkeys || [];
+  });
+
   private currentPubkey = computed(() => this.accountState.pubkey());
 
   // All filtered articles sorted by date
   private allFollowingArticles = computed(() => {
-    const following = this.followingPubkeys();
-    if (following.length === 0) return [];
+    const pubkeys = this.filterPubkeys();
+    if (pubkeys === null || pubkeys.length === 0) return [];
 
     return this.allArticles()
-      .filter(article => following.includes(article.pubkey))
+      .filter(article => pubkeys.includes(article.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
 
@@ -128,6 +170,18 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
+  // Combined articles based on selection (for list filter mode)
+  private allListArticles = computed(() => {
+    const filter = this.selectedListFilter();
+    // If using following or a specific list, use the filtered articles
+    if (filter !== 'public') {
+      return this.allFollowingArticles();
+    }
+    // For public, combine following and public
+    return [...this.allFollowingArticles(), ...this.allPublicArticles()]
+      .sort((a, b) => b.created_at - a.created_at);
+  });
+
   // Paginated articles for display
   followingArticles = computed(() => {
     return this.allFollowingArticles().slice(0, this.followingDisplayCount());
@@ -138,6 +192,15 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   currentArticles = computed(() => {
+    const filter = this.selectedListFilter();
+    
+    // When using a specific list (not 'following' or 'public'), show list articles
+    if (filter !== 'following' && filter !== 'public') {
+      const listArticles = this.allFollowingArticles();
+      const displayCount = this.followingDisplayCount();
+      return listArticles.slice(0, displayCount);
+    }
+    
     const showFollowing = this.showFollowing();
     const showPublic = this.showPublic();
     
@@ -166,6 +229,13 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   });
 
   hasMore = computed(() => {
+    const filter = this.selectedListFilter();
+    
+    // When using a specific list, check if there are more list articles
+    if (filter !== 'following' && filter !== 'public') {
+      return this.allFollowingArticles().length > this.followingDisplayCount();
+    }
+    
     const showFollowing = this.showFollowing();
     const showPublic = this.showPublic();
     
@@ -186,18 +256,46 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   isAuthenticated = computed(() => this.app.authenticated());
 
   constructor() {
+    // Handle URL query params for list filter
+    effect(() => {
+      const queryParams = this.route.snapshot.queryParams;
+      if (queryParams['list']) {
+        // Set list filter from URL
+        this.selectedListFilter.set(queryParams['list']);
+        // When using a list filter, disable following/public toggles
+        this.showFollowing.set(true);
+        this.showPublic.set(false);
+      }
+    });
+
     // Load persisted filter settings from local state
     effect(() => {
       const pubkey = this.currentPubkey();
       if (pubkey) {
-        const savedShowFollowing = this.accountLocalState.getArticlesShowFollowing(pubkey);
-        const savedShowPublic = this.accountLocalState.getArticlesShowPublic(pubkey);
-        this.showFollowing.set(savedShowFollowing);
-        this.showPublic.set(savedShowPublic);
+        // Only load saved filter if no URL param is set
+        const queryParams = this.route.snapshot.queryParams;
+        if (!queryParams['list']) {
+          const savedFilter = this.accountLocalState.getArticlesListFilter(pubkey);
+          this.selectedListFilter.set(savedFilter);
+          
+          // Update following/public toggles based on saved filter
+          if (savedFilter === 'following') {
+            this.showFollowing.set(true);
+            this.showPublic.set(false);
+          } else if (savedFilter === 'public') {
+            this.showFollowing.set(false);
+            this.showPublic.set(true);
+          } else {
+            // List filter - show the list
+            this.showFollowing.set(true);
+            this.showPublic.set(false);
+          }
+        }
       } else {
         // Anonymous users default to public view
         this.showFollowing.set(false);
         this.showPublic.set(true);
+        this.selectedListFilter.set('public');
       }
     }, { allowSignalWrites: true });
 
@@ -320,9 +418,11 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     if (source === 'following') {
       this.showFollowing.set(true);
       this.showPublic.set(false);
+      this.selectedListFilter.set('following');
     } else {
       this.showFollowing.set(false);
       this.showPublic.set(true);
+      this.selectedListFilter.set('public');
     }
 
     // Persist the settings
@@ -330,13 +430,76 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     if (pubkey) {
       this.accountLocalState.setArticlesShowFollowing(pubkey, this.showFollowing());
       this.accountLocalState.setArticlesShowPublic(pubkey, this.showPublic());
+      this.accountLocalState.setArticlesListFilter(pubkey, this.selectedListFilter());
     }
+
+    // Update URL to remove list param if switching to following/public
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      queryParamsHandling: ''
+    });
 
     // Start appropriate subscription if not already running
     if (source === 'following' && !this.followingSubscription) {
       this.startFollowingSubscription();
     } else if (source === 'public' && !this.publicSubscription) {
       this.startPublicSubscription();
+    }
+  }
+
+  /**
+   * Select a people list filter
+   * @param filter - 'following', 'public', or a FollowSet
+   */
+  selectListFilter(filter: string | FollowSet | null): void {
+    let filterValue: string;
+    if (filter === null || filter === 'following') {
+      filterValue = 'following';
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    } else if (filter === 'public') {
+      filterValue = 'public';
+      this.showFollowing.set(false);
+      this.showPublic.set(true);
+    } else if (typeof filter === 'object') {
+      filterValue = filter.dTag;
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    } else {
+      filterValue = filter;
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    }
+
+    this.selectedListFilter.set(filterValue);
+
+    // Save preference
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setArticlesListFilter(pubkey, filterValue);
+      this.accountLocalState.setArticlesShowFollowing(pubkey, this.showFollowing());
+      this.accountLocalState.setArticlesShowPublic(pubkey, this.showPublic());
+    }
+
+    // Update URL with list param or clear it
+    if (filterValue !== 'following' && filterValue !== 'public') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { list: filterValue },
+        queryParamsHandling: 'merge'
+      });
+    } else {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {},
+        queryParamsHandling: ''
+      });
+    }
+
+    // Start following subscription if not running
+    if (!this.followingSubscription) {
+      this.startFollowingSubscription();
     }
   }
 

@@ -3,46 +3,40 @@
   <h2 class="panel-title title-font">Articles</h2>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
-  <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Display options">
-    <mat-icon>tune</mat-icon>
+  <!-- People List Selector -->
+  <button mat-icon-button [matMenuTriggerFor]="listFilterMenu"
+    [matTooltip]="'Filter by: ' + filterTitle()">
+    <mat-icon>{{ selectedFollowSet()?.isPrivate ? 'lock' : (selectedListFilter() === 'public' ? 'public' : (selectedListFilter() === 'following' ? 'people' : 'group')) }}</mat-icon>
   </button>
-  
-  <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
-    <div class="filter-menu-header" (click)="preventMenuClose($event)">
-      <span>Display Options</span>
-    </div>
+
+  <mat-menu #listFilterMenu="matMenu">
+    <button mat-menu-item (click)="selectListFilter('following')"
+      [class.selected]="selectedListFilter() === 'following'">
+      <mat-icon>people</mat-icon>
+      <span>Following</span>
+      @if (followingCount() > 0) {
+      <span class="set-count"> ({{ followingCount() }})</span>
+      }
+    </button>
+    <button mat-menu-item (click)="selectListFilter('public')"
+      [class.selected]="selectedListFilter() === 'public'">
+      <mat-icon>public</mat-icon>
+      <span>Public</span>
+      @if (publicCount() > 0) {
+      <span class="set-count"> ({{ publicCount() }})</span>
+      }
+    </button>
+    @if (allFollowSets().length > 0) {
     <mat-divider></mat-divider>
-    <div class="filter-section" (click)="preventMenuClose($event)">
-      <mat-slide-toggle 
-        [checked]="showFollowing()" 
-        (change)="toggleShowFollowing()">
-        <div class="toggle-content">
-          <mat-icon>people</mat-icon>
-          <div class="toggle-text">
-            <span class="toggle-label">Following</span>
-            <span class="toggle-description">Articles from people you follow</span>
-            @if (followingCount() > 0) {
-            <span class="toggle-count">{{ followingCount() }}</span>
-            }
-          </div>
-        </div>
-      </mat-slide-toggle>
-      
-      <mat-slide-toggle 
-        [checked]="showPublic()" 
-        (change)="toggleShowPublic()">
-        <div class="toggle-content">
-          <mat-icon>public</mat-icon>
-          <div class="toggle-text">
-            <span class="toggle-label">Public</span>
-            <span class="toggle-description">Articles from the wider network</span>
-            @if (publicCount() > 0) {
-            <span class="toggle-count">{{ publicCount() }}</span>
-            }
-          </div>
-        </div>
-      </mat-slide-toggle>
-    </div>
+    @for (set of allFollowSets(); track set.id) {
+    <button mat-menu-item (click)="selectListFilter(set)"
+      [class.selected]="selectedListFilter() === set.dTag">
+      <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
+      <span>{{ set.title }}</span>
+      <span class="set-count"> ({{ set.pubkeys.length }})</span>
+    </button>
+    }
+    }
   </mat-menu>
   }
   @if (isAuthenticated()) {
