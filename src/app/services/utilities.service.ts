@@ -765,9 +765,32 @@ export class UtilitiesService {
   }
 
   /**
+   * Check if a relay URL is valid.
+   * A valid relay URL must:
+   * - Use secure WebSocket protocol (wss://)
+   * - Have a valid hostname with a domain (contains a dot)
+   *
+   * This filters out malformed URLs like "wss://was//snort.social" where
+   * autocomplete errors turn "wss" into "was" creating invalid hostnames.
+   */
+  isValidRelayUrl(url: string): boolean {
+    if (!url || !this.isSecureRelayUrl(url)) {
+      return false;
+    }
+    try {
+      const parsedUrl = new URL(url);
+      // Must have a real hostname with a dot (valid domain)
+      return parsedUrl.hostname.includes('.');
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Normalizes relay URLs by ensuring root URLs have a trailing slash
    * but leaves URLs with paths unchanged.
    * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
+   * Also validates that the hostname is a valid domain (contains a dot).
    */
   normalizeRelayUrl(url: string): string {
     try {
@@ -778,6 +801,13 @@ export class UtilitiesService {
       }
 
       const parsedUrl = new URL(url);
+
+      // Must have a real hostname with a dot (not malformed like "wss://was//snort.social")
+      // This catches autocomplete errors where "wss" becomes "was" and creates invalid URLs
+      if (!parsedUrl.hostname.includes('.')) {
+        this.logger.warn(`Invalid relay hostname (no domain): ${url}`);
+        return '';
+      }
 
       // If the URL has no pathname (or just '/'), ensure it ends with a slash
       if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
