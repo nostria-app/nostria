@@ -108,4 +108,8 @@ export class HomeComponent {
   openWelcomeWizard(): void {
     this.layout.showWelcomeDialog();
   }
+
+  openTermsOfUse(): void {
+    this.layout.openTermsOfUse();
+  }
 }

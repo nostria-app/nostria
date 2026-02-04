@@ -230,7 +230,7 @@
             border-radius: 12px;
             font-weight: 500;
             white-space: nowrap;
-            font-family: Roboto, sans-serif;
+            font-family: var(--nostria-font-family);
 
             &.published {
               background-color: var(--mat-sys-primary-container);
