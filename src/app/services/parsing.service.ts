@@ -330,16 +330,20 @@ export class ParsingService implements OnDestroy {
     // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
     const youtubeRegex =
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
+    // Media regexes: lookahead also matches uppercase letter (start of new word without space)
+    // This handles cases like "...file.mp4Curious about..." where text follows without whitespace
     const imageRegex =
-      /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+      /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
+    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
     const videoRegex =
-      /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+      /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
     // Nostr URI regex: matches nostr: URIs and raw bech32 identifiers (with optional @ prefix)
     // Uses the exact bech32 character set (qpzry9x8gf2tvdw0s3jn54khce6mua7l) to properly
     // terminate the match when followed by non-bech32 characters (like 'is' in 'nprofile...is an')
     // This prevents greedily capturing trailing text that would cause decode failures
     // Supports: nostr:npub1..., npub1..., @npub1..., and same for nprofile, note, nevent, naddr
+    // IMPORTANT: Must NOT match npub1 inside URLs (e.g., https://npub1...blossom.band/...)
+    // We'll filter out URL-embedded matches after finding them
     const nostrRegex =
       /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+/gi;
     // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only
@@ -477,17 +481,41 @@ export class ParsingService implements OnDestroy {
     }
 
     // Find Nostr URIs (highest priority) - collect first, then batch process
+    // Filter out matches that are embedded in URLs (e.g., https://npub1...blossom.band/...)
     const nostrMatches: {
       match: RegExpExecArray;
       index: number;
       length: number;
     }[] = [];
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      nostrMatches.push({
-        match,
-        index: match.index,
-        length: match[0].length,
-      });
+      const matchIndex = match.index;
+
+      // Check if this match is inside a URL by looking at preceding characters
+      // URLs containing npub1 in the hostname will have characters like :// or / before the npub1
+      // We need to check if there's a URL pattern before this match
+      let isInsideUrl = false;
+
+      // Look backwards from the match to see if we're inside a URL
+      if (matchIndex > 0) {
+        // Find the start of the potential URL (look for http:// or https://)
+        const textBefore = processedContent.substring(Math.max(0, matchIndex - 100), matchIndex);
+
+        // Check if there's an unclosed URL before this match
+        // Look for https:// or http:// without whitespace/linebreak after it
+        const urlStartMatch = textBefore.match(/https?:\/\/[^\s]*$/);
+        if (urlStartMatch) {
+          // There's a URL that extends to this match position - we're inside a URL
+          isInsideUrl = true;
+        }
+      }
+
+      if (!isInsideUrl) {
+        nostrMatches.push({
+          match,
+          index: matchIndex,
+          length: match[0].length,
+        });
+      }
     }
 
     // Batch process nostr URIs with a short timeout to balance speed and completeness

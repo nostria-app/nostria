@@ -56,8 +56,16 @@ import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
 import { PlaylistService } from '../../services/playlist.service';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
+import { ParsingService } from '../../services/parsing.service';
+import { SocialPreviewComponent } from '../social-preview/social-preview.component';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
 type EventCardAppearance = 'card' | 'plain';
+
+interface CollapsedContentMedia {
+  images: string[];
+  urls: string[];
+}
 
 @Component({
   selector: 'app-event',
@@ -95,6 +103,7 @@ type EventCardAppearance = 'card' | 'plain';
     ReportedContentComponent,
     ZapButtonComponent,
     ContentWarningComponent,
+    SocialPreviewComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -154,6 +163,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   powService = inject(PowService);
   playlistService = inject(PlaylistService);
   relayPool = inject(RelayPoolService);
+  parsingService = inject(ParsingService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -230,6 +240,46 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return content.length <= this.CONTENT_LENGTH_THRESHOLD;
   }
 
+  /**
+   * Extract images and URLs from collapsed content
+   * Images will be shown in an album layout, URLs will be shown as link previews
+   */
+  private extractCollapsedMedia(content: string): CollapsedContentMedia {
+    const images: string[] = [];
+    const urls: string[] = [];
+    
+    // Simple regex patterns to extract content
+    const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
+    const urlRegex = /https?:\/\/[^\s<]+/gi;
+    
+    // Track seen URLs to avoid duplicates
+    const seenImages = new Set<string>();
+    const seenUrls = new Set<string>();
+    
+    // Extract images first
+    let match;
+    while ((match = imageRegex.exec(content)) !== null) {
+      const url = match[0];
+      if (!seenImages.has(url)) {
+        seenImages.add(url);
+        images.push(url);
+      }
+    }
+    
+    // Extract all other URLs (excluding images)
+    urlRegex.lastIndex = 0;
+    while ((match = urlRegex.exec(content)) !== null) {
+      const url = match[0];
+      // Skip if it's an image or already seen
+      if (!seenImages.has(url) && !seenUrls.has(url)) {
+        seenUrls.add(url);
+        urls.push(url);
+      }
+    }
+    
+    return { images, urls };
+  }
+
   // Check if root event content should be collapsible (content is long enough)
   isRootContentLong = computed<boolean>(() => {
     // Don't show expander in dialogs or thread view - only in feed
@@ -278,6 +328,39 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Check if main content should show collapsed state
   isMainContentCollapsed = computed<boolean>(() => {
     return this.isMainContentLong() && !this.isMainContentExpanded();
+  });
+
+  // Extract media (images and URLs) from collapsed content
+  // These will be shown below the truncated text
+  mainCollapsedMedia = computed<CollapsedContentMedia>(() => {
+    // Only show previews when content is collapsed
+    if (!this.isMainContentCollapsed()) return { images: [], urls: [] };
+    
+    const targetItem = this.targetRecord();
+    if (!targetItem) return { images: [], urls: [] };
+    
+    const content = targetItem.event.content || '';
+    return this.extractCollapsedMedia(content);
+  });
+
+  rootCollapsedMedia = computed<CollapsedContentMedia>(() => {
+    if (!this.isRootContentLong() || this.isRootEventExpanded()) return { images: [], urls: [] };
+    
+    const rootRecordData = this.rootRecord();
+    if (!rootRecordData) return { images: [], urls: [] };
+    
+    const content = rootRecordData.event.content || '';
+    return this.extractCollapsedMedia(content);
+  });
+
+  parentCollapsedMedia = computed<CollapsedContentMedia>(() => {
+    if (!this.isParentContentLong() || this.isParentEventExpanded()) return { images: [], urls: [] };
+    
+    const parentRecordData = this.parentRecord();
+    if (!parentRecordData) return { images: [], urls: [] };
+    
+    const content = parentRecordData.event.content || '';
+    return this.extractCollapsedMedia(content);
   });
 
   // Check if this event card should be clickable (only kind 1)
@@ -1938,5 +2021,31 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   onExpandClick(event: MouseEvent, expandedSignal: typeof this.isRootEventExpanded, expand: boolean) {
     event.stopPropagation(); // Prevent card click
     expandedSignal.set(expand);
+  }
+
+  /**
+   * Open collapsed image in MediaPreviewDialog
+   */
+  onCollapsedImageClick(event: MouseEvent, imageUrl: string, allImages: string[]) {
+    event.stopPropagation(); // Prevent card click
+    
+    const currentIndex = allImages.indexOf(imageUrl);
+    const mediaItems = allImages.map((url, index) => ({
+      url,
+      type: 'image/jpeg',
+      title: `Image ${index + 1}`,
+    }));
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems,
+        initialIndex: currentIndex >= 0 ? currentIndex : 0,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 }

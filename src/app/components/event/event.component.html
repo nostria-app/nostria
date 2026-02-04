@@ -126,19 +126,37 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="repostedRecord()?.data" [event]="repostedEvent" [trustedByPubkey]="item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentLong()"></app-content>
     </div>
     @if (isMainContentLong()) {
+    <!-- Images and URLs for collapsed content -->
     @if (!isMainContentExpanded()) {
     <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
       <mat-icon>expand_more</mat-icon>
       Show more
     </button>
-    } @else {
-    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
-      <mat-icon>expand_less</mat-icon>
-      Show less
-    </button>
+    @if (mainCollapsedMedia().images.length > 0) {
+    <div class="collapsed-images">
+      @if (mainCollapsedMedia().images.length === 1) {
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
+           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      } @else {
+      <div class="image-grid">
+        @for (image of mainCollapsedMedia().images; track image) {
+        <img [src]="image" alt="Image" loading="lazy" 
+             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        }
+      </div>
+      }
+    </div>
+    }
+    @if (mainCollapsedMedia().urls.length > 0) {
+    <div class="collapsed-urls">
+      @for (url of mainCollapsedMedia().urls; track url) {
+      <app-social-preview [url]="url"></app-social-preview>
+      }
+    </div>
+    }
     }
     }
     }
@@ -223,7 +241,7 @@
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
+            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentLong()"></app-content>
           }
         </mat-card-content>
         @if (isRootContentLong()) {
@@ -232,11 +250,26 @@
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
-        } @else {
-        <button mat-button class="show-less-btn" (click)="onExpandClick($event, isRootEventExpanded, false)">
-          <mat-icon>expand_less</mat-icon>
-          Show less
-        </button>
+        @if (rootCollapsedMedia().images.length > 0) {
+        <div class="collapsed-images">
+          @if (rootCollapsedMedia().images.length === 1) {
+          <img [src]="rootCollapsedMedia().images[0]" alt="Image" loading="lazy" />
+          } @else {
+          <div class="image-grid">
+            @for (image of rootCollapsedMedia().images; track image) {
+            <img [src]="image" alt="Image" loading="lazy" />
+            }
+          </div>
+          }
+        </div>
+        }
+        @if (rootCollapsedMedia().urls.length > 0) {
+        <div class="collapsed-urls">
+          @for (url of rootCollapsedMedia().urls; track url) {
+          <app-social-preview [url]="url"></app-social-preview>
+          }
+        </div>
+        }
         }
         }
       </mat-card>
@@ -315,7 +348,7 @@
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
+            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentLong()"></app-content>
           }
         </mat-card-content>
         @if (isParentContentLong()) {
@@ -324,11 +357,26 @@
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
-        } @else {
-        <button mat-button class="show-less-btn" (click)="onExpandClick($event, isParentEventExpanded, false)">
-          <mat-icon>expand_less</mat-icon>
-          Show less
-        </button>
+        @if (parentCollapsedMedia().images.length > 0) {
+        <div class="collapsed-images">
+          @if (parentCollapsedMedia().images.length === 1) {
+          <img [src]="parentCollapsedMedia().images[0]" alt="Image" loading="lazy" />
+          } @else {
+          <div class="image-grid">
+            @for (image of parentCollapsedMedia().images; track image) {
+            <img [src]="image" alt="Image" loading="lazy" />
+            }
+          </div>
+          }
+        </div>
+        }
+        @if (parentCollapsedMedia().urls.length > 0) {
+        <div class="collapsed-urls">
+          @for (url of parentCollapsedMedia().urls; track url) {
+          <app-social-preview [url]="url"></app-social-preview>
+          }
+        </div>
+        }
         }
         }
       </mat-card>
@@ -401,7 +449,7 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentLong()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -409,11 +457,28 @@
       <mat-icon>expand_more</mat-icon>
       Show more
     </button>
-    } @else {
-    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
-      <mat-icon>expand_less</mat-icon>
-      Show less
-    </button>
+    @if (mainCollapsedMedia().images.length > 0) {
+    <div class="collapsed-images">
+      @if (mainCollapsedMedia().images.length === 1) {
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
+           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      } @else {
+      <div class="image-grid">
+        @for (image of mainCollapsedMedia().images; track image) {
+        <img [src]="image" alt="Image" loading="lazy" 
+             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        }
+      </div>
+      }
+    </div>
+    }
+    @if (mainCollapsedMedia().urls.length > 0) {
+    <div class="collapsed-urls">
+      @for (url of mainCollapsedMedia().urls; track url) {
+      <app-social-preview [url]="url"></app-social-preview>
+      }
+    </div>
+    }
     }
     }
     }
@@ -489,19 +554,37 @@
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()"></app-content>
+        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentLong()"></app-content>
     </div>
     @if (isMainContentLong()) {
+    <!-- Images and URLs for collapsed content (normal event) -->
     @if (!isMainContentExpanded()) {
     <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
       <mat-icon>expand_more</mat-icon>
       Show more
     </button>
-    } @else {
-    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
-      <mat-icon>expand_less</mat-icon>
-      Show less
-    </button>
+    @if (mainCollapsedMedia().images.length > 0) {
+    <div class="collapsed-images">
+      @if (mainCollapsedMedia().images.length === 1) {
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
+           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      } @else {
+      <div class="image-grid">
+        @for (image of mainCollapsedMedia().images; track image) {
+        <img [src]="image" alt="Image" loading="lazy" 
+             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        }
+      </div>
+      }
+    </div>
+    }
+    @if (mainCollapsedMedia().urls.length > 0) {
+    <div class="collapsed-urls">
+      @for (url of mainCollapsedMedia().urls; track url) {
+      <app-social-preview [url]="url"></app-social-preview>
+      }
+    </div>
+    }
     }
     }
     }
