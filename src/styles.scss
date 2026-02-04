@@ -99,6 +99,40 @@ body {
   overflow: hidden;
 }
 
+// ============================================
+// FONT FAMILY OVERRIDES FOR MATERIAL COMPONENTS
+// ============================================
+// Ensure Material components use the dynamic font
+// MDC components have high specificity internal styles, so we need !important
+.mat-drawer,
+.mat-sidenav,
+.mat-sidenav-content,
+.mat-drawer-content,
+mat-sidenav,
+mat-sidenav-container,
+mat-nav-list,
+.mat-nav-list,
+.mat-mdc-nav-list,
+.mat-mdc-list,
+.mat-mdc-list-item,
+.mat-mdc-list-item-unscoped-content,
+.mdc-list-item__content,
+.mdc-list-item__primary-text,
+.mdc-list-item__secondary-text,
+.mobile-nav,
+.mobile-nav-label,
+.mat-mdc-button,
+.mat-mdc-icon-button,
+.mat-mdc-fab,
+.mat-mdc-mini-fab,
+.mat-mdc-menu-item,
+.mat-mdc-menu-panel,
+.mdc-button__label,
+.mdc-list-item,
+.mdc-list {
+  font-family: var(--nostria-font-family) !important;
+}
+
 // Android PWA safe area - ensure content doesn't overlap system navigation
 // Uses padding-bottom on html to push all content up
 @media all and (display-mode: standalone) {

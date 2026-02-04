@@ -74,7 +74,7 @@ import { TextScaleService, TEXT_SCALE_OPTIONS, DEFAULT_TEXT_SCALE } from '../../
     }
 
     .text-preview {
-      font-family: 'Roboto', sans-serif;
+      font-family: var(--nostria-font-family);
       min-width: 40px;
       text-align: center;
       color: var(--mat-sys-primary);

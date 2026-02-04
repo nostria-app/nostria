@@ -27,8 +27,9 @@ import { AccountLocalStateService } from './account-local-state.service';
 @Injectable({
   providedIn: 'root',
 })
-export class ApplicationService {  /** Application version */
-  readonly version = '2.1.0';
+export class ApplicationService {
+  /** Application version */
+  readonly version = '3.0.0';
   nostrService = inject(NostrService);
   database = inject(DatabaseService);
   router = inject(Router);

@@ -331,8 +331,7 @@
     <div class="footer-links">
       <a href="https://github.com/nostria-app/nostria" target="_blank" rel="noopener noreferrer">GitHub</a>
       <span class="dot">•</span>
-      <a href="https://nostria.app/privacy" target="_blank" rel="noopener noreferrer"
-        i18n="@@home.footer.privacy">Privacy</a>
+      <a href="#" (click)="$event.preventDefault(); openTermsOfUse()" i18n="@@home.footer.terms">Terms of Use</a>
       <span class="dot">•</span>
       <a routerLink="/about" i18n="@@home.footer.about">About</a>
     </div>
