@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -14,6 +14,8 @@ import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { LayoutService } from '../../services/layout.service';
+import { EmojiSetService } from '../../services/emoji-set.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -444,7 +446,12 @@ export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
   private router = inject(Router);
   private layout = inject(LayoutService);
+  private emojiSetService = inject(EmojiSetService);
+  private accountState = inject(AccountStateService);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
+
+  // Custom emojis for fallback lookup
+  customEmojis = signal<{ shortcode: string; url: string }[]>([]);
 
   constructor() {
     this.router.events.pipe(
@@ -452,6 +459,25 @@ export class ReactionsDialogComponent {
       takeUntilDestroyed()
     ).subscribe(() => {
       this.dialogRef.close();
+    });
+
+    // Load user's custom emojis for fallback
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.customEmojis.set([]);
+        return;
+      }
+
+      untracked(async () => {
+        try {
+          const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
+          const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+          this.customEmojis.set(emojiArray);
+        } catch {
+          this.customEmojis.set([]);
+        }
+      });
     });
   }
 
@@ -502,7 +528,8 @@ export class ReactionsDialogComponent {
 
   /**
    * Get custom emoji URL from reaction event tags (NIP-30)
-   * Returns the image URL if the reaction has an emoji tag matching the content
+   * Returns the image URL if the reaction has an emoji tag matching the content.
+   * Falls back to user's custom emojis if no tag found in the event.
    */
   getCustomEmojiUrl(event: Event): string | null {
     if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
@@ -510,9 +537,16 @@ export class ReactionsDialogComponent {
     }
 
     const shortcode = event.content.slice(1, -1); // Remove colons
+    
+    // First, try to get URL from the event's emoji tag (NIP-30)
     const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+    if (emojiTag?.[2]) {
+      return emojiTag[2];
+    }
 
-    return emojiTag?.[2] || null;
+    // Fallback: check user's loaded custom emojis
+    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+    return customEmoji?.url || null;
   }
 
   onTabChange(index: number): void {

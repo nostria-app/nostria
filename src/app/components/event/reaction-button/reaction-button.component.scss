@@ -136,8 +136,214 @@
   display: flex;
   flex-direction: column;
   width: 296px;
-  max-height: 360px;
+  max-height: 400px;
   overflow: hidden;
+}
+
+// Emoji search bar
+.emoji-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  flex-shrink: 0;
+
+  .search-icon {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--mat-sys-on-surface);
+    font-size: 0.875rem;
+    outline: none;
+    min-width: 0;
+
+    &::placeholder {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .clear-search {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+// Search results container
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+
+  .emoji-grid {
+    max-height: 280px;
+  }
+}
+
+.no-results {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+// Emoji category tabs (icon-only tabs)
+.emoji-category-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+
+  ::ng-deep {
+    .mat-mdc-tab-header {
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      min-height: 40px;
+    }
+
+    .mat-mdc-tab-labels {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .mat-mdc-tab {
+      min-width: 36px;
+      padding: 0 4px;
+      flex-shrink: 0;
+      height: 40px;
+      min-height: 40px;
+
+      .mdc-tab__content {
+        padding: 0;
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .mat-mdc-tab-body-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .mat-mdc-tab-body-content {
+      overflow: hidden;
+    }
+  }
+}
+
+// Tab content area
+.emoji-tab-content {
+  padding: 8px 8px 8px 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--mat-sys-outline-variant);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--mat-sys-outline);
+    }
+  }
+}
+
+// Empty state message for tabs
+.empty-tab-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    opacity: 0.6;
+  }
+
+  span {
+    font-size: 0.875rem;
+    text-align: center;
+  }
+}
+
+// Quick suggestions in recent tab
+.quick-suggestions {
+  margin-top: 12px;
+
+  .section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Custom emoji set sections
+.emoji-set-section {
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.set-title {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// Custom emojis tab with multiple sets
+.custom-emojis-tab {
+  .emoji-grid {
+    max-height: none;
+  }
 }
 
 // Quick reactions row at top
@@ -172,28 +378,7 @@
   display: grid;
   grid-template-columns: repeat(6, 40px);
   gap: 4px;
-  max-height: 200px;
-  overflow-x: hidden;
-  overflow-y: auto;
   padding: 4px 0;
-
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--mat-sys-outline-variant);
-    border-radius: 3px;
-
-    &:hover {
-      background: var(--mat-sys-outline);
-    }
-  }
 }
 
 // Emoji sets container with tabs
@@ -303,11 +488,11 @@
   padding: 12px;
 }
 
-// Link to emoji collections page
+// Link to emoji collections page (inside Recent tab)
 .emoji-collections-link {
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--mat-sys-outline-variant);
-  padding: 8px 12px;
-  flex-shrink: 0;
 
   a {
     display: flex;
