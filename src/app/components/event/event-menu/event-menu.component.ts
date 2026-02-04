@@ -631,9 +631,19 @@ export class EventMenuComponent {
       // Trigger change detection to render the component
       componentRef.changeDetectorRef.detectChanges();
 
-      // Wait for the component to render and profile data to load
-      // This includes time for nostr mentions to be parsed and resolved
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for the component to signal it's ready (content parsed, mentions resolved)
+      // Use a promise that resolves when the ready output emits, with a timeout fallback
+      await new Promise<void>(resolve => {
+        const subscription = componentRef.instance.ready.subscribe(() => {
+          subscription.unsubscribe();
+          resolve();
+        });
+        // Timeout fallback in case ready never fires (e.g., no mentions to resolve)
+        setTimeout(() => {
+          subscription.unsubscribe();
+          resolve();
+        }, 2000);
+      });
 
       // Run change detection again to ensure profile and mentions are rendered
       componentRef.changeDetectorRef.detectChanges();
