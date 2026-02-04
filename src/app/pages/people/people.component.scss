@@ -1,3 +1,10 @@
+// Force mat-button label to use flex layout for list-selector-button
+::ng-deep .list-selector-button .mdc-button__label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
 // Component-specific panel-header nested styles
 .panel-header {
   .panel-title-static {
@@ -136,9 +143,10 @@
     padding: 8px 16px;
     min-height: 40px;
 
-    // Force horizontal layout for menu item content
+    // Force horizontal layout for menu item content - target all possible wrappers
     .mdc-list-item__primary-text,
-    .mat-mdc-menu-item-text {
+    .mat-mdc-menu-item-text,
+    >span {
       display: flex !important;
       flex-direction: row !important;
       align-items: center !important;
@@ -162,7 +170,7 @@
     }
 
     .menu-item-count {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       min-width: 22px;
@@ -173,6 +181,7 @@
       font-size: 0.7rem;
       color: var(--mat-sys-on-surface-variant);
       flex-shrink: 0;
+      margin-left: auto;
     }
 
     &.active {

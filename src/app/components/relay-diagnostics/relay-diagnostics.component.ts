@@ -144,9 +144,16 @@ import { MatChipsModule } from '@angular/material/chips';
     </mat-card>
   `,
   styles: [`
+    :host {
+      display: block;
+      color: var(--mat-sys-on-surface);
+    }
+
     mat-card {
       margin: 1rem;
       max-width: 1400px;
+      background-color: var(--mat-sys-surface);
+      color: var(--mat-sys-on-surface);
     }
 
     mat-card-header {
@@ -157,6 +164,10 @@ import { MatChipsModule } from '@angular/material/chips';
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    mat-card-content {
       color: var(--mat-sys-on-surface);
     }
 
@@ -199,19 +210,51 @@ import { MatChipsModule } from '@angular/material/chips';
       margin: 1rem 0;
     }
 
+    /* Table styling */
     table {
       width: 100%;
       margin-top: 1rem;
+      background-color: var(--mat-sys-surface);
     }
 
+    th[mat-header-cell] {
+      color: var(--mat-sys-on-surface);
+      background-color: var(--mat-sys-surface-container);
+    }
+
+    td[mat-cell] {
+      color: var(--mat-sys-on-surface);
+    }
+
+    tr[mat-header-row] {
+      background-color: var(--mat-sys-surface-container);
+    }
+
+    tr[mat-row] {
+      background-color: var(--mat-sys-surface);
+    }
+
+    tr[mat-row]:hover {
+      background-color: var(--mat-sys-surface-container-low);
+    }
+
+    /* Chip styling */
     mat-chip.connected {
-      background-color: #4caf50;
-      color: white;
+      --mdc-chip-elevated-container-color: #4caf50;
+      --mdc-chip-label-text-color: white;
+      --mat-chip-trailing-action-state-layer-color: white;
+      --mat-chip-selected-trailing-icon-color: white;
+      background-color: #4caf50 !important;
+      color: white !important;
     }
 
     mat-chip.disconnected {
-      background-color: #f44336;
-      color: white;
+      --mdc-chip-elevated-container-color: #f44336;
+      --mdc-chip-label-text-color: white;
+      --mat-chip-trailing-action-state-layer-color: white;
+      --mat-chip-selected-trailing-icon-color: white;
+      background-color: #f44336 !important;
+      color: white !important;
     }
 
     .subscription-detail {
@@ -229,6 +272,10 @@ import { MatChipsModule } from '@angular/material/chips';
       color: var(--mat-sys-on-surface);
     }
 
+    .sub-header strong {
+      color: var(--mat-sys-on-surface);
+    }
+
     .age {
       color: var(--mat-sys-on-surface-variant);
       font-size: 0.9rem;
@@ -239,6 +286,10 @@ import { MatChipsModule } from '@angular/material/chips';
       flex-direction: column;
       gap: 0.5rem;
       font-size: 0.9rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .sub-info strong {
       color: var(--mat-sys-on-surface);
     }
 
