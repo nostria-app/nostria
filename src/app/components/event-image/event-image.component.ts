@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, inject, input, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, input, signal, effect, output } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { type Event, nip19 } from 'nostr-tools';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
@@ -48,6 +48,12 @@ export class EventImageComponent {
   /** Parsed content segments with resolved mentions */
   contentSegments = signal<ContentSegment[]>([]);
 
+  /** Whether content parsing is complete (including profile resolution) */
+  isReady = signal<boolean>(false);
+
+  /** Emits when content parsing is complete */
+  ready = output<void>();
+
   /** The encoded event ID (nevent1... or naddr1...) */
   encodedEventId = computed(() => {
     const ev = this.event();
@@ -61,7 +67,11 @@ export class EventImageComponent {
     effect(() => {
       const ev = this.event();
       if (ev) {
-        this.parseContent(ev.content);
+        this.isReady.set(false);
+        this.parseContent(ev.content).then(() => {
+          this.isReady.set(true);
+          this.ready.emit();
+        });
       }
     });
   }
@@ -75,21 +85,31 @@ export class EventImageComponent {
       return;
     }
 
-    // Regex to match nostr URIs using bech32 character set
+    // Regex to match nostr URIs and raw bech32 identifiers (with optional @ prefix)
     // Uses the exact bech32 character set to properly terminate matches
-    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)/gi;
+    // Supports: nostr:npub1..., npub1..., @npub1..., and same for nprofile, note, nevent, naddr
+    const nostrRegex = /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+/gi;
 
     const segments: ContentSegment[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
     // Find all nostr URIs
-    const matches: { start: number; end: number; uri: string }[] = [];
+    const matches: { start: number; end: number; uri: string; rawMatch: string }[] = [];
     while ((match = nostrRegex.exec(content)) !== null) {
+      // Normalize: strip @ prefix and add nostr: prefix if needed
+      let uri = match[0];
+      if (uri.startsWith('@')) {
+        uri = uri.slice(1);
+      }
+      if (!uri.startsWith('nostr:')) {
+        uri = 'nostr:' + uri;
+      }
       matches.push({
         start: match.index,
         end: match.index + match[0].length,
-        uri: match[0],
+        uri: uri,
+        rawMatch: match[0],
       });
     }
 
