@@ -228,21 +228,48 @@ export class SummaryComponent implements OnInit, OnDestroy {
   totalUnfilteredPostersCount = computed(() => this.allActivePosters().length);
 
   // Profile updates (pubkeys of people who updated their profiles)
-  profileUpdates = signal<string[]>([]);
+  profileUpdatesRaw = signal<string[]>([]);
+
+  // Filtered profile updates (by list filter)
+  profileUpdates = computed(() => {
+    const all = this.profileUpdatesRaw();
+    const list = this.selectedList();
+    if (!list) return all;
+    const listPubkeys = new Set(list.pubkeys);
+    return all.filter(pubkey => listPubkeys.has(pubkey));
+  });
 
   // Raw events for timeline and drill-down
   noteEvents = signal<TimelineEvent[]>([]);
-  articleEvents = signal<TimelineEvent[]>([]);
-  mediaEvents = signal<TimelineEvent[]>([]);
+  articleEventsRaw = signal<TimelineEvent[]>([]);
+  mediaEventsRaw = signal<TimelineEvent[]>([]);
+
+  // Filtered article events (by list filter)
+  articleEvents = computed(() => {
+    const all = this.articleEventsRaw();
+    const list = this.selectedList();
+    if (!list) return all;
+    const listPubkeys = new Set(list.pubkeys);
+    return all.filter(e => listPubkeys.has(e.pubkey));
+  });
+
+  // Filtered media events (by list filter)
+  mediaEvents = computed(() => {
+    const all = this.mediaEventsRaw();
+    const list = this.selectedList();
+    if (!list) return all;
+    const listPubkeys = new Set(list.pubkeys);
+    return all.filter(e => listPubkeys.has(e.pubkey));
+  });
 
   // Timeline pagination
   timelinePage = signal(1);
 
-  // All timeline events (combined, filtered by selected posters and profile search, and sorted)
+  // All timeline events (combined, filtered by selected posters and list, and sorted)
   allTimelineEvents = computed(() => {
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
-    const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
-    const media = this.mediaEvents().map(e => ({ ...e, type: 'media' as const }));
+    const articles = this.articleEventsRaw().map(e => ({ ...e, type: 'article' as const }));
+    const media = this.mediaEventsRaw().map(e => ({ ...e, type: 'media' as const }));
     let allEvents = [...notes, ...articles, ...media]
       .sort((a, b) => b.created_at - a.created_at);
 
@@ -526,10 +553,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
         });
         this.allActivePosters.set([]);
         this.postersPage.set(1);
-        this.profileUpdates.set([]);
+        this.profileUpdatesRaw.set([]);
         this.noteEvents.set([]);
-        this.articleEvents.set([]);
-        this.mediaEvents.set([]);
+        this.articleEventsRaw.set([]);
+        this.mediaEventsRaw.set([]);
         return;
       }
 
@@ -566,7 +593,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         created_at: e.created_at,
         content: e.content,
       })));
-      this.articleEvents.set(articles.map(e => ({
+      this.articleEventsRaw.set(articles.map(e => ({
         id: e.id,
         pubkey: e.pubkey,
         kind: e.kind,
@@ -574,7 +601,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         content: e.content,
         tags: e.tags, // Include tags for naddr generation
       })));
-      this.mediaEvents.set(media.map(e => ({
+      this.mediaEventsRaw.set(media.map(e => ({
         id: e.id,
         pubkey: e.pubkey,
         kind: e.kind,
@@ -584,7 +611,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       })));
 
       this.calculatePosterStats(notes, articles, media);
-      this.profileUpdates.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
+      this.profileUpdatesRaw.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
 
     } catch (error) {
       this.logger.warn('Failed to load activity summary:', error);
