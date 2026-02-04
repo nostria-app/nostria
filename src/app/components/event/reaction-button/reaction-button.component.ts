@@ -6,6 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { RouterLink } from '@angular/router';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../../../interfaces';
@@ -41,7 +42,8 @@ interface EmojiSetGroup {
     MatTooltipModule,
     MatMenuModule,
     MatProgressSpinnerModule,
-    MatTabsModule
+    MatTabsModule,
+    RouterLink
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -226,7 +228,7 @@ constructor() {
     }
   }
 
-  private closeMenu() {
+  closeMenu() {
     this.menuTrigger()?.closeMenu();
     this.menuTriggerFull()?.closeMenu();
   }
