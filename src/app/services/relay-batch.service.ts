@@ -617,6 +617,12 @@ export class RelayBatchService {
    * - Popular relays aggregate content from many users
    * - Your relay list is usually the same relays your friends use
    * 
+   * PERFORMANCE OPTIMIZATIONS:
+   * - Starts fetching immediately without waiting for full relay init
+   * - Uses higher concurrency (5 batches) for faster throughput
+   * - Shorter timeout (2s) to fail fast on slow relays
+   * - Streams events to UI as soon as ANY batch returns data
+   * 
    * @param kinds Event kinds to fetch
    * @param options.since Start of time window (in seconds)
    * @param options.until End of time window (in seconds)
@@ -639,18 +645,25 @@ export class RelayBatchService {
       return [];
     }
 
-    // Check if account relay is ready
+    // Check if account relay is ready - use shorter wait with polling
     if (!this.accountRelay.isInitialized()) {
       this.logger.warn('[RelayBatchService] Account relay not initialized, waiting...');
-      // Wait a bit for account relay to initialize
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Poll every 50ms for up to 500ms (faster than the old 1000ms single wait)
+      const MAX_WAIT = 500;
+      const POLL_INTERVAL = 50;
+      let waited = 0;
+      while (!this.accountRelay.isInitialized() && waited < MAX_WAIT) {
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+        waited += POLL_INTERVAL;
+      }
       if (!this.accountRelay.isInitialized()) {
-        this.logger.error('[RelayBatchService] Account relay still not initialized');
+        this.logger.error('[RelayBatchService] Account relay still not initialized after 500ms');
         return [];
       }
+      this.logger.debug(`[RelayBatchService] Account relay ready after ${waited}ms`);
     }
 
-    const { since, until, timeout = 3000 } = options;
+    const { since, until, timeout = 2000 } = options; // Reduced default timeout from 3000 to 2000
     const now = Math.floor(Date.now() / 1000);
     const untilTimestamp = until ?? now;
 
@@ -665,8 +678,9 @@ export class RelayBatchService {
     const allEvents: Event[] = [];
 
     try {
-      // Batch authors to respect relay limits (typically 10-50 per query)
-      const BATCH_SIZE = 20; // Conservative batch size
+      // Batch authors to respect relay limits
+      // Larger batches = fewer round trips, but some relays limit authors per query
+      const BATCH_SIZE = 25; // Increased from 20 to 25 for fewer round trips
       const batches: string[][] = [];
       for (let i = 0; i < followingList.length; i += BATCH_SIZE) {
         batches.push(followingList.slice(i, i + BATCH_SIZE));
@@ -674,8 +688,9 @@ export class RelayBatchService {
 
       this.logger.debug(`[RelayBatchService] FAST fetch: ${batches.length} batches of ~${BATCH_SIZE} authors`);
 
-      // Process batches with limited concurrency
-      const CONCURRENT_BATCHES = 3;
+      // Process batches with higher concurrency for faster throughput
+      // Most relays can handle 5+ concurrent subscriptions
+      const CONCURRENT_BATCHES = 5; // Increased from 3 to 5
 
       for (let i = 0; i < batches.length; i += CONCURRENT_BATCHES) {
         const currentBatches = batches.slice(i, i + CONCURRENT_BATCHES);
@@ -698,7 +713,8 @@ export class RelayBatchService {
           try {
             const events = await this.accountRelay.getMany<Event>(filter, { timeout });
 
-            // Immediately notify for each event
+            // IMMEDIATELY notify callback as soon as this batch returns
+            // This is critical for fast time-to-first-render
             if (onEventsReceived && events.length > 0) {
               onEventsReceived(events);
             }

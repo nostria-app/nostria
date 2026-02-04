@@ -1,5 +1,6 @@
-import { Component, inject, signal, effect, computed, PLATFORM_ID } from '@angular/core';
+import { Component, inject, signal, effect, computed, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -79,6 +80,7 @@ export class MediaComponent {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // View state
   viewMode = signal<ViewMode>('medium');
@@ -157,7 +159,7 @@ export class MediaComponent {
     });
 
     // Check for upload query parameter
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const uploadParam = params.get('upload');
       const filterParam = params.get('filter');
 

@@ -12,6 +12,7 @@ import {
   TemplateRef,
   viewChild,
   AfterViewInit,
+  DestroyRef,
 } from '@angular/core';
 import { isPlatformBrowser, Location, NgTemplateOutlet } from '@angular/common';
 import {
@@ -38,7 +39,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ApplicationStateService } from '../../services/application-state.service';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -158,6 +159,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private readonly userRelayService = inject(UserRelayService);
   private readonly accountService = inject(AccountService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly destroyRef = inject(DestroyRef);
 
   pubkey = signal<string>('');
 
@@ -512,7 +514,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     });
 
     // Add effect to monitor router events for sub-route changes
-    this.router.events.subscribe(event => {
+    this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event instanceof NavigationEnd) {
         // Check if we're navigating to a profile route (supports both root and named outlets)
         const currentUrl = event.urlAfterRedirects;

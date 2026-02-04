@@ -75,7 +75,8 @@
     [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
     (backdropClick)="closeFilterPanel()">
     <app-people-filter-panel [filters]="filters()" [sortOption]="sortOption()"
-      (filtersChanged)="onFiltersChanged($event)" (sortOptionChanged)="onSortOptionChanged($event)">
+      (filtersChanged)="onFiltersChanged($event)" (sortOptionChanged)="onSortOptionChanged($event)"
+      (refreshTrustRanks)="onRefreshTrustRanks()">
     </app-people-filter-panel>
   </ng-template>
 </div>

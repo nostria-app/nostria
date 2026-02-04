@@ -96,6 +96,11 @@ const SORT_OPTIONS: SortOptionDef[] = [
 
       <!-- Actions Row -->
       <div class="actions-row">
+        <button mat-stroked-button class="action-btn" (click)="onRefreshTrustRanks()">
+          Refresh Trust Ranks
+        </button>
+      </div>
+      <div class="actions-row">
         <button mat-stroked-button class="action-btn" (click)="reset()">
           Reset All
         </button>
@@ -194,6 +199,7 @@ export class PeopleFilterPanelComponent {
   // Output events for changes
   filtersChanged = output<Partial<PeopleFilters>>();
   sortOptionChanged = output<SortOption>();
+  refreshTrustRanks = output<void>();
 
   // Expose sort options
   sortOptions = SORT_OPTIONS;
@@ -226,5 +232,12 @@ export class PeopleFilterPanelComponent {
       showRank: true,
     });
     this.sortOptionChanged.emit('default');
+  }
+
+  /**
+   * Trigger refresh of trust ranks for all people in current list
+   */
+  onRefreshTrustRanks(): void {
+    this.refreshTrustRanks.emit();
   }
 }

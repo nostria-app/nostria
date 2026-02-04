@@ -121,18 +121,16 @@ export class UserFollowingComponent {
     return list;
   });
 
-  // Computed signal for mutual connections
+  // Computed signal for mutual connections - optimized with Set for O(n) instead of O(n*m)
   mutualConnectionsList = computed(() => {
     const currentUserFollowing = this.accountState.followingList();
     const profileFollowing = this.filteredFollowingList();
 
-    // Find users that both the current user and the profile are following
-    const mutualPubkeys = currentUserFollowing.filter(pubkey =>
-      profileFollowing.some(user => user.id === pubkey)
-    );
+    // Use Set for O(1) lookups instead of O(n) array scanning
+    const currentUserFollowingSet = new Set(currentUserFollowing);
 
-    // Return the user profiles for mutual connections
-    return profileFollowing.filter(user => mutualPubkeys.includes(user.id));
+    // Find users that both the current user and the profile are following
+    return profileFollowing.filter(user => currentUserFollowingSet.has(user.id));
   });
 
   selectedTabIndex = signal(0);
