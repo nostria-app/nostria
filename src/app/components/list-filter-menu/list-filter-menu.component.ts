@@ -176,6 +176,7 @@ export class ListFilterMenuComponent implements OnInit {
   showPublicOption = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
   storageKey = input.required<'streams' | 'articles' | 'summary'>();
+  initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
 
   // Outputs
   filterChanged = output<ListFilterValue>();
@@ -207,7 +208,7 @@ export class ListFilterMenuComponent implements OnInit {
     const followSet = this.selectedFollowSet();
     if (followSet?.isPrivate) return 'lock';
     const filter = this.selectedFilter();
-    if (filter === 'all') return 'filter_list';
+    if (filter === 'all') return 'public';
     if (filter === 'following') return 'people';
     if (filter === 'nostria-favorites') return 'star';
     return 'group';
@@ -230,6 +231,14 @@ export class ListFilterMenuComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Check for initial filter from URL query params first (takes precedence)
+    const urlFilter = this.initialFilter();
+    if (urlFilter) {
+      this.selectedFilter.set(urlFilter);
+      this.filterChanged.emit(urlFilter);
+      return;
+    }
+
     // Load persisted filter from storage
     const pubkey = this.accountState.pubkey();
     if (pubkey) {

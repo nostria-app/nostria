@@ -85,6 +85,10 @@ export class StreamsComponent implements OnInit, OnDestroy {
   // People list filter state
   selectedListFilter = signal<string>('all'); // 'all', 'following', or follow set d-tag
 
+  // URL query param for list filter (for passing to ListFilterMenuComponent)
+  // Set from route snapshot at construction time
+  urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
   // Relay set constants
   private readonly RELAY_SET_KIND = 30002;
   private readonly STREAMS_RELAY_SET_D_TAG = 'streams';
@@ -204,28 +208,6 @@ export class StreamsComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Handle URL query params for list filter
-    effect(() => {
-      const queryParams = this.route.snapshot.queryParams;
-      if (queryParams['list']) {
-        // Set list filter from URL - can be 'all', 'following', or a follow set d-tag
-        this.selectedListFilter.set(queryParams['list']);
-      }
-    });
-
-    // Load saved filter preference
-    effect(() => {
-      const pubkey = this.currentPubkey();
-      if (pubkey) {
-        // Only load saved filter if no URL param is set
-        const queryParams = this.route.snapshot.queryParams;
-        if (!queryParams['list']) {
-          const savedFilter = this.accountLocalState.getStreamsListFilter(pubkey);
-          this.selectedListFilter.set(savedFilter);
-        }
-      }
-    }, { allowSignalWrites: true });
-
     // Setup infinite scroll when sentinel becomes available and we're on the ended tab
     effect(() => {
       const sentinel = this.scrollSentinel();

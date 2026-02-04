@@ -5,7 +5,7 @@
   @if (isAuthenticated()) {
   <!-- People List Selector -->
   <app-list-filter-menu storageKey="articles" [showPublicOption]="true" defaultFilter="following"
-    (filterChanged)="onListFilterChanged($event)" />
+    [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
   }
   @if (isAuthenticated()) {
   <a mat-icon-button routerLink="/articles/edit" matTooltip="My Articles">

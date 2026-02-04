@@ -84,6 +84,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   // People list filter state - 'following', 'public', or follow set d-tag
   selectedListFilter = signal<string>('following');
 
+  // URL query param for list filter (for passing to ListFilterMenuComponent)
+  // Set from route snapshot at construction time
+  urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
   // Computed feed source based on what's enabled (for toggle UI)
   feedSource = computed(() => {
     if (this.showFollowing()) return 'following';
@@ -258,40 +262,34 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   isAuthenticated = computed(() => this.app.authenticated());
 
   constructor() {
-    // Handle URL query params for list filter
+    // Load persisted filter settings from local state (only if no URL param)
     effect(() => {
+      const pubkey = this.currentPubkey();
       const queryParams = this.route.snapshot.queryParams;
+
+      // If URL param is set, the ListFilterMenuComponent will handle initialization
       if (queryParams['list']) {
-        // Set list filter from URL
-        this.selectedListFilter.set(queryParams['list']);
         // When using a list filter, disable following/public toggles
         this.showFollowing.set(true);
         this.showPublic.set(false);
+        return;
       }
-    });
 
-    // Load persisted filter settings from local state
-    effect(() => {
-      const pubkey = this.currentPubkey();
       if (pubkey) {
-        // Only load saved filter if no URL param is set
-        const queryParams = this.route.snapshot.queryParams;
-        if (!queryParams['list']) {
-          const savedFilter = this.accountLocalState.getArticlesListFilter(pubkey);
-          this.selectedListFilter.set(savedFilter);
+        const savedFilter = this.accountLocalState.getArticlesListFilter(pubkey);
+        this.selectedListFilter.set(savedFilter);
 
-          // Update following/public toggles based on saved filter
-          if (savedFilter === 'following') {
-            this.showFollowing.set(true);
-            this.showPublic.set(false);
-          } else if (savedFilter === 'public') {
-            this.showFollowing.set(false);
-            this.showPublic.set(true);
-          } else {
-            // List filter - show the list
-            this.showFollowing.set(true);
-            this.showPublic.set(false);
-          }
+        // Update following/public toggles based on saved filter
+        if (savedFilter === 'following') {
+          this.showFollowing.set(true);
+          this.showPublic.set(false);
+        } else if (savedFilter === 'public') {
+          this.showFollowing.set(false);
+          this.showPublic.set(true);
+        } else {
+          // List filter - show the list
+          this.showFollowing.set(true);
+          this.showPublic.set(false);
         }
       } else {
         // Anonymous users default to public view

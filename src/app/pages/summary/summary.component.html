@@ -18,7 +18,8 @@
     <div class="panel-actions">
       <!-- List Filter -->
       <app-list-filter-menu storageKey="summary" [showPublicOption]="false" defaultFilter="following"
-        (filterChanged)="onFilterChanged($event)" (followSetChanged)="onFollowSetChanged($event)" />
+        [initialFilter]="urlListFilter()" (filterChanged)="onFilterChanged($event)"
+        (followSetChanged)="onFollowSetChanged($event)" />
 
       @if (isFetching()) {
       <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
