@@ -1,0 +1,26 @@
+<div class="event-image-container" [style.width.px]="width()">
+  <mat-card class="event-card" appearance="outlined">
+    <!-- Header with user profile and full timestamp -->
+    <mat-card-header>
+      <app-user-profile [pubkey]="event().pubkey" [view]="'list'" [disableLink]="true">
+        <span class="timestamp">
+          {{ event().created_at | timestamp: 'medium' }}
+        </span>
+      </app-user-profile>
+    </mat-card-header>
+
+    <!-- Content - simple text rendering for screenshot -->
+    <mat-card-content>
+      <div class="content-text">{{ content() }}</div>
+    </mat-card-content>
+
+    <!-- Branding footer with event ID -->
+    <div class="branding-footer">
+      <span class="event-id">{{ encodedEventId() }}</span>
+      <div class="nostria-branding">
+        <img src="icons/nostria.png" alt="Nostria" class="nostria-logo" />
+        <span class="nostria-text">nostria.app</span>
+      </div>
+    </div>
+  </mat-card>
+</div>

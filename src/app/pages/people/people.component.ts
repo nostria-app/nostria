@@ -245,9 +245,11 @@ export class PeopleComponent implements OnDestroy {
     return profiles;
   });
 
-  // Extract pubkeys for rendering
+  // Extract pubkeys for rendering (deduplicated to avoid @for track errors)
   sortedPeople = computed(() => {
-    return this.filteredAndSortedProfiles().map(p => p.pubkey);
+    const pubkeys = this.filteredAndSortedProfiles().map(p => p.pubkey);
+    // Remove duplicates while preserving order
+    return [...new Set(pubkeys)];
   });
 
   // Pagination: limit how many items are rendered to avoid thousands of event listeners

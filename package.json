@@ -28,7 +28,7 @@
     "lint-fix": "eslint . --ext .ts,.html --fix",
     "lint:check": "eslint . --ext .ts,.html --fix"
   },
-    "prettier": {
+  "prettier": {
     "printWidth": 100,
     "singleQuote": true,
     "overrides": [
@@ -70,6 +70,7 @@
     "dompurify": "^3.3.1",
     "express": "^5.1.0",
     "hls.js": "^1.6.15",
+    "html-to-image": "^1.11.13",
     "idb": "^8.0.3",
     "marked": "^17.0.1",
     "multer": "^2.0.2",
