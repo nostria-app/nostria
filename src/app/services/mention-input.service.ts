@@ -108,8 +108,13 @@ export class MentionInputService {
     const beforeMention = fullText.substring(0, mentionStart);
     const afterMention = fullText.substring(cursorPosition);
 
-    const newText = beforeMention + replacementText + afterMention;
-    const newCursorPosition = mentionStart + replacementText.length;
+    // Add a space after the mention if there isn't one already
+    // This ensures proper separation when user continues typing
+    const needsSpace = afterMention.length === 0 || !/^\s/.test(afterMention);
+    const spacer = needsSpace ? ' ' : '';
+
+    const newText = beforeMention + replacementText + spacer + afterMention;
+    const newCursorPosition = mentionStart + replacementText.length + spacer.length;
 
     return {
       replacementText: newText,
