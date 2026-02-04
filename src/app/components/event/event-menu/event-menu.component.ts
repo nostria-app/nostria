@@ -626,9 +626,10 @@ export class EventMenuComponent {
       componentRef.changeDetectorRef.detectChanges();
 
       // Wait for the component to render and profile data to load
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // This includes time for nostr mentions to be parsed and resolved
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Run change detection again to ensure profile is rendered
+      // Run change detection again to ensure profile and mentions are rendered
       componentRef.changeDetectorRef.detectChanges();
       
       // Wait for any images to load
