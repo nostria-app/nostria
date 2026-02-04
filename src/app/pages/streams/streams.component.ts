@@ -26,6 +26,7 @@ import { FollowSetsService, FollowSet } from '../../services/follow-sets.service
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 
 @Component({
   selector: 'app-streams',
@@ -41,6 +42,7 @@ import { StreamsSettingsDialogComponent } from './streams-settings-dialog/stream
     MatDividerModule,
     LiveEventComponent,
     StreamsSettingsDialogComponent,
+    ListFilterMenuComponent,
   ],
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
@@ -71,7 +73,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
   // Pagination for ended streams (continuous scrolling)
   private readonly PAGE_SIZE = 20;
   endedDisplayLimit = signal(this.PAGE_SIZE);
-  
+
   // Scroll sentinel for infinite loading
   scrollSentinel = viewChild<ElementRef>('scrollSentinel');
   private scrollObserver?: IntersectionObserver;
@@ -93,6 +95,12 @@ export class StreamsComponent implements OnInit, OnDestroy {
 
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
+
+  // Computed: get the favorites set separately
+  favoritesSet = computed(() => this.allFollowSets().find(set => set.dTag === 'nostria-favorites'));
+
+  // Computed: get follow sets excluding favorites
+  otherFollowSets = computed(() => this.allFollowSets().filter(set => set.dTag !== 'nostria-favorites'));
 
   // Computed: get the currently selected follow set (if any)
   selectedFollowSet = computed(() => {
@@ -161,7 +169,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
   currentStreams = computed(() => {
     const index = this.selectedTabIndex();
     let streams: Event[];
-    
+
     if (index === 0) {
       streams = this.liveStreams();
     } else if (index === 1) {
@@ -548,34 +556,16 @@ export class StreamsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Select a people list filter
-   * @param filter - 'all', 'following', or a FollowSet
+   * Handle filter change from ListFilterMenuComponent
    */
-  selectListFilter(filter: string | FollowSet | null): void {
-    let filterValue: string;
-    if (filter === null || filter === 'all') {
-      filterValue = 'all';
-    } else if (filter === 'following') {
-      filterValue = 'following';
-    } else if (typeof filter === 'object') {
-      filterValue = filter.dTag;
-    } else {
-      filterValue = filter;
-    }
-
-    this.selectedListFilter.set(filterValue);
-
-    // Save preference
-    const pubkey = this.currentPubkey();
-    if (pubkey) {
-      this.accountLocalState.setStreamsListFilter(pubkey, filterValue);
-    }
+  onListFilterChanged(filter: ListFilterValue): void {
+    this.selectedListFilter.set(filter);
 
     // Update URL with list param or clear it
-    if (filterValue !== 'all') {
+    if (filter !== 'all') {
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { list: filterValue },
+        queryParams: { list: filter },
         queryParamsHandling: 'merge'
       });
     } else {

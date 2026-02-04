@@ -14,52 +14,12 @@
       <mat-icon>schedule</mat-icon>
       <span>{{ selectedTimeLabel() }}</span>
     </button>
-    <!-- List Filter Dropdown -->
-    <button mat-stroked-button [matMenuTriggerFor]="listMenu" class="list-filter-btn"
-      [class.active]="selectedList()" matTooltip="Filter by list">
-      <mat-icon>{{ selectedList() ? (selectedList()!.isPrivate ? 'lock' : 'people') : 'filter_list' }}</mat-icon>
-      <span>{{ selectedList()?.title || 'All People' }}</span>
-      @if (selectedList()) {
-      <mat-icon class="dropdown-icon">close</mat-icon>
-      } @else {
-      <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
-      }
-    </button>
-    <mat-menu #listMenu="matMenu" class="list-filter-menu">
-      <div class="menu-section-header" role="presentation">
-        <mat-icon>people</mat-icon>
-        <span>People Lists</span>
-      </div>
-      <mat-divider></mat-divider>
-      @if (followSetsLoading()) {
-      <div class="menu-loading-state" role="presentation">
-        <mat-spinner diameter="20"></mat-spinner>
-        <span>Loading lists...</span>
-      </div>
-      } @else if (followSets().length === 0) {
-      <div class="menu-empty-state" role="presentation">
-        <mat-icon>list_alt</mat-icon>
-        <span>No lists found</span>
-      </div>
-      } @else {
-      @for (list of followSets(); track list.dTag) {
-      <button mat-menu-item (click)="selectList(list)" [class.active]="selectedList()?.dTag === list.dTag">
-        <mat-icon>{{ list.isPrivate ? 'lock' : 'people' }}</mat-icon>
-        <span class="menu-item-label">{{ list.title }}</span>
-        <span class="menu-item-count">{{ list.pubkeys.length }}</span>
-      </button>
-      }
-      }
-      @if (selectedList()) {
-      <mat-divider></mat-divider>
-      <button mat-menu-item (click)="clearListFilter()">
-        <mat-icon>clear</mat-icon>
-        <span>Show All People</span>
-      </button>
-      }
-    </mat-menu>
     <span class="panel-header-spacer"></span>
     <div class="panel-actions">
+      <!-- List Filter -->
+      <app-list-filter-menu storageKey="summary" [showPublicOption]="false" defaultFilter="following"
+        (filterChanged)="onFilterChanged($event)" (followSetChanged)="onFollowSetChanged($event)" />
+
       @if (isFetching()) {
       <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
       } @else {
@@ -67,7 +27,6 @@
         <mat-icon>refresh</mat-icon>
       </button>
       }
-
     </div>
   </div>
 

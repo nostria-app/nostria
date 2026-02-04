@@ -86,6 +86,7 @@ interface AccountLocalState {
   recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
+  summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
 }
 
 /**
@@ -1224,6 +1225,25 @@ export class AccountLocalStateService {
     // Only store non-default values
     const value = filter === 'following' ? undefined : filter;
     this.updateAccountState(pubkey, { articlesListFilter: value });
+  }
+
+  /**
+   * Get summary list filter for an account
+   * Returns 'following' if not set
+   */
+  getSummaryListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.summaryListFilter || 'following';
+  }
+
+  /**
+   * Set summary list filter for an account
+   * @param filter - 'following' or a follow set d-tag
+   */
+  setSummaryListFilter(pubkey: string, filter: string): void {
+    // Only store non-default values
+    const value = filter === 'following' ? undefined : filter;
+    this.updateAccountState(pubkey, { summaryListFilter: value });
   }
 
   /**
