@@ -10,6 +10,7 @@ import {
   DOCUMENT,
   OnInit,
   ElementRef,
+  OnDestroy,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, RouteReuseStrategy, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -79,7 +80,8 @@ import { InstallService } from './services/install.service';
 import { ImageCacheService } from './services/image-cache.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
 import { AccountLocalStateService, ANONYMOUS_PUBKEY } from './services/account-local-state.service';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
 import { CredentialsBackupPromptComponent } from './components/credentials-backup-prompt/credentials-backup-prompt.component';
@@ -170,10 +172,13 @@ interface NavItem {
     '(window:keydown)': 'onWindowKeyDown($event)',
   },
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   // Translated labels for use in templates
   createLabel = $localize`:@@app.create.label:Create`;
   publishingEventLabel = $localize`:@@app.tooltip.publishing-event:Publishing event...`;
+
+  // Subject for managing subscription cleanup
+  private readonly destroy$ = new Subject<void>();
 
   // Computed tooltip for profile caching progress
   cachingTooltip = computed(() => {
@@ -889,7 +894,10 @@ export class App implements OnInit {
 
     // Track route changes to save last route for each account
     this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
+      .pipe(
+        filter(event => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
       .subscribe((event: NavigationEnd) => {
         const pubkey = this.accountState.pubkey();
         if (pubkey && event.urlAfterRedirects) {
@@ -1093,6 +1101,12 @@ export class App implements OnInit {
     }
 
     this.logger.info('[App] ==> ngOnInit completed');
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscriptions
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private showStorageError(error: any, diagnostics: any): void {

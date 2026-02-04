@@ -309,7 +309,7 @@ export class FollowingDataService {
         {
           since: sinceTimestamp,
           until: untilTimestamp,
-          timeout: 5000, // Shorter timeout since we're using connected relays
+          timeout: 2000, // Short timeout - fail fast on slow relays, we have caching
         },
         (batchEvents: Event[]) => {
           // Save events to database as they arrive

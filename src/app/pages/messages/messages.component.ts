@@ -10,7 +10,9 @@ import {
   computed,
   effect,
   untracked,
+  DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -407,26 +409,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   // Filtered chats based on selected tab and search query (excluding Note to Self)
+  // Optimized with Set for O(1) following list lookups
   followingChats = computed(() => {
     const followingList = this.accountState.followingList();
+    const followingSet = new Set(followingList);
     const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
       .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
-      .filter(item => followingList.includes(item.chat.pubkey))
+      .filter(item => followingSet.has(item.chat.pubkey))
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
 
   otherChats = computed(() => {
     const followingList = this.accountState.followingList();
+    const followingSet = new Set(followingList);
     const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
       .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
-      .filter(item => !followingList.includes(item.chat.pubkey))
+      .filter(item => !followingSet.has(item.chat.pubkey))
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
@@ -442,6 +447,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Subscription management
   private messageSubscription: any = null;
   private chatSubscription: any = null;
+  private readonly destroyRef = inject(DestroyRef);
 
   // ViewChild for scrolling functionality
   @ViewChild('messagesWrapper', { static: false })
@@ -623,7 +629,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.startLiveSubscription();
 
     // Check for route parameters first to see if we need to start a specific chat
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(params => {
       const pubkey = params['pubkey'];
       if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);

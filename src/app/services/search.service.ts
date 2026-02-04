@@ -612,20 +612,24 @@ export class SearchService {
         };
       });
 
-      // Sort by WoT rank (lower is better, with undefined ranks at the end)
-      // Then by source priority: following > cached > remote
+      // Sort by source priority first (following > cached > remote),
+      // then by WoT rank within each source group (lower is better)
       enrichedResults.sort((a, b) => {
-        // First, sort by WoT rank if both have it
-        if (a.wotRank !== undefined && b.wotRank !== undefined) {
-          return a.wotRank - b.wotRank; // Lower rank = higher trust
+        // Primary sort: source priority (following > cached > remote)
+        const sourcePriority = { following: 0, cached: 1, remote: 2 };
+        const sourceCompare = sourcePriority[a.source] - sourcePriority[b.source];
+        if (sourceCompare !== 0) {
+          return sourceCompare;
         }
-        // If only one has a rank, it comes first
+
+        // Secondary sort: WoT rank (lower is better, undefined ranks at the end)
+        if (a.wotRank !== undefined && b.wotRank !== undefined) {
+          return a.wotRank - b.wotRank;
+        }
         if (a.wotRank !== undefined) return -1;
         if (b.wotRank !== undefined) return 1;
 
-        // If neither has a rank, sort by source priority
-        const sourcePriority = { following: 0, cached: 1, remote: 2 };
-        return sourcePriority[a.source] - sourcePriority[b.source];
+        return 0;
       });
 
       // Final check before updating (prevent race conditions)

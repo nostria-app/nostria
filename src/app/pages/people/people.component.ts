@@ -39,6 +39,7 @@ import { FollowSetsService, FollowSet } from '../../services/follow-sets.service
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { TrustService } from '../../services/trust.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -91,6 +92,7 @@ export class PeopleComponent implements OnDestroy {
   private hoverCardService = inject(ProfileHoverCardService);
   private utilities = inject(UtilitiesService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private trustService = inject(TrustService);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -552,12 +554,45 @@ export class PeopleComponent implements OnDestroy {
    * Handle filter changes from filter panel
    */
   onFiltersChanged(changes: Partial<FilterOptions>): void {
+    const currentShowRank = this.filters().showRank;
     this.filters.update(current => ({
       ...current,
       ...changes,
     }));
     // Reset display limit when filters change
     this.displayLimit.set(this.PAGE_SIZE);
+
+    // If showRank was toggled ON, trigger trust rank download for current list
+    if (changes.showRank === true && !currentShowRank) {
+      this.downloadTrustRanksForCurrentList();
+    }
+  }
+
+  /**
+   * Handle refresh trust ranks button click
+   */
+  onRefreshTrustRanks(): void {
+    this.downloadTrustRanksForCurrentList();
+  }
+
+  /**
+   * Download trust ranks for all people in the current filtered list
+   */
+  private async downloadTrustRanksForCurrentList(): Promise<void> {
+    const pubkeys = this.sortedPeople();
+    if (pubkeys.length === 0) {
+      return;
+    }
+
+    this.logger.info(`[People] Downloading trust ranks for ${pubkeys.length} people`);
+
+    try {
+      // Use batch fetch from TrustService for efficiency
+      await this.trustService.fetchMetricsBatch(pubkeys);
+      this.logger.info(`[People] Trust ranks download completed for ${pubkeys.length} people`);
+    } catch (error) {
+      this.logger.error('[People] Failed to download trust ranks:', error);
+    }
   }
 
   /**

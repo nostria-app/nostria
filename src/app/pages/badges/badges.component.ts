@@ -1,4 +1,5 @@
-import { Component, effect, inject, signal, untracked, computed, ElementRef, ViewChild, NgZone, afterNextRender, OnDestroy, PLATFORM_ID, Injector } from '@angular/core';
+import { Component, effect, inject, signal, untracked, computed, ElementRef, ViewChild, NgZone, afterNextRender, OnDestroy, PLATFORM_ID, Injector, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,6 +58,7 @@ export class BadgesComponent implements OnDestroy {
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly panelNav = inject(PanelNavigationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   isUpdating = signal<boolean>(false);
   isInitialLoading = signal<boolean>(true);
@@ -106,7 +108,7 @@ export class BadgesComponent implements OnDestroy {
     }
 
     // Subscribe to query param changes to handle back navigation
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const tab = params.get('tab');
       if (tab !== null) {
         const tabIndex = parseInt(tab, 10);

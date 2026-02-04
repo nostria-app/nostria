@@ -1,4 +1,4 @@
-import { inject, Injectable, Injector, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal, OnDestroy } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -29,7 +29,7 @@ export interface DeepDiscoveryStatus {
 @Injectable({
   providedIn: 'root',
 })
-export class DataService {
+export class DataService implements OnDestroy {
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelayEx = inject(UserRelayService);
@@ -60,16 +60,29 @@ export class DataService {
   // Signal to track deep discovery status for UI feedback
   readonly deepDiscoveryStatus = signal<DeepDiscoveryStatus | null>(null);
 
+  // Interval handle for cleanup - stored for proper cleanup on destroy
+  private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
   // Clean up old pending requests periodically
   constructor() {
     // Clean up any stale pending requests every 30 seconds
-    setInterval(() => {
+    this.cleanupIntervalHandle = setInterval(() => {
       if (this.pendingProfileRequests.size > 100) {
         this.logger.warn(
           `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
         );
       }
     }, 30000);
+  }
+
+  ngOnDestroy(): void {
+    // Clean up the interval to prevent memory leaks
+    if (this.cleanupIntervalHandle) {
+      clearInterval(this.cleanupIntervalHandle);
+      this.cleanupIntervalHandle = null;
+    }
+    // Clear pending requests map
+    this.pendingProfileRequests.clear();
   }
 
   toRecord(event: Event) {

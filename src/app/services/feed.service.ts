@@ -1506,6 +1506,14 @@ export class FeedService {
           if (cachedEvents.length > 0 && feedData.events().length === 0) {
             this.handleFollowingIncrementalUpdate(feedData, cachedEvents);
             this.logger.debug(`📦 Loaded ${cachedEvents.length} cached events immediately`);
+            
+            // Signal initial content ready immediately when cache is loaded
+            // This provides the fastest possible time-to-first-render
+            if (!this._hasInitialContent()) {
+              this._hasInitialContent.set(true);
+              this.appState.feedHasInitialContent.set(true);
+              this.logger.debug(`✅ [Following] Cache loaded - signaling content ready`);
+            }
           }
         }
       );
@@ -1606,6 +1614,7 @@ export class FeedService {
    * - Shows events IMMEDIATELY (doesn't wait for all users to complete)
    * - If no cached events: render first batch immediately for fast initial paint
    * - If has cached events: add to pending for "new posts" button (also immediate!)
+   * - Signals hasInitialContent as soon as ANY events are available for faster perceived load
    */
   private handleFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
     if (newEvents.length === 0) return;
@@ -1644,6 +1653,14 @@ export class FeedService {
 
         // Mark initial load as complete after first batch is shown
         feedData.initialLoadComplete = true;
+        
+        // Signal that initial content is ready - this helps with perceived performance
+        // and allows other components (like profile loading) to proceed
+        if (!this._hasInitialContent()) {
+          this._hasInitialContent.set(true);
+          this.appState.feedHasInitialContent.set(true);
+          this.logger.debug(`✅ [Following] First events rendered - signaling content ready`);
+        }
 
         // Save to database for Summary page queries
         for (const event of trulyNewEvents) {
