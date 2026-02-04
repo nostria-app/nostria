@@ -65,13 +65,13 @@
   </button>
 
   <mat-menu #shortcutsMenu="matMenu">
-    <button mat-menu-item (click)="goToSummary()">
-      <mat-icon>summarize</mat-icon>
-      <span>Summary</span>
-    </button>
     <button mat-menu-item (click)="goToFeeds()">
       <mat-icon>dynamic_feed</mat-icon>
       <span>Feeds</span>
+    </button>
+    <button mat-menu-item (click)="goToSummary()">
+      <mat-icon>summarize</mat-icon>
+      <span>Summary</span>
     </button>
     <button mat-menu-item (click)="goToStreams()">
       <mat-icon>live_tv</mat-icon>
@@ -80,6 +80,10 @@
     <button mat-menu-item (click)="goToArticles()">
       <mat-icon>article</mat-icon>
       <span>Articles</span>
+    </button>
+    <button mat-menu-item (click)="goToMusic()">
+      <mat-icon>music_note</mat-icon>
+      <span>Music</span>
     </button>
   </mat-menu>
   }

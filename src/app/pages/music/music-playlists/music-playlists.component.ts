@@ -13,7 +13,9 @@ import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MusicDataService } from '../../../services/music-data.service';
+import { FollowSetsService } from '../../../services/follow-sets.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
+import { ListFilterMenuComponent, ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -21,15 +23,16 @@ const PAGE_SIZE = 24;
 @Component({
   selector: 'app-music-playlists',
   changeDetection: ChangeDetectionStrategy.OnPush,
-imports: [
+  imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
     MusicPlaylistCardComponent,
+    ListFilterMenuComponent,
   ],
-template: `
+  template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
         <mat-icon>arrow_back</mat-icon>
@@ -37,19 +40,9 @@ template: `
       <h2 class="panel-title title-font" i18n="@@music.playlists.title">Playlists</h2>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
-        <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter">
-          <mat-icon>{{ source() === 'following' ? 'people' : 'public' }}</mat-icon>
-        </button>
-        <mat-menu #filterMenu="matMenu">
-          <button mat-menu-item (click)="onSourceChange('following')">
-            <mat-icon>{{ source() === 'following' ? 'check' : '' }}</mat-icon>
-            <span i18n="@@music.toggle.following">Following</span>
-          </button>
-          <button mat-menu-item (click)="onSourceChange('public')">
-            <mat-icon>{{ source() === 'public' ? 'check' : '' }}</mat-icon>
-            <span i18n="@@music.toggle.public">Public</span>
-          </button>
-        </mat-menu>
+        <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
+          [initialFilter]="urlListFilter()"
+          (filterChanged)="onFilterChanged($event)" />
       }
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort">
         <mat-icon>sort</mat-icon>
@@ -88,7 +81,7 @@ template: `
             <mat-icon>queue_music</mat-icon>
             <h2 i18n="@@music.playlists.empty.title">No playlists found</h2>
             <p>
-              @if (source() === 'following') {
+              @if (selectedListFilter() === 'following') {
                 <span i18n="@@music.playlists.empty.following">People you follow haven't created any playlists yet. Switch to Public to discover playlists from the wider Nostr network.</span>
               } @else {
                 <span i18n="@@music.playlists.empty.public">No playlists have been created yet.</span>
@@ -122,7 +115,7 @@ template: `
       </div>
     </div>
   `,
-styles: [`
+  styles: [`
     :host {
       display: block;
     }
@@ -277,6 +270,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
+  private followSetsService = inject(FollowSetsService);
 
   // Input kept for potential future use with RightPanelService
   sourceInput = input<'following' | 'public' | undefined>(undefined);
@@ -285,8 +279,13 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   loading = signal(true);
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
-  source = signal<'following' | 'public'>('following');
   sortBy = signal<'recents' | 'alphabetical' | 'artist'>('recents');
+
+  // List filter state - 'all', 'following', or follow set d-tag
+  selectedListFilter = signal<ListFilterValue>('all');
+
+  // URL query param for list filter
+  urlListFilter = signal<string | undefined>(undefined);
 
   private playlistSubscription: { close: () => void } | null = null;
   private playlistMap = new Map<string, Event>();
@@ -299,20 +298,47 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     return this.accountState.pubkey();
   });
 
+  // Computed: get all follow sets
+  private allFollowSets = computed(() => this.followSetsService.followSets());
+
+  // Computed: get the currently selected follow set (if any)
+  selectedFollowSet = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all' || filter === 'following') {
+      return null;
+    }
+    return this.allFollowSets().find(set => set.dTag === filter) || null;
+  });
+
+  // Computed: get the pubkeys to filter by based on current selection
+  private filterPubkeys = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all') {
+      return null; // No filtering
+    }
+    if (filter === 'following') {
+      return this.followingPubkeys();
+    }
+    // Filter by a specific follow set
+    const followSet = this.selectedFollowSet();
+    return followSet?.pubkeys || [];
+  });
+
   isAuthenticated = computed(() => this.app.authenticated());
 
   filteredPlaylists = computed(() => {
     const playlists = this.allPlaylists();
-    const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
-    const sourceVal = this.source();
+    const pubkeys = this.filterPubkeys();
     const sort = this.sortBy();
 
-    let filtered: Event[];
-    if (sourceVal === 'following' && following.length > 0) {
-      filtered = playlists.filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey);
-    } else {
-      filtered = playlists.filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey);
+    // Filter out user's own playlists
+    let filtered = playlists.filter(p => p.pubkey !== myPubkey);
+
+    // Apply pubkey filter
+    if (pubkeys !== null) {
+      if (pubkeys.length === 0) return [];
+      filtered = filtered.filter(p => pubkeys.includes(p.pubkey));
     }
 
     // Apply sorting
@@ -350,22 +376,43 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private intersectionObserver: IntersectionObserver | null = null;
 
   ngOnInit(): void {
-    // Check for input first (when opened via RightPanelService)
-    const sourceFromInput = this.sourceInput();
-    if (sourceFromInput) {
-      this.source.set(sourceFromInput);
-      this.initializePlaylists();
-      return;
+    // Get filter from query params - check for list (follow set) or source (following/public)
+    const queryParams = this.route.snapshot.queryParams;
+
+    if (queryParams['list']) {
+      // Follow set d-tag passed
+      this.urlListFilter.set(queryParams['list']);
+      this.selectedListFilter.set(queryParams['list']);
+    } else if (queryParams['source']) {
+      // Legacy source parameter - map to new filter
+      const sourceParam = queryParams['source'];
+      if (sourceParam === 'following') {
+        this.urlListFilter.set('following');
+        this.selectedListFilter.set('following');
+      } else if (sourceParam === 'public') {
+        this.urlListFilter.set('all');
+        this.selectedListFilter.set('all');
+      }
     }
 
-    // Get source from query params
-    this.route.queryParams.subscribe(params => {
-      const sourceParam = params['source'];
-      if (sourceParam === 'following' || sourceParam === 'public') {
-        this.source.set(sourceParam);
+    // Check for input (when opened via RightPanelService)
+    const sourceFromInput = this.sourceInput();
+    if (sourceFromInput) {
+      if (sourceFromInput === 'following') {
+        this.selectedListFilter.set('following');
+      } else {
+        this.selectedListFilter.set('all');
       }
-    });
+    }
+
     this.initializePlaylists();
+  }
+
+  /**
+   * Handle filter change from ListFilterMenuComponent
+   */
+  onFilterChanged(filter: ListFilterValue): void {
+    this.selectedListFilter.set(filter);
   }
 
   /**
@@ -470,17 +517,6 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
         this.loading.set(false);
         this.tryObserveSentinel();
       }
-    });
-  }
-
-  onSourceChange(value: 'following' | 'public'): void {
-    this.source.set(value);
-    this.displayLimit.set(PAGE_SIZE);
-    // Update URL query params
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { source: value },
-      queryParamsHandling: 'merge',
     });
   }
 
