@@ -835,7 +835,7 @@ export class PeopleComponent implements OnDestroy {
       // (user might have navigated away)
       const currentProfiles = this.followSetProfiles();
       if (currentProfiles.length === pubkeys.length &&
-          currentProfiles[0]?.pubkey === pubkeys[0]) {
+        currentProfiles[0]?.pubkey === pubkeys[0]) {
         this.followSetProfiles.set(profiles);
       }
     }).catch(error => {
@@ -921,6 +921,20 @@ export class PeopleComponent implements OnDestroy {
       });
     } else {
       this.router.navigate(['/articles']);
+    }
+  }
+
+  /**
+   * Navigate to Music page filtered by the selected list
+   */
+  goToMusic(): void {
+    const selectedSet = this.selectedFollowSet();
+    if (selectedSet) {
+      this.router.navigate(['/music'], {
+        queryParams: { list: selectedSet.dTag }
+      });
+    } else {
+      this.router.navigate(['/music']);
     }
   }
 

@@ -175,7 +175,7 @@ export class ListFilterMenuComponent implements OnInit {
   // Inputs
   showPublicOption = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
-  storageKey = input.required<'streams' | 'articles' | 'summary'>();
+  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music'>();
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
 
   // Outputs
@@ -255,6 +255,9 @@ export class ListFilterMenuComponent implements OnInit {
         case 'summary':
           savedFilter = this.accountLocalState.getSummaryListFilter(pubkey);
           break;
+        case 'music':
+          savedFilter = this.accountLocalState.getMusicListFilter(pubkey);
+          break;
         default:
           savedFilter = this.defaultFilter();
       }
@@ -283,6 +286,9 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         case 'summary':
           this.accountLocalState.setSummaryListFilter(pubkey, filter);
+          break;
+        case 'music':
+          this.accountLocalState.setMusicListFilter(pubkey, filter);
           break;
       }
     }

@@ -10,6 +10,10 @@
   <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'">
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
+  @if (isAuthenticated()) {
+  <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
+    [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
+  }
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh music">
     <mat-icon>refresh</mat-icon>
   </button>
@@ -146,100 +150,50 @@
     </section>
     }
 
-    <!-- PLAYLISTS (FOLLOWING) SECTION -->
-    @if (followingPlaylistsPreview().length > 0) {
+    <!-- PLAYLISTS SECTION (filtered by list filter) -->
+    @if (listFilteredPlaylistsPreview().length > 0) {
     <section class="music-section">
       <div class="section-header">
         <h2>
-          <span i18n="@@music.section.playlistsFollowing">Playlists (Following)</span>
-          @if (followingPlaylistsCount() > 0) {
-          <span class="section-count">{{ followingPlaylistsCount() }}</span>
+          <span i18n="@@music.section.playlists">Playlists</span>
+          @if (listFilteredPlaylistsCount() > 0) {
+          <span class="section-count">{{ listFilteredPlaylistsCount() }}</span>
           }
         </h2>
-        @if (hasMoreFollowingPlaylists()) {
-        <button mat-button (click)="goToAllFollowingPlaylists()" class="show-all-btn">
+        @if (hasMoreListFilteredPlaylists()) {
+        <button mat-button (click)="goToAllPlaylists()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
           <mat-icon>arrow_forward</mat-icon>
         </button>
         }
       </div>
       <div class="playlists-grid">
-        @for (playlist of followingPlaylistsPreview(); track playlist.id) {
+        @for (playlist of listFilteredPlaylistsPreview(); track playlist.id) {
         <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
         }
       </div>
     </section>
     }
 
-    <!-- SONGS (FOLLOWING) SECTION -->
-    @if (followingTracksPreview().length > 0) {
+    <!-- SONGS SECTION (filtered by list filter) -->
+    @if (listFilteredTracksPreview().length > 0) {
     <section class="music-section">
       <div class="section-header">
         <h2>
-          <span i18n="@@music.section.songsFollowing">Songs (Following)</span>
-          @if (followingTracksCount() > 0) {
-          <span class="section-count">{{ followingTracksCount() }}</span>
+          <span i18n="@@music.section.songs">Songs</span>
+          @if (listFilteredTracksCount() > 0) {
+          <span class="section-count">{{ listFilteredTracksCount() }}</span>
           }
         </h2>
-        @if (hasMoreFollowingTracks()) {
-        <button mat-button (click)="goToAllFollowingTracks()" class="show-all-btn">
+        @if (hasMoreListFilteredTracks()) {
+        <button mat-button (click)="goToAllTracks()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
           <mat-icon>arrow_forward</mat-icon>
         </button>
         }
       </div>
       <div class="music-grid">
-        @for (track of followingTracksPreview(); track track.id) {
-        <app-music-event [event]="track" mode="card"></app-music-event>
-        }
-      </div>
-    </section>
-    }
-
-    <!-- PLAYLISTS (PUBLIC) SECTION -->
-    @if (publicPlaylistsPreview().length > 0) {
-    <section class="music-section">
-      <div class="section-header">
-        <h2>
-          <span i18n="@@music.section.playlistsPublic">Playlists (Public)</span>
-          @if (publicPlaylistsCount() > 0) {
-          <span class="section-count">{{ publicPlaylistsCount() }}</span>
-          }
-        </h2>
-        @if (hasMorePublicPlaylists()) {
-        <button mat-button (click)="goToAllPublicPlaylists()" class="show-all-btn">
-          <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
-        </button>
-        }
-      </div>
-      <div class="playlists-grid">
-        @for (playlist of publicPlaylistsPreview(); track playlist.id) {
-        <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
-        }
-      </div>
-    </section>
-    }
-
-    <!-- SONGS (PUBLIC) SECTION -->
-    @if (publicTracksPreview().length > 0) {
-    <section class="music-section">
-      <div class="section-header">
-        <h2>
-          <span i18n="@@music.section.songsPublic">Songs (Public)</span>
-          @if (publicTracksCount() > 0) {
-          <span class="section-count">{{ publicTracksCount() }}</span>
-          }
-        </h2>
-        @if (hasMorePublicTracks()) {
-        <button mat-button (click)="goToAllPublicTracks()" class="show-all-btn">
-          <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
-        </button>
-        }
-      </div>
-      <div class="music-grid">
-        @for (track of publicTracksPreview(); track track.id) {
+        @for (track of listFilteredTracksPreview(); track track.id) {
         <app-music-event [event]="track" mode="card"></app-music-event>
         }
       </div>
@@ -284,8 +238,7 @@
     }
 
     <!-- EMPTY STATE -->
-    @if (followingTracksPreview().length === 0 && publicTracksPreview().length === 0 &&
-    followingPlaylistsPreview().length === 0 && publicPlaylistsPreview().length === 0) {
+    @if (listFilteredTracksPreview().length === 0 && listFilteredPlaylistsPreview().length === 0) {
     <div class="empty-state">
       <mat-icon>library_music</mat-icon>
       <h2 i18n="@@music.empty.title">No music found</h2>

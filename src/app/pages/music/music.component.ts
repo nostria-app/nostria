@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,6 +21,7 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -30,6 +31,7 @@ import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -51,6 +53,7 @@ const SECTION_LIMIT = 12;
     MusicTrackDialogComponent,
     ImportRssDialogComponent,
     MusicSettingsDialogComponent,
+    ListFilterMenuComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -64,6 +67,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private mediaPlayer = inject(MediaPlayerService);
   private dataService = inject(DataService);
   private database = inject(DatabaseService);
@@ -72,6 +76,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private musicData = inject(MusicDataService);
+  followSetsService = inject(FollowSetsService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -126,6 +131,47 @@ export class MusicComponent implements OnInit, OnDestroy {
   });
 
   isAuthenticated = computed(() => this.app.authenticated());
+
+  // URL query param for list filter (for passing to ListFilterMenuComponent)
+  urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
+  // List filter state - 'all', 'following', or follow set d-tag
+  selectedListFilter = signal<ListFilterValue>('all');
+
+  // Computed: get all follow sets for the dropdown
+  allFollowSets = computed(() => this.followSetsService.followSets());
+
+  // Computed: get the currently selected follow set (if any)
+  selectedFollowSet = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all' || filter === 'following') {
+      return null;
+    }
+    return this.allFollowSets().find(set => set.dTag === filter) || null;
+  });
+
+  // Computed: get the pubkeys to filter by based on current selection
+  private filterPubkeys = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all') {
+      return null; // No filtering
+    }
+    if (filter === 'following') {
+      return this.followingPubkeys();
+    }
+    // Filter by a specific follow set
+    const followSet = this.selectedFollowSet();
+    return followSet?.pubkeys || [];
+  });
+
+  // Computed: get the display title for the current filter
+  filterTitle = computed(() => {
+    const filter = this.selectedListFilter();
+    if (filter === 'all') return 'All Music';
+    if (filter === 'following') return 'Following';
+    const followSet = this.selectedFollowSet();
+    return followSet?.title || 'Music';
+  });
 
   /**
    * Helper to check if a track matches search query
@@ -198,7 +244,66 @@ export class MusicComponent implements OnInit, OnDestroy {
   myPlaylistsPreview = computed(() => this.myPlaylists().slice(0, SECTION_LIMIT));
   hasMoreMyPlaylists = computed(() => this.myPlaylists().length > SECTION_LIMIT);
 
-  // === PLAYLISTS (FOLLOWING) ===
+  // === FILTERED PLAYLISTS (based on list filter) ===
+  // Playlists filtered by list filter (excluding user's own)
+  listFilteredPlaylists = computed(() => {
+    const myPubkey = this.currentPubkey();
+    const pubkeys = this.filterPubkeys();
+
+    let playlists = this.filteredPlaylists()
+      .filter(p => p.pubkey !== myPubkey);
+
+    // Apply filter
+    if (pubkeys !== null) {
+      if (pubkeys.length === 0) return [];
+      playlists = playlists.filter(p => pubkeys.includes(p.pubkey));
+    }
+
+    return playlists.sort((a, b) => b.created_at - a.created_at);
+  });
+
+  listFilteredPlaylistsPreview = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.listFilteredPlaylists().slice(0, limit);
+  });
+
+  hasMoreListFilteredPlaylists = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.listFilteredPlaylists().length > limit;
+  });
+
+  listFilteredPlaylistsCount = computed(() => this.listFilteredPlaylists().length);
+
+  // === FILTERED SONGS (based on list filter) ===
+  // Tracks filtered by list filter
+  listFilteredTracks = computed(() => {
+    const pubkeys = this.filterPubkeys();
+
+    let tracks = this.filteredTracks();
+
+    // Apply filter
+    if (pubkeys !== null) {
+      if (pubkeys.length === 0) return [];
+      tracks = tracks.filter(t => pubkeys.includes(t.pubkey));
+    }
+
+    return tracks.sort((a, b) => b.created_at - a.created_at);
+  });
+
+  listFilteredTracksPreview = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.listFilteredTracks().slice(0, limit);
+  });
+
+  hasMoreListFilteredTracks = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.listFilteredTracks().length > limit;
+  });
+
+  listFilteredTracksCount = computed(() => this.listFilteredTracks().length);
+
+  // Keep legacy computed properties for backward compatibility with navigation
+  // === PLAYLISTS (FOLLOWING) - for "Show all" navigation ===
   followingPlaylists = computed(() => {
     const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
@@ -208,16 +313,7 @@ export class MusicComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  followingPlaylistsPreview = computed(() => {
-    const limit = this.calculatePlaylistLimit();
-    return this.followingPlaylists().slice(0, limit);
-  });
-  hasMoreFollowingPlaylists = computed(() => {
-    const limit = this.calculatePlaylistLimit();
-    return this.followingPlaylists().length > limit;
-  });
-
-  // === SONGS (FOLLOWING) ===
+  // === SONGS (FOLLOWING) - for "Show all" navigation ===
   followingTracks = computed(() => {
     const following = this.followingPubkeys();
     if (following.length === 0) return [];
@@ -226,16 +322,7 @@ export class MusicComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  followingTracksPreview = computed(() => {
-    const limit = this.calculateTrackLimit();
-    return this.followingTracks().slice(0, limit);
-  });
-  hasMoreFollowingTracks = computed(() => {
-    const limit = this.calculateTrackLimit();
-    return this.followingTracks().length > limit;
-  });
-
-  // === PLAYLISTS (PUBLIC) ===
+  // === PLAYLISTS (PUBLIC) - for "Show all" navigation ===
   publicPlaylists = computed(() => {
     const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
@@ -244,37 +331,13 @@ export class MusicComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  publicPlaylistsPreview = computed(() => {
-    const limit = this.calculatePlaylistLimit();
-    return this.publicPlaylists().slice(0, limit);
-  });
-  hasMorePublicPlaylists = computed(() => {
-    const limit = this.calculatePlaylistLimit();
-    return this.publicPlaylists().length > limit;
-  });
-
-  // === SONGS (PUBLIC) ===
+  // === SONGS (PUBLIC) - for "Show all" navigation ===
   publicTracks = computed(() => {
     const following = this.followingPubkeys();
     return this.filteredTracks()
       .filter(track => !following.includes(track.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
-
-  publicTracksPreview = computed(() => {
-    const limit = this.calculateTrackLimit();
-    return this.publicTracks().slice(0, limit);
-  });
-  hasMorePublicTracks = computed(() => {
-    const limit = this.calculateTrackLimit();
-    return this.publicTracks().length > limit;
-  });
-
-  // Counts for display
-  followingPlaylistsCount = computed(() => this.followingPlaylists().length);
-  followingTracksCount = computed(() => this.followingTracks().length);
-  publicPlaylistsCount = computed(() => this.publicPlaylists().length);
-  publicTracksCount = computed(() => this.publicTracks().length);
 
   // === ARTISTS ===
   /**
@@ -698,6 +761,56 @@ export class MusicComponent implements OnInit, OnDestroy {
     this.router.navigate(['/music/offline']);
   }
 
+  /**
+   * Handle filter change from ListFilterMenuComponent
+   */
+  onListFilterChanged(filter: ListFilterValue): void {
+    this.selectedListFilter.set(filter);
+  }
+
+  /**
+   * Navigate to all playlists with current filter
+   */
+  goToAllPlaylists(): void {
+    const filter = this.selectedListFilter();
+    this.musicData.setPreloadedPlaylists(this.listFilteredPlaylists());
+
+    // Map filter to source parameter for sub-component
+    let source: string;
+    if (filter === 'all') {
+      source = 'public';
+    } else if (filter === 'following') {
+      source = 'following';
+    } else {
+      // For follow set, pass the d-tag as list parameter
+      this.router.navigate(['/music/playlists'], { queryParams: { list: filter } });
+      return;
+    }
+    this.router.navigate(['/music/playlists'], { queryParams: { source } });
+  }
+
+  /**
+   * Navigate to all tracks with current filter
+   */
+  goToAllTracks(): void {
+    const filter = this.selectedListFilter();
+    this.musicData.setPreloadedTracks(this.listFilteredTracks());
+
+    // Map filter to source parameter for sub-component
+    let source: string;
+    if (filter === 'all') {
+      source = 'public';
+    } else if (filter === 'following') {
+      source = 'following';
+    } else {
+      // For follow set, pass the d-tag as list parameter
+      this.router.navigate(['/music/tracks'], { queryParams: { list: filter } });
+      return;
+    }
+    this.router.navigate(['/music/tracks'], { queryParams: { source } });
+  }
+
+  // Legacy navigation methods (keep for backward compatibility)
   goToAllFollowingPlaylists(): void {
     this.musicData.setPreloadedPlaylists(this.followingPlaylists());
     this.router.navigate(['/music/playlists'], { queryParams: { source: 'following' } });

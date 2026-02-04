@@ -87,6 +87,7 @@ interface AccountLocalState {
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
+  musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
 }
 
 /**
@@ -1244,6 +1245,25 @@ export class AccountLocalStateService {
     // Only store non-default values
     const value = filter === 'following' ? undefined : filter;
     this.updateAccountState(pubkey, { summaryListFilter: value });
+  }
+
+  /**
+   * Get music list filter for an account
+   * Returns 'all' if not set (shows all music)
+   */
+  getMusicListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.musicListFilter || 'all';
+  }
+
+  /**
+   * Set music list filter for an account
+   * @param filter - 'all', 'following', or a follow set d-tag
+   */
+  setMusicListFilter(pubkey: string, filter: string): void {
+    // Only store non-default values
+    const value = filter === 'all' ? undefined : filter;
+    this.updateAccountState(pubkey, { musicListFilter: value });
   }
 
   /**
