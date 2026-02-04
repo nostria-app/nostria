@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,7 +39,7 @@ interface MeetingSpace {
   templateUrl: './meetings.component.html',
   styleUrl: './meetings.component.scss',
 })
-export class MeetingsComponent {
+export class MeetingsComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -48,6 +48,9 @@ export class MeetingsComponent {
   meetingSpaces = signal<MeetingSpace[]>([]);
   loading = signal(true);
   selectedTabIndex = signal(0);
+
+  // Store interval handle for cleanup
+  private refreshIntervalHandle: ReturnType<typeof setInterval> | null = null;
 
   // Computed signals for filtering by status
   openSpaces = computed(() => {
@@ -76,9 +79,16 @@ export class MeetingsComponent {
     this.loadMeetings();
 
     // Refresh meetings every 30 seconds
-    setInterval(() => {
+    this.refreshIntervalHandle = setInterval(() => {
       this.loadMeetings();
     }, 30000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshIntervalHandle) {
+      clearInterval(this.refreshIntervalHandle);
+      this.refreshIntervalHandle = null;
+    }
   }
 
   async loadMeetings(): Promise<void> {

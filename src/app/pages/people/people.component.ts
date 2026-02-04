@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy, untracked, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy, untracked, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +12,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { PeopleFilterPanelComponent } from './people-filter-panel/people-filter-panel.component';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
 import { Subject, firstValueFrom } from 'rxjs';
@@ -93,6 +93,7 @@ export class PeopleComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private trustService = inject(TrustService);
+  private destroyRef = inject(DestroyRef);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -317,7 +318,10 @@ export class PeopleComponent implements OnDestroy {
     this.twoColumnLayout.setWideLeft();
 
     // Initialize search debounce
-    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
+    this.searchChanged.pipe(
+      debounceTime(300),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(term => {
       this.searchTerm.set(term);
     });
 
@@ -519,9 +523,9 @@ export class PeopleComponent implements OnDestroy {
   }
 
   /**
-   * Get icon for current view mode
+   * Get icon for current view mode - computed signal for better change detection
    */
-  getViewModeIcon(): string {
+  viewModeIcon = computed(() => {
     switch (this.viewMode()) {
       case 'comfortable':
         return 'view_agenda';
@@ -534,7 +538,7 @@ export class PeopleComponent implements OnDestroy {
       default:
         return 'view_module';
     }
-  }
+  });
 
   /**
    * Toggle filter panel visibility

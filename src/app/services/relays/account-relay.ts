@@ -34,31 +34,34 @@ export class AccountRelayService extends RelayServiceBase {
     let hasMalformedRelayList = false;
     let malformedEvent: any = undefined;
 
-    // Get the relays URLs from storage, if available.
-    let event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    // OPTIMIZATION: Query both RelayList (10002) and Contacts (3) in parallel
+    // This reduces initialization time when RelayList is not found
+    const [relayListEvent, contactsEvent] = await Promise.all([
+      this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList),
+      this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts),
+    ]);
 
-    if (event) {
+    // Prefer RelayList (kind 10002) over Contacts (kind 3)
+    if (relayListEvent) {
       this.logger.debug(`Found relay list for pubkey ${pubkey} in storage`);
 
       // Check if event has malformed 'relay' tags instead of 'r' tags
-      const hasRelayTags = event.tags.some(tag => tag[0] === 'relay');
-      const hasRTags = event.tags.some(tag => tag[0] === 'r');
+      const hasRelayTags = relayListEvent.tags.some(tag => tag[0] === 'relay');
+      const hasRTags = relayListEvent.tags.some(tag => tag[0] === 'r');
 
       if (hasRelayTags && !hasRTags) {
         this.logger.warn(`Found malformed kind 10002 event with 'relay' tags instead of 'r' tags`);
         hasMalformedRelayList = true;
-        malformedEvent = event;
+        malformedEvent = relayListEvent;
         // Don't use malformed relays - leave relayUrls empty to force user to repair
         relayUrls = [];
       } else {
-        relayUrls = this.utilities.getRelayUrls(event);
+        relayUrls = this.utilities.getRelayUrls(relayListEvent);
       }
-    } else {
-      event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-
-      if (event) {
-        relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
-      }
+    } else if (contactsEvent) {
+      // Fall back to Contacts event (already fetched in parallel)
+      this.logger.debug(`Using contacts event for relay URLs for pubkey ${pubkey}`);
+      relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
     }
 
     if (relayUrls.length === 0) {

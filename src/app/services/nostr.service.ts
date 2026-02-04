@@ -538,6 +538,12 @@ export class NostrService implements NostriaService {
         this.logger.info('[NostrService] Setting initialized=true after loading cached data');
         this.initialized.set(true);
       }
+      // OPTIMIZATION: Also set accountState.initialized to allow FeedService and SettingsService
+      // to start loading immediately from cache, without waiting for EOSE from relays
+      if (!this.accountState.initialized()) {
+        this.logger.info('[NostrService] Setting accountState.initialized=true after loading cached data');
+        this.accountState.initialized.set(true);
+      }
 
       await this.database.saveInfo(pubkey, 'user', info);
     } catch (error) {

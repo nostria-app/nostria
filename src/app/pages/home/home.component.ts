@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -57,19 +57,25 @@ export class HomeComponent {
   private dialog = inject(MatDialog);
 
   /**
+   * Greeting based on time of day - signal for better change detection.
+   * Initialized once when component is created.
+   */
+  greeting = signal(this.computeGreeting());
+
+  private computeGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return $localize`:@@home.greeting.morning:Good Morning`;
+    if (hour < 18) return $localize`:@@home.greeting.afternoon:Good Afternoon`;
+    return $localize`:@@home.greeting.evening:Good Evening`;
+  }
+
+  /**
    * Open the create content menu
    */
   openCreateMenu(): void {
     this.bottomSheet.open(CreateOptionsSheetComponent, {
       panelClass: 'glass-bottom-sheet',
     });
-  }
-
-  getGreeting(): string {
-    const hour = new Date().getHours();
-    if (hour < 12) return $localize`:@@home.greeting.morning:Good Morning`;
-    if (hour < 18) return $localize`:@@home.greeting.afternoon:Good Afternoon`;
-    return $localize`:@@home.greeting.evening:Good Evening`;
   }
 
   openCommandPalette(): void {

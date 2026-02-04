@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal, OnDestroy } from '@angular/core';
 import { SwUpdate, VersionReadyEvent, UnrecoverableStateEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
@@ -8,13 +8,16 @@ import { NotificationType } from './database.service';
 @Injectable({
   providedIn: 'root',
 })
-export class PwaUpdateService {
+export class PwaUpdateService implements OnDestroy {
   private swUpdate = inject(SwUpdate);
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
 
   // Signal to track if an update is available
   updateAvailable = signal(false);
+
+  // Store interval handle for cleanup
+  private updateCheckIntervalHandle: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.logger.info('Initializing PwaUpdateService');
@@ -104,12 +107,19 @@ export class PwaUpdateService {
 
     // Then check every hour
     this.logger.debug('Setting up hourly update checks');
-    setInterval(
+    this.updateCheckIntervalHandle = setInterval(
       () => {
         this.checkForUpdate();
       },
       60 * 60 * 1000
     ); // 60 minutes
+  }
+
+  ngOnDestroy(): void {
+    if (this.updateCheckIntervalHandle) {
+      clearInterval(this.updateCheckIntervalHandle);
+      this.updateCheckIntervalHandle = null;
+    }
   }
 
   /**

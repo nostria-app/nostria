@@ -1,4 +1,4 @@
-import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy, computed } from '@angular/core';
+import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy, computed, ChangeDetectionStrategy } from '@angular/core';
 import { Router, NavigationStart, RouterLink } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -84,6 +84,7 @@ export interface DisplayItem {
   ],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NoteContentComponent implements OnDestroy {
   contentTokens = input<ContentToken[]>([]);

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -98,6 +98,7 @@ type EventCardAppearance = 'card' | 'plain';
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventComponent implements AfterViewInit, OnDestroy {
   id = input<string | null | undefined>();
