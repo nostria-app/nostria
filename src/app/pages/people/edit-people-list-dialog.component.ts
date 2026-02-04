@@ -1,10 +1,13 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { FollowingService, FollowingProfile } from '../../services/following.service';
 import { LoggerService } from '../../services/logger.service';
@@ -27,22 +30,40 @@ export interface EditPeopleListDialogResult {
   selector: 'app-edit-people-list-dialog',
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatDialogModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatInputModule,
+    MatFormFieldModule,
   ],
   template: `
     <div class="dialog-container">
       <div class="dialog-header">
-        <h2 class="dialog-title">Edit {{ data.followSet.title }}</h2>
+        <h2 class="dialog-title">Edit List</h2>
         <button mat-icon-button class="close-button" (click)="cancel()">
           <mat-icon>close</mat-icon>
         </button>
       </div>
 
       <div class="dialog-content">
+        <!-- List Name Input -->
+        <div class="name-section">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>List Name</mat-label>
+            <input matInput 
+                   [ngModel]="listName()"
+                   (ngModelChange)="listName.set($event)"
+                   placeholder="Enter list name"
+                   maxlength="50"
+                   autocomplete="off" />
+            <mat-icon matIconPrefix>label</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- People List -->
         @if (loading()) {
         <div class="loading-container">
           <mat-spinner diameter="40"></mat-spinner>
@@ -139,6 +160,14 @@ export interface EditPeopleListDialogResult {
       overflow-y: auto;
       padding: 16px 24px;
       min-height: 200px;
+    }
+
+    .name-section {
+      margin-bottom: 16px;
+      
+      .full-width {
+        width: 100%;
+      }
     }
 
     .loading-container {
@@ -287,11 +316,18 @@ export class EditPeopleListDialogComponent {
   loading = signal(true);
   profiles = signal<FollowingProfile[]>([]);
   removedPubkeys = signal<string[]>([]);
+  listName = signal('');
 
   // Computed
-  hasChanges = computed(() => this.removedPubkeys().length > 0);
+  hasChanges = computed(() => 
+    this.removedPubkeys().length > 0 || 
+    this.listName().trim() !== this.data.followSet.title.trim()
+  );
 
   constructor() {
+    // Initialize list name
+    this.listName.set(this.data.followSet.title);
+    
     // Load profiles for the follow set
     this.loadProfiles();
   }
@@ -326,28 +362,46 @@ export class EditPeopleListDialogComponent {
   async save(): Promise<void> {
     const set = this.data.followSet;
     const removed = this.removedPubkeys();
+    const newName = this.listName().trim();
 
-    if (!removed.length) {
+    // Check if there are any changes at all
+    if (!removed.length && newName === set.title.trim()) {
       this.cancel();
       return;
     }
 
     try {
-      // Remove each pubkey from the follow set
-      for (const pubkey of removed) {
-        await this.followSetsService.removeFromFollowSet(set.dTag, pubkey);
+      // Get the updated pubkey list
+      const updatedPubkeys = set.pubkeys.filter(pk => !removed.includes(pk));
+
+      // Save the follow set with updated title and pubkeys
+      // This will publish a new event with the updated data
+      const result = await this.followSetsService.saveFollowSet(
+        set.dTag,
+        newName || set.title, // Use new name if provided, fallback to original
+        updatedPubkeys,
+        set.isPrivate
+      );
+
+      if (result) {
+        const changes: string[] = [];
+        if (removed.length > 0) {
+          changes.push(`Removed ${removed.length} ${removed.length === 1 ? 'person' : 'people'}`);
+        }
+        if (newName !== set.title.trim()) {
+          changes.push(`Renamed to "${newName}"`);
+        }
+        
+        this.notificationService.notify(changes.join(' and '));
+
+        // Close dialog with result
+        this.dialogRef.close({
+          followSet: result,
+          removedPubkeys: removed
+        });
+      } else {
+        this.notificationService.notify('Failed to save changes');
       }
-
-      this.notificationService.notify(`Removed ${removed.length} ${removed.length === 1 ? 'person' : 'people'} from ${set.title}`);
-
-      // Get updated follow set
-      const updatedSet = this.followSetsService.getFollowSetByDTag(set.dTag);
-
-      // Close dialog with result
-      this.dialogRef.close({
-        followSet: updatedSet || set,
-        removedPubkeys: removed
-      });
     } catch (error) {
       this.logger.error('Failed to save follow set changes:', error);
       this.notificationService.notify('Failed to save changes');
