@@ -335,8 +335,12 @@ export class ParsingService implements OnDestroy {
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    // Nostr URI regex: matches nostr: URIs with bech32-encoded identifiers
+    // Uses the exact bech32 character set (qpzry9x8gf2tvdw0s3jn54khce6mua7l) to properly
+    // terminate the match when followed by non-bech32 characters (like 'is' in 'nprofile...is an')
+    // This prevents greedily capturing trailing text that would cause decode failures
     const nostrRegex =
-      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)/gi;
     // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only
     const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
     // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
