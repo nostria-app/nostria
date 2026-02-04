@@ -639,6 +639,38 @@ export class ReactionButtonComponent {
   }
 
   /**
+   * Look up a custom emoji URL by shortcode from user's loaded emoji sets.
+   * Checks customEmojis, recentEmojis, and emojiSets in order.
+   * @param shortcode The emoji shortcode without colons (e.g., 'catJAM')
+   * @param emojiWithColons The full emoji string with colons (e.g., ':catJAM:') for recent emoji lookup
+   */
+  private lookupEmojiUrlByShortcode(shortcode: string, emojiWithColons?: string): string | null {
+    // Check user's loaded custom emojis
+    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+    if (customEmoji?.url) {
+      return customEmoji.url;
+    }
+
+    // Check recent emojis (they store the URL when used)
+    if (emojiWithColons) {
+      const recentEmoji = this.recentEmojis().find(e => e.emoji === emojiWithColons);
+      if (recentEmoji?.url) {
+        return recentEmoji.url;
+      }
+    }
+
+    // Check all emoji sets
+    for (const set of this.emojiSets()) {
+      const emoji = set.emojis.find(e => e.shortcode === shortcode);
+      if (emoji?.url) {
+        return emoji.url;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Get custom emoji URL from reaction event tags (NIP-30)
    * Returns the image URL if the reaction has an emoji tag matching the content.
    * Falls back to user's emoji sets if the event doesn't have the emoji tag.
@@ -656,27 +688,8 @@ export class ReactionButtonComponent {
       return emojiTag[2];
     }
 
-    // Fallback 1: check user's loaded custom emojis
-    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
-    if (customEmoji?.url) {
-      return customEmoji.url;
-    }
-
-    // Fallback 2: check recent emojis (they store the URL when used)
-    const recentEmoji = this.recentEmojis().find(e => e.emoji === event.content);
-    if (recentEmoji?.url) {
-      return recentEmoji.url;
-    }
-
-    // Fallback 3: check all emoji sets
-    for (const set of this.emojiSets()) {
-      const emoji = set.emojis.find(e => e.shortcode === shortcode);
-      if (emoji?.url) {
-        return emoji.url;
-      }
-    }
-
-    return null;
+    // Fall back to user's emoji sets
+    return this.lookupEmojiUrlByShortcode(shortcode, event.content);
   }
 
   /**
@@ -835,18 +848,17 @@ export class ReactionButtonComponent {
   /**
    * Get the URL for a custom emoji by its shortcode format (:shortcode:)
    */
-  getCustomEmojiUrlByShortcode(emoji: string): string | undefined {
+  getCustomEmojiUrlByShortcode(emoji: string): string | null {
     if (!emoji.startsWith(':') || !emoji.endsWith(':')) {
-      return undefined;
+      return null;
     }
     const shortcode = emoji.slice(1, -1);
-    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
-    return customEmoji?.url;
+    return this.lookupEmojiUrlByShortcode(shortcode, emoji);
   }
 
   /**
    * Get the URL for a custom emoji in reaction groups display.
-   * First checks if any reaction event has the emoji tag, then falls back to user's custom emojis and recent emojis.
+   * First checks if any reaction event has the emoji tag, then falls back to user's emoji sets.
    */
   getCustomEmojiUrlForGroup(content: string): string | null {
     if (!content.startsWith(':') || !content.endsWith(':')) {
@@ -861,28 +873,8 @@ export class ReactionButtonComponent {
       return this.getCustomEmojiUrl(reactionWithTag.event);
     }
 
+    // Fall back to user's emoji sets
     const shortcode = content.slice(1, -1);
-
-    // Fallback 1: check user's loaded custom emojis
-    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
-    if (customEmoji?.url) {
-      return customEmoji.url;
-    }
-
-    // Fallback 2: check recent emojis (they store the URL when used)
-    const recentEmoji = this.recentEmojis().find(e => e.emoji === content);
-    if (recentEmoji?.url) {
-      return recentEmoji.url;
-    }
-
-    // Fallback 3: check all emoji sets
-    for (const set of this.emojiSets()) {
-      const emoji = set.emojis.find(e => e.shortcode === shortcode);
-      if (emoji?.url) {
-        return emoji.url;
-      }
-    }
-
-    return null;
+    return this.lookupEmojiUrlByShortcode(shortcode, content);
   }
 }
