@@ -641,9 +641,10 @@ export class App implements OnInit, OnDestroy {
     { path: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
     { path: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
     { path: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
-    { path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
+{ path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
     { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
     { path: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
+    { path: 'newsletter', label: $localize`:@@menu.newsletter:Newsletter`, icon: 'campaign', authenticated: true },
     { path: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
     { path: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
   ];

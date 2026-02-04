@@ -181,7 +181,7 @@
         </button>
         }
 
-        @for (item of navigationItems(); track $index) {
+@for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: item.path === 'people' ? false : true }"

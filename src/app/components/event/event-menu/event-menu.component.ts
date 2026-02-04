@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, signal, ApplicationRef, createComponent, EnvironmentInjector, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -72,6 +73,7 @@ export class EventMenuComponent {
   utilities = inject(UtilitiesService);
   playlistService = inject(PlaylistService);
   eventService = inject(EventService);
+  private router = inject(Router);
   private accountRelay = inject(AccountRelayService);
   private eventImageService = inject(EventImageService);
   private appRef = inject(ApplicationRef);
@@ -90,6 +92,12 @@ export class EventMenuComponent {
     }
 
     return event.pubkey === this.accountState.pubkey();
+  });
+
+  // Check if user has premium subscription
+  isPremium = computed<boolean>(() => {
+    const subscription = this.accountState.subscription();
+    return !!subscription?.expires && subscription.expires > Date.now();
   });
 
   // Check if we're on our own profile page
@@ -626,10 +634,10 @@ export class EventMenuComponent {
       // Wait for the component to render and profile data to load
       // This includes time for nostr mentions to be parsed and resolved
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Run change detection again to ensure profile and mentions are rendered
       componentRef.changeDetectorRef.detectChanges();
-      
+
       // Wait for any images to load
       await this.waitForImages(container);
 
@@ -681,5 +689,25 @@ export class EventMenuComponent {
     });
 
     return Promise.all(promises).then(() => undefined);
+  }
+
+  /**
+   * Navigate to the Newsletter page for this event
+   */
+  goToNewsletter(): void {
+    const encodedId = this.eventEncodedId();
+    if (encodedId) {
+      this.router.navigate(['/newsletter', encodedId]);
+    }
+  }
+
+  /**
+   * Navigate to the Event Analytics page for this event
+   */
+  goToEventAnalytics(): void {
+    const encodedId = this.eventEncodedId();
+    if (encodedId) {
+      this.router.navigate(['/analytics/event', encodedId]);
+    }
   }
 }

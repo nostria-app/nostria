@@ -13,10 +13,6 @@
     <mat-icon>content_copy</mat-icon>
     Copy
   </button>
-  <button mat-menu-item (click)="openEventDetails()">
-    <mat-icon>info</mat-icon>
-    Details
-  </button>
   <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">
@@ -57,9 +53,9 @@
     Bookmark
     }
   </button>
-  <button mat-menu-item (click)="layout.publishEvent(event())">
-    <mat-icon>publish</mat-icon>
-    Publish
+  <button mat-menu-item [matMenuTriggerFor]="advancedMenu">
+    <mat-icon>tune</mat-icon>
+    Advanced
   </button>
   @if (hasMedia()) {
   <mat-divider></mat-divider>
@@ -146,5 +142,26 @@
   </button>
   }
   }
+  }
+</mat-menu>
+
+<mat-menu #advancedMenu="matMenu">
+  <button mat-menu-item (click)="openEventDetails()">
+    <mat-icon>info</mat-icon>
+    Details
+  </button>
+  <button mat-menu-item (click)="layout.publishEvent(event())">
+    <mat-icon>publish</mat-icon>
+    Publish
+  </button>
+  @if (isOurEvent() && isPremium()) {
+  <button mat-menu-item (click)="goToNewsletter()">
+    <mat-icon>mail</mat-icon>
+    Newsletter
+  </button>
+  <button mat-menu-item (click)="goToEventAnalytics()">
+    <mat-icon>analytics</mat-icon>
+    Analytics
+  </button>
   }
 </mat-menu>
