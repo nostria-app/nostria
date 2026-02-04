@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, OnDestroy } from '@angular/core';
 
 interface PendingSubscription {
   key: string;
@@ -21,7 +21,7 @@ interface CachedResult {
 @Injectable({
   providedIn: 'root',
 })
-export class SubscriptionCacheService {
+export class SubscriptionCacheService implements OnDestroy {
   private pendingSubscriptions = new Map<string, PendingSubscription>();
   private resultCache = new Map<string, CachedResult>();
   private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes
@@ -32,9 +32,19 @@ export class SubscriptionCacheService {
   private readonly cacheMisses = signal(0);
   private readonly deduplicationHits = signal(0);
 
+  // Store interval handle for cleanup
+  private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     // Clean up expired cache entries every minute
-    setInterval(() => this.cleanupExpiredEntries(), 60 * 1000);
+    this.cleanupIntervalHandle = setInterval(() => this.cleanupExpiredEntries(), 60 * 1000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.cleanupIntervalHandle) {
+      clearInterval(this.cleanupIntervalHandle);
+      this.cleanupIntervalHandle = null;
+    }
   }
 
   /**

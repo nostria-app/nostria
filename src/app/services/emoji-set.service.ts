@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
 import { NostrService } from './nostr.service';
@@ -15,7 +15,7 @@ interface EmojiSet {
 @Injectable({
   providedIn: 'root',
 })
-export class EmojiSetService {
+export class EmojiSetService implements OnDestroy {
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);
   private readonly nostr = inject(NostrService);
@@ -30,9 +30,12 @@ export class EmojiSetService {
   // Pending requests to prevent duplicate fetches
   private pendingRequests = new Map<string, Promise<EmojiSet | null>>();
 
+  // Store interval handle for cleanup
+  private cacheCleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     // Clean up cache periodically
-    setInterval(() => {
+    this.cacheCleanupIntervalHandle = setInterval(() => {
       if (this.emojiSetCache.size > 100) {
         this.logger.debug(`Emoji set cache size: ${this.emojiSetCache.size}`);
         // Clear half of the cache if it gets too large
@@ -43,6 +46,13 @@ export class EmojiSetService {
         }
       }
     }, 60000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.cacheCleanupIntervalHandle) {
+      clearInterval(this.cacheCleanupIntervalHandle);
+      this.cacheCleanupIntervalHandle = null;
+    }
   }
 
   /**

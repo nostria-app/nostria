@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed, effect, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -83,6 +84,7 @@ export class FollowingComponent {
   profileState = inject(PROFILE_STATE);
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
@@ -158,7 +160,10 @@ export class FollowingComponent {
 
   constructor() {
     // Initialize search debounce
-    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
+    this.searchChanged.pipe(
+      debounceTime(300),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(term => {
       this.searchTerm.set(term);
     });
 

@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { DataService } from './data.service';
 import { nip19 } from 'nostr-tools';
 import type { ProfilePointer } from 'nostr-tools/nip19';
@@ -72,7 +72,7 @@ export interface ContentToken {
 @Injectable({
   providedIn: 'root',
 })
-export class ParsingService {
+export class ParsingService implements OnDestroy {
   data = inject(DataService);
   nostr = inject(NostrService);
   utilities = inject(UtilitiesService);
@@ -92,9 +92,12 @@ export class ParsingService {
     Promise<{ type: string; data: any; displayName: string } | null>
   >();
 
+  // Store interval handle for cleanup
+  private cacheCleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     // Clean up cache periodically to prevent memory leaks
-    setInterval(() => {
+    this.cacheCleanupIntervalHandle = setInterval(() => {
       if (this.nostrUriCache.size > 500) {
         this.logger.debug(
           `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`
@@ -106,6 +109,13 @@ export class ParsingService {
         }
       }
     }, 60000); // Check every minute
+  }
+
+  ngOnDestroy(): void {
+    if (this.cacheCleanupIntervalHandle) {
+      clearInterval(this.cacheCleanupIntervalHandle);
+      this.cacheCleanupIntervalHandle = null;
+    }
   }
 
   async parseNostrUri(

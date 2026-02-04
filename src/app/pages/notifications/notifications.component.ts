@@ -253,6 +253,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   contentNotifications = computed(() => {
     const filters = this.notificationFilters();
     const mutedAccounts = this.accountState.mutedAccounts();
+    // Convert to Set for O(1) lookups instead of O(n) array.includes()
+    const mutedAccountsSet = new Set(mutedAccounts);
     const query = this.searchQuery().toLowerCase().trim();
     const unreadOnly = this.showUnreadOnly();
 
@@ -270,7 +272,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
         // CRITICAL: Filter out notifications from muted/blocked accounts
         const contentNotif = n as ContentNotification;
-        if (contentNotif.authorPubkey && mutedAccounts.includes(contentNotif.authorPubkey)) {
+        if (contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
           return false;
         }
 

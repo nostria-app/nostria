@@ -186,6 +186,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
   private autoSaveTimer?: ReturnType<typeof setTimeout>;
+  private contentCheckIntervalHandle?: ReturnType<typeof setInterval>;
+  private otherChangesIntervalHandle?: ReturnType<typeof setInterval>;
 
   // Signals for reactive state
   content = signal('');
@@ -649,6 +651,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       clearTimeout(this.autoSaveTimer);
     }
 
+    // Clean up auto-save intervals
+    if (this.contentCheckIntervalHandle) {
+      clearInterval(this.contentCheckIntervalHandle);
+    }
+    if (this.otherChangesIntervalHandle) {
+      clearInterval(this.otherChangesIntervalHandle);
+    }
+
     // Clean up publish subscription
     if (this.publishSubscription) {
       this.publishSubscription.unsubscribe();
@@ -819,7 +829,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     };
 
     // Check for content changes every 2 seconds instead of 500ms
-    setInterval(checkAndScheduleAutoSave, 2000);
+    this.contentCheckIntervalHandle = setInterval(checkAndScheduleAutoSave, 2000);
 
     // Check other properties less frequently
     const mentionsSignal = this.mentions;
@@ -867,7 +877,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     };
 
     // Check other changes every 5 seconds
-    setInterval(checkOtherChanges, 5000);
+    this.otherChangesIntervalHandle = setInterval(checkOtherChanges, 5000);
   }
 
   private scheduleAutoSave(): void {

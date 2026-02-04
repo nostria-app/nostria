@@ -59,6 +59,170 @@
   }
 }
 
+// List filter button in header
+.list-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  height: 32px;
+  font-size: 0.8rem;
+  border-radius: var(--mat-sys-corner-full);
+  border-color: var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: 8px;
+  flex-shrink: 0;
+  max-width: 180px;
+
+  mat-icon:first-child {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dropdown-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-primary);
+  }
+
+  &.active {
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    border-color: var(--mat-sys-primary);
+
+    mat-icon:first-child {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// List filter menu styles
+::ng-deep .list-filter-menu {
+  min-width: 240px;
+  max-height: 400px;
+
+  .menu-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background-color: var(--mat-sys-surface-container-low);
+    cursor: default;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-primary);
+    }
+
+    span {
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .menu-loading-state,
+  .menu-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    gap: 8px;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      opacity: 0.5;
+    }
+
+    span {
+      font-size: 0.8rem;
+    }
+  }
+
+  .mat-mdc-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    min-height: 40px;
+
+    // Force horizontal layout for menu item content
+    .mdc-list-item__primary-text,
+    .mat-mdc-menu-item-text {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 8px !important;
+      width: 100% !important;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    .menu-item-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .menu-item-count {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: 9px;
+      background-color: var(--mat-sys-surface-container-highest);
+      font-size: 0.7rem;
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    &.active {
+      background-color: var(--mat-sys-primary-container);
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+
+      .menu-item-label {
+        color: var(--mat-sys-on-primary-container);
+      }
+
+      .menu-item-count {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+      }
+    }
+  }
+}
+
 // Summary Content - scrollable area
 .summary-content {
   display: flex;

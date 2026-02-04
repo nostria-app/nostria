@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -70,6 +71,7 @@ export class UserFollowingComponent {
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
   private panelNav = inject(PanelNavigationService);
+  private destroyRef = inject(DestroyRef);
 
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -144,7 +146,10 @@ export class UserFollowingComponent {
 
   constructor() {
     // Initialize search debounce
-    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
+    this.searchChanged.pipe(
+      debounceTime(300),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(term => {
       this.searchTerm.set(term);
     });
 

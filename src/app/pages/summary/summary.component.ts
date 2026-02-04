@@ -32,8 +32,8 @@ import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { FollowingDataService } from '../../services/following-data.service';
-import { CustomDialogService, CustomDialogRef } from '../../services/custom-dialog.service';
-import { EventDialogComponent } from '../event/event-dialog/event-dialog.component';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LayoutService } from '../../services/layout.service';
@@ -100,6 +100,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   private readonly location = inject(Location);
   private readonly onDemandUserData = inject(OnDemandUserDataService);
+  private readonly followSetsService = inject(FollowSetsService);
   private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
   private readonly router = inject(Router);
@@ -180,27 +181,51 @@ export class SummaryComponent implements OnInit, OnDestroy {
   selectedPosters = signal<Set<string>>(new Set());
 
   // Whether filter mode is active
-  isFilterMode = computed(() => this.selectedPosters().size > 0 || this.gmFilterEnabled());
+  isFilterMode = computed(() => this.selectedPosters().size > 0 || this.gmFilterEnabled() || !!this.selectedList());
 
   // GM/Pura Vida filter
   gmFilterEnabled = signal(false);
 
-  // Paginated active posters
-  activePosters = computed(() => {
+  // Selected list filter (from FollowSetsService)
+  selectedList = signal<FollowSet | null>(null);
+
+  // Expose follow sets from service
+  followSets = this.followSetsService.followSets;
+  followSetsLoading = this.followSetsService.isLoading;
+
+  // Filtered active posters (by list filter, then paginated)
+  filteredActivePosters = computed(() => {
     const all = this.allActivePosters();
+    const list = this.selectedList();
+    
+    if (!list) {
+      return all;
+    }
+    
+    // Filter by pubkeys in the selected list
+    const listPubkeys = new Set(list.pubkeys);
+    return all.filter(poster => listPubkeys.has(poster.pubkey));
+  });
+
+  // Paginated active posters (from filtered list)
+  activePosters = computed(() => {
+    const all = this.filteredActivePosters();
     const page = this.postersPage();
     return all.slice(0, page * MAX_POSTERS_DISPLAY);
   });
 
   // Check if there are more posters to load
   hasMorePosters = computed(() => {
-    const all = this.allActivePosters();
+    const all = this.filteredActivePosters();
     const shown = this.activePosters();
     return shown.length < all.length;
   });
 
-  // Total posters count
-  totalPostersCount = computed(() => this.allActivePosters().length);
+  // Total posters count (filtered)
+  totalPostersCount = computed(() => this.filteredActivePosters().length);
+
+  // Total unfiltered posters count (for showing "X of Y" in UI)
+  totalUnfilteredPostersCount = computed(() => this.allActivePosters().length);
 
   // Profile updates (pubkeys of people who updated their profiles)
   profileUpdates = signal<string[]>([]);
@@ -213,7 +238,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Timeline pagination
   timelinePage = signal(1);
 
-  // All timeline events (combined, filtered by selected posters, and sorted)
+  // All timeline events (combined, filtered by selected posters and profile search, and sorted)
   allTimelineEvents = computed(() => {
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
     const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
@@ -225,6 +250,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const selected = this.selectedPosters();
     if (selected.size > 0) {
       allEvents = allEvents.filter(e => selected.has(e.pubkey));
+    }
+
+    // Filter by selected list if active (applies to timeline too)
+    const list = this.selectedList();
+    if (list) {
+      const listPubkeys = new Set(list.pubkeys);
+      allEvents = allEvents.filter(e => listPubkeys.has(e.pubkey));
     }
 
     // Filter by GM/Pura Vida if enabled
@@ -680,6 +712,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   clearPosterFilter(): void {
     this.selectedPosters.set(new Set());
+    this.timelinePage.set(1);
+  }
+
+  clearListFilter(): void {
+    this.selectedList.set(null);
+    this.postersPage.set(1);
+    this.timelinePage.set(1);
+  }
+
+  selectList(list: FollowSet): void {
+    this.selectedList.set(list);
+    this.postersPage.set(1);
     this.timelinePage.set(1);
   }
 
