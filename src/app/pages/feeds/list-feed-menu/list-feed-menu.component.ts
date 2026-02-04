@@ -4,6 +4,7 @@ import {
   signal,
   output,
   effect,
+  computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -284,8 +285,10 @@ export class ListFeedMenuComponent {
   selectedInterest = signal<string>('');
   private lastLoadedPubkey = '';
 
-  // Expose service signals for people lists
-  followSets = this.followSetsService.followSets;
+  // Expose service signals for people lists, sorted alphabetically by title
+  followSets = computed(() =>
+    this.followSetsService.followSets().slice().sort((a, b) => a.title.localeCompare(b.title))
+  );
   isLoading = this.followSetsService.isLoading;
 
   // Interest sets state
