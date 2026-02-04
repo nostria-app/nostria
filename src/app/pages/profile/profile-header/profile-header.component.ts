@@ -240,11 +240,11 @@ export class ProfileHeaderComponent implements OnDestroy {
   });
 
   // Add signal for verified identifiers (supports multiple NIP-05 addresses)
-  verifiedIdentifiers = signal<Array<{
+  verifiedIdentifiers = signal<{
     value: string;
     valid: boolean;
     status: string;
-  }>>([]);
+  }[]>([]);
 
   // Legacy signal for backwards compatibility - returns first identifier
   verifiedIdentifier = computed(() => {
@@ -901,11 +901,11 @@ export class ProfileHeaderComponent implements OnDestroy {
   /**
    * Verify all NIP-05 identifiers for the profile
    */
-  private async getVerifiedIdentifiers(): Promise<Array<{
+  private async getVerifiedIdentifiers(): Promise<{
     value: string;
     valid: boolean;
     status: string;
-  }>> {
+  }[]> {
     const metadata = this.profile();
     if (!metadata || !metadata.data.nip05) {
       return [];
@@ -914,7 +914,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const nip05Data = metadata.data.nip05;
     const nip05List = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
 
-    const results: Array<{ value: string; valid: boolean; status: string }> = [];
+    const results: { value: string; valid: boolean; status: string }[] = [];
 
     for (const nip05 of nip05List) {
       if (!nip05 || typeof nip05 !== 'string') continue;

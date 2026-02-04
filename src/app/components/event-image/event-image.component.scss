@@ -1,0 +1,106 @@
+:host {
+  display: block;
+}
+
+.event-image-container {
+  // Use theme-aware background color
+  background-color: var(--mat-sys-surface);
+  border-radius: 12px;
+  overflow: hidden;
+  // Ensure consistent font rendering for screenshot
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.event-card {
+  // Use lightest surface for content cards - maximum readability
+  background-color: var(--mat-sys-surface-container-lowest);
+  box-shadow: none !important;
+  border-radius: 12px;
+  margin: 0;
+  
+  mat-card-header {
+    padding: 16px 16px 8px 16px;
+  }
+  
+  mat-card-content {
+    padding: 0 16px 16px 16px;
+  }
+}
+
+.timestamp {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
+.branding-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  gap: 12px;
+}
+
+.event-id {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--mat-sys-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.nostria-branding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.content-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.nostria-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.nostria-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+  letter-spacing: 0.02em;
+}
+
+// Ensure content doesn't overflow
+:host ::ng-deep {
+  .content-container {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+  
+  // Hide social previews in screenshot (can be too large)
+  .social-preview {
+    display: none;
+  }
+  
+  // Ensure images fit within container
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}

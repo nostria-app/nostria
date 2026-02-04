@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, ApplicationRef, createComponent, EnvironmentInjector, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -39,6 +40,7 @@ import { EventService } from '../../../services/event';
 import { BookmarkListSelectorComponent } from '../../bookmark-list-selector/bookmark-list-selector.component';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../share-article-dialog/share-article-dialog.component';
+import { EventImageService } from '../../../services/event-image.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -71,6 +73,10 @@ export class EventMenuComponent {
   playlistService = inject(PlaylistService);
   eventService = inject(EventService);
   private accountRelay = inject(AccountRelayService);
+  private eventImageService = inject(EventImageService);
+  private appRef = inject(ApplicationRef);
+  private environmentInjector = inject(EnvironmentInjector);
+  private platformId = inject(PLATFORM_ID);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -568,5 +574,113 @@ export class EventMenuComponent {
       'Dismiss',
       { duration: 3000 }
     );
+  }
+
+  /**
+   * Copy the event as an image/screenshot to the clipboard
+   */
+  async copyAsImage(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const ev = this.event();
+    if (!ev) {
+      return;
+    }
+
+    try {
+      this.snackBar.open('Generating screenshot...', undefined, { duration: 2000 });
+
+      // Create a container for rendering the screenshot component
+      // Position it at 0,0 and make it visible so IntersectionObserver works
+      // The brief flash is acceptable for screenshot generation
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '0';
+      container.style.top = '0';
+      container.style.width = '500px';
+      container.style.zIndex = '9999';
+      container.style.background = 'var(--mat-sys-surface)';
+      // Ensure the container inherits theme styles
+      container.className = document.body.className;
+      document.body.appendChild(container);
+
+      // Dynamically import EventImageComponent to avoid circular dependency
+      const { EventImageComponent } = await import('../../event-image/event-image.component');
+
+      // Dynamically create the EventImageComponent
+      const componentRef = createComponent(EventImageComponent, {
+        environmentInjector: this.environmentInjector,
+        hostElement: container
+      });
+
+      // Set the event input
+      componentRef.setInput('event', ev);
+      componentRef.setInput('width', 500);
+
+      // Attach to Angular's change detection
+      this.appRef.attachView(componentRef.hostView);
+
+      // Trigger change detection to render the component
+      componentRef.changeDetectorRef.detectChanges();
+
+      // Wait for the component to render and profile data to load
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Run change detection again to ensure profile is rendered
+      componentRef.changeDetectorRef.detectChanges();
+      
+      // Wait for any images to load
+      await this.waitForImages(container);
+
+      // Capture the element as an image
+      const element = container.querySelector('.event-image-container') as HTMLElement;
+      if (!element) {
+        throw new Error('Could not find event image container');
+      }
+
+      // Get the computed background color for the screenshot
+      const computedStyle = getComputedStyle(element);
+      const backgroundColor = computedStyle.backgroundColor || '#ffffff';
+
+      const success = await this.eventImageService.captureAndCopy(element, {
+        backgroundColor,
+        pixelRatio: 2
+      });
+
+      // Cleanup
+      this.appRef.detachView(componentRef.hostView);
+      componentRef.destroy();
+      document.body.removeChild(container);
+
+      if (!success) {
+        this.snackBar.open('Failed to copy screenshot', 'Dismiss', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Failed to copy event as image:', error);
+      this.snackBar.open('Failed to generate screenshot', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Wait for all images in a container to load
+   */
+  private waitForImages(container: HTMLElement): Promise<void> {
+    const images = container.querySelectorAll('img');
+    const promises: Promise<void>[] = [];
+
+    images.forEach(img => {
+      if (!img.complete) {
+        promises.push(new Promise((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // Resolve even on error to not block
+          // Timeout fallback
+          setTimeout(resolve, 3000);
+        }));
+      }
+    });
+
+    return Promise.all(promises).then(() => undefined);
   }
 }
