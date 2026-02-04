@@ -89,6 +89,14 @@
         </div>
       </div>
       }
+
+      <!-- Link to emoji collections -->
+      <div class="emoji-collections-link">
+        <a routerLink="/collections/emojis" (click)="closeMenu()">
+          <mat-icon>add_circle_outline</mat-icon>
+          <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
+        </a>
+      </div>
     </div>
   </mat-menu>
   } @else {
@@ -188,6 +196,14 @@
           </div>
         </div>
         }
+
+        <!-- Link to emoji collections -->
+        <div class="emoji-collections-link">
+          <a routerLink="/collections/emojis" (click)="closeMenu()">
+            <mat-icon>add_circle_outline</mat-icon>
+            <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
+          </a>
+        </div>
       </div>
     </mat-menu>
   </div>

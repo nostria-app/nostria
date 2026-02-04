@@ -17,6 +17,54 @@
   </div>
   }
 
+  <!-- Suggested Emoji Packs -->
+  @if (suggestedPacks().length > 0) {
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>auto_awesome</mat-icon>
+        <h2 i18n="@@emoji-sets.suggested.title">Suggested Emoji Packs</h2>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      <div class="suggested-packs-grid">
+        @for (pack of suggestedPacks(); track pack.identifier) {
+        <div class="suggested-pack-card">
+          <div class="pack-header">
+            <span class="pack-title">{{ pack.title }}</span>
+            <div class="pack-action">
+              @if (isPackInstalled(pack)) {
+              <mat-icon class="installed-icon" matTooltip="Already installed">check_circle</mat-icon>
+              } @else if (pack.isInstalling) {
+              <mat-spinner diameter="20"></mat-spinner>
+              } @else {
+              <button mat-flat-button (click)="installPack(pack)" [disabled]="pack.isLoading">
+                Install
+              </button>
+              }
+            </div>
+          </div>
+          <div class="pack-preview">
+            @if (pack.isLoading) {
+            <mat-spinner diameter="24"></mat-spinner>
+            } @else if (pack.previewEmojis.length === 0) {
+            <span class="no-preview">No preview available</span>
+            } @else {
+            @for (emoji of pack.previewEmojis; track emoji.shortcode) {
+            <img [src]="emoji.url" [alt]="emoji.shortcode" class="preview-emoji">
+            }
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+  </mat-card>
+  }
+
   <!-- My Emojis (kind 10030) -->
   @if (preferredEmojis().length > 0) {
   <mat-card class="section-card">

@@ -302,3 +302,31 @@
   gap: 4px;
   padding: 12px;
 }
+
+// Link to emoji collections page
+.emoji-collections-link {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding: 8px 12px;
+  flex-shrink: 0;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    padding: 4px 0;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
