@@ -102,37 +102,87 @@
     }
   }
 
-  // Menu styling - Match List Feeds exactly
-  ::ng-deep .list-selector-menu {
-    min-width: 280px;
-    max-height: 500px;
-    margin-top: 8px;
+  // List filter menu styles (same as Summary)
+  ::ng-deep .list-filter-menu {
+    min-width: 240px;
+    max-height: 400px;
+
+    .menu-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background-color: var(--mat-sys-surface-container-low);
+      cursor: default;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        color: var(--mat-sys-primary);
+      }
+
+      span {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface);
+      }
+    }
 
     .mat-mdc-menu-item {
-      position: relative;
-      padding: 10px 16px !important;
-      min-height: 44px !important;
-      height: auto !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      min-height: 40px;
 
-      // Force horizontal layout
+      // Force horizontal layout for menu item content
+      .mdc-list-item__primary-text,
       .mat-mdc-menu-item-text {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 12px !important;
+        gap: 8px !important;
         width: 100% !important;
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
+      }
+
+      .menu-item-label {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .menu-item-count {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background-color: var(--mat-sys-surface-container-highest);
+        font-size: 0.7rem;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
       }
 
       &.active {
         background-color: var(--mat-sys-primary-container);
 
-        .list-item-icon {
+        mat-icon {
           color: var(--mat-sys-primary);
         }
 
-        .list-item-name {
+        .menu-item-label {
           color: var(--mat-sys-on-primary-container);
-          font-weight: 500;
         }
 
         .menu-item-count {
@@ -140,39 +190,6 @@
           color: var(--mat-sys-on-primary);
         }
       }
-    }
-
-    .list-item-icon {
-      width: 20px;
-      height: 20px;
-      font-size: 20px;
-      color: var(--mat-sys-on-surface-variant);
-      flex-shrink: 0;
-    }
-
-    .list-item-name {
-      font-size: 14px;
-      color: var(--mat-sys-on-surface);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .menu-item-count {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      height: 20px;
-      padding: 0 6px;
-      border-radius: 10px;
-      background-color: var(--mat-sys-surface-container-highest);
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--mat-sys-on-surface);
-      flex-shrink: 0;
     }
   }
 }
@@ -787,7 +804,7 @@
   }
 }
 
-.people-sidebar.compact ~ .alphabet-nav-container {
+.people-sidebar.compact~.alphabet-nav-container {
   display: none;
 }
 

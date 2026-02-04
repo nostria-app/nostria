@@ -27,6 +27,7 @@ import { ArticleEventComponent } from '../../components/event-types/article-even
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ArticlesSettingsDialogComponent } from './articles-settings-dialog/articles-settings-dialog.component';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 
 const PAGE_SIZE = 30;
 const RELAY_SET_KIND = 30002;
@@ -36,7 +37,7 @@ const BATCH_DELAY_MS = 100;
 
 @Component({
   selector: 'app-articles-discover',
-imports: [
+  imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
@@ -50,6 +51,7 @@ imports: [
     UserProfileComponent,
     AgoPipe,
     ArticlesSettingsDialogComponent,
+    ListFilterMenuComponent,
   ],
   templateUrl: './articles.component.html',
   styleUrls: ['./articles.component.scss'],
@@ -74,7 +76,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   allArticles = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
-  
+
   // Filter signals for which articles to show
   showFollowing = signal(true);
   showPublic = signal(false);
@@ -117,7 +119,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private publicSubscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
   private wasScrolledToBottom = false;
-  
+
   // Cooldown to prevent rapid-fire loading
   private lastLoadTime = 0;
   private readonly LOAD_COOLDOWN_MS = 2000;
@@ -193,28 +195,28 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
   currentArticles = computed(() => {
     const filter = this.selectedListFilter();
-    
+
     // When using a specific list (not 'following' or 'public'), show list articles
     if (filter !== 'following' && filter !== 'public') {
       const listArticles = this.allFollowingArticles();
       const displayCount = this.followingDisplayCount();
       return listArticles.slice(0, displayCount);
     }
-    
+
     const showFollowing = this.showFollowing();
     const showPublic = this.showPublic();
-    
+
     // Combine articles based on what's enabled
     const articles: Event[] = [];
-    
+
     if (showFollowing) {
       articles.push(...this.followingArticles());
     }
-    
+
     if (showPublic) {
       articles.push(...this.publicArticles());
     }
-    
+
     // Sort combined articles by date (newest first)
     return articles.sort((a, b) => b.created_at - a.created_at);
   });
@@ -230,15 +232,15 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
   hasMore = computed(() => {
     const filter = this.selectedListFilter();
-    
+
     // When using a specific list, check if there are more list articles
     if (filter !== 'following' && filter !== 'public') {
       return this.allFollowingArticles().length > this.followingDisplayCount();
     }
-    
+
     const showFollowing = this.showFollowing();
     const showPublic = this.showPublic();
-    
+
     // Has more if either enabled source has more
     if (showFollowing && this.hasMoreFollowing()) return true;
     if (showPublic && this.hasMorePublic()) return true;
@@ -277,7 +279,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         if (!queryParams['list']) {
           const savedFilter = this.accountLocalState.getArticlesListFilter(pubkey);
           this.selectedListFilter.set(savedFilter);
-          
+
           // Update following/public toggles based on saved filter
           if (savedFilter === 'following') {
             this.showFollowing.set(true);
@@ -306,11 +308,11 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     effect(() => {
       const showFollowing = this.showFollowing();
       const showPublic = this.showPublic();
-      
+
       if (showFollowing) {
         this.startFollowingSubscription();
       }
-      
+
       if (showPublic && !this.publicSubscription) {
         this.startPublicSubscription();
       }
@@ -487,6 +489,55 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: { list: filterValue },
+        queryParamsHandling: 'merge'
+      });
+    } else {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {},
+        queryParamsHandling: ''
+      });
+    }
+
+    // Start following subscription if not running
+    if (!this.followingSubscription) {
+      this.startFollowingSubscription();
+    }
+  }
+
+  /**
+   * Handle filter change from ListFilterMenuComponent
+   */
+  onListFilterChanged(filter: ListFilterValue): void {
+    // Map the filter to the internal logic
+    if (filter === 'following') {
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    } else if (filter === 'all') {
+      // Map 'all' (Public in the menu) to public feed
+      this.showFollowing.set(false);
+      this.showPublic.set(true);
+      filter = 'public'; // Store as 'public' internally
+    } else {
+      // Follow set selected
+      this.showFollowing.set(true);
+      this.showPublic.set(false);
+    }
+
+    this.selectedListFilter.set(filter);
+
+    // Save preference
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setArticlesShowFollowing(pubkey, this.showFollowing());
+      this.accountLocalState.setArticlesShowPublic(pubkey, this.showPublic());
+    }
+
+    // Update URL with list param or clear it
+    if (filter !== 'following' && filter !== 'public') {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { list: filter },
         queryParamsHandling: 'merge'
       });
     } else {
@@ -898,7 +949,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     if (this.showPublic()) {
       this.startPublicSubscription();
     }
-    
+
     // If nothing is enabled, stop loading
     if (!this.showFollowing() && !this.showPublic()) {
       this.loading.set(false);

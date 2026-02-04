@@ -37,6 +37,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LayoutService } from '../../services/layout.service';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 
 interface ActivitySummary {
   notesCount: number;
@@ -85,7 +86,8 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatMenuModule,
     OverlayModule,
     UserProfileComponent,
-    AgoPipe
+    AgoPipe,
+    ListFilterMenuComponent
   ],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
@@ -198,11 +200,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
   filteredActivePosters = computed(() => {
     const all = this.allActivePosters();
     const list = this.selectedList();
-    
+
     if (!list) {
       return all;
     }
-    
+
     // Filter by pubkeys in the selected list
     const listPubkeys = new Set(list.pubkeys);
     return all.filter(poster => listPubkeys.has(poster.pubkey));
@@ -761,8 +763,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timelinePage.set(1);
   }
 
-  selectList(list: FollowSet): void {
-    this.selectedList.set(list);
+  onFilterChanged(filter: ListFilterValue): void {
+    // Filter change is handled by followSetChanged
+    this.postersPage.set(1);
+    this.timelinePage.set(1);
+  }
+
+  onFollowSetChanged(followSet: FollowSet | null): void {
+    this.selectedList.set(followSet);
     this.postersPage.set(1);
     this.timelinePage.set(1);
   }

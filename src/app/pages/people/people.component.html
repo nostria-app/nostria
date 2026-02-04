@@ -2,12 +2,10 @@
 <div class="panel-header">
   <!-- Interactive List Selector -->
   @if (allFollowSets().length > 0) {
-  <button 
-    class="list-selector-button" 
-    mat-button 
-    [matMenuTriggerFor]="followSetsMenu"
+  <button class="list-selector-button" mat-button [matMenuTriggerFor]="followSetsMenu"
     [class.has-selection]="selectedFollowSet()">
-    <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' : (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : 'group')) : 'people' }}</mat-icon>
+    <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' :
+      (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : 'group')) : 'people' }}</mat-icon>
     <span class="selector-label">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</span>
     @if (selectedFollowSet()) {
     <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
@@ -15,16 +13,20 @@
     <mat-icon class="selector-arrow">expand_more</mat-icon>
   </button>
 
-  <mat-menu #followSetsMenu="matMenu" class="list-selector-menu">
-    <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
-      <mat-icon class="list-item-icon">people</mat-icon>
-      <span class="list-item-name">Following</span>
-    </button>
+  <mat-menu #followSetsMenu="matMenu" class="list-filter-menu">
+    <div class="menu-section-header" role="presentation">
+      <mat-icon>people</mat-icon>
+      <span>People Lists</span>
+    </div>
     <mat-divider></mat-divider>
+    <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
+      <mat-icon>people</mat-icon>
+      <span class="menu-item-label">Following</span>
+    </button>
     @for (set of allFollowSets(); track set.id) {
     <button mat-menu-item (click)="selectFollowSet(set)" [class.active]="selectedFollowSet()?.dTag === set.dTag">
-      <mat-icon class="list-item-icon">{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
-      <span class="list-item-name">{{ set.title }}</span>
+      <mat-icon>{{ set.isPrivate ? 'lock' : (set.dTag === 'nostria-favorites' ? 'star' : 'group') }}</mat-icon>
+      <span class="menu-item-label">{{ set.title }}</span>
       <span class="menu-item-count">{{ set.pubkeys.length }}</span>
     </button>
     }
@@ -56,12 +58,12 @@
   <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List">
     <mat-icon>edit</mat-icon>
   </button>
-  
+
   <!-- Shortcuts menu (only when a list is selected) -->
   <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in...">
     <mat-icon>open_in_new</mat-icon>
   </button>
-  
+
   <mat-menu #shortcutsMenu="matMenu">
     <button mat-menu-item (click)="goToSummary()">
       <mat-icon>summarize</mat-icon>
@@ -190,10 +192,8 @@
   <!-- Alphabet Navigation Sidebar - sticky within scroll context -->
   @if (showAlphabetNav() && sortedPeople().length > 0) {
   <div class="alphabet-nav-container">
-    <div class="alphabet-nav" #alphabetNav
-      (touchstart)="onAlphabetTouchStart($event)"
-      (touchmove)="onAlphabetTouchMove($event)"
-      (touchend)="onAlphabetTouchEnd()">
+    <div class="alphabet-nav" #alphabetNav (touchstart)="onAlphabetTouchStart($event)"
+      (touchmove)="onAlphabetTouchMove($event)" (touchend)="onAlphabetTouchEnd()">
       @for (letter of availableLetters(); track letter) {
       <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
         (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
