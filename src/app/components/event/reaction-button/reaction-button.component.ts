@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
@@ -6,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { RouterLink } from '@angular/router';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../../../interfaces';
@@ -17,6 +19,217 @@ import { LayoutService } from '../../../services/layout.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
 import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
+
+// Emoji categories with icons
+const EMOJI_CATEGORIES = [
+  { id: 'smileys', label: 'Smileys', icon: 'sentiment_satisfied', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
+  { id: 'gestures', label: 'Gestures', icon: 'waving_hand', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
+  { id: 'hearts', label: 'Hearts', icon: 'favorite', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '❤️‍🔥', '❤️‍🩹'] },
+  { id: 'animals', label: 'Animals', icon: 'pets', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪲', '🪳', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'] },
+  { id: 'food', label: 'Food', icon: 'restaurant', emojis: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
+  { id: 'activities', label: 'Activities', icon: 'sports_soccer', emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🏊', '🚣', '🧗', '🚴', '🚵', '🎪', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩'] },
+  { id: 'travel', label: 'Travel', icon: 'flight', emojis: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🛰️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '🪝', '⛽', '🚧', '🚦', '🚥', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🕍', '🛕', '🕋', '⛩️', '🛤️', '🛣️', '🗾', '🎑', '🏞️', '🌅', '🌄', '🌠', '🎇', '🎆', '🌇', '🌆', '🏙️', '🌃', '🌌', '🌉', '🌁'] },
+  { id: 'objects', label: 'Objects', icon: 'lightbulb', emojis: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🪠', '🧺', '🧻', '🚽', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '🪧', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'] },
+  { id: 'symbols', label: 'Symbols', icon: 'emoji_symbols', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧️', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '✖️', '🟰', '♾️', '💲', '💱', '™️', '©️', '®️', '👁️‍🗨️', '🔚', '🔙', '🔛', '🔝', '🔜', '〰️', '➰', '➿', '✔️', '☑️', '🔘', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '💬', '💭', '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧'] },
+  { id: 'flags', label: 'Flags', icon: 'flag', emojis: ['🏳️', '🏴', '🏴‍☠️', '🏁', '🚩', '🎌', '🏳️‍🌈', '🏳️‍⚧️', '🇺🇸', '🇬🇧', '🇨🇦', '🇦🇺', '🇩🇪', '🇫🇷', '🇪🇸', '🇮🇹', '🇯🇵', '🇰🇷', '🇨🇳', '🇮🇳', '🇧🇷', '🇲🇽', '🇷🇺', '🇿🇦', '🇳🇬', '🇪🇬', '🇦🇷', '🇨🇱', '🇨🇴', '🇵🇪', '🇻🇪', '🇵🇱', '🇳🇱', '🇧🇪', '🇸🇪', '🇳🇴', '🇩🇰', '🇫🇮', '🇮🇪', '🇵🇹', '🇬🇷', '🇹🇷', '🇸🇦', '🇦🇪', '🇮🇱', '🇹🇭', '🇻🇳', '🇵🇭', '🇮🇩', '🇲🇾', '🇸🇬', '🇳🇿', '🇨🇭', '🇦🇹', '🇭🇺', '🇨🇿', '🇷🇴', '🇺🇦', '🇭🇷', '🇷🇸', '🇧🇬', '🇸🇰', '🇸🇮'] }
+];
+
+// Keyword-based emoji search map
+const EMOJI_KEYWORDS: Record<string, string[]> = {
+  // Smileys
+  '😀': ['grin', 'happy', 'smile', 'face'],
+  '😃': ['smile', 'happy', 'grin', 'face', 'open'],
+  '😄': ['smile', 'happy', 'grin', 'face', 'eyes'],
+  '😁': ['grin', 'teeth', 'happy', 'beam'],
+  '😆': ['laugh', 'satisfied', 'xd', 'squint'],
+  '😅': ['sweat', 'nervous', 'laugh', 'relief'],
+  '🤣': ['rofl', 'rolling', 'laugh', 'lol', 'lmao'],
+  '😂': ['laugh', 'cry', 'tears', 'joy', 'lol', 'funny'],
+  '🙂': ['smile', 'slight', 'face'],
+  '😊': ['blush', 'smile', 'happy', 'pleased'],
+  '😇': ['angel', 'innocent', 'halo', 'blessed'],
+  '🥰': ['love', 'hearts', 'adore', 'affection'],
+  '😍': ['love', 'heart', 'eyes', 'crush', 'adore'],
+  '🤩': ['star', 'eyes', 'excited', 'starstruck', 'wow'],
+  '😘': ['kiss', 'love', 'heart', 'blow'],
+  '😋': ['yummy', 'delicious', 'tongue', 'tasty', 'food'],
+  '😛': ['tongue', 'playful', 'silly'],
+  '😜': ['wink', 'tongue', 'playful', 'crazy', 'silly'],
+  '🤪': ['crazy', 'zany', 'wild', 'goofy', 'silly'],
+  '😝': ['tongue', 'squint', 'playful', 'silly'],
+  '🤑': ['money', 'rich', 'dollar', 'greedy'],
+  '🤗': ['hug', 'hugging', 'embrace', 'open', 'arms'],
+  '🤔': ['think', 'thinking', 'hmm', 'consider', 'ponder'],
+  '🤐': ['zip', 'mouth', 'secret', 'quiet', 'silent'],
+  '🤨': ['raised', 'eyebrow', 'skeptical', 'suspicious'],
+  '😐': ['neutral', 'meh', 'blank', 'expressionless'],
+  '😑': ['expressionless', 'blank', 'meh', 'unamused'],
+  '😶': ['silent', 'mute', 'speechless', 'no', 'mouth'],
+  '😏': ['smirk', 'smug', 'sly', 'suggestive'],
+  '😒': ['unamused', 'side', 'eye', 'meh', 'annoyed'],
+  '🙄': ['eye', 'roll', 'annoyed', 'frustrated', 'whatever'],
+  '😬': ['grimace', 'awkward', 'nervous', 'cringe'],
+  '😌': ['relieved', 'content', 'peaceful', 'calm'],
+  '😔': ['sad', 'pensive', 'disappointed', 'down'],
+  '😪': ['sleepy', 'tired', 'sleep', 'drowsy'],
+  '🤤': ['drool', 'drooling', 'hungry', 'want', 'desire'],
+  '😴': ['sleep', 'sleeping', 'zzz', 'tired', 'snore'],
+  '😷': ['mask', 'sick', 'medical', 'covid', 'flu'],
+  '🤒': ['sick', 'thermometer', 'fever', 'ill'],
+  '🤕': ['hurt', 'injured', 'bandage', 'head'],
+  '🤢': ['sick', 'nauseous', 'green', 'queasy'],
+  '🤮': ['vomit', 'sick', 'throw', 'up', 'puke'],
+  '🤧': ['sneeze', 'sick', 'tissue', 'cold', 'allergies'],
+  '🥵': ['hot', 'heat', 'sweating', 'fever', 'overheated'],
+  '🥶': ['cold', 'freezing', 'frozen', 'ice', 'winter'],
+  '🥴': ['drunk', 'woozy', 'dizzy', 'tipsy', 'intoxicated'],
+  '😵': ['dizzy', 'dead', 'knocked', 'out', 'spiral'],
+  '🤯': ['mind', 'blown', 'explode', 'shocked', 'wow'],
+  '🤠': ['cowboy', 'western', 'yeehaw', 'hat'],
+  '🥳': ['party', 'celebration', 'birthday', 'celebrate', 'woohoo'],
+  '😎': ['cool', 'sunglasses', 'awesome', 'chill'],
+  '🤓': ['nerd', 'geek', 'glasses', 'smart'],
+  '🧐': ['monocle', 'fancy', 'investigate', 'curious'],
+  // Gestures
+  '👍': ['thumbs', 'up', 'like', 'approve', 'yes', 'good', 'ok', 'okay'],
+  '👎': ['thumbs', 'down', 'dislike', 'disapprove', 'no', 'bad'],
+  '👋': ['wave', 'hi', 'hello', 'bye', 'goodbye', 'hand'],
+  '👏': ['clap', 'applause', 'bravo', 'congrats', 'praise'],
+  '🙌': ['raise', 'hands', 'hooray', 'celebration', 'praise'],
+  '🤝': ['handshake', 'deal', 'agreement', 'partnership'],
+  '🙏': ['pray', 'please', 'thanks', 'namaste', 'hope', 'wish'],
+  '✌️': ['peace', 'victory', 'two', 'fingers'],
+  '🤞': ['crossed', 'fingers', 'luck', 'hope', 'wish'],
+  '🤟': ['love', 'you', 'rock', 'sign'],
+  '🤘': ['rock', 'metal', 'horns', 'devil'],
+  '👌': ['ok', 'okay', 'perfect', 'fine', 'good'],
+  '🤌': ['italian', 'pinched', 'fingers', 'chef', 'kiss'],
+  '💪': ['muscle', 'strong', 'flex', 'bicep', 'power', 'strength'],
+  '👊': ['fist', 'bump', 'punch', 'bro'],
+  '✊': ['fist', 'raised', 'power', 'solidarity'],
+  // Hearts and love
+  '❤️': ['heart', 'love', 'red', 'romance'],
+  '🧡': ['heart', 'orange', 'love'],
+  '💛': ['heart', 'yellow', 'love', 'friendship'],
+  '💚': ['heart', 'green', 'love', 'nature', 'envy'],
+  '💙': ['heart', 'blue', 'love', 'trust'],
+  '💜': ['heart', 'purple', 'love'],
+  '🖤': ['heart', 'black', 'love', 'dark'],
+  '🤍': ['heart', 'white', 'love', 'pure'],
+  '💕': ['hearts', 'two', 'love', 'affection'],
+  '💖': ['heart', 'sparkle', 'love', 'sparkling'],
+  '💗': ['heart', 'growing', 'love'],
+  '💘': ['heart', 'arrow', 'cupid', 'love', 'valentine'],
+  '💝': ['heart', 'ribbon', 'gift', 'love', 'valentine'],
+  '💔': ['broken', 'heart', 'sad', 'heartbreak'],
+  '🔥': ['fire', 'hot', 'flame', 'lit', 'awesome', 'popular'],
+  // Celebration
+  '🎉': ['party', 'celebration', 'tada', 'congratulations', 'confetti'],
+  '🎊': ['confetti', 'ball', 'party', 'celebration'],
+  '🎈': ['balloon', 'party', 'birthday', 'celebration'],
+  '🎁': ['gift', 'present', 'wrapped', 'birthday', 'christmas'],
+  '🎂': ['cake', 'birthday', 'celebration', 'dessert'],
+  '🥂': ['cheers', 'toast', 'champagne', 'celebrate', 'glasses'],
+  '🍾': ['champagne', 'bottle', 'celebrate', 'party', 'pop'],
+  // Animals
+  '🐶': ['dog', 'puppy', 'pet', 'animal', 'cute'],
+  '🐱': ['cat', 'kitten', 'pet', 'animal', 'cute'],
+  '🐰': ['rabbit', 'bunny', 'pet', 'animal', 'easter'],
+  '🐻': ['bear', 'animal', 'teddy', 'cute'],
+  '🐼': ['panda', 'bear', 'animal', 'cute', 'china'],
+  '🦊': ['fox', 'animal', 'clever', 'cute'],
+  '🦁': ['lion', 'king', 'animal', 'brave', 'cat'],
+  '🐯': ['tiger', 'animal', 'cat', 'fierce'],
+  '🦄': ['unicorn', 'magic', 'fantasy', 'rainbow', 'horse'],
+  '🐝': ['bee', 'honey', 'insect', 'buzz'],
+  '🦋': ['butterfly', 'insect', 'beautiful', 'nature'],
+  '🐢': ['turtle', 'slow', 'animal', 'shell'],
+  '🐍': ['snake', 'reptile', 'slither'],
+  '🐬': ['dolphin', 'ocean', 'sea', 'marine', 'smart'],
+  '🐳': ['whale', 'ocean', 'sea', 'marine', 'big'],
+  '🦈': ['shark', 'ocean', 'fish', 'predator'],
+  // Food and drink
+  '🍕': ['pizza', 'food', 'italian', 'slice'],
+  '🍔': ['burger', 'hamburger', 'food', 'fast'],
+  '🍟': ['fries', 'french', 'food', 'fast', 'potato'],
+  '🌮': ['taco', 'mexican', 'food'],
+  '🌯': ['burrito', 'mexican', 'food', 'wrap'],
+  '🍣': ['sushi', 'japanese', 'food', 'fish', 'rice'],
+  '🍜': ['noodles', 'ramen', 'soup', 'asian', 'food'],
+  '🍝': ['spaghetti', 'pasta', 'italian', 'food'],
+  '🍦': ['ice', 'cream', 'dessert', 'sweet', 'cold'],
+  '🍩': ['donut', 'doughnut', 'dessert', 'sweet'],
+  '🍪': ['cookie', 'dessert', 'sweet', 'biscuit'],
+  '🍫': ['chocolate', 'candy', 'sweet', 'dessert'],
+  '🍰': ['cake', 'slice', 'dessert', 'sweet', 'birthday'],
+  '☕': ['coffee', 'drink', 'hot', 'cafe', 'morning', 'espresso'],
+  '🍵': ['tea', 'drink', 'hot', 'green', 'japanese'],
+  '🍺': ['beer', 'drink', 'alcohol', 'cheers'],
+  '🍻': ['beers', 'cheers', 'drink', 'alcohol', 'toast'],
+  '🍷': ['wine', 'drink', 'alcohol', 'red', 'glass'],
+  // Objects and tech
+  '💻': ['computer', 'laptop', 'tech', 'work', 'device'],
+  '📱': ['phone', 'mobile', 'smartphone', 'device', 'cell'],
+  '⌨️': ['keyboard', 'typing', 'computer', 'tech'],
+  '🖥️': ['desktop', 'computer', 'monitor', 'screen'],
+  '🎮': ['game', 'controller', 'gaming', 'video', 'play'],
+  '🎧': ['headphones', 'music', 'audio', 'listen'],
+  '📷': ['camera', 'photo', 'picture', 'photography'],
+  '📸': ['camera', 'flash', 'photo', 'selfie'],
+  '🎬': ['movie', 'film', 'cinema', 'clapperboard', 'action'],
+  '📚': ['books', 'reading', 'study', 'library', 'learn'],
+  '📖': ['book', 'reading', 'open', 'study'],
+  '✏️': ['pencil', 'write', 'edit', 'school'],
+  '💡': ['idea', 'lightbulb', 'bright', 'think', 'creative'],
+  '🔑': ['key', 'lock', 'security', 'unlock'],
+  '💰': ['money', 'bag', 'rich', 'cash', 'dollar'],
+  '💵': ['dollar', 'money', 'cash', 'bill', 'currency'],
+  '💎': ['diamond', 'gem', 'precious', 'valuable', 'jewel'],
+  // Nature and weather
+  '🌸': ['cherry', 'blossom', 'flower', 'spring', 'pink', 'japan'],
+  '🌹': ['rose', 'flower', 'red', 'love', 'romantic'],
+  '🌻': ['sunflower', 'flower', 'yellow', 'summer', 'sun'],
+  '🌺': ['hibiscus', 'flower', 'tropical', 'pink'],
+  '🌈': ['rainbow', 'colors', 'colorful', 'pride', 'lgbtq'],
+  '⭐': ['star', 'favorite', 'night', 'sky', 'special'],
+  '🌟': ['star', 'glowing', 'sparkle', 'shine', 'special'],
+  '✨': ['sparkles', 'magic', 'shine', 'special', 'glitter', 'new'],
+  '💫': ['dizzy', 'star', 'sparkle', 'magic'],
+  '🌙': ['moon', 'night', 'crescent', 'sleep'],
+  '☀️': ['sun', 'sunny', 'weather', 'bright', 'hot'],
+  '⛅': ['cloudy', 'weather', 'partly', 'sun', 'cloud'],
+  '🌧️': ['rain', 'rainy', 'weather', 'cloud'],
+  '⛈️': ['storm', 'thunder', 'lightning', 'weather'],
+  '❄️': ['snow', 'snowflake', 'cold', 'winter', 'frozen'],
+  '🌊': ['wave', 'ocean', 'sea', 'water', 'surf'],
+  // Misc popular
+  '💯': ['hundred', 'perfect', 'score', '100', 'complete'],
+  '✅': ['check', 'done', 'complete', 'yes', 'correct'],
+  '❌': ['cross', 'wrong', 'no', 'incorrect', 'cancel', 'delete'],
+  '❗': ['exclamation', 'important', 'alert', 'attention'],
+  '❓': ['question', 'what', 'confused', 'ask'],
+  '💤': ['sleep', 'zzz', 'tired', 'sleepy', 'snore'],
+  '💬': ['speech', 'bubble', 'talk', 'chat', 'message', 'comment'],
+  '👀': ['eyes', 'look', 'see', 'watch', 'stare', 'peek'],
+  '👁️': ['eye', 'look', 'see', 'watch'],
+  '🗣️': ['speaking', 'head', 'talk', 'say', 'announce'],
+  '🚀': ['rocket', 'launch', 'space', 'fast', 'moon', 'ship'],
+  '⚡': ['lightning', 'bolt', 'electric', 'fast', 'power', 'energy', 'zap'],
+  '🏆': ['trophy', 'winner', 'champion', 'award', 'prize', 'first'],
+  '🎯': ['target', 'bullseye', 'goal', 'aim', 'direct'],
+  '🎵': ['music', 'note', 'song', 'melody'],
+  '🎶': ['music', 'notes', 'song', 'melody', 'singing'],
+  '🔔': ['bell', 'notification', 'alert', 'ring'],
+  '📌': ['pin', 'pushpin', 'location', 'mark', 'important'],
+  '🔗': ['link', 'chain', 'url', 'connection'],
+  '⚙️': ['gear', 'settings', 'config', 'cog', 'options'],
+  '🛠️': ['tools', 'build', 'repair', 'fix', 'work'],
+  '⏰': ['alarm', 'clock', 'time', 'wake'],
+  '📅': ['calendar', 'date', 'schedule', 'event'],
+  '📊': ['chart', 'graph', 'statistics', 'data', 'bar'],
+  '📈': ['chart', 'increase', 'up', 'growth', 'trending'],
+  '📉': ['chart', 'decrease', 'down', 'decline'],
+};
 
 type ViewMode = 'icon' | 'full';
 
@@ -36,12 +249,14 @@ interface EmojiSetGroup {
 @Component({
   selector: 'app-reaction-button',
   imports: [
+    FormsModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
     MatMenuModule,
     MatProgressSpinnerModule,
-    MatTabsModule
+    MatTabsModule,
+    RouterLink
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -67,6 +282,10 @@ export class ReactionButtonComponent {
   emojiSets = signal<EmojiSetGroup[]>([]);
   recentEmojis = signal<RecentEmoji[]>([]);
   activeTabIndex = signal<number>(0);
+  emojiSearchQuery = signal<string>('');
+
+  // Emoji categories for tabbed display
+  readonly emojiCategories = EMOJI_CATEGORIES;
 
   // Quick reactions for the picker
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -132,7 +351,47 @@ export class ReactionButtonComponent {
     return this.reactions().events.length;
   });
 
-constructor() {
+  // Computed: Search results for emoji search
+  searchResults = computed<{ unicode: string[]; custom: { shortcode: string; url: string }[] }>(() => {
+    const query = this.emojiSearchQuery().toLowerCase().trim();
+    if (!query) {
+      return { unicode: [], custom: [] };
+    }
+
+    // Search unicode emojis by keywords
+    const unicodeMatches: string[] = [];
+    for (const [emoji, keywords] of Object.entries(EMOJI_KEYWORDS)) {
+      if (keywords.some(kw => kw.includes(query))) {
+        unicodeMatches.push(emoji);
+      }
+    }
+
+    // Also search all category emojis if not found in keywords
+    if (unicodeMatches.length < 20) {
+      for (const category of EMOJI_CATEGORIES) {
+        for (const emoji of category.emojis) {
+          if (!unicodeMatches.includes(emoji)) {
+            // Check if category label matches
+            if (category.label.toLowerCase().includes(query)) {
+              unicodeMatches.push(emoji);
+            }
+          }
+        }
+      }
+    }
+
+    // Search custom emojis by shortcode
+    const customMatches = this.customEmojis().filter(e =>
+      e.shortcode.toLowerCase().includes(query)
+    );
+
+    return {
+      unicode: unicodeMatches.slice(0, 50),
+      custom: customMatches.slice(0, 20)
+    };
+  });
+
+  constructor() {
     // Load user's custom emojis and emoji sets
     effect(() => {
       const pubkey = this.accountState.pubkey();
@@ -226,7 +485,7 @@ constructor() {
     }
   }
 
-  private closeMenu() {
+  closeMenu() {
     this.menuTrigger()?.closeMenu();
     this.menuTriggerFull()?.closeMenu();
   }
