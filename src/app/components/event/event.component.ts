@@ -325,6 +325,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 
+  // Check if root content should show collapsed state
+  isRootContentCollapsed = computed<boolean>(() => {
+    return this.isRootContentLong() && !this.isRootEventExpanded();
+  });
+
+  // Check if parent content should show collapsed state
+  isParentContentCollapsed = computed<boolean>(() => {
+    return this.isParentContentLong() && !this.isParentEventExpanded();
+  });
+
   // Check if main content should show collapsed state
   isMainContentCollapsed = computed<boolean>(() => {
     return this.isMainContentLong() && !this.isMainContentExpanded();
