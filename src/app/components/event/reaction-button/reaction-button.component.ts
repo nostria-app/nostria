@@ -19,6 +19,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
 import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
+import { UserDataService } from '../../../services/user-data.service';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = [
@@ -271,6 +272,7 @@ export class ReactionButtonComponent {
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);
+  private readonly userData = inject(UserDataService);
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -324,8 +326,9 @@ export class ReactionButtonComponent {
   reactionGroups = computed<ReactionGroup[]>(() => {
     const currentUserPubkey = this.accountState.pubkey();
     const groups = new Map<string, ReactionGroup>();
+    const reactions = this.reactions();
 
-    for (const record of this.reactions().events) {
+    for (const record of reactions.events) {
       const emoji = record.event.content;
       if (!groups.has(emoji)) {
         groups.set(emoji, {
@@ -515,15 +518,35 @@ export class ReactionButtonComponent {
 
     this.isLoadingReactions.set(true);
     try {
+      // Look up emoji URL from customEmojis or emojiSets before creating reaction
+      // This ensures the emoji tag is added to the reaction event (NIP-30)
+      let emojiUrl: string | undefined;
+      if (emoji.startsWith(':') && emoji.endsWith(':')) {
+        const shortcode = emoji.slice(1, -1);
+        // First check customEmojis
+        const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+        if (customEmoji?.url) {
+          emojiUrl = customEmoji.url;
+        } else {
+          // Fallback: check emojiSets
+          for (const set of this.emojiSets()) {
+            const setEmoji = set.emojis.find(e => e.shortcode === shortcode);
+            if (setEmoji?.url) {
+              emojiUrl = setEmoji.url;
+              break;
+            }
+          }
+        }
+      }
+
       this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
-      const success = await this.reactionService.addReaction(emoji, event);
+      const success = await this.reactionService.addReaction(emoji, event, emojiUrl);
       if (!success) {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
         this.snackBar.open('Failed to add reaction. Please try again.', 'Dismiss', { duration: 3000 });
       } else {
         // Track emoji usage for recent emojis
-        const customEmoji = this.customEmojis().find(e => `:${e.shortcode}:` === emoji);
-        this.trackEmojiUsage(emoji, customEmoji?.url);
+        this.trackEmojiUsage(emoji, emojiUrl);
         // Notify parent to reload reactions
         this.reactionChanged.emit();
       }
@@ -617,7 +640,8 @@ export class ReactionButtonComponent {
 
   /**
    * Get custom emoji URL from reaction event tags (NIP-30)
-   * Returns the image URL if the reaction has an emoji tag matching the content
+   * Returns the image URL if the reaction has an emoji tag matching the content.
+   * Falls back to user's emoji sets if the event doesn't have the emoji tag.
    */
   getCustomEmojiUrl(event: Event): string | null {
     if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
@@ -625,9 +649,34 @@ export class ReactionButtonComponent {
     }
 
     const shortcode = event.content.slice(1, -1); // Remove colons
-    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
 
-    return emojiTag?.[2] || null;
+    // First, check if the event has an emoji tag
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+    if (emojiTag?.[2]) {
+      return emojiTag[2];
+    }
+
+    // Fallback 1: check user's loaded custom emojis
+    const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
+    if (customEmoji?.url) {
+      return customEmoji.url;
+    }
+
+    // Fallback 2: check recent emojis (they store the URL when used)
+    const recentEmoji = this.recentEmojis().find(e => e.emoji === event.content);
+    if (recentEmoji?.url) {
+      return recentEmoji.url;
+    }
+
+    // Fallback 3: check all emoji sets
+    for (const set of this.emojiSets()) {
+      const emoji = set.emojis.find(e => e.shortcode === shortcode);
+      if (emoji?.url) {
+        return emoji.url;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -652,9 +701,23 @@ export class ReactionButtonComponent {
       const isCustomEmoji = emoji.startsWith(':') && emoji.endsWith(':');
       if (isCustomEmoji) {
         const shortcode = emoji.slice(1, -1);
+        // First check customEmojis
+        let emojiUrl: string | undefined;
         const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
-        if (customEmoji) {
-          baseTags.push(['emoji', shortcode, customEmoji.url]);
+        if (customEmoji?.url) {
+          emojiUrl = customEmoji.url;
+        } else {
+          // Fallback: check emojiSets
+          for (const set of this.emojiSets()) {
+            const setEmoji = set.emojis.find(e => e.shortcode === shortcode);
+            if (setEmoji?.url) {
+              emojiUrl = setEmoji.url;
+              break;
+            }
+          }
+        }
+        if (emojiUrl) {
+          baseTags.push(['emoji', shortcode, emojiUrl]);
         }
       }
 
@@ -704,13 +767,15 @@ export class ReactionButtonComponent {
   private async loadEmojiSetsGrouped(pubkey: string): Promise<void> {
     try {
       // Get user's preferred emojis list (kind 10030)
-      const emojiListEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+      // Use UserDataService to fetch from database first, then from relays if not found
+      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
 
-      if (!emojiListEvent) {
+      if (!emojiListRecord) {
         this.emojiSets.set([]);
         return;
       }
 
+      const emojiListEvent = emojiListRecord.event;
       const sets: EmojiSetGroup[] = [];
 
       // First, add inline emojis as "My Emojis" set
@@ -781,7 +846,7 @@ export class ReactionButtonComponent {
 
   /**
    * Get the URL for a custom emoji in reaction groups display.
-   * First checks if any reaction event has the emoji tag, then falls back to user's custom emojis.
+   * First checks if any reaction event has the emoji tag, then falls back to user's custom emojis and recent emojis.
    */
   getCustomEmojiUrlForGroup(content: string): string | null {
     if (!content.startsWith(':') || !content.endsWith(':')) {
@@ -796,9 +861,28 @@ export class ReactionButtonComponent {
       return this.getCustomEmojiUrl(reactionWithTag.event);
     }
 
-    // Fallback: check user's loaded custom emojis
     const shortcode = content.slice(1, -1);
+
+    // Fallback 1: check user's loaded custom emojis
     const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
-    return customEmoji?.url || null;
+    if (customEmoji?.url) {
+      return customEmoji.url;
+    }
+
+    // Fallback 2: check recent emojis (they store the URL when used)
+    const recentEmoji = this.recentEmojis().find(e => e.emoji === content);
+    if (recentEmoji?.url) {
+      return recentEmoji.url;
+    }
+
+    // Fallback 3: check all emoji sets
+    for (const set of this.emojiSets()) {
+      const emoji = set.emojis.find(e => e.shortcode === shortcode);
+      if (emoji?.url) {
+        return emoji.url;
+      }
+    }
+
+    return null;
   }
 }

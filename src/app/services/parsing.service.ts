@@ -386,10 +386,42 @@ export class ParsingService implements OnDestroy {
       }
     }
 
-    // Note: We DON'T fetch user emoji sets here anymore to avoid performance issues.
-    // User emoji sets are only needed for reactions (handled by ReactionButtonComponent)
-    // and for rendering emoji set events themselves.
-    // Regular content should use inline emoji tags only.
+    // Check if we need to fetch author's emoji sets
+    // This is needed when the event uses custom emojis but doesn't include inline emoji tags
+    // We'll fetch lazily only if we find unresolved emoji shortcodes
+    let authorEmojiSets: Map<string, string> | null = null;
+
+    // Pre-scan for emoji shortcodes that aren't in event tags or built-in map
+    // to determine if we need to fetch author's emoji sets
+    const potentialCustomEmojis: string[] = [];
+    const emojiPreScanRegex = /(:[a-zA-Z0-9_]+:)/g;
+    let preScanMatch: RegExpExecArray | null;
+    while ((preScanMatch = emojiPreScanRegex.exec(processedContent)) !== null) {
+      const emojiCode = preScanMatch[0];
+      // Not in event tags and not a built-in emoji
+      if (!customEmojiMap.has(emojiCode) && !this.emojiMap[emojiCode]) {
+        potentialCustomEmojis.push(emojiCode);
+      }
+    }
+
+    // If we have unresolved emojis and an author pubkey, fetch their emoji sets
+    if (potentialCustomEmojis.length > 0 && authorPubkey) {
+      try {
+        authorEmojiSets = await this.emojiSetService.getUserEmojiSets(authorPubkey);
+        // Merge author's emoji sets into customEmojiMap for lookup
+        if (authorEmojiSets.size > 0) {
+          for (const [shortcode, url] of authorEmojiSets) {
+            // Don't override inline emoji tags from the event
+            const shortcodeWithColons = `:${shortcode}:`;
+            if (!customEmojiMap.has(shortcodeWithColons)) {
+              customEmojiMap.set(shortcodeWithColons, url);
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to fetch author emoji sets:', error);
+      }
+    }
 
     // Find all matches and their positions
     const matches: {

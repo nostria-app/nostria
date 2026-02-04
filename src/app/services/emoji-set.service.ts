@@ -1,6 +1,7 @@
 import { inject, Injectable, OnDestroy } from '@angular/core';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
+import { UserDataService } from './user-data.service';
 import { NostrService } from './nostr.service';
 import { Event as NostrEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
@@ -18,6 +19,7 @@ interface EmojiSet {
 export class EmojiSetService implements OnDestroy {
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);
+  private readonly userData = inject(UserDataService);
   private readonly nostr = inject(NostrService);
   private readonly logger = inject(LoggerService);
 
@@ -129,6 +131,7 @@ export class EmojiSetService implements OnDestroy {
 
   /**
    * Get user's preferred emoji sets from their kind 10030 list
+   * Fetches from local database first, then from user's relays if not found
    */
   async getUserEmojiSets(pubkey: string): Promise<Map<string, string>> {
     // Check cache first
@@ -139,13 +142,15 @@ export class EmojiSetService implements OnDestroy {
     try {
       // Kind 10030 is a replaceable event (10000-19999), not parameterized replaceable
       // It has no d-tag, just pubkey+kind
-      const emojiListEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+      // Use UserDataService to fetch from database first, then from user's relays if not found
+      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
 
-      if (!emojiListEvent) {
+      if (!emojiListRecord) {
         // Don't cache empty results - user might install an emoji set later
         return new Map();
       }
 
+      const emojiListEvent = emojiListRecord.event;
       const allEmojis = new Map<string, string>();
 
       // Process inline emoji tags
