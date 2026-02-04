@@ -179,6 +179,16 @@ export class PeopleComponent implements OnDestroy {
     return [...sets].sort((a, b) => a.title.localeCompare(b.title));
   });
 
+  // Computed: Get the favorites set (if exists)
+  favoritesSet = computed(() => {
+    return this.allFollowSets().find(set => set.dTag === 'nostria-favorites') || null;
+  });
+
+  // Computed: Get all follow sets except favorites (sorted alphabetically)
+  otherFollowSets = computed(() => {
+    return this.allFollowSets().filter(set => set.dTag !== 'nostria-favorites');
+  });
+
   // Computed: Get the selected follow set reactively from the service
   // This ensures we always have the latest version with updated pubkeys
   selectedFollowSet = computed(() => {
