@@ -17,7 +17,7 @@
     <!-- People List Selector -->
     @if (isAuthenticated()) {
     <app-list-filter-menu storageKey="streams" [showPublicOption]="true" defaultFilter="all"
-      (filterChanged)="onListFilterChanged($event)" />
+      [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
     }
 
     <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">

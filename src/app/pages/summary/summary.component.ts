@@ -192,6 +192,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Selected list filter (from FollowSetsService)
   selectedList = signal<FollowSet | null>(null);
 
+  // URL query param for list filter (for passing to ListFilterMenuComponent)
+  // Set from route snapshot at construction time
+  urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
   // Expose follow sets from service
   followSets = this.followSetsService.followSets;
   followSetsLoading = this.followSetsService.isLoading;
@@ -354,18 +358,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Handle URL query params for list filter
-    effect(() => {
-      const queryParams = this.route.snapshot.queryParams;
-      if (queryParams['list']) {
-        // Find the matching follow set
-        const list = this.followSets().find(s => s.dTag === queryParams['list']);
-        if (list) {
-          this.selectedList.set(list);
-        }
-      }
-    });
-
     // Load data when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
