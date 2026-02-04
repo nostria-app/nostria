@@ -219,6 +219,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.IMAGE_REGEX.test(content) || this.VIDEO_REGEX.test(content);
   }
 
+  // Check if this is primarily a media post (short text with media)
+  // Media posts shouldn't be collapsed, but long text posts with embedded images should be
+  private isPrimaryMediaPost(content: string): boolean {
+    if (!content) return false;
+    if (!this.contentHasMedia(content)) return false;
+    
+    // If content has media AND is short (under threshold), it's a media post
+    // If content has media but is long, it's a text post with embedded media (should be collapsible)
+    return content.length <= this.CONTENT_LENGTH_THRESHOLD;
+  }
+
   // Check if root event content should be collapsible (content is long enough)
   isRootContentLong = computed<boolean>(() => {
     // Don't show expander in dialogs or thread view - only in feed
@@ -228,8 +239,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1)
     if (rootRecordData.event.kind !== 1) return false;
     const content = rootRecordData.event.content || '';
-    // Don't collapse content with media - images/videos should always be visible
-    if (this.contentHasMedia(content)) return false;
+    // Don't collapse primary media posts (short posts with images/videos)
+    // but DO collapse long text posts that happen to include media
+    if (this.isPrimaryMediaPost(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 
@@ -242,8 +254,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1)
     if (parentRecordData.event.kind !== 1) return false;
     const content = parentRecordData.event.content || '';
-    // Don't collapse content with media - images/videos should always be visible
-    if (this.contentHasMedia(content)) return false;
+    // Don't collapse primary media posts (short posts with images/videos)
+    // but DO collapse long text posts that happen to include media
+    if (this.isPrimaryMediaPost(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 
@@ -256,8 +269,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Only apply to text notes (kind 1) - not photos, videos, articles, etc.
     if (targetItem.event.kind !== 1) return false;
     const content = targetItem.event.content || '';
-    // Don't collapse content with media - images/videos should always be visible
-    if (this.contentHasMedia(content)) return false;
+    // Don't collapse primary media posts (short posts with images/videos)
+    // but DO collapse long text posts that happen to include media
+    if (this.isPrimaryMediaPost(content)) return false;
     return content.length > this.CONTENT_LENGTH_THRESHOLD;
   });
 

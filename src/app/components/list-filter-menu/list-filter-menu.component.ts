@@ -191,8 +191,12 @@ export class ListFilterMenuComponent implements OnInit {
   // Computed: favorites set
   favoritesSet = computed(() => this.allFollowSets().find(set => set.dTag === 'nostria-favorites'));
 
-  // Computed: other follow sets (excluding favorites)
-  otherFollowSets = computed(() => this.allFollowSets().filter(set => set.dTag !== 'nostria-favorites'));
+  // Computed: other follow sets (excluding favorites), sorted alphabetically by title
+  otherFollowSets = computed(() =>
+    this.allFollowSets()
+      .filter(set => set.dTag !== 'nostria-favorites')
+      .sort((a, b) => a.title.localeCompare(b.title))
+  );
 
   // Computed: selected follow set (null for 'all' or 'following')
   selectedFollowSet = computed(() => {
