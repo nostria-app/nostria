@@ -157,6 +157,7 @@ import { MatChipsModule } from '@angular/material/chips';
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      color: var(--mat-sys-on-surface);
     }
 
     .metrics-summary {
@@ -168,20 +169,20 @@ import { MatChipsModule } from '@angular/material/chips';
 
     .metric-card {
       padding: 1rem;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 8px;
       text-align: center;
+      background-color: var(--mat-sys-surface-container);
     }
 
     .metric-value {
       font-size: 2rem;
-      font-weight: bold;
-      color: var(--primary-color);
+      color: var(--mat-sys-primary);
     }
 
     .metric-label {
       font-size: 0.9rem;
-      color: var(--text-secondary);
+      color: var(--mat-sys-on-surface-variant);
       margin-top: 0.5rem;
     }
 
@@ -191,6 +192,7 @@ import { MatChipsModule } from '@angular/material/chips';
 
     .section h3 {
       margin-bottom: 1rem;
+      color: var(--mat-sys-on-surface);
     }
 
     mat-chip-set {
@@ -215,18 +217,20 @@ import { MatChipsModule } from '@angular/material/chips';
     .subscription-detail {
       padding: 1rem;
       margin: 0.5rem 0;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 4px;
+      background-color: var(--mat-sys-surface-container);
     }
 
     .sub-header {
       display: flex;
       justify-content: space-between;
       margin-bottom: 0.5rem;
+      color: var(--mat-sys-on-surface);
     }
 
     .age {
-      color: var(--text-secondary);
+      color: var(--mat-sys-on-surface-variant);
       font-size: 0.9rem;
     }
 
@@ -235,10 +239,12 @@ import { MatChipsModule } from '@angular/material/chips';
       flex-direction: column;
       gap: 0.5rem;
       font-size: 0.9rem;
+      color: var(--mat-sys-on-surface);
     }
 
     .sub-info code {
-      background: var(--code-background);
+      background: var(--mat-sys-surface-container-highest);
+      color: var(--mat-sys-on-surface);
       padding: 0.2rem 0.4rem;
       border-radius: 3px;
       font-size: 0.85rem;

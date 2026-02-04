@@ -24,7 +24,8 @@
       <span class="menu-item-label">Following</span>
     </button>
     @if (favoritesSet(); as favorites) {
-    <button mat-menu-item (click)="selectFollowSet(favorites)" [class.active]="selectedFollowSet()?.dTag === 'nostria-favorites'">
+    <button mat-menu-item (click)="selectFollowSet(favorites)"
+      [class.active]="selectedFollowSet()?.dTag === 'nostria-favorites'">
       <mat-icon>star</mat-icon>
       <span class="menu-item-label">Favorites</span>
       <span class="menu-item-count">{{ favorites.pubkeys.length }}</span>
