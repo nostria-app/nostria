@@ -2562,14 +2562,28 @@ export class MessagingService implements NostriaService {
       // Sign the gift wrap with the ephemeral key
       const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
+      // Get UserRelayService for publishing to DM relays (NIP-17)
+      const userRelayService = await this.getUserRelayService();
+
       // For Note to Self: Only publish one gift wrap to self
       // For regular messages: Create and publish two gift wraps (one for recipient, one for self)
       if (isNoteToSelf) {
         // Note to Self: Only one gift wrap needed
-        await Promise.allSettled([
-          this.relay.publish(signedGiftWrap), // Gift wrap → account relays (for sync across devices)
-          this.discoveryRelay.publish(signedGiftWrap), // Gift wrap → discovery relays
-        ]);
+        // Publish to sender's DM relays (kind 10050) + account relays for sync
+        const publishPromises: Promise<unknown>[] = [];
+
+        // Publish to account relays for sync across devices
+        const accountPublishResult = await this.relay.publish(signedGiftWrap);
+        if (accountPublishResult) {
+          publishPromises.push(...accountPublishResult);
+        }
+
+        // Publish to sender's DM relays if UserRelayService is available
+        if (userRelayService) {
+          publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap));
+        }
+
+        await Promise.allSettled(publishPromises);
       } else {
         // Regular message: Create second gift wrap for self
         const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
@@ -2600,12 +2614,27 @@ export class MessagingService implements NostriaService {
 
         const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
 
-        // Publish both gift wraps
-        await Promise.allSettled([
-          this.relay.publish(signedGiftWrap), // Gift wrap for receiver → account relays
-          this.discoveryRelay.publish(signedGiftWrap), // Gift wrap for receiver → discovery relays
-          this.relay.publish(signedGiftWrap2), // Gift wrap for sender (self) → account relays
-        ]);
+        // Publish both gift wraps to recipient's and sender's DM relays (NIP-17)
+        // Also publish to account relays for multi-device sync
+        const publishPromises: Promise<unknown>[] = [];
+
+        // Publish to account relays (backup/sync)
+        const accountPublish1 = await this.relay.publish(signedGiftWrap);
+        if (accountPublish1) {
+          publishPromises.push(...accountPublish1);
+        }
+        const accountPublish2 = await this.relay.publish(signedGiftWrap2);
+        if (accountPublish2) {
+          publishPromises.push(...accountPublish2);
+        }
+
+        // Publish to recipient's DM relays (kind 10050) - this is the primary delivery mechanism per NIP-17
+        if (userRelayService) {
+          publishPromises.push(userRelayService.publishToDmRelays(receiverPubkey, signedGiftWrap));
+          publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap2));
+        }
+
+        await Promise.allSettled(publishPromises);
       }
 
       // Create the message object

@@ -140,13 +140,13 @@ export class EventImageComponent {
 
       if (decoded.type === 'npub' || decoded.type === 'nprofile') {
         const pubkey = decoded.type === 'npub' ? decoded.data : decoded.data.pubkey;
-        
+
         // Try to get profile from cache/database
         const profile = await this.data.getProfile(pubkey);
         if (profile?.data) {
           return '@' + (profile.data.display_name || profile.data.name || this.utilities.getTruncatedNpub(pubkey));
         }
-        
+
         // Fallback to truncated npub
         return '@' + this.utilities.getTruncatedNpub(pubkey);
       }

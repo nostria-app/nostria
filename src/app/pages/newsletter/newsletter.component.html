@@ -1,0 +1,284 @@
+@if (!app.authenticated()) {
+<div class="unauthenticated-state">
+  <mat-icon>account_circle</mat-icon>
+  <h2>Sign in to use Newsletter</h2>
+  <p>Send direct messages to everyone who engaged with your content.</p>
+</div>
+} @else if (!isPremium()) {
+<div class="premium-gate">
+  <!-- Blurred preview background -->
+  <div class="preview-backdrop">
+    <div class="mock-stats-grid">
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mock-recipients-list">
+      <div class="mock-recipient-row"></div>
+      <div class="mock-recipient-row"></div>
+      <div class="mock-recipient-row"></div>
+      <div class="mock-recipient-row"></div>
+      <div class="mock-recipient-row"></div>
+    </div>
+  </div>
+
+  <!-- Premium CTA overlay -->
+  <div class="premium-cta-overlay">
+    <div class="premium-badge">
+      <mat-icon>campaign</mat-icon>
+    </div>
+    <h1 class="premium-title">Unlock Newsletter</h1>
+    <p class="premium-subtitle">
+      Send personalized messages to everyone who engaged with your content
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>favorite</mat-icon>
+        </div>
+        <h3>Target Likers</h3>
+        <p>Reach people who liked your posts</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>chat_bubble</mat-icon>
+        </div>
+        <h3>Engage Commenters</h3>
+        <p>Follow up with people who commented</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>repeat</mat-icon>
+        </div>
+        <h3>Thank Reposters</h3>
+        <p>Appreciate those who shared your content</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>bolt</mat-icon>
+        </div>
+        <h3>Reward Zappers</h3>
+        <p>Connect with your supporters</p>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <a mat-flat-button routerLink="/premium/upgrade" class="upgrade-btn">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </a>
+      <p class="cta-hint">Includes all premium features • Cancel anytime</p>
+    </div>
+  </div>
+</div>
+} @else {
+<div class="newsletter-container">
+  <!-- Header -->
+  <div class="newsletter-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>campaign</mat-icon>
+        Newsletter
+        <span class="beta-badge">Beta</span>
+      </h1>
+      <p class="subtitle">Send direct messages to people who engaged with your content</p>
+    </div>
+  </div>
+
+  <!-- Target Event Info -->
+  @if (isLoadingEvent()) {
+  <div class="loading-event">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Loading event...</span>
+  </div>
+  } @else if (loadError()) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ loadError() }}</p>
+    <button mat-flat-button (click)="routeData.goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Go Back
+    </button>
+  </div>
+  } @else if (targetEvent()) {
+  <mat-card class="event-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>{{ getEventKindLabel() === 'Article' ? 'article' : 'chat' }}</mat-icon>
+      <mat-card-title>Target {{ getEventKindLabel() }}</mat-card-title>
+      <mat-card-subtitle>
+        Created {{ targetEvent()!.created_at * 1000 | date:'medium' }}
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="event-preview">{{ getEventPreview() }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Engagement Type Selector -->
+  <div class="engagement-selector">
+    <h3>Select Audience</h3>
+    <mat-form-field appearance="outline">
+      <mat-label>Engagement Type</mat-label>
+      <mat-select [value]="selectedEngagementType()" (selectionChange)="onEngagementTypeChange($event.value)">
+        @for (type of engagementTypes; track type.value) {
+        <mat-option [value]="type.value">
+          <mat-icon>{{ type.icon }}</mat-icon>
+          {{ type.label }}
+        </mat-option>
+        }
+      </mat-select>
+      <mat-hint>People who {{ selectedEngagementType() }} this content</mat-hint>
+    </mat-form-field>
+  </div>
+
+  <!-- Recipients List -->
+  <div class="recipients-section">
+    <div class="recipients-header">
+      <h3>Recipients</h3>
+      @if (isLoadingRecipients()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+      <span class="recipient-count">{{ recipientCount() }} people</span>
+      }
+    </div>
+
+    @if (!isLoadingRecipients() && recipients().length === 0) {
+    <div class="no-recipients">
+      <mat-icon>person_off</mat-icon>
+      <p>No one has {{ selectedEngagementType() }} this content yet.</p>
+    </div>
+    } @else {
+    <div class="recipients-preview">
+      @for (recipient of recipients(); track recipient.pubkey) {
+      <div class="recipient-item" [class.sent]="recipient.sent" [class.error]="recipient.error">
+        <app-user-profile [pubkey]="recipient.pubkey" view="list" />
+        @if (recipient.sent) {
+        <mat-icon class="status-icon sent">check_circle</mat-icon>
+        } @else if (recipient.error) {
+        <mat-icon class="status-icon error" [matTooltip]="recipient.error">error</mat-icon>
+        } @else if (!isSending()) {
+        <button mat-icon-button class="remove-btn" (click)="removeRecipient(recipient.pubkey)" matTooltip="Remove from list">
+          <mat-icon>close</mat-icon>
+        </button>
+        }
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Message Composer -->
+  <div class="message-composer">
+    <h3>Your Message</h3>
+    <mat-form-field appearance="outline" class="message-field">
+      <mat-label>Message</mat-label>
+      <textarea
+        matInput
+        [(ngModel)]="messageText"
+        placeholder="Write your message here..."
+        rows="5"
+        [disabled]="isSending()"
+      ></textarea>
+      <mat-hint>This message will be sent as an individual DM to each recipient</mat-hint>
+    </mat-form-field>
+  </div>
+
+  <!-- Send Progress -->
+  @if (isSending()) {
+  <div class="send-progress">
+    <mat-progress-bar mode="determinate" [value]="sendProgress()"></mat-progress-bar>
+    <div class="progress-info">
+      <span class="status">{{ sendStatus() }}</span>
+      <span class="counts">
+        <span class="sent">{{ sentCount() }} sent</span>
+        @if (failedCount() > 0) {
+        <span class="failed">{{ failedCount() }} failed</span>
+        }
+      </span>
+    </div>
+  </div>
+  }
+
+  <!-- Send Button -->
+  <div class="send-actions">
+    <button
+      mat-flat-button
+      class="send-button"
+      [disabled]="!canSend()"
+      (click)="sendNewsletter()"
+    >
+      @if (isSending()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      Sending...
+      } @else {
+      <mat-icon>send</mat-icon>
+      Send to {{ recipientCount() }} People
+      }
+    </button>
+  </div>
+  } @else {
+  <div class="no-event">
+    <div class="no-event-icon">
+      <mat-icon>campaign</mat-icon>
+    </div>
+    <h2>Send a Newsletter</h2>
+    <p class="no-event-description">
+      Send personalized direct messages to everyone who engaged with your content.
+    </p>
+
+    <div class="how-to-use">
+      <h3>How to use</h3>
+      <ol class="steps">
+        <li>
+          <div class="step-icon"><mat-icon>article</mat-icon></div>
+          <div class="step-content">
+            <strong>Find your post</strong>
+            <span>Go to your profile or find a post you created</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-icon"><mat-icon>more_vert</mat-icon></div>
+          <div class="step-content">
+            <strong>Open the menu</strong>
+            <span>Click the three-dot menu on your post</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-icon"><mat-icon>send</mat-icon></div>
+          <div class="step-content">
+            <strong>Select "Newsletter"</strong>
+            <span>Under the "Advanced" submenu, choose Newsletter</span>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+  }
+</div>
+}

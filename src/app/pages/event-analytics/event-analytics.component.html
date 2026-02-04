@@ -1,0 +1,251 @@
+@if (!app.authenticated()) {
+<div class="unauthenticated-state">
+  <mat-icon>account_circle</mat-icon>
+  <h2>Sign in to see Event Analytics</h2>
+  <p>Get detailed insights into how people engage with your content.</p>
+</div>
+} @else if (!isPremium()) {
+<div class="premium-gate">
+  <!-- Blurred preview background -->
+  <div class="preview-backdrop">
+    <div class="mock-stats-grid">
+      <div class="mock-stat-card"></div>
+      <div class="mock-stat-card"></div>
+      <div class="mock-stat-card"></div>
+      <div class="mock-stat-card"></div>
+    </div>
+    <div class="mock-engagers">
+      <div class="mock-engager"></div>
+      <div class="mock-engager"></div>
+      <div class="mock-engager"></div>
+    </div>
+  </div>
+
+  <!-- Premium CTA overlay -->
+  <div class="premium-cta-overlay">
+    <div class="premium-badge">
+      <mat-icon>diamond</mat-icon>
+    </div>
+    <h1 class="premium-title">Unlock Event Analytics</h1>
+    <p class="premium-subtitle">
+      See exactly how people are engaging with this content
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>favorite</mat-icon>
+        </div>
+        <h3>Reaction Breakdown</h3>
+        <p>See all reactions and likes</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <h3>Top Engagers</h3>
+        <p>Discover your biggest supporters</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>bolt</mat-icon>
+        </div>
+        <h3>Zap Analytics</h3>
+        <p>Track sats received</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>repeat</mat-icon>
+        </div>
+        <h3>Reach Analysis</h3>
+        <p>See reposts and replies</p>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <a mat-flat-button routerLink="/premium/upgrade" class="upgrade-btn">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </a>
+      <p class="cta-hint">Includes all premium features</p>
+    </div>
+  </div>
+</div>
+} @else {
+<div class="analytics-container">
+  <!-- Header -->
+  <div class="analytics-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>insights</mat-icon>
+        Event Analytics
+      </h1>
+      <p class="subtitle">Performance insights for this content</p>
+    </div>
+    <div class="header-actions">
+      @if (isLoadingStats()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh data" [disabled]="isLoadingStats()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Target Event Info -->
+  @if (isLoadingEvent()) {
+  <div class="loading-event">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Loading event...</span>
+  </div>
+  } @else if (targetEvent()) {
+  <mat-card class="event-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>{{ getEventKindLabel() === 'Article' ? 'article' : 'chat' }}</mat-icon>
+      <mat-card-title>{{ getEventKindLabel() }}</mat-card-title>
+      <mat-card-subtitle>
+        Created {{ targetEvent()!.created_at * 1000 | date:'medium' }}
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="event-preview">{{ getEventPreview() }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  @if (isLoadingStats()) {
+  <div class="loading-state">
+    <mat-progress-bar mode="determinate" [value]="loadingProgress()"></mat-progress-bar>
+    <p class="loading-status">{{ loadingStatus() }}</p>
+  </div>
+  } @else {
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <mat-card class="stat-card reactions-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>favorite</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ eventStats().reactions | number }}</span>
+          <span class="stat-label">Reactions</span>
+          <span class="stat-secondary">{{ eventStats().likes }} likes</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card reposts-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>repeat</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ eventStats().reposts | number }}</span>
+          <span class="stat-label">Reposts</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card replies-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>chat_bubble</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ eventStats().replies | number }}</span>
+          <span class="stat-label">Replies</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card zaps-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>bolt</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ eventStats().zaps | number }}</span>
+          <span class="stat-label">Zaps</span>
+          <span class="stat-secondary">{{ formatSats(eventStats().zapAmount) }} sats</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card engagers-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ eventStats().uniqueEngagers | number }}</span>
+          <span class="stat-label">Unique Engagers</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card total-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ totalEngagement() | number }}</span>
+          <span class="stat-label">Total Engagement</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Top Engagers -->
+  @if (topEngagers().length > 0) {
+  <div class="top-engagers-section">
+    <h2>
+      <mat-icon>emoji_events</mat-icon>
+      Top Engagers
+    </h2>
+    <div class="engagers-list">
+      @for (engager of topEngagers(); track engager.pubkey; let i = $index) {
+      <div class="engager-item">
+        <span class="rank">{{ i + 1 }}</span>
+        <app-user-profile [pubkey]="engager.pubkey" view="list" />
+        <div class="engagement-counts">
+          @if (engager.reactions > 0) {
+          <span class="count reactions" matTooltip="Reactions">
+            <mat-icon>favorite</mat-icon>
+            {{ engager.reactions }}
+          </span>
+          }
+          @if (engager.reposts > 0) {
+          <span class="count reposts" matTooltip="Reposts">
+            <mat-icon>repeat</mat-icon>
+            {{ engager.reposts }}
+          </span>
+          }
+          @if (engager.replies > 0) {
+          <span class="count replies" matTooltip="Replies">
+            <mat-icon>chat_bubble</mat-icon>
+            {{ engager.replies }}
+          </span>
+          }
+          @if (engager.zaps > 0) {
+          <span class="count zaps" matTooltip="{{ engager.zapAmount }} sats">
+            <mat-icon>bolt</mat-icon>
+            {{ engager.zaps }}
+          </span>
+          }
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+  }
+  } @else {
+  <div class="no-event">
+    <mat-icon>help_outline</mat-icon>
+    <h2>No Event Selected</h2>
+    <p>Navigate here from an event's menu to see its analytics.</p>
+  </div>
+  }
+</div>
+}

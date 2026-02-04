@@ -823,6 +823,19 @@
   }
 }
 
+.tile-premium-newsletter {
+  background: linear-gradient(160deg, rgba(103, 58, 183, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(103, 58, 183, 0.15);
+
+  .tile-icon {
+    color: #673AB7;
+  }
+
+  &:hover {
+    border-color: rgba(103, 58, 183, 0.4);
+  }
+}
+
 .tile-premium-subscription {
   background: linear-gradient(160deg, rgba(255, 215, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
   border: 1px solid rgba(255, 215, 0, 0.15);

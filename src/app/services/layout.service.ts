@@ -1170,6 +1170,10 @@ export class LayoutService implements OnDestroy {
    * @param options Optional navigation state
    */
   navigateToRightPanel(rightPath: string, options?: { state?: Record<string, unknown> }): void {
+    // Clear any service-based right panel content before navigating via router
+    // This prevents both systems from showing content simultaneously
+    this.rightPanel.clearHistory();
+
     const currentUrl = this.router.url;
     const { primaryPath, queryString } = this.parseUrlParts(currentUrl);
     // Query params must come after auxiliary routes: /path(right:...)/?query=params

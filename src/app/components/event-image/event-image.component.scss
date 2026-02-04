@@ -18,11 +18,11 @@
   box-shadow: none !important;
   border-radius: 12px;
   margin: 0;
-  
+
   mat-card-header {
     padding: 16px 16px 8px 16px;
   }
-  
+
   mat-card-content {
     padding: 0 16px 16px 16px;
   }
@@ -69,7 +69,7 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  
+
   .mention {
     color: var(--mat-sys-primary);
   }
@@ -96,12 +96,12 @@
     overflow-wrap: break-word;
     word-wrap: break-word;
   }
-  
+
   // Hide social previews in screenshot (can be too large)
   .social-preview {
     display: none;
   }
-  
+
   // Ensure images fit within container
   img {
     max-width: 100%;

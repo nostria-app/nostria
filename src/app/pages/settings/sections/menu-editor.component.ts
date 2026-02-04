@@ -39,9 +39,10 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
   { id: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
   { id: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
-  { id: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
+{ id: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
   { id: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
   { id: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
+  { id: 'newsletter', label: $localize`:@@menu.newsletter:Newsletter`, icon: 'campaign', authenticated: true },
   { id: 'premium', label: $localize`:@@app.nav.premium:Premium`, icon: 'diamond', authenticated: true },
   { id: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
   { id: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
@@ -94,7 +95,7 @@ const DEFAULT_MENU_IDS = [
             [cdkDropListConnectedTo]="[availableList]"
             class="menu-list active-list"
             (cdkDropListDropped)="drop($event, 'active')">
-            @for (item of activeItems(); track item.id) {
+@for (item of activeItems(); track item.id) {
               <div class="menu-item" cdkDrag>
                 <div class="drag-handle" cdkDragHandle>
                   <mat-icon>drag_indicator</mat-icon>
@@ -128,7 +129,7 @@ const DEFAULT_MENU_IDS = [
             [cdkDropListConnectedTo]="[activeList]"
             class="menu-list available-list"
             (cdkDropListDropped)="drop($event, 'hidden')">
-            @for (item of hiddenItems(); track item.id) {
+@for (item of hiddenItems(); track item.id) {
               <div class="menu-item" cdkDrag>
                 <div class="drag-handle" cdkDragHandle>
                   <mat-icon>drag_indicator</mat-icon>
@@ -274,7 +275,7 @@ const DEFAULT_MENU_IDS = [
       height: 20px;
     }
 
-    .item-label {
+.item-label {
       flex: 1;
       font-size: 0.9rem;
     }

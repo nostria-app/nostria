@@ -548,6 +548,25 @@ export const routes: Routes = [
     data: { isRoot: true },
   },
   {
+    path: 'analytics/event/:id',
+    loadComponent: () =>
+      import('./pages/event-analytics/event-analytics.component').then(m => m.EventAnalyticsComponent),
+    title: 'Event Analytics',
+  },
+  {
+    path: 'newsletter',
+    loadComponent: () =>
+      import('./pages/newsletter/newsletter.component').then(m => m.NewsletterComponent),
+    title: 'Newsletter',
+    data: { isRoot: true },
+  },
+  {
+    path: 'newsletter/:id',
+    loadComponent: () =>
+      import('./pages/newsletter/newsletter.component').then(m => m.NewsletterComponent),
+    title: 'Newsletter',
+  },
+  {
     path: 'ai',
     loadComponent: () => import('./pages/ai/ai').then(m => m.AiComponent),
     title: 'AI',

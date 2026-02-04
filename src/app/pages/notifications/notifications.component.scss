@@ -239,7 +239,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  overflow: visible;
+  flex: 1;
+  min-height: 0; // Required for flex child to enable scrolling
+  overflow-y: auto; // Enable vertical scrolling
   padding-bottom: 80px; // Space for mobile navigation menu
 }
 
