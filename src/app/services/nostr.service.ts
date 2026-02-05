@@ -145,8 +145,8 @@ export class NostrService implements NostriaService {
   // Default relays for new user accounts
   private readonly DEFAULT_RELAYS = [
     'wss://relay.damus.io/',
-    'wss://relay.snort.social/',
     'wss://nos.lol/',
+    'wss://relay.primal.net/',
   ];
   publishQueue: any[] = [];
   accountSubscription: any = null;
@@ -2111,13 +2111,16 @@ export class NostrService implements NostriaService {
     this.discoveryRelay.setDiscoveryRelays(discoveryRelays);
 
     const relayServerUrl = this.region.getRelayServer(accountRegion, 0);
+    // Build the complete list of account relays (regional + defaults)
+    const allAccountRelays = [relayServerUrl!, ...this.DEFAULT_RELAYS];
+
     const relayTags = this.createTags('r', [relayServerUrl!]);
 
     // Add these 3 default relays, most popular ones.
     this.DEFAULT_RELAYS.forEach(relay => relayTags.push(['r', relay]));
 
-    // Initialize the account relay so we can start using it
-    this.accountRelay.init([relayServerUrl!]);
+    // Initialize the account relay with all relays so we can start using them
+    this.accountRelay.init(allAccountRelays);
 
     // Create and publish Relay List event
     const relayListEvent: UnsignedEvent = {
