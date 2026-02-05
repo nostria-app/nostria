@@ -81,7 +81,7 @@ export interface InterestFeedSelection {
               [class.active]="list.dTag === selectedList()"
             >
               <mat-icon class="list-item-icon">
-                {{ list.isPrivate ? 'lock' : 'people' }}
+                {{ list.title.toLowerCase() === 'favorites' ? 'star' : (list.isPrivate ? 'lock' : 'people') }}
               </mat-icon>
               <span class="list-item-name">{{ list.title }}</span>
               <span class="menu-item-count">{{ list.pubkeys.length }}</span>
@@ -196,8 +196,7 @@ export interface InterestFeedSelection {
       }
 
       .list-items {
-        max-height: 350px;
-        overflow-y: auto;
+        // No max-height or overflow - let the menu handle scrolling
       }
 
       ::ng-deep .list-feed-selector-menu .mat-mdc-menu-item {
@@ -285,9 +284,15 @@ export class ListFeedMenuComponent {
   selectedInterest = signal<string>('');
   private lastLoadedPubkey = '';
 
-  // Expose service signals for people lists, sorted alphabetically by title
+  // Expose service signals for people lists, with Favorites at top then sorted alphabetically
   followSets = computed(() =>
-    this.followSetsService.followSets().slice().sort((a, b) => a.title.localeCompare(b.title))
+    this.followSetsService.followSets().slice().sort((a, b) => {
+      // Favorites always first
+      if (a.title.toLowerCase() === 'favorites') return -1;
+      if (b.title.toLowerCase() === 'favorites') return 1;
+      // Then sort alphabetically
+      return a.title.localeCompare(b.title);
+    })
   );
   isLoading = this.followSetsService.isLoading;
 
@@ -303,7 +308,7 @@ export class ListFeedMenuComponent {
         this.lastLoadedPubkey = pubkey;
         // Follow sets are loaded automatically by the service when account changes
         this.logger.debug('[ListFeedMenu] Account changed, follow sets will be loaded by service');
-        
+
         // Load interest sets
         this.loadInterestSets(pubkey);
       }
