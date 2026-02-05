@@ -35,6 +35,7 @@ import { MusicTrackMenuComponent } from '../../../components/music-track-menu/mu
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -74,6 +75,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private imageCache = inject(ImageCacheService);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private zapService = inject(ZapService);
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
@@ -599,9 +601,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         encodedId: naddr,
       };
 
-      this.dialog.open(ShareArticleDialogComponent, {
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: 'Share',
         data: dialogData,
         width: '450px',
+        maxWidth: '95vw',
       });
     } catch {
       this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });

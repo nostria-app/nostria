@@ -19,6 +19,7 @@ import { MediaItem } from '../../interfaces';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 
 const MUSIC_KIND = 36787;
 
@@ -135,6 +136,7 @@ export class MusicTrackMenuComponent {
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private clipboard = inject(Clipboard);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
@@ -323,9 +325,11 @@ export class MusicTrackMenuComponent {
         encodedId: naddr,
       };
 
-      this.dialog.open(ShareArticleDialogComponent, {
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: 'Share',
         data: dialogData,
         width: '450px',
+        maxWidth: '95vw',
       });
     } catch {
       this.snackBar.open('Failed to open share dialog', 'Close', { duration: 3000 });

@@ -43,7 +43,6 @@ import {
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
-import { RepostButtonComponent } from './repost-button/repost-button.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { EventMenuComponent } from './event-menu/event-menu.component';
 import { ReportedContentComponent } from '../reported-content/reported-content.component';
@@ -55,6 +54,10 @@ import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.c
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
 import { PlaylistService } from '../../services/playlist.service';
+import { UtilitiesService } from '../../services/utilities.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
 import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
@@ -78,7 +81,6 @@ interface CollapsedContentMedia {
     CommonModule,
     ReplyButtonComponent,
     ReactionButtonComponent,
-    RepostButtonComponent,
     EventHeaderComponent,
     ContentComponent,
     MatTooltipModule,
@@ -152,6 +154,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   layout = inject(LayoutService);
   accountRelay = inject(AccountRelayService);
   dialog = inject(MatDialog);
+  customDialog = inject(CustomDialogService);
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
@@ -164,6 +167,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   playlistService = inject(PlaylistService);
   relayPool = inject(RelayPoolService);
   parsingService = inject(ParsingService);
+  private utilities = inject(UtilitiesService);
+  private userRelaysService = inject(UserRelaysService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -1593,6 +1598,45 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         selectedTab,
       },
     });
+  }
+
+  async openShareDialog() {
+    const targetItem = this.targetRecord();
+    if (!targetItem) return;
+
+    const ev = targetItem.event;
+    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+    const relayHint = authorRelays[0];
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
+
+    const dialogData: ShareArticleDialogData = {
+      title: ev.kind === kinds.LongFormArticle ? 'Article' : this.getEventPreviewTitle(ev.content),
+      summary: ev.content || undefined,
+      url: window.location.href,
+      eventId: ev.id,
+      pubkey: ev.pubkey,
+      identifier: ev.tags.find(tag => tag[0] === 'd')?.[1],
+      kind: ev.kind,
+      encodedId,
+      event: ev,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: 'Share',
+      data: dialogData,
+      width: '450px',
+      maxWidth: '95vw',
+    });
+  }
+
+  private getEventPreviewTitle(content: string): string {
+    const cleaned = content.replace(/\s+/g, ' ').trim();
+    if (!cleaned) return 'Event';
+    const maxLength = 72;
+    if (cleaned.length <= maxLength) return cleaned;
+    return `${cleaned.slice(0, maxLength).trim()}…`;
   }
 
   async toggleLike(event?: MouseEvent) {

@@ -601,7 +601,18 @@
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
     <div class="reactions-row" [class.compact]="compact()">
-      <!-- Reply -->
+      <!-- Like/Reactions -->
+      <div class="reaction-group">
+        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
+          (reactionChanged)="loadReactions(true)"></app-reaction-button>
+        @if (!compact()) {
+        <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
+          <span>{{ reactions().events.length }}</span>
+        </button>
+        }
+      </div>
+
+      <!-- Comment -->
       <div class="reaction-group">
         <app-reply-button [event]="targetItem.event"></app-reply-button>
         @if (!compact()) {
@@ -611,23 +622,15 @@
         }
       </div>
 
-      <!-- Repost -->
+      <!-- Share -->
       <div class="reaction-group">
-        <app-repost-button [event]="targetItem.event" [repostsFromParent]="reposts()"></app-repost-button>
+        <button mat-icon-button class="share-button" (click)="openShareDialog(); $event.stopPropagation()"
+          matTooltip="Share" matTooltipPosition="below">
+          <mat-icon>share</mat-icon>
+        </button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('reposts'); $event.stopPropagation()">
           <span>{{ repostCount() }}</span>
-        </button>
-        }
-      </div>
-
-      <!-- Like/Reactions -->
-      <div class="reaction-group">
-        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
-          (reactionChanged)="loadReactions(true)"></app-reaction-button>
-        @if (!compact()) {
-        <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
-          <span>{{ reactions().events.length }}</span>
         </button>
         }
       </div>

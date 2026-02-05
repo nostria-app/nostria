@@ -154,6 +154,16 @@
     }
   }
 
+  .share-button {
+    color: #666;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+      background-color: transparent;
+    }
+  }
+
   .count-button {
     min-width: auto !important;
     padding: 4px 8px !important;

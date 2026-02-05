@@ -40,6 +40,7 @@ import { CommentsListComponent } from '../../../components/comments-list/comment
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 
 interface TopZapper {
   pubkey: string;
@@ -90,6 +91,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private imageCache = inject(ImageCacheService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private clipboard = inject(Clipboard);
   private userRelaysService = inject(UserRelaysService);
 
@@ -765,9 +767,11 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         encodedId: naddr,
       };
 
-      this.dialog.open(ShareArticleDialogComponent, {
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: 'Share',
         data: dialogData,
         width: '450px',
+        maxWidth: '95vw',
       });
     } catch {
       this.snackBar.open('Failed to share track', 'Close', { duration: 2000 });
