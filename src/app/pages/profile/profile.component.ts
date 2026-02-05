@@ -880,9 +880,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       kind: kinds.Metadata, // Profile is kind 0
     };
 
-    this.dialog.open(ShareArticleDialogComponent, {
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: 'Share',
       data: dialogData,
       width: '450px',
+      maxWidth: '95vw',
     });
   }
 
@@ -1229,9 +1231,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
         kind: kinds.Metadata,
       };
 
-      this.dialog.open(ShareArticleDialogComponent, {
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: 'Share',
         data: dialogData,
         width: '450px',
+        maxWidth: '95vw',
       });
     } catch (err) {
       this.logger.error('Failed to open invite dialog', err);

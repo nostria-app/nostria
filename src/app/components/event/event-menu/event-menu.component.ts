@@ -287,11 +287,14 @@ export class EventMenuComponent {
       identifier: ev.tags.find(tag => tag[0] === 'd')?.[1],
       kind: ev.kind,
       encodedId,
+      event: ev,
     };
 
-    this.dialog.open(ShareArticleDialogComponent, {
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: 'Share',
       data: dialogData,
       width: '450px',
+      maxWidth: '95vw',
     });
   }
 
@@ -734,7 +737,7 @@ export class EventMenuComponent {
   /**
    * NIP-41: Edit a kind:1 short note
    * Opens the note editor with the original content for editing
-   * Only available for premium users and their own text notes
+   * Only available for the user's own text notes
    */
   async editEvent(): Promise<void> {
     const ev = this.event();

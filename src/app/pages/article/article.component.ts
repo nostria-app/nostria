@@ -35,6 +35,7 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NostrRecord } from '../../interfaces';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
@@ -73,6 +74,7 @@ export class ArticleComponent implements OnDestroy {
   private url = inject(UrlUpdateService);
   private readonly cache = inject(Cache);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
@@ -639,9 +641,11 @@ export class ArticleComponent implements OnDestroy {
       }),
     };
 
-    this.dialog.open(ShareArticleDialogComponent, {
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: 'Share',
       data: dialogData,
       width: '450px',
+      maxWidth: '95vw',
     });
   }
 
