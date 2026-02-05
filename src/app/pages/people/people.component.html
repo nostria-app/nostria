@@ -54,13 +54,13 @@
   </button>
 
   <mat-menu #addMenu="matMenu">
-    <button mat-menu-item (click)="createNewList()">
-      <mat-icon>playlist_add</mat-icon>
-      <span>New list</span>
-    </button>
     <button mat-menu-item (click)="openAddPersonDialog()">
       <mat-icon>person_add</mat-icon>
       <span>Add person</span>
+    </button>
+    <button mat-menu-item (click)="createNewList()">
+      <mat-icon>playlist_add</mat-icon>
+      <span>New list</span>
     </button>
   </mat-menu>
 
@@ -100,7 +100,8 @@
   }
 
   <!-- View toggle button - cycles through modes - hidden on small screens -->
-  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'" class="hide-small">
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'"
+    class="hide-small">
     <mat-icon>{{ viewModeIcon() }}</mat-icon>
   </button>
 
