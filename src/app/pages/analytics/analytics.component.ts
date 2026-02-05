@@ -1127,6 +1127,19 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Clear the follower discovery cache from local storage
+   */
+  clearFollowerCache(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const cacheKey = `follower-discovery-${pubkey}`;
+    this.localStorage.removeItem(cacheKey);
+    this.discoveredFollowers.set([]);
+    this.logger.debug('Cleared follower discovery cache');
+  }
+
+  /**
    * Discover followers by querying for kind 3 events that mention the current user
    * Implements pagination to fetch all followers beyond the 500 event limit
    */
