@@ -28,6 +28,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
@@ -59,6 +60,7 @@ export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
     MatCheckboxModule,
     TimestampPipe,
     MatTooltipModule,
+    MatDividerModule,
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss'],

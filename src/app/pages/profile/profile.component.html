@@ -9,18 +9,20 @@
 
     @if (!isOwnProfile() && !isLoading() && !error()) {
     <!-- Send private message button -->
-    <button mat-icon-button matTooltip="Send private message" (click)="openSendMessage()">
+    <button mat-icon-button class="hide-small" matTooltip="Send private message" (click)="openSendMessage()">
       <mat-icon>message</mat-icon>
     </button>
 
     <!-- Zap Button -->
     @if (hasLightningAddress()) {
-    <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
+    <span class="hide-small">
+      <app-zap-button [recipientPubkey]="pubkey()"></app-zap-button>
+    </span>
     }
 
     <!-- Gift Premium Button - Only show if user doesn't have premium -->
     @if (!isPremium()) {
-    <button mat-icon-button matTooltip="Gift Premium subscription" (click)="giftPremium()">
+    <button mat-icon-button class="hide-small" matTooltip="Gift Premium subscription" (click)="giftPremium()">
       <mat-icon>card_giftcard</mat-icon>
     </button>
     }
@@ -47,13 +49,13 @@
     <!-- Profile Menu (moved from profile-header) -->
     <mat-menu #profileMenu="matMenu">
       @if (!isOwnProfile()) {
-      <button mat-menu-item (click)="openSendMessage()">
+      <button mat-menu-item class="show-small" (click)="openSendMessage()">
         <mat-icon>message</mat-icon>
         <span>Message</span>
       </button>
 
       @if (hasLightningAddress()) {
-      <button mat-menu-item (click)="zapUser()">
+      <button mat-menu-item class="show-small" (click)="zapUser()">
         <mat-icon>bolt</mat-icon>
         <span>Zap</span>
       </button>
@@ -61,7 +63,7 @@
 
       <!-- Gift Premium - Only show if user doesn't have premium -->
       @if (!isPremium()) {
-      <button mat-menu-item (click)="giftPremium()">
+      <button mat-menu-item class="show-small" (click)="giftPremium()">
         <mat-icon>card_giftcard</mat-icon>
         <span>Gift Premium</span>
       </button>

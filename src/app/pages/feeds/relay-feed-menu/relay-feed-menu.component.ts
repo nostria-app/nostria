@@ -5,12 +5,13 @@ import {
   output,
   effect,
   ChangeDetectionStrategy,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -284,6 +285,9 @@ export class RelayFeedMenuComponent {
   private accountState = inject(AccountStateService);
   private relayFeedsService = inject(RelayFeedsService);
 
+  // ViewChild for menu trigger - allows programmatic opening
+  @ViewChild(MatMenuTrigger) menuTrigger?: MatMenuTrigger;
+
   // Outputs
   relaySelected = output<string>();
 
@@ -483,5 +487,13 @@ export class RelayFeedMenuComponent {
     if (this.selectedRelay() && !defaults.includes(this.selectedRelay())) {
       this.relaySelected.emit('');
     }
+  }
+
+  /**
+   * Open the relay feed menu programmatically.
+   * Used by parent component to open menu from more_vert menu on small screens.
+   */
+  openMenu(): void {
+    this.menuTrigger?.openMenu();
   }
 }
