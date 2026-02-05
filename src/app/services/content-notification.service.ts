@@ -756,12 +756,18 @@ export class ContentNotificationService implements OnDestroy {
 
     // Generate unique notification ID
     // For zaps, always use the zap receipt ID (unique per zap) to avoid duplicates
+    // For reactions, use the reaction event ID (unique per reaction) to avoid deduplication issues
+    // when multiple users react to the same post
     // For other notification types, use eventId if available
     let notificationId: string;
 
     if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
       // For zaps, use the zap receipt ID (unique for each zap)
       notificationId = `content-${data.type}-${data.metadata.zapReceiptId}`;
+    } else if (data.type === NotificationType.REACTION && data.metadata?.reactionEventId) {
+      // For reactions, use the reaction event ID (unique for each reaction)
+      // This prevents deduplication when multiple users react to the same post
+      notificationId = `content-${data.type}-${data.metadata.reactionEventId}`;
     } else if (data.eventId) {
       // For other notifications, use the event ID
       notificationId = `content-${data.type}-${data.eventId}`;
