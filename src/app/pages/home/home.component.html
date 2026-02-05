@@ -267,7 +267,7 @@
         <mat-icon class="tile-icon">campaign</mat-icon>
         <span i18n="@@home.newsletter">Newsletter</span>
       </a>
-      <a routerLink="/premium" class="bento-tile tile-premium-subscription tile-section-small" mat-ripple>
+      <a routerLink="/accounts" [queryParams]="{tab: 'premium'}" class="bento-tile tile-premium-subscription tile-section-small" mat-ripple>
         <mat-icon class="tile-icon">card_membership</mat-icon>
         <span i18n="@@home.subscription">Subscription</span>
       </a>
@@ -275,7 +275,7 @@
   </section>
   } @else {
   <section class="bento-section">
-    <a routerLink="/premium" class="bento-tile tile-premium-upsell tile-upsell" mat-ripple>
+    <a routerLink="/premium/upgrade" class="bento-tile tile-premium-upsell tile-upsell" mat-ripple>
       <div class="tile-background"></div>
       <div class="tile-content">
         <div class="upsell-content">

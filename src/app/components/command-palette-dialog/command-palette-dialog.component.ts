@@ -358,7 +358,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-premium',
       label: 'Open Premium',
       icon: 'workspace_premium',
-      action: () => this.router.navigate(['/premium']),
+      action: () => this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } }),
       keywords: ['premium', 'subscription', 'upgrade', 'pro']
     },
 

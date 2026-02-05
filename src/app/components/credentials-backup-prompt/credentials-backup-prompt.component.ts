@@ -26,7 +26,7 @@ export class CredentialsBackupPromptComponent {
     }
 
     this.bottomSheetRef.dismiss();
-    this.router.navigate(['/credentials']);
+    this.router.navigate(['/accounts'], { queryParams: { tab: 'credentials' } });
   }
 
   dismiss(): void {

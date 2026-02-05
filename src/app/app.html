@@ -122,11 +122,7 @@
             matTooltip="My Profile" i18n-matTooltip="@@app.profile.my-profile">
             <mat-icon>person</mat-icon>
           </button>
-          <button mat-icon-button routerLink="/credentials" (click)="closeSidenavOnMobile()" matTooltip="Credentials"
-            i18n-matTooltip="@@app.profile.credentials">
-            <mat-icon>key</mat-icon>
-          </button>
-          <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage accounts"
+          <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage Account"
             i18n-matTooltip="@@app.profile.manage-accounts">
             <mat-icon>manage_accounts</mat-icon>
           </button>
@@ -183,7 +179,7 @@
 
 @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" [queryParams]="item.queryParams" routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: item.path === 'people' ? false : true }"
           (click)="onNavItemClick($event, item)" class="nav-item" [class.expandable-nav-item]="item.expandable">
           <mat-icon matListItemIcon [matBadge]="item.badge ? item.badge() : null" matBadgeSize="small">{{ item.icon
@@ -589,13 +585,9 @@
     <mat-icon>person</mat-icon>
     <span i18n="@@app.profile.my-profile">My Profile</span>
   </button>
-  <button mat-menu-item routerLink="/credentials" (click)="closeSidenavOnMobile()">
-    <mat-icon>key</mat-icon>
-    <span i18n="@@app.profile.credentials">Credentials</span>
-  </button>
   <button mat-menu-item routerLink="/accounts" (click)="closeSidenavOnMobile()">
     <mat-icon>manage_accounts</mat-icon>
-    <span i18n="@@app.profile.manage-accounts">Manage accounts</span>
+    <span i18n="@@app.profile.manage-accounts">Manage Account</span>
   </button>
   } @else {
   <button mat-menu-item (click)="addAccount(); closeSidenavOnMobile()">

@@ -368,12 +368,12 @@ export class GiftPremiumDialogComponent {
   }
 
   openCredentials(): void {
-    // Navigate to credentials page where user can paste NWC connection string
+    // Navigate to credentials tab where user can manage NWC connection
     try {
       this.dialogRef.close({ success: false });
-      this.router.navigate(['/credentials']);
+      this.router.navigate(['/accounts'], { queryParams: { tab: 'credentials' } });
     } catch {
-      // If navigation fails, fallback to opening new window with #/credentials
+      // If navigation fails, fallback to redirect route
       window.location.href = '#/credentials';
     }
   }
