@@ -26,6 +26,7 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { ZapService } from '../../../services/zap.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -75,6 +76,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   private zapService = inject(ZapService);
   private panelNav = inject(PanelNavigationService);
+  private userRelaysService = inject(UserRelaysService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -543,16 +545,19 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
   }
 
-  copyEventId(): void {
+  async copyEventId(): Promise<void> {
     const ev = this.playlist();
     if (!ev) return;
 
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
       this.clipboard.copy(`nostr:${naddr}`);
       this.snackBar.open('Event ID copied!', 'Close', { duration: 2000 });
@@ -565,11 +570,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.openShareDialog();
   }
 
-  openShareDialog(): void {
+  async openShareDialog(): Promise<void> {
     const ev = this.playlist();
     if (!ev) return;
 
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const npub = nip19.npubEncode(ev.pubkey);
       const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
@@ -577,6 +584,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
       const dialogData: ShareArticleDialogData = {
@@ -880,13 +888,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
   }
 
-  copyTrackLink(track: Event): void {
+  async copyTrackLink(track: Event): Promise<void> {
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(track.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(track.pubkey);
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: track.kind,
         pubkey: track.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
       const link = `https://nostria.app/a/${naddr}`;
       this.clipboard.copy(link);

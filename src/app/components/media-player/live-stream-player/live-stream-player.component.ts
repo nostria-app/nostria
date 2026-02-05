@@ -28,7 +28,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { CastService } from '../../../services/cast.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
-import { AccountRelayService } from '../../../services/relays/account-relay';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { Filter, Event } from 'nostr-tools';
 
 // Extend Window to include Hls
@@ -67,7 +67,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   private readonly location = inject(Location);
   private readonly relayPool = inject(RelayPoolService);
   private readonly relaysService = inject(RelaysService);
-  private readonly accountRelay = inject(AccountRelayService);
+  private readonly userRelaysService = inject(UserRelaysService);
   private readonly overlayContainer = inject(OverlayContainer);
   private readonly elementRef = inject(ElementRef);
 
@@ -291,9 +291,11 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
     if (isExpanding && this.liveEvent()) {
       // Expanding to fullscreen - silently update URL without navigation
-      const relayHint = this.accountRelay.relays()[0]?.url;
+      const liveEvent = this.liveEvent()!;
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
+      const relayHint = authorRelays[0];
       const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
-      const encoded = this.utilities.encodeEventForUrl(this.liveEvent()!, relayHints.length > 0 ? relayHints : undefined);
+      const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       this.location.replaceState(`/stream/${encoded}`);
     } else if (!isExpanding) {
       // Minimizing - exit native fullscreen if active
@@ -325,9 +327,11 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   copyEventUrl(): void {
     if (this.liveEvent()) {
-      const relayHint = this.accountRelay.relays()[0]?.url;
+      const liveEvent = this.liveEvent()!;
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
+      const relayHint = authorRelays[0];
       const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
-      const encoded = this.utilities.encodeEventForUrl(this.liveEvent()!, relayHints.length > 0 ? relayHints : undefined);
+      const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       navigator.clipboard.writeText(`https://nostria.app/stream/${encoded}`);
     }
   }

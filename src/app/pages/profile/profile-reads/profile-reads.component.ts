@@ -21,7 +21,7 @@ import { EventService } from '../../../services/event';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { ZapService } from '../../../services/zap.service';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountRelayService } from '../../../services/relays/account-relay';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 
 /** Engagement metrics for an article */
 interface ArticleEngagement {
@@ -64,7 +64,7 @@ export class ProfileReadsComponent implements OnChanges {
   private sharedRelay = inject(SharedRelayService);
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);
-  private accountRelay = inject(AccountRelayService);
+  private userRelaysService = inject(UserRelaysService);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
@@ -264,12 +264,14 @@ export class ProfileReadsComponent implements OnChanges {
   /**
    * Share an article
    */
-  shareArticle(event: Event): void {
+  async shareArticle(event: Event): Promise<void> {
     const slug = this.utilities.getTagValues('d', event.tags)[0];
     const title = this.getArticleTitle(event);
 
     if (slug) {
-      const relayHint = this.accountRelay.relays()[0]?.url;
+      await this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
+      const relayHint = authorRelays[0];
       const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
       const naddr = nip19.naddrEncode({
         identifier: slug,

@@ -12,6 +12,7 @@ import { PlaylistService } from '../../../services/playlist.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { ApplicationService } from '../../../services/application.service';
 import { Playlist } from '../../../interfaces';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { CreatePlaylistDialogComponent } from '../../playlists/create-playlist-dialog/create-playlist-dialog.component';
 import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylistDialogResult } from '../../../components/rename-playlist-dialog/rename-playlist-dialog.component';
 
@@ -35,6 +36,7 @@ export class PlaylistsTabComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private app = inject(ApplicationService);
+  private userRelaysService = inject(UserRelaysService);
 
   playlists = this.playlistService.playlists;
   drafts = this.playlistService.drafts;
@@ -175,11 +177,13 @@ export class PlaylistsTabComponent {
 
   async copyNeventAddress(playlist: Playlist): Promise<void> {
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(playlist.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(playlist.pubkey);
       const naddr = nip19.naddrEncode({
         kind: 32100,
         pubkey: playlist.pubkey,
         identifier: playlist.id,
-        relays: []
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
       await navigator.clipboard.writeText(naddr);

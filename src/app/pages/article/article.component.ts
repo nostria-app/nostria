@@ -42,7 +42,7 @@ import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
-import { AccountRelayService } from '../../services/relays/account-relay';
+import { UserRelaysService } from '../../services/relays/user-relays';
 
 @Component({
   selector: 'app-article',
@@ -80,7 +80,7 @@ export class ArticleComponent implements OnDestroy {
   private relayPool = inject(RelayPoolService);
   private rightPanel = inject(RightPanelService);
   private panelNav = inject(PanelNavigationService);
-  private accountRelay = inject(AccountRelayService);
+  private userRelaysService = inject(UserRelaysService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -616,7 +616,9 @@ export class ArticleComponent implements OnDestroy {
     const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
     const image = this.image();
 
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    await this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
     const dialogData: ShareArticleDialogData = {
