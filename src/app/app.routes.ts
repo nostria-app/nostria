@@ -527,7 +527,7 @@ export const routes: Routes = [
     resolve: { data: DataResolver, user: UsernameResolver },
     children: createProfileChildren(),
   },
-  {
+{
     path: 'premium',
     loadComponent: () =>
       import('./pages/premium/premium.component').then(m => m.PremiumComponent),
@@ -539,6 +539,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/premium/upgrade/upgrade.component').then(m => m.UpgradeComponent),
     title: 'Upgrade to Premium',
+  },
+  {
+    path: 'premium/renew',
+    loadComponent: () =>
+      import('./pages/premium/renew/renew.component').then(m => m.RenewComponent),
+    title: 'Renew Subscription',
   },
   {
     path: 'analytics',

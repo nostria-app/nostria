@@ -98,7 +98,7 @@ export interface SetUsernameDialogData {
                 <mat-icon>info</mat-icon>
                 <div>
                   <p class="nip05-label">Current NIP-05:</p>
-                  <p class="nip05-value">{{ existingNip05() }}</p>
+                  <p class="nip05-value">{{ displayNip05() }}</p>
                 </div>
               </div>
             }
@@ -283,12 +283,23 @@ export class SetUsernameDialogComponent implements OnDestroy {
   isCheckingUsername = signal<boolean>(false);
   isSaving = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
-  existingNip05 = signal<string | null>(null);
+  existingNip05 = signal<string | string[] | null>(null);
   shouldUpdateNip05 = false;
 
   hasExistingNip05 = computed(() => {
     const nip05 = this.existingNip05();
-    return nip05 !== null && nip05.trim() !== '';
+    if (nip05 === null) return false;
+    if (typeof nip05 === 'string') return nip05.trim() !== '';
+    if (Array.isArray(nip05) && nip05.length > 0) return typeof nip05[0] === 'string' && nip05[0].trim() !== '';
+    return false;
+  });
+
+  displayNip05 = computed(() => {
+    const nip05 = this.existingNip05();
+    if (nip05 === null) return null;
+    if (typeof nip05 === 'string') return nip05;
+    if (Array.isArray(nip05) && nip05.length > 0 && typeof nip05[0] === 'string') return nip05[0];
+    return null;
   });
 
   dialogTitle = computed(() =>

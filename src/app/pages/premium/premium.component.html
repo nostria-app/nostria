@@ -5,7 +5,7 @@
     <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
 
     <div class="cta-container">
-      <button mat-flat-button color="primary" class="premium-cta-button" [routerLink]="['/premium/upgrade']">
+      <button mat-flat-button class="premium-cta-button" [routerLink]="['/premium/upgrade']">
         <mat-icon>stars</mat-icon>
         Upgrade to Premium
       </button>
@@ -20,41 +20,160 @@
 <div class="content-medium">
   <h1>Nostria Premium</h1>
 
-  <mat-card>
+  <!-- Subscription Status Card -->
+  <mat-card class="subscription-card" [class.expired]="isExpired()" [class.expiring-soon]="isExpiringSoon()">
     <mat-card-header>
-      <mat-card-title>Your subscription</mat-card-title>
+      <mat-card-title>Your Subscription</mat-card-title>
+      @if (isExpired()) {
+        <span class="status-badge expired">Expired</span>
+      } @else if (isExpiringSoon()) {
+        <span class="status-badge expiring">Expiring Soon</span>
+      } @else {
+        <span class="status-badge active">Active</span>
+      }
     </mat-card-header>
 
     <mat-card-content>
       <mat-list role="list">
         <mat-list-item role="listitem">
-          Plan: {{ accountState.subscription()?.tier }}
+          <mat-icon matListItemIcon>workspace_premium</mat-icon>
+          <span matListItemTitle>Plan</span>
+          <span matListItemLine>{{ accountState.subscription()?.tier }}</span>
         </mat-list-item>
         <mat-list-item role="listitem">
-          Expiry date:
-          {{ accountState.subscription()?.expires | date: 'short' }}
+          <mat-icon matListItemIcon [class.expired-icon]="isExpired()">schedule</mat-icon>
+          <span matListItemTitle>
+            @if (isExpired()) {
+              Expired on
+            } @else {
+              Expires on
+            }
+          </span>
+          <span matListItemLine [class.expired-text]="isExpired()">
+            {{ accountState.subscription()?.expires | date: 'mediumDate' }}
+            @if (!isExpired() && expiresIn()) {
+              ({{ expiresIn() }} remaining)
+            }
+          </span>
         </mat-list-item>
         @if (accountState.subscription()?.username) {
-        <mat-list-item role="listitem">
-          Username: {{ accountState.subscription()?.username }}@nostria.app
-          <button mat-icon-button (click)="openSetUsernameDialog()" matListItemMeta>
-            <mat-icon>edit</mat-icon>
-          </button>
-        </mat-list-item>
-        } @else {
-        <mat-list-item role="listitem">
-          <div class="username-prompt">
-            <p class="username-prompt-text">
-              You haven't set your premium username yet. Set it now to claim your unique identity!
-            </p>
-            <button mat-flat-button color="primary" (click)="openSetUsernameDialog()">
-              <mat-icon>alternate_email</mat-icon>
-              Set Username
+          <mat-list-item role="listitem">
+            <mat-icon matListItemIcon>alternate_email</mat-icon>
+            <span matListItemTitle>Username</span>
+            <span matListItemLine>{{ accountState.subscription()?.username }}&#64;nostria.app</span>
+            <button mat-icon-button (click)="openSetUsernameDialog()" matListItemMeta>
+              <mat-icon>edit</mat-icon>
             </button>
-          </div>
-        </mat-list-item>
+          </mat-list-item>
+        } @else {
+          <mat-list-item role="listitem">
+            <div class="username-prompt">
+              <p class="username-prompt-text">
+                You haven't set your premium username yet. Set it now to claim your unique identity!
+              </p>
+              <button mat-flat-button (click)="openSetUsernameDialog()">
+                <mat-icon>alternate_email</mat-icon>
+                Set Username
+              </button>
+            </div>
+          </mat-list-item>
         }
       </mat-list>
+    </mat-card-content>
+
+    <mat-card-actions>
+      @if (isExpired()) {
+        <button mat-flat-button [routerLink]="['/premium/renew']" class="renew-button">
+          <mat-icon>refresh</mat-icon>
+          Reactivate Subscription
+        </button>
+      } @else {
+        <button mat-flat-button [routerLink]="['/premium/renew']" class="renew-button">
+          <mat-icon>add_circle</mat-icon>
+          Extend Subscription
+        </button>
+      }
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- History Section -->
+  <mat-card class="history-card">
+    <mat-card-header>
+      <mat-card-title>History</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (isLoadingHistory()) {
+        <div class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading history...</p>
+        </div>
+      } @else {
+        <mat-tab-group>
+          <mat-tab label="Subscriptions">
+            @if (subscriptionHistory().length === 0) {
+              <div class="empty-history">
+                <mat-icon>history</mat-icon>
+                <p>No subscription history yet</p>
+              </div>
+            } @else {
+              <div class="history-list">
+                @for (item of subscriptionHistory(); track item.id) {
+                  <div class="history-item">
+                    <div class="history-item-main">
+                      <div class="history-item-icon">
+                        <mat-icon>workspace_premium</mat-icon>
+                      </div>
+                      <div class="history-item-details">
+                        <span class="history-item-title">{{ item.tier }} - {{ formatBillingCycle(item.billingCycle) }}</span>
+                        <span class="history-item-date">{{ item.purchaseDate | date: 'mediumDate' }}</span>
+                      </div>
+                    </div>
+                    <div class="history-item-price">
+                      {{ formatPrice(item.priceCents, item.currency) }}
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </mat-tab>
+          <mat-tab label="Payments">
+            @if (paymentHistory().length === 0) {
+              <div class="empty-history">
+                <mat-icon>receipt_long</mat-icon>
+                <p>No payment history yet</p>
+              </div>
+            } @else {
+              <div class="history-list">
+                @for (item of paymentHistory(); track item.id) {
+                  <div class="history-item">
+                    <div class="history-item-main">
+                      <div class="history-item-icon" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.expired]="item.status === 'expired'">
+                        @if (item.status === 'paid') {
+                          <mat-icon>check_circle</mat-icon>
+                        } @else if (item.status === 'pending') {
+                          <mat-icon>pending</mat-icon>
+                        } @else {
+                          <mat-icon>cancel</mat-icon>
+                        }
+                      </div>
+                      <div class="history-item-details">
+                        <span class="history-item-title">{{ item.tier }} - {{ formatBillingCycle(item.billingCycle) }}</span>
+                        <span class="history-item-date">{{ item.createdAt | date: 'mediumDate' }}</span>
+                      </div>
+                    </div>
+                    <div class="history-item-meta">
+                      <span class="history-item-price">{{ formatPrice(item.priceCents, item.currency) }}</span>
+                      <span class="history-item-status" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.expired]="item.status === 'expired'">
+                        {{ item.status }}
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </mat-tab>
+        </mat-tab-group>
+      }
     </mat-card-content>
   </mat-card>
 </div>
