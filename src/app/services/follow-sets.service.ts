@@ -512,12 +512,15 @@ export class FollowSetsService {
     }
 
     try {
-      // Ensure d-tag has nostria prefix
-      const prefixedDTag = dTag.startsWith(NOSTRIA_PREFIX) ? dTag : `${NOSTRIA_PREFIX}${dTag}`;
+      // IMPORTANT: Preserve the original d-tag exactly as provided.
+      // Do NOT modify the d-tag here - this prevents creating duplicates when:
+      // 1. Editing lists created by other clients (e.g., "followset-favorites")
+      // 2. Toggling between private and public
+      // The prefix is only added in createFollowSet() for NEW lists.
 
       // Build tags - only include d and title tags
       const tags: string[][] = [
-        ['d', prefixedDTag],
+        ['d', dTag],
         ['title', title],
       ];
 
@@ -558,7 +561,7 @@ export class FollowSetsService {
       // Create FollowSet object for local update
       const followSet: FollowSet = {
         id: signedEvent.id,
-        dTag: prefixedDTag,
+        dTag,
         title,
         pubkeys,
         createdAt: signedEvent.created_at,
