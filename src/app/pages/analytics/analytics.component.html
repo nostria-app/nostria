@@ -590,28 +590,37 @@
         @if (discoveredFollowers().length > 0) {
         <div class="followers-results">
           <h3>Discovered Followers</h3>
-          <div class="followers-list">
+          <cdk-virtual-scroll-viewport 
+            class="followers-virtual-scroll" 
+            [itemSize]="followerItemSize"
+            [minBufferPx]="minBufferPx"
+            [maxBufferPx]="maxBufferPx">
             @for (follower of discoveredFollowers(); track follower.pubkey) {
             <div class="follower-item">
               <div class="follower-profile">
                 <app-user-profile [pubkey]="follower.pubkey" view="compact"></app-user-profile>
               </div>
-              <div class="follower-status">
-                @if (follower.isFollowing) {
-                <mat-chip class="following-chip">
-                  <mat-icon>check_circle</mat-icon>
-                  Following
-                </mat-chip>
-                } @else {
-                <mat-chip class="not-following-chip">
-                  <mat-icon>person_add</mat-icon>
-                  Not Following
-                </mat-chip>
-                }
+              <div class="follower-metadata">
+                <div class="follower-status">
+                  @if (follower.isFollowing) {
+                  <mat-chip class="following-chip">
+                    <mat-icon>check_circle</mat-icon>
+                    Following
+                  </mat-chip>
+                  } @else {
+                  <mat-chip class="not-following-chip">
+                    <mat-icon>person_add</mat-icon>
+                    Not Following
+                  </mat-chip>
+                  }
+                </div>
+                <div class="follower-date" [matTooltip]="'Follow list last updated: ' + (follower.followListUpdated * 1000 | date:'medium')">
+                  {{ follower.followListUpdated * 1000 | date:'short' }}
+                </div>
               </div>
             </div>
             }
-          </div>
+          </cdk-virtual-scroll-viewport>
         </div>
         } @else if (!followerDiscoveryLoading()) {
         <div class="empty-state">

@@ -1030,21 +1030,19 @@
     margin: 0 0 1rem 0;
   }
 
-  .followers-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-height: 600px;
-    overflow-y: auto;
+  .followers-virtual-scroll {
+    height: 600px;
+    width: 100%;
 
     .follower-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem;
-      border-radius: 8px;
+      height: 56px; // Fixed height as requested
+      padding: 0 0.75rem;
       background-color: var(--mat-sys-surface-container);
       transition: background-color 0.2s;
+      box-sizing: border-box;
 
       &:hover {
         background-color: var(--mat-sys-surface-container-high);
@@ -1053,26 +1051,43 @@
       .follower-profile {
         flex: 1;
         min-width: 0;
+        display: flex;
+        align-items: center;
       }
 
-      .follower-status {
-        mat-chip {
-          &.following-chip {
-            background-color: var(--mat-success-color);
-            color: white;
-          }
+      .follower-metadata {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-shrink: 0;
 
-          &.not-following-chip {
-            background-color: var(--mat-sys-surface-container-highest);
-            color: var(--mat-sys-on-surface);
-          }
+        .follower-status {
+          mat-chip {
+            &.following-chip {
+              background-color: var(--mat-success-color);
+              color: white;
+            }
 
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-            margin-right: 0.25rem;
+            &.not-following-chip {
+              background-color: var(--mat-sys-surface-container-highest);
+              color: var(--mat-sys-on-surface);
+            }
+
+            mat-icon {
+              font-size: 18px;
+              width: 18px;
+              height: 18px;
+              margin-right: 0.25rem;
+            }
           }
+        }
+
+        .follower-date {
+          font-size: 0.75rem;
+          color: var(--mat-sys-on-surface-variant);
+          white-space: nowrap;
+          min-width: 100px;
+          text-align: right;
         }
       }
     }

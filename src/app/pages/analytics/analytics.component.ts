@@ -30,6 +30,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { kinds, Event, nip19 } from 'nostr-tools';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LoggerService } from '../../services/logger.service';
@@ -128,6 +129,7 @@ interface DiscoveredFollower {
   pubkey: string;
   isFollowing: boolean;
   discoveredAt: number;
+  followListUpdated: number; // Timestamp when the follower's contact list (kind 3 event) was last updated
 }
 
 interface FollowerDiscoveryCache {
@@ -164,6 +166,7 @@ interface FollowerDiscoveryCache {
     DatePipe,
     FormsModule,
     UserProfileComponent,
+    ScrollingModule,
   ],
   templateUrl: './analytics.component.html',
   styleUrl: './analytics.component.scss',
@@ -237,6 +240,11 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   customRelayInput = signal('');
   customRelays = signal<string[]>([]);
   customRelayError = signal('');
+
+  // Virtual scroll configuration for follower list
+  readonly followerItemSize = 56; // Fixed height in pixels
+  readonly minBufferPx = 560; // 10 items
+  readonly maxBufferPx = 1120; // 20 items
 
   // Computed signals for follower discovery
   newFollowersCount = computed(() => {
@@ -1120,6 +1128,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   /**
    * Discover followers by querying for kind 3 events that mention the current user
+   * Implements pagination to fetch all followers beyond the 500 event limit
    */
   async discoverFollowers(): Promise<void> {
     const pubkey = this.accountState.pubkey();
@@ -1156,43 +1165,99 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
       // Query for kind 3 (contact list) events that include this user's pubkey in p-tags
       // The authors of these events are the users who follow the current user
-      // Note: Limited to 500 events per query. Users with more followers may need multiple queries.
-      const events = await pool.querySync(relayUrls, {
-        kinds: [kinds.Contacts],
-        '#p': [pubkey],
-        limit: 500,
-      });
+      // Use pagination to fetch all followers beyond the 500 event limit
+      const allEvents: Event[] = [];
+      const followerDataMap = new Map<string, { pubkey: string; followListUpdated: number }>();
+      let until: number | undefined = undefined;
+      let hasMore = true;
+      let pageCount = 0;
+      const maxPages = 20; // Safety limit to prevent infinite loops
 
-      this.followerDiscoveryProgress.set(60);
-      this.followerDiscoveryStatus.set(`Found ${events.length} kind 3 events, extracting followers...`);
+      while (hasMore && pageCount < maxPages) {
+        const filter: any = {
+          kinds: [kinds.Contacts],
+          '#p': [pubkey],
+          limit: 500,
+        };
 
-      // Extract unique follower pubkeys (authors of the kind 3 events who have this user in their contact list)
-      const followerPubkeys = new Set<string>();
-      for (const event of events) {
-        if (event.pubkey !== pubkey) { // Don't include self
-          followerPubkeys.add(event.pubkey);
+        // Add 'until' parameter for pagination (events are sorted by created_at descending)
+        if (until !== undefined) {
+          filter.until = until;
         }
+
+        this.logger.debug(`Fetching page ${pageCount + 1}, until: ${until}`);
+        const events = await pool.querySync(relayUrls, filter);
+
+        if (events.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        allEvents.push(...events);
+
+        // Extract unique follower pubkeys with their follow list update timestamp
+        for (const event of events) {
+          if (event.pubkey !== pubkey) { // Don't include self
+            // Keep the most recent follow list update for each follower
+            const existing = followerDataMap.get(event.pubkey);
+            if (!existing || event.created_at > existing.followListUpdated) {
+              followerDataMap.set(event.pubkey, {
+                pubkey: event.pubkey,
+                followListUpdated: event.created_at,
+              });
+            }
+          }
+        }
+
+        // Update progress (each page is worth 5% progress, up to 60%)
+        const progressIncrement = Math.min(5, (60 - 10) / maxPages);
+        this.followerDiscoveryProgress.update(p => Math.min(60, p + progressIncrement));
+        this.followerDiscoveryStatus.set(
+          `Found ${followerDataMap.size} unique followers across ${pageCount + 1} page(s)...`
+        );
+
+        // Check if we got fewer events than the limit (no more pages)
+        if (events.length < 500) {
+          hasMore = false;
+        } else {
+          // Get the oldest event's timestamp for the next page
+          const oldestEvent = events.reduce((oldest, event) =>
+            event.created_at < oldest.created_at ? event : oldest
+          );
+          until = oldestEvent.created_at;
+        }
+
+        pageCount++;
       }
 
-      this.followerDiscoveryProgress.set(80);
-      this.followerDiscoveryStatus.set('Checking following status...');
+      this.followerDiscoveryProgress.set(60);
+      this.followerDiscoveryStatus.set(
+        `Found ${followerDataMap.size} unique followers, checking following status...`
+      );
 
       // Check which followers we're already following
       const currentFollowing = this.accountState.followingList();
       const followingSet = new Set(currentFollowing);
 
-      const discoveredFollowers: DiscoveredFollower[] = Array.from(followerPubkeys).map(
-        followerPubkey => ({
-          pubkey: followerPubkey,
-          isFollowing: followingSet.has(followerPubkey),
+      const discoveredFollowers: DiscoveredFollower[] = Array.from(followerDataMap.values()).map(
+        followerData => ({
+          pubkey: followerData.pubkey,
+          isFollowing: followingSet.has(followerData.pubkey),
           discoveredAt: Math.floor(Date.now() / 1000),
+          followListUpdated: followerData.followListUpdated,
         })
       );
 
-      // Sort by following status (non-following first)
+      this.followerDiscoveryProgress.set(80);
+      this.followerDiscoveryStatus.set('Sorting results...');
+
+      // Sort by following status (non-following first), then by most recent update
       discoveredFollowers.sort((a, b) => {
-        if (a.isFollowing === b.isFollowing) return 0;
-        return a.isFollowing ? 1 : -1;
+        if (a.isFollowing !== b.isFollowing) {
+          return a.isFollowing ? 1 : -1;
+        }
+        // Within the same following status, sort by most recent update
+        return b.followListUpdated - a.followListUpdated;
       });
 
       this.discoveredFollowers.set(discoveredFollowers);
@@ -1203,7 +1268,9 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         `Discovered ${discoveredFollowers.length} followers (${discoveredFollowers.filter(f => !f.isFollowing).length} new)`
       );
 
-      this.logger.info(`Follower discovery complete: ${discoveredFollowers.length} followers found`);
+      this.logger.info(
+        `Follower discovery complete: ${discoveredFollowers.length} followers found across ${pageCount} page(s)`
+      );
     } catch (error) {
       this.logger.error('Failed to discover followers', error);
       this.followerDiscoveryStatus.set('Failed to discover followers');
