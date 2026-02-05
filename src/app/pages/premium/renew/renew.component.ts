@@ -353,8 +353,8 @@ export class RenewComponent implements OnDestroy {
   }
 
   finishSetup() {
-    // Navigate to the premium page
-    this.router.navigate(['/premium']);
+    // Navigate to the accounts page with premium tab
+    this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
 
     this.snackBar.open('Your subscription has been renewed!', 'Thanks!', {
       duration: 5000,

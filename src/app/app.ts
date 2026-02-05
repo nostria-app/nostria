@@ -127,6 +127,7 @@ interface NavItem {
   followSetId?: string;
   mediaSettings?: boolean;
   badge?: () => number | null; // Function that returns badge count or null
+  queryParams?: { [key: string]: string }; // Query parameters for navigation
 }
 
 @Component({
@@ -627,11 +628,12 @@ export class App implements OnInit, OnDestroy {
       icon: 'live_tv',
     },
     {
-      path: 'premium',
+      path: 'accounts',
       label: $localize`:@@app.nav.premium:Premium`,
       icon: 'diamond',
       authenticated: true,
       hideOnSubscribed: true,
+      queryParams: { tab: 'premium' },
     },
     // Additional items available for menu customization
     { path: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },

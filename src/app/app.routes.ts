@@ -409,15 +409,15 @@ export const routes: Routes = [
   },
   {
     path: 'credentials',
-    loadComponent: () =>
-      import('./pages/credentials/credentials.component').then(m => m.CredentialsComponent),
-    data: { isRoot: true },
+    redirectTo: 'accounts?tab=credentials',
+    pathMatch: 'full',
   },
   {
     path: 'accounts',
     loadComponent: () =>
       import('./pages/accounts/accounts.component').then(m => m.AccountsComponent),
     data: { isRoot: true },
+    title: 'Manage Account',
   },
   {
     path: 'about',
@@ -529,10 +529,8 @@ export const routes: Routes = [
   },
 {
     path: 'premium',
-    loadComponent: () =>
-      import('./pages/premium/premium.component').then(m => m.PremiumComponent),
-    title: 'Premium',
-    data: { isRoot: true },
+    redirectTo: 'accounts?tab=premium',
+    pathMatch: 'full',
   },
   {
     path: 'premium/upgrade',

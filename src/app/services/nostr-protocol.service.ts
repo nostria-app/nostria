@@ -98,7 +98,7 @@ export class NostrProtocolService {
             verticalPosition: 'bottom',
           });
 
-          await this.router.navigate(['/credentials']);
+          await this.router.navigate(['/accounts'], { queryParams: { tab: 'credentials' } });
         } catch (error) {
           this.logger.error('[NostrProtocol] Failed to add wallet:', error);
           this.snackBar.open(

@@ -1,113 +1,716 @@
 <div class="panel-header">
-  <h2 class="panel-title title-font">Manage Accounts</h2>
+  <h2 class="panel-title title-font">Manage Account</h2>
   <span class="panel-header-spacer"></span>
   <button mat-icon-button (click)="layout.showLoginDialog()" matTooltip="Add account">
     <mat-icon>person_add</mat-icon>
   </button>
 </div>
 
-<div class="accounts-container">
+<mat-tab-group [(selectedIndex)]="selectedTabIndex" class="account-tabs">
+  <!-- ACCOUNTS TAB -->
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>manage_accounts</mat-icon>
+      <span class="tab-label">Accounts</span>
+    </ng-template>
 
-  @let currentAccount = accountState.account();
-  @let currentMetadata = accountState.profile()?.data;
+    <div class="tab-content">
+      @let currentAccount = accountState.account();
+      @let currentMetadata = accountState.profile()?.data;
 
-  <div class="current-account">
-    <h2>Current Account</h2>
-    <mat-card class="account-card">
-      @if (currentAccount && currentMetadata) {
-      <div class="account-content">
-        <div class="account-avatar">
-          @if (currentMetadata.picture) {
-          <img [src]="currentMetadata.picture" alt="Profile picture" class="avatar-image" />
+      <div class="current-account">
+        <h2>Current Account</h2>
+        <mat-card class="account-card">
+          @if (currentAccount && currentMetadata) {
+          <div class="account-content">
+            <div class="account-avatar">
+              @if (currentMetadata.picture) {
+              <img [src]="currentMetadata.picture" alt="Profile picture" class="avatar-image" />
+              } @else {
+              <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+              }
+            </div>
+            <div class="account-details">
+              <h3>
+                {{ currentMetadata.display_name || currentMetadata.name || 'Unnamed Account' }}
+              </h3>
+              <p class="pubkey">{{ currentAccount.pubkey | npub }}</p>
+              <p class="account-source">
+                Type: {{ currentAccount.source }} • Last used:
+                {{ currentAccount.lastUsed | date: 'medium' }}
+              </p>
+            </div>
+          </div>
+          } @else if (currentAccount) {
+          <div class="account-content">
+            <div class="account-avatar">
+              <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+            </div>
+            <div class="account-details">
+              <h3>Unnamed Account</h3>
+              <p class="account-source">
+                Type: {{ currentAccount.source }} • Last used:
+                {{ currentAccount.lastUsed | date: 'medium' }}
+              </p>
+            </div>
+          </div>
           } @else {
-          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
+          <div class="account-content">
+            <p>No active account</p>
+          </div>
           }
-        </div>
-        <div class="account-details">
-          <h3>
-            {{ currentMetadata.display_name || currentMetadata.name || 'Unnamed Account' }}
-          </h3>
-          <p class="pubkey">{{ currentAccount.pubkey | npub }}</p>
-          <p class="account-source">
-            Type: {{ currentAccount.source }} • Last used:
-            {{ currentAccount.lastUsed | date: 'medium' }}
-          </p>
-        </div>
+        </mat-card>
       </div>
-      } @else if (currentAccount) {
-      <div class="account-content">
-        <div class="account-avatar">
-          <mat-icon class="avatar-placeholder">account_circle</mat-icon>
-        </div>
-        <div class="account-details">
-          <h3>Unnamed Account</h3>
-          <p class="account-source">
-            Type: {{ currentAccount.source }} • Last used:
-            {{ currentAccount.lastUsed | date: 'medium' }}
+
+      @if (accountState.accounts().length > 0) {
+      <div class="all-accounts">
+        <h2>Account List</h2>
+        <mat-list class="accounts-list">
+          @for (accountItem of accountState.accounts(); track accountItem.pubkey) {
+          @let accountItemProfile = accountState.getAccountProfileSync(accountItem.pubkey);
+
+          <mat-list-item class="account-item"
+            [class.current-account-item]="accountItem.pubkey === accountState.account()?.pubkey" (click)="
+                  accountItem.pubkey !== accountState.account()?.pubkey
+                    ? switchAccount(accountItem.pubkey)
+                    : null
+                ">
+            <div class="account-item-content">
+              <div class="account-avatar list-avatar">
+                @if (accountItemProfile?.data?.picture; as profilePicture) {
+                <img [src]="profilePicture" alt="Profile picture" class="avatar-image" />
+                } @else {
+                <mat-icon>account_circle</mat-icon>
+                }
+              </div>
+              <div class="account-list-content">
+                <div class="account-name">
+                  @if (accountItemProfile?.data; as profileData) {
+                  {{ profileData.display_name || profileData.name || 'Unnamed Account' }}
+                  } @else {
+                  Unnamed Account
+                  }
+                </div>
+
+                <div class="account-details-container">
+                  <div class="account-npub">{{ accountItem.pubkey | npub }}</div>
+                  <div class="account-source">
+                    Type: {{ accountItem.source }} • Last used:
+                    {{ accountItem.lastUsed | date: 'medium' }}
+                  </div>
+                </div>
+              </div>
+
+              <button mat-icon-button class="delete-button" (click)="removeAccount($event, accountItem.pubkey)"
+                matTooltip="Remove account">
+                <mat-icon color="warn">delete</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+          }
+        </mat-list>
+      </div>
+
+      <button (click)="nostrService.logout()" mat-raised-button class="add-account-button">
+        <mat-icon>account_circle_off</mat-icon> Set no active account
+      </button>
+      } @else {
+      <p class="no-accounts">No accounts available</p>
+      }
+    </div>
+  </mat-tab>
+
+  <!-- CREDENTIALS TAB -->
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>key</mat-icon>
+      <span class="tab-label">Credentials</span>
+    </ng-template>
+
+    <div class="tab-content credentials-content">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Public Key (npub)</mat-card-title>
+          <mat-card-subtitle>Your public Nostr identifier</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="key-display">
+            <div class="key-value">{{ getNpub() }}</div>
+            <button mat-icon-button matTooltip="Copy npub to clipboard" (click)="copyToClipboard(getNpub(), 'Public key')">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+          <p class="key-info">
+            This is your public identifier on the Nostr network. You can share this with others so
+            they can follow you.
+          </p>
+        </mat-card-content>
+      </mat-card>
+
+      @if (isRemoteAccount()) {
+      <mat-card class="private-key-card">
+        <mat-card-header>
+          <mat-card-title>Remote Signing</mat-card-title>
+          <mat-card-subtitle>Enhanced security with external signer</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="remote-signing-info">
+            <mat-icon class="info-icon">security</mat-icon>
+            <p>
+              This account uses remote signing for enhanced security. Your private key is
+              managed externally and is not accessible within this application. All signing
+              operations are handled by your external signer.
+            </p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      } @else if (accountState.account()?.privkey) {
+      <mat-card class="private-key-card">
+        <mat-card-header>
+          <mat-card-title>Private Key (nsec)</mat-card-title>
+          <mat-card-subtitle>Keep this secure and private</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="key-display">
+            <div class="key-value private-key">
+              @if (isNsecVisible()) {
+              {{ getNsec() }}
+              } @else {
+              {{ getMaskedNsec(getNsec()) }}
+              }
+            </div>
+            <div class="key-actions">
+              <button mat-icon-button matTooltip="{{ isNsecVisible() ? 'Hide private key' : 'Reveal private key' }}"
+                (click)="toggleNsecVisibility()">
+                <mat-icon>{{ isNsecVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Copy private key to clipboard"
+                (click)="copyToClipboard(getNsec(), 'Private key')">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Download credentials as JSON file" (click)="downloadCredentials()">
+                <mat-icon>download</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="warning-message">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <p>
+              Your private key is the master key to your Nostr identity. Never share it with
+              anyone. Anyone with your private key can post as you and access all your data.
+            </p>
+          </div>
+
+          <div class="qr-login-section">
+            <div class="qr-login-header">
+              <mat-icon class="qr-icon">devices</mat-icon>
+              <div class="qr-login-text">
+                <strong>Login on Another Device?</strong>
+                <p>Scan the QR code for instant login on your phone or other device.</p>
+              </div>
+            </div>
+            <button mat-stroked-button (click)="exportQrCode()">
+              <mat-icon>qr_code</mat-icon>
+              Show Login QR Code
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      @if (hasRemoteSigner()) {
+      <mat-card class="remote-signer-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon class="status-icon connected">check_circle</mat-icon>
+            Remote Signer Connected
+          </mat-card-title>
+          <mat-card-subtitle>NIP-46 remote signing is configured</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="signing-method-section">
+            <p><strong>Current Signing Method:</strong></p>
+            <div class="signing-method-toggle">
+              <button mat-stroked-button [class.active]="getPreferredSigningMethod() === 'local'"
+                (click)="setPreferredSigningMethod('local')" [disabled]="!accountState.account()?.privkey">
+                <mat-icon>key</mat-icon>
+                Local Key
+              </button>
+              <button mat-stroked-button [class.active]="getPreferredSigningMethod() === 'remote'"
+                (click)="setPreferredSigningMethod('remote')">
+                <mat-icon>security</mat-icon>
+                Remote Signer
+              </button>
+            </div>
+            <p class="signing-method-hint">
+              @if (getPreferredSigningMethod() === 'remote') {
+              All signing operations will be handled by your remote signer app.
+              } @else {
+              Signing operations will use the local private key stored in this app.
+              }
+            </p>
+          </div>
+
+          @if (accountState.account()?.privkey) {
+          <div class="danger-zone">
+            <p><strong>Danger Zone</strong></p>
+            <div class="danger-warning">
+              <mat-icon class="warning-icon">warning</mat-icon>
+              <span>
+                Once you've verified remote signing works correctly, you can optionally remove the local private key
+                for enhanced security.
+                This action is <strong>irreversible</strong> - make sure you have backed up your key first!
+              </span>
+            </div>
+            <button mat-stroked-button color="warn" (click)="removePrivateKey()">
+              <mat-icon>delete_forever</mat-icon>
+              Remove Local Private Key
+            </button>
+          </div>
+          }
+
+          <div class="remote-signer-actions">
+            <button mat-stroked-button (click)="disconnectRemoteSigner()">
+              <mat-icon>link_off</mat-icon>
+              Disconnect Remote Signer
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      }
+
+      @if (hasMnemonic()) {
+      <mat-card class="private-key-card">
+        <mat-card-header>
+          <mat-card-title>Secret Recovery Phrase</mat-card-title>
+          <mat-card-subtitle>12-word backup for your account</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="key-display">
+            <div class="key-value private-key mnemonic-display">
+              @if (isMnemonicVisible()) {
+              {{ getMnemonic() }}
+              } @else {
+              {{ getMaskedMnemonic(getMnemonic()) }}
+              }
+            </div>
+            <div class="key-actions">
+              <button mat-icon-button
+                matTooltip="{{ isMnemonicVisible() ? 'Hide recovery phrase' : 'Reveal recovery phrase' }}"
+                (click)="toggleMnemonicVisibility()">
+                <mat-icon>{{ isMnemonicVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Copy recovery phrase to clipboard"
+                (click)="copyToClipboard(getMnemonic(), 'Recovery phrase')">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="info-message">
+            <mat-icon class="info-icon">info</mat-icon>
+            <p>
+              Your 12-word recovery phrase can be used to restore your account on any device.
+              Keep it safe and never share it with anyone. Write it down and store it in a secure location.
+            </p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      }
+      } @else {
+      <mat-card class="private-key-card">
+        <mat-card-header>
+          <mat-card-title>Private Key Not Available</mat-card-title>
+          <mat-card-subtitle>Your key is managed externally</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (isExtensionAccount()) {
+          <div class="signing-info">
+            <mat-icon class="info-icon">extension</mat-icon>
+            <div>
+              <p>
+                Your private key is managed by a <strong>browser extension</strong> (such as Alby,
+                nos2x, or Blockcore Wallet). This is a secure way to use Nostr as your key never
+                leaves the extension.
+              </p>
+              <p class="key-info">
+                To view or backup your private key, open your browser extension's settings.
+              </p>
+            </div>
+          </div>
+          } @else if (isExternalSignerAccount()) {
+          <div class="signing-info">
+            <mat-icon class="info-icon">smartphone</mat-icon>
+            <div>
+              <p>
+                Your private key is managed by an <strong>external signer app</strong> (such as Amber)
+                on your device. This provides enhanced security as your key stays in a dedicated
+                signing application.
+              </p>
+              <p class="key-info">
+                To view or backup your private key, open your signer app's settings.
+              </p>
+            </div>
+          </div>
+          } @else if (isPreviewAccount()) {
+          <div class="signing-info">
+            <mat-icon class="info-icon">visibility</mat-icon>
+            <div>
+              <p>
+                You are using <strong>preview mode</strong> with a public key only. This is a read-only
+                mode that allows you to browse Nostr content without a private key.
+              </p>
+              <p class="key-info">
+                To post content or interact with others, you'll need to log in with a full account.
+              </p>
+            </div>
+          </div>
+          } @else {
+          <div class="signing-info">
+            <mat-icon class="info-icon">key_off</mat-icon>
+            <div>
+              <p>
+                Your private key is not stored in this application. You may be using an external
+                method to manage your Nostr identity.
+              </p>
+            </div>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+      }
+
+      @if (hasEncryptedKey()) {
+      <mat-card class="pin-management-card">
+        <mat-card-header>
+          <mat-card-title>PIN Protection</mat-card-title>
+          <mat-card-subtitle>Secure your private key with a PIN</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (!isChangingPin() && !isResettingPin()) {
+          <div class="pin-info">
+            <mat-icon class="info-icon">lock</mat-icon>
+            <div>
+              <p>
+                Your private key is encrypted with a PIN for at-rest protection. This provides
+                basic security against unauthorized access to your stored credentials.
+              </p>
+              <p class="default-pin-warning">
+                <mat-icon class="warning-icon">info</mat-icon>
+                <strong>Note:</strong> By default, your key is protected with PIN "0000".
+                We strongly recommend changing this to a custom PIN for better security.
+              </p>
+            </div>
+          </div>
+          <div class="pin-actions">
+            <button mat-flat-button (click)="startChangingPin()">
+              <mat-icon>vpn_key</mat-icon>
+              Change PIN
+            </button>
+            <button mat-stroked-button (click)="startResettingPin()">
+              <mat-icon>restart_alt</mat-icon>
+              Reset to Default
+            </button>
+          </div>
+          } @else if (isChangingPin()) {
+          <div class="pin-change-form">
+            <h3 class="form-title">
+              <mat-icon>vpn_key</mat-icon>
+              Change Your PIN
+            </h3>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Current PIN</mat-label>
+              <input matInput [formControl]="oldPinControl" type="password" placeholder="Enter current PIN"
+                autocomplete="off" />
+              <mat-hint>Default PIN is "0000" if you haven't changed it</mat-hint>
+              @if (oldPinControl.hasError('required')) {
+              <mat-error>Current PIN is required</mat-error>
+              }
+              @if (oldPinControl.hasError('minlength')) {
+              <mat-error>PIN must be at least 4 characters</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>New PIN</mat-label>
+              <input matInput [formControl]="newPinControl" type="password" placeholder="Enter new PIN"
+                autocomplete="off" />
+              <mat-hint>Choose a PIN with at least 4 characters</mat-hint>
+              @if (newPinControl.hasError('required')) {
+              <mat-error>New PIN is required</mat-error>
+              }
+              @if (newPinControl.hasError('minlength')) {
+              <mat-error>PIN must be at least 4 characters</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirm New PIN</mat-label>
+              <input matInput [formControl]="confirmPinControl" type="password" placeholder="Re-enter new PIN"
+                autocomplete="off" (keydown.enter)="changePin()" />
+              @if (confirmPinControl.hasError('required')) {
+              <mat-error>Confirmation is required</mat-error>
+              }
+              @if (confirmPinControl.hasError('minlength')) {
+              <mat-error>PIN must be at least 4 characters</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-button (click)="cancelChangingPin()">Cancel</button>
+              <button mat-flat-button (click)="changePin()" [disabled]="
+                      oldPinControl.invalid || newPinControl.invalid || confirmPinControl.invalid
+                    ">
+                Update PIN
+              </button>
+            </div>
+          </div>
+          } @else if (isResettingPin()) {
+          <div class="pin-reset-form">
+            <h3 class="form-title">
+              <mat-icon>restart_alt</mat-icon>
+              Reset PIN to Default
+            </h3>
+            <div class="reset-info">
+              <mat-icon class="warning-icon">info</mat-icon>
+              <p>
+                This will reset your PIN back to the default value <strong>"0000"</strong>.
+                After resetting, you can change it to a new custom PIN.
+              </p>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Current PIN</mat-label>
+              <input matInput [formControl]="resetPinControl" type="password" placeholder="Enter your current PIN"
+                autocomplete="off" (keydown.enter)="resetPinToDefault()" />
+              <mat-hint>Enter your current PIN to confirm the reset</mat-hint>
+              @if (resetPinControl.hasError('required')) {
+              <mat-error>Current PIN is required</mat-error>
+              }
+              @if (resetPinControl.hasError('minlength')) {
+              <mat-error>PIN must be at least 4 characters</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-button (click)="cancelResettingPin()">Cancel</button>
+              <button mat-flat-button (click)="resetPinToDefault()" [disabled]="resetPinControl.invalid">
+                Reset to Default
+              </button>
+            </div>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+      }
+
+      <div class="security-info">
+        <h2>Credential Security</h2>
+        <p>
+          <strong>Protect your private key (nsec):</strong> Never share your private key with
+          anyone. It provides full access to your Nostr identity.
+        </p>
+        <p>
+          <strong>Backup your keys:</strong> Make sure to save a backup of your keys in a secure
+          location.
+        </p>
+        <p>
+          <strong>Consider using an extension:</strong> For enhanced security, consider using a
+          browser extension like Alby or nos2x to manage your keys.
+        </p>
+      </div>
+    </div>
+  </mat-tab>
+
+  <!-- PREMIUM TAB -->
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>workspace_premium</mat-icon>
+      <span class="tab-label">Premium</span>
+    </ng-template>
+
+    <div class="tab-content premium-content">
+      @if (!accountState.subscription()?.expires) {
+      <div class="premium-container">
+        <div class="premium-header">
+          <h1 class="premium-title title-font">Nostria Premium</h1>
+          <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
+
+          <div class="cta-container">
+            <button mat-flat-button class="premium-cta-button" [routerLink]="['/premium/upgrade']">
+              <mat-icon>stars</mat-icon>
+              Upgrade to Premium
+            </button>
+          </div>
+          <p>
+            <br />
+            <a href="https://www.nostria.app/premium" target="_blank" rel="noopener noreferrer" mat-flat-button>Learn more</a>
           </p>
         </div>
       </div>
       } @else {
-      <div class="account-content">
-        <p>No active account</p>
-      </div>
-      }
-    </mat-card>
-  </div>
+      <h1>Nostria Premium</h1>
 
-  @if (accountState.accounts().length > 0) {
-  <div class="all-accounts">
-    <h2>Account List</h2>
-    <mat-list class="accounts-list">
-      @for (accountItem of accountState.accounts(); track accountItem.pubkey) {
-      @let accountItemProfile = accountState.getAccountProfileSync(accountItem.pubkey);
+      <mat-card class="subscription-card" [class.expired]="isExpired()" [class.expiring-soon]="isExpiringSoon()">
+        <mat-card-header>
+          <mat-card-title>Your Subscription</mat-card-title>
+          @if (isExpired()) {
+            <span class="status-badge expired">Expired</span>
+          } @else if (isExpiringSoon()) {
+            <span class="status-badge expiring">Expiring Soon</span>
+          } @else {
+            <span class="status-badge active">Active</span>
+          }
+        </mat-card-header>
 
-      <mat-list-item class="account-item"
-        [class.current-account-item]="accountItem.pubkey === accountState.account()?.pubkey" (click)="
-              accountItem.pubkey !== accountState.account()?.pubkey
-                ? switchAccount(accountItem.pubkey)
-                : null
-            ">
-        <div class="account-item-content">
-          <div class="account-avatar list-avatar">
-            @if (accountItemProfile?.data?.picture; as profilePicture) {
-            <img [src]="profilePicture" alt="Profile picture" class="avatar-image" />
+        <mat-card-content>
+          <mat-list role="list">
+            <mat-list-item role="listitem">
+              <mat-icon matListItemIcon>workspace_premium</mat-icon>
+              <span matListItemTitle>Plan</span>
+              <span matListItemLine>{{ accountState.subscription()?.tier }}</span>
+            </mat-list-item>
+            <mat-list-item role="listitem">
+              <mat-icon matListItemIcon [class.expired-icon]="isExpired()">schedule</mat-icon>
+              <span matListItemTitle>
+                @if (isExpired()) {
+                  Expired on
+                } @else {
+                  Expires on
+                }
+              </span>
+              <span matListItemLine [class.expired-text]="isExpired()">
+                {{ accountState.subscription()?.expires | date: 'mediumDate' }}
+                @if (!isExpired() && expiresIn()) {
+                  ({{ expiresIn() }} remaining)
+                }
+              </span>
+            </mat-list-item>
+            @if (accountState.subscription()?.username) {
+              <mat-list-item role="listitem">
+                <mat-icon matListItemIcon>alternate_email</mat-icon>
+                <span matListItemTitle>Username</span>
+                <span matListItemLine>{{ accountState.subscription()?.username }}&#64;nostria.app</span>
+                <button mat-icon-button (click)="openSetUsernameDialog()" matListItemMeta>
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </mat-list-item>
             } @else {
-            <mat-icon>account_circle</mat-icon>
+              <mat-list-item role="listitem">
+                <div class="username-prompt">
+                  <p class="username-prompt-text">
+                    You haven't set your premium username yet. Set it now to claim your unique identity!
+                  </p>
+                  <button mat-flat-button (click)="openSetUsernameDialog()">
+                    <mat-icon>alternate_email</mat-icon>
+                    Set Username
+                  </button>
+                </div>
+              </mat-list-item>
             }
-          </div>
-          <div class="account-list-content">
-            <div class="account-name">
-              @if (accountItemProfile?.data; as profileData) {
-              {{ profileData.display_name || profileData.name || 'Unnamed Account' }}
-              } @else {
-              Unnamed Account
-              }
-            </div>
+          </mat-list>
+        </mat-card-content>
 
-            <div class="account-details-container">
-              <div class="account-npub">{{ accountItem.pubkey | npub }}</div>
-              <div class="account-source">
-                Type: {{ accountItem.source }} • Last used:
-                {{ accountItem.lastUsed | date: 'medium' }}
-              </div>
-            </div>
-          </div>
+        <mat-card-actions>
+          @if (isExpired()) {
+            <button mat-flat-button [routerLink]="['/premium/renew']" class="renew-button">
+              <mat-icon>refresh</mat-icon>
+              Reactivate Subscription
+            </button>
+          } @else {
+            <button mat-flat-button [routerLink]="['/premium/renew']" class="renew-button">
+              <mat-icon>add_circle</mat-icon>
+              Extend Subscription
+            </button>
+          }
+        </mat-card-actions>
+      </mat-card>
 
-          <button mat-icon-button class="delete-button" (click)="removeAccount($event, accountItem.pubkey)"
-            matTooltip="Remove account">
-            <mat-icon color="warn">delete</mat-icon>
-          </button>
-        </div>
-      </mat-list-item>
+      <mat-card class="history-card">
+        <mat-card-header>
+          <mat-card-title>History</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (isLoadingHistory()) {
+            <div class="loading-container">
+              <mat-spinner diameter="40"></mat-spinner>
+              <p>Loading history...</p>
+            </div>
+          } @else {
+            <mat-tab-group>
+              <mat-tab label="Subscriptions">
+                @if (subscriptionHistory().length === 0) {
+                  <div class="empty-history">
+                    <mat-icon>history</mat-icon>
+                    <p>No subscription history yet</p>
+                  </div>
+                } @else {
+                  <div class="history-list">
+                    @for (item of subscriptionHistory(); track item.id) {
+                      <div class="history-item">
+                        <div class="history-item-main">
+                          <div class="history-item-icon">
+                            <mat-icon>workspace_premium</mat-icon>
+                          </div>
+                          <div class="history-item-details">
+                            <span class="history-item-title">{{ item.tier }} - {{ formatBillingCycle(item.billingCycle) }}</span>
+                            <span class="history-item-date">{{ item.purchaseDate | date: 'mediumDate' }}</span>
+                          </div>
+                        </div>
+                        <div class="history-item-price">
+                          {{ formatPrice(item.priceCents, item.currency) }}
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </mat-tab>
+              <mat-tab label="Payments">
+                @if (paymentHistory().length === 0) {
+                  <div class="empty-history">
+                    <mat-icon>receipt_long</mat-icon>
+                    <p>No payment history yet</p>
+                  </div>
+                } @else {
+                  <div class="history-list">
+                    @for (item of paymentHistory(); track item.id) {
+                      <div class="history-item">
+                        <div class="history-item-main">
+                          <div class="history-item-icon" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.expired]="item.status === 'expired'">
+                            @if (item.status === 'paid') {
+                              <mat-icon>check_circle</mat-icon>
+                            } @else if (item.status === 'pending') {
+                              <mat-icon>pending</mat-icon>
+                            } @else {
+                              <mat-icon>cancel</mat-icon>
+                            }
+                          </div>
+                          <div class="history-item-details">
+                            <span class="history-item-title">{{ item.tier }} - {{ formatBillingCycle(item.billingCycle) }}</span>
+                            <span class="history-item-date">{{ item.createdAt | date: 'mediumDate' }}</span>
+                          </div>
+                        </div>
+                        <div class="history-item-meta">
+                          <span class="history-item-price">{{ formatPrice(item.priceCents, item.currency) }}</span>
+                          <span class="history-item-status" [class.paid]="item.status === 'paid'" [class.pending]="item.status === 'pending'" [class.expired]="item.status === 'expired'">
+                            {{ item.status }}
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </mat-tab>
+            </mat-tab-group>
+          }
+        </mat-card-content>
+      </mat-card>
       }
-    </mat-list>
-  </div>
-
-  <button (click)="nostrService.logout()" mat-raised-button class="add-account-button">
-    <mat-icon>account_circle_off</mat-icon> Set no active account
-  </button>
-  } @else {
-  <p class="no-accounts">No accounts available</p>
-  }
-</div>
+    </div>
+  </mat-tab>
+</mat-tab-group>
