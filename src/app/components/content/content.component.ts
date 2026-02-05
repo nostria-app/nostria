@@ -3,7 +3,7 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, comp
 import { MatIconModule } from '@angular/material/icon';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { SettingsService } from '../../services/settings.service';
-import { ContentToken, ParsingService } from '../../services/parsing.service';
+import { ContentToken, ParsingService, PendingMentionResolution } from '../../services/parsing.service';
 import { NoteContentComponent } from './note-content/note-content.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
@@ -201,13 +201,18 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(true);
         const currentEvent = this.event();
         const authorPubkey = currentEvent?.pubkey;
-        const newTokens = await this.parsing.parseContent(content, currentEvent?.tags, authorPubkey);
+        const result = await this.parsing.parseContent(content, currentEvent?.tags, authorPubkey);
 
         // Update cached tokens - inline rendering of event/article mentions is now handled by note-content.component
         untracked(() => {
-          this._cachedTokens.set(newTokens);
+          this._cachedTokens.set(result.tokens);
           this._lastParsedContent = content;
         });
+
+        // Resolve any pending mention profiles in the background
+        if (result.pendingMentions.length > 0) {
+          this.resolvePendingMentions(result.pendingMentions);
+        }
       } catch (error) {
         console.error('Error parsing content:', error);
 
@@ -226,6 +231,37 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(false);
       }
     }, this.PARSE_DEBOUNCE_TIME);
+  }
+
+  /**
+   * Resolves pending mention profiles that timed out during initial parsing.
+   * When a profile loads, updates the corresponding token in the cached tokens array.
+   */
+  private resolvePendingMentions(pendingMentions: PendingMentionResolution[]): void {
+    for (const pending of pendingMentions) {
+      pending.promise.then(nostrData => {
+        if (!nostrData) return;
+
+        // Update the token in the cached array
+        const currentTokens = this._cachedTokens();
+        const tokenIndex = currentTokens.findIndex(t => t.id === pending.tokenId);
+        if (tokenIndex === -1) return;
+
+        const token = currentTokens[tokenIndex];
+        // Only update if the token still has no nostrData (hasn't been resolved by something else)
+        if (token.nostrData) return;
+
+        // Create a new array with the updated token to trigger signal change detection
+        const updatedTokens = [...currentTokens];
+        updatedTokens[tokenIndex] = {
+          ...token,
+          nostrData,
+        };
+        this._cachedTokens.set(updatedTokens);
+      }).catch(error => {
+        console.warn('Failed to resolve pending mention:', error);
+      });
+    }
   }
 
   private setupIntersectionObserver() {

@@ -414,7 +414,7 @@ export class NoteContentComponent implements OnDestroy {
               }
 
               // Parse content tokens for the nested event
-              const contentTokens = await this.parsing.parseContent(
+              const parseResult = await this.parsing.parseContent(
                 eventData.data,
                 eventData.event.tags,
                 eventData.event.pubkey
@@ -423,7 +423,7 @@ export class NoteContentComponent implements OnDestroy {
               loadingMap.set(token.id, 'loaded');
               eventMentionsMap.set(token.id, {
                 event: eventData,
-                contentTokens,
+                contentTokens: parseResult.tokens,
                 loading: false,
                 eventId: eventId as string,
                 expanded: false,
