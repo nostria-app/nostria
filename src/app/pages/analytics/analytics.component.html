@@ -503,21 +503,18 @@
             <div class="relay-source-selector">
               <h3>Select Relay Source</h3>
               <div class="relay-options">
-                <button mat-stroked-button 
-                        [class.active]="selectedRelaySource() === 'account'"
-                        (click)="onRelaySourceChange('account')">
+                <button mat-stroked-button [class.active]="selectedRelaySource() === 'account'"
+                  (click)="onRelaySourceChange('account')">
                   <mat-icon>account_circle</mat-icon>
                   Account Relays
                 </button>
-                <button mat-stroked-button 
-                        [class.active]="selectedRelaySource() === 'custom'"
-                        (click)="onRelaySourceChange('custom')">
+                <button mat-stroked-button [class.active]="selectedRelaySource() === 'custom'"
+                  (click)="onRelaySourceChange('custom')">
                   <mat-icon>settings</mat-icon>
                   Custom Relays
                 </button>
-                <button mat-stroked-button 
-                        [class.active]="selectedRelaySource() === 'deep'"
-                        (click)="onRelaySourceChange('deep')">
+                <button mat-stroked-button [class.active]="selectedRelaySource() === 'deep'"
+                  (click)="onRelaySourceChange('deep')">
                   <mat-icon>explore</mat-icon>
                   Deep Discovery
                 </button>
@@ -527,11 +524,8 @@
               <div class="custom-relay-input">
                 <mat-form-field appearance="outline" class="relay-input-field">
                   <mat-label>Add Custom Relay</mat-label>
-                  <input matInput 
-                         [(ngModel)]="customRelayInput" 
-                         (keyup.enter)="addCustomRelay()"
-                         (input)="customRelayError.set('')"
-                         placeholder="wss://relay.example.com">
+                  <input matInput [(ngModel)]="customRelayInput" (keyup.enter)="addCustomRelay()"
+                    (input)="customRelayError.set('')" placeholder="wss://relay.example.com">
                   <button mat-icon-button matSuffix (click)="addCustomRelay()" [disabled]="!customRelayInput()">
                     <mat-icon>add</mat-icon>
                   </button>
@@ -560,9 +554,8 @@
             </div>
 
             <div class="discovery-actions">
-              <button mat-flat-button 
-                      (click)="discoverFollowers()"
-                      [disabled]="followerDiscoveryLoading() || (selectedRelaySource() === 'custom' && customRelays().length === 0)">
+              <button mat-flat-button (click)="discoverFollowers()"
+                [disabled]="followerDiscoveryLoading() || (selectedRelaySource() === 'custom' && customRelays().length === 0)">
                 @if (followerDiscoveryLoading()) {
                 <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
                 } @else {
@@ -571,10 +564,8 @@
                 Discover Followers
               </button>
               @if (discoveredFollowers().length > 0) {
-              <button mat-stroked-button 
-                      (click)="clearFollowerCache()"
-                      [disabled]="followerDiscoveryLoading()"
-                      matTooltip="Clear cached followers list">
+              <button mat-stroked-button (click)="clearFollowerCache()" [disabled]="followerDiscoveryLoading()"
+                matTooltip="Clear cached followers list">
                 <mat-icon>delete_outline</mat-icon>
                 Clear Cache
               </button>
@@ -597,11 +588,8 @@
         @if (discoveredFollowers().length > 0) {
         <div class="followers-results">
           <h3>Discovered Followers</h3>
-          <cdk-virtual-scroll-viewport 
-            class="followers-virtual-scroll" 
-            [itemSize]="followerItemSize"
-            [minBufferPx]="minBufferPx"
-            [maxBufferPx]="maxBufferPx">
+          <cdk-virtual-scroll-viewport class="followers-virtual-scroll" [itemSize]="followerItemSize"
+            [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx">
             @for (follower of discoveredFollowers(); track follower.pubkey) {
             <div class="follower-item">
               <div class="follower-profile">
@@ -621,7 +609,8 @@
                   </mat-chip>
                   }
                 </div>
-                <div class="follower-date" [matTooltip]="'Follow list last updated: ' + (follower.followListUpdated * 1000 | date:'medium')">
+                <div class="follower-date"
+                  [matTooltip]="'Follow list last updated: ' + (follower.followListUpdated * 1000 | date:'medium')">
                   {{ follower.followListUpdated * 1000 | date:'short' }}
                 </div>
               </div>
