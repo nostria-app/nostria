@@ -325,11 +325,11 @@ export class ParsingService implements OnDestroy {
     // Trailing punctuation (including unbalanced parens) is handled by post-processing cleanup
     // Stops at whitespace, LINEBREAK markers, quotes, or common trailing punctuation
     const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/g;
-    // YouTube regex: matches standard, shortened, and Shorts YouTube URLs with optional query parameters
-    // Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID
+    // YouTube regex: matches standard, shortened, Shorts, and Live YouTube URLs with optional query parameters
+    // Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/live/ID
     // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
     const youtubeRegex =
-      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
+      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
     // Media regexes: lookahead also matches uppercase letter (start of new word without space)
     // This handles cases like "...file.mp4Curious about..." where text follows without whitespace
     const imageRegex =

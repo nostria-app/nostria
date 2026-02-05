@@ -1045,8 +1045,9 @@ export class MediaPlayerService implements OnInitialized {
         return this._youtubeUrlCache.get(cacheKey)!;
       }
 
-      // Regex supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID
-      const regex = /(?:youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      // Regex supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/live/ID
+      // Handles optional www. prefix
+      const regex = /(?:(?:www\.)?youtube\.com\/watch\?v=|(?:www\.)?youtube\.com\/shorts\/|(?:www\.)?youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       const match = url.match(regex);
 
       let embedUrl: SafeResourceUrl;

@@ -206,6 +206,15 @@
   </div>
   }
 </div>
+} @else if (token.type === 'youtube') {
+<!-- YouTube Video Embed -->
+<div class="media-container youtube-container" [class.youtube-short]="token.isYouTubeShort">
+  @if (token.processedUrl) {
+  <iframe [src]="token.processedUrl" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+  }
+</div>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===
 'nprofile')) {
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
