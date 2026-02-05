@@ -7,21 +7,46 @@
     <mat-icon>add</mat-icon>
   </button>
   }
-  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'">
+  <!-- Search toggle - hidden on small screens -->
+  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'" class="hide-small">
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
   @if (isAuthenticated()) {
   <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
     [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
   }
-  <button mat-icon-button (click)="refresh()" matTooltip="Refresh music">
+  <!-- Refresh button - hidden on small screens -->
+  <button mat-icon-button (click)="refresh()" matTooltip="Refresh music" class="hide-small">
     <mat-icon>refresh</mat-icon>
   </button>
   @if (isAuthenticated()) {
-  <button mat-icon-button (click)="openSettings()" matTooltip="Music settings">
+  <!-- Settings button - hidden on small screens -->
+  <button mat-icon-button (click)="openSettings()" matTooltip="Music settings" class="hide-small">
     <mat-icon>settings</mat-icon>
   </button>
   }
+
+  <!-- More options menu - shown only on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #moreOptionsMenu="matMenu">
+    <button mat-menu-item (click)="toggleSearch()">
+      <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+      <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
+    </button>
+    <button mat-menu-item (click)="refresh()">
+      <mat-icon>refresh</mat-icon>
+      <span>Refresh</span>
+    </button>
+    @if (isAuthenticated()) {
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="openSettings()">
+      <mat-icon>settings</mat-icon>
+      <span>Music Settings</span>
+    </button>
+    }
+  </mat-menu>
 </div>
 
 <mat-menu #addMenu="matMenu">

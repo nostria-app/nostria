@@ -68,8 +68,8 @@
         </app-list-feed-menu>
         }
 
-        <!-- Public Relay Feeds Menu -->
-        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+        <!-- Public Relay Feeds Menu - hidden on small screens, available in more_vert menu -->
+        <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)" class="hide-small">
         </app-relay-feed-menu>
 
         <!-- Filter button with overlay panel - only for authenticated users -->
@@ -97,6 +97,13 @@
 
         <mat-menu #feedManagementMenu="matMenu">
           @let feed = activeFeed();
+          <!-- Public Relay Feeds - shown only on small screens (mobile responsive) -->
+          <button mat-menu-item (click)="relayFeedMenu.openMenu()" class="show-small">
+            <mat-icon>dns</mat-icon>
+            <span>Public Relay Feeds</span>
+          </button>
+          <mat-divider class="show-small"></mat-divider>
+
           <!-- Refresh -->
           @if ((feed || showListFeed()) && !showRelayFeed()) {
           <button mat-menu-item (click)="refreshCurrentFeed()">

@@ -6,7 +6,7 @@
     <span class="notification-badge">{{ newNotificationCount() }}</span>
     }
     <span class="panel-header-spacer"></span>
-    <button mat-icon-button (click)="toggleSearch()" matTooltip="Search notifications">
+    <button mat-icon-button (click)="toggleSearch()" matTooltip="Search notifications" class="hide-small">
       <mat-icon>search</mat-icon>
     </button>
     <!-- Filter button with overlay panel -->
@@ -23,6 +23,13 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #notificationsMenu="matMenu">
+      <!-- Search - shown only on small screens -->
+      <button mat-menu-item (click)="toggleSearch()" class="show-small">
+        <mat-icon>search</mat-icon>
+        <span>Search</span>
+      </button>
+      <mat-divider class="show-small"></mat-divider>
+
       <button mat-menu-item (click)="refreshNotifications()" [disabled]="isRefreshing()">
         @if (isRefreshing()) {
         <mat-spinner diameter="18"></mat-spinner>

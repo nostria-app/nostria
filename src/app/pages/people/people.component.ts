@@ -526,6 +526,14 @@ export class PeopleComponent implements OnDestroy {
   }
 
   /**
+   * Set view mode directly - alias for changeViewMode
+   * Used in the mobile more_vert menu
+   */
+  setViewMode(mode: ViewModeType) {
+    this.changeViewMode(mode);
+  }
+
+  /**
    * Cycle through view modes on button click
    */
   cycleViewMode() {

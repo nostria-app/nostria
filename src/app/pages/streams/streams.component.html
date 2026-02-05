@@ -20,14 +20,31 @@
       [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
     }
 
-    <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">
+    <button mat-icon-button class="hide-small" (click)="refresh()" [disabled]="loading()" matTooltip="Refresh streams">
       <mat-icon>refresh</mat-icon>
     </button>
     @if (isAuthenticated()) {
-    <button mat-icon-button (click)="openSettings()" matTooltip="Streams settings">
+    <button mat-icon-button class="hide-small" (click)="openSettings()" matTooltip="Streams settings">
       <mat-icon>settings</mat-icon>
     </button>
     }
+
+    <!-- Mobile more options menu -->
+    <button mat-icon-button class="show-small" [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #moreOptionsMenu="matMenu">
+      <button mat-menu-item (click)="refresh()" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon>
+        <span>Refresh</span>
+      </button>
+      @if (isAuthenticated()) {
+      <button mat-menu-item (click)="openSettings()">
+        <mat-icon>settings</mat-icon>
+        <span>Streams Settings</span>
+      </button>
+      }
+    </mat-menu>
   </div>
 
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">

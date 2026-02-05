@@ -34,8 +34,8 @@
 
   <span class="panel-header-spacer"></span>
 
-  <!-- Add menu button -->
-  <button mat-icon-button [matMenuTriggerFor]="addMenu" [disabled]="loading()" matTooltip="Add New">
+  <!-- Add menu button - hidden on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="addMenu" [disabled]="loading()" matTooltip="Add New" class="hide-small">
     <mat-icon>add</mat-icon>
   </button>
   <mat-menu #addMenu="matMenu">
@@ -49,8 +49,8 @@
     </button>
   </mat-menu>
 
-  <!-- View mode toggle button -->
-  <button mat-icon-button (click)="toggleViewMode()" [matTooltip]="viewMode() === 'content' ? 'Switch to Tiles View' : 'Switch to Content View'">
+  <!-- View mode toggle button - hidden on small screens -->
+  <button mat-icon-button (click)="toggleViewMode()" [matTooltip]="viewMode() === 'content' ? 'Switch to Tiles View' : 'Switch to Content View'" class="hide-small">
     <mat-icon>{{ getViewIcon() }}</mat-icon>
   </button>
 
@@ -59,6 +59,28 @@
     <mat-icon>more_vert</mat-icon>
   </button>
   <mat-menu #listMenu="matMenu">
+    <!-- Add options - shown only on small screens -->
+    <button mat-menu-item (click)="addBookmark()" class="show-small">
+      <mat-icon>bookmark_add</mat-icon>
+      <span>Add Bookmark</span>
+    </button>
+    <button mat-menu-item (click)="createNewList()" class="show-small">
+      <mat-icon>playlist_add</mat-icon>
+      <span>Create List</span>
+    </button>
+    <mat-divider class="show-small"></mat-divider>
+
+    <!-- View mode options - shown only on small screens -->
+    <button mat-menu-item (click)="setViewMode('content')" class="show-small" [class.active]="viewMode() === 'content'">
+      <mat-icon>view_stream</mat-icon>
+      <span>Content View</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('tiles')" class="show-small" [class.active]="viewMode() === 'tiles'">
+      <mat-icon>grid_view</mat-icon>
+      <span>Tiles View</span>
+    </button>
+    <mat-divider class="show-small"></mat-divider>
+
     @if (bookmarkService.selectedListId() !== 'default') {
     <button mat-menu-item (click)="renameCurrentList()">
       <mat-icon>edit</mat-icon>

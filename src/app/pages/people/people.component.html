@@ -64,14 +64,14 @@
     </button>
   </mat-menu>
 
-  <!-- Edit List button (only when a list is selected) -->
+  <!-- Edit List button (only when a list is selected) - hidden on small screens -->
   @if (selectedFollowSet()) {
-  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List">
+  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" class="hide-small">
     <mat-icon>edit</mat-icon>
   </button>
 
-  <!-- Shortcuts menu (only when a list is selected) -->
-  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in...">
+  <!-- Shortcuts menu (only when a list is selected) - hidden on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..." class="hide-small">
     <mat-icon>open_in_new</mat-icon>
   </button>
 
@@ -99,8 +99,8 @@
   </mat-menu>
   }
 
-  <!-- View toggle button - cycles through modes -->
-  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'">
+  <!-- View toggle button - cycles through modes - hidden on small screens -->
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'" class="hide-small">
     <mat-icon>{{ viewModeIcon() }}</mat-icon>
   </button>
 
@@ -109,6 +109,69 @@
     [matTooltip]="'Filter & Sort'" [class.active-filters]="hasActiveFilters()">
     <mat-icon>tune</mat-icon>
   </button>
+
+  <!-- More options menu - shown only on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+
+  <mat-menu #moreOptionsMenu="matMenu">
+    <!-- Edit List (only when a list is selected) -->
+    @if (selectedFollowSet()) {
+    <button mat-menu-item (click)="openEditListDialog()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit List</span>
+    </button>
+    <mat-divider></mat-divider>
+    <!-- View this list in... submenu -->
+    <button mat-menu-item [matMenuTriggerFor]="mobileShortcutsMenu">
+      <mat-icon>open_in_new</mat-icon>
+      <span>View list in...</span>
+    </button>
+    <mat-divider></mat-divider>
+    }
+    <!-- View mode options -->
+    <button mat-menu-item (click)="setViewMode('comfortable')" [class.active]="viewMode() === 'comfortable'">
+      <mat-icon>view_agenda</mat-icon>
+      <span>Comfortable view</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('medium')" [class.active]="viewMode() === 'medium'">
+      <mat-icon>grid_view</mat-icon>
+      <span>Grid view</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('small')" [class.active]="viewMode() === 'small'">
+      <mat-icon>apps</mat-icon>
+      <span>Compact view</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('details')" [class.active]="viewMode() === 'details'">
+      <mat-icon>view_list</mat-icon>
+      <span>Details view</span>
+    </button>
+  </mat-menu>
+
+  <!-- Mobile shortcuts submenu -->
+  <mat-menu #mobileShortcutsMenu="matMenu">
+    <button mat-menu-item (click)="goToFeeds()">
+      <mat-icon>dynamic_feed</mat-icon>
+      <span>Feeds</span>
+    </button>
+    <button mat-menu-item (click)="goToSummary()">
+      <mat-icon>summarize</mat-icon>
+      <span>Summary</span>
+    </button>
+    <button mat-menu-item (click)="goToStreams()">
+      <mat-icon>live_tv</mat-icon>
+      <span>Streams</span>
+    </button>
+    <button mat-menu-item (click)="goToArticles()">
+      <mat-icon>article</mat-icon>
+      <span>Articles</span>
+    </button>
+    <button mat-menu-item (click)="goToMusic()">
+      <mat-icon>music_note</mat-icon>
+      <span>Music</span>
+    </button>
+  </mat-menu>
 
   <!-- Filter Panel Overlay -->
   <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"

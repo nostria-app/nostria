@@ -26,7 +26,7 @@
   <h2 class="panel-title title-font">Media Library</h2>
   <span class="panel-header-spacer"></span>
 
-  <!-- Filter button -->
+  <!-- Filter button - always visible -->
   <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter: {{ getFilterLabel() }}">
     <mat-icon>{{ getFilterIcon() }}</mat-icon>
   </button>
@@ -53,8 +53,8 @@
     </button>
   </mat-menu>
 
-  <!-- Sort button -->
-  <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort: {{ getSortLabel() }}">
+  <!-- Sort button - hidden on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort: {{ getSortLabel() }}" class="hide-small">
     <mat-icon>sort</mat-icon>
   </button>
   <mat-menu #sortMenu="matMenu">
@@ -84,38 +84,126 @@
     </button>
   </mat-menu>
 
-  <!-- Select all button -->
-  <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All">
+  <!-- Select all button - hidden on small screens -->
+  <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All" class="hide-small">
     <mat-icon>checklist</mat-icon>
   </button>
 
-  <!-- View mode button (toggle) -->
-  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + getViewModeLabel()">
+  <!-- View mode button (toggle) - hidden on small screens -->
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + getViewModeLabel()" class="hide-small">
     <mat-icon>{{ getViewModeIcon() }}</mat-icon>
   </button>
 
-  <!-- Upload button -->
+  <!-- Upload button - hidden on small screens -->
   @if (mediaService.uploading()) {
-  <mat-spinner diameter="20"></mat-spinner>
+  <mat-spinner diameter="20" class="hide-small"></mat-spinner>
   } @else {
-  <button mat-icon-button (click)="openUploadDialog()" matTooltip="Upload">
+  <button mat-icon-button (click)="openUploadDialog()" matTooltip="Upload" class="hide-small">
     <mat-icon>upload</mat-icon>
   </button>
   }
 
-  <!-- Refresh button -->
+  <!-- Refresh button - hidden on small screens -->
   @if (mediaService.loading()) {
-  <mat-spinner diameter="20"></mat-spinner>
+  <mat-spinner diameter="20" class="hide-small"></mat-spinner>
   } @else {
-  <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh">
+  <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh" class="hide-small">
     <mat-icon>refresh</mat-icon>
   </button>
   }
 
-  <!-- Settings button -->
-  <button mat-icon-button (click)="openServersDialog()" matTooltip="Media Servers">
+  <!-- Settings button - hidden on small screens -->
+  <button mat-icon-button (click)="openServersDialog()" matTooltip="Media Servers" class="hide-small">
     <mat-icon>settings</mat-icon>
   </button>
+
+  <!-- More options menu - shown only on small screens -->
+  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #moreOptionsMenu="matMenu">
+    <!-- Upload -->
+    <button mat-menu-item (click)="openUploadDialog()" [disabled]="mediaService.uploading()">
+      <mat-icon>upload</mat-icon>
+      <span>Upload</span>
+    </button>
+    <mat-divider></mat-divider>
+
+    <!-- Sort submenu -->
+    <button mat-menu-item [matMenuTriggerFor]="mobileSortMenu">
+      <mat-icon>sort</mat-icon>
+      <span>Sort</span>
+    </button>
+
+    <!-- View mode submenu -->
+    <button mat-menu-item [matMenuTriggerFor]="mobileViewMenu">
+      <mat-icon>{{ getViewModeIcon() }}</mat-icon>
+      <span>View Mode</span>
+    </button>
+
+    <!-- Select All -->
+    <button mat-menu-item (click)="selectAll()" [disabled]="filteredMedia().length === 0">
+      <mat-icon>checklist</mat-icon>
+      <span>Select All</span>
+    </button>
+    <mat-divider></mat-divider>
+
+    <!-- Refresh -->
+    <button mat-menu-item (click)="refreshMedia()" [disabled]="mediaService.loading()">
+      <mat-icon>refresh</mat-icon>
+      <span>Refresh</span>
+    </button>
+
+    <!-- Settings -->
+    <button mat-menu-item (click)="openServersDialog()">
+      <mat-icon>settings</mat-icon>
+      <span>Media Servers</span>
+    </button>
+  </mat-menu>
+
+  <!-- Mobile sort submenu -->
+  <mat-menu #mobileSortMenu="matMenu">
+    <button mat-menu-item (click)="setSortOption('newest')" [class.selected-option]="sortOption() === 'newest'">
+      <mat-icon>arrow_downward</mat-icon>
+      <span>Newest First</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-option]="sortOption() === 'oldest'">
+      <mat-icon>arrow_upward</mat-icon>
+      <span>Oldest First</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-option]="sortOption() === 'name-asc'">
+      <mat-icon>sort_by_alpha</mat-icon>
+      <span>Name (A-Z)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-option]="sortOption() === 'name-desc'">
+      <mat-icon>sort_by_alpha</mat-icon>
+      <span>Name (Z-A)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-option]="sortOption() === 'size-desc'">
+      <mat-icon>expand_more</mat-icon>
+      <span>Size (Large-Small)</span>
+    </button>
+    <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-option]="sortOption() === 'size-asc'">
+      <mat-icon>expand_less</mat-icon>
+      <span>Size (Small-Large)</span>
+    </button>
+  </mat-menu>
+
+  <!-- Mobile view mode submenu -->
+  <mat-menu #mobileViewMenu="matMenu">
+    <button mat-menu-item (click)="setViewMode('large')" [class.selected-option]="viewMode() === 'large'">
+      <mat-icon>grid_on</mat-icon>
+      <span>Large Grid</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('medium')" [class.selected-option]="viewMode() === 'medium'">
+      <mat-icon>grid_view</mat-icon>
+      <span>Medium Grid</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('details')" [class.selected-option]="viewMode() === 'details'">
+      <mat-icon>view_list</mat-icon>
+      <span>Details View</span>
+    </button>
+  </mat-menu>
 </div>
 }
 

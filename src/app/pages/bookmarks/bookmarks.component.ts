@@ -13,6 +13,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDividerModule } from '@angular/material/divider';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
 import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
@@ -65,6 +66,7 @@ export type ViewMode = 'tiles' | 'content';
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatDividerModule,
     EventComponent,
     ArticleComponent,
     SocialPreviewComponent,

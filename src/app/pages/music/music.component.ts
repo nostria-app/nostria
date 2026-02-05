@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -46,6 +47,7 @@ const SECTION_LIMIT = 12;
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
+    MatDividerModule,
     FormsModule,
     MusicEventComponent,
     MusicPlaylistCardComponent,
