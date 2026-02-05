@@ -129,7 +129,7 @@ interface DiscoveredFollower {
   pubkey: string;
   isFollowing: boolean;
   discoveredAt: number;
-  followListUpdated: number; // Timestamp when the follower's contact list (kind 3 event) was last updated
+  followListUpdated: number; // Timestamp of the most recent kind 3 event where this follower included the current user in their contact list
 }
 
 interface FollowerDiscoveryCache {
@@ -1174,16 +1174,12 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       const maxPages = 20; // Safety limit to prevent infinite loops
 
       while (hasMore && pageCount < maxPages) {
-        const filter: any = {
+        const filter = {
           kinds: [kinds.Contacts],
           '#p': [pubkey],
           limit: 500,
+          ...(until !== undefined && { until }),
         };
-
-        // Add 'until' parameter for pagination (events are sorted by created_at descending)
-        if (until !== undefined) {
-          filter.until = until;
-        }
 
         this.logger.debug(`Fetching page ${pageCount + 1}, until: ${until}`);
         const events = await pool.querySync(relayUrls, filter);
@@ -1251,7 +1247,9 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       this.followerDiscoveryProgress.set(80);
       this.followerDiscoveryStatus.set('Sorting results...');
 
-      // Sort by following status (non-following first), then by most recent update
+      // Sort by two-tier logic:
+      // 1. Non-following users first (potential new connections)
+      // 2. Within each group, sort by most recent follow list update
       discoveredFollowers.sort((a, b) => {
         if (a.isFollowing !== b.isFollowing) {
           return a.isFollowing ? 1 : -1;
