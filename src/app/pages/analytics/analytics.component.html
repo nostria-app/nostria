@@ -571,6 +571,13 @@
                 Discover Followers
               </button>
               @if (discoveredFollowers().length > 0) {
+              <button mat-stroked-button 
+                      (click)="clearFollowerCache()"
+                      [disabled]="followerDiscoveryLoading()"
+                      matTooltip="Clear cached followers list">
+                <mat-icon>delete_outline</mat-icon>
+                Clear Cache
+              </button>
               <span class="followers-count">
                 Found {{ discoveredFollowers().length }} followers
                 ({{ newFollowersCount() }} new)
