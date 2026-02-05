@@ -62,39 +62,9 @@ export interface ListData {
 }
 
 // NIP-51 Standard Lists (10000 series - replaceable, single per kind)
+// Note: Many list types (Mute List, Bookmarks, Relays, etc.) are now edited
+// with better UI elsewhere in the app. Only keeping lists without dedicated editors.
 const STANDARD_LISTS: ListType[] = [
-  {
-    kind: 10000,
-    name: 'Mute List',
-    description: 'Users and content you don\'t want to see',
-    icon: 'block',
-    isReplaceable: true,
-    expectedTags: ['p', 't', 'word', 'e'],
-  },
-  {
-    kind: 10001,
-    name: 'Pinned Notes',
-    description: 'Events showcased on your profile',
-    icon: 'push_pin',
-    isReplaceable: true,
-    expectedTags: ['e'],
-  },
-  {
-    kind: 10002,
-    name: 'Read/Write Relays',
-    description: 'Where you publish and expect mentions (NIP-65)',
-    icon: 'router',
-    isReplaceable: true,
-    expectedTags: ['r'], // NIP-65: uses 'r' tags, not 'relay'
-  },
-  {
-    kind: 10003,
-    name: 'Bookmarks',
-    description: 'Saved notes, articles, hashtags, and URLs',
-    icon: 'bookmark',
-    isReplaceable: true,
-    expectedTags: ['e', 'a', 't', 'r'],
-  },
   {
     kind: 10004,
     name: 'Communities',
@@ -112,22 +82,6 @@ const STANDARD_LISTS: ListType[] = [
     expectedTags: ['e'],
   },
   {
-    kind: 10006,
-    name: 'Blocked Relays',
-    description: 'Relays clients should never connect to',
-    icon: 'block',
-    isReplaceable: true,
-    expectedTags: ['relay'],
-  },
-  {
-    kind: 10007,
-    name: 'Search Relays',
-    description: 'Relays to use when performing searches',
-    icon: 'search',
-    isReplaceable: true,
-    expectedTags: ['relay'],
-  },
-  {
     kind: 10009,
     name: 'Simple Groups',
     description: 'NIP-29 groups you\'re in',
@@ -136,44 +90,12 @@ const STANDARD_LISTS: ListType[] = [
     expectedTags: ['group', 'r'],
   },
   {
-    kind: 10012,
-    name: 'Relay Feeds',
-    description: 'Favorite browsable relays and relay sets',
-    icon: 'rss_feed',
-    isReplaceable: true,
-    expectedTags: ['relay', 'a'],
-  },
-  {
-    kind: 10015,
-    name: 'Interests',
-    description: 'Topics and interest sets',
-    icon: 'interests',
-    isReplaceable: true,
-    expectedTags: ['t', 'a'],
-  },
-  {
     kind: 10020,
     name: 'Media Follows',
     description: 'Multimedia (photos, short video) follow list',
     icon: 'perm_media',
     isReplaceable: true,
     expectedTags: ['p'],
-  },
-  {
-    kind: 10030,
-    name: 'Emojis',
-    description: 'Preferred emojis and emoji sets',
-    icon: 'emoji_emotions',
-    isReplaceable: true,
-    expectedTags: ['emoji', 'a'],
-  },
-  {
-    kind: 10050,
-    name: 'DM Relays',
-    description: 'Where to receive NIP-17 direct messages',
-    icon: 'mail',
-    isReplaceable: true,
-    expectedTags: ['relay'],
   },
   {
     kind: 10101,
@@ -194,31 +116,9 @@ const STANDARD_LISTS: ListType[] = [
 ];
 
 // NIP-51 Sets (30000 series - parameterized replaceable, multiple per kind)
+// Note: Many set types (Follow Sets, Relay Sets, Bookmark Sets, etc.) are now edited
+// with better UI elsewhere in the app. Only keeping sets without dedicated editors.
 const LIST_SETS: ListType[] = [
-  {
-    kind: 30000,
-    name: 'Follow Sets',
-    description: 'Categorized groups of users',
-    icon: 'people',
-    isReplaceable: false,
-    expectedTags: ['p'],
-  },
-  {
-    kind: 30002,
-    name: 'Relay Sets',
-    description: 'User-defined relay groups',
-    icon: 'hub',
-    isReplaceable: false,
-    expectedTags: ['relay'],
-  },
-  {
-    kind: 30003,
-    name: 'Bookmark Sets',
-    description: 'Categorized bookmarks',
-    icon: 'bookmarks',
-    isReplaceable: false,
-    expectedTags: ['e', 'a', 't', 'r'],
-  },
   {
     kind: 30004,
     name: 'Curation Sets (Articles)',
@@ -244,36 +144,12 @@ const LIST_SETS: ListType[] = [
     expectedTags: ['e'],
   },
   {
-    kind: 30015,
-    name: 'Interest Sets',
-    description: 'Interest topics by hashtags',
-    icon: 'label',
-    isReplaceable: false,
-    expectedTags: ['t'],
-  },
-  {
-    kind: 30030,
-    name: 'Emoji Sets',
-    description: 'Categorized emoji groups',
-    icon: 'emoji_emotions',
-    isReplaceable: false,
-    expectedTags: ['emoji'],
-  },
-  {
     kind: 31924,
     name: 'Calendar Sets',
     description: 'Categorized calendar events',
     icon: 'event',
     isReplaceable: false,
     expectedTags: ['a'],
-  },
-  {
-    kind: 39089,
-    name: 'Starter Packs',
-    description: 'Named set of profiles to follow together',
-    icon: 'group_add',
-    isReplaceable: false,
-    expectedTags: ['p'],
   },
   {
     kind: 39092,
