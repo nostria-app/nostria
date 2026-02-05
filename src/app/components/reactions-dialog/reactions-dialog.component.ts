@@ -16,6 +16,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { LayoutService } from '../../services/layout.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -448,6 +449,7 @@ export class ReactionsDialogComponent {
   private layout = inject(LayoutService);
   private emojiSetService = inject(EmojiSetService);
   private accountState = inject(AccountStateService);
+  private userRelaysService = inject(UserRelaysService);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
 
   // Custom emojis for fallback lookup
@@ -559,10 +561,12 @@ export class ReactionsDialogComponent {
   }
 
   getNevent(event: { id: string; pubkey: string; kind: number }): string {
+    const relays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
     return nip19.neventEncode({
       id: event.id,
       author: event.pubkey,
       kind: event.kind,
+      relays: relays.length > 0 ? relays : undefined,
     });
   }
 

@@ -20,6 +20,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
@@ -60,6 +61,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
   private dialog = inject(MatDialog);
+  private userRelaysService = inject(UserRelaysService);
 
   // Input for when opened via RightPanelService
   npubInput = input<string | undefined>(undefined);
@@ -431,13 +433,16 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     }
   }
 
-  copyTrackLink(track: Event): void {
+  async copyTrackLink(track: Event): Promise<void> {
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(track.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(track.pubkey);
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: track.kind,
         pubkey: track.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
       const link = `https://nostria.app/a/${naddr}`;
       this.clipboard.copy(link);

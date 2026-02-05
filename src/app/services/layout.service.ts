@@ -783,7 +783,8 @@ export class LayoutService implements OnDestroy {
     }
 
     if (type === 'nevent') {
-      const eventPointer: EventPointer = { id: text, author: author, kind: kind };
+      const relays = author ? this.userRelayService.getRelaysForPubkey(author) : [];
+      const eventPointer: EventPointer = { id: text, author: author, kind: kind, relays: relays.length > 0 ? relays : undefined };
       text = nip19.neventEncode(eventPointer);
     }
 
@@ -1280,7 +1281,7 @@ export class LayoutService implements OnDestroy {
           // This is a reference to a live event (kind 30311)
           const [, pubkey, dTag] = parts;
           const relayHint = aTag[2] || '';
-          const relays = relayHint ? [relayHint] : this.accountRelay.relays().map((r: { url: string }) => r.url).slice(0, 3);
+          const relays = relayHint ? [relayHint] : this.userRelayService.getRelaysForPubkey(pubkey).slice(0, 3);
 
           // Encode as naddr (for parameterized replaceable events)
           const naddr = nip19.naddrEncode({
@@ -1299,7 +1300,7 @@ export class LayoutService implements OnDestroy {
 
     // Handle live events (kind 30311) - open the stream directly
     if (event.kind === 30311) {
-      const relayHints = this.accountRelay.relays().map((r: { url: string }) => r.url).slice(0, 3);
+      const relayHints = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
 
       // Encode as naddr (for parameterized replaceable events)
@@ -2432,13 +2433,15 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  shareEvent(event: Event): void {
+  async shareEvent(event: Event): Promise<void> {
     if (!event) {
       this.logger.error('Cannot share event: event is undefined');
       return;
     }
 
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    await this.userRelayService.ensureRelaysForPubkey(event.pubkey);
+    const authorRelays = this.userRelayService.getRelaysForPubkey(event.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
     const shareUrl = event.kind === kinds.LongFormArticle

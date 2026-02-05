@@ -7,7 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import type { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { kinds, nip19 } from 'nostr-tools';
-import { AccountRelayService } from '../../services/relays/account-relay';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import type { SendMessageDialogData } from '../send-message-dialog/send-message-dialog.component';
 
@@ -49,9 +49,9 @@ export interface ShareArticleDialogData {
           <mat-icon>link</mat-icon>
           <span>Copy link</span>
         </button>
-        <button class="share-btn" (click)="shareToFacebook()" title="Facebook">
-          <mat-icon>facebook</mat-icon>
-          <span>Facebook</span>
+        <button class="share-btn" (click)="sendAsMessage()" title="Message">
+          <mat-icon>send</mat-icon>
+          <span>Message</span>
         </button>
         <button class="share-btn" (click)="shareViaEmail()" title="Email">
           <mat-icon>mail</mat-icon>
@@ -66,39 +66,39 @@ export interface ShareArticleDialogData {
         </button>
       </div>
 
-      <!-- More Options Menu -->
+      <!-- More Options Menu (alphabetically sorted) -->
       <mat-menu #moreMenu="matMenu" class="share-more-menu">
         <button mat-menu-item (click)="shareToBluesky()">
           <mat-icon>cloud</mat-icon>
           <span>Bluesky</span>
         </button>
-        <button mat-menu-item (click)="shareToTwitter()">
-          <mat-icon>share</mat-icon>
-          <span>X (Twitter)</span>
+        <button mat-menu-item (click)="copyEmbed()">
+          <mat-icon>code</mat-icon>
+          <span>Embed</span>
         </button>
-        <button mat-menu-item (click)="shareToLinkedIn()">
-          <mat-icon>work</mat-icon>
-          <span>LinkedIn</span>
-        </button>
-        <button mat-menu-item (click)="shareToReddit()">
-          <mat-icon>forum</mat-icon>
-          <span>Reddit</span>
-        </button>
-        <button mat-menu-item (click)="shareToPinterest()">
-          <mat-icon>push_pin</mat-icon>
-          <span>Pinterest</span>
+        <button mat-menu-item (click)="shareToFacebook()">
+          <mat-icon>facebook</mat-icon>
+          <span>Facebook</span>
         </button>
         <button mat-menu-item (click)="shareToHackerNews()">
           <mat-icon>code</mat-icon>
           <span>Hacker News</span>
         </button>
-        <button mat-menu-item (click)="sendAsMessage()">
-          <mat-icon>send</mat-icon>
-          <span>Send as message</span>
+        <button mat-menu-item (click)="shareToLinkedIn()">
+          <mat-icon>work</mat-icon>
+          <span>LinkedIn</span>
         </button>
-        <button mat-menu-item (click)="copyEmbed()">
-          <mat-icon>code</mat-icon>
-          <span>Embed</span>
+        <button mat-menu-item (click)="shareToPinterest()">
+          <mat-icon>push_pin</mat-icon>
+          <span>Pinterest</span>
+        </button>
+        <button mat-menu-item (click)="shareToReddit()">
+          <mat-icon>forum</mat-icon>
+          <span>Reddit</span>
+        </button>
+        <button mat-menu-item (click)="shareToTwitter()">
+          <mat-icon>share</mat-icon>
+          <span>X (Twitter)</span>
         </button>
       </mat-menu>
     </mat-dialog-content>
@@ -194,7 +194,7 @@ export class ShareArticleDialogComponent {
   };
   private snackBar = inject(MatSnackBar);
   private customDialog = inject(CustomDialogService);
-  private accountRelay = inject(AccountRelayService);
+  private userRelaysService = inject(UserRelaysService);
   private utilities = inject(UtilitiesService);
 
   /** Generate clean canonical URL for sharing (uses data.url if provided, otherwise generates from event) */
@@ -347,7 +347,8 @@ export class ShareArticleDialogComponent {
       return this.data.naddr;
     }
 
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(this.data.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
 
     if (this.data.kind >= 30000 && this.data.kind < 40000) {

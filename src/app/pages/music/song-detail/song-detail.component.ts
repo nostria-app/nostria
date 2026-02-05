@@ -32,6 +32,7 @@ import { OfflineMusicService } from '../../../services/offline-music.service';
 import { NostrService } from '../../../services/nostr.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
@@ -90,6 +91,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+  private userRelaysService = inject(UserRelaysService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -711,16 +713,19 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
   }
 
-  copyEventLink(): void {
+  async copyEventLink(): Promise<void> {
     const ev = this.song();
     if (!ev) return;
 
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
       const link = `https://nostria.app/a/${naddr}`;
       this.clipboard.copy(link);
@@ -730,16 +735,19 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  shareTrack(): void {
+  async shareTrack(): Promise<void> {
     const ev = this.song();
     if (!ev) return;
 
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
       const npub = this.artistNpub();

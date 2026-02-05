@@ -16,6 +16,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 import { MediaItem } from '../../interfaces';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 
@@ -138,6 +139,7 @@ export class MusicTrackMenuComponent {
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
   private eventService = inject(EventService);
+  private userRelaysService = inject(UserRelaysService);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -266,14 +268,17 @@ export class MusicTrackMenuComponent {
     this.layout.publishEvent(this.track());
   }
 
-  copyEventId(): void {
+  async copyEventId(): Promise<void> {
     const ev = this.track();
     const dTag = this.getIdentifier();
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const naddr = nip19.naddrEncode({
         kind: MUSIC_KIND,
         pubkey: ev.pubkey,
         identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
       this.clipboard.copy(`nostr:${naddr}`);
       this.snackBar.open('Event ID copied!', 'Close', { duration: 2000 });
@@ -282,7 +287,7 @@ export class MusicTrackMenuComponent {
     }
   }
 
-  openShareDialog(): void {
+  async openShareDialog(): Promise<void> {
     const ev = this.track();
     const npub = this.getArtistNpub();
     const id = this.getIdentifier();
@@ -297,10 +302,13 @@ export class MusicTrackMenuComponent {
     const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(id)}`;
 
     try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const naddr = nip19.naddrEncode({
         kind: MUSIC_KIND,
         pubkey: ev.pubkey,
         identifier: id,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
       const dialogData: ShareArticleDialogData = {

@@ -39,10 +39,10 @@ import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dia
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventService } from '../../../services/event';
 import { BookmarkListSelectorComponent } from '../../bookmark-list-selector/bookmark-list-selector.component';
-import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../share-article-dialog/share-article-dialog.component';
 import { EventImageService } from '../../../services/event-image.service';
 import { NoteEditorDialogData } from '../../../interfaces/note-editor';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 
 @Component({
   selector: 'app-event-menu',
@@ -75,7 +75,7 @@ export class EventMenuComponent {
   playlistService = inject(PlaylistService);
   eventService = inject(EventService);
   private router = inject(Router);
-  private accountRelay = inject(AccountRelayService);
+  private userRelaysService = inject(UserRelaysService);
   private eventImageService = inject(EventImageService);
   private appRef = inject(ApplicationRef);
   private environmentInjector = inject(EnvironmentInjector);
@@ -266,13 +266,15 @@ export class EventMenuComponent {
     }
   }
 
-  shareEventDialog(): void {
+  async shareEventDialog(): Promise<void> {
     const ev = this.event();
     if (!ev) {
       return;
     }
 
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
 
@@ -332,7 +334,8 @@ export class EventMenuComponent {
     }
 
     // Use encodeEventForUrl which handles addressable events (naddr) vs regular events (nevent)
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
@@ -354,7 +357,8 @@ export class EventMenuComponent {
     if (!event) {
       return '';
     }
-    const relayHint = this.accountRelay.relays()[0]?.url;
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
+    const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     return this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
   });
@@ -369,6 +373,9 @@ export class EventMenuComponent {
 
       const record = this.data.toRecord(event);
       this.record.set(record);
+
+      // Ensure author relays are loaded so computed signals can use them
+      this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
     });
   }
 

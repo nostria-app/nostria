@@ -19,6 +19,7 @@ import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { NostrService } from '../../../services/nostr.service';
 import { EventService } from '../../../services/event';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -53,6 +54,7 @@ export class EventHeaderComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
+  private userRelaysService = inject(UserRelaysService);
   event = input.required<Event>();
   compact = input<boolean>(false);
   /** Whether this event has been edited (NIP-41) */
@@ -76,9 +78,12 @@ export class EventHeaderComponent {
       return '';
     }
 
+    const relays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
     const eventPointer: EventPointer = {
       id: event.id,
       author: event.pubkey,
+      kind: event.kind,
+      relays: relays.length > 0 ? relays : undefined,
     };
     return nip19.neventEncode(eventPointer);
   });
@@ -108,6 +113,9 @@ export class EventHeaderComponent {
 
       const record = this.data.toRecord(event);
       this.record.set(record);
+
+      // Trigger relay discovery for author so nevent computed has relay hints
+      this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
     });
   }
 
