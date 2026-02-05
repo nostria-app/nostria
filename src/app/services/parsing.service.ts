@@ -69,6 +69,23 @@ export interface ContentToken {
   isYouTubeShort?: boolean; // True if the YouTube URL is a Short (9:16 aspect ratio)
 }
 
+/**
+ * Represents a pending resolution for a nostr mention that timed out during initial parsing.
+ * The promise resolves with the NostrData once the profile is loaded.
+ */
+export interface PendingMentionResolution {
+  tokenId: number;
+  promise: Promise<NostrData | null>;
+}
+
+/**
+ * Result of parsing content, including tokens and any pending mention resolutions.
+ */
+export interface ParseContentResult {
+  tokens: ContentToken[];
+  pendingMentions: PendingMentionResolution[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -313,8 +330,8 @@ export class ParsingService implements OnDestroy {
     ':black_circle:': '⚫',
   };
 
-  async parseContent(content: string, tags?: string[][], authorPubkey?: string): Promise<ContentToken[]> {
-    if (!content) return [];
+  async parseContent(content: string, tags?: string[][], authorPubkey?: string): Promise<ParseContentResult> {
+    if (!content) return { tokens: [], pendingMentions: [] };
 
     // Replace line breaks with placeholders
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
@@ -518,12 +535,16 @@ export class ParsingService implements OnDestroy {
       }
     }
 
+    // Track pending mention resolutions for profiles that time out
+    const pendingMentions: PendingMentionResolution[] = [];
+
     // Batch process nostr URIs with a short timeout to balance speed and completeness
     const nostrDataPromises = nostrMatches.map(async nostrMatch => {
       try {
         // Add timeout protection (800ms per URI) for quick loading
+        let timedOut = false;
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 800)
+          setTimeout(() => { timedOut = true; resolve(null); }, 800)
         );
 
         // Normalize the match: strip @ prefix and add nostr: prefix if needed
@@ -541,12 +562,18 @@ export class ParsingService implements OnDestroy {
         return {
           ...nostrMatch,
           nostrData,
+          timedOut: timedOut && !nostrData,
+          identifier,
+          backgroundPromise: timedOut && !nostrData ? nostrDataPromise : null,
         };
       } catch (error) {
         console.warn('Error parsing nostr URI:', nostrMatch.match[0], error);
         return {
           ...nostrMatch,
           nostrData: null,
+          timedOut: false,
+          identifier: nostrMatch.match[0],
+          backgroundPromise: null,
         };
       }
     });
@@ -555,7 +582,10 @@ export class ParsingService implements OnDestroy {
     const processedNostrMatches = await Promise.all(nostrDataPromises);
 
     // Add all nostr matches to the matches array (with or without resolved data)
-    for (const { match, index, length, nostrData } of processedNostrMatches) {
+    for (const { match, index, length, nostrData, timedOut, backgroundPromise } of processedNostrMatches) {
+      // Generate the token ID now so we can reference it in pending resolutions
+      const tokenId = this.generateStableTokenId(index, match[0], 'nostr-mention');
+
       matches.push({
         start: index,
         end: index + length,
@@ -563,6 +593,14 @@ export class ParsingService implements OnDestroy {
         type: 'nostr-mention',
         nostrData: nostrData || undefined,
       });
+
+      // If this mention timed out, track the background promise for late resolution
+      if (timedOut && backgroundPromise) {
+        pendingMentions.push({
+          tokenId,
+          promise: backgroundPromise as Promise<NostrData | null>,
+        });
+      }
     }
 
     // Find Cashu tokens (ecash)
@@ -1007,7 +1045,7 @@ export class ParsingService implements OnDestroy {
       this.processTextSegment(textSegment, tokens, lastIndex);
     }
 
-    return tokens;
+    return { tokens, pendingMentions };
   }
   private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
     // Process line breaks in text segments

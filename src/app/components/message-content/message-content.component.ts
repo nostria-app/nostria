@@ -699,7 +699,7 @@ export class MessageContentComponent {
 
           if (eventData) {
             // Parse content tokens for the nested event
-            const contentTokens = await this.parsing.parseContent(
+            const parseResult = await this.parsing.parseContent(
               eventData.data,
               eventData.event.tags,
               eventData.event.pubkey
@@ -707,7 +707,7 @@ export class MessageContentComponent {
 
             eventMentionsMap.set(part.id, {
               event: eventData,
-              contentTokens,
+              contentTokens: parseResult.tokens,
               loading: false,
               eventId: part.eventId,
               expanded: false,
