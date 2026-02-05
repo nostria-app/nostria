@@ -4,7 +4,6 @@ import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
@@ -21,8 +20,9 @@ import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { MessagingService } from '../../services/messaging.service';
+import { FavoritesService } from '../../services/favorites.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
-import { NPubPipe } from '../../pipes/npub.pipe';
 import type { NostrRecord } from '../../interfaces';
 
 export interface ShareArticleDialogData {
@@ -45,14 +45,12 @@ export interface ShareArticleDialogData {
     FormsModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
     MatInputModule,
     MatFormFieldModule,
     MatDividerModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
-    NPubPipe,
   ],
   template: `
     <div dialog-content class="share-dialog-content">
@@ -92,8 +90,7 @@ export interface ShareArticleDialogData {
         <div class="recipient-chips">
           @for (recipient of selectedRecipients(); track recipient.event.pubkey) {
           <div class="recipient-chip">
-            <app-user-profile [pubkey]="recipient.event.pubkey" view="tiny" [disableLink]="true"></app-user-profile>
-            <span class="recipient-name">{{ recipient.data?.display_name || recipient.data?.name || (recipient.event.pubkey | npub) }}</span>
+            <app-user-profile [pubkey]="recipient.event.pubkey" view="chip" [disableLink]="true"></app-user-profile>
             <button class="remove-recipient" (click)="removeRecipient(recipient.event.pubkey)" [disabled]="isSending()">
               <mat-icon>close</mat-icon>
             </button>
@@ -133,8 +130,7 @@ export interface ShareArticleDialogData {
         <div class="quick-contacts">
           @for (contact of quickContacts(); track contact.event.pubkey) {
           <button class="quick-contact-chip" (click)="selectProfile(contact)" matTooltip="Add as recipient">
-            <app-user-profile [pubkey]="contact.event.pubkey" view="tiny" [disableLink]="true"></app-user-profile>
-            <span class="contact-name">{{ contact.data?.display_name || contact.data?.name || 'Unknown' }}</span>
+            <app-user-profile [pubkey]="contact.event.pubkey" view="chip" [disableLink]="true"></app-user-profile>
           </button>
           }
         </div>
@@ -335,43 +331,42 @@ export interface ShareArticleDialogData {
 
     .recipient-chip {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 4px 4px 4px 4px;
+      gap: 0;
+      padding: 6px;
       background: var(--mat-sys-surface-container-high);
-      border-radius: 20px;
-      max-width: 180px;
-
-      .recipient-name {
-        font-size: 12px;
-        color: var(--mat-sys-on-surface);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100px;
-      }
+      color: var(--mat-sys-on-surface);
+      border-radius: 12px;
+      position: relative;
+      min-width: 60px;
+      max-width: 88px;
 
       .remove-recipient {
+        position: absolute;
+        top: 2px;
+        right: 2px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border: none;
-        background: transparent;
+        background: var(--mat-sys-surface-container-highest);
         cursor: pointer;
         border-radius: 50%;
         padding: 0;
         color: var(--mat-sys-on-surface-variant);
 
         mat-icon {
-          font-size: 14px;
-          width: 14px;
-          height: 14px;
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
         }
 
         &:hover {
-          background: var(--mat-sys-surface-container-highest);
+          background: var(--mat-sys-error-container);
+          color: var(--mat-sys-on-error-container);
         }
       }
     }
@@ -416,26 +411,20 @@ export interface ShareArticleDialogData {
 
     .quick-contact-chip {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px 4px 4px;
+      padding: 6px;
       border: 1px solid var(--mat-sys-outline-variant);
       background: var(--mat-sys-surface-container);
-      border-radius: 20px;
+      color: var(--mat-sys-on-surface);
+      border-radius: 12px;
       cursor: pointer;
       transition: background-color 0.2s;
-      max-width: 160px;
+      min-width: 60px;
+      max-width: 88px;
 
       &:hover {
         background: var(--mat-sys-surface-container-high);
-      }
-
-      .contact-name {
-        font-size: 12px;
-        color: var(--mat-sys-on-surface);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
     }
 
@@ -533,6 +522,8 @@ export class ShareArticleDialogComponent {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private messagingService = inject(MessagingService);
+  private favoritesService = inject(FavoritesService);
+  private accountLocalState = inject(AccountLocalStateService);
 
   // Contact search
   searchInput = signal<string>('');
@@ -578,13 +569,72 @@ export class ShareArticleDialogComponent {
     return records.filter(r => !selectedPubkeys.has(r.event.pubkey));
   });
 
-  // Quick contacts: first N from following list (favorites/frequent)
+  // Quick contacts: recent recipients first, then favorites, then last entries of following
   quickContacts = computed(() => {
-    const allProfiles = this.followingService.searchProfiles('');
-    const records = this.followingService.toNostrRecords(allProfiles).slice(0, 8);
-    // Filter out already selected recipients
     const selectedPubkeys = new Set(this.selectedRecipients().map(r => r.event.pubkey));
-    return records.filter(r => !selectedPubkeys.has(r.event.pubkey));
+    const maxContacts = 12;
+    const seenPubkeys = new Set<string>();
+    const result: NostrRecord[] = [];
+
+    const addRecord = (record: NostrRecord) => {
+      const pk = record.event.pubkey;
+      if (seenPubkeys.has(pk) || selectedPubkeys.has(pk)) return;
+      seenPubkeys.add(pk);
+      result.push(record);
+    };
+
+    // 1. Recent share recipients (from persisted storage)
+    const userPubkey = this.accountState.pubkey();
+    if (userPubkey) {
+      const recentPubkeys = this.accountLocalState.getRecentShareRecipients(userPubkey);
+      for (const pk of recentPubkeys) {
+        if (result.length >= maxContacts) break;
+        // Try to find in following cache first
+        const followingProfile = this.followingService.getProfile(pk);
+        if (followingProfile?.profile) {
+          addRecord(followingProfile.profile);
+        } else {
+          // Create a minimal record so the chip view can load the profile
+          addRecord({
+            event: { id: '', pubkey: pk, kind: 0, created_at: 0, content: '', tags: [], sig: '' },
+            data: null,
+          });
+        }
+      }
+    }
+
+    // 2. Favorites
+    const favoritePubkeys = this.favoritesService.favorites();
+    if (favoritePubkeys.length > 0) {
+      for (const pk of favoritePubkeys) {
+        if (result.length >= maxContacts) break;
+        const followingProfile = this.followingService.getProfile(pk);
+        if (followingProfile?.profile) {
+          addRecord(followingProfile.profile);
+        } else {
+          addRecord({
+            event: { id: '', pubkey: pk, kind: 0, created_at: 0, content: '', tags: [], sig: '' },
+            data: null,
+          });
+        }
+      }
+    }
+
+    // 3. Fallback: if still not enough contacts, add from following list
+    //    Use the LAST entries (reverse order) instead of the first
+    if (result.length < maxContacts) {
+      const allProfiles = this.followingService.searchProfiles('');
+      const allRecords = this.followingService.toNostrRecords(allProfiles);
+      // Take from the end of the list
+      const remaining = maxContacts - result.length;
+      const tailRecords = allRecords.slice(-remaining).reverse();
+      for (const record of tailRecords) {
+        if (result.length >= maxContacts) break;
+        addRecord(record);
+      }
+    }
+
+    return result;
   });
 
   canSend = computed(() => this.selectedRecipients().length > 0 && !this.isSending());
@@ -697,6 +747,15 @@ export class ShareArticleDialogComponent {
         this.snackBar.open(`Sent to ${sentCount} of ${recipients.length}`, 'Close', { duration: 3000 });
       } else {
         this.snackBar.open('Failed to send messages', 'Close', { duration: 3000 });
+      }
+
+      // Persist successful recipients for next time
+      if (sentCount > 0) {
+        const userPubkey = this.accountState.pubkey();
+        if (userPubkey) {
+          const sentPubkeys = recipients.map(r => r.event.pubkey);
+          this.accountLocalState.addRecentShareRecipients(userPubkey, sentPubkeys);
+        }
       }
 
       this.dialogRef?.close();

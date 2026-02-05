@@ -88,6 +88,7 @@ interface AccountLocalState {
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
+  recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
 }
 
 /**
@@ -1273,6 +1274,34 @@ export class AccountLocalStateService {
     const allStates = this.getAllStates();
     delete allStates[pubkey];
     this.saveAllStates(allStates);
+  }
+
+  /**
+   * Get recent share recipients for an account
+   * Returns up to 10 most recently shared-to pubkeys, most recent first
+   */
+  getRecentShareRecipients(pubkey: string): string[] {
+    const state = this.getAccountState(pubkey);
+    return state.recentShareRecipients || [];
+  }
+
+  /**
+   * Add pubkeys to recent share recipients for an account
+   * If a pubkey already exists, it moves to the front (most recent)
+   * Keeps only the 10 most recent recipients
+   */
+  addRecentShareRecipients(pubkey: string, recipientPubkeys: string[]): void {
+    const state = this.getAccountState(pubkey);
+    const current = state.recentShareRecipients || [];
+
+    // Remove existing entries for these pubkeys
+    const recipientSet = new Set(recipientPubkeys);
+    const filtered = current.filter(pk => !recipientSet.has(pk));
+
+    // Add new entries at the beginning (most recent first)
+    const updated = [...recipientPubkeys, ...filtered].slice(0, 10);
+
+    this.updateAccountState(pubkey, { recentShareRecipients: updated });
   }
 
   /**

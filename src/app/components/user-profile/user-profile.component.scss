@@ -886,6 +886,72 @@
   }
 }
 
+.user-profile.chip {
+  width: auto;
+  flex-shrink: 0;
+
+  .user-profile-container {
+    justify-content: flex-start;
+    padding: 0;
+    width: auto;
+  }
+
+  .user-profile-content.chip-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    margin-left: 0;
+    padding: 0;
+    gap: 4px;
+    min-width: 48px;
+  }
+
+  .user-profile-avatar.chip-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border: 2px solid var(--mat-button-text-label-text-color, var(--mat-sys-primary));
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    box-sizing: border-box;
+  }
+
+  .user-profile-avatar.chip-avatar .user-avatar,
+  .user-profile-avatar.chip-avatar .default-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-profile-name.chip-label {
+    color: var(--mat-sys-on-surface);
+
+    app-profile-display-name {
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      max-width: 72px;
+      line-height: 1.2;
+    }
+  }
+}
+
 // Avatar-only view mode
 .user-profile.avatar {
   width: 100%;

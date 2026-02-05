@@ -720,46 +720,6 @@
       margin-bottom: 4px;
       // No max-height constraint for regular list items
       // (constraint is applied in .notification-viewport scope)
-
-      ::ng-deep .user-profile.tiny {
-        gap: 8px;
-        padding: 4px 8px;
-        border-radius: 8px;
-        transition: background-color 0.2s ease;
-        cursor: pointer;
-        width: fit-content;
-        max-width: 100%; // Prevent overflow
-
-        &:hover {
-          background-color: var(--mat-sys-surface-container);
-        }
-
-        .user-profile-avatar {
-          width: 32px;
-          height: 32px;
-          min-width: 32px;
-          min-height: 32px;
-
-          .user-avatar {
-            width: 32px;
-            height: 32px;
-          }
-
-          .default-user-avatar {
-            font-size: 32px;
-            width: 32px;
-            height: 32px;
-          }
-        }
-
-        .user-profile-name {
-          font-size: 14px;
-          font-weight: 500;
-          white-space: nowrap; // Prevent wrapping
-          overflow: hidden; // Hide overflow
-          text-overflow: ellipsis; // Show ellipsis
-        }
-      }
     }
 
     .notification-message {
