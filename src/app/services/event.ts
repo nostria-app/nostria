@@ -1838,6 +1838,77 @@ export class EventService {
     return cachedResult;
   }
 
+  /**
+   * NIP-41: Load edit events (kind 1010) for a kind:1 short note
+   * Returns the most recent edit event from the same author, or null if no edits exist
+   * @param eventId The ID of the original kind:1 event
+   * @param eventPubkey The pubkey of the original event author (edits must come from same author)
+   * @param invalidateCache Whether to force reload from relays
+   */
+  async loadLatestEdit(
+    eventId: string,
+    eventPubkey: string,
+    invalidateCache = false,
+  ): Promise<NostrRecord | null> {
+    this.logger.info('loadLatestEdit called for event:', eventId);
+
+    // Handle cache invalidation if requested
+    if (invalidateCache) {
+      this.subscriptionCache.invalidateEventCache([eventId]);
+    }
+
+    // Use subscription cache to prevent duplicate subscriptions
+    const cacheKey = `edit-${eventId}`;
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<NostrRecord | null>(
+      cacheKey,
+      [eventId],
+      'edit',
+      async () => {
+        try {
+          // Kind 1010 is the edit event kind per NIP-41
+          const editKind = 1010;
+          const edits = await this.userDataService.getEventsByKindAndEventTag(
+            eventPubkey,
+            editKind,
+            eventId,
+            {
+              save: false,
+              cache: true,
+              invalidateCache,
+              includeAccountRelays: true,
+            }
+          );
+
+          // Filter to only edits from the same author (CRITICAL per NIP-41)
+          const authorEdits = edits.filter(record => record.event.pubkey === eventPubkey);
+
+          if (authorEdits.length === 0) {
+            return null;
+          }
+
+          // Sort by created_at descending and return the most recent
+          authorEdits.sort((a, b) => b.event.created_at - a.event.created_at);
+
+          this.logger.info(
+            'Found edits for event:',
+            eventId,
+            'count:',
+            authorEdits.length,
+            'latest:',
+            authorEdits[0].event.created_at
+          );
+
+          return authorEdits[0];
+        } catch (error) {
+          this.logger.error('Error loading edits for event:', eventId, error);
+          return null;
+        }
+      },
+    );
+
+    return cachedResult;
+  }
+
   // Handler methods for different creation types
   async createNote(data: NoteEditorDialogData = {}): Promise<void> {
     // Dynamically import NoteEditorDialogComponent to avoid circular dependency

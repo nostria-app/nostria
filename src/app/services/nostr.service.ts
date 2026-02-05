@@ -887,9 +887,13 @@ export class NostrService implements NostriaService {
       const request = this.extensionSigningQueue.shift()!;
 
       try {
+        this.logger.debug('[Extension Signing] Processing queue item, calling performExtensionSigning');
         const signedEvent = await this.performExtensionSigning(request.event);
+        this.logger.debug('[Extension Signing] performExtensionSigning returned', { eventId: signedEvent?.id });
         request.resolve(signedEvent);
+        this.logger.debug('[Extension Signing] Request resolved successfully');
       } catch (error) {
+        this.logger.error('[Extension Signing] Error during signing', error);
         request.reject(error instanceof Error ? error : new Error(String(error)));
       }
     }
@@ -963,10 +967,16 @@ export class NostrService implements NostriaService {
       // Pass event template to extension, race against dialog close
       this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
       const extensionResult = await Promise.race([
-        window.nostr.signEvent(eventTemplate),
+        window.nostr.signEvent(eventTemplate).then((result) => {
+          this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
+          return result;
+        }).catch((err: Error) => {
+          this.logger.error('[Extension Signing] Extension signEvent threw error', err);
+          throw err;
+        }),
         dialogClosedPromise,
       ]);
-      this.logger.debug('[Extension Signing] Extension signing completed');
+      this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
       return extensionResult as Event;
     } finally {
       // Always close the dialog when signing completes (success or error)

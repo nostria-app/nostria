@@ -202,6 +202,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Signal for async-loaded reposted event (when repost has empty content)
   asyncRepostedEvent = signal<Event | null>(null);
 
+  // NIP-41 Edit support
+  // The most recent edit event for this note (kind 1010)
+  latestEditEvent = signal<NostrRecord | null>(null);
+  isLoadingEdit = signal<boolean>(false);
+
+  // Whether the event has been edited (derived from latestEditEvent)
+  isEdited = computed<boolean>(() => this.latestEditEvent() !== null);
+
+  // Timestamp of the most recent edit
+  editedAt = computed<number | undefined>(() => this.latestEditEvent()?.event.created_at);
+
   // Parent and root events for replies
   parentEvent = signal<Event | null>(null);
   rootEvent = signal<Event | null>(null);
@@ -641,6 +652,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.record();
   });
 
+  /**
+   * Get the displayed record with NIP-41 edit support
+   * Returns a record with the edited content if an edit exists, otherwise the original record
+   * The event ID and other metadata remain from the original event (for reactions, etc.)
+   */
+  displayedRecord = computed<NostrRecord | null>(() => {
+    const targetItem = this.targetRecord();
+    if (!targetItem) return null;
+
+    const editEvent = this.latestEditEvent();
+    if (editEvent && targetItem.event.kind === 1) {
+      // Return a new record with the edited content but original event metadata
+      return {
+        event: targetItem.event,
+        data: editEvent.event.content,  // For kind 1, data is the text content
+      };
+    }
+
+    return targetItem;
+  });
+
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
   // Quote events should NOT show the "replied to" header because the quoted content is rendered inline
   isQuoteOnly = computed<boolean>(() => {
@@ -846,6 +878,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this.zaps.set([]);
         this.quotes.set([]);
         this.asyncRepostedEvent.set(null); // Clear async-loaded repost event
+        this.latestEditEvent.set(null); // Clear NIP-41 edit event
 
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions
@@ -1029,6 +1062,31 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           console.error('Error loading reposted event:', error);
         } finally {
           this.isLoadingRepostedEvent.set(false);
+        }
+      });
+    });
+
+    // Effect to load NIP-41 edit events for kind 1 notes
+    effect(() => {
+      const event = this.event() || this.record()?.event;
+
+      // Only load edits for kind 1 (short text notes)
+      if (!event || event.kind !== 1) {
+        return;
+      }
+
+      untracked(async () => {
+        this.isLoadingEdit.set(true);
+        try {
+          const editRecord = await this.eventService.loadLatestEdit(
+            event.id,
+            event.pubkey
+          );
+          this.latestEditEvent.set(editRecord);
+        } catch (error) {
+          console.error('Error loading edit event:', error);
+        } finally {
+          this.isLoadingEdit.set(false);
         }
       });
     });

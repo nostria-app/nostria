@@ -21,4 +21,9 @@ export interface NoteEditorDialogData {
   mentions?: string[]; // Array of pubkeys to mention
   content?: string; // Initial content
   files?: File[]; // Initial files
+  /**
+   * NIP-41: Edit mode - the original event being edited
+   * When set, the dialog will publish a kind:1010 edit event instead of a new kind:1
+   */
+  editEvent?: NostrEvent;
 }

@@ -70,7 +70,7 @@
     <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
   </mat-card-header>
 
-  <app-event-header [event]="repostedEvent"></app-event-header>
+  <app-event-header [event]="repostedEvent" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
   <mat-card-content>
     @if (targetItem.event.kind === 20) {
     <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
@@ -125,7 +125,7 @@
     <app-profile-update-event [event]="targetItem.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="repostedRecord()?.data" [event]="repostedEvent" [trustedByPubkey]="item.event.pubkey"
+      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
         [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
@@ -386,7 +386,7 @@
   }
 
   <!-- Current event (the reply) -->
-  <app-event-header [event]="item.event"></app-event-header>
+  <app-event-header [event]="item.event" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
   <mat-card-content>
     @if (shouldHideContentDueToWarning()) {
     <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
@@ -448,7 +448,7 @@
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
         [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
@@ -488,7 +488,7 @@
 
   } @else {
   <!-- Normal event structure -->
-  <app-event-header [event]="item.event"></app-event-header>
+  <app-event-header [event]="item.event" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
   <mat-card-content>
     @if (shouldHideContentDueToWarning()) {
     <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
@@ -553,7 +553,7 @@
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
         [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {

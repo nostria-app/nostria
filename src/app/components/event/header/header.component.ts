@@ -6,6 +6,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { Event, nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
@@ -27,13 +28,13 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
 
 @Component({
   selector: 'app-event-header',
-  standalone: true,
   imports: [
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
     MatMenuModule,
+    MatTooltipModule,
     UserProfileComponent,
     EventMenuComponent,
     AgoPipe,
@@ -54,6 +55,10 @@ export class EventHeaderComponent {
   eventService = inject(EventService);
   event = input.required<Event>();
   compact = input<boolean>(false);
+  /** Whether this event has been edited (NIP-41) */
+  isEdited = input<boolean>(false);
+  /** Timestamp of the most recent edit (for tooltip) */
+  editedAt = input<number | undefined>(undefined);
   record = signal<NostrRecord | null>(null);
 
   isOurEvent = computed<boolean>(() => {
