@@ -278,6 +278,19 @@
   }
 }
 
+// Fix alignment for edit button in mat-list-item
+.subscription-card mat-list-item button[mat-icon-button] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .username-prompt {
   display: flex;
   flex-direction: column;
@@ -294,4 +307,217 @@ mat-list-item:has(.username-prompt) {
   height: auto !important;
   min-height: 80px;
   padding: 12px 0;
+}
+
+// Subscription Card Styles
+.subscription-card {
+  margin-bottom: 1.5rem;
+
+  &.expired {
+    border: 2px solid var(--mat-sys-error);
+  }
+
+  &.expiring-soon {
+    border: 2px solid var(--mat-sys-warning, #f59e0b);
+  }
+
+  mat-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  margin-left: auto;
+
+  &.active {
+    background-color: var(--mat-success-color, #22c55e);
+    color: white;
+  }
+
+  &.expiring {
+    background-color: var(--mat-sys-warning, #f59e0b);
+    color: white;
+  }
+
+  &.expired {
+    background-color: var(--mat-sys-error);
+    color: white;
+  }
+}
+
+.expired-icon {
+  color: var(--mat-sys-error);
+}
+
+.expired-text {
+  color: var(--mat-sys-error);
+}
+
+mat-card-actions {
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.renew-button {
+  mat-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+// History Card Styles
+.history-card {
+  mat-card-content {
+    padding: 0;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+
+  p {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.empty-history {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+}
+
+.history-list {
+  padding: 1rem 0;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+.history-item-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.history-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-surface-container-high);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  &.paid mat-icon {
+    color: var(--mat-success-color, #22c55e);
+  }
+
+  &.pending mat-icon {
+    color: var(--mat-sys-warning, #f59e0b);
+  }
+
+  &.expired mat-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+.history-item-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item-title {
+  color: var(--mat-sys-on-surface);
+}
+
+.history-item-date {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.history-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.history-item-price {
+  color: var(--mat-sys-on-surface);
+}
+
+.history-item-status {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  text-transform: capitalize;
+
+  &.paid {
+    background-color: color-mix(in srgb, var(--mat-success-color, #22c55e) 20%, transparent);
+    color: var(--mat-success-color, #22c55e);
+  }
+
+  &.pending {
+    background-color: color-mix(in srgb, var(--mat-sys-warning, #f59e0b) 20%, transparent);
+    color: var(--mat-sys-warning, #f59e0b);
+  }
+
+  &.expired {
+    background-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
+    color: var(--mat-sys-error);
+  }
+}
+
+// Responsive adjustments for history
+@media (max-width: 600px) {
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .history-item-meta {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 }
