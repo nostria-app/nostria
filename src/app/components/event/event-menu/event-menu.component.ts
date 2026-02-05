@@ -42,6 +42,7 @@ import { BookmarkListSelectorComponent } from '../../bookmark-list-selector/book
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../share-article-dialog/share-article-dialog.component';
 import { EventImageService } from '../../../services/event-image.service';
+import { NoteEditorDialogData } from '../../../interfaces/note-editor';
 
 @Component({
   selector: 'app-event-menu',
@@ -721,5 +722,39 @@ export class EventMenuComponent {
     if (encodedId) {
       this.router.navigate(['/analytics/event', encodedId]);
     }
+  }
+
+  /**
+   * NIP-41: Edit a kind:1 short note
+   * Opens the note editor with the original content for editing
+   * Only available for premium users and their own text notes
+   */
+  async editEvent(): Promise<void> {
+    const ev = this.event();
+    if (!ev || ev.kind !== kinds.ShortTextNote) {
+      return;
+    }
+
+    // Dynamically import NoteEditorDialogComponent to avoid circular dependency
+    const { NoteEditorDialogComponent } = await import('../../note-editor-dialog/note-editor-dialog.component');
+
+    const editData: NoteEditorDialogData = {
+      editEvent: ev,
+      content: ev.content,
+    };
+
+    const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
+      NoteEditorDialogComponent, {
+        title: 'Edit Note',
+        headerIcon: this.accountState.profile()?.data?.picture || '',
+        width: '680px',
+        maxWidth: '95vw',
+        disableClose: true,
+        data: editData,
+      }
+    );
+
+    dialogRef.componentInstance.dialogRef = dialogRef;
+    dialogRef.componentInstance.data = editData;
   }
 }

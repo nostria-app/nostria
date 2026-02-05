@@ -5,7 +5,7 @@ interface PendingSubscription {
   promise: Promise<unknown>;
   timestamp: number;
   eventIds: string[];
-  type: 'reactions' | 'reposts' | 'reports' | 'event' | 'replies' | 'interactions' | 'quotes';
+  type: 'reactions' | 'reposts' | 'reports' | 'event' | 'replies' | 'interactions' | 'quotes' | 'edit';
 }
 
 interface CachedResult {

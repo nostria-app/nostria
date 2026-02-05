@@ -490,6 +490,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
+  /** NIP-41: Check if we're editing an existing note */
+  isEdit = computed(() => !!this.data?.editEvent);
 
   // Check if a mention is the reply target (cannot be removed)
   isReplyTargetMention(pubkey: string): boolean {
@@ -560,6 +562,46 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           kind1WrapperEvent: kind1Event,
         }, null, 2);
       }
+    }
+
+    // NIP-41: For edit mode, show kind 1010 event with 'e' tag
+    if (this.isEdit()) {
+      const editEvent = this.data?.editEvent;
+      const content = this.processContentForPublishing(this.content().trim());
+
+      // Build edit event tags
+      const tags: string[][] = [
+        ['e', editEvent?.id || '<original_event_id>'],
+      ];
+
+      // Add hashtags from content
+      this.extractHashtags(content, tags);
+
+      // Extract NIP-27 tags (p tags for nostr:nprofile/npub, q tags for quotes)
+      this.extractNip27Tags(content, tags);
+
+      // Add mentions from the mentions signal (with deduplication)
+      this.mentions().forEach(mentionPubkey => {
+        const alreadyAdded = tags.some(t => t[0] === 'p' && t[1] === mentionPubkey);
+        if (!alreadyAdded) {
+          tags.push(['p', mentionPubkey]);
+        }
+      });
+
+      // Add client tag if enabled
+      if (this.addClientTag()) {
+        tags.push(['client', 'nostria']);
+      }
+
+      const unsignedEvent = {
+        kind: 1010,
+        content,
+        tags,
+        pubkey,
+        created_at,
+      };
+
+      return JSON.stringify(unsignedEvent, null, 2);
     }
 
     // Standard kind 1 event
@@ -771,7 +813,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     }
 
-    // Initialize content if provided (e.g. from Share Target)
+    // Initialize content if provided (e.g. from Share Target or Edit)
     if (this.data?.content) {
       const currentContent = this.content();
       const newContent = this.data.content.trim();
@@ -785,6 +827,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.content.set(newContent);
         }
       }
+    }
+
+    // NIP-41: When editing, parse nostr: references to extract pubkeys for p tags
+    // This ensures existing mentions in the original note are preserved in the edit event
+    if (this.isEdit()) {
+      this.parseNostrReferencesFromContent(this.content());
     }
 
     // Add reply mentions if this is a reply
@@ -1045,7 +1093,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isPublishing.set(true);
 
     try {
-      if (this.isMediaModeEnabled()) {
+      if (this.isEdit()) {
+        await this.publishEditFlow();
+      } else if (this.isMediaModeEnabled()) {
         await this.publishMediaFlow();
       } else {
         await this.publishStandardFlow();
@@ -1153,6 +1203,117 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     return verticalVideo ? 22 : 21;
+  }
+
+  /**
+   * NIP-41: Publish an edit event (kind 1010) for an existing kind:1 note
+   * The edit event has an 'e' tag pointing to the original event ID
+   */
+  private async publishEditFlow(): Promise<void> {
+    const editEvent = this.data?.editEvent;
+    if (!editEvent) {
+      throw new Error('No event to edit');
+    }
+
+    const content = this.processContentForPublishing(this.content().trim());
+
+    // Build tags for the edit event
+    // Must include 'e' tag referencing the original event ID
+    const tags: string[][] = [
+      ['e', editEvent.id],
+    ];
+
+    // Add hashtags from content
+    this.extractHashtags(content, tags);
+
+    // Extract NIP-27 tags (p tags for nostr:nprofile/npub, q tags for quotes)
+    this.extractNip27Tags(content, tags);
+
+    // Add mentions from the mentions signal (these may overlap with NIP-27 extracted ones,
+    // but extractNip27Tags already handles deduplication via addedPubkeys set)
+    this.mentions().forEach(pubkey => {
+      // Check if already added by extractNip27Tags
+      const alreadyAdded = tags.some(t => t[0] === 'p' && t[1] === pubkey);
+      if (!alreadyAdded) {
+        tags.push(['p', pubkey]);
+      }
+    });
+
+    // Add client tag if enabled
+    if (this.addClientTag()) {
+      tags.push(['client', 'nostria']);
+    }
+
+    // Create and publish the kind:1010 edit event
+    const unsignedEvent = this.nostrService.createEvent(1010, content, tags);
+
+    // Set up dialog close handling similar to publishEvent
+    let dialogClosed = false;
+    let publishedEventId: string | undefined;
+
+    this.publishSubscription = this.publishEventBus.on('relay-result').subscribe((event) => {
+      if (!dialogClosed && event.type === 'relay-result') {
+        const relayEvent = event as PublishRelayResultEvent;
+
+        const isOurEvent = publishedEventId
+          ? relayEvent.event.id === publishedEventId
+          : relayEvent.event.content === content;
+
+        if (isOurEvent && relayEvent.success) {
+          dialogClosed = true;
+          publishedEventId = relayEvent.event.id;
+
+          if (!this.inlineMode()) {
+            this.clearAutoDraft();
+          }
+          this.snackBar.open('Note edited successfully!', 'Close', {
+            duration: 3000,
+          });
+
+          const signedEvent = relayEvent.event;
+
+          if (this.inlineMode()) {
+            this.content.set('');
+            this.mentionMap.clear();
+            this.pubkeyToNameMap.clear();
+            this.mediaMetadata.set([]);
+            this.isExpanded.set(false);
+            this.replyPublished.emit(signedEvent);
+          } else {
+            this.dialogRef?.close({ published: true, event: signedEvent });
+          }
+
+          // Navigate to the original event (not the edit event)
+          const nevent = nip19.neventEncode({
+            id: editEvent.id,
+            author: editEvent.pubkey,
+            kind: editEvent.kind,
+          });
+          this.layout.openGenericEvent(nevent, editEvent);
+
+          if (this.publishSubscription) {
+            this.publishSubscription.unsubscribe();
+            this.publishSubscription = undefined;
+          }
+        }
+      }
+    });
+
+    const result = await this.nostrService.signAndPublish(unsignedEvent);
+
+    console.log('[NoteEditorDialog] Edit publish result:', {
+      success: result.success,
+      hasEvent: !!result.event,
+      eventId: result.event?.id
+    });
+
+    if (result.event) {
+      publishedEventId = result.event.id;
+    }
+
+    if (!dialogClosed && (!result.success || !result.event)) {
+      throw new Error('Failed to publish edit event');
+    }
   }
 
   private async publishEvent(contentToPublish: string, tags: string[][]): Promise<void> {
@@ -1508,6 +1669,40 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       } catch (error) {
         // Invalid NIP-19 identifier, skip it
         console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
+      }
+    }
+  }
+
+  /**
+   * Parse existing nostr: profile references from content and add pubkeys to mentions.
+   * This is called when loading edit content to ensure existing mentions get p tags.
+   * Without this, editing a note with nostr:nprofile... references would lose the p tags.
+   */
+  private parseNostrReferencesFromContent(content: string): void {
+    // Match nostr:npub1... and nostr:nprofile1... URIs
+    const nostrUriPattern = /nostr:(npub1|nprofile1)([a-zA-Z0-9]+)/g;
+    let match;
+
+    while ((match = nostrUriPattern.exec(content)) !== null) {
+      const fullIdentifier = match[1] + match[2];
+
+      try {
+        const decoded = nip19.decode(fullIdentifier);
+        let pubkey: string | undefined;
+
+        if (decoded.type === 'npub') {
+          pubkey = decoded.data;
+        } else if (decoded.type === 'nprofile') {
+          pubkey = decoded.data.pubkey;
+        }
+
+        if (pubkey && !this.mentions().includes(pubkey)) {
+          this.mentions.update(m => [...m, pubkey!]);
+          // Load the profile name for display in the mentions chip list
+          this.loadMentionProfileName(pubkey);
+        }
+      } catch (e) {
+        console.warn('Failed to decode nostr URI:', fullIdentifier, e);
       }
     }
   }

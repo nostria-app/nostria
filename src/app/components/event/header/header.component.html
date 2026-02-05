@@ -4,6 +4,13 @@
       (click)="openEventAndStopPropagation($event)" (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
       {{ event().created_at | ago }}
     </a>
+    @if (isEdited()) {
+    <span class="edited-indicator" 
+          [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
+          matTooltipPosition="below">
+      (edited)
+    </span>
+    }
     @if (!compact()) {
     <app-event-menu [event]="event()"></app-event-menu>
     }

@@ -18,6 +18,8 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { DatabaseService } from '../../services/database.service';
+import { UserDataService } from '../../services/user-data.service';
 import { NostrRecord } from '../../interfaces';
 import { nip19 } from 'nostr-tools';
 import { FollowingService } from '../../services/following.service';
@@ -128,6 +130,8 @@ export class MentionAutocompleteComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly followingService = inject(FollowingService);
   private readonly userRelaysService = inject(UserRelaysService);
+  private readonly database = inject(DatabaseService);
+  private readonly userData = inject(UserDataService);
   readonly utilities = inject(UtilitiesService);
 
   // Inputs
@@ -204,10 +208,56 @@ export class MentionAutocompleteComponent {
       return;
     }
 
-    // Search following profiles using FollowingService
+    // Search following profiles using FollowingService (these get priority)
     const followingResults = this.followingService.searchProfiles(query);
-    const records = this.followingService.toNostrRecords(followingResults).slice(0, this.maxResults());
-    this.searchResults.set(records);
+    const followingRecords = this.followingService.toNostrRecords(followingResults);
+
+    // If we have enough results from following, use those
+    if (followingRecords.length >= this.maxResults()) {
+      this.searchResults.set(followingRecords.slice(0, this.maxResults()));
+      return;
+    }
+
+    // Otherwise, also search cached profiles in the database
+    // This includes profiles you've viewed but don't follow
+    this.searchCachedProfiles(query, followingRecords);
+  }
+
+  /**
+   * Search cached profiles in the database and merge with following results
+   * Following profiles appear first, then other cached profiles
+   */
+  private async searchCachedProfiles(query: string, followingRecords: NostrRecord[]): Promise<void> {
+    try {
+      this.isLoading.set(true);
+      const followingPubkeys = new Set(followingRecords.map(r => r.event.pubkey));
+
+      // Search all cached profiles in the database
+      const cachedEvents = await this.database.searchCachedProfiles(query);
+
+      // Convert to NostrRecord and filter out duplicates (already in following results)
+      const additionalRecords: NostrRecord[] = [];
+      for (const event of cachedEvents) {
+        if (!followingPubkeys.has(event.pubkey)) {
+          const record = this.userData.toRecord(event);
+          additionalRecords.push(record);
+        }
+      }
+
+      // Merge: following first, then other cached profiles
+      const mergedResults = [
+        ...followingRecords,
+        ...additionalRecords,
+      ].slice(0, this.maxResults());
+
+      this.searchResults.set(mergedResults);
+    } catch (error) {
+      console.warn('[MentionAutocomplete] Error searching cached profiles:', error);
+      // Fall back to just following results
+      this.searchResults.set(followingRecords.slice(0, this.maxResults()));
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   onKeyDown(event: KeyboardEvent): void {

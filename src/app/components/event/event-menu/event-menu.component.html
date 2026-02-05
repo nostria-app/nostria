@@ -73,6 +73,12 @@
   </button>
   }
   <mat-divider></mat-divider>
+  @if (isOurEvent() && isTextNote() && isPremium()) {
+  <button mat-menu-item (click)="editEvent()">
+    <mat-icon>edit</mat-icon>
+    Edit
+  </button>
+  }
   @if (isOurEvent()) {
   <button mat-menu-item (click)="deleteEvent()">
     <mat-icon>delete</mat-icon>
