@@ -236,6 +236,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   selectedRelaySource = signal<RelaySource>('account');
   customRelayInput = signal('');
   customRelays = signal<string[]>([]);
+  customRelayError = signal('');
 
   // Computed signals for follower discovery
   newFollowersCount = computed(() => {
@@ -1136,6 +1137,9 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     this.followerDiscoveryProgress.set(0);
     this.followerDiscoveryStatus.set('Preparing to discover followers...');
 
+    // Create a temporary pool for this query
+    const pool = new SimplePool();
+
     try {
       // Get relay URLs based on selected source
       const relayUrls = await this.getRelayUrlsForDiscovery();
@@ -1150,10 +1154,9 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       this.followerDiscoveryStatus.set(`Querying ${relayUrls.length} relays for kind 3 events...`);
       this.followerDiscoveryProgress.set(10);
 
-      // Create a temporary pool for this query
-      const pool = new SimplePool();
-
-      // Query for kind 3 events that include this user's pubkey in p-tags
+      // Query for kind 3 (contact list) events that include this user's pubkey in p-tags
+      // The authors of these events are the users who follow the current user
+      // Note: Limited to 500 events per query. Users with more followers may need multiple queries.
       const events = await pool.querySync(relayUrls, {
         kinds: [kinds.Contacts],
         '#p': [pubkey],
@@ -1163,7 +1166,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       this.followerDiscoveryProgress.set(60);
       this.followerDiscoveryStatus.set(`Found ${events.length} kind 3 events, extracting followers...`);
 
-      // Extract unique pubkeys (authors of the kind 3 events)
+      // Extract unique follower pubkeys (authors of the kind 3 events who have this user in their contact list)
       const followerPubkeys = new Set<string>();
       for (const event of events) {
         if (event.pubkey !== pubkey) { // Don't include self
@@ -1200,14 +1203,18 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         `Discovered ${discoveredFollowers.length} followers (${discoveredFollowers.filter(f => !f.isFollowing).length} new)`
       );
 
-      // Close the temporary pool
-      pool.close(relayUrls);
-
       this.logger.info(`Follower discovery complete: ${discoveredFollowers.length} followers found`);
     } catch (error) {
       this.logger.error('Failed to discover followers', error);
       this.followerDiscoveryStatus.set('Failed to discover followers');
     } finally {
+      // Always close the pool to prevent resource leaks
+      try {
+        const relayUrls = await this.getRelayUrlsForDiscovery();
+        pool.close(relayUrls);
+      } catch (closeError) {
+        this.logger.debug('Error closing pool:', closeError);
+      }
       this.followerDiscoveryLoading.set(false);
     }
   }
@@ -1261,10 +1268,14 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
    */
   addCustomRelay(): void {
     const relayUrl = this.customRelayInput().trim();
-    if (!relayUrl) return;
+    if (!relayUrl) {
+      this.customRelayError.set('Please enter a relay URL');
+      return;
+    }
 
     // Basic validation
     if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+      this.customRelayError.set('Invalid relay URL. Must start with wss:// or ws://');
       this.logger.warn('Invalid relay URL, must start with wss:// or ws://');
       return;
     }
@@ -1272,6 +1283,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     // Check if already added
     const currentRelays = this.customRelays();
     if (currentRelays.includes(relayUrl)) {
+      this.customRelayError.set('This relay has already been added');
       this.logger.debug('Relay already added');
       return;
     }
@@ -1279,6 +1291,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     // Add to list
     this.customRelays.update(relays => [...relays, relayUrl]);
     this.customRelayInput.set('');
+    this.customRelayError.set(''); // Clear error on success
     this.logger.debug(`Added custom relay: ${relayUrl}`);
   }
 

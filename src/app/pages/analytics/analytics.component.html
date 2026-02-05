@@ -530,10 +530,14 @@
                   <input matInput 
                          [(ngModel)]="customRelayInput" 
                          (keyup.enter)="addCustomRelay()"
+                         (input)="customRelayError.set('')"
                          placeholder="wss://relay.example.com">
                   <button mat-icon-button matSuffix (click)="addCustomRelay()" [disabled]="!customRelayInput()">
                     <mat-icon>add</mat-icon>
                   </button>
+                  @if (customRelayError()) {
+                  <mat-error>{{ customRelayError() }}</mat-error>
+                  }
                 </mat-form-field>
 
                 @if (customRelays().length > 0) {
