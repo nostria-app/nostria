@@ -34,7 +34,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'streams', label: $localize`:@@app.nav.streams:Streams`, icon: 'live_tv', authenticated: false },
   { id: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },
   { id: 'collections/media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
-  { id: 'lists', label: $localize`:@@menu.lists:Lists`, icon: 'lists', authenticated: true },
+  // Note: 'lists' is intentionally omitted - it's a power-user feature accessible only via direct URL /lists
   { id: 'polls', label: $localize`:@@menu.polls:Polls`, icon: 'poll', authenticated: false },
   { id: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
   { id: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
