@@ -1056,8 +1056,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
             // Add default relays (same as new user accounts)
             const defaultRelays = [
               'wss://relay.damus.io/',
-              'wss://relay.snort.social/',
               'wss://nos.lol/',
+              'wss://relay.primal.net/',
             ];
 
             this.logger.info('Adding default relays for automated setup', { defaultRelays });
