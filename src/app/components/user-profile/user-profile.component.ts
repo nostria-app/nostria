@@ -587,7 +587,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
     // Don't show hover card for tiny/name-only views
-    if (this.view() === 'tiny' || this.view() === 'name') {
+    if (this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
       return;
     }
 

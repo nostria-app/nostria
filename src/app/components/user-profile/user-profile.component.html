@@ -21,7 +21,7 @@
     }
 
     <!-- Avatar section - single image element -->
-    @if (view() !== 'name' && view() !== 'tiny' && view() !== 'avatar') {
+    @if (view() !== 'name' && view() !== 'tiny' && view() !== 'chip' && view() !== 'avatar') {
     <div class="user-profile-avatar-container">
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
@@ -79,6 +79,7 @@
     view() !== 'comfortable' &&
     view() !== 'icon' &&
     view() !== 'tiny' &&
+    view() !== 'chip' &&
     view() !== 'name'
     ) {
     <div class="user-profile-content">
@@ -173,6 +174,35 @@
         <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </span>
     </a>
+    }
+
+    @if (view() === 'chip') {
+    <div class="user-profile-content chip-view">
+      <div class="user-profile-avatar chip-avatar">
+        @if (isLoading()) {
+        <mat-spinner [diameter]="40" color="primary"></mat-spinner>
+        } @else if (profile()?.data?.picture && !imageLoadError()) {
+        @if (settingsService.settings().imageCacheEnabled) {
+        <img [src]="getOptimizedImageUrl(profile().data.picture)" (error)="onImageLoadError()" alt="User Avatar"
+          class="user-avatar" loading="lazy" />
+        } @else {
+        <img [src]="profile().data.picture" (error)="onImageLoadError()" alt="User Avatar" class="user-avatar"
+          loading="lazy" />
+        }
+        } @else {
+        <mat-icon [ngClass]="[
+                'default-user-avatar',
+                isProfileNotFound() ? 'not-found-avatar' : '',
+                imageLoadError() ? 'error-avatar' : '',
+              ]" [style.font-size]="'40px'" [style.height]="'40px'" [style.width]="'40px'">
+          {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
+        </mat-icon>
+        }
+      </div>
+      <span class="user-profile-name chip-label">
+        <app-profile-display-name [pubkey]="pubkey()" [disableLink]="true"></app-profile-display-name>
+      </span>
+    </div>
     }
 
     @if (view() === 'avatar') {
