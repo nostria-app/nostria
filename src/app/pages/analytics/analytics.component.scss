@@ -927,3 +927,155 @@
     }
   }
 }
+
+// Follower Discovery Styles
+.discovery-controls {
+  margin-bottom: 1.5rem;
+
+  .relay-source-selector {
+    h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+    }
+
+    .relay-options {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+
+      button {
+        &.active {
+          background-color: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
+        }
+
+        mat-icon {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+
+    .custom-relay-input {
+      margin-top: 1rem;
+
+      .relay-input-field {
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .custom-relays-list {
+        margin-top: 1rem;
+
+        h4 {
+          margin: 0 0 0.5rem 0;
+          font-size: 0.9rem;
+          color: var(--mat-sys-on-surface-variant);
+        }
+
+        mat-chip-set {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        mat-chip {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+  }
+
+  .discovery-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 1.5rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      mat-spinner {
+        display: inline-block;
+      }
+    }
+
+    .followers-count {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.9rem;
+    }
+  }
+
+  .discovery-progress {
+    margin-top: 1rem;
+
+    mat-progress-bar {
+      max-width: 500px;
+    }
+
+    .discovery-status {
+      margin: 0.5rem 0 0 0;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.9rem;
+    }
+  }
+}
+
+.followers-results {
+  h3 {
+    margin: 0 0 1rem 0;
+  }
+
+  .followers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 600px;
+    overflow-y: auto;
+
+    .follower-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      border-radius: 8px;
+      background-color: var(--mat-sys-surface-container);
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+      }
+
+      .follower-profile {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .follower-status {
+        mat-chip {
+          &.following-chip {
+            background-color: var(--mat-success-color);
+            color: white;
+          }
+
+          &.not-following-chip {
+            background-color: var(--mat-sys-surface-container-highest);
+            color: var(--mat-sys-on-surface);
+          }
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            margin-right: 0.25rem;
+          }
+        }
+      }
+    }
+  }
+}
+

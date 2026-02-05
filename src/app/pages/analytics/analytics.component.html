@@ -484,6 +484,139 @@
         </div>
       </div>
     </mat-tab>
+
+    <!-- Followers Discovery Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>person_search</mat-icon>
+        <span>Followers Discovery</span>
+      </ng-template>
+      <div class="tab-content">
+        <mat-card class="discovery-controls">
+          <mat-card-header>
+            <mat-card-title>Discover Who Follows You</mat-card-title>
+            <mat-card-subtitle>
+              Find all profiles that have added you to their contact lists (kind 3 events)
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="relay-source-selector">
+              <h3>Select Relay Source</h3>
+              <div class="relay-options">
+                <button mat-stroked-button 
+                        [class.active]="selectedRelaySource() === 'account'"
+                        (click)="onRelaySourceChange('account')">
+                  <mat-icon>account_circle</mat-icon>
+                  Account Relays
+                </button>
+                <button mat-stroked-button 
+                        [class.active]="selectedRelaySource() === 'custom'"
+                        (click)="onRelaySourceChange('custom')">
+                  <mat-icon>settings</mat-icon>
+                  Custom Relays
+                </button>
+                <button mat-stroked-button 
+                        [class.active]="selectedRelaySource() === 'deep'"
+                        (click)="onRelaySourceChange('deep')">
+                  <mat-icon>explore</mat-icon>
+                  Deep Discovery
+                </button>
+              </div>
+
+              @if (selectedRelaySource() === 'custom') {
+              <div class="custom-relay-input">
+                <mat-form-field appearance="outline" class="relay-input-field">
+                  <mat-label>Add Custom Relay</mat-label>
+                  <input matInput 
+                         [(ngModel)]="customRelayInput" 
+                         (keyup.enter)="addCustomRelay()"
+                         placeholder="wss://relay.example.com">
+                  <button mat-icon-button matSuffix (click)="addCustomRelay()" [disabled]="!customRelayInput()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </mat-form-field>
+
+                @if (customRelays().length > 0) {
+                <div class="custom-relays-list">
+                  <h4>Custom Relays ({{ customRelays().length }})</h4>
+                  <mat-chip-set>
+                    @for (relay of customRelays(); track relay) {
+                    <mat-chip (removed)="removeCustomRelay(relay)">
+                      {{ relay }}
+                      <button matChipRemove>
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
+                }
+              </div>
+              }
+            </div>
+
+            <div class="discovery-actions">
+              <button mat-flat-button 
+                      (click)="discoverFollowers()"
+                      [disabled]="followerDiscoveryLoading() || (selectedRelaySource() === 'custom' && customRelays().length === 0)">
+                @if (followerDiscoveryLoading()) {
+                <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+                } @else {
+                <mat-icon>search</mat-icon>
+                }
+                Discover Followers
+              </button>
+              @if (discoveredFollowers().length > 0) {
+              <span class="followers-count">
+                Found {{ discoveredFollowers().length }} followers
+                ({{ newFollowersCount() }} new)
+              </span>
+              }
+            </div>
+
+            @if (followerDiscoveryLoading()) {
+            <div class="discovery-progress">
+              <mat-progress-bar mode="determinate" [value]="followerDiscoveryProgress()"></mat-progress-bar>
+              <p class="discovery-status">{{ followerDiscoveryStatus() }}</p>
+            </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (discoveredFollowers().length > 0) {
+        <div class="followers-results">
+          <h3>Discovered Followers</h3>
+          <div class="followers-list">
+            @for (follower of discoveredFollowers(); track follower.pubkey) {
+            <div class="follower-item">
+              <div class="follower-profile">
+                <app-user-profile [pubkey]="follower.pubkey" view="compact"></app-user-profile>
+              </div>
+              <div class="follower-status">
+                @if (follower.isFollowing) {
+                <mat-chip class="following-chip">
+                  <mat-icon>check_circle</mat-icon>
+                  Following
+                </mat-chip>
+                } @else {
+                <mat-chip class="not-following-chip">
+                  <mat-icon>person_add</mat-icon>
+                  Not Following
+                </mat-chip>
+                }
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+        } @else if (!followerDiscoveryLoading()) {
+        <div class="empty-state">
+          <mat-icon>person_search</mat-icon>
+          <p>No followers discovered yet. Click "Discover Followers" to find who follows you.</p>
+        </div>
+        }
+      </div>
+    </mat-tab>
   </mat-tab-group>
   }
 </div>

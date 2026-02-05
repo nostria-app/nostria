@@ -38,6 +38,9 @@ import { ZapService } from '../../services/zap.service';
 import { Metrics } from '../../services/metrics';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
+import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
+import { LocalStorageService } from '../../services/local-storage.service';
+import { SimplePool } from 'nostr-tools';
 
 // Time period options
 type TimePeriod = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -118,6 +121,22 @@ interface DailyZapData {
   volumeSent: number;
 }
 
+// Relay source types for follower discovery
+type RelaySource = 'account' | 'custom' | 'deep';
+
+interface DiscoveredFollower {
+  pubkey: string;
+  isFollowing: boolean;
+  discoveredAt: number;
+}
+
+interface FollowerDiscoveryCache {
+  followers: DiscoveredFollower[];
+  lastUpdated: number;
+  relaySource: RelaySource;
+  customRelays?: string[];
+}
+
 @Component({
   selector: 'app-analytics',
   imports: [
@@ -156,6 +175,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly zapService = inject(ZapService);
   private readonly metricsService = inject(Metrics);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly localStorage = inject(LocalStorageService);
   protected readonly app = inject(ApplicationService);
   protected readonly layout = inject(LayoutService);
 
@@ -206,6 +227,20 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     satsSent: 0,
   });
   dailyZapData = signal<DailyZapData[]>([]);
+
+  // Follower discovery data
+  discoveredFollowers = signal<DiscoveredFollower[]>([]);
+  followerDiscoveryLoading = signal(false);
+  followerDiscoveryProgress = signal(0);
+  followerDiscoveryStatus = signal('');
+  selectedRelaySource = signal<RelaySource>('account');
+  customRelayInput = signal('');
+  customRelays = signal<string[]>([]);
+
+  // Computed signals for follower discovery
+  newFollowersCount = computed(() => {
+    return this.discoveredFollowers().filter(f => !f.isFollowing).length;
+  });
 
   // Computed signals for UI
   timeRange = computed<TimeRange>(() => {
@@ -261,6 +296,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     if (this.app.authenticated() && this.isPremium()) {
       await this.loadAnalytics();
+      // Load cached follower discovery data
+      this.loadFollowerDiscoveryCache();
     }
   }
 
@@ -1034,5 +1071,230 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     const minHeight = 2;
     const maxHeight = 80;
     return maxValue > 0 ? Math.max(minHeight, (value / maxValue) * maxHeight) : minHeight;
+  }
+
+  /**
+   * Load cached follower discovery data from local storage
+   */
+  private loadFollowerDiscoveryCache(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const cacheKey = `follower-discovery-${pubkey}`;
+    const cached = this.localStorage.getItem(cacheKey);
+
+    if (cached) {
+      try {
+        const cacheData: FollowerDiscoveryCache = JSON.parse(cached);
+        this.discoveredFollowers.set(cacheData.followers);
+        this.selectedRelaySource.set(cacheData.relaySource);
+        if (cacheData.customRelays) {
+          this.customRelays.set(cacheData.customRelays);
+        }
+        this.logger.debug(`Loaded ${cacheData.followers.length} cached followers`);
+      } catch (error) {
+        this.logger.error('Failed to parse follower discovery cache', error);
+      }
+    }
+  }
+
+  /**
+   * Save follower discovery data to local storage
+   */
+  private saveFollowerDiscoveryCache(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const cacheKey = `follower-discovery-${pubkey}`;
+    const cacheData: FollowerDiscoveryCache = {
+      followers: this.discoveredFollowers(),
+      lastUpdated: Date.now(),
+      relaySource: this.selectedRelaySource(),
+      customRelays: this.customRelays(),
+    };
+
+    this.localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    this.logger.debug(`Saved ${cacheData.followers.length} followers to cache`);
+  }
+
+  /**
+   * Discover followers by querying for kind 3 events that mention the current user
+   */
+  async discoverFollowers(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('No pubkey available for follower discovery');
+      return;
+    }
+
+    if (this.followerDiscoveryLoading()) {
+      this.logger.debug('Follower discovery already in progress');
+      return;
+    }
+
+    this.followerDiscoveryLoading.set(true);
+    this.followerDiscoveryProgress.set(0);
+    this.followerDiscoveryStatus.set('Preparing to discover followers...');
+
+    try {
+      // Get relay URLs based on selected source
+      const relayUrls = await this.getRelayUrlsForDiscovery();
+      this.logger.debug(`Using ${relayUrls.length} relays for follower discovery`);
+
+      if (relayUrls.length === 0) {
+        this.followerDiscoveryStatus.set('No relays available');
+        this.followerDiscoveryLoading.set(false);
+        return;
+      }
+
+      this.followerDiscoveryStatus.set(`Querying ${relayUrls.length} relays for kind 3 events...`);
+      this.followerDiscoveryProgress.set(10);
+
+      // Create a temporary pool for this query
+      const pool = new SimplePool();
+
+      // Query for kind 3 events that include this user's pubkey in p-tags
+      const events = await pool.querySync(relayUrls, {
+        kinds: [kinds.Contacts],
+        '#p': [pubkey],
+        limit: 500,
+      });
+
+      this.followerDiscoveryProgress.set(60);
+      this.followerDiscoveryStatus.set(`Found ${events.length} kind 3 events, extracting followers...`);
+
+      // Extract unique pubkeys (authors of the kind 3 events)
+      const followerPubkeys = new Set<string>();
+      for (const event of events) {
+        if (event.pubkey !== pubkey) { // Don't include self
+          followerPubkeys.add(event.pubkey);
+        }
+      }
+
+      this.followerDiscoveryProgress.set(80);
+      this.followerDiscoveryStatus.set('Checking following status...');
+
+      // Check which followers we're already following
+      const currentFollowing = this.accountState.followingList();
+      const followingSet = new Set(currentFollowing);
+
+      const discoveredFollowers: DiscoveredFollower[] = Array.from(followerPubkeys).map(
+        followerPubkey => ({
+          pubkey: followerPubkey,
+          isFollowing: followingSet.has(followerPubkey),
+          discoveredAt: Math.floor(Date.now() / 1000),
+        })
+      );
+
+      // Sort by following status (non-following first)
+      discoveredFollowers.sort((a, b) => {
+        if (a.isFollowing === b.isFollowing) return 0;
+        return a.isFollowing ? 1 : -1;
+      });
+
+      this.discoveredFollowers.set(discoveredFollowers);
+      this.saveFollowerDiscoveryCache();
+
+      this.followerDiscoveryProgress.set(100);
+      this.followerDiscoveryStatus.set(
+        `Discovered ${discoveredFollowers.length} followers (${discoveredFollowers.filter(f => !f.isFollowing).length} new)`
+      );
+
+      // Close the temporary pool
+      pool.close(relayUrls);
+
+      this.logger.info(`Follower discovery complete: ${discoveredFollowers.length} followers found`);
+    } catch (error) {
+      this.logger.error('Failed to discover followers', error);
+      this.followerDiscoveryStatus.set('Failed to discover followers');
+    } finally {
+      this.followerDiscoveryLoading.set(false);
+    }
+  }
+
+  /**
+   * Get relay URLs based on the selected relay source
+   */
+  private async getRelayUrlsForDiscovery(): Promise<string[]> {
+    const relaySource = this.selectedRelaySource();
+
+    switch (relaySource) {
+      case 'account':
+        // Use account relays
+        return this.accountRelay.getRelayUrls();
+
+      case 'custom':
+        // Use custom relays
+        return this.customRelays();
+
+      case 'deep':
+        // Use deep discovery - get relays from all observed relays
+        return await this.getDeepDiscoveryRelays();
+
+      default:
+        return this.accountRelay.getRelayUrls();
+    }
+  }
+
+  /**
+   * Get relays for deep discovery mode by combining account relays and discovery relays
+   */
+  private async getDeepDiscoveryRelays(): Promise<string[]> {
+    const relaySet = new Set<string>();
+
+    // Add account relays
+    const accountRelays = this.accountRelay.getRelayUrls();
+    accountRelays.forEach(url => relaySet.add(url));
+
+    // Add discovery relays
+    const discoveryRelays = this.discoveryRelay.getRelayUrls();
+    discoveryRelays.forEach(url => relaySet.add(url));
+
+    // Could also add relays from followed users here if needed
+    // For now, we'll just use account + discovery relays
+
+    return Array.from(relaySet);
+  }
+
+  /**
+   * Add a custom relay URL
+   */
+  addCustomRelay(): void {
+    const relayUrl = this.customRelayInput().trim();
+    if (!relayUrl) return;
+
+    // Basic validation
+    if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+      this.logger.warn('Invalid relay URL, must start with wss:// or ws://');
+      return;
+    }
+
+    // Check if already added
+    const currentRelays = this.customRelays();
+    if (currentRelays.includes(relayUrl)) {
+      this.logger.debug('Relay already added');
+      return;
+    }
+
+    // Add to list
+    this.customRelays.update(relays => [...relays, relayUrl]);
+    this.customRelayInput.set('');
+    this.logger.debug(`Added custom relay: ${relayUrl}`);
+  }
+
+  /**
+   * Remove a custom relay URL
+   */
+  removeCustomRelay(relayUrl: string): void {
+    this.customRelays.update(relays => relays.filter(r => r !== relayUrl));
+    this.logger.debug(`Removed custom relay: ${relayUrl}`);
+  }
+
+  /**
+   * Handle relay source change
+   */
+  onRelaySourceChange(source: RelaySource): void {
+    this.selectedRelaySource.set(source);
+    this.logger.debug(`Relay source changed to: ${source}`);
   }
 }
