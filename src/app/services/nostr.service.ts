@@ -1158,6 +1158,10 @@ export class NostrService implements NostriaService {
         }
 
         signedEvent = finalizeEvent(cleanEvent, hexToBytes(decryptedPrivkey));
+
+        // Increment signing count for backup prompt tracking
+        this.accountLocalState.incrementSigningCount(currentUser.pubkey);
+
         break;
       }
     }

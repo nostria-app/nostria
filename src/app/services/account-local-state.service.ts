@@ -89,6 +89,7 @@ interface AccountLocalState {
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
   recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
+  signingCount?: number; // Number of signing operations performed with nsec
 }
 
 /**
@@ -147,6 +148,9 @@ export class AccountLocalStateService {
 
   // Signal to trigger reactivity when left panel collapsed state changes
   private leftPanelCollapsedVersion = signal(0);
+
+  // Signal to trigger reactivity when signing count changes
+  private signingCountVersion = signal(0);
 
   /**
    * Get all account states from cache or localStorage
@@ -463,6 +467,36 @@ export class AccountLocalStateService {
     const newCount = currentCount + 1;
     this.updateAccountState(pubkey, { launchCount: newCount });
     return newCount;
+  }
+
+  /**
+   * Get signing count for an account
+   */
+  getSigningCount(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.signingCount || 0;
+  }
+
+  /**
+   * Increment signing count for an account and trigger reactivity
+   */
+  incrementSigningCount(pubkey: string): number {
+    const currentCount = this.getSigningCount(pubkey);
+    const newCount = currentCount + 1;
+    this.updateAccountState(pubkey, { signingCount: newCount });
+    this.signingCountVersion.update(v => v + 1);
+    return newCount;
+  }
+
+  /**
+   * Get signing count with reactivity tracking
+   * @param trackChanges If true, reads the version signal to enable reactivity
+   */
+  getSigningCountReactive(pubkey: string, trackChanges = false): number {
+    if (trackChanges) {
+      this.signingCountVersion();
+    }
+    return this.getSigningCount(pubkey);
   }
 
   /**
