@@ -11,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
+import { formatDuration } from '../../../utils/format-duration';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -809,9 +810,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (durationTag?.[1]) {
       const seconds = parseInt(durationTag[1], 10);
       if (!isNaN(seconds)) {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return formatDuration(seconds);
       }
     }
     return '--:--';

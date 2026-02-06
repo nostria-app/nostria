@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, computed, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
+import { inject, Injectable, signal, computed, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -48,7 +49,6 @@ export interface OpenEventOptions {
   replies?: ThreadedEvent[];
 }
 import { SearchActionService } from './search-action.service';
-// import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
   providedIn: 'root',
@@ -62,6 +62,7 @@ export class LayoutService implements OnDestroy {
   location = inject(Location);
   private logger = inject(LoggerService);
   private ngZone = inject(NgZone);
+  private destroyRef = inject(DestroyRef);
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
@@ -215,14 +216,18 @@ export class LayoutService implements OnDestroy {
 
   constructor() {
     // Monitor smaller screens (single-pane view threshold)
-    this.breakpointObserver.observe('(max-width: 699px)').subscribe(result => {
+    this.breakpointObserver.observe('(max-width: 699px)').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
       this.logger.debug('Breakpoint observer update', {
         isMobile: result.matches,
       });
       this.isHandset.set(result.matches);
     });
 
-    this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
+    this.breakpointObserver.observe('(min-width: 1200px)').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
       this.isWideScreen.set(result.matches);
     });
 
@@ -239,7 +244,9 @@ export class LayoutService implements OnDestroy {
     // Track whether we're on the home route
     // Initialize with current route state
     this.isHomeRoute.set(this.router.url === '/' || this.router.url.startsWith('/?'));
-    this.router.events.subscribe(event => {
+    this.router.events.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(event => {
       if (event instanceof NavigationEnd) {
         this.isHomeRoute.set(event.url === '/' || event.url.startsWith('/?'));
       }
@@ -263,7 +270,6 @@ export class LayoutService implements OnDestroy {
    */
   private initializeScrollMonitoring(): void {
     // Find the content wrapper (prioritize .mat-drawer-content, fallback to .content-wrapper)
-    // const matDrawerContent = document.querySelector('.mat-drawer-content');
     const contentWrapper = document.querySelector('.content-wrapper');
 
     if (!contentWrapper) {

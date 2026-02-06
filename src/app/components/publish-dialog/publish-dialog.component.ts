@@ -36,7 +36,6 @@ interface RelayPublishResult {
 
 @Component({
   selector: 'app-publish-dialog',
-  standalone: true,
   imports: [
     CommonModule,
     MatDialogModule,

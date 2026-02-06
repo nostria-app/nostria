@@ -2,7 +2,6 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'name',
-  standalone: true,
   pure: true,
 })
 export class NamePipe implements PipeTransform {

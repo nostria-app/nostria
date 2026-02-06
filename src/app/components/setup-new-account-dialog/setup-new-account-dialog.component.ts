@@ -8,7 +8,6 @@ import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-setup-new-account-dialog',
-  standalone: true,
   imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './setup-new-account-dialog.component.html',
   styleUrl: './setup-new-account-dialog.component.scss',

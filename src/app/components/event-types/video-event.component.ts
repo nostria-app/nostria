@@ -17,6 +17,7 @@ import { CastService } from '../../services/cast.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { formatDuration } from '../../utils/format-duration';
 
 interface VideoData {
   url: string;
@@ -793,11 +794,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return this.imagePlaceholder.generatePlaceholderDataUrl(placeholder, width, height);
   }
 
-  formatDuration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
+  formatDuration = formatDuration;
 
   /**
    * Determines the correct MIME type based on the video file extension

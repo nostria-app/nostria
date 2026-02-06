@@ -12,7 +12,6 @@ import { FeedsCollectionService } from '../../../services/feeds-collection.servi
 
 @Component({
   selector: 'app-discover-people',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,

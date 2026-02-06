@@ -42,7 +42,6 @@ interface RelayPublishResult {
 
 @Component({
   selector: 'app-report-dialog',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,

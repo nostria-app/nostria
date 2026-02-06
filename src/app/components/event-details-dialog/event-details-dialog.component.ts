@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -35,6 +35,7 @@ export interface EventDetailsDialogData {
   ],
   templateUrl: './event-details-dialog.component.html',
   styleUrl: './event-details-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventDetailsDialogComponent {
   dialogRef?: CustomDialogRef<EventDetailsDialogComponent>;

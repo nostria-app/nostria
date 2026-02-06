@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -94,6 +95,7 @@ export class ZapDialogComponent {
   private breakpointObserver = inject(BreakpointObserver);
   private dataService = inject(DataService);
   private utilities = inject(UtilitiesService);
+  private destroyRef = inject(DestroyRef);
 
   data: ZapDialogData = inject(MAT_DIALOG_DATA);
 
@@ -183,7 +185,9 @@ export class ZapDialogComponent {
 
   constructor() {
     // Watch for amount changes to enable/disable custom amount
-    this.zapForm.get('amount')?.valueChanges.subscribe(value => {
+    this.zapForm.get('amount')?.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(value => {
       const customAmountControl = this.zapForm.get('customAmount');
       if (value === 'custom') {
         customAmountControl?.setValidators([Validators.required, Validators.min(1)]);
@@ -209,7 +213,9 @@ export class ZapDialogComponent {
     }
 
     // Check if on mobile device
-    this.breakpointObserver.observe('(max-width: 768px)').subscribe(result => {
+    this.breakpointObserver.observe('(max-width: 768px)').pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(result => {
       this.isMobile.set(result.matches);
     });
 

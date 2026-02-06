@@ -17,7 +17,6 @@ import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-favorites-overlay',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,

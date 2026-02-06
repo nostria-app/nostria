@@ -13,6 +13,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { CircularProgressComponent } from '../circular-progress/circular-progress.component';
@@ -95,16 +96,7 @@ export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
     return null;
   });
 
-  formatTime(value: number): string {
-    if (!value || isNaN(value)) return '0:00';
-    const hours = Math.floor(value / 3600);
-    const minutes = Math.floor((value % 3600) / 60);
-    const seconds = Math.floor(value % 60);
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  formatTime = formatDuration;
 
   onSwipeProgress(event: SwipeProgressEvent): void {
     // Disable gestures when lyrics are showing

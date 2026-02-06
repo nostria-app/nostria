@@ -39,7 +39,6 @@ import { IntersectionObserverService } from '../../services/intersection-observe
 
 @Component({
   selector: 'app-user-profile',
-  standalone: true,
   imports: [
     ProfileDisplayNameComponent,
     CommonModule,

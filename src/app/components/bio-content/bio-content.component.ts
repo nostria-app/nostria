@@ -29,7 +29,6 @@ interface BioToken {
 
 @Component({
   selector: 'app-bio-content',
-  standalone: true,
   imports: [],
   template: `
     @for (token of tokens(); track $index) {

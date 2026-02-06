@@ -13,7 +13,6 @@ import { MediaService } from '../../../services/media.service';
 
 @Component({
   selector: 'app-media-upload-dialog',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatButtonModule,

@@ -13,7 +13,6 @@ import encodeQR from 'qr';
 
 @Component({
   selector: 'qr-code',
-  standalone: true,
   template: `
     @if (mode() === 'canvas') {
       <canvas #qrCanvas></canvas>

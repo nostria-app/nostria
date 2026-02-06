@@ -19,7 +19,6 @@ export interface CreatePlaylistDialogData {
 
 @Component({
   selector: 'app-create-playlist-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

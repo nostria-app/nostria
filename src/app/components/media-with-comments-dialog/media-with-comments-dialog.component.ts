@@ -39,7 +39,6 @@ interface VideoData {
 
 @Component({
   selector: 'app-media-with-comments-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,
@@ -423,12 +422,6 @@ export class MediaWithCommentsDialogComponent {
     };
 
     return mimeTypeMap[extension || ''] || 'video/mp4';
-  }
-
-  formatDuration(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   /**

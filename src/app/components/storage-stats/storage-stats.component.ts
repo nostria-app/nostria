@@ -21,7 +21,6 @@ export type CacheType = 'all' | 'events' | 'notifications' | 'messages' | 'relay
 
 @Component({
   selector: 'app-storage-stats',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

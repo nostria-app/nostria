@@ -51,7 +51,6 @@ import { CreateListDialogComponent, CreateListDialogResult } from '../../../comp
 
 @Component({
   selector: 'app-profile-header',
-  standalone: true,
   imports: [
     MatIconModule,
     MatListModule,

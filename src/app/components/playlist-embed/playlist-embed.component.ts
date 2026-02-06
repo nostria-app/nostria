@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { formatDuration } from '../../utils/format-duration';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
@@ -420,7 +421,7 @@ export class PlaylistEmbedComponent {
           }
 
           if (duration && duration !== '-1') {
-            currentTrack.duration = this.formatDuration(parseInt(duration, 10));
+            currentTrack.duration = formatDuration(parseInt(duration, 10));
           }
         }
       } else if (line && !line.startsWith('#')) {
@@ -437,17 +438,6 @@ export class PlaylistEmbedComponent {
     return tracks;
   }
 
-  private formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-  }
 
   private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
     if (!url) return 'Music';

@@ -40,7 +40,6 @@ export interface RelayConnection {
 
 @Component({
   selector: 'app-logs-settings',
-  standalone: true,
   imports: [
     MatTabsModule,
     MatCardModule,

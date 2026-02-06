@@ -1,4 +1,4 @@
-import { Component, inject, Input, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Input, input, signal } from '@angular/core';
 import { OpenGraphService } from '../../services/opengraph.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -17,6 +17,7 @@ interface SocialPreview {
   imports: [MatCardModule, MatProgressSpinnerModule],
   templateUrl: './social-preview.component.html',
   styleUrl: './social-preview.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SocialPreviewComponent {
   openGraphService = inject(OpenGraphService);

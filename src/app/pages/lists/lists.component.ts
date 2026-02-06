@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -183,6 +183,7 @@ const LIST_SETS: ListType[] = [
   ],
   templateUrl: './lists.component.html',
   styleUrl: './lists.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ListsComponent implements OnInit {
   private readonly accountState = inject(AccountStateService);
@@ -910,15 +911,15 @@ export class ListsComponent implements OnInit {
   }
 
   /**
-   * Get filtered list sets based on selectedKind
+   * Computed filtered list sets based on selectedKind
    */
-  getFilteredListSets(): ListType[] {
+  filteredListSets = computed(() => {
     const kind = this.selectedKind();
     if (kind === undefined) {
       return this.listSets;
     }
     return this.listSets.filter(listType => listType.kind === kind);
-  }
+  });
 
   /**
    * Get count display text

@@ -23,7 +23,6 @@ export interface SetUsernameDialogData {
 
 @Component({
   selector: 'app-set-username-dialog',
-  standalone: true,
   imports: [
     FormsModule,
     ReactiveFormsModule,

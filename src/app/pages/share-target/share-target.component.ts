@@ -1,4 +1,4 @@
-import { Component, effect, inject, PLATFORM_ID, Inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, inject, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -17,11 +17,9 @@ export class ShareTargetComponent {
   private customDialog = inject(CustomDialogService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
-  private isBrowser: boolean;
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  constructor(@Inject(PLATFORM_ID) platformId: object) {
-    this.isBrowser = isPlatformBrowser(platformId);
-
+  constructor() {
     if (!this.isBrowser) return;
 
     effect(() => {

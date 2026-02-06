@@ -1,17 +1,18 @@
-import { Component, Input, signal, ViewChild, ElementRef, AfterViewInit, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, signal, ViewChild, ElementRef, AfterViewInit, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { formatDuration } from '../../utils/format-duration';
 
 @Component({
   selector: 'app-audio-player',
-  standalone: true,
   imports: [MatIconModule, MatButtonModule, MatSliderModule, FormsModule, MatProgressSpinnerModule],
   templateUrl: './audio-player.component.html',
-  styleUrls: ['./audio-player.component.scss']
+  styleUrls: ['./audio-player.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() src = '';
@@ -131,12 +132,7 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
     audio.currentTime = Number(value);
   }
 
-  formatTime(seconds: number): string {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
+  formatTime = formatDuration;
 
   private maxWaveformValue = 100;
 

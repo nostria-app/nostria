@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
+import { formatDuration } from '../../../utils/format-duration';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { RelaysService } from '../../../services/relays/relays';
@@ -203,7 +204,7 @@ export class ImportRssDialogComponent {
             album: channelTitle,
             audioUrl,
             imageUrl: itemImage,
-            duration: this.formatDuration(duration),
+            duration: this.formatRssDuration(duration),
             releaseDate: this.formatDate(pubDate ? new Date(pubDate) : new Date()),
             description: this.stripHtml(description),
             trackNumber: index + 1,
@@ -287,7 +288,7 @@ export class ImportRssDialogComponent {
     return div.textContent || div.innerText || '';
   }
 
-  private formatDuration(duration: string): string {
+  private formatRssDuration(duration: string): string {
     if (!duration) return '';
 
     // If it's already in HH:MM:SS or MM:SS format
@@ -299,14 +300,7 @@ export class ImportRssDialogComponent {
     const seconds = parseInt(duration, 10);
     if (isNaN(seconds)) return duration;
 
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    return formatDuration(seconds);
   }
 
   private formatDate(date: Date): string {

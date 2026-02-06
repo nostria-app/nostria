@@ -17,10 +17,10 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { PlaylistTrack } from '../../../interfaces';
 import { AddTrackDialogComponent } from './add-track-dialog/add-track-dialog.component';
 import { EditTrackDialogComponent, EditTrackDialogData, EditTrackDialogResult } from './edit-track-dialog/edit-track-dialog.component';
+import { formatDuration } from '../../../utils/format-duration';
 
 @Component({
   selector: 'app-playlist-editor',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     DragDropModule,
@@ -306,7 +306,7 @@ export class PlaylistEditorComponent implements OnInit {
       }
     }
 
-    return hasValidDurations ? this.formatDuration(totalSeconds) : '0:00';
+    return hasValidDurations ? formatDuration(totalSeconds) : '0:00';
   }
 
   private parseDurationToSeconds(duration: string): number {
@@ -321,17 +321,6 @@ export class PlaylistEditorComponent implements OnInit {
     return parseInt(duration, 10) || 0;
   }
 
-  private formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-  }
 
   private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
     if (!url) return 'Music';

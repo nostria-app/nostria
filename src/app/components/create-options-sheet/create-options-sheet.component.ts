@@ -7,7 +7,6 @@ import { EventService } from '../../services/event';
 
 @Component({
   selector: 'app-create-options-sheet',
-  standalone: true,
   imports: [MatListModule, MatIconModule],
   templateUrl: './create-options-sheet.component.html',
   styleUrl: './create-options-sheet.component.scss',

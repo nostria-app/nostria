@@ -54,7 +54,6 @@ interface TopZapper {
 
 @Component({
   selector: 'app-article-display',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

@@ -22,7 +22,6 @@ interface NavLink {
 
 @Component({
   selector: 'app-profile-home',
-  standalone: true,
   imports: [
     MatIconModule, 
     MatTabsModule, 

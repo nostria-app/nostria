@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-standalone-terms-dialog',
-  standalone: true,
   imports: [CustomDialogComponent, TermsOfUseDialogContentComponent, MatButtonModule],
   template: `
     <app-custom-dialog

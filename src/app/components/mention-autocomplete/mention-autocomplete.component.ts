@@ -41,7 +41,6 @@ export interface MentionAutocompleteConfig {
 
 @Component({
   selector: 'app-mention-autocomplete',
-  standalone: true,
   imports: [
     MatListModule,
     MatIconModule,

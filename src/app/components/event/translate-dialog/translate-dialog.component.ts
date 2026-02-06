@@ -18,7 +18,6 @@ export interface TranslateDialogData {
 
 @Component({
   selector: 'app-translate-dialog',
-  standalone: true,
   imports: [
     CommonModule,
     MatDialogModule,

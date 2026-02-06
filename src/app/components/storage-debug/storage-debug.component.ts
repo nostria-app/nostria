@@ -8,7 +8,6 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-storage-debug',
-  standalone: true,
   imports: [CommonModule, MatCardModule, MatButtonModule, MatExpansionModule],
   template: `
     <div class="debug-container">

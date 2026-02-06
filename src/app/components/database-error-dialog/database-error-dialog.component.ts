@@ -7,7 +7,6 @@ import { DatabaseService } from '../../services/database.service';
 
 @Component({
   selector: 'app-database-error-dialog',
-  standalone: true,
   imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div style="max-width: 600px">

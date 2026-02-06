@@ -6,7 +6,6 @@ import { EthiopianCalendarService } from '../services/ethiopian-calendar.service
 
 @Pipe({
   name: 'timestamp',
-  standalone: true,
   pure: false, // Not pure because it depends on settings signal
 })
 export class TimestampPipe implements PipeTransform {

@@ -27,7 +27,6 @@ interface QRCamera {
   selector: 'app-qrcode-scan-dialog',
   templateUrl: './qrcode-scan-dialog.component.html',
   styleUrls: ['./qrcode-scan-dialog.component.scss'],
-  standalone: true,
   imports: [MatDialogModule, MatButtonModule, MatIconModule],
 })
 export class

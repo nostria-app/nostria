@@ -15,7 +15,6 @@ export interface AddTrackDialogData {
 
 @Component({
   selector: 'app-add-track-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

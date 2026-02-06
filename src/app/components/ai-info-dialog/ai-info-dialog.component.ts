@@ -8,7 +8,6 @@ import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-ai-info-dialog',
-  standalone: true,
   imports: [MatDialogModule, MatButtonModule, MatCheckboxModule, FormsModule],
   templateUrl: './ai-info-dialog.component.html',
   styleUrl: './ai-info-dialog.component.scss',

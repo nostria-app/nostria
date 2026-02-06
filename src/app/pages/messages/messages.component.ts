@@ -111,7 +111,6 @@ interface MessageGroup {
 
 @Component({
   selector: 'app-messages',
-  standalone: true,
   imports: [
     FormsModule,
     MatButtonModule,

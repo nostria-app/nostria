@@ -24,7 +24,6 @@ interface WebManifest {
 
 @Component({
   selector: 'app-about',
-  standalone: true,
   imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',

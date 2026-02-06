@@ -21,7 +21,6 @@ interface DialogData {
 
 @Component({
   selector: 'app-bookmark-category-dialog',
-  standalone: true,
   imports: [
     FormsModule,
     MatDialogModule,

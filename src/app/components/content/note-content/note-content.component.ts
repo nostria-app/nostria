@@ -60,7 +60,6 @@ export interface DisplayItem {
 
 @Component({
   selector: 'app-note-content',
-  standalone: true,
   imports: [
     MatIconModule,
     MatProgressSpinnerModule,

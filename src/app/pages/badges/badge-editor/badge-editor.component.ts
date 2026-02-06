@@ -31,7 +31,6 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 
 @Component({
   selector: 'app-badge-editor',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatButtonModule,

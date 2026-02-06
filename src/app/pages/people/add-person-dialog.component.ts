@@ -25,7 +25,6 @@ export interface AddPersonDialogData {
 
 @Component({
   selector: 'app-add-person-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

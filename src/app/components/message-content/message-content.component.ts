@@ -62,7 +62,6 @@ interface EventMention {
 
 @Component({
   selector: 'app-message-content',
-  standalone: true,
   imports: [
     RouterLink,
     MatIconModule,

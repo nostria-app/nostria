@@ -49,7 +49,6 @@ interface TierDisplay {
 
 @Component({
   selector: 'app-upgrade',
-  standalone: true,
   imports: [
     FormsModule,
     ReactiveFormsModule,

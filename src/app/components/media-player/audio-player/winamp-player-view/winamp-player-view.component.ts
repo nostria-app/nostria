@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
@@ -180,12 +181,7 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     }, 150);
   }
 
-  formatTime(value: number): string {
-    if (!value || isNaN(value)) return '0:00';
-    const minutes = Math.floor(value / 60);
-    const seconds = Math.floor(value % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  formatTime = formatDuration;
 
   formatTimeDisplay(value: number): string {
     if (!value || isNaN(value)) return '00:00';

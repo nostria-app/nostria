@@ -5,6 +5,7 @@ import { NostrService } from './nostr.service';
 import { AccountRelayService } from './relays/account-relay';
 import { Playlist, PlaylistTrack, PlaylistDraft, OnInitialized, MediaItem } from '../interfaces';
 import { Event, Filter } from 'nostr-tools';
+import { formatDuration } from '../utils/format-duration';
 
 @Injectable({
   providedIn: 'root',
@@ -1057,7 +1058,7 @@ export class PlaylistService implements OnInitialized {
           }
 
           if (duration && duration !== '-1') {
-            currentTrack.duration = this.formatDuration(parseInt(duration, 10));
+            currentTrack.duration = formatDuration(parseInt(duration, 10));
           }
         }
       } else if (line && !line.startsWith('#')) {
@@ -1088,7 +1089,7 @@ export class PlaylistService implements OnInitialized {
       }
     }
 
-    return hasValidDurations ? this.formatDuration(totalSeconds) : undefined;
+    return hasValidDurations ? formatDuration(totalSeconds) : undefined;
   }
 
   private parseDurationToSeconds(duration: string): number {
@@ -1104,17 +1105,6 @@ export class PlaylistService implements OnInitialized {
     return parseInt(duration, 10) || 0;
   }
 
-  private formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-  }
 
   /**
    * Get the "Watch Later" playlist, creating it if it doesn't exist

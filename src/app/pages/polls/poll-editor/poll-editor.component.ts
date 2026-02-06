@@ -15,7 +15,6 @@ import { PollDraft } from '../../../interfaces';
 
 @Component({
   selector: 'app-poll-editor',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatButtonModule,
