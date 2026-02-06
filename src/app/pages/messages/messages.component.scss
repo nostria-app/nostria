@@ -728,7 +728,7 @@
   }
 
   .message-bubble {
-    max-width: calc(100% - 56px);
+    max-width: min(600px, calc(100% - 56px));
     min-width: 0;
     padding: 10px 14px;
     border-radius: 18px;
@@ -742,7 +742,7 @@
     overflow: hidden;
 
     @media (max-width: 699px) {
-      max-width: calc(100% - 50px);
+      max-width: min(600px, calc(100% - 50px));
       padding: 8px 12px;
     }
 

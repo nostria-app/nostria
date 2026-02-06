@@ -12,7 +12,7 @@ import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
-import { MusicPlaylistService } from '../../services/music-playlist.service';
+import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
@@ -30,7 +30,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, UserProfileComponent, DateToggleComponent],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, CreateMusicPlaylistDialogComponent, UserProfileComponent, DateToggleComponent],
   template: `
     <!-- Card mode: Vertical layout for grid views -->
     @if (mode() === 'card') {
@@ -194,6 +194,12 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       <app-music-track-dialog
         [data]="editDialogData()!"
         (closed)="onEditDialogClosed($event)"
+      />
+    }
+    @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
+      <app-create-music-playlist-dialog
+        [data]="createPlaylistDialogData()!"
+        (closed)="onCreatePlaylistDialogClosed($event)"
       />
     }
   `,
@@ -583,6 +589,10 @@ export class MusicEventComponent {
   showEditDialog = signal(false);
   editDialogData = signal<MusicTrackDialogData | null>(null);
 
+  // Create playlist dialog signals
+  showCreatePlaylistDialog = signal(false);
+  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
+
   // Check if this is the current user's track
   isOwnTrack = computed(() => {
     const ev = this.event();
@@ -925,20 +935,19 @@ export class MusicEventComponent {
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
 
-    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
-      width: '500px',
-      maxWidth: '95vw',
-      data: {
-        trackPubkey: ev.pubkey,
-        trackDTag: dTag,
-      } as CreateMusicPlaylistDialogData,
+    this.createPlaylistDialogData.set({
+      trackPubkey: ev.pubkey,
+      trackDTag: dTag,
     });
+    this.showCreatePlaylistDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.playlist) {
-        this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
-      }
-    });
+  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+    this.showCreatePlaylistDialog.set(false);
+    this.createPlaylistDialogData.set(null);
+    if (result?.playlist) {
+      this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
+    }
   }
 
   // Add track to an existing playlist
