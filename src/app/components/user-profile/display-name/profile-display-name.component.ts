@@ -39,7 +39,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
 
   private linkElement: HTMLElement | null = null;
 
-publicKey = '';
+  publicKey = '';
   pubkey = input<string>('');
   event = input<Event | undefined>(undefined);
   // Optional prefetched profile passed from parent to avoid duplicate fetches
@@ -108,7 +108,7 @@ publicKey = '';
     return npub ? `/p/${npub}` : '';
   });
 
-constructor() {
+  constructor() {
     // If a prefetched profile is provided, initialize local profile with it
     // This prevents redundant fetches when parent has already loaded the profile
     effect(() => {

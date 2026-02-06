@@ -1,4 +1,4 @@
-import { Component, inject, input, output, computed, ViewChild } from '@angular/core';
+import { Component, inject, input, output, computed, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatMenuModule, MatMenu } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MusicPlaylistService } from '../../services/music-playlist.service';
+import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -31,6 +31,7 @@ const MUSIC_KIND = 36787;
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    CreateMusicPlaylistDialogComponent,
   ],
   template: `
     <mat-menu #trackMenu="matMenu">
@@ -107,6 +108,13 @@ const MUSIC_KIND = 36787;
         }
       }
     </mat-menu>
+
+    @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
+      <app-create-music-playlist-dialog
+        [data]="createPlaylistDialogData()!"
+        (closed)="onCreatePlaylistDialogClosed($event)"
+      />
+    }
   `,
   styles: [`
     :host {
@@ -336,24 +344,27 @@ export class MusicTrackMenuComponent {
     }
   }
 
+  // Create playlist dialog signals
+  showCreatePlaylistDialog = signal(false);
+  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
+
   createNewPlaylist(): void {
     const ev = this.track();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
 
-    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
-      width: '500px',
-      maxWidth: '95vw',
-      data: {
-        trackPubkey: ev.pubkey,
-        trackDTag: dTag,
-      } as CreateMusicPlaylistDialogData,
+    this.createPlaylistDialogData.set({
+      trackPubkey: ev.pubkey,
+      trackDTag: dTag,
     });
+    this.showCreatePlaylistDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.playlist) {
-        this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
-      }
-    });
+  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+    this.showCreatePlaylistDialog.set(false);
+    this.createPlaylistDialogData.set(null);
+    if (result?.playlist) {
+      this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
+    }
   }
 
   async addToPlaylist(playlistId: string): Promise<void> {

@@ -257,3 +257,7 @@
 @if (showEditDialog() && editDialogData()) {
 <app-music-track-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
 }
+
+@if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
+<app-create-music-playlist-dialog [data]="createPlaylistDialogData()!" (closed)="onCreatePlaylistDialogClosed($event)" />
+}

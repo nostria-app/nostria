@@ -25,7 +25,7 @@ import { EventService } from '../../../services/event';
 import { ZapService } from '../../../services/zap.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
-import { MusicPlaylistService } from '../../../services/music-playlist.service';
+import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
@@ -64,6 +64,7 @@ const MUSIC_KIND = 36787;
     ZapChipsComponent,
     CommentsListComponent,
     MusicTrackDialogComponent,
+    CreateMusicPlaylistDialogComponent,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -126,6 +127,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   // Edit dialog signals
   showEditDialog = signal(false);
   editDialogData = signal<MusicTrackDialogData | null>(null);
+
+  // Create playlist dialog signals
+  showCreatePlaylistDialog = signal(false);
+  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
 
   // Engagement metrics
   reactionCount = signal<number>(0);
@@ -824,20 +829,19 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
 
-    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
-      width: '500px',
-      maxWidth: '95vw',
-      data: {
-        trackPubkey: ev.pubkey,
-        trackDTag: dTag,
-      } as CreateMusicPlaylistDialogData,
+    this.createPlaylistDialogData.set({
+      trackPubkey: ev.pubkey,
+      trackDTag: dTag,
     });
+    this.showCreatePlaylistDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.playlist) {
-        this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
-      }
-    });
+  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+    this.showCreatePlaylistDialog.set(false);
+    this.createPlaylistDialogData.set(null);
+    if (result?.playlist) {
+      this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
+    }
   }
 
   // Add track to an existing playlist
