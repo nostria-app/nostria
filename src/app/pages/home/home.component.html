@@ -5,8 +5,7 @@
   <!-- Hero Section -->
   <header class="hero-section">
     <div class="hero-content">
-      <h1 class="greeting">
-        Erling! {{ greeting() }}@if (account.profile()?.data?.display_name || account.profile()?.data?.name) {<span
+      <h1 class="greeting">{{ greeting() }}@if (account.profile()?.data?.display_name || account.profile()?.data?.name) {<span
           class="user-name">, {{
           account.profile()?.data?.display_name || account.profile()?.data?.name }}</span>}
       </h1>
