@@ -970,7 +970,6 @@ export class App implements OnInit, OnDestroy {
       const authenticated = this.app.authenticated();
       const initialized = this.app.initialized();
       const pubkey = this.accountState.pubkey();
-      const account = this.accountState.account();
 
       if (authenticated && initialized && pubkey) {
         // Only increment launch count once per session
@@ -985,15 +984,26 @@ export class App implements OnInit, OnDestroy {
               this.showPushNotificationPrompt();
             }, 3000);
           }
+        }
+      }
+    });
 
-          // Show credentials backup prompt after 10 launches (only for accounts with private keys)
-          const backupDismissed = this.accountLocalState.getDismissedCredentialsBackupDialog(pubkey);
-          const hasPrivateKey = account?.privkey && account.source === 'nsec';
-          if (launchCount >= 10 && hasPrivateKey && !backupDismissed) {
-            setTimeout(() => {
-              this.showCredentialsBackupPrompt();
-            }, 5000); // 5 second delay (after push notification prompt if shown)
-          }
+    // Handle credentials backup prompt based on signing operations count
+    effect(() => {
+      const authenticated = this.app.authenticated();
+      const initialized = this.app.initialized();
+      const pubkey = this.accountState.pubkey();
+      const account = this.accountState.account();
+
+      if (authenticated && initialized && pubkey && !this.credentialsBackupPromptShown()) {
+        const signingCount = this.accountLocalState.getSigningCountReactive(pubkey, true);
+        const backupDismissed = this.accountLocalState.getDismissedCredentialsBackupDialog(pubkey);
+        const hasPrivateKey = account?.privkey && account.source === 'nsec';
+
+        if (signingCount >= 20 && hasPrivateKey && !backupDismissed) {
+          setTimeout(() => {
+            this.showCredentialsBackupPrompt();
+          }, 5000);
         }
       }
     });
