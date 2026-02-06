@@ -123,13 +123,13 @@
   <div class="bookmarks-list" [attr.data-view]="viewMode()" (scroll)="onScroll($event)">
     @if (selectedCategory() === 'events') {
     @for (bookmark of displayedEvents(); track bookmark.id) {
-    <app-event [id]="bookmark.id" [compact]="viewMode() === 'tiles'"></app-event>
+    <app-event [id]="bookmark.id" [relayHints]="bookmark.relay ? [bookmark.relay] : undefined" [compact]="viewMode() === 'tiles'"></app-event>
     }
     } @else if (selectedCategory() === 'articles') {
     @for (bookmark of displayedArticles(); track bookmark.id) {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
     <div class="bookmark-article-wrapper">
-      <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
+      <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" [relayHints]="bookmark.relay ? [bookmark.relay] : undefined" mode="card" [showAuthor]="true"
         [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
       <button mat-icon-button class="remove-bookmark-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
         matTooltip="Remove from this list">

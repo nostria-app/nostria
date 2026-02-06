@@ -90,6 +90,7 @@ interface AccountLocalState {
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
   recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
   signingCount?: number; // Number of signing operations performed with nsec
+  boardsViewMode?: string; // View mode for boards: 'compact' or 'standard'
 }
 
 /**
@@ -374,6 +375,21 @@ export class AccountLocalStateService {
    */
   setBookmarksViewMode(pubkey: string, viewMode: string | null | undefined): void {
     this.updateAccountState(pubkey, { bookmarksViewMode: viewMode || undefined });
+  }
+
+  /**
+   * Get boards view mode for an account
+   */
+  getBoardsViewMode(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.boardsViewMode;
+  }
+
+  /**
+   * Set boards view mode for an account
+   */
+  setBoardsViewMode(pubkey: string, viewMode: string | null | undefined): void {
+    this.updateAccountState(pubkey, { boardsViewMode: viewMode || undefined });
   }
 
   /**

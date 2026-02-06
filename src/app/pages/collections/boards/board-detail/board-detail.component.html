@@ -1,0 +1,244 @@
+<!-- Panel Header -->
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back to boards">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">{{ boardTitle() }}</h2>
+  <span class="panel-header-spacer"></span>
+
+  <!-- View mode toggle -->
+  <mat-button-toggle-group [value]="viewMode()" (change)="setViewMode($event.value)" class="view-mode-toggle hide-small">
+    <mat-button-toggle value="compact" matTooltip="Compact grid view">
+      <mat-icon>grid_view</mat-icon>
+    </mat-button-toggle>
+    <mat-button-toggle value="standard" matTooltip="Standard list view">
+      <mat-icon>view_agenda</mat-icon>
+    </mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <button mat-icon-button [matMenuTriggerFor]="boardMenu" matTooltip="Board options">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #boardMenu="matMenu">
+    <button mat-menu-item class="show-small" (click)="setViewMode('compact')">
+      <mat-icon>grid_view</mat-icon>
+      <span>Compact View</span>
+    </button>
+    <button mat-menu-item class="show-small" (click)="setViewMode('standard')">
+      <mat-icon>view_agenda</mat-icon>
+      <span>Standard View</span>
+    </button>
+    <mat-divider class="show-small"></mat-divider>
+    <button mat-menu-item (click)="startEditing()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit</span>
+    </button>
+    <button mat-menu-item (click)="deleteBoard()" class="delete-menu-item">
+      <mat-icon>delete</mat-icon>
+      <span>Delete</span>
+    </button>
+  </mat-menu>
+</div>
+
+<div class="board-detail-container">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  @if (boardSet(); as set) {
+  <!-- Board info -->
+  <div class="board-info">
+    @if (set.description) {
+    <p class="board-description">{{ set.description }}</p>
+    }
+    <span class="board-meta">
+      <mat-icon class="meta-icon">{{ boardIcon() }}</mat-icon>
+      {{ getKindLabel(set.kind) }}
+      <span class="meta-separator">·</span>
+      {{ getItemLabel(getItemCount(set)) }}
+    </span>
+  </div>
+
+  @if (isEditing()) {
+  <!-- Editing mode -->
+  <mat-card class="section-card">
+    <div class="section-content">
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Board Title</mat-label>
+          <input matInput [(ngModel)]="editingTitle" placeholder="Board title">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (optional)</mat-label>
+          <input matInput [(ngModel)]="editingDescription" placeholder="A short description">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Image URL (optional)</mat-label>
+          <input matInput [(ngModel)]="editingImage" placeholder="https://example.com/image.jpg">
+        </mat-form-field>
+
+        <!-- Event References (structured editing) -->
+        <div class="ref-list-section">
+          <div class="ref-list-header">
+            <h4>Event References</h4>
+            <button mat-icon-button (click)="addEditingEventRef()" matTooltip="Add event reference">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+          @for (ref of editingEventRefs(); track $index) {
+          <div class="ref-edit-row">
+            <mat-form-field appearance="outline" class="ref-field ref-id-field">
+              <mat-label>Event ID</mat-label>
+              <input matInput [value]="ref.id" (input)="updateEditingEventRef($index, 'id', $any($event.target).value)"
+                placeholder="hex event ID, note1..., or nevent1...">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="ref-field ref-relay-field">
+              <mat-label>Relay hint</mat-label>
+              <input matInput [value]="ref.relay || ''" (input)="updateEditingEventRef($index, 'relay', $any($event.target).value)"
+                placeholder="wss://relay.example.com">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="ref-field ref-pubkey-field">
+              <mat-label>Author pubkey</mat-label>
+              <input matInput [value]="ref.pubkey || ''" (input)="updateEditingEventRef($index, 'pubkey', $any($event.target).value)"
+                placeholder="hex pubkey (optional)">
+            </mat-form-field>
+            <button mat-icon-button (click)="removeEditingEventRef($index)" matTooltip="Remove" class="ref-remove-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+          @if (editingEventRefs().length === 0) {
+          <p class="ref-empty-hint">No event references. Click + to add one.</p>
+          }
+        </div>
+
+        @if (supportsAddressableRefs()) {
+        <!-- Addressable References (structured editing) -->
+        <div class="ref-list-section">
+          <div class="ref-list-header">
+            <h4>Article References</h4>
+            <button mat-icon-button (click)="addEditingAddressableRef()" matTooltip="Add article reference">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+          @for (ref of editingAddressableRefs(); track $index) {
+          <div class="ref-edit-row">
+            <mat-form-field appearance="outline" class="ref-field ref-id-field">
+              <mat-label>Coordinates</mat-label>
+              <input matInput [value]="ref.coordinates" (input)="updateEditingAddressableRef($index, 'coordinates', $any($event.target).value)"
+                placeholder="kind:pubkey:d-tag or naddr1...">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="ref-field ref-relay-field">
+              <mat-label>Relay hint</mat-label>
+              <input matInput [value]="ref.relay || ''" (input)="updateEditingAddressableRef($index, 'relay', $any($event.target).value)"
+                placeholder="wss://relay.example.com">
+            </mat-form-field>
+            <button mat-icon-button (click)="removeEditingAddressableRef($index)" matTooltip="Remove" class="ref-remove-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+          @if (editingAddressableRefs().length === 0) {
+          <p class="ref-empty-hint">No article references. Click + to add one.</p>
+          }
+        </div>
+        }
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditing()">Cancel</button>
+          <button mat-flat-button (click)="saveEdit()" [disabled]="isLoading()">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+  } @else {
+  <!-- Display mode -->
+  @if (set.image) {
+  <div class="board-image-container">
+    <img [src]="set.image" [alt]="set.title" class="board-image" />
+  </div>
+  }
+
+  @if (getItemCount(set) === 0) {
+  <div class="empty-state-container">
+    <mat-icon class="empty-icon">{{ boardIcon() }}</mat-icon>
+    <h3>No items in this board</h3>
+    <p>Add items by bookmarking content, or edit the board to add references manually.</p>
+    <button mat-flat-button (click)="startEditing()">
+      <mat-icon>edit</mat-icon>
+      Edit Board
+    </button>
+  </div>
+  } @else {
+
+    @if (viewMode() === 'compact') {
+    <!-- Masonry / Pinterest-style view -->
+    <div class="masonry-grid">
+      @for (ref of set.eventRefs; track ref.id) {
+      <div class="masonry-item" (click)="openEvent(ref)">
+        <app-event [id]="encodeNevent(ref)" [relayHints]="ref.relay ? [ref.relay] : undefined"
+          appearance="plain" [hideComments]="true" [showOverlay]="true" [hideFooter]="true" [hideHeader]="true"></app-event>
+      </div>
+      }
+      @for (ref of set.addressableRefs; track ref.coordinates) {
+      <div class="masonry-item" (click)="openAddressableEvent(ref)">
+        <app-event [id]="encodeNaddr(ref)" [relayHints]="ref.relay ? [ref.relay] : undefined"
+          appearance="plain" [hideComments]="true" [showOverlay]="true" [hideFooter]="true" [hideHeader]="true"></app-event>
+      </div>
+      }
+    </div>
+
+    } @else {
+    <!-- Standard / List view -->
+    <div class="board-list">
+      @if (set.eventRefs.length > 0) {
+      <div class="list-section">
+        @if (set.addressableRefs.length > 0) {
+        <h4 class="list-section-title">Events</h4>
+        }
+        @for (ref of set.eventRefs; track ref.id) {
+        <div class="list-event-item">
+          <app-event [id]="encodeNevent(ref)" [relayHints]="ref.relay ? [ref.relay] : undefined"
+            [hideComments]="true"></app-event>
+          @if (ref.relay) {
+          <div class="ref-meta">
+            <mat-icon class="ref-meta-icon">dns</mat-icon>
+            <span class="ref-meta-text">{{ formatRelay(ref.relay) }}</span>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      @if (set.addressableRefs.length > 0) {
+      <div class="list-section">
+        @if (set.eventRefs.length > 0) {
+        <h4 class="list-section-title">Articles</h4>
+        }
+        @for (ref of set.addressableRefs; track ref.coordinates) {
+        <div class="list-event-item">
+          <app-event [id]="encodeNaddr(ref)" [relayHints]="ref.relay ? [ref.relay] : undefined"
+            [hideComments]="true"></app-event>
+          @if (ref.relay) {
+          <div class="ref-meta">
+            <mat-icon class="ref-meta-icon">dns</mat-icon>
+            <span class="ref-meta-text">{{ formatRelay(ref.relay) }}</span>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+  }
+  }
+  }
+</div>

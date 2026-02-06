@@ -70,7 +70,9 @@
     <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
   </mat-card-header>
 
+  @if (!hideHeader()) {
   <app-event-header [event]="repostedEvent" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
+  }
   <mat-card-content>
     @if (targetItem.event.kind === 20) {
     <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
@@ -191,7 +193,9 @@
       }
       <mat-card appearance="outlined" class="root-event" [style.cursor]="isRootCardClickable() ? 'pointer' : 'auto'"
         (click)="onRootEventClick($event)">
+        @if (!hideHeader()) {
         <app-event-header [event]="rootRecordData.event" [compact]="true"></app-event-header>
+        }
         <mat-card-content [class.collapsed]="isRootContentLong() && !isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
           <app-photo-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
@@ -294,7 +298,9 @@
       }
       <mat-card appearance="outlined" class="parent-event" [style.cursor]="isParentCardClickable() ? 'pointer' : 'auto'"
         (click)="onParentEventClick($event)">
+        @if (!hideHeader()) {
         <app-event-header [event]="parentRecordData.event" [compact]="true"></app-event-header>
+        }
         <mat-card-content [class.collapsed]="isParentContentLong() && !isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
           <app-photo-event [event]="parentRecordData.event" [hideComments]="hideComments()"
@@ -386,7 +392,9 @@
   }
 
   <!-- Current event (the reply) -->
+  @if (!hideHeader()) {
   <app-event-header [event]="item.event" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
+  }
   <mat-card-content>
     @if (shouldHideContentDueToWarning()) {
     <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
@@ -488,7 +496,9 @@
 
   } @else {
   <!-- Normal event structure -->
+  @if (!hideHeader()) {
   <app-event-header [event]="item.event" [isEdited]="isEdited()" [editedAt]="editedAt()"></app-event-header>
+  }
   <mat-card-content>
     @if (shouldHideContentDueToWarning()) {
     <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>

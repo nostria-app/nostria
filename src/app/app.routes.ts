@@ -647,6 +647,18 @@ export const routes: Routes = [
     title: 'Follow Packs',
   },
   {
+    path: 'collections/boards',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/collections/boards/boards.component').then(m => m.BoardsComponent),
+    title: 'Boards',
+  },
+  {
+    path: 'collections/boards/:kind/:identifier',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/collections/boards/board-detail/board-detail.component').then(m => m.BoardDetailComponent),
+    title: 'Board',
+  },
+  {
     path: 'delete-event',
     loadComponent: () =>
       import('./pages/delete-event/delete-event.component').then(m => m.DeleteEventComponent),

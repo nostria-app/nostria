@@ -30,6 +30,7 @@ import { LoggerService } from '../../services/logger.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
 import { DataService } from '../../services/data.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
 
 export interface ArticleData {
   event?: Event;
@@ -187,6 +188,7 @@ export class ArticleDisplayComponent {
   private eventService = inject(EventService);
   private zapService = inject(ZapService);
   private logger = inject(LoggerService);
+  private userRelaysService = inject(UserRelaysService);
 
   // Engagement metrics signals
   reactionCount = signal<number>(0);
@@ -432,11 +434,21 @@ export class ArticleDisplayComponent {
   /**
    * Open bookmark list selector dialog
    */
-  openBookmarkSelector() {
+  async openBookmarkSelector() {
+    const authorPubkey = this.article().authorPubkey;
+
+    // Get relay hint for the author
+    await this.userRelaysService.ensureRelaysForPubkey(authorPubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(authorPubkey);
+    const relayHint = authorRelays[0] || undefined;
+
     this.dialog.open(BookmarkListSelectorComponent, {
       data: {
         itemId: this.id(),
-        type: 'a'
+        type: 'a',
+        eventKind: 30023,
+        pubkey: authorPubkey,
+        relay: relayHint
       },
       width: '400px',
       panelClass: 'responsive-dialog'

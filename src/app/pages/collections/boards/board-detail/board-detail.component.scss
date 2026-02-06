@@ -1,0 +1,414 @@
+.board-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
+
+.board-info {
+  margin-bottom: 24px;
+
+  .board-description {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .board-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+
+    .meta-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .meta-separator {
+      margin: 0 4px;
+    }
+  }
+}
+
+.view-mode-toggle {
+  margin-right: 8px;
+}
+
+// ============================================
+// Edit form
+// ============================================
+.section-card {
+  margin-bottom: 24px;
+}
+
+.section-content {
+  padding: 24px;
+}
+
+.edit-form {
+  .full-width {
+    width: 100%;
+    margin-bottom: 16px;
+
+    textarea {
+      field-sizing: content;
+      min-height: 80px;
+      max-height: 300px;
+    }
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      height: auto;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  // Structured ref editing
+  .ref-list-section {
+    margin-bottom: 24px;
+
+    .ref-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+
+      h4 {
+        margin: 0;
+        font-size: 14px;
+        color: var(--mat-sys-on-surface-variant);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    .ref-edit-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+
+      .ref-field {
+        margin-bottom: 0;
+      }
+
+      .ref-id-field {
+        flex: 2;
+        min-width: 0;
+      }
+
+      .ref-relay-field {
+        flex: 1.5;
+        min-width: 0;
+      }
+
+      .ref-pubkey-field {
+        flex: 1.5;
+        min-width: 0;
+      }
+
+      .ref-remove-btn {
+        flex-shrink: 0;
+        margin-top: 8px;
+        color: var(--mat-sys-error);
+      }
+    }
+
+    .ref-empty-hint {
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      text-align: center;
+      padding: 16px 0;
+      margin: 0;
+    }
+  }
+}
+
+// ============================================
+// Board image
+// ============================================
+.board-image-container {
+  margin-bottom: 16px;
+
+  .board-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+}
+
+// ============================================
+// Masonry / Pinterest-style view
+// ============================================
+.masonry-grid {
+  column-count: 3;
+  column-gap: 16px;
+
+  .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--mat-sys-surface-container-low);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    // Override event component styles for masonry display
+    ::ng-deep app-event {
+      display: block;
+      pointer-events: none;
+
+      .note-card {
+        margin: 0 !important;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+
+        &.plain {
+          border: none;
+          box-shadow: none;
+        }
+      }
+
+      mat-card-content {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      app-photo-event {
+        display: block;
+
+        .photo-carousel-container,
+        .photo-carousel {
+          margin: 0 !important;
+          padding: 0 !important;
+          max-width: none !important;
+        }
+
+        .photo-container {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        .photo-item {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+
+        .photo-title,
+        .photo-description {
+          display: none;
+        }
+      }
+
+      app-video-event {
+        display: block;
+
+        .video-container {
+          margin: 0 !important;
+          padding: 0 !important;
+          max-width: none !important;
+        }
+
+        .video-thumbnail-container {
+          width: 100%;
+
+          .video-thumbnail {
+            width: 100%;
+            height: auto;
+            display: block;
+          }
+        }
+      }
+
+      app-article-event {
+        display: block;
+
+        .article-container {
+          padding: 12px !important;
+        }
+      }
+
+      .main-content-wrapper {
+        padding: 12px;
+      }
+
+      app-content {
+        display: block;
+        padding: 12px;
+      }
+    }
+  }
+}
+
+// ============================================
+// Standard (list) view
+// ============================================
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .list-section {
+    .list-section-title {
+      margin: 12px 0 8px 0;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+  }
+
+  .list-event-item {
+    margin-bottom: 8px;
+
+    .ref-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px 8px;
+
+      .ref-meta-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
+      }
+
+      .ref-meta-text {
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
+      }
+    }
+  }
+}
+
+// ============================================
+// Empty states
+// ============================================
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    max-width: 400px;
+  }
+}
+
+// Menu item styles
+.delete-menu-item {
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+// Responsive visibility helpers
+.hide-small {
+  display: inline-flex;
+}
+
+.show-small {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .board-detail-container {
+    padding: 16px;
+  }
+
+  .section-content {
+    padding: 16px;
+  }
+
+  .hide-small {
+    display: none !important;
+  }
+
+  .show-small {
+    display: inline-flex !important;
+  }
+
+  // Masonry: 1 column on mobile
+  .masonry-grid {
+    column-count: 1;
+  }
+
+  // Stack ref edit fields vertically on mobile
+  .edit-form .ref-list-section .ref-edit-row {
+    flex-wrap: wrap;
+
+    .ref-id-field {
+      flex-basis: 100%;
+    }
+
+    .ref-relay-field,
+    .ref-pubkey-field {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  // Masonry: 2 columns on tablet
+  .masonry-grid {
+    column-count: 2;
+  }
+}
