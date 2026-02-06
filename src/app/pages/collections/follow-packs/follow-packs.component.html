@@ -1,0 +1,170 @@
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font" i18n="@@follow-packs.title">Follow Packs</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="startCreatingNew()" matTooltip="Create new follow pack">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
+
+<div class="follow-packs-container">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <!-- Create New Pack Form -->
+  @if (isCreatingNew()) {
+  <mat-card class="section-card new-pack-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>add_circle</mat-icon>
+        <h2>Create New Follow Pack</h2>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Pack Title</mat-label>
+          <input matInput [(ngModel)]="newPackTitle" placeholder="e.g., Bitcoin Developers, Artists">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (optional)</mat-label>
+          <input matInput [(ngModel)]="newPackDescription" placeholder="A short description of this follow pack">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Image URL (optional)</mat-label>
+          <input matInput [(ngModel)]="newPackImage" placeholder="https://example.com/image.jpg">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Pubkeys</mat-label>
+          <textarea matInput [(ngModel)]="newPackPubkeys" rows="4"
+            placeholder="npub1...&#10;npub1...&#10;or hex pubkeys"></textarea>
+          <mat-hint>One pubkey per line (npub or hex format)</mat-hint>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelCreatingNew()">Cancel</button>
+          <button mat-flat-button (click)="saveNewPack()" [disabled]="isLoading()">
+            Create Pack
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+  }
+
+  <!-- Follow Packs -->
+  @for (pack of followPacks(); track pack.identifier) {
+  <mat-card class="section-card follow-pack-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>group</mat-icon>
+        <div class="title-info">
+          <h2>{{ pack.title }}</h2>
+          @if (pack.description) {
+          <p class="pack-description">{{ pack.description }}</p>
+          }
+        </div>
+      </div>
+      <div class="section-actions">
+        @if (editingPackId() !== pack.identifier) {
+        <span class="member-count">{{ pack.pubkeys.length }} members</span>
+
+        <!-- Menu for edit/delete -->
+        <button mat-icon-button [matMenuTriggerFor]="packMenu" matTooltip="Pack options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #packMenu="matMenu">
+          <button mat-menu-item (click)="startEditing(pack)">
+            <mat-icon>edit</mat-icon>
+            <span>Edit</span>
+          </button>
+          <button mat-menu-item (click)="deletePack(pack)" class="delete-menu-item">
+            <mat-icon>delete</mat-icon>
+            <span>Delete</span>
+          </button>
+        </mat-menu>
+        }
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (editingPackId() === pack.identifier) {
+      <!-- Editing mode -->
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Pack Title</mat-label>
+          <input matInput [(ngModel)]="editingTitle" placeholder="Pack title">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (optional)</mat-label>
+          <input matInput [(ngModel)]="editingDescription" placeholder="A short description">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Image URL (optional)</mat-label>
+          <input matInput [(ngModel)]="editingImage" placeholder="https://example.com/image.jpg">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Pubkeys</mat-label>
+          <textarea matInput [(ngModel)]="editingPubkeys" rows="4"></textarea>
+          <mat-hint>One pubkey per line (npub or hex format)</mat-hint>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditing()">Cancel</button>
+          <button mat-flat-button (click)="saveEdit()" [disabled]="isLoading()">
+            Save
+          </button>
+        </div>
+      </div>
+      } @else {
+      <!-- Display mode -->
+      @if (pack.image) {
+      <div class="pack-image-container">
+        <img [src]="pack.image" [alt]="pack.title" class="pack-image" />
+      </div>
+      }
+      @if (pack.pubkeys.length === 0) {
+      <p class="empty-state">
+        No members in this follow pack. Click the menu to edit.
+      </p>
+      } @else {
+      <div class="members-list">
+        @for (pubkey of pack.pubkeys; track pubkey) {
+        <div class="member-item" (click)="openProfile(pubkey)">
+          <app-profile-display-name [pubkey]="pubkey" [disableLink]="true" />
+        </div>
+        }
+      </div>
+      }
+      }
+    </div>
+  </mat-card>
+  }
+
+  <!-- Empty state if no packs -->
+  @if (followPacks().length === 0 && !isLoading() && !isCreatingNew()) {
+  <div class="empty-state-container">
+    <mat-icon class="empty-icon">group</mat-icon>
+    <h3>No Follow Packs</h3>
+    <p>Create your first follow pack to share curated lists of profiles with others.</p>
+    <button mat-flat-button (click)="startCreatingNew()">
+      <mat-icon>add</mat-icon>
+      Create Follow Pack
+    </button>
+  </div>
+  }
+</div>

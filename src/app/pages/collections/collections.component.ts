@@ -62,6 +62,13 @@ export class CollectionsComponent {
       route: '/collections/interests',
       color: '#9c27b0',
     },
+    {
+      title: $localize`:@@collections.follow-packs.title:Follow Packs`,
+      description: $localize`:@@collections.follow-packs.description:Curated lists of profiles to share`,
+      icon: 'group',
+      route: '/collections/follow-packs',
+      color: '#4caf50',
+    },
   ];
 
   navigateTo(route: string): void {

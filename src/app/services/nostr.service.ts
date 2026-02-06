@@ -1,4 +1,4 @@
-import { Injectable, signal, effect, inject } from '@angular/core';
+import { Injectable, signal, effect, inject, NgZone } from '@angular/core';
 import {
   Event,
   EventTemplate,
@@ -126,6 +126,7 @@ export class NostrService implements NostriaService {
   private readonly relayAuth = inject(RelayAuthService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly followSetsService = inject(FollowSetsService);
+  private readonly ngZone = inject(NgZone);
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -964,26 +965,43 @@ export class NostrService implements NostriaService {
         eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
       }
 
-      // Pass event template to extension, race against dialog close
+      // Pass event template to extension, race against dialog close.
+      // IMPORTANT: window.nostr.signEvent() resolves outside Angular's zone (it's a browser
+      // extension API). We must bring the resolution back into the zone so that the dialog
+      // close triggers change detection and the UI actually updates. Without this, the dialog
+      // can visually "hang" even though signing completed successfully underneath.
       this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
+
+      const zonedSignEvent = new Promise<Event>((resolve, reject) => {
+        window.nostr!.signEvent(eventTemplate).then(
+          (result) => {
+            this.ngZone.run(() => {
+              this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
+              resolve(result as Event);
+            });
+          },
+          (err: Error) => {
+            this.ngZone.run(() => {
+              this.logger.error('[Extension Signing] Extension signEvent threw error', err);
+              reject(err);
+            });
+          }
+        );
+      });
+
       const extensionResult = await Promise.race([
-        window.nostr.signEvent(eventTemplate).then((result) => {
-          this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
-          return result;
-        }).catch((err: Error) => {
-          this.logger.error('[Extension Signing] Extension signEvent threw error', err);
-          throw err;
-        }),
+        zonedSignEvent,
         dialogClosedPromise,
       ]);
       this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
       return extensionResult as Event;
     } finally {
-      // Always close the dialog when signing completes (success or error)
+      // Always close the dialog when signing completes (success or error).
+      // Run inside NgZone to ensure Angular processes the dialog removal.
       if (this.currentSigningDialogRef) {
         const dialogRef = this.currentSigningDialogRef;
         this.currentSigningDialogRef = null; // Clear before closing to prevent rejection
-        dialogRef.close();
+        this.ngZone.run(() => dialogRef.close());
       }
     }
   }
