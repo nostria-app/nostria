@@ -1,0 +1,263 @@
+.boards-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
+
+// ============================================
+// Create New Board Card
+// ============================================
+.new-board-card {
+  margin-bottom: 24px;
+  border: 2px dashed var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-container-lowest);
+}
+
+.new-board-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.new-board-form {
+  padding: 24px;
+}
+
+.edit-form {
+  .full-width {
+    width: 100%;
+    margin-bottom: 16px;
+
+    textarea {
+      field-sizing: content;
+      min-height: 80px;
+      max-height: 300px;
+    }
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      height: auto;
+    }
+  }
+
+  .select-icon {
+    margin-right: 8px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+// ============================================
+// Board Gallery Grid
+// ============================================
+.boards-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.board-gallery-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 4 / 3;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  background: var(--mat-sys-surface-container-low);
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+    transform: translateY(-3px);
+  }
+
+  .card-visual {
+    position: absolute;
+    inset: 0;
+
+    .card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-gradient {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+    pointer-events: none;
+
+    .card-title {
+      margin: 0;
+      font-size: 18px;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+
+      .kind-chip {
+        --mdc-chip-elevated-container-color: rgba(255, 255, 255, 0.2);
+        --mdc-chip-label-text-color: #fff;
+        --mat-chip-avatar-size: 18px;
+        font-size: 12px;
+        height: 28px;
+
+        mat-icon {
+          color: #fff;
+          font-size: 16px;
+        }
+      }
+
+      .card-item-count {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .card-menu-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  &:hover .card-menu-btn {
+    opacity: 1;
+  }
+}
+
+// ============================================
+// Empty State
+// ============================================
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    max-width: 400px;
+  }
+}
+
+// Menu item styles
+.delete-menu-item {
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+// ============================================
+// Responsive
+// ============================================
+@media (max-width: 768px) {
+  .boards-container {
+    padding: 16px;
+  }
+
+  .boards-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .board-gallery-card {
+    .card-menu-btn {
+      opacity: 1; // Always show on mobile (no hover)
+    }
+  }
+
+  .new-board-header {
+    padding: 16px;
+  }
+
+  .new-board-form {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .boards-gallery {
+    grid-template-columns: 1fr;
+  }
+}

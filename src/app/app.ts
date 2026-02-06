@@ -547,6 +547,12 @@ export class App implements OnInit, OnDestroy {
           //   authenticated: false,
           // },
           {
+            path: '/collections/boards',
+            label: $localize`:@@app.nav.collections.boards:Boards`,
+            icon: 'dashboard',
+            authenticated: false,
+          },
+          {
             path: '/collections/relays',
             label: $localize`:@@app.nav.collections.relays:Relays`,
             icon: 'dns',

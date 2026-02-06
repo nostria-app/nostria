@@ -104,7 +104,10 @@ export class BookmarkService {
       const id = eventTags[i][1];
       if (!uniqueIds.has(id)) {
         uniqueIds.add(id);
-        uniqueEvents.push({ id });
+        // NIP-51 e-tag format: ["e", id, relay, pubkey]
+        const relay = eventTags[i][2] || undefined;
+        const pubkey = eventTags[i][3] || undefined;
+        uniqueEvents.push({ id, relay, pubkey });
       }
     }
 
@@ -125,7 +128,9 @@ export class BookmarkService {
       const id = articleTags[i][1];
       if (!uniqueIds.has(id)) {
         uniqueIds.add(id);
-        uniqueArticles.push({ id });
+        // NIP-51 a-tag format: ["a", coordinates, relay]
+        const relay = articleTags[i][2] || undefined;
+        uniqueArticles.push({ id, relay });
       }
     }
 
@@ -376,7 +381,7 @@ export class BookmarkService {
     };
   }
 
-  async addBookmark(id: string, type: BookmarkType = 'e', listId?: string) {
+  async addBookmark(id: string, type: BookmarkType = 'e', listId?: string, relay?: string, pubkey?: string) {
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
@@ -449,8 +454,16 @@ export class BookmarkService {
         // Remove existing bookmark
         bookmarks.splice(existingIndex, 1);
       } else {
-        // Add new bookmark
-        bookmarks.push([type, bookmarkId]);
+        // Add new bookmark with relay/pubkey hints per NIP-51
+        const entry: string[] = [type, bookmarkId];
+        if (type === 'e') {
+          // NIP-51 e-tag format: ["e", id, relay, pubkey]
+          entry.push(relay || '', pubkey || '');
+        } else if (type === 'a') {
+          // NIP-51 a-tag format: ["a", coordinates, relay]
+          if (relay) entry.push(relay);
+        }
+        bookmarks.push(entry as [string, string]);
       }
 
       // Encrypt and store in content
@@ -465,8 +478,18 @@ export class BookmarkService {
         // Remove from the bookmark event tags
         event.tags = event.tags.filter(tag => !(tag[0] === type && tag[1] === bookmarkId));
       } else {
-        // Add to the bookmark event tags
-        event.tags.push([type, bookmarkId]);
+        // Add to the bookmark event tags with relay/pubkey hints per NIP-51
+        if (type === 'e') {
+          // NIP-51 e-tag format: ["e", id, relay, pubkey]
+          event.tags.push([type, bookmarkId, relay || '', pubkey || '']);
+        } else if (type === 'a') {
+          // NIP-51 a-tag format: ["a", coordinates, relay]
+          const tag = [type, bookmarkId];
+          if (relay) tag.push(relay);
+          event.tags.push(tag);
+        } else {
+          event.tags.push([type, bookmarkId]);
+        }
       }
     }
 

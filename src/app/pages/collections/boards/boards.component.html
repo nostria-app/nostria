@@ -1,0 +1,144 @@
+<!-- Panel Header -->
+<div class="panel-header">
+  <h2 class="panel-title title-font" i18n="@@boards.title">Boards</h2>
+  <span class="panel-header-spacer"></span>
+
+  <button mat-icon-button (click)="startCreatingNew()" matTooltip="Create new board">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
+
+<div class="boards-container">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <!-- Create New Board Form -->
+  @if (isCreatingNew()) {
+  <mat-card class="new-board-card">
+    <div class="new-board-header">
+      <mat-icon>add_circle</mat-icon>
+      <h3>Create New Board</h3>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="new-board-form">
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Board Type</mat-label>
+          <mat-select [(ngModel)]="newSetKind">
+            @for (tab of tabs; track tab.kind) {
+            <mat-option [value]="tab.kind">
+              <mat-icon class="select-icon">{{ tab.icon }}</mat-icon>
+              {{ tab.label }}
+            </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Board Title</mat-label>
+          <input matInput [(ngModel)]="newSetTitle" placeholder="e.g., Favorite Articles, Must Watch Videos">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (optional)</mat-label>
+          <input matInput [(ngModel)]="newSetDescription" placeholder="A short description of this board">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Image URL (optional)</mat-label>
+          <input matInput [(ngModel)]="newSetImage" placeholder="https://example.com/image.jpg">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Event References (optional)</mat-label>
+          <textarea matInput [(ngModel)]="newSetEventRefs" rows="3"
+            placeholder="note1...&#10;nevent1...&#10;or hex event IDs"></textarea>
+          <mat-hint>One per line (note1, nevent1, or hex ID)</mat-hint>
+        </mat-form-field>
+
+        @if (supportsAddressableRefs(newSetKind())) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Article References (optional)</mat-label>
+          <textarea matInput [(ngModel)]="newSetAddressableRefs" rows="3"
+            placeholder="naddr1...&#10;or kind:pubkey:d-tag"></textarea>
+          <mat-hint>One per line (naddr1 or kind:pubkey:d-tag)</mat-hint>
+        </mat-form-field>
+        }
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelCreatingNew()">Cancel</button>
+          <button mat-flat-button (click)="saveNewSet()" [disabled]="isLoading()">
+            Create Board
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+  }
+
+  <!-- Board Gallery Grid -->
+  @if (allBoards().length > 0) {
+  <div class="boards-gallery">
+    @for (set of allBoards(); track set.identifier) {
+    <div class="board-gallery-card" (click)="navigateToBoard(set)">
+      <!-- Card visual: image or gradient -->
+      <div class="card-visual">
+        @if (set.image) {
+        <img [src]="set.image" [alt]="set.title" class="card-image" />
+        } @else {
+        <div class="card-gradient" [style.background]="generateGradient(set.identifier)"></div>
+        }
+      </div>
+
+      <!-- Card overlay with info -->
+      <div class="card-overlay">
+        <h3 class="card-title">{{ set.title }}</h3>
+        <div class="card-meta">
+          <mat-chip-set>
+            <mat-chip class="kind-chip" disabled>
+              <mat-icon matChipAvatar>{{ getKindIcon(set.kind) }}</mat-icon>
+              {{ getKindLabel(set.kind) }}
+            </mat-chip>
+          </mat-chip-set>
+          <span class="card-item-count">{{ getItemLabel(getItemCount(set)) }}</span>
+        </div>
+      </div>
+
+      <!-- Card menu button -->
+      <button mat-icon-button class="card-menu-btn" [matMenuTriggerFor]="cardMenu"
+        (click)="$event.stopPropagation()" matTooltip="Options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #cardMenu="matMenu">
+        <button mat-menu-item (click)="navigateToBoard(set)">
+          <mat-icon>edit</mat-icon>
+          <span>Open &amp; Edit</span>
+        </button>
+        <button mat-menu-item (click)="deleteSet($event, set)" class="delete-menu-item">
+          <mat-icon>delete</mat-icon>
+          <span>Delete</span>
+        </button>
+      </mat-menu>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Empty state -->
+  @if (allBoards().length === 0 && !isLoading() && !isCreatingNew()) {
+  <div class="empty-state-container">
+    <mat-icon class="empty-icon">dashboard</mat-icon>
+    <h3>No Boards Yet</h3>
+    <p>Create a board to curate and organize your favorite content. You can also add items to boards when bookmarking.</p>
+    <button mat-flat-button (click)="startCreatingNew()">
+      <mat-icon>add</mat-icon>
+      Create Board
+    </button>
+  </div>
+  }
+</div>

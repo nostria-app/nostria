@@ -69,6 +69,13 @@ export class CollectionsComponent {
       route: '/collections/follow-packs',
       color: '#4caf50',
     },
+    {
+      title: $localize`:@@collections.boards.title:Boards`,
+      description: $localize`:@@collections.boards.description:Curate posts, videos, and pictures into boards`,
+      icon: 'dashboard',
+      route: '/collections/boards',
+      color: '#795548',
+    },
   ];
 
   navigateTo(route: string): void {

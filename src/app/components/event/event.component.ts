@@ -123,6 +123,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   showOverlay = input<boolean>(false);
   hideParentEvent = input<boolean>(false);
   hideFooter = input<boolean>(false);
+  hideHeader = input<boolean>(false);
   // Media navigation context (for Media tab grid)
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
@@ -901,12 +902,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Effect to load event by ID when only id is provided (not event)
     effect(() => {
       if (this.app.initialized()) {
-        const eventId = this.id();
+        const rawId = this.id();
         const type = this.type();
         const existingEvent = this.event();
 
         // Only load by ID if no event is provided directly
-        if (!eventId || !type || existingEvent) {
+        if (!rawId || !type || existingEvent) {
           return;
         }
 
@@ -914,34 +915,85 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           if (type === 'e' || type === 'a') {
             this.isLoadingEvent.set(true);
             this.loadingError.set(null);
+
+            // Decode nevent1/naddr1 bech32 strings to extract hex ID and relay hints
+            let eventId = rawId;
+            let decodedRelayHints: string[] | undefined;
+            try {
+              if (rawId.startsWith('nevent1')) {
+                const decoded = nip19.decode(rawId);
+                if (decoded.type === 'nevent') {
+                  eventId = decoded.data.id;
+                  decodedRelayHints = decoded.data.relays;
+                  console.log('[EventComponent:Load] Decoded nevent1:', {
+                    hexId: eventId.substring(0, 16) + '...',
+                    relays: decodedRelayHints,
+                    author: decoded.data.author?.substring(0, 16),
+                  });
+                }
+              } else if (rawId.startsWith('naddr1')) {
+                const decoded = nip19.decode(rawId);
+                if (decoded.type === 'naddr') {
+                  // For addressable events, reconstruct the coordinate-based ID
+                  eventId = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
+                  decodedRelayHints = decoded.data.relays;
+                  console.log('[EventComponent:Load] Decoded naddr1:', {
+                    coordinates: eventId,
+                    relays: decodedRelayHints,
+                  });
+                }
+              }
+            } catch (e) {
+              console.warn('[EventComponent:Load] Failed to decode bech32 id, using as-is:', rawId.substring(0, 20));
+            }
+
+            // Merge relay hints: explicit input takes priority, then decoded from bech32
+            const inputHints = this.relayHints();
+            const hints = (inputHints && inputHints.length > 0) ? inputHints : decodedRelayHints;
+
+            console.log('[EventComponent:Load] Starting fetch for eventId:', eventId.substring(0, 16), '| type:', type, '| hints:', hints);
+
             try {
               let eventData = null;
-              const hints = this.relayHints();
 
-              // If relay hints are provided (e.g., for trending feeds), try those first
+              // If relay hints are provided (explicit or decoded from nevent/naddr), try those first
               if (hints && hints.length > 0) {
+                console.log('[EventComponent:Load] Has relay hints:', hints, '| checking cache first...');
                 // First check cache/database
                 eventData = await this.data.getEventById(eventId, { cache: true, save: false });
+                console.log('[EventComponent:Load] Cache lookup result:', eventData ? 'FOUND' : 'NOT FOUND');
 
                 // If not found locally, try the hinted relays
                 if (!eventData) {
+                  console.log('[EventComponent:Load] Trying hinted relays:', hints, '| eventId:', eventId);
                   const event = await this.relayPool.getEventById(hints, eventId, 10000);
+                  console.log('[EventComponent:Load] Relay hint fetch result:', event ? 'FOUND' : 'NOT FOUND');
                   if (event) {
                     eventData = this.data.toRecord(event);
                   }
                 }
+              } else {
+                console.log('[EventComponent:Load] No relay hints available');
               }
 
               // Fall back to normal loading if relay hints didn't work
               if (!eventData) {
+                console.log('[EventComponent:Load] Falling back to normal getEventById for:', eventId.substring(0, 16));
                 // Use cache and save options to:
                 // 1. Check in-memory cache first
                 // 2. Check database before hitting relays
                 // 3. Persist fetched events for future loads
                 eventData = await this.data.getEventById(eventId, { cache: true, save: true });
+                console.log('[EventComponent:Load] Normal fetch result:', eventData ? `FOUND (kind: ${eventData.event?.kind})` : 'NOT FOUND');
               }
 
               this.record.set(eventData);
+
+              if (!eventData) {
+                console.warn('[EventComponent:Load] Event NOT FOUND after all attempts. eventId:', eventId);
+              } else {
+                console.log('[EventComponent:Load] Event loaded successfully. id:', eventData.event?.id?.substring(0, 16), '| kind:', eventData.event?.kind);
+              }
 
               // After loading the event by ID, check if we need to load interactions
               // This handles the case where the element was already visible before the event loaded
@@ -949,7 +1001,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               // was already visible, so we need to manually trigger interaction loading
               this.checkAndLoadInteractionsIfVisible();
             } catch (error) {
-              console.error('Error loading event:', error);
+              console.error('[EventComponent:Load] Error loading event:', error, '| eventId:', eventId);
               this.loadingError.set('Failed to load event');
             } finally {
               this.isLoadingEvent.set(false);
@@ -1921,18 +1973,28 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return `Proof-of-Work: ${difficulty} bits (${strength})`;
   }
 
-  onBookmarkClick(event: MouseEvent) {
+  async onBookmarkClick(event: MouseEvent) {
     event.stopPropagation();
     const targetItem = this.repostedRecord() || this.record();
     if (targetItem) {
       if (targetItem.event.kind === 32100) {
         this.togglePlaylistBookmark(targetItem.event);
       } else {
+        const authorPubkey = targetItem.event.pubkey;
+
+        // Get relay hint for the author
+        await this.userRelaysService.ensureRelaysForPubkey(authorPubkey);
+        const authorRelays = this.userRelaysService.getRelaysForPubkey(authorPubkey);
+        const relayHint = authorRelays[0] || undefined;
+
         // Open bookmark list selector dialog
         this.dialog.open(BookmarkListSelectorComponent, {
           data: {
             itemId: targetItem.event.id,
-            type: 'e'
+            type: 'e',
+            eventKind: targetItem.event.kind,
+            pubkey: authorPubkey,
+            relay: relayHint
           },
           width: '400px',
           panelClass: 'responsive-dialog'

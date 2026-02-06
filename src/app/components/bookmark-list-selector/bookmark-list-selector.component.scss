@@ -12,6 +12,10 @@
   color: var(--mat-sys-primary);
 }
 
+.board-badge {
+  color: var(--mat-sys-tertiary);
+}
+
 .private-icon {
   font-size: 16px;
   width: 16px;
@@ -39,6 +43,44 @@
     gap: 8px;
     justify-content: flex-end;
     margin-top: 8px;
+  }
+}
+
+.boards-section {
+  padding-top: 8px;
+
+  .boards-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 4px;
+
+    .boards-section-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-tertiary);
+    }
+
+    .boards-section-title {
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .boards-loading {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .no-boards-hint {
+    text-align: center;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+    padding: 8px 16px;
   }
 }
 

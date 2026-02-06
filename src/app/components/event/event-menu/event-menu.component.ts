@@ -310,19 +310,28 @@ export class EventMenuComponent {
     return `${cleaned.slice(0, maxLength).trim()}…`;
   }
 
-  onBookmarkClick(event: MouseEvent) {
+  async onBookmarkClick(event: MouseEvent) {
     event.stopPropagation();
     const targetItem = this.record();
     if (targetItem) {
       // Use article ID for articles, event ID for regular events
       const itemId = this.isArticle() ? this.articleId() : targetItem.event.id;
       const itemType = this.isArticle() ? 'a' : 'e';
+      const authorPubkey = targetItem.event.pubkey;
+
+      // Get relay hint for the author
+      await this.userRelaysService.ensureRelaysForPubkey(authorPubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(authorPubkey);
+      const relayHint = authorRelays[0] || undefined;
 
       // Open bookmark list selector dialog
       this.dialog.open(BookmarkListSelectorComponent, {
         data: {
           itemId: itemId,
-          type: itemType
+          type: itemType,
+          eventKind: targetItem.event.kind,
+          pubkey: authorPubkey,
+          relay: relayHint
         },
         width: '400px',
         panelClass: 'responsive-dialog'

@@ -1,7 +1,7 @@
 <h2 mat-dialog-title>Save to Bookmark List</h2>
 
 <mat-dialog-content>
-  @if (!showNewListInput()) {
+  @if (!showNewListInput() && !showNewBoardInput()) {
   <mat-list>
     @for (list of allLists(); track list.id) {
     <mat-list-item (click)="toggleBookmarkInList(list.id)" class="bookmark-list-item">
@@ -33,7 +33,53 @@
     <mat-icon>add</mat-icon>
     Create New List
   </button>
-  } @else {
+
+  <!-- Boards Section -->
+  @if (curationKind()) {
+  <mat-divider></mat-divider>
+
+  <div class="boards-section">
+    <div class="boards-section-header">
+      <mat-icon class="boards-section-icon">dashboard</mat-icon>
+      <span class="boards-section-title">{{ boardLabel() }} Boards</span>
+    </div>
+
+    @if (boardsLoading()) {
+    <div class="boards-loading">
+      <mat-spinner diameter="24"></mat-spinner>
+    </div>
+    } @else {
+    <mat-list>
+      @for (board of boards(); track board.identifier) {
+      <mat-list-item (click)="toggleBoard(board.identifier)" class="bookmark-list-item board-item">
+        <mat-icon matListItemIcon>
+          @if (isInBoard(board.identifier)) {
+          check_box
+          } @else {
+          check_box_outline_blank
+          }
+        </mat-icon>
+        <span matListItemTitle>{{ board.title }}</span>
+        <span matListItemMeta class="board-badge">
+          <mat-icon>dashboard</mat-icon>
+        </span>
+      </mat-list-item>
+      }
+    </mat-list>
+
+    @if (boards().length === 0) {
+    <div class="no-boards-hint">No boards yet</div>
+    }
+
+    <button mat-button (click)="showNewBoardForm()" class="new-list-button">
+      <mat-icon>add</mat-icon>
+      Create New Board
+    </button>
+    }
+  </div>
+  }
+
+  } @else if (showNewListInput()) {
   <div class="new-list-form">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>List Name</mat-label>
@@ -44,6 +90,24 @@
       <button mat-button (click)="cancelNewList()" [disabled]="creatingList()">Cancel</button>
       <button mat-flat-button (click)="createAndAddToNewList()" [disabled]="!newListName().trim() || creatingList()">
         @if (creatingList()) {
+        Creating...
+        } @else {
+        Create & Add
+        }
+      </button>
+    </div>
+  </div>
+  } @else if (showNewBoardInput()) {
+  <div class="new-list-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Board Name</mat-label>
+      <input matInput [(ngModel)]="newBoardName" placeholder="Enter board name" (keyup.enter)="createAndAddToNewBoard()">
+    </mat-form-field>
+
+    <div class="form-actions">
+      <button mat-button (click)="cancelNewBoard()" [disabled]="creatingBoard()">Cancel</button>
+      <button mat-flat-button (click)="createAndAddToNewBoard()" [disabled]="!newBoardName().trim() || creatingBoard()">
+        @if (creatingBoard()) {
         Creating...
         } @else {
         Create & Add
