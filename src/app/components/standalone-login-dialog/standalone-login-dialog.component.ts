@@ -33,7 +33,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
  */
 @Component({
   selector: 'app-standalone-login-dialog',
-  standalone: true,
   imports: [CustomDialogComponent, LoginDialogComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <app-custom-dialog

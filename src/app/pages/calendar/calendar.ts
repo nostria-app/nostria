@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -109,6 +110,7 @@ interface CalendarCollection {
   ],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Calendar {
   private accountRelay = inject(AccountRelayService);
@@ -123,6 +125,7 @@ export class Calendar {
   private gregorianService = inject(GregorianCalendarService);
   private ethiopianService = inject(EthiopianCalendarService);
   public accountState = inject(AccountStateService);
+  private destroyRef = inject(DestroyRef);
 
   // Premium check
   isPremium = computed(() => {
@@ -357,13 +360,13 @@ export class Calendar {
       await this.loadEventsForMonth(date);
     });
 
-    // Effect to handle date picker changes
-    effect(() => {
-      this.selectedDateControl.valueChanges.subscribe(date => {
-        if (date) {
-          this.selectedDate.set(date);
-        }
-      });
+    // Handle date picker changes with proper cleanup
+    this.selectedDateControl.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(date => {
+      if (date) {
+        this.selectedDate.set(date);
+      }
     });
 
     // Check for event parameter in URL on load
@@ -982,21 +985,35 @@ export class Calendar {
     return `${weekday}, ${shortMonthName} ${date.getDate()}`;
   }
 
-  // Get events for a specific hour and day in week view
-  getEventsForWeekHour(dayIndex: number, hour: number): CalendarEvent[] {
+  // Pre-computed week grid: Map<'dayIndex-hour', CalendarEvent[]> to avoid per-cell filtering in template
+  weekEventGrid = computed(() => {
+    const grid = new Map<string, CalendarEvent[]>();
     const weekDates = this.weekDates();
-    const targetDate = weekDates[dayIndex];
+    const events = this.weekEventsFiltered();
 
-    return this.weekEventsFiltered().filter(event => {
-      if (!this.isSameDay(event.start, targetDate)) return false;
-
-      if (event.isAllDay) {
-        return hour === 0; // Show all-day events at the top
+    // Initialize grid
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        grid.set(`${day}-${hour}`, []);
       }
+    }
 
-      const eventHour = event.start.getHours();
-      return eventHour === hour;
-    });
+    // Distribute events into grid cells
+    for (const event of events) {
+      for (let day = 0; day < weekDates.length; day++) {
+        if (!this.isSameDay(event.start, weekDates[day])) continue;
+        const hour = event.isAllDay ? 0 : event.start.getHours();
+        const key = `${day}-${hour}`;
+        grid.get(key)!.push(event);
+      }
+    }
+
+    return grid;
+  });
+
+  // Get events for a specific hour and day in week view (uses pre-computed grid)
+  getEventsForWeekHour(dayIndex: number, hour: number): CalendarEvent[] {
+    return this.weekEventGrid().get(`${dayIndex}-${hour}`) || [];
   }
 
   selectWeekCell(dayIndex: number, hour: number): void {

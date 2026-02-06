@@ -18,7 +18,6 @@ import { MatChipsModule } from '@angular/material/chips';
 
 @Component({
   selector: 'app-media-server-dialog',
-  standalone: true,
   imports: [
     FormsModule,
     ReactiveFormsModule,

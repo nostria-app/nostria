@@ -12,7 +12,6 @@ import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-inf
 
 @Component({
   selector: 'app-ai-settings',
-  standalone: true,
   imports: [
     MatCardModule,
     MatSlideToggleModule,

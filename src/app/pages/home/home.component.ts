@@ -29,7 +29,6 @@ import { Introduction } from '../../components/introduction/introduction';
  */
 @Component({
   selector: 'app-home',
-  standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,

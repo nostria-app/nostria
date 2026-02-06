@@ -8,7 +8,6 @@ import { UtilitiesService } from '../services/utilities.service';
  */
 @Pipe({
   name: 'linkify',
-  standalone: true
 })
 export class LinkifyPipe implements PipeTransform {
   private sanitizer = inject(DomSanitizer);

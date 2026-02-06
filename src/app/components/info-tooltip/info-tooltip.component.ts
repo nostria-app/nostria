@@ -1,4 +1,4 @@
-import { Component, Input, signal, inject, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, signal, inject, ViewChild, ElementRef } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +9,6 @@ import { TemplateRef } from '@angular/core';
 
 @Component({
   selector: 'app-info-tooltip',
-  standalone: true,
   imports: [MatIconModule, MatButtonModule, MatCardModule, OverlayModule],
   template: `
     <button
@@ -17,16 +16,17 @@ import { TemplateRef } from '@angular/core';
       mat-icon-button
       class="info-tooltip-trigger"
       (click)="toggleTooltip()"
-      [attr.aria-label]="ariaLabel"
+      [attr.aria-label]="ariaLabel()"
     >
       <mat-icon>info</mat-icon>
     </button>
   `,
   styleUrl: './info-tooltip.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InfoTooltipComponent {
-  @Input() ariaLabel = 'Show information';
-  @Input() content: TemplateRef<unknown> | null = null;
+  ariaLabel = input('Show information');
+  content = input<TemplateRef<unknown> | null>(null);
   @ViewChild('trigger', { read: ElementRef }) trigger!: ElementRef;
 
   private overlay = inject(Overlay);
@@ -44,7 +44,7 @@ export class InfoTooltipComponent {
   }
 
   openTooltip(): void {
-    if (this.overlayRef || !this.content) return;
+    if (this.overlayRef || !this.content()) return;
 
     const positionStrategy = this.overlayPositionBuilder
       .flexibleConnectedTo(this.trigger)
@@ -84,7 +84,7 @@ export class InfoTooltipComponent {
 
     const portal = new ComponentPortal(TooltipContentComponent);
     const componentRef = this.overlayRef.attach(portal);
-    componentRef.instance.content = this.content;
+    componentRef.instance.content = this.content();
 
     this.overlayRef.backdropClick().subscribe(() => this.closeTooltip());
     this.isOpen.set(true);
@@ -101,7 +101,6 @@ export class InfoTooltipComponent {
 
 @Component({
   selector: 'app-tooltip-content',
-  standalone: true,
   imports: [MatCardModule, NgTemplateOutlet],
   template: `
     <mat-card class="tooltip-content-card">
@@ -133,7 +132,8 @@ export class InfoTooltipComponent {
       }
     `,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TooltipContentComponent {
-  @Input() content: TemplateRef<unknown> | null = null;
+  content: TemplateRef<unknown> | null = null;
 }

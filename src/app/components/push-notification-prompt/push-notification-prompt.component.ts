@@ -8,7 +8,6 @@ import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-push-notification-prompt',
-  standalone: true,
   imports: [MatButtonModule, MatIconModule],
   templateUrl: './push-notification-prompt.component.html',
   styleUrl: './push-notification-prompt.component.scss',

@@ -8,7 +8,6 @@ import { ReportingService } from '../../services/reporting.service';
 
 @Component({
   selector: 'app-blocked-content',
-  standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule],
   templateUrl: './blocked-content.component.html',
   styleUrl: './blocked-content.component.scss',

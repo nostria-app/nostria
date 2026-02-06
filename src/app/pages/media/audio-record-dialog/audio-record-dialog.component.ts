@@ -11,7 +11,6 @@ import { AudioPlayerComponent } from '../../../components/audio-player/audio-pla
 
 @Component({
   selector: 'app-audio-record-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

@@ -43,7 +43,6 @@ export interface MediaPublishOptions {
 
 @Component({
   selector: 'app-media-publish-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

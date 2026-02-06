@@ -20,7 +20,6 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
 
 @Component({
   selector: 'app-delete-event',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     MatButtonModule,

@@ -8,6 +8,7 @@ import { MediaItem, Playlist, NostrRecord } from '../../interfaces';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';
+import { formatDuration } from '../../utils/format-duration';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
@@ -33,7 +34,6 @@ interface PlaylistData {
 
 @Component({
   selector: 'app-playlist-event',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -395,7 +395,7 @@ export class PlaylistEventComponent {
           }
 
           if (duration && duration !== '-1') {
-            currentTrack.duration = this.formatDuration(parseInt(duration, 10));
+            currentTrack.duration = formatDuration(parseInt(duration, 10));
           }
         }
       } else if (line && !line.startsWith('#')) {
@@ -426,7 +426,7 @@ export class PlaylistEventComponent {
       }
     }
 
-    return hasValidDurations ? this.formatDuration(totalSeconds) : undefined;
+    return hasValidDurations ? formatDuration(totalSeconds) : undefined;
   }
 
   private parseDuration(duration: string): number {
@@ -442,17 +442,6 @@ export class PlaylistEventComponent {
     return parseInt(duration, 10) || 0;
   }
 
-  private formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-  }
 
   private async loadTrackEvents(event: Event): Promise<void> {
     // Get all 'a' tags that reference track events (kind 36787)

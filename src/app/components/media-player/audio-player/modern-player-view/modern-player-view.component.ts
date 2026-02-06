@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
+import { formatDuration } from '../../../../utils/format-duration';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
@@ -117,16 +118,7 @@ export class ModernPlayerViewComponent {
     return this.currentTime() / dur;
   });
 
-  formatTime(value: number): string {
-    if (!value || isNaN(value)) return '0:00';
-    const hours = Math.floor(value / 3600);
-    const minutes = Math.floor((value % 3600) / 60);
-    const seconds = Math.floor(value % 60);
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  formatTime = formatDuration;
 
   onTimeChange(event: Event): void {
     const input = event.target as HTMLInputElement;

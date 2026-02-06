@@ -62,6 +62,7 @@ import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { formatDuration } from '../../utils/format-duration';
 
 // NavLink interface removed because it was unused.
 
@@ -1896,17 +1897,6 @@ export class FeedsComponent implements OnDestroy {
     return warningTag ? warningTag[1] : '';
   }
 
-  formatDuration(seconds: string): string {
-    const num = parseInt(seconds);
-    const hours = Math.floor(num / 3600);
-    const minutes = Math.floor((num % 3600) / 60);
-    const secs = num % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  }
   openImageDialog(imageUrl: string, altText: string): void {
     this.dialog.open(MediaPreviewDialogComponent, {
       data: {
@@ -2151,7 +2141,7 @@ export class FeedsComponent implements OnDestroy {
       alt,
       tracks,
       url: playlistUrl,
-      totalDuration: totalDuration > 0 ? this.formatDuration(totalDuration.toString()) : undefined,
+      totalDuration: totalDuration > 0 ? formatDuration(totalDuration) : undefined,
     };
   }
 

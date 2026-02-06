@@ -57,7 +57,6 @@ export interface EventDetailsResult {
 
 @Component({
   selector: 'app-event-details-dialog',
-  standalone: true,
   imports: [
     CommonModule,
     MatDialogModule,

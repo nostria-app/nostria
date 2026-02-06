@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 
 
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -14,13 +14,13 @@ interface LogMessage {
 
 @Component({
   selector: 'app-loading-overlay',
-  standalone: true,
   imports: [MatProgressSpinnerModule, MatCardModule],
   templateUrl: './loading-overlay.component.html',
   styleUrl: './loading-overlay.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoadingOverlayComponent implements OnInit, OnDestroy {
-  @Input() message = 'Loading...';
+  message = input('Loading...');
 
   private readonly loggerService = inject(LoggerService);
 

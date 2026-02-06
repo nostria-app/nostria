@@ -28,7 +28,6 @@ import { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-badges',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

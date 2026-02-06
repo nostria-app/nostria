@@ -31,7 +31,6 @@ interface ModelInfo {
 
 @Component({
   selector: 'app-ai',
-  standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,

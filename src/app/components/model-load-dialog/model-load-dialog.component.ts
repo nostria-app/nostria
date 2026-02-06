@@ -11,7 +11,6 @@ export interface ModelLoadDialogData {
 
 @Component({
   selector: 'app-model-load-dialog',
-  standalone: true,
   imports: [MatDialogModule, MatProgressBarModule, MatButtonModule],
   template: `
     <h2 mat-dialog-title>Loading AI Model</h2>

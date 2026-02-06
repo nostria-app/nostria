@@ -42,7 +42,6 @@ interface RelayInfo {
 
 @Component({
   selector: 'app-relay-info-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

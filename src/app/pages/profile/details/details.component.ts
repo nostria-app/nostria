@@ -30,7 +30,6 @@ import { kinds } from 'nostr-tools';
 
 @Component({
   selector: 'app-following',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,

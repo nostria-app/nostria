@@ -25,6 +25,7 @@ import { CardsPlayerViewComponent } from './cards-player-view/cards-player-view.
 import { WinampPlayerViewComponent } from './winamp-player-view/winamp-player-view.component';
 import { PlaylistDrawerComponent } from './playlist-drawer/playlist-drawer.component';
 import { nip19 } from 'nostr-tools';
+import { formatDuration } from '../../../utils/format-duration';
 
 export type PlayerViewType = 'modern' | 'cards' | 'winamp';
 
@@ -136,20 +137,7 @@ export class AudioPlayerComponent {
     return this.imageCache.getOptimizedImageUrlWithSize(artwork, 64, 64);
   });
 
-  formatLabel(value: number): string {
-    if (!value || isNaN(value)) {
-      return '0:00';
-    }
-
-    const hours = Math.floor(value / 3600);
-    const minutes = Math.floor((value % 3600) / 60);
-    const seconds = Math.floor(value % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+  formatLabel = formatDuration;
 
   onTimeChange(event: Event): void {
     const input = event.target as HTMLInputElement;

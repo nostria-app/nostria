@@ -47,7 +47,6 @@ import { UserRelaysService } from '../../services/relays/user-relays';
 
 @Component({
   selector: 'app-article',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

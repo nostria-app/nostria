@@ -19,7 +19,6 @@ export interface AiToolsDialogData {
 
 @Component({
   selector: 'app-ai-tools-dialog',
-  standalone: true,
   imports: [
     CommonModule,
     MatDialogModule,

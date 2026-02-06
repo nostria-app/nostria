@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, ApplicationRef, createComponent, EnvironmentInjector, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, ApplicationRef, createComponent, EnvironmentInjector, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -46,7 +46,6 @@ import { UserRelaysService } from '../../../services/relays/user-relays';
 
 @Component({
   selector: 'app-event-menu',
-  standalone: true,
   imports: [
     MatIconModule,
     MatButtonModule,
@@ -56,6 +55,7 @@ import { UserRelaysService } from '../../../services/relays/user-relays';
   ],
   templateUrl: './event-menu.component.html',
   styleUrl: './event-menu.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventMenuComponent {
   layout = inject(LayoutService);

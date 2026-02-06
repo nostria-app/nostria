@@ -7,7 +7,6 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 
 @Component({
   selector: 'app-audio-event',
-  standalone: true,
   imports: [
     MatIconModule,
     AudioPlayerComponent,

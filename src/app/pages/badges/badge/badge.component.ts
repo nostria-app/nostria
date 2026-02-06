@@ -22,7 +22,6 @@ export type BadgeLayout = 'vertical' | 'horizontal';
 
 @Component({
   selector: 'app-badge',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,

@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, output, inject } from '@angular/core';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 
@@ -7,7 +7,6 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
  */
 @Component({
   selector: 'app-login-wrapper',
-  standalone: true,
   imports: [CustomDialogComponent, LoginDialogComponent],
   template: `
     <app-custom-dialog
@@ -30,10 +29,11 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
     :host {
       display: block;
     }
-  `]
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginWrapperComponent {
-  @Output() closed = new EventEmitter<void>();
+  closed = output<void>();
 
   loginDialog!: LoginDialogComponent;
 

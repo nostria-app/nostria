@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   Input,
   Output,
@@ -35,7 +36,6 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 
 @Component({
   selector: 'app-rich-text-editor',
-  standalone: true,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -51,6 +51,7 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 ],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   @Input() content = '';

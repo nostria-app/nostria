@@ -3,7 +3,6 @@ import { UtilitiesService } from '../services/utilities.service';
 
 @Pipe({
   name: 'npub',
-  standalone: true,
   pure: true,
 })
 export class NPubPipe implements PipeTransform {

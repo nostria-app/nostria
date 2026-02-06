@@ -23,8 +23,8 @@
     </mat-card-title>
     <mat-card-subtitle>
       <div class="subtitle-row">
-        <span>Event ID: <a (click)="layout.openGenericEvent(notification.event.id)" tabindex="0">{{
-            notification.event.id.substring(0, 8)
+        <span>Event ID: <a (click)="layout.openGenericEvent(notification().event.id)" tabindex="0">{{
+            notification().event.id.substring(0, 8)
             }}</a>...</span>
         <span class="progress-text">{{ progress | number:'1.0-0' }}% complete</span>
       </div>
@@ -36,7 +36,7 @@
       [color]="hasFailures && pendingCount === 0 ? 'warn' : 'primary'"></mat-progress-bar>
 
     <div class="relays-container">
-      @for (relay of notification.relayPromises; track trackByRelayUrl($index, relay)) {
+      @for (relay of notification().relayPromises; track trackByRelayUrl($index, relay)) {
       <div class="relay-item" [class.success]="relay.status === 'success'" [class.failed]="relay.status === 'failed'"
         [class.pending]="relay.status === 'pending'">
         <div class="relay-info">

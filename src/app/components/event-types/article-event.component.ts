@@ -14,7 +14,6 @@ import { EthiopianCalendarService } from '../../services/ethiopian-calendar.serv
 
 @Component({
   selector: 'app-article-event',
-  standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MentionHoverDirective],
   templateUrl: './article-event.component.html',
   styleUrl: './article-event.component.scss',

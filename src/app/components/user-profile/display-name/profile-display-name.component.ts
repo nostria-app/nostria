@@ -18,6 +18,7 @@ import { ProfileHoverCardService } from '../../../services/profile-hover-card.se
 import { ScrollStateService } from '../../../services/scroll-state.service';
 import { SettingsService } from '../../../services/settings.service';
 import { LayoutService } from '../../../services/layout.service';
+import { IntersectionObserverService } from '../../../services/intersection-observer.service';
 
 @Component({
   selector: 'app-profile-display-name',
@@ -34,6 +35,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private scrollState = inject(ScrollStateService);
   private settingsService = inject(SettingsService);
   private layout = inject(LayoutService);
+  private readonly intersectionObserverService = inject(IntersectionObserverService);
 
   private linkElement: HTMLElement | null = null;
 
@@ -49,7 +51,6 @@ publicKey = '';
 
   // Flag to track if component is visible
   private isVisible = signal(false);
-  private intersectionObserver?: IntersectionObserver;
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
@@ -198,37 +199,31 @@ constructor() {
   private setupIntersectionObserver(): void {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
 
-    // Create IntersectionObserver instance
-    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
-    this.intersectionObserver = new IntersectionObserver(
-      entries => {
+    // Use the shared IntersectionObserver service instead of creating per-component observer
+    // This ensures callbacks run inside NgZone for proper change detection,
+    // which is critical for components inside CDK virtual scroll viewports
+    this.intersectionObserverService.observe(
+      this.elementRef.nativeElement,
+      (isIntersecting) => {
         // Update visibility state
-        const isVisible = entries.some(entry => entry.isIntersecting);
-        this.isVisible.set(isVisible);
+        this.isVisible.set(isIntersecting);
 
-        if (isVisible && !this.scrollState.isScrolling()) {
+        if (isIntersecting && !this.scrollState.isScrolling()) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
-            this.debouncedLoadProfileData(this.pubkey());
+            this.debouncedLoadProfileData(this.normalizedPubkey());
           }
         }
       },
       {
         threshold: 0.01, // Trigger when at least 1% is visible
-        root: null, // Use viewport as root
         rootMargin: '200px', // Start loading 200px before entering viewport
       }
     );
-
-    // Start observing this component
-    this.intersectionObserver.observe(this.elementRef.nativeElement);
   }
 
   private disconnectObserver(): void {
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-      this.intersectionObserver = undefined;
-    }
+    this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
   }
 
   /**

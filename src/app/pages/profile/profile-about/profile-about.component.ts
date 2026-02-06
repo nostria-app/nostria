@@ -13,7 +13,6 @@ import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-profile-about',
-  standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, TimestampPipe],
   templateUrl: './profile-about.component.html',
   styleUrl: './profile-about.component.scss',

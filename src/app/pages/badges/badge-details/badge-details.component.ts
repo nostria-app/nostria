@@ -36,7 +36,6 @@ interface BadgeDisplayData {
 
 @Component({
   selector: 'app-badge-details',
-  standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,

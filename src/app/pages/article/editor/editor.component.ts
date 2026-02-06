@@ -8,7 +8,6 @@ import { ArticleEditorDialogComponent } from '../../../components/article-editor
   selector: 'app-editor',
   template: '',
   styles: [],
-  standalone: true,
 })
 export class EditorComponent implements OnInit {
   private dialog = inject(CustomDialogService);

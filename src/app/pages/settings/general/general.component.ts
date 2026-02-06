@@ -33,7 +33,6 @@ interface Language {
 
 @Component({
   selector: 'app-general-settings',
-  standalone: true,
   imports: [
     FormsModule,
     MatButtonModule,

@@ -35,7 +35,6 @@ interface QueryGroup {
 
 @Component({
   selector: 'app-debug-panel',
-  standalone: true,
   imports: [
     CommonModule,
     MatIconModule,

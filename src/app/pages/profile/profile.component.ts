@@ -82,7 +82,6 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../compo
 
 @Component({
   selector: 'app-profile',
-  standalone: true,
   imports: [
     RouterModule,
     RouterOutlet,

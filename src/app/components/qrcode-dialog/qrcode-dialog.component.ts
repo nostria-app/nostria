@@ -1,4 +1,4 @@
-import { Component, Inject, AfterViewInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, AfterViewInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -19,15 +19,15 @@ export interface QRCodeDialogData {
   imports: [MatDialogModule, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
   templateUrl: './qrcode-dialog.component.html',
   styleUrl: './qrcode-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QRCodeDialogComponent implements AfterViewInit {
   private clipboard = inject(ClipboardService);
+  data = inject<QRCodeDialogData>(MAT_DIALOG_DATA);
 
   qrStyle = 'did';
 
   qrValue = '';
-
-  constructor(@Inject(MAT_DIALOG_DATA) public data: QRCodeDialogData) { }
 
   ngAfterViewInit() {
     this.generateQR(this.data.did);

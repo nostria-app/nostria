@@ -26,7 +26,6 @@ import { RightPanelService } from '../../../services/right-panel.service';
 
 @Component({
   selector: 'app-privacy-settings',
-  standalone: true,
   imports: [
     MatTabsModule,
     MatCardModule,

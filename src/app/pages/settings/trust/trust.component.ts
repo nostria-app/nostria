@@ -18,7 +18,6 @@ interface TrustRelay {
 
 @Component({
   selector: 'app-trust-settings',
-  standalone: true,
   imports: [
     FormsModule,
     MatButtonModule,

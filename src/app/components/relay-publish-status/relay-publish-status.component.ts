@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 
 import { MatCardModule } from '@angular/material/card';
@@ -31,42 +31,39 @@ import { LayoutService } from '../../services/layout.service';
   ],
   templateUrl: './relay-publish-status.component.html',
   styleUrls: ['./relay-publish-status.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RelayPublishStatusComponent {
-  @Input() notification!: RelayPublishingNotification;
-  @Output() retry = new EventEmitter<string>();
-  @Output() republish = new EventEmitter<string>();
+  notification = input.required<RelayPublishingNotification>();
+  retry = output<string>();
+  republish = output<string>();
 
   private nostrService = inject(NostrService);
   private customDialog = inject(CustomDialogService);
   layout = inject(LayoutService);
 
   get successCount(): number {
-    if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {
-      return 0;
-    }
-    return this.notification.relayPromises.filter(rp => rp.status === 'success').length;
+    const promises = this.notification().relayPromises;
+    if (!promises || promises.length === 0) return 0;
+    return promises.filter(rp => rp.status === 'success').length;
   }
 
   get failedCount(): number {
-    if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {
-      return 0;
-    }
-    return this.notification.relayPromises.filter(rp => rp.status === 'failed').length;
+    const promises = this.notification().relayPromises;
+    if (!promises || promises.length === 0) return 0;
+    return promises.filter(rp => rp.status === 'failed').length;
   }
 
   get pendingCount(): number {
-    if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {
-      return 0;
-    }
-    return this.notification.relayPromises.filter(rp => rp.status === 'pending').length;
+    const promises = this.notification().relayPromises;
+    if (!promises || promises.length === 0) return 0;
+    return promises.filter(rp => rp.status === 'pending').length;
   }
 
   get progress(): number {
-    if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {
-      return 0;
-    }
-    const total = this.notification.relayPromises.length;
+    const promises = this.notification().relayPromises;
+    if (!promises || promises.length === 0) return 0;
+    const total = promises.length;
     const completed = this.successCount + this.failedCount;
     return total > 0 ? (completed / total) * 100 : 0;
   }
@@ -76,11 +73,11 @@ export class RelayPublishStatusComponent {
   }
 
   onRetry(): void {
-    this.retry.emit(this.notification.id);
+    this.retry.emit(this.notification().id);
   }
 
   onRepublish(): void {
-    this.republish.emit(this.notification.id);
+    this.republish.emit(this.notification().id);
   }
 
   getRelayName(url: string): string {
@@ -110,10 +107,10 @@ export class RelayPublishStatusComponent {
       title: 'Event Details',
       width: '800px',
       maxWidth: '95vw',
-      data: { event: this.notification.event } as EventDetailsDialogData,
+      data: { event: this.notification().event } as EventDetailsDialogData,
     });
 
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.dialogData = { event: this.notification.event };
+    dialogRef.componentInstance.dialogData = { event: this.notification().event };
   }
 }

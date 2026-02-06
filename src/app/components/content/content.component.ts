@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked, input } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
@@ -21,7 +21,6 @@ interface SocialPreview {
 
 @Component({
   selector: 'app-content',
-  standalone: true,
   imports: [
     NoteContentComponent,
     MatIconModule,
@@ -31,6 +30,7 @@ interface SocialPreview {
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContentComponent implements AfterViewInit, OnDestroy {
   settings = inject(SettingsService);

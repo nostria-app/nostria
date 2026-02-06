@@ -9,7 +9,9 @@ import {
   OnDestroy,
   input,
   effect,
+  DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationStart } from '@angular/router';
 import { Location } from '@angular/common';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -70,6 +72,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly overlayContainer = inject(OverlayContainer);
   private readonly elementRef = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
@@ -151,7 +154,9 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   constructor() {
-    this.router.events.subscribe(event => {
+    this.router.events.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(event => {
       if (event instanceof NavigationStart) {
         if (this.layout.fullscreenMediaPlayer()) {
           this.layout.fullscreenMediaPlayer.set(false);
