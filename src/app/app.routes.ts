@@ -641,6 +641,12 @@ export const routes: Routes = [
     title: 'Interests',
   },
   {
+    path: 'collections/follow-packs',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/collections/follow-packs/follow-packs.component').then(m => m.FollowPacksComponent),
+    title: 'Follow Packs',
+  },
+  {
     path: 'delete-event',
     loadComponent: () =>
       import('./pages/delete-event/delete-event.component').then(m => m.DeleteEventComponent),

@@ -564,6 +564,12 @@ export class App implements OnInit, OnDestroy {
             icon: 'tag',
             authenticated: false,
           },
+          {
+            path: '/collections/follow-packs',
+            label: $localize`:@@app.nav.collections.follow-packs:Follow Packs`,
+            icon: 'group',
+            authenticated: false,
+          },
         ];
 
         return {
