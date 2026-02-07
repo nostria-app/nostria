@@ -83,8 +83,10 @@
           [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
           [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
           [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
-          <app-feed-filter-panel [feed]="activeFeed() ?? undefined" (kindsChanged)="onKindsChanged($event)"
-            (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)">
+          <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
+            [mentionedMode]="listMentionedMode()" (kindsChanged)="onKindsChanged($event)"
+            (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)"
+            (mentionedModeChanged)="onMentionedModeChanged($event)">
           </app-feed-filter-panel>
         </ng-template>
         }
@@ -163,7 +165,9 @@
           <div class="column-content">
             <app-list-column #listColumn [listData]="activeListFeed()"
               [showReplies]="localSettings.contentFilter().showReplies"
-              [showReposts]="localSettings.contentFilter().showReposts">
+              [showReposts]="localSettings.contentFilter().showReposts"
+              [mentionedMode]="listMentionedMode()"
+              [filterKinds]="localSettings.contentFilter().kinds">
             </app-list-column>
           </div>
         </div>

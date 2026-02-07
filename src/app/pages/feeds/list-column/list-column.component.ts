@@ -18,6 +18,7 @@ import { EventComponent } from '../../../components/event/event.component';
 import { LoggerService } from '../../../services/logger.service';
 import { RepostService } from '../../../services/repost.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DatabaseService } from '../../../services/database.service';
 import { Event } from 'nostr-tools';
 
@@ -123,6 +124,7 @@ export class ListColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private repostService = inject(RepostService);
   private sharedRelayService = inject(SharedRelayService);
+  private accountRelay = inject(AccountRelayService);
   private database = inject(DatabaseService);
 
   // Input for the list data
@@ -130,6 +132,8 @@ export class ListColumnComponent implements OnDestroy {
 
   // Track the current list dTag to detect changes
   private currentListDTag = '';
+  // Track previous mentionedMode to detect changes
+  private previousMentionedMode = false;
 
   private loadMoreTriggerElement?: HTMLDivElement;
 
@@ -144,6 +148,13 @@ export class ListColumnComponent implements OnDestroy {
   // Filter inputs from parent
   showReplies = input(false);
   showReposts = input(true);
+
+  // Mentioned mode: when true, query for events where list members are mentioned (#p tag)
+  // instead of events authored by list members
+  mentionedMode = input(false);
+
+  // Kinds to filter by (from parent filter panel)
+  filterKinds = input<number[]>([]);
 
   // State
   isLoading = signal(false);
@@ -162,8 +173,14 @@ export class ListColumnComponent implements OnDestroy {
     const events = this.allEvents();
     const showReplies = this.showReplies();
     const showReposts = this.showReposts();
+    const filterKinds = this.filterKinds();
 
     return events.filter(event => {
+      // Filter by kinds if specified
+      if (filterKinds.length > 0 && !filterKinds.includes(event.kind)) {
+        return false;
+      }
+
       // Check if it's a repost
       const isRepost = this.repostService.isRepostEvent(event);
 
@@ -187,18 +204,20 @@ export class ListColumnComponent implements OnDestroy {
   hasMore = computed(() => this.displayCount() < this.filteredEvents().length);
 
   constructor() {
-    // Load events when list data changes
+    // Load events when list data or mentionedMode changes
     effect(() => {
       const data = this.listData();
+      const mentioned = this.mentionedMode();
       if (data && data.pubkeys.length > 0) {
-        // Check if this is a different list
-        if (this.currentListDTag !== data.dTag) {
-          // Clear existing events immediately when switching lists
+        // Check if this is a different list or mode changed
+        if (this.currentListDTag !== data.dTag || this.previousMentionedMode !== mentioned) {
+          // Clear existing events immediately when switching lists or modes
           this.allEvents.set([]);
           this.displayCount.set(PAGE_SIZE);
           this.currentListDTag = data.dTag;
+          this.previousMentionedMode = mentioned;
         }
-        this.loadEventsFromList(data);
+        this.loadEventsFromList(data, mentioned);
       } else {
         this.allEvents.set([]);
         this.displayCount.set(PAGE_SIZE);
@@ -234,28 +253,42 @@ export class ListColumnComponent implements OnDestroy {
   /**
    * Load events from users in the list
    * First loads from local database for instant display, then fetches from relays
+   * @param mentioned When true, query for events mentioning the pubkeys (#p tag) instead of authored by them
    */
-  private async loadEventsFromList(data: ListFeedData): Promise<void> {
+  private async loadEventsFromList(data: ListFeedData, mentioned: boolean): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
 
     const { pubkeys } = data;
-    this.logger.info(`[ListColumn] Loading events for ${pubkeys.length} users from list "${data.title}"`);
+    const modeLabel = mentioned ? 'mentioned by' : 'authored by';
+    this.logger.info(`[ListColumn] Loading events ${modeLabel} ${pubkeys.length} users from list "${data.title}"`);
 
     try {
-      // Step 1: Load cached events from database immediately
-      const cachedEvents = await this.loadEventsFromDatabase(pubkeys);
-      if (cachedEvents.length > 0) {
-        this.logger.info(`[ListColumn] Loaded ${cachedEvents.length} cached events from database`);
-        this.updateEventsState(cachedEvents);
-      }
+      if (mentioned) {
+        // Mentioned mode: query account relays for events with #p tags
+        // No local database query since we index by author, not by tags
+        this.isLoadingFromRelays.set(true);
+        try {
+          await this.loadMentionedEventsFromRelays(pubkeys);
+        } finally {
+          this.isLoadingFromRelays.set(false);
+        }
+      } else {
+        // Authored mode (default): query by author pubkeys
+        // Step 1: Load cached events from database immediately
+        const cachedEvents = await this.loadEventsFromDatabase(pubkeys);
+        if (cachedEvents.length > 0) {
+          this.logger.info(`[ListColumn] Loaded ${cachedEvents.length} cached events from database`);
+          this.updateEventsState(cachedEvents);
+        }
 
-      // Step 2: Fetch fresh events from relays in the background
-      this.isLoadingFromRelays.set(true);
-      try {
-        await this.loadEventsFromRelays(pubkeys, cachedEvents);
-      } finally {
-        this.isLoadingFromRelays.set(false);
+        // Step 2: Fetch fresh events from relays in the background
+        this.isLoadingFromRelays.set(true);
+        try {
+          await this.loadEventsFromRelays(pubkeys, cachedEvents);
+        } finally {
+          this.isLoadingFromRelays.set(false);
+        }
       }
     } catch (err) {
       this.logger.error('[ListColumn] Error loading events:', err);
@@ -325,6 +358,39 @@ export class ListColumnComponent implements OnDestroy {
     this.logger.info(`[ListColumn] Loaded ${allLoadedEvents.length} total events from list`);
   }
 
+  /**
+   * Fetch events from account relays where pubkeys are mentioned (#p tag)
+   * Unlike authored mode, we can't use the outbox model here since we don't know
+   * who authored the events. Instead, we query account relays with #p tag filters.
+   * Pubkeys are batched to avoid creating overly large filters.
+   */
+  private async loadMentionedEventsFromRelays(pubkeys: string[]): Promise<void> {
+    const allLoadedEvents: Event[] = [];
+    const kinds = [1, 6, 30023]; // Notes, reposts, articles
+    const batchSize = 10;
+
+    for (let i = 0; i < pubkeys.length; i += batchSize) {
+      const batch = pubkeys.slice(i, i + batchSize);
+
+      try {
+        const events = await this.accountRelay.getMany({
+          kinds,
+          '#p': batch,
+          limit: batch.length * 15,
+        }, { timeout: 8000 });
+
+        allLoadedEvents.push(...events);
+      } catch (err) {
+        this.logger.debug(`[ListColumn] Failed to fetch mentioned events for batch ${i / batchSize}:`, err);
+      }
+
+      // Update UI incrementally after each batch
+      this.updateEventsState(allLoadedEvents);
+    }
+
+    this.logger.info(`[ListColumn] Loaded ${allLoadedEvents.length} total mentioned events from list`);
+  }
+
   private updateEventsState(events: Event[]): void {
     // Sort by created_at descending and deduplicate by event ID
     const seen = new Set<string>();
@@ -347,7 +413,7 @@ export class ListColumnComponent implements OnDestroy {
     this.displayCount.set(PAGE_SIZE);
 
     try {
-      await this.loadEventsFromList(data);
+      await this.loadEventsFromList(data, this.mentionedMode());
     } finally {
       this.isRefreshing.set(false);
     }

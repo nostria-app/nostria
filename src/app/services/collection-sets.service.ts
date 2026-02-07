@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
@@ -75,6 +75,42 @@ export class CollectionSetsService {
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
   private deletionFilter = inject(DeletionFilterService);
+
+  // Reactive signal for interest sets - shared across all consumers
+  interestSets = signal<InterestSet[]>([]);
+  interestSetsLoading = signal(false);
+
+  private lastLoadedPubkey: string | null = null;
+
+  constructor() {
+    // Auto-load interest sets when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      if (pubkey && pubkey !== this.lastLoadedPubkey) {
+        this.lastLoadedPubkey = pubkey;
+        this.loadInterestSetsForAccount(pubkey);
+      } else if (!pubkey) {
+        this.lastLoadedPubkey = null;
+        this.interestSets.set([]);
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  /**
+   * Load interest sets for the current account and update the shared signal
+   */
+  private async loadInterestSetsForAccount(pubkey: string): Promise<void> {
+    this.interestSetsLoading.set(true);
+    try {
+      const sets = await this.getInterestSets(pubkey);
+      this.interestSets.set(sets);
+    } catch (error) {
+      this.logger.error('Error loading interest sets for account:', error);
+    } finally {
+      this.interestSetsLoading.set(false);
+    }
+  }
 
   /**
    * Get preferred emojis from user's emoji list (kind 10030)
@@ -492,6 +528,26 @@ export class CollectionSetsService {
       // Save to database
       await this.database.saveEvent(signedEvent);
 
+      // Update the shared signal immediately after database save so all consumers
+      // see the change right away (consistent with FollowSetsService pattern)
+      const cleanHashtags = hashtags.map(h => h.replace(/^#/, '')).filter(h => h);
+      this.interestSets.update(sets => {
+        const index = sets.findIndex(s => s.identifier === identifier);
+        const updatedSet: InterestSet = {
+          identifier,
+          title: title || (index >= 0 ? sets[index].title : this.formatDTagAsTitle(identifier)),
+          hashtags: cleanHashtags,
+          eventId: signedEvent.id,
+          created_at: signedEvent.created_at,
+        };
+        if (index >= 0) {
+          const newSets = [...sets];
+          newSets[index] = updatedSet;
+          return newSets;
+        }
+        return [...sets, updatedSet];
+      });
+
       // Publish to relays
       const result = await this.publishService.publish(signedEvent, {
         useOptimizedRelays: false, // Publish to all account relays
@@ -570,6 +626,9 @@ export class CollectionSetsService {
 
       // Save deletion event to database
       await this.database.saveEvent(signedEvent);
+
+      // Remove from the shared signal immediately so all consumers see the change
+      this.interestSets.update(sets => sets.filter(s => s.identifier !== identifier));
 
       // Publish deletion event
       const result = await this.publishService.publish(signedEvent, {

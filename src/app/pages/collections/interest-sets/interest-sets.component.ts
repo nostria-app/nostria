@@ -53,7 +53,7 @@ export class InterestSetsComponent implements OnInit {
 
   // State - multiple interest sets
   isLoading = signal(false);
-  interestSets = signal<InterestSet[]>([]);
+  interestSets = this.collectionSetsService.interestSets;
 
   // Editing state for existing lists
   editingListId = signal<string | null>(null);
@@ -79,8 +79,9 @@ export class InterestSetsComponent implements OnInit {
         return;
       }
 
+      // Fetch fresh data and update the shared signal in the service
       const sets = await this.collectionSetsService.getInterestSets(pubkey);
-      this.interestSets.set(sets);
+      this.collectionSetsService.interestSets.set(sets);
     } catch (error) {
       this.logger.error('Error loading interest sets:', error);
       this.snackBar.open('Error loading interests', 'Close', { duration: 3000 });

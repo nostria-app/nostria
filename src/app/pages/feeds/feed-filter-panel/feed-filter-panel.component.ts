@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
 
@@ -51,9 +52,29 @@ function isStandardKindsSelection(kinds: number[]): boolean {
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
+    MatButtonToggleModule,
   ],
   template: `
     <div class="filter-panel" (click)="$event.stopPropagation()">
+      <!-- Authored / Mentioned toggle - only shown for list feeds -->
+      @if (isListFeed()) {
+        <div class="source-mode-section">
+          <div class="section-label">Show events where list members are</div>
+          <mat-button-toggle-group
+            [value]="currentMentionedMode() ? 'mentioned' : 'authored'"
+            (change)="onSourceModeChange($event.value)">
+            <mat-button-toggle value="authored">
+              <mat-icon>edit</mat-icon>
+              <span>Authored</span>
+            </mat-button-toggle>
+            <mat-button-toggle value="mentioned">
+              <mat-icon>alternate_email</mat-icon>
+              <span>Mentioned</span>
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+      }
+
       <!-- Custom Filter Warning -->
       @if (hasCustomFilter()) {
         <div class="custom-filter-notice">
@@ -280,6 +301,32 @@ function isStandardKindsSelection(kinds: number[]): boolean {
     .action-btn:disabled {
       opacity: 0.5;
     }
+
+    .source-mode-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-label {
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .source-mode-section mat-button-toggle-group {
+      width: 100%;
+    }
+
+    .source-mode-section mat-button-toggle {
+      flex: 1;
+    }
+
+    .source-mode-section mat-button-toggle mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      margin-right: 0.375rem;
+    }
   `]
 })
 export class FeedFilterPanelComponent {
@@ -289,10 +336,20 @@ export class FeedFilterPanelComponent {
   // Input: the feed to configure (if provided, saves to feed; otherwise uses global)
   feed = input<FeedConfig | undefined>(undefined);
 
+  // Input: whether the filter panel is being shown for a list feed
+  isListFeed = input(false);
+
+  // Input: current mentioned mode state from parent
+  mentionedMode = input(false);
+
   // Output events for filter changes (kept for backward compatibility)
   kindsChanged = output<number[]>();
   showRepliesChanged = output<boolean>();
   showRepostsChanged = output<boolean>();
+  mentionedModeChanged = output<boolean>();
+
+  // Compute the current mentioned mode from input
+  currentMentionedMode = computed(() => this.mentionedMode());
 
   // Compute available content types (all types for now, could be filtered based on feed type)
   availableContentTypes = computed(() => CONTENT_TYPES);
@@ -392,6 +449,13 @@ export class FeedFilterPanelComponent {
    */
   onShowRepliesChange(checked: boolean): void {
     this.updateShowReplies(checked);
+  }
+
+  /**
+   * Handle source mode change (authored vs mentioned)
+   */
+  onSourceModeChange(mode: string): void {
+    this.mentionedModeChanged.emit(mode === 'mentioned');
   }
 
   /**
