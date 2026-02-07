@@ -3,7 +3,6 @@ import {
   inject,
   signal,
   output,
-  effect,
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -15,7 +14,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoggerService } from '../../../services/logger.service';
-import { AccountStateService } from '../../../services/account-state.service';
 import { FollowSetsService, FollowSet } from '../../../services/follow-sets.service';
 import { CollectionSetsService, InterestSet } from '../../../services/collection-sets.service';
 
@@ -271,7 +269,6 @@ export interface InterestFeedSelection {
 })
 export class ListFeedMenuComponent {
   private logger = inject(LoggerService);
-  private accountState = inject(AccountStateService);
   private followSetsService = inject(FollowSetsService);
   private collectionSetsService = inject(CollectionSetsService);
 
@@ -282,7 +279,6 @@ export class ListFeedMenuComponent {
   // State
   selectedList = signal<string>('');
   selectedInterest = signal<string>('');
-  private lastLoadedPubkey = '';
 
   // Expose service signals for people lists, with Favorites at top then sorted alphabetically
   followSets = computed(() =>
@@ -296,38 +292,11 @@ export class ListFeedMenuComponent {
   );
   isLoading = this.followSetsService.isLoading;
 
-  // Interest sets state
-  interestSets = signal<InterestSet[]>([]);
-  isLoadingInterests = signal(false);
-
-  constructor() {
-    // Load follow sets and interest sets when account changes
-    effect(() => {
-      const pubkey = this.accountState.pubkey();
-      if (pubkey && pubkey !== this.lastLoadedPubkey) {
-        this.lastLoadedPubkey = pubkey;
-        // Follow sets are loaded automatically by the service when account changes
-        this.logger.debug('[ListFeedMenu] Account changed, follow sets will be loaded by service');
-
-        // Load interest sets
-        this.loadInterestSets(pubkey);
-      }
-    });
-  }
-
-  private async loadInterestSets(pubkey: string): Promise<void> {
-    this.isLoadingInterests.set(true);
-    try {
-      const sets = await this.collectionSetsService.getInterestSets(pubkey);
-      this.interestSets.set(sets);
-      this.logger.debug('[ListFeedMenu] Loaded interest sets:', sets.length);
-    } catch (error) {
-      this.logger.error('[ListFeedMenu] Error loading interest sets:', error);
-      this.interestSets.set([]);
-    } finally {
-      this.isLoadingInterests.set(false);
-    }
-  }
+  // Interest sets - consume the reactive signal from CollectionSetsService via computed()
+  // Using computed() ensures Angular tracks this as a reactive dependency even when
+  // the template renders inside a mat-menu overlay (CDK portal outside component tree)
+  interestSets = computed(() => this.collectionSetsService.interestSets());
+  isLoadingInterests = computed(() => this.collectionSetsService.interestSetsLoading());
 
   onSelectList(list: FollowSet): void {
     if (list.pubkeys.length === 0) {

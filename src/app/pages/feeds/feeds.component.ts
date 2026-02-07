@@ -216,6 +216,7 @@ export class FeedsComponent implements OnDestroy {
   // List feed state - for showing posts from people lists
   activeListFeed = signal<ListFeedData | null>(null);
   showListFeed = computed(() => !!this.activeListFeed());
+  listMentionedMode = signal(false);
   @ViewChild('listFeedMenu') listFeedMenu?: ListFeedMenuComponent;
   @ViewChild('listColumn') listColumn?: ListColumnComponent;
 
@@ -1543,6 +1544,7 @@ export class FeedsComponent implements OnDestroy {
    */
   closeListFeed(): void {
     this.activeListFeed.set(null);
+    this.listMentionedMode.set(false);
     this.listFeedMenu?.clearSelection();
     
     this.router.navigate(['/f'], {
@@ -1688,6 +1690,14 @@ export class FeedsComponent implements OnDestroy {
   onShowRepostsChanged(_showReposts: boolean): void {
     // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
     // No per-feed update needed
+  }
+
+  /**
+   * Handle mentioned mode changed from filter panel (list feeds only)
+   * Toggles between showing events authored by list members vs. events mentioning them.
+   */
+  onMentionedModeChanged(mentioned: boolean): void {
+    this.listMentionedMode.set(mentioned);
   }
 
   /**
