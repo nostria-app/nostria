@@ -135,6 +135,15 @@ export class ListColumnComponent implements OnDestroy {
   // Track previous mentionedMode to detect changes
   private previousMentionedMode = false;
 
+  // Pagination cursor for mentioned mode (oldest event timestamp)
+  private mentionedUntilCursor = signal<number | null>(null);
+  // Whether more mentioned events can potentially be fetched from relays
+  private mentionedHasMore = signal(true);
+  // Guard against concurrent relay fetches
+  private isFetchingMoreMentioned = false;
+  // Count consecutive fetches that returned no new events, to stop pagination
+  private mentionedEmptyFetchCount = 0;
+
   private loadMoreTriggerElement?: HTMLDivElement;
 
   @ViewChild('loadMoreTrigger')
@@ -201,23 +210,38 @@ export class ListColumnComponent implements OnDestroy {
   // Computed signals
   displayedEvents = computed(() => this.filteredEvents().slice(0, this.displayCount()));
   hasEvents = computed(() => this.displayedEvents().length > 0);
-  hasMore = computed(() => this.displayCount() < this.filteredEvents().length);
+  // In mentioned mode, we can always fetch more from relays until the relay returns nothing.
+  // In authored mode, we only paginate through the locally-loaded set.
+  hasMore = computed(() => {
+    const localHasMore = this.displayCount() < this.filteredEvents().length;
+    if (localHasMore) return true;
+    // In mentioned mode, there may be older events on the relay
+    if (this.mentionedMode() && this.mentionedHasMore()) return true;
+    return false;
+  });
 
   constructor() {
-    // Load events when list data or mentionedMode changes
+    // Load events when list data or mentionedMode changes.
+    // IMPORTANT: Only call loadEventsFromList when the list or mode actually changed.
+    // Without this guard, signal writes inside loadEventsFromList (isLoading, allEvents, etc.)
+    // could cause the effect to re-trigger in an infinite loop.
     effect(() => {
       const data = this.listData();
       const mentioned = this.mentionedMode();
       if (data && data.pubkeys.length > 0) {
-        // Check if this is a different list or mode changed
+        // Only load when the list or mode actually changed
         if (this.currentListDTag !== data.dTag || this.previousMentionedMode !== mentioned) {
           // Clear existing events immediately when switching lists or modes
           this.allEvents.set([]);
           this.displayCount.set(PAGE_SIZE);
+          this.mentionedUntilCursor.set(null);
+          this.mentionedHasMore.set(true);
+          this.isFetchingMoreMentioned = false;
+          this.mentionedEmptyFetchCount = 0;
           this.currentListDTag = data.dTag;
           this.previousMentionedMode = mentioned;
+          this.loadEventsFromList(data, mentioned);
         }
-        this.loadEventsFromList(data, mentioned);
       } else {
         this.allEvents.set([]);
         this.displayCount.set(PAGE_SIZE);
@@ -269,7 +293,10 @@ export class ListColumnComponent implements OnDestroy {
         // No local database query since we index by author, not by tags
         this.isLoadingFromRelays.set(true);
         try {
-          await this.loadMentionedEventsFromRelays(pubkeys);
+          const count = await this.loadMentionedEventsFromRelays(pubkeys);
+          if (count === 0) {
+            this.mentionedHasMore.set(false);
+          }
         } finally {
           this.isLoadingFromRelays.set(false);
         }
@@ -363,23 +390,47 @@ export class ListColumnComponent implements OnDestroy {
    * Unlike authored mode, we can't use the outbox model here since we don't know
    * who authored the events. Instead, we query account relays with #p tag filters.
    * Pubkeys are batched to avoid creating overly large filters.
+   *
+   * @param until Optional cursor: only fetch events older than this timestamp
+   * @returns The number of new (previously unseen) events fetched
    */
-  private async loadMentionedEventsFromRelays(pubkeys: string[]): Promise<void> {
-    const allLoadedEvents: Event[] = [];
+  private async loadMentionedEventsFromRelays(pubkeys: string[], until?: number): Promise<number> {
+    const existingIds = new Set(this.allEvents().map(e => e.id));
+    const allLoadedEvents: Event[] = [...this.allEvents()];
     const kinds = [1, 6, 30023]; // Notes, reposts, articles
     const batchSize = 10;
+    let newEventCount = 0;
+    // Track the oldest timestamp from THIS fetch (not the global pool)
+    // to advance the cursor even when all events are duplicates.
+    let oldestInThisFetch: number | null = null;
 
     for (let i = 0; i < pubkeys.length; i += batchSize) {
       const batch = pubkeys.slice(i, i + batchSize);
 
       try {
-        const events = await this.accountRelay.getMany({
+        const filter: Record<string, unknown> = {
           kinds,
           '#p': batch,
           limit: batch.length * 15,
-        }, { timeout: 8000 });
+        };
+        if (until !== undefined) {
+          filter['until'] = until - 1; // exclusive: fetch strictly older
+        }
 
-        allLoadedEvents.push(...events);
+        const events = await this.accountRelay.getMany(filter as any, { timeout: 8000 });
+
+        for (const event of events) {
+          // Track oldest from this fetch regardless of duplication
+          if (oldestInThisFetch === null || event.created_at < oldestInThisFetch) {
+            oldestInThisFetch = event.created_at;
+          }
+
+          if (!existingIds.has(event.id)) {
+            existingIds.add(event.id);
+            allLoadedEvents.push(event);
+            newEventCount++;
+          }
+        }
       } catch (err) {
         this.logger.debug(`[ListColumn] Failed to fetch mentioned events for batch ${i / batchSize}:`, err);
       }
@@ -388,7 +439,14 @@ export class ListColumnComponent implements OnDestroy {
       this.updateEventsState(allLoadedEvents);
     }
 
-    this.logger.info(`[ListColumn] Loaded ${allLoadedEvents.length} total mentioned events from list`);
+    // Advance the cursor based on what the relay returned in THIS fetch,
+    // so the next page query skips past these events even if they were all duplicates.
+    if (oldestInThisFetch !== null) {
+      this.mentionedUntilCursor.set(oldestInThisFetch);
+    }
+
+    this.logger.info(`[ListColumn] Loaded ${newEventCount} new mentioned events (${allLoadedEvents.length} total)`);
+    return newEventCount;
   }
 
   private updateEventsState(events: Event[]): void {
@@ -420,6 +478,73 @@ export class ListColumnComponent implements OnDestroy {
   }
 
   loadMore(): void {
-    this.displayCount.update(count => count + PAGE_SIZE);
+    const localHasMore = this.displayCount() < this.filteredEvents().length;
+
+    if (localHasMore) {
+      // Still have locally loaded events to show
+      this.displayCount.update(count => count + PAGE_SIZE);
+    } else if (this.mentionedMode() && this.mentionedHasMore() && !this.isFetchingMoreMentioned) {
+      // In mentioned mode with all local events displayed — fetch the next page from relays
+      this.fetchNextMentionedPage();
+    }
+  }
+
+  /**
+   * Fetch the next page of mentioned events using time-based cursor pagination.
+   * Uses the oldest event's timestamp as the `until` parameter.
+   * After fetching, shows all loaded events and re-checks if the scroll trigger
+   * is still visible to chain further fetches for continuous scrolling.
+   */
+  private async fetchNextMentionedPage(): Promise<void> {
+    const data = this.listData();
+    if (!data || data.pubkeys.length === 0) return;
+
+    this.isFetchingMoreMentioned = true;
+    this.isLoadingMore.set(true);
+
+    try {
+      const cursor = this.mentionedUntilCursor();
+      const newEvents = await this.loadMentionedEventsFromRelays(data.pubkeys, cursor ?? undefined);
+
+      if (newEvents === 0) {
+        this.mentionedEmptyFetchCount++;
+        // Stop if the relay returned nothing, or if we've had 3 consecutive
+        // fetches with no new unique events (all duplicates / cursor not advancing)
+        if (this.mentionedEmptyFetchCount >= 3) {
+          this.mentionedHasMore.set(false);
+        }
+      } else {
+        this.mentionedEmptyFetchCount = 0;
+        // Show all loaded events (they were just fetched on demand, no reason to hide them)
+        this.displayCount.set(this.filteredEvents().length);
+      }
+    } catch (err) {
+      this.logger.error('[ListColumn] Error fetching next mentioned page:', err);
+    } finally {
+      this.isLoadingMore.set(false);
+      this.isFetchingMoreMentioned = false;
+
+      // The IntersectionObserver won't re-fire if the trigger element stayed in the
+      // viewport during the async fetch. Manually check and chain another fetch.
+      this.checkLoadMoreTriggerVisibility();
+    }
+  }
+
+  /**
+   * Manually check if the load-more trigger element is currently visible in the viewport.
+   * If it is and we still have more to load, trigger another loadMore() call.
+   * This bridges the gap where the IntersectionObserver won't re-fire because the
+   * trigger element never left/re-entered the viewport during an async fetch.
+   */
+  private checkLoadMoreTriggerVisibility(): void {
+    if (!this.loadMoreTriggerElement || !this.hasMore() || this.isLoadingMore()) return;
+
+    const rect = this.loadMoreTriggerElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    // Check if the trigger is within the viewport + 200px margin (matching the observer's rootMargin)
+    if (rect.top < viewportHeight + 200) {
+      this.loadMore();
+    }
   }
 }
