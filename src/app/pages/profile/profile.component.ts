@@ -432,7 +432,33 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
             // When in right panel, we want to preserve the main route (e.g., /people) for bookmarking
             const shouldUpdateUrl = this.route.outlet !== 'right';
 
-            if (id.startsWith('npub')) {
+            if (id.startsWith('nprofile')) {
+              try {
+                const decoded = nip19.decode(id);
+                if (decoded.type === 'nprofile') {
+                  const profileData = decoded.data as { pubkey: string };
+                  id = profileData.pubkey;
+                }
+              } catch (e) {
+                this.logger.warn('Failed to decode nprofile:', e);
+                this.error.set('Invalid profile identifier');
+                this.isLoading.set(false);
+                return;
+              }
+
+              // Update URL to use npub or username
+              if (shouldUpdateUrl) {
+                const identifier: string = id;
+                this.username.getUsername(id).then(username => {
+                  if (username) {
+                    this.url.updatePathSilently(['/u', username]);
+                  } else {
+                    const encoded = nip19.npubEncode(identifier);
+                    this.url.updatePathSilently(['/p', encoded]);
+                  }
+                });
+              }
+            } else if (id.startsWith('npub')) {
               id = this.utilities.getPubkeyFromNpub(id);
 
               // First update URL to have npub in URL.
@@ -799,13 +825,13 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
         throw new Error('Failed to get hex pubkey');
       }
 
-      // Get relay hints from account relays
-      const relays = this.accountRelay.getRelayUrls();
+      // Get relay hints for the profile being viewed (not the current user's relays)
+      const relays = this.userRelayService.getRelaysForPubkey(hexPubkey);
 
       // Encode nprofile with pubkey and relay hints
       const nprofile = nip19.nprofileEncode({
         pubkey: hexPubkey,
-        relays: relays.slice(0, 5), // Include up to 5 relays
+        relays: relays.slice(0, 1), // Include 1 relay hint for the profile
       });
 
       this.copyToClipboard(nprofile, 'nprofile');
@@ -900,10 +926,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     }
 
     // Otherwise, use nprofile with relay hints for better discoverability
-    const relays = this.accountRelay.getRelayUrls();
+    // Use the profile's relays (not the current user's) for the hint
+    const relays = this.userRelayService.getRelaysForPubkey(pubkey);
     const nprofile = nip19.nprofileEncode({
       pubkey: pubkey,
-      relays: relays.slice(0, 3), // Include up to 3 relays
+      relays: relays.slice(0, 1), // Include 1 relay hint for the profile
     });
 
     return `https://nostria.app/p/${nprofile}`;
