@@ -15,7 +15,6 @@ import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
-import { ScrollStateService } from '../../../services/scroll-state.service';
 import { SettingsService } from '../../../services/settings.service';
 import { LayoutService } from '../../../services/layout.service';
 import { IntersectionObserverService } from '../../../services/intersection-observer.service';
@@ -32,7 +31,6 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private elementRef = inject(ElementRef);
   private hoverCardService = inject(ProfileHoverCardService);
   readonly utilities = inject(UtilitiesService);
-  private scrollState = inject(ScrollStateService);
   private settingsService = inject(SettingsService);
   private layout = inject(LayoutService);
   private readonly intersectionObserverService = inject(IntersectionObserverService);
@@ -109,33 +107,10 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // If a prefetched profile is provided, initialize local profile with it
-    // This prevents redundant fetches when parent has already loaded the profile
-    effect(() => {
-      const pref = this.prefetchedProfile();
-      if (pref) {
-        this.profile.set(pref as unknown as Record<string, unknown>);
-        // Mark as loaded to prevent redundant fetches
-        this.isLoading.set(false);
-      }
-    });
-
-    // Effect to trigger load when scrolling stops if the component is visible but not loaded
-    effect(() => {
-      const isScrolling = this.scrollState.isScrolling();
-      const isVisible = this.isVisible();
-      const profile = this.profile();
-      const isLoading = this.isLoading();
-      const pubkey = this.normalizedPubkey();
-
-      if (!isScrolling && isVisible && !profile && !isLoading && pubkey) {
-        untracked(() => {
-          this.debouncedLoadProfileData(pubkey);
-        });
-      }
-    });
-
     // Set up an effect to watch for changes to pubkey input
+    // This must run BEFORE the prefetchedProfile effect so that when both inputs
+    // change simultaneously (e.g., CDK virtual scroll recycling), the pubkey effect
+    // clears old data first, then the prefetchedProfile effect sets the new data.
     effect(() => {
       const pubkey = this.normalizedPubkey();
 
@@ -154,15 +129,51 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         this.publicKey = pubkey;
 
         untracked(() => {
+          // Check prefetched profile first (passed from parent, e.g., batch-loaded)
+          // This is critical for virtual scroll recycling where both pubkey and
+          // prefetchedProfile inputs change at the same time
+          const prefetched = this.prefetchedProfile();
+          if (prefetched) {
+            this.profile.set(prefetched as unknown as Record<string, unknown>);
+            this.isLoading.set(false);
+            return;
+          }
+
           // Try to get cached profile synchronously first for instant display
           const cachedProfile = this.data.getCachedProfile(pubkey);
           if (cachedProfile) {
             this.profile.set(cachedProfile);
             this.isLoading.set(false);
-          } else if (this.isVisible() && !this.scrollState.isScrolling()) {
-            // Only load profile data when the component is visible and not scrolling
+          } else if (this.isVisible()) {
+            // Load profile data when the component is visible
             this.debouncedLoadProfileData(pubkey);
           }
+        });
+      }
+    });
+
+    // If a prefetched profile is provided (or updated later after batch load),
+    // initialize local profile with it. This runs AFTER the pubkey effect so it
+    // won't be overwritten when both inputs change simultaneously.
+    effect(() => {
+      const pref = this.prefetchedProfile();
+      if (pref) {
+        this.profile.set(pref as unknown as Record<string, unknown>);
+        // Mark as loaded to prevent redundant fetches
+        this.isLoading.set(false);
+      }
+    });
+
+    // Effect to trigger load when the component becomes visible and profile is not loaded
+    effect(() => {
+      const isVisible = this.isVisible();
+      const profile = this.profile();
+      const isLoading = this.isLoading();
+      const pubkey = this.normalizedPubkey();
+
+      if (isVisible && !profile && !isLoading && pubkey) {
+        untracked(() => {
+          this.debouncedLoadProfileData(pubkey);
         });
       }
     });
@@ -208,7 +219,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         // Update visibility state
         this.isVisible.set(isIntersecting);
 
-        if (isIntersecting && !this.scrollState.isScrolling()) {
+        if (isIntersecting) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
             this.debouncedLoadProfileData(this.normalizedPubkey());
@@ -248,8 +259,8 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
 
     // Set a new timer
     this.debouncedLoadTimer = window.setTimeout(() => {
-      // Only proceed if we're visible and not currently scrolling
-      if (this.isVisible() && !this.scrollState.isScrolling()) {
+      // Only proceed if we're visible
+      if (this.isVisible()) {
         this.loadProfileData(pubkeyValue);
       }
     }, this.DEBOUNCE_TIME);
