@@ -68,7 +68,7 @@ describe('MediaPlayerService - Media Session API', () => {
     expect(setActionHandlerSpy).not.toHaveBeenCalled();
   });
 
-  it('should handle missing Media Session API gracefully', () => {
+  it('should handle missing Media Session API gracefully', async () => {
     // Remove mediaSession from navigator
     Object.defineProperty(navigator, 'mediaSession', {
       value: undefined,
@@ -76,14 +76,31 @@ describe('MediaPlayerService - Media Session API', () => {
       configurable: true,
     });
 
-    // Create a new service instance without mediaSession
-    const newService = new MediaPlayerService();
+    // Recreate the service through TestBed with undefined mediaSession
+    const testBed = TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        MediaPlayerService,
+        { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+        { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => {}, removeItem: () => {} } },
+        { provide: LayoutService, useValue: {} },
+        { provide: UtilitiesService, useValue: {} },
+        { provide: WakeLockService, useValue: {} },
+        { provide: OfflineMusicService, useValue: {} },
+        { provide: AccountStateService, useValue: { pubkey: () => null } },
+        { provide: AccountLocalStateService, useValue: {} },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: Router, useValue: {} },
+      ],
+    });
+    
+    const newService = testBed.inject(MediaPlayerService);
     
     // Should not throw any errors during construction
     expect(newService).toBeTruthy();
   });
 
-  it('should handle partial Media Session API support', () => {
+  it('should handle partial Media Session API support', async () => {
     // Simulate environment where navigator.mediaSession exists but is null/undefined
     Object.defineProperty(navigator, 'mediaSession', {
       value: null,
@@ -91,8 +108,26 @@ describe('MediaPlayerService - Media Session API', () => {
       configurable: true,
     });
 
+    // Recreate service through TestBed
+    const testBed = TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        MediaPlayerService,
+        { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+        { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => {}, removeItem: () => {} } },
+        { provide: LayoutService, useValue: {} },
+        { provide: UtilitiesService, useValue: {} },
+        { provide: WakeLockService, useValue: {} },
+        { provide: OfflineMusicService, useValue: {} },
+        { provide: AccountStateService, useValue: { pubkey: () => null } },
+        { provide: AccountLocalStateService, useValue: {} },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: Router, useValue: {} },
+      ],
+    });
+
     // Should not throw errors
-    const newService = new MediaPlayerService();
+    const newService = testBed.inject(MediaPlayerService);
     expect(newService).toBeTruthy();
   });
 
@@ -102,7 +137,7 @@ describe('MediaPlayerService - Media Session API', () => {
     expect(isSupported).toBe(true);
   });
 
-  it('should detect when Media Session API is not supported', () => {
+  it('should detect when Media Session API is not supported', async () => {
     // Remove mediaSession
     Object.defineProperty(navigator, 'mediaSession', {
       value: undefined,
@@ -110,13 +145,31 @@ describe('MediaPlayerService - Media Session API', () => {
       configurable: true,
     });
 
+    // Recreate service through TestBed
+    const testBed = TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        MediaPlayerService,
+        { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+        { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => {}, removeItem: () => {} } },
+        { provide: LayoutService, useValue: {} },
+        { provide: UtilitiesService, useValue: {} },
+        { provide: WakeLockService, useValue: {} },
+        { provide: OfflineMusicService, useValue: {} },
+        { provide: AccountStateService, useValue: { pubkey: () => null } },
+        { provide: AccountLocalStateService, useValue: {} },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: Router, useValue: {} },
+      ],
+    });
+
     // Check support on a fresh instance
-    const newService = new MediaPlayerService();
+    const newService = testBed.inject(MediaPlayerService);
     const isSupported = (newService as any).isMediaSessionSupported;
     expect(isSupported).toBe(false);
   });
 
-  it('should not set playbackState when Media Session API is unavailable', () => {
+  it('should not set playbackState when Media Session API is unavailable', async () => {
     // Remove mediaSession
     Object.defineProperty(navigator, 'mediaSession', {
       value: undefined,
@@ -124,14 +177,32 @@ describe('MediaPlayerService - Media Session API', () => {
       configurable: true,
     });
 
-    const newService = new MediaPlayerService();
+    // Recreate service through TestBed
+    const testBed = TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        MediaPlayerService,
+        { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+        { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => {}, removeItem: () => {} } },
+        { provide: LayoutService, useValue: {} },
+        { provide: UtilitiesService, useValue: {} },
+        { provide: WakeLockService, useValue: {} },
+        { provide: OfflineMusicService, useValue: {} },
+        { provide: AccountStateService, useValue: { pubkey: () => null } },
+        { provide: AccountLocalStateService, useValue: {} },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: Router, useValue: {} },
+      ],
+    });
+
+    const newService = testBed.inject(MediaPlayerService);
     
     // Try to pause (which normally sets playbackState)
     // Should not throw error
     expect(() => newService.pause()).not.toThrow();
   });
 
-  it('should handle errors when initializing media session handlers', () => {
+  it('should handle errors when initializing media session handlers', async () => {
     // Mock setActionHandler to throw an error
     const errorMediaSession = {
       setActionHandler: jasmine.createSpy('setActionHandler').and.throwError('Test error'),
@@ -145,7 +216,25 @@ describe('MediaPlayerService - Media Session API', () => {
       configurable: true,
     });
 
-    const newService = new MediaPlayerService();
+    // Recreate service through TestBed
+    const testBed = TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        MediaPlayerService,
+        { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+        { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => {}, removeItem: () => {} } },
+        { provide: LayoutService, useValue: {} },
+        { provide: UtilitiesService, useValue: {} },
+        { provide: WakeLockService, useValue: {} },
+        { provide: OfflineMusicService, useValue: {} },
+        { provide: AccountStateService, useValue: { pubkey: () => null } },
+        { provide: AccountLocalStateService, useValue: {} },
+        { provide: DomSanitizer, useValue: {} },
+        { provide: Router, useValue: {} },
+      ],
+    });
+
+    const newService = testBed.inject(MediaPlayerService);
     
     // Call the private initializeMediaSession method
     // Should catch the error and not crash

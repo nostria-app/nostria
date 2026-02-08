@@ -168,8 +168,19 @@ export class MediaPlayerService implements OnInitialized {
 
   /**
    * Initialize Media Session API handlers
-   * Called lazily when playback starts to avoid crashes during bootstrap in environments
-   * where the Media Session API is not available (e.g., embedded Android WebViews)
+   * 
+   * This method is called lazily when playback starts (not during service construction)
+   * to avoid crashes during Angular bootstrap in environments where the Media Session API
+   * is not available (e.g., embedded Android WebViews like Keychat).
+   * 
+   * The Media Session API allows integration with system media controls (play/pause buttons,
+   * lock screen controls, etc.), but is not universally supported. This method:
+   * - Checks if the API is supported before attempting to use it
+   * - Sets up action handlers for play, pause, seek, and track navigation
+   * - Only initializes once (tracked by mediaSessionInitialized flag)
+   * - Catches and logs any initialization errors without crashing the app
+   * 
+   * @see isMediaSessionSupported for feature detection logic
    */
   private initializeMediaSession(): void {
     // Skip if already initialized or not supported
