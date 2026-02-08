@@ -119,7 +119,7 @@ export class LoggerService {
   timeEnd(label: string): void {
     if (this.shouldLog('debug') && this.timers[label]) {
       const duration = performance.now() - this.timers[label];
-      console.log(...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`));
+      console.debug(...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`));
       delete this.timers[label];
     }
   }
