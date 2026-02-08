@@ -132,9 +132,8 @@ export class ReportingService {
     }
 
     // Check for muted words in content
-    const content = event.content?.toLowerCase() || '';
     const mutedWords = this.mutedWords();
-    if (mutedWords.some(word => content.includes(word.toLowerCase()))) {
+    if (ReportingService.contentContainsMutedWord(event.content, mutedWords)) {
       return true;
     }
 
@@ -149,7 +148,7 @@ export class ReportingService {
 
   /**
    * Check if an author's profile contains any muted words.
-   * Checks name, display_name, and nip05 fields.
+   * Checks name, display_name, and nip05 fields using word boundary matching.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -188,11 +187,57 @@ export class ReportingService {
       });
     }
 
-    // Check if any muted word appears in any of the profile fields
-    return mutedWords.some(word => {
-      const lowerWord = word.toLowerCase();
-      return fieldsToCheck.some(field => field.includes(lowerWord));
-    });
+    // Check if any muted word appears as a whole word in any of the profile fields
+    return ReportingService.fieldsContainMutedWord(fieldsToCheck, mutedWords);
+  }
+
+  /**
+   * Regex to match nostr URIs (npub, nprofile, note, nevent, naddr) and HTTP(S) URLs.
+   * These are stripped from content before muted word matching to avoid
+   * false positives from encoded identifiers (e.g., "gm" inside an npub string).
+   */
+  private static readonly NOSTR_URI_AND_URL_REGEX =
+    /nostr:(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+|https?:\/\/\S+/gi;
+
+  /**
+   * Strip nostr URIs and URLs from content so muted word matching
+   * only applies to human-readable text, not encoded identifiers.
+   */
+  static stripNostrUrisAndUrls(content: string): string {
+    return content.replace(ReportingService.NOSTR_URI_AND_URL_REGEX, ' ');
+  }
+
+  /**
+   * Check if a muted word appears as a whole word in the given text.
+   * Uses word boundary matching to avoid false positives from substrings
+   * (e.g., muting "gm" should not match "programming").
+   */
+  static wordMatchesMutedWord(text: string, mutedWord: string): boolean {
+    const escaped = mutedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(text);
+  }
+
+  /**
+   * Check if event content contains any muted word as a whole word.
+   * Strips nostr URIs and URLs first to prevent false positives
+   * from encoded identifiers.
+   */
+  static contentContainsMutedWord(content: string | undefined, mutedWords: string[]): boolean {
+    if (!content || mutedWords.length === 0) return false;
+    const cleaned = ReportingService.stripNostrUrisAndUrls(content);
+    return mutedWords.some(word => ReportingService.wordMatchesMutedWord(cleaned, word));
+  }
+
+  /**
+   * Check if any of the given text fields contain a muted word as a whole word.
+   * Used for profile field matching (name, display_name, nip05).
+   */
+  static fieldsContainMutedWord(fields: string[], mutedWords: string[]): boolean {
+    if (fields.length === 0 || mutedWords.length === 0) return false;
+    return mutedWords.some(word =>
+      fields.some(field => ReportingService.wordMatchesMutedWord(field, word))
+    );
   }
 
   /**
