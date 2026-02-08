@@ -932,12 +932,19 @@ export class NostrService implements NostriaService {
       backdropClass: 'signing-dialog-backdrop',
     });
 
+    // Capture a local reference so the afterClosed handler can verify it's still the
+    // active dialog.  Without this, a previous dialog's afterClosed (which fires
+    // asynchronously after dialog.close()) could null-out currentSigningDialogRef that
+    // already points to a *new* dialog, causing the new dialog to never be closed.
+    const localDialogRef = this.currentSigningDialogRef;
+
     // Create a promise that rejects if the user closes the dialog
     const dialogClosedPromise = new Promise<never>((_, reject) => {
-      this.currentSigningDialogRef?.afterClosed().subscribe(() => {
-        // Only reject if the dialog was closed by user action, not by our code
-        // We set currentSigningDialogRef to null before closing programmatically
-        if (this.currentSigningDialogRef) {
+      localDialogRef.afterClosed().subscribe(() => {
+        // Only reject if THIS dialog is still the active one and was closed by user
+        // action, not by our code. We set currentSigningDialogRef to null before
+        // closing programmatically, so if it still matches, the user dismissed it.
+        if (this.currentSigningDialogRef === localDialogRef) {
           this.currentSigningDialogRef = null;
           reject(new Error('Signing cancelled by user'));
         }
