@@ -1708,8 +1708,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // Remove like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', false);
 
-        const success = await this.reactionService.deleteReaction(existingLikeReaction.event);
-        if (!success) {
+        const result = await this.reactionService.deleteReaction(existingLikeReaction.event);
+        if (!result.success) {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', true);
           this.snackBar.open('Failed to remove like. Please try again.', 'Dismiss', { duration: 3000 });
@@ -1718,8 +1718,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // Add like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', true);
 
-        const success = await this.reactionService.addLike(targetEvent);
-        if (!success) {
+        const result = await this.reactionService.addLike(targetEvent);
+        if (!result.success) {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });

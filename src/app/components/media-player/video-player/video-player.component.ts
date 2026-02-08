@@ -17,6 +17,10 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { CastService } from '../../../services/cast.service';
+import {
+  toggleFullscreen as fullscreenToggle,
+  addFullscreenChangeListener,
+} from '../../../utils/fullscreen';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
@@ -56,6 +60,7 @@ export class VideoPlayerComponent implements OnDestroy {
   isHoveringControlsBar = signal(false);
   isNativeFullscreen = signal(false);
 
+  private fullscreenCleanup: (() => void) | null = null;
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly AUTO_HIDE_DELAY = 3000;
   // Flag to ignore mouse events briefly after entering fullscreen
@@ -87,11 +92,13 @@ export class VideoPlayerComponent implements OnDestroy {
     if (this.touchInteractionTimeout) {
       clearTimeout(this.touchInteractionTimeout);
     }
-    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    if (this.fullscreenCleanup) {
+      this.fullscreenCleanup();
+      this.fullscreenCleanup = null;
+    }
   }
 
-  private fullscreenChangeHandler = () => {
-    const isFullscreen = !!document.fullscreenElement;
+  private onFullscreenChange = (isFullscreen: boolean) => {
     this.isNativeFullscreen.set(isFullscreen);
 
     // Move CDK overlay container into/out of fullscreen element for menus to work
@@ -125,7 +132,10 @@ export class VideoPlayerComponent implements OnDestroy {
   };
 
   private setupFullscreenListener(): void {
-    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    this.fullscreenCleanup = addFullscreenChangeListener(
+      this.videoElement?.nativeElement,
+      this.onFullscreenChange
+    );
   }
 
   registerVideoElement(): void {
@@ -185,15 +195,10 @@ export class VideoPlayerComponent implements OnDestroy {
 
   async requestNativeFullscreen(): Promise<void> {
     const videoWrapper = document.querySelector('.video-wrapper');
-    if (!videoWrapper) return;
+    const video = this.videoElement?.nativeElement;
 
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await videoWrapper.requestFullscreen();
-      }
-    } catch {
+    const success = await fullscreenToggle(videoWrapper, video);
+    if (!success) {
       // Fullscreen not supported, fall back to expand
       this.toggleFullscreen();
     }

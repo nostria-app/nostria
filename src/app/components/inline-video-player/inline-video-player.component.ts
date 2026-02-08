@@ -19,6 +19,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { formatDuration } from '../../utils/format-duration';
+import {
+  toggleFullscreen as fullscreenToggle,
+  isInFullscreen,
+  addFullscreenChangeListener,
+} from '../../utils/fullscreen';
 import { VideoControlsComponent } from '../video-controls/video-controls.component';
 import { CastService } from '../../services/cast.service';
 
@@ -107,12 +112,13 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Only auto-played videos should be auto-paused when leaving viewport
   private wasAutoPlayed = signal(false);
 
-  private readonly fullscreenChangeHandler = () => {
-    const isFullscreen = !!document.fullscreenElement;
-    this.isFullscreen.set(isFullscreen);
+  private fullscreenCleanup: (() => void) | null = null;
+
+  private readonly onFullscreenChange = (fullscreen: boolean) => {
+    this.isFullscreen.set(fullscreen);
 
     const overlayContainerEl = this.overlayContainer.getContainerElement();
-    if (isFullscreen) {
+    if (fullscreen) {
       const fullscreenElement = document.fullscreenElement;
       if (fullscreenElement && overlayContainerEl) {
         fullscreenElement.appendChild(overlayContainerEl);
@@ -167,8 +173,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       } else {
         // Video left viewport - pause if currently playing
         // But don't pause if we're in fullscreen mode (fullscreen changes viewport intersection)
-        const isFullscreen = !!document.fullscreenElement;
-        if (!video.paused && !isFullscreen) {
+        if (!video.paused && !isInFullscreen(video)) {
           video.pause();
         }
       }
@@ -199,7 +204,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
 
     if (isPlatformBrowser(this.platformId)) {
-      document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
+      this.fullscreenCleanup = addFullscreenChangeListener(
+        this.videoElement?.nativeElement,
+        this.onFullscreenChange
+      );
     }
   }
 
@@ -212,8 +220,9 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.intersectionObserver.disconnect();
     }
 
-    if (isPlatformBrowser(this.platformId)) {
-      document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    if (isPlatformBrowser(this.platformId) && this.fullscreenCleanup) {
+      this.fullscreenCleanup();
+      this.fullscreenCleanup = null;
     }
 
     // Clean up blob URL if created
@@ -413,17 +422,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   async toggleFullscreen(): Promise<void> {
     const container = this.videoElement?.nativeElement?.parentElement;
-    if (!container) return;
+    const video = this.videoElement?.nativeElement;
+    if (!container && !video) return;
 
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await container.requestFullscreen();
-      }
-    } catch {
-      // Fullscreen not supported
-    }
+    await fullscreenToggle(container, video);
   }
 
   async pictureInPicture(): Promise<void> {

@@ -28,6 +28,11 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { CastService } from '../../../services/cast.service';
+import {
+  toggleFullscreen as fullscreenToggle,
+  isInFullscreen,
+  addFullscreenChangeListener,
+} from '../../../utils/fullscreen';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UserRelaysService } from '../../../services/relays/user-relays';
@@ -85,6 +90,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   @ViewChild(VideoControlsComponent)
   videoControlsRef?: VideoControlsComponent;
+
+  private fullscreenCleanup: (() => void) | null = null;
 
   private eventSubscription: { close: () => void } | null = null;
   private currentStreamId: string | null = null;
@@ -197,9 +204,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     });
   }
 
-  private fullscreenChangeHandler = () => {
-    const isFullscreen = !!document.fullscreenElement;
-    console.log('[LiveStream] fullscreenChangeHandler, isFullscreen:', isFullscreen, 'fullscreenElement:', document.fullscreenElement);
+  private onFullscreenChange = (isFullscreen: boolean) => {
+    console.log('[LiveStream] fullscreenChangeHandler, isFullscreen:', isFullscreen);
     this.isNativeFullscreen.set(isFullscreen);
 
     // Move CDK overlay container into/out of fullscreen element for menus to work
@@ -226,11 +232,17 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if (this.eventSubscription) {
       this.eventSubscription.close();
     }
-    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    if (this.fullscreenCleanup) {
+      this.fullscreenCleanup();
+      this.fullscreenCleanup = null;
+    }
   }
 
   private setupFullscreenListener(): void {
-    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
+    this.fullscreenCleanup = addFullscreenChangeListener(
+      this.videoElement?.nativeElement,
+      this.onFullscreenChange
+    );
   }
 
   private subscribeToEventUpdates(event: Event): void {
@@ -304,8 +316,10 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       this.location.replaceState(`/stream/${encoded}`);
     } else if (!isExpanding) {
       // Minimizing - exit native fullscreen if active
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
+      if (isInFullscreen(this.videoElement?.nativeElement)) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
       }
       // Navigate to streams page to show content
       this.router.navigate(['/streams'], { replaceUrl: true });
@@ -384,13 +398,9 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   async onNativeFullscreenToggle(): Promise<void> {
     const container = document.querySelector('.live-stream-container');
-    if (!container) return;
+    const video = this.videoElement?.nativeElement;
 
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await container.requestFullscreen();
-    }
+    await fullscreenToggle(container, video);
   }
 
   async castToDevice(): Promise<void> {

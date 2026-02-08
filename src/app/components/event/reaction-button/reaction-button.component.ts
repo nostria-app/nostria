@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +21,7 @@ import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { LoggerService } from '../../../services/logger.service';
+import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = [
@@ -290,10 +291,12 @@ interface EmojiSetGroup {
     MatMenuModule,
     MatProgressSpinnerModule,
     MatTabsModule,
-    RouterLink
+    RouterLink,
+    CustomDialogComponent
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReactionButtonComponent {
   private readonly eventService = inject(EventService);
@@ -319,6 +322,8 @@ export class ReactionButtonComponent {
   recentEmojis = signal<RecentEmoji[]>([]);
   activeTabIndex = signal<number>(0);
   emojiSearchQuery = signal<string>('');
+  showSigningErrorDialog = signal<boolean>(false);
+  signingErrorMessage = signal<string>('');
 
   // Emoji categories for tabbed display
   readonly emojiCategories = EMOJI_CATEGORIES;
@@ -531,10 +536,10 @@ export class ReactionButtonComponent {
     this.isLoadingReactions.set(true);
     try {
       this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
-      const success = await this.reactionService.deleteReaction(reaction.event);
-      if (!success) {
+      const result = await this.reactionService.deleteReaction(reaction.event);
+      if (!result.success) {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
-        this.snackBar.open('Failed to remove reaction. Please try again.', 'Dismiss', { duration: 3000 });
+        this.handleReactionError(result.error, 'Failed to remove reaction. Please try again.');
       } else {
         // Notify parent to reload reactions
         this.reactionChanged.emit();
@@ -574,10 +579,10 @@ export class ReactionButtonComponent {
       }
 
       this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
-      const success = await this.reactionService.addReaction(emoji, event, emojiUrl);
-      if (!success) {
+      const result = await this.reactionService.addReaction(emoji, event, emojiUrl);
+      if (!result.success) {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
-        this.snackBar.open('Failed to add reaction. Please try again.', 'Dismiss', { duration: 3000 });
+        this.handleReactionError(result.error, 'Failed to add reaction. Please try again.');
       } else {
         // Track emoji usage for recent emojis
         this.trackEmojiUsage(emoji, emojiUrl);
@@ -613,21 +618,21 @@ export class ReactionButtonComponent {
         // Remove like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', false);
 
-        const success = await this.reactionService.deleteReaction(existingLikeReaction.event);
-        if (!success) {
+        const result = await this.reactionService.deleteReaction(existingLikeReaction.event);
+        if (!result.success) {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', true);
-          this.snackBar.open('Failed to remove like. Please try again.', 'Dismiss', { duration: 3000 });
+          this.handleReactionError(result.error, 'Failed to remove like. Please try again.');
         }
       } else {
         // Add like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', true);
 
-        const success = await this.reactionService.addLike(event);
-        if (!success) {
+        const result = await this.reactionService.addLike(event);
+        if (!result.success) {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
-          this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
+          this.handleReactionError(result.error, 'Failed to add like. Please try again.');
         }
       }
 
@@ -639,6 +644,27 @@ export class ReactionButtonComponent {
     } finally {
       this.isLoadingReactions.set(false);
     }
+  }
+
+  isExtensionError(error?: string): boolean {
+    if (!error) return false;
+    return error.includes('Nostr extension not found') ||
+      error.includes('NIP-07') ||
+      error.includes('extension');
+  }
+
+  handleReactionError(error: string | undefined, fallbackMessage: string): void {
+    if (this.isExtensionError(error)) {
+      this.signingErrorMessage.set(error!);
+      this.showSigningErrorDialog.set(true);
+    } else {
+      this.snackBar.open(fallbackMessage, 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  closeSigningErrorDialog(): void {
+    this.showSigningErrorDialog.set(false);
+    this.signingErrorMessage.set('');
   }
 
   async loadReactions(invalidateCache = false) {

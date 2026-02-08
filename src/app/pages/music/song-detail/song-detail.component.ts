@@ -649,9 +649,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     this.isLiking.set(true);
-    this.reactionService.addLike(ev).then(success => {
+    this.reactionService.addLike(ev).then(result => {
       this.isLiking.set(false);
-      if (success) {
+      if (result.success) {
         this.isLiked.set(true);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {

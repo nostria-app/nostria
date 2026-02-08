@@ -19,6 +19,10 @@ import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
 import { formatDuration } from '../../utils/format-duration';
+import {
+  toggleFullscreen as fullscreenToggle,
+  isInFullscreen,
+} from '../../utils/fullscreen';
 
 interface VideoData {
   url: string;
@@ -139,7 +143,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       }
 
       // Don't pause if we're in fullscreen mode (fullscreen changes viewport intersection)
-      const isFullscreen = !!document.fullscreenElement;
+      const isFullscreen = isInFullscreen(videoElement);
 
       // Pause video when leaving viewport (for ALL video types, not just short form)
       // But don't pause if we're in fullscreen mode
@@ -552,13 +556,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   toggleFullscreen(): void {
     const container = this.hostElement.nativeElement.querySelector('.video-player-container');
-    if (!container) return;
+    const video = this.videoPlayerRef?.nativeElement;
+    if (!container && !video) return;
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      container.requestFullscreen().catch(() => { /* Fullscreen not supported */ });
-    }
+    fullscreenToggle(container, video);
   }
 
   onVideoDoubleClick(event: MouseEvent): void {

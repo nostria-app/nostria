@@ -627,8 +627,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
 
     try {
-      const success = await this.reactionService.addReaction(emoji, message.event);
-      if (success) {
+      const result = await this.reactionService.addReaction(emoji, message.event);
+      if (result.success) {
         // Optimistically update UI - but check again to prevent duplicates
         this.messages.update(msgs => {
           return msgs.map(msg => {
