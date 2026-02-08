@@ -15,6 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { firstValueFrom } from 'rxjs';
 import { AiService } from '../../services/ai.service';
+import { LoggerService } from '../../services/logger.service';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 
 interface ModelInfo {
@@ -53,6 +54,7 @@ interface ModelInfo {
 export class AiComponent implements OnInit {
   private aiService = inject(AiService);
   private dialog = inject(MatDialog);
+  private readonly logger = inject(LoggerService);
 
   displayedColumns: string[] = ['info', 'size', 'status', 'actions'];
 
@@ -235,7 +237,7 @@ export class AiComponent implements OnInit {
       });
       this.updateModelStatus(model.id, { loaded: true, cached: true });
     } catch (err) {
-      console.error(err);
+      this.logger.error(err);
     } finally {
       this.updateModelStatus(model.id, { loading: false });
     }
@@ -297,14 +299,14 @@ export class AiComponent implements OnInit {
         do_sample: true,
         return_full_text: false
       }) as { generated_text: string }[];
-      console.log('Generate result:', result);
+      this.logger.debug('Generate result:', result);
       if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
         this.outputText.set(result[0].generated_text.trim());
       } else {
         this.outputText.set(JSON.stringify(result, null, 2));
       }
     } catch (err) {
-      console.error('Generate error:', err);
+      this.logger.error('Generate error:', err);
       this.outputText.set('Error: ' + err);
     } finally {
       this.isGenerating.set(false);
@@ -382,7 +384,7 @@ export class AiComponent implements OnInit {
         this.playAudio(result.blob);
       }
     } catch (err) {
-      console.error('Speech error', err);
+      this.logger.error('Speech error', err);
     } finally {
       this.isSpeaking.set(false);
     }

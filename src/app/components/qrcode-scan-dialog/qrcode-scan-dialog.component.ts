@@ -56,7 +56,7 @@ export class
       try {
         await this.initializeCamera();
       } catch (error) {
-        console.error('Failed to initialize camera:', error);
+        this.logger.error('Failed to initialize camera:', error);
 
         // Provide more specific error messages
         if (error instanceof Error) {
@@ -85,7 +85,7 @@ export class
         try {
           await this.listAvailableCameras();
         } catch (listError) {
-          console.error('Failed to list cameras:', listError);
+          this.logger.error('Failed to list cameras:', listError);
         }
       }
     }, 100);
@@ -107,10 +107,10 @@ export class
         }));
 
       this.availableCameras.set(videoDevices);
-      console.log('Available cameras (fallback):', videoDevices);
+      this.logger.debug('Available cameras (fallback):', videoDevices);
       return videoDevices;
     } catch (error) {
-      console.error('Failed to enumerate devices:', error);
+      this.logger.error('Failed to enumerate devices:', error);
       return [];
     }
   }
@@ -147,7 +147,7 @@ export class
       // Start scanning
       this.startScanning();
     } catch (error) {
-      console.error('Error in initializeCamera:', error);
+      this.logger.error('Error in initializeCamera:', error);
       throw error;
     }
   }
@@ -352,7 +352,7 @@ export class
       this.currentCameraIndex.set(nextIndex);
       this.currentDevice.set(nextCamera);
     } catch (error) {
-      console.error('Failed to switch camera:', error);
+      this.logger.error('Failed to switch camera:', error);
       this.errorMessage.set('Failed to switch camera');
     }
   }
@@ -371,7 +371,7 @@ export class
 
       if (deviceId) {
         // Try specific camera
-        console.log('Trying specific camera:', deviceId);
+        this.logger.debug('Trying specific camera:', deviceId);
 
         // Create camera with specific device
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -424,7 +424,7 @@ export class
       // Start scanning
       this.startScanning();
     } catch (error) {
-      console.error('Failed to switch to different camera:', error);
+      this.logger.error('Failed to switch to different camera:', error);
       if (error instanceof Error) {
         this.errorMessage.set(`Failed to switch camera: ${error.message}`);
       } else {

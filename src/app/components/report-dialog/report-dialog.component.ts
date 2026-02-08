@@ -22,6 +22,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { PublishService } from '../../services/publish.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface ReportDialogData {
   target: ReportTarget;
@@ -72,6 +73,7 @@ export class ReportDialogComponent {
   private layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
   private publishService = inject(PublishService);
+  private readonly logger = inject(LoggerService);
 
   selectedReportType = signal<ReportType>('spam');
   reportDescription = signal<string>('');
@@ -114,7 +116,7 @@ export class ReportDialogComponent {
           const relays = await this.discoveryRelay.getUserRelayUrls(this.data.target.pubkey);
           this.authorRelays.set(relays || []);
         } catch (error) {
-          console.error('Error loading author relays:', error);
+          this.logger.error('Error loading author relays:', error);
           this.authorRelays.set([]);
         } finally {
           this.loadingAuthorRelays.set(false);
@@ -229,7 +231,7 @@ export class ReportDialogComponent {
       const publishPromises = await this.accountRelay.publishToRelay(signedEvent, targetRelays);
 
       if (!publishPromises) {
-        console.error('Error during publishing: No promises returned.');
+        this.logger.error('Error during publishing: No promises returned.');
         return;
       }
 
@@ -273,7 +275,7 @@ export class ReportDialogComponent {
         this.dialogRef.close(true);
       }, 2000);
     } catch (error) {
-      console.error('Error submitting report:', error);
+      this.logger.error('Error submitting report:', error);
       this.snackBar.open('Failed to submit report', 'Dismiss', {
         duration: 3000,
       });
@@ -334,7 +336,7 @@ export class ReportDialogComponent {
         });
       }
     } catch (error) {
-      console.error('Error blocking target:', error);
+      this.logger.error('Error blocking target:', error);
       this.snackBar.open('Failed to block target', 'Dismiss', {
         duration: 3000,
       });

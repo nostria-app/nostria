@@ -21,6 +21,7 @@ import { nip19 } from 'nostr-tools';
 import { AudioPlayerComponent } from '../../../components/audio-player/audio-player.component';
 import { VideoControlsComponent } from '../../../components/video-controls/video-controls.component';
 import { LayoutService } from '../../../services/layout.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-media-details',
@@ -48,6 +49,7 @@ export class MediaDetailsComponent {
   private nostr = inject(NostrService);
   private publishService = inject(PublishService);
   private destroyRef = inject(DestroyRef);
+  private readonly logger = inject(LoggerService);
 
   // Video element reference for video controls
   videoElement = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
@@ -113,7 +115,7 @@ export class MediaDetailsComponent {
       const text = await response.text();
       this.textContent.set(text);
     } catch (error) {
-      console.error('Error fetching text content:', error);
+      this.logger.error('Error fetching text content:', error);
       this.textContent.set('Error loading text content');
     } finally {
       this.textLoading.set(false);
@@ -289,7 +291,7 @@ export class MediaDetailsComponent {
       this.snackBar.open('Failed to download media', 'Close', {
         duration: 3000,
       });
-      console.error('Download error:', error);
+      this.logger.error('Download error:', error);
     }
   }
 
@@ -418,7 +420,7 @@ export class MediaDetailsComponent {
         });
       }
     } catch (error) {
-      console.error('Error publishing media:', error);
+      this.logger.error('Error publishing media:', error);
       this.snackBar.open('Failed to publish media', 'Close', {
         duration: 3000,
       });

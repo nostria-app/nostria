@@ -20,6 +20,7 @@ import { DataService } from '../../services/data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { ParsingService, ContentToken } from '../../services/parsing.service';
+import { LoggerService } from '../../services/logger.service';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
@@ -443,6 +444,7 @@ export class MessageContentComponent {
   private relayPool = inject(RelayPoolService);
   private userRelayService = inject(UserRelayService);
   private parsing = inject(ParsingService);
+  private readonly logger = inject(LoggerService);
 
   content = input.required<string>();
 
@@ -625,7 +627,7 @@ export class MessageContentComponent {
           return null;
       }
     } catch (error) {
-      console.warn('Failed to parse nostr URI:', uri, error);
+      this.logger.warn('Failed to parse nostr URI:', uri, error);
       return null;
     }
   }
@@ -721,7 +723,7 @@ export class MessageContentComponent {
             });
           }
         } catch (error) {
-          console.error('Error loading event:', error);
+          this.logger.error('Error loading event:', error);
           eventMentionsMap.set(part.id, {
             event: null,
             contentTokens: [],

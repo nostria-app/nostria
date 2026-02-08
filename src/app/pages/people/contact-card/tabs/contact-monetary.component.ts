@@ -15,6 +15,7 @@ import { AccountStateService } from '../../../../services/account-state.service'
 import { AgoPipe } from '../../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../../pipes/timestamp.pipe';
 import { LayoutService } from '../../../../services/layout.service';
+import { LoggerService } from '../../../../services/logger.service';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -52,6 +53,7 @@ export class ContactMonetaryComponent {
   private data = inject(DataService);
   private snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
+  private logger = inject(LoggerService);
 
   isLoading = signal(false);
   allZaps = signal<ZapHistoryEntry[]>([]);
@@ -169,7 +171,7 @@ export class ContactMonetaryComponent {
 
       this.allZaps.set(zapHistory);
     } catch (error) {
-      console.error('Failed to load zap history for contact:', error);
+      this.logger.error('Failed to load zap history for contact:', error);
     } finally {
       this.isLoading.set(false);
       this.loadingInProgress = false;
@@ -194,7 +196,7 @@ export class ContactMonetaryComponent {
         duration: 3000,
       });
     } catch (error) {
-      console.error('Failed to copy event data:', error);
+      this.logger.error('Failed to copy event data:', error);
       this.snackBar.open('Failed to copy event data', 'Dismiss', {
         duration: 3000,
       });

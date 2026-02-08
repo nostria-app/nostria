@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MediaService } from '../../../services/media.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-media-upload-dialog',
@@ -31,6 +32,7 @@ export class MediaUploadDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent>);
   private fb = inject(FormBuilder);
   private mediaService = inject(MediaService);
+  private readonly logger = inject(LoggerService);
 
   uploadForm: FormGroup;
   selectedFile = signal<File | null>(null);
@@ -161,7 +163,7 @@ export class MediaUploadDialogComponent {
       // Clean up
       URL.revokeObjectURL(videoUrl);
     } catch (error) {
-      console.error('Failed to extract video thumbnail:', error);
+      this.logger.error('Failed to extract video thumbnail:', error);
       this.videoThumbnailUrl.set(null);
     } finally {
       this.extractingThumbnail.set(false);

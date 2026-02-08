@@ -11,6 +11,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface TranslateDialogData {
   content: string;
@@ -36,6 +37,7 @@ export class TranslateDialogComponent {
   private dialogRef = inject(MatDialogRef<TranslateDialogComponent>);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
+  private logger = inject(LoggerService);
   data: TranslateDialogData = inject(MAT_DIALOG_DATA);
   ai = inject(AiService);
 
@@ -141,7 +143,6 @@ export class TranslateDialogComponent {
         // We should probably try to load it.
         await this.ai.loadModel('translation', model, (data: unknown) => {
           // Handle progress if needed
-          console.log('Loading progress', data);
         });
       }
 

@@ -810,7 +810,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.layout.openArticle(naddr);
         return;
       } catch (err) {
-        console.error('[Summary] Failed to encode article naddr:', err);
+        this.logger.error('[Summary] Failed to encode article naddr:', err);
         // Fall through to regular event handling
       }
     }
@@ -854,7 +854,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       // Pass the event to avoid re-fetching
       this.layout.openArticle(naddr, event as Event);
     } catch (err) {
-      console.error('[Summary] Failed to encode article naddr:', err);
+      this.logger.error('[Summary] Failed to encode article naddr:', err);
       // Fallback to event dialog
       this.layout.openGenericEvent(event.id);
     }

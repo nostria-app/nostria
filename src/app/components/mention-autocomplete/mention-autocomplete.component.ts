@@ -23,6 +23,7 @@ import { UserDataService } from '../../services/user-data.service';
 import { NostrRecord } from '../../interfaces';
 import { nip19 } from 'nostr-tools';
 import { FollowingService } from '../../services/following.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface MentionSelection {
   pubkey: string;
@@ -132,6 +133,7 @@ export class MentionAutocompleteComponent {
   private readonly database = inject(DatabaseService);
   private readonly userData = inject(UserDataService);
   readonly utilities = inject(UtilitiesService);
+  private readonly logger = inject(LoggerService);
 
   // Inputs
   config = input.required<MentionAutocompleteConfig | null>();
@@ -251,7 +253,7 @@ export class MentionAutocompleteComponent {
 
       this.searchResults.set(mergedResults);
     } catch (error) {
-      console.warn('[MentionAutocomplete] Error searching cached profiles:', error);
+      this.logger.warn('[MentionAutocomplete] Error searching cached profiles:', error);
       // Fall back to just following results
       this.searchResults.set(followingRecords.slice(0, this.maxResults()));
     } finally {
@@ -336,7 +338,7 @@ export class MentionAutocompleteComponent {
 
       return `nostr:${nprofile}`;
     } catch (error) {
-      console.warn('Failed to create nprofile URI, falling back to npub:', error);
+      this.logger.warn('Failed to create nprofile URI, falling back to npub:', error);
 
       // Fallback to npub if nprofile fails
       const npub = nip19.npubEncode(pubkey);

@@ -480,7 +480,7 @@ export class MediaComponent {
               await this.mediaService.deleteFile(id);
               deletedCount++;
             } catch (err) {
-              console.error(`Failed to delete item ${id}:`, err);
+              this.logger.error(`Failed to delete item ${id}:`, err);
             }
           }
 
@@ -533,7 +533,7 @@ export class MediaComponent {
 
             await new Promise(resolve => setTimeout(resolve, 300));
           } catch (err) {
-            console.error(`Failed to download ${item.url}:`, err);
+            this.logger.error(`Failed to download ${item.url}:`, err);
           }
         }
       }
@@ -578,7 +578,7 @@ export class MediaComponent {
               await this.mediaService.mirrorFile(item.sha256, item.url);
               mirroredCount++;
             } catch (err) {
-              console.error(`Failed to mirror item ${item.sha256}:`, err);
+              this.logger.error(`Failed to mirror item ${item.sha256}:`, err);
             }
           }
 
@@ -809,7 +809,7 @@ export class MediaComponent {
         return null;
       }
     } catch (error) {
-      console.error('Error publishing media:', error);
+      this.logger.error('Error publishing media:', error);
       return null;
     }
   }
@@ -891,7 +891,7 @@ export class MediaComponent {
           thumbnailUrls.push(...uniqueUrls);
         }
       } catch (error) {
-        console.error('Failed to upload thumbnail during publish:', error);
+        this.logger.error('Failed to upload thumbnail during publish:', error);
       }
     } else if (thumbnailUrl) {
       thumbnailUrls.push(thumbnailUrl);

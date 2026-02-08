@@ -19,6 +19,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { VideoFilterService, PhotoAdjustments } from '../../../services/video-filter.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { LoggerService } from '../../../services/logger.service';
 import { nip19, NostrEvent } from 'nostr-tools';
 
 export interface MediaCreatorResult {
@@ -68,6 +69,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   filterService = inject(VideoFilterService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private utilities = inject(UtilitiesService);
+  private readonly logger = inject(LoggerService);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
@@ -307,7 +309,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
         this.isCameraReady.set(true);
       }
     } catch (error: unknown) {
-      console.error('Camera error:', error);
+      this.logger.error('Camera error:', error);
       const message = error instanceof Error ? error.message : 'Could not access camera';
       this.cameraError.set(message);
       this.stopCamera();
@@ -506,7 +508,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
         files.map(f => f.id === mediaFile.id ? { ...f, blurhash: result.blurhash } : f)
       );
     } catch (error) {
-      console.error('Failed to generate blurhash:', error);
+      this.logger.error('Failed to generate blurhash:', error);
     }
   }
 
@@ -528,7 +530,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
         files.map(f => f.id === mediaFile.id ? { ...f, blurhash: placeholders.blurhash } : f)
       );
     } catch (error) {
-      console.error('Failed to extract video thumbnail:', error);
+      this.logger.error('Failed to extract video thumbnail:', error);
     }
   }
 
@@ -850,7 +852,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
       });
 
     } catch (error) {
-      console.error('Failed to publish media:', error);
+      this.logger.error('Failed to publish media:', error);
       this.snackBar.open('Failed to publish media', 'Close', { duration: 5000 });
       this.publishGuard = false;
     } finally {
@@ -925,7 +927,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
               }
             }
           } catch (error) {
-            console.error('Failed to upload thumbnail:', error);
+            this.logger.error('Failed to upload thumbnail:', error);
           }
         }
 

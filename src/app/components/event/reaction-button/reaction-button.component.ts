@@ -20,6 +20,7 @@ import { EmojiSetService } from '../../../services/emoji-set.service';
 import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
+import { LoggerService } from '../../../services/logger.service';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = [
@@ -305,6 +306,7 @@ export class ReactionButtonComponent {
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);
   private readonly userData = inject(UserDataService);
+  private readonly logger = inject(LoggerService);
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -451,7 +453,7 @@ export class ReactionButtonComponent {
           // Load emoji sets grouped by set for tabbed display
           await this.loadEmojiSetsGrouped(pubkey);
         } catch (error) {
-          console.error('Failed to load custom emojis for reactions:', error);
+          this.logger.error('Failed to load custom emojis for reactions:', error);
           this.customEmojis.set([]);
           this.emojiSets.set([]);
         }
@@ -858,7 +860,7 @@ export class ReactionButtonComponent {
 
       this.emojiSets.set(sets);
     } catch (error) {
-      console.error('Failed to load emoji sets grouped:', error);
+      this.logger.error('Failed to load emoji sets grouped:', error);
       this.emojiSets.set([]);
     }
   }

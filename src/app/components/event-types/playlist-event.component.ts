@@ -15,6 +15,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { PlaylistService } from '../../services/playlist.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DataService } from '../../services/data.service';
+import { LoggerService } from '../../services/logger.service';
 import { MusicEventComponent } from './music-event.component';
 
 interface PlaylistTrack {
@@ -55,6 +56,7 @@ export class PlaylistEventComponent {
   private playlistService = inject(PlaylistService);
   private snackBar = inject(MatSnackBar);
   private dataService = inject(DataService);
+  private logger = inject(LoggerService);
 
   layout = inject(LayoutService);
 
@@ -147,7 +149,7 @@ export class PlaylistEventComponent {
         this.snackBar.open('Playlist saved to bookmarks', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to toggle save playlist:', error);
+      this.logger.error('Failed to toggle save playlist:', error);
       this.snackBar.open('Failed to update saved playlists', 'Close', { duration: 3000 });
     }
   }
@@ -156,12 +158,12 @@ export class PlaylistEventComponent {
     const tracks = this.trackEvents();
 
     if (tracks.length === 0) {
-      console.warn('No tracks in playlist');
+      this.logger.warn('No tracks in playlist');
       this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 
-    console.log('Playing playlist:', playlistData.title, 'Tracks:', tracks.length);
+    this.logger.debug('Playing playlist:', playlistData.title, 'Tracks:', tracks.length);
 
     // Clear current queue and add all tracks
     this.mediaPlayerService.clearQueue();
@@ -199,12 +201,12 @@ export class PlaylistEventComponent {
     const tracks = this.trackEvents();
 
     if (tracks.length === 0) {
-      console.warn('No tracks in playlist');
+      this.logger.warn('No tracks in playlist');
       this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 
-    console.log('Adding playlist to queue:', playlistData.title, 'Tracks:', tracks.length);
+    this.logger.debug('Adding playlist to queue:', playlistData.title, 'Tracks:', tracks.length);
 
     // Convert track events to MediaItems and add to queue
     const mediaItems: MediaItem[] = tracks.map((trackEvent, index) => {
@@ -261,8 +263,6 @@ export class PlaylistEventComponent {
 
     // Clean up
     URL.revokeObjectURL(url);
-
-    console.log(`Downloaded M3U file: ${m3uFilename}`);
   }
 
   private generateEnhancedM3U(event: Event): string {
@@ -365,7 +365,7 @@ export class PlaylistEventComponent {
         totalDuration,
       };
     } catch (error) {
-      console.error('Failed to parse playlist data:', error);
+      this.logger.error('Failed to parse playlist data:', error);
       return null;
     }
   }
@@ -447,10 +447,10 @@ export class PlaylistEventComponent {
     // Get all 'a' tags that reference track events (kind 36787)
     const aTags = event.tags.filter(tag => tag[0] === 'a');
 
-    console.log('[PlaylistEvent] Loading tracks from a-tags:', aTags.length);
+    this.logger.debug('[PlaylistEvent] Loading tracks from a-tags:', aTags.length);
 
     if (aTags.length === 0) {
-      console.log('[PlaylistEvent] No a-tags found in playlist event');
+      this.logger.debug('[PlaylistEvent] No a-tags found in playlist event');
       return;
     }
 
@@ -469,7 +469,7 @@ export class PlaylistEventComponent {
         const [kindStr, pubkey, dTag] = parts;
         const kind = parseInt(kindStr, 10);
 
-        console.log(`[PlaylistEvent] Loading track: kind=${kind}, pubkey=${pubkey.substring(0, 8)}..., dTag=${dTag}`);
+        this.logger.debug(`[PlaylistEvent] Loading track: kind=${kind}, pubkey=${pubkey.substring(0, 8)}..., dTag=${dTag}`);
 
         // Only load track events (kind 36787)
         if (kind !== 36787) continue;
@@ -483,17 +483,17 @@ export class PlaylistEventComponent {
           );
 
           if (record && record.event) {
-            console.log(`[PlaylistEvent] Successfully loaded track: ${record.event.id}`);
+            this.logger.debug(`[PlaylistEvent] Successfully loaded track: ${record.event.id}`);
             tracks.push(record.event);
           } else {
-            console.warn(`[PlaylistEvent] Track not found: ${coordinate}`);
+            this.logger.warn(`[PlaylistEvent] Track not found: ${coordinate}`);
           }
         } catch (error) {
-          console.error(`[PlaylistEvent] Failed to load track ${coordinate}:`, error);
+          this.logger.error(`[PlaylistEvent] Failed to load track ${coordinate}:`, error);
         }
       }
 
-      console.log(`[PlaylistEvent] Loaded ${tracks.length} tracks total`);
+      this.logger.debug(`[PlaylistEvent] Loaded ${tracks.length} tracks total`);
       this.trackEvents.set(tracks);
     } finally {
       this.loadingTracks.set(false);

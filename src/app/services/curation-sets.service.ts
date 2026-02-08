@@ -407,14 +407,14 @@ export class CurationSetsService {
       const eventRefTags = event.tags.filter(tag => tag[0] === 'e');
       const addressableRefTags = event.tags.filter(tag => tag[0] === 'a');
 
-      console.log('[CurationSets] Parsing event:', event.id.substring(0, 16), '| identifier:', identifier, '| kind:', kind);
-      console.log('[CurationSets] Raw tags:', JSON.stringify(event.tags));
-      console.log('[CurationSets] Found', eventRefTags.length, 'e-tags,', addressableRefTags.length, 'a-tags');
+      this.logger.debug('[CurationSets] Parsing event:', event.id.substring(0, 16), '| identifier:', identifier, '| kind:', kind);
+      this.logger.debug('[CurationSets] Raw tags:', JSON.stringify(event.tags));
+      this.logger.debug('[CurationSets] Found', eventRefTags.length, 'e-tags,', addressableRefTags.length, 'a-tags');
       for (const tag of eventRefTags) {
-        console.log('[CurationSets]   e-tag:', { id: tag[1]?.substring(0, 16), relay: tag[2], pubkey: tag[3]?.substring(0, 16), fullTag: tag });
+        this.logger.debug('[CurationSets]   e-tag:', { id: tag[1]?.substring(0, 16), relay: tag[2], pubkey: tag[3]?.substring(0, 16), fullTag: tag });
       }
       for (const tag of addressableRefTags) {
-        console.log('[CurationSets]   a-tag:', { coordinates: tag[1], relay: tag[2], fullTag: tag });
+        this.logger.debug('[CurationSets]   a-tag:', { coordinates: tag[1], relay: tag[2], fullTag: tag });
       }
 
       return {

@@ -17,6 +17,7 @@ import { CastService } from '../../services/cast.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LoggerService } from '../../services/logger.service';
 import { formatDuration } from '../../utils/format-duration';
 
 interface VideoData {
@@ -54,7 +55,6 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   set videoPlayerRef(ref: ElementRef<HTMLVideoElement> | undefined) {
     this._videoPlayerRef = ref;
     const element = ref?.nativeElement;
-    console.log('[VideoEvent] ViewChild videoPlayer resolved:', !!element, element?.src);
     this.videoElement.set(element);
   }
   get videoPlayerRef(): ElementRef<HTMLVideoElement> | undefined {
@@ -74,6 +74,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private castService = inject(CastService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private utilities = inject(UtilitiesService);
+  private logger = inject(LoggerService);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -121,33 +122,19 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       const isShortForm = this.isShortFormVideo();
       const inViewport = this.isInViewport();
 
-      console.log('🎥 [Video AutoPlay] Effect triggered:', {
-        eventId: this.event().id.substring(0, 8),
-        shouldPlay,
-        hasVideoElement: !!videoElement,
-        isCurrentlyExpanded,
-        isBlurred,
-        inOverlayMode,
-        isShortForm,
-        inViewport
-      });
-
       // Skip if blurred or in overlay mode
       if (isBlurred || inOverlayMode) {
-        console.log('🎥 [Video AutoPlay] Skipping - blurred or overlay mode');
         return;
       }
 
       // Auto-expand when entering viewport (before we have a video element)
       if (shouldPlay && !isCurrentlyExpanded && isShortForm) {
-        console.log('🎥 [Video AutoPlay] Auto-expanding video');
         this.isExpanded.set(true);
         return; // Let the next effect run handle playing after expansion
       }
 
       // Now handle play/pause if we have a video element
       if (!videoElement) {
-        console.log('🎥 [Video AutoPlay] No video element yet');
         return;
       }
 
@@ -157,20 +144,17 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       // Pause video when leaving viewport (for ALL video types, not just short form)
       // But don't pause if we're in fullscreen mode
       if (!inViewport && isCurrentlyExpanded && !videoElement.paused && !isFullscreen) {
-        console.log('🎥 [Video AutoPlay] Pausing video (left viewport)');
         videoElement.pause();
       }
 
       // Play/pause based on viewport visibility (only for short form auto-play behavior)
       if (isCurrentlyExpanded && isShortForm) {
         if (shouldPlay) {
-          console.log('🎥 [Video AutoPlay] Playing video');
           videoElement.play().catch((error) => {
-            console.log('🎥 [Video AutoPlay] Play failed:', error);
+            this.logger.debug('[Video AutoPlay] Play failed:', error);
             // Ignore errors (e.g., user hasn't interacted with page yet)
           });
         } else {
-          console.log('🎥 [Video AutoPlay] Pausing video');
           videoElement.pause();
         }
       }
@@ -185,12 +169,6 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           entries.forEach(entry => {
             // Consider video in viewport if at least 50% is visible
             const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
-            console.log('🎥 [Video AutoPlay] Viewport change:', {
-              eventId: this.event().id.substring(0, 8),
-              isVisible,
-              intersectionRatio: entry.intersectionRatio,
-              isIntersecting: entry.isIntersecting
-            });
             this.isInViewport.set(isVisible);
           });
         },
@@ -202,7 +180,6 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
       // Observe the component's host element directly
       if (this.hostElement?.nativeElement) {
-        console.log('🎥 [Video AutoPlay] Setting up observer for event:', this.event().id.substring(0, 8));
         this.intersectionObserver.observe(this.hostElement.nativeElement);
       }
     }
@@ -269,7 +246,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const data = this.getVideoData(event);
     // Safety check: if we have a video event but no video data, something is wrong
     if (!data && (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236)) {
-      console.warn('[VideoEvent] Video event has no video data:', event.id);
+      this.logger.warn('[VideoEvent] Video event has no video data:', event.id);
     }
     return data;
   });
@@ -526,24 +503,16 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   togglePlayPause(): void {
     const video = this.videoPlayerRef?.nativeElement;
     if (!video) {
-      console.warn('[VideoEvent] togglePlayPause: No video element');
+      this.logger.warn('[VideoEvent] togglePlayPause: No video element');
       return;
     }
 
-    console.log('[VideoEvent] togglePlayPause:', {
-      paused: video.paused,
-      readyState: video.readyState,
-      networkState: video.networkState,
-      currentSrc: video.currentSrc
-    });
-
     if (video.paused) {
       video.play().catch((error) => {
-        console.error('[VideoEvent] Play failed:', error);
+        this.logger.error('[VideoEvent] Play failed:', error);
       });
     } else {
       video.pause();
-      console.log('[VideoEvent] Pause called, video.paused is now:', video.paused);
     }
   }
 
@@ -616,7 +585,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   async castToDevice(): Promise<void> {
     const video = this.videoPlayerRef?.nativeElement;
     if (!video) {
-      console.log('Cast: No video element available');
+      this.logger.debug('Cast: No video element available');
       return;
     }
 
@@ -685,7 +654,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     if (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
       const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
 
-      console.log('Video event kind:', event.kind, 'imeta tags:', imetaTags);
+      this.logger.debug('Video event kind:', event.kind, 'imeta tags:', imetaTags);
 
       // If imeta tags exist, parse them
       if (imetaTags.length > 0) {
@@ -696,7 +665,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         // Get placeholder data with dimensions from the service
         const placeholderData = this.imagePlaceholder.extractPlaceholderFromImeta(primaryImeta);
 
-        console.log('Parsed imeta tag:', parsed);
+        this.logger.debug('Parsed imeta tag:', parsed);
 
         if (parsed['url']) {
           // Get duration from dedicated duration tag
@@ -715,7 +684,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
             alt: altTag?.[1] || parsed['alt'],
           };
 
-          console.log('Video data:', videoData);
+          this.logger.debug('Video data:', videoData);
 
           return videoData;
         }
@@ -746,7 +715,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         };
       }
 
-      console.warn('No video URL found in event');
+      this.logger.warn('No video URL found in event');
       return null;
     } else {
       // Fallback for other event types

@@ -7,6 +7,7 @@ import { FeedService } from '../../services/feed.service';
 import { MetaService } from '../../services/meta.service';
 import { RelaysService } from '../../services/relays/relays';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { LoggerService } from '../../services/logger.service';
 import { Event } from 'nostr-tools';
 import { STREAM_STATE_KEY, StreamData } from '../../stream-resolver';
 import { isPlatformServer, isPlatformBrowser } from '@angular/common';
@@ -48,24 +49,25 @@ export class StreamViewerComponent implements OnInit {
   private platformId = inject(PLATFORM_ID);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
+  private readonly logger = inject(LoggerService);
 
   loading = false;
 
   constructor() {
-    console.log('[StreamViewer] ===== CONSTRUCTOR CALLED =====');
-    console.log('[StreamViewer] Constructor - isPlatformServer:', isPlatformServer(this.platformId));
+    this.logger.debug('[StreamViewer] ===== CONSTRUCTOR CALLED =====');
+    this.logger.debug('[StreamViewer] Constructor - isPlatformServer:', isPlatformServer(this.platformId));
   }
 
   async ngOnInit(): Promise<void> {
-    console.log('[StreamViewer] ngOnInit called - START');
-    console.log('[StreamViewer] isPlatformServer:', isPlatformServer(this.platformId));
-    console.log('[StreamViewer] isPlatformBrowser:', isPlatformBrowser(this.platformId));
+    this.logger.debug('[StreamViewer] ngOnInit called - START');
+    this.logger.debug('[StreamViewer] isPlatformServer:', isPlatformServer(this.platformId));
+    this.logger.debug('[StreamViewer] isPlatformBrowser:', isPlatformBrowser(this.platformId));
 
     const encodedEvent = this.route.snapshot.paramMap.get('encodedEvent');
-    console.log('[StreamViewer] Encoded event:', encodedEvent?.substring(0, 50));
+    this.logger.debug('[StreamViewer] Encoded event:', encodedEvent?.substring(0, 50));
 
     if (!encodedEvent) {
-      console.warn('[StreamViewer] No encoded event in URL');
+      this.logger.warn('[StreamViewer] No encoded event in URL');
       // Only navigate on browser
       if (isPlatformBrowser(this.platformId)) {
         this.router.navigate(['/streams']);
@@ -76,7 +78,7 @@ export class StreamViewerComponent implements OnInit {
     const eventPointer = this.utilities.decodeEventFromUrl(encodedEvent);
 
     if (!eventPointer) {
-      console.error('[StreamViewer] Failed to decode event from URL');
+      this.logger.error('[StreamViewer] Failed to decode event from URL');
       // Only navigate on browser
       if (isPlatformBrowser(this.platformId)) {
         this.router.navigate(['/streams']);
@@ -84,13 +86,13 @@ export class StreamViewerComponent implements OnInit {
       return;
     }
 
-    console.log('[StreamViewer] Event pointer decoded:', eventPointer);
+    this.logger.debug('[StreamViewer] Event pointer decoded:', eventPointer);
 
     // Fetch the event from relays
     this.loading = true;
 
     try {
-      console.log('[StreamViewer] Calling fetchEventFromRelays...');
+      this.logger.debug('[StreamViewer] Calling fetchEventFromRelays...');
       let event: Event | null;
 
       // Check if it's an naddr (kind + pubkey + identifier) or nevent (id)
@@ -106,7 +108,7 @@ export class StreamViewerComponent implements OnInit {
         // It's a nevent - fetch by ID
         event = await this.fetchEventFromRelays(eventPointer.id, eventPointer.relays);
       } else {
-        console.error('[StreamViewer] Invalid event pointer format');
+        this.logger.error('[StreamViewer] Invalid event pointer format');
         if (isPlatformBrowser(this.platformId)) {
           this.router.navigate(['/streams']);
         }
@@ -114,7 +116,7 @@ export class StreamViewerComponent implements OnInit {
       }
 
       if (!event) {
-        console.error('[StreamViewer] Event not found');
+        this.logger.error('[StreamViewer] Event not found');
         // Only navigate on browser
         if (isPlatformBrowser(this.platformId)) {
           this.router.navigate(['/streams']);
@@ -122,11 +124,11 @@ export class StreamViewerComponent implements OnInit {
         return;
       }
 
-      console.log('[StreamViewer] Event fetched successfully:', event);
+      this.logger.debug('[StreamViewer] Event fetched successfully:', event);
 
       // If on server, set meta tags for SSR
       if (isPlatformServer(this.platformId)) {
-        console.log('[StreamViewer SSR] Setting meta tags...');
+        this.logger.debug('[StreamViewer SSR] Setting meta tags...');
         this.setMetaTags(event, encodedEvent);
         this.loading = false;
       }
@@ -138,7 +140,7 @@ export class StreamViewerComponent implements OnInit {
         this.loadStream(event);
       }
     } catch (error) {
-      console.error('[StreamViewer] Error fetching stream event:', error);
+      this.logger.error('[StreamViewer] Error fetching stream event:', error);
       this.loading = false;
       // Only navigate on browser
       if (isPlatformBrowser(this.platformId)) {
@@ -146,31 +148,31 @@ export class StreamViewerComponent implements OnInit {
       }
     }
 
-    console.log('[StreamViewer] ngOnInit called - END');
+    this.logger.debug('[StreamViewer] ngOnInit called - END');
   }
 
   private async fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
-    console.log('[StreamViewer] fetchEventByAddress called:', { kind, pubkey: pubkey.substring(0, 8), identifier });
+    this.logger.debug('[StreamViewer] fetchEventByAddress called:', { kind, pubkey: pubkey.substring(0, 8), identifier });
 
     // Use relay hints if provided, otherwise use user's relays, or fall back to preferred relays
     let relaysToUse: string[];
 
     if (relayHints && relayHints.length > 0) {
       relaysToUse = relayHints;
-      console.log('[StreamViewer] Using relay hints:', relaysToUse);
+      this.logger.debug('[StreamViewer] Using relay hints:', relaysToUse);
     } else {
       const userRelays = this.accountRelay.relays().map((r: { url: string }) => r.url);
       if (userRelays.length > 0) {
         relaysToUse = userRelays;
-        console.log('[StreamViewer] Using user relays:', relaysToUse);
+        this.logger.debug('[StreamViewer] Using user relays:', relaysToUse);
       } else {
         relaysToUse = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-        console.log('[StreamViewer] Using preferred relays as fallback:', relaysToUse);
+        this.logger.debug('[StreamViewer] Using preferred relays as fallback:', relaysToUse);
       }
     }
 
     if (relaysToUse.length === 0) {
-      console.error('[StreamViewer] No relays available for fetching event');
+      this.logger.error('[StreamViewer] No relays available for fetching event');
       return null;
     }
 
@@ -178,7 +180,7 @@ export class StreamViewerComponent implements OnInit {
     const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
     try {
-      console.log('[StreamViewer] Fetching event from relays...');
+      this.logger.debug('[StreamViewer] Fetching event from relays...');
       // Fetch by kind, author, and d-tag for replaceable events
       const event = await pool.get(relaysToUse, {
         kinds: [kind],
@@ -186,10 +188,10 @@ export class StreamViewerComponent implements OnInit {
         '#d': [identifier],
       });
       pool.close(relaysToUse);
-      console.log('[StreamViewer] Event fetched:', event ? 'success' : 'not found');
+      this.logger.debug('[StreamViewer] Event fetched:', event ? 'success' : 'not found');
       return event;
     } catch (error) {
-      console.error('[StreamViewer] Error fetching event by address:', error);
+      this.logger.error('[StreamViewer] Error fetching event by address:', error);
       pool.close(relaysToUse);
       return null;
     }
@@ -226,24 +228,24 @@ export class StreamViewerComponent implements OnInit {
       pool.close(relays);
       return event;
     } catch (error) {
-      console.error('Error fetching event:', error);
+      this.logger.error('Error fetching event:', error);
       pool.close(relays);
       return null;
     }
   }
 
   private loadStream(event: Event): void {
-    console.log('[StreamViewer] loadStream called with event:', event.id);
+    this.logger.debug('[StreamViewer] loadStream called with event:', event.id);
 
     // Check stream status
     const statusTag = event.tags.find(tag => tag[0] === 'status');
     const status = statusTag?.[1] || 'planned';
 
-    console.log('[StreamViewer] Stream status:', status);
+    this.logger.debug('[StreamViewer] Stream status:', status);
 
     // If stream has ended, navigate to event details instead
     if (status === 'ended') {
-      console.log('[StreamViewer] Stream has ended, redirecting to event details');
+      this.logger.debug('[StreamViewer] Stream has ended, redirecting to event details');
       this.layout.openGenericEvent(event.id);
       return;
     }
@@ -257,10 +259,10 @@ export class StreamViewerComponent implements OnInit {
     const streamUrl = streamingTag?.[1];
     const thumbnail = imageTag?.[1];
 
-    console.log('[StreamViewer] Stream URL:', streamUrl);
+    this.logger.debug('[StreamViewer] Stream URL:', streamUrl);
 
     if (!streamUrl) {
-      console.error('No streaming URL found in event');
+      this.logger.error('No streaming URL found in event');
       // For planned or ended streams without URL, show event details
       this.layout.openGenericEvent(event.id);
       return;
@@ -300,10 +302,10 @@ export class StreamViewerComponent implements OnInit {
     const description = summaryTag?.[1] || 'Watch this live stream on Nostria';
     const image = imageTag?.[1];
 
-    console.log('[StreamViewer SSR] Setting meta tags:');
-    console.log('[StreamViewer SSR]   Title:', title);
-    console.log('[StreamViewer SSR]   Description:', description);
-    console.log('[StreamViewer SSR]   Image:', image);
+    this.logger.debug('[StreamViewer SSR] Setting meta tags:');
+    this.logger.debug('[StreamViewer SSR]   Title:', title);
+    this.logger.debug('[StreamViewer SSR]   Description:', description);
+    this.logger.debug('[StreamViewer SSR]   Image:', image);
 
     this.metaService.updateSocialMetadata({
       title,
@@ -312,6 +314,6 @@ export class StreamViewerComponent implements OnInit {
       url: `https://nostria.app/stream/${encodedEvent}`,
     });
 
-    console.log('[StreamViewer SSR] Meta tags updated');
+    this.logger.debug('[StreamViewer SSR] Meta tags updated');
   }
 }

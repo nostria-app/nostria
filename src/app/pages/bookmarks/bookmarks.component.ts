@@ -181,21 +181,21 @@ export class BookmarksComponent implements OnInit {
       const total = this.bookmarkService.bookmarkEvents().length;
       if (current < total) {
         this.displayedEventCount.set(Math.min(current + this.PAGE_SIZE, total));
-        console.log(`[Bookmarks] Loaded more events: ${this.displayedEventCount()}/${total}`);
+        this.logger.debug(`[Bookmarks] Loaded more events: ${this.displayedEventCount()}/${total}`);
       }
     } else if (category === 'articles') {
       const current = this.displayedArticleCount();
       const total = this.bookmarkService.bookmarkArticles().length;
       if (current < total) {
         this.displayedArticleCount.set(Math.min(current + this.PAGE_SIZE, total));
-        console.log(`[Bookmarks] Loaded more articles: ${this.displayedArticleCount()}/${total}`);
+        this.logger.debug(`[Bookmarks] Loaded more articles: ${this.displayedArticleCount()}/${total}`);
       }
     } else if (category === 'websites') {
       const current = this.displayedUrlCount();
       const total = this.bookmarkService.bookmarkUrls().length;
       if (current < total) {
         this.displayedUrlCount.set(Math.min(current + this.PAGE_SIZE, total));
-        console.log(`[Bookmarks] Loaded more URLs: ${this.displayedUrlCount()}/${total}`);
+        this.logger.debug(`[Bookmarks] Loaded more URLs: ${this.displayedUrlCount()}/${total}`);
       }
     }
   }

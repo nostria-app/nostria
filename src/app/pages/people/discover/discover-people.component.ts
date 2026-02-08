@@ -58,7 +58,7 @@ export class DiscoverPeopleComponent implements OnInit {
       const interests = this.followsetService.convertStarterPacksToInterests(starterPacks);
       this.availableInterests.set(interests);
     } catch (error) {
-      console.error('Failed to load starter packs:', error);
+      this.logger.error('Failed to load starter packs:', error);
     } finally {
       this.isLoadingInterests.set(false);
     }

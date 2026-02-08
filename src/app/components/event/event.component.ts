@@ -16,6 +16,7 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { LoggerService } from '../../services/logger.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
@@ -170,6 +171,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   parsingService = inject(ParsingService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
+  private readonly logger = inject(LoggerService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -183,13 +185,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Check pubkey-based muting
     const mutedAccounts = this.accountState.mutedAccounts();
     if (mutedAccounts.includes(currentEvent.pubkey)) {
-      console.log('[EventComponent] Event author is muted (pubkey):', currentEvent.pubkey.substring(0, 8));
+      this.logger.debug('[EventComponent] Event author is muted (pubkey):', currentEvent.pubkey.substring(0, 8));
       return true;
     }
 
     // Check if profile fields match any muted words
     if (this.reportingService.isProfileBlockedByMutedWord(currentEvent.pubkey)) {
-      console.log('[EventComponent] Event author is muted (profile word match):', currentEvent.pubkey.substring(0, 8));
+      this.logger.debug('[EventComponent] Event author is muted (profile word match):', currentEvent.pubkey.substring(0, 8));
       return true;
     }
 
@@ -865,11 +867,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      // Debug: Log emoji set events
-      if (event.kind === 30030) {
-        console.log('🎨 Event component: Detected emoji set event (kind 30030)', event);
-      }
-
       untracked(async () => {
         const record = this.data.toRecord(event);
         this.record.set(record);
@@ -925,11 +922,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
                 if (decoded.type === 'nevent') {
                   eventId = decoded.data.id;
                   decodedRelayHints = decoded.data.relays;
-                  console.log('[EventComponent:Load] Decoded nevent1:', {
-                    hexId: eventId.substring(0, 16) + '...',
-                    relays: decodedRelayHints,
-                    author: decoded.data.author?.substring(0, 16),
-                  });
                 }
               } else if (rawId.startsWith('naddr1')) {
                 const decoded = nip19.decode(rawId);
@@ -937,62 +929,58 @@ export class EventComponent implements AfterViewInit, OnDestroy {
                   // For addressable events, reconstruct the coordinate-based ID
                   eventId = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
                   decodedRelayHints = decoded.data.relays;
-                  console.log('[EventComponent:Load] Decoded naddr1:', {
-                    coordinates: eventId,
-                    relays: decodedRelayHints,
-                  });
                 }
               }
             } catch (e) {
-              console.warn('[EventComponent:Load] Failed to decode bech32 id, using as-is:', rawId.substring(0, 20));
+              this.logger.warn('[EventComponent:Load] Failed to decode bech32 id, using as-is:', rawId.substring(0, 20));
             }
 
             // Merge relay hints: explicit input takes priority, then decoded from bech32
             const inputHints = this.relayHints();
             const hints = (inputHints && inputHints.length > 0) ? inputHints : decodedRelayHints;
 
-            console.log('[EventComponent:Load] Starting fetch for eventId:', eventId.substring(0, 16), '| type:', type, '| hints:', hints);
+            this.logger.debug('[EventComponent:Load] Starting fetch for eventId:', eventId.substring(0, 16), '| type:', type, '| hints:', hints);
 
             try {
               let eventData = null;
 
               // If relay hints are provided (explicit or decoded from nevent/naddr), try those first
               if (hints && hints.length > 0) {
-                console.log('[EventComponent:Load] Has relay hints:', hints, '| checking cache first...');
+                this.logger.debug('[EventComponent:Load] Has relay hints:', hints, '| checking cache first...');
                 // First check cache/database
                 eventData = await this.data.getEventById(eventId, { cache: true, save: false });
-                console.log('[EventComponent:Load] Cache lookup result:', eventData ? 'FOUND' : 'NOT FOUND');
+                this.logger.debug('[EventComponent:Load] Cache lookup result:', eventData ? 'FOUND' : 'NOT FOUND');
 
                 // If not found locally, try the hinted relays
                 if (!eventData) {
-                  console.log('[EventComponent:Load] Trying hinted relays:', hints, '| eventId:', eventId);
+                  this.logger.debug('[EventComponent:Load] Trying hinted relays:', hints, '| eventId:', eventId);
                   const event = await this.relayPool.getEventById(hints, eventId, 10000);
-                  console.log('[EventComponent:Load] Relay hint fetch result:', event ? 'FOUND' : 'NOT FOUND');
+                  this.logger.debug('[EventComponent:Load] Relay hint fetch result:', event ? 'FOUND' : 'NOT FOUND');
                   if (event) {
                     eventData = this.data.toRecord(event);
                   }
                 }
               } else {
-                console.log('[EventComponent:Load] No relay hints available');
+                this.logger.debug('[EventComponent:Load] No relay hints available');
               }
 
               // Fall back to normal loading if relay hints didn't work
               if (!eventData) {
-                console.log('[EventComponent:Load] Falling back to normal getEventById for:', eventId.substring(0, 16));
+                this.logger.debug('[EventComponent:Load] Falling back to normal getEventById for:', eventId.substring(0, 16));
                 // Use cache and save options to:
                 // 1. Check in-memory cache first
                 // 2. Check database before hitting relays
                 // 3. Persist fetched events for future loads
                 eventData = await this.data.getEventById(eventId, { cache: true, save: true });
-                console.log('[EventComponent:Load] Normal fetch result:', eventData ? `FOUND (kind: ${eventData.event?.kind})` : 'NOT FOUND');
+                this.logger.debug('[EventComponent:Load] Normal fetch result:', eventData ? `FOUND (kind: ${eventData.event?.kind})` : 'NOT FOUND');
               }
 
               this.record.set(eventData);
 
               if (!eventData) {
-                console.warn('[EventComponent:Load] Event NOT FOUND after all attempts. eventId:', eventId);
+                this.logger.warn('[EventComponent:Load] Event NOT FOUND after all attempts. eventId:', eventId);
               } else {
-                console.log('[EventComponent:Load] Event loaded successfully. id:', eventData.event?.id?.substring(0, 16), '| kind:', eventData.event?.kind);
+                this.logger.debug('[EventComponent:Load] Event loaded successfully. id:', eventData.event?.id?.substring(0, 16), '| kind:', eventData.event?.kind);
               }
 
               // After loading the event by ID, check if we need to load interactions
@@ -1001,7 +989,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               // was already visible, so we need to manually trigger interaction loading
               this.checkAndLoadInteractionsIfVisible();
             } catch (error) {
-              console.error('[EventComponent:Load] Error loading event:', error, '| eventId:', eventId);
+              this.logger.error('[EventComponent:Load] Error loading event:', error, '| eventId:', eventId);
               this.loadingError.set('Failed to load event');
             } finally {
               this.isLoadingEvent.set(false);
@@ -1045,7 +1033,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       if (reportNotification && currentEvent && reportNotification.eventId === currentEvent.id) {
         untracked(async () => {
-          console.log('🚨 [Report Notification] New report detected for event:', currentEvent.id.substring(0, 8));
+          this.logger.debug('[Report Notification] New report detected for event:', currentEvent.id.substring(0, 8));
           // Reload reports with cache invalidation to get the fresh data
           await this.loadReports(true);
         });
@@ -1071,12 +1059,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // Get the reference info from the e tag
       const reference = this.repostService.getRepostReference(event);
       if (!reference) {
-        console.warn('⚠️ [Repost] No event reference found in repost:', event.id.substring(0, 8));
+        this.logger.warn('[Repost] No event reference found in repost:', event.id.substring(0, 8));
         return;
       }
 
       untracked(async () => {
-        console.log('🔄 [Repost] Loading referenced event from relay hint:',
+        this.logger.debug('[Repost] Loading referenced event from relay hint:',
           reference.eventId.substring(0, 8),
           'relay:', reference.relayHint);
 
@@ -1094,10 +1082,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
                 15000 // 15 second timeout for relay hint
               );
               if (repostedEvent) {
-                console.log('✅ [Repost] Found event from relay hint:', reference.eventId.substring(0, 8));
+                this.logger.debug('[Repost] Found event from relay hint:', reference.eventId.substring(0, 8));
               }
             } catch (error) {
-              console.debug('Relay hint fetch failed for repost:', reference.eventId, error);
+              this.logger.debug('Relay hint fetch failed for repost:', reference.eventId, error);
             }
           }
 
@@ -1106,17 +1094,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             const record = await this.data.getEventById(reference.eventId);
             if (record?.event) {
               repostedEvent = record.event;
-              console.log('✅ [Repost] Found event from data service:', reference.eventId.substring(0, 8));
+              this.logger.debug('[Repost] Found event from data service:', reference.eventId.substring(0, 8));
             }
           }
 
           if (repostedEvent) {
             this.asyncRepostedEvent.set(repostedEvent);
           } else {
-            console.warn('⚠️ [Repost] Could not find referenced event:', reference.eventId.substring(0, 8));
+            this.logger.warn('[Repost] Could not find referenced event:', reference.eventId.substring(0, 8));
           }
         } catch (error) {
-          console.error('Error loading reposted event:', error);
+          this.logger.error('Error loading reposted event:', error);
         } finally {
           this.isLoadingRepostedEvent.set(false);
         }
@@ -1141,7 +1129,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           );
           this.latestEditEvent.set(editRecord);
         } catch (error) {
-          console.error('Error loading edit event:', error);
+          this.logger.error('Error loading edit event:', error);
         } finally {
           this.isLoadingEdit.set(false);
         }
@@ -1173,11 +1161,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           const currentEventId = currentRecord?.event.id;
 
           if (!currentRecord || !currentEventId) {
-            console.warn('[Lazy Load] No record available when event became visible');
+            this.logger.warn('[Lazy Load] No record available when event became visible');
             return;
           }
 
-          console.log('[Lazy Load] Event became visible:', currentEventId.substring(0, 8));
+          this.logger.debug('[Lazy Load] Event became visible:', currentEventId.substring(0, 8));
 
           // Store which event we're loading for to prevent cross-contamination
           this.observedEventId = currentEventId;
@@ -1188,7 +1176,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           if (this.supportsReactions()) {
             // Get the target record (reposted event for reposts, regular event otherwise)
             const targetRecordData = this.targetRecord();
-            console.log('[Lazy Load] Loading interactions for visible event:',
+            this.logger.debug('[Lazy Load] Loading interactions for visible event:',
               targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
 
             // Double-check event ID before loading to prevent race conditions
@@ -1197,7 +1185,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               this.loadAllInteractions();
               this.loadZaps();
             } else {
-              console.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+              this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
             }
           }
         }
@@ -1241,7 +1229,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (isVisible) {
       const currentEventId = currentRecord.event.id;
-      console.log('👁️ [Lazy Load] Event was already visible when loaded:', currentEventId.substring(0, 8));
+      this.logger.debug('[Lazy Load] Event was already visible when loaded:', currentEventId.substring(0, 8));
 
       this.observedEventId = currentEventId;
       this.hasLoadedInteractions.set(true);
@@ -1249,7 +1237,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // Load interactions for the event
       if (this.supportsReactions()) {
         const targetRecordData = this.targetRecord();
-        console.log('🚀 [Lazy Load] Loading interactions for already-visible event:',
+        this.logger.debug('[Lazy Load] Loading interactions for already-visible event:',
           targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
 
         this.loadAllInteractions();
@@ -1286,7 +1274,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       );
       this.reports.set(reports);
     } catch (error) {
-      console.error('Error loading reports:', error);
+      this.logger.error('Error loading reports:', error);
     }
   }
 
@@ -1312,7 +1300,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // skip loading replies from relays to avoid duplicate queries
     const skipReplies = this.replyCountFromParent() !== undefined;
 
-    console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8), 'skipReplies:', skipReplies);
+    this.logger.debug('[Loading Interactions] Starting load for event:', targetEventId.substring(0, 8), 'skipReplies:', skipReplies);
 
     this.isLoadingReactions.set(true);
     try {
@@ -1337,8 +1325,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // For reposts, we compare against targetRecord which is the reposted event
       const currentTargetRecord = this.targetRecord();
       if (currentTargetRecord?.event.id !== targetEventId) {
-        console.warn('⚠️ [Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
-        console.warn('⚠️ [Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
+        this.logger.warn('[Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        this.logger.warn('[Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
         return;
       }
 
@@ -1383,7 +1371,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this._replyCountInternal.set(interactions.replyCount);
       }
     } catch (error) {
-      console.error('Error loading event interactions:', error);
+      this.logger.error('Error loading event interactions:', error);
     } finally {
       this.isLoadingReactions.set(false);
     }
@@ -1454,7 +1442,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const parentEvent = await this.eventService.loadEvent(nevent);
       this.parentEvent.set(parentEvent);
     } catch (error) {
-      console.error('Error loading parent event:', error);
+      this.logger.error('Error loading parent event:', error);
       this.parentEvent.set(null);
     } finally {
       this.isLoadingParent.set(false);
@@ -1482,7 +1470,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const rootEvent = await this.eventService.loadEvent(nevent);
       this.rootEvent.set(rootEvent);
     } catch (error) {
-      console.error('Error loading root event:', error);
+      this.logger.error('Error loading root event:', error);
       this.rootEvent.set(null);
     }
   }
@@ -1500,7 +1488,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Capture the event ID we're loading for to prevent race conditions
     const targetEventId = targetRecordData.event.id;
 
-    console.log('⚡ [Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
+    this.logger.debug('[Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
 
     try {
       const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
@@ -1509,8 +1497,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // For reposts, we compare against targetRecord which is the reposted event
       const currentTargetRecord = this.targetRecord();
       if (currentTargetRecord?.event.id !== targetEventId) {
-        console.warn('⚠️ [Loading Zaps] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
-        console.warn('⚠️ [Loading Zaps] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
+        this.logger.warn('[Loading Zaps] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        this.logger.warn('[Loading Zaps] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
         return;
       }
 
@@ -1533,7 +1521,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       this.zaps.set(parsedZaps);
     } catch (error) {
-      console.error('Error loading zaps:', error);
+      this.logger.error('Error loading zaps:', error);
     }
   }
 
@@ -1542,7 +1530,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Refreshes the zap data from relays after a short delay to allow propagation.
    */
   async onZapSent(amount: number): Promise<void> {
-    console.log('⚡ [Zap Sent] Received zap sent event for amount:', amount);
+    this.logger.debug('[Zap Sent] Received zap sent event for amount:', amount);
 
     // Show loading indicator while waiting for zap receipt
     this.isLoadingZaps.set(true);
@@ -1587,7 +1575,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       this.reposts.set(filteredReposts);
     } catch (error) {
-      console.error('Error loading reposts:', error);
+      this.logger.error('Error loading reposts:', error);
     }
   }
 
@@ -1611,13 +1599,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // CRITICAL: Verify we're still showing the same event before updating state
       const currentTargetRecord = this.targetRecord();
       if (currentTargetRecord?.event.id !== targetEventId) {
-        console.warn('⚠️ [Loading Quotes] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        this.logger.warn('[Loading Quotes] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
         return;
       }
 
       this.quotes.set(quotes);
     } catch (error) {
-      console.error('Error loading quotes:', error);
+      this.logger.error('Error loading quotes:', error);
     }
   }
 
@@ -1725,8 +1713,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', true);
           this.snackBar.open('Failed to remove like. Please try again.', 'Dismiss', { duration: 3000 });
-        } else {
-          console.log('Like removed successfully');
         }
       } else {
         // Add like - optimistically update UI first
@@ -1737,8 +1723,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
-        } else {
-          console.log('Like added successfully');
         }
       }
 
@@ -2027,7 +2011,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this.snackBar.open('Playlist saved to bookmarks', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to toggle playlist bookmark:', error);
+      this.logger.error('Failed to toggle playlist bookmark:', error);
       this.snackBar.open('Failed to update saved playlists', 'Close', { duration: 3000 });
     }
   }

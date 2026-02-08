@@ -27,6 +27,7 @@ import { LiveEventComponent } from '../../components/event-types/live-event.comp
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-streams',
@@ -62,6 +63,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   followSetsService = inject(FollowSetsService);
+  private readonly logger = inject(LoggerService);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -259,7 +261,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
       );
 
       if (cachedEvent) {
-        console.log('[Streams] Loaded relay set from database:', cachedEvent);
+        this.logger.debug('[Streams] Loaded relay set from database:', cachedEvent);
         this.streamsRelaySet.set(cachedEvent);
         const relays = cachedEvent.tags
           .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -300,7 +302,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
         const event = foundEvent as Event;
         // Only update if newer than cached
         if (!cachedEvent || event.created_at > cachedEvent.created_at) {
-          console.log('[Streams] Found newer relay set from relays, updating...');
+          this.logger.debug('[Streams] Found newer relay set from relays, updating...');
           this.streamsRelaySet.set(event);
           const relays = event.tags
             .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -310,11 +312,11 @@ export class StreamsComponent implements OnInit, OnDestroy {
           // Persist to database
           const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
           await this.database.saveEvent({ ...event, dTag });
-          console.log('[Streams] Saved relay set to database');
+          this.logger.debug('[Streams] Saved relay set to database');
         }
       }
     } catch (error) {
-      console.error('Error loading streams relay set:', error);
+      this.logger.error('Error loading streams relay set:', error);
     }
   }
 
@@ -338,12 +340,12 @@ export class StreamsComponent implements OnInit, OnDestroy {
       allRelayUrls = this.utilities.anonymousRelays;
     }
 
-    console.log('[Streams] Account relays:', accountRelays);
-    console.log('[Streams] Custom streams relays:', customStreamsRelays);
-    console.log('[Streams] All relays:', allRelayUrls);
+    this.logger.debug('[Streams] Account relays:', accountRelays);
+    this.logger.debug('[Streams] Custom streams relays:', customStreamsRelays);
+    this.logger.debug('[Streams] All relays:', allRelayUrls);
 
     if (allRelayUrls.length === 0) {
-      console.warn('No relays available for loading streams');
+      this.logger.warn('No relays available for loading streams');
       this.loading.set(false);
       return;
     }
@@ -356,7 +358,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
     // Set a timeout to stop loading even if no events arrive
     const loadingTimeout = setTimeout(() => {
       if (this.loading()) {
-        console.log('[Streams] No events received within timeout, stopping loading state');
+        this.logger.debug('[Streams] No events received within timeout, stopping loading state');
         this.loading.set(false);
       }
     }, 5000); // 5 second timeout

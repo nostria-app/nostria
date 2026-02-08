@@ -21,6 +21,7 @@ import { ZapService } from '../../services/zap.service';
 import { OfflineMusicService } from '../../services/offline-music.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { LayoutService } from '../../services/layout.service';
+import { LoggerService } from '../../services/logger.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -576,6 +577,7 @@ export class MusicEventComponent {
   private zapService = inject(ZapService);
   private offlineMusicService = inject(OfflineMusicService);
   private imageCache = inject(ImageCacheService);
+  private logger = inject(LoggerService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list'>('list');
@@ -784,7 +786,7 @@ export class MusicEventComponent {
 
     const url = this.audioUrl();
     if (!url) {
-      console.warn('No audio URL found for track');
+      this.logger.warn('No audio URL found for track');
       return;
     }
 
@@ -969,7 +971,7 @@ export class MusicEventComponent {
         this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Error adding to playlist:', error);
+      this.logger.error('Error adding to playlist:', error);
       this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
     }
   }

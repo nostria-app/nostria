@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface MediaPublishDialogData {
   mediaItem: MediaItem;
@@ -65,6 +66,7 @@ export class MediaPublishDialogComponent {
   private mediaService = inject(MediaService);
   private utilities = inject(UtilitiesService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private readonly logger = inject(LoggerService);
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
@@ -267,7 +269,7 @@ export class MediaPublishDialogComponent {
       // Auto-generate blurhash from the object URL
       await this.loadImageAndGenerateBlurhash(result.objectUrl);
     } catch (error) {
-      console.error('Failed to extract thumbnail:', error);
+      this.logger.error('Failed to extract thumbnail:', error);
     } finally {
       this.extractingThumbnail.set(false);
     }
@@ -280,7 +282,7 @@ export class MediaPublishDialogComponent {
     const file = input.files[0];
 
     if (!file.type.startsWith('image/')) {
-      console.error('Only image files are allowed for thumbnails');
+      this.logger.error('Only image files are allowed for thumbnails');
       return;
     }
 
@@ -302,7 +304,7 @@ export class MediaPublishDialogComponent {
       // Read dimensions and auto-generate blurhash
       await this.loadImageAndGenerateBlurhash(objectUrl);
     } catch (error) {
-      console.error('Failed to process thumbnail:', error);
+      this.logger.error('Failed to process thumbnail:', error);
     }
   }
 
@@ -348,7 +350,7 @@ export class MediaPublishDialogComponent {
         this.thumbhash.set(result.thumbhash);
       }
     } catch (error) {
-      console.error('Failed to generate placeholders:', error);
+      this.logger.error('Failed to generate placeholders:', error);
     } finally {
       this.generatingBlurhash.set(false);
     }

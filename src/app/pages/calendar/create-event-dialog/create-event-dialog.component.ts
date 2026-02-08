@@ -15,6 +15,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { Event, getEventHash } from 'nostr-tools';
 import { ApplicationService } from '../../../services/application.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface CreateEventDialogData {
   selectedDate?: Date;
@@ -51,6 +52,7 @@ export class CreateEventDialogComponent {
   private fb = inject(FormBuilder);
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
+  private logger = inject(LoggerService);
 
   isLoading = signal<boolean>(false);
   isAllDay = signal<boolean>(false);
@@ -206,15 +208,13 @@ export class CreateEventDialogComponent {
       // For now, we'll set a placeholder signature
       signedEvent.sig = 'placeholder_signature_' + Date.now();
 
-      console.log('Created calendar event:', signedEvent);
-
       // Publish the event
       await this.accountRelay.publish(signedEvent);
 
       // Close dialog with the result
       this.dialogRef.close({ event: signedEvent } as CreateEventResult);
     } catch (error) {
-      console.error('Error creating calendar event:', error);
+      this.logger.error('Error creating calendar event:', error);
     } finally {
       this.isLoading.set(false);
     }
