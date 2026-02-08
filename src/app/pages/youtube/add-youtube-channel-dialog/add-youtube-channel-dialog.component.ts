@@ -32,14 +32,14 @@ export interface AddYouTubeChannelData {
     <mat-dialog-content>
       <div class="form-container">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Channel ID or Feed URL</mat-label>
+          <mat-label>Channel URL, ID, or Feed URL</mat-label>
           <input
             matInput
             [(ngModel)]="channelInput"
             (ngModelChange)="onInputChange()"
-            placeholder="UC1XvxnHFtWruS9egyFasP1Q or full feed URL"
+            placeholder="https://www.youtube.com/&#64;NASA or channel ID"
           />
-          <mat-hint>Enter a YouTube channel ID or the RSS feed URL</mat-hint>
+          <mat-hint>Paste a YouTube channel URL, &#64;handle, channel ID, or RSS feed URL</mat-hint>
           @if (error()) {
             <mat-error>{{ error() }}</mat-error>
           }
@@ -211,85 +211,204 @@ export class AddYouTubeChannelDialogComponent {
       return;
     }
 
-    // Parse input to get channel ID and feed URL
-    let channelId = '';
-    let feedUrl = '';
-
-    if (input.includes('youtube.com/feeds/videos.xml')) {
-      // Full feed URL provided
-      feedUrl = input;
-      const match = input.match(/channel_id=([A-Za-z0-9_-]+)/);
-      if (match) {
-        channelId = match[1];
-      }
-    } else if (input.includes('youtube.com/channel/')) {
-      // Channel page URL
-      const match = input.match(/youtube\.com\/channel\/([A-Za-z0-9_-]+)/);
-      if (match) {
-        channelId = match[1];
-        feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-      }
-    } else if (input.includes('youtube.com/@')) {
-      // Handle URL - we can't directly get the channel ID from this
-      this.error.set('Please use the channel ID or feed URL. Handle URLs (@username) are not supported.');
-      return;
-    } else if (/^UC[A-Za-z0-9_-]{22}$/.test(input)) {
-      // Just the channel ID (starts with UC and is 24 chars)
-      channelId = input;
-      feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    } else {
-      // Assume it's a channel ID even if it doesn't match the pattern
-      channelId = input;
-      feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    }
-
-    if (!feedUrl) {
-      this.error.set('Invalid input. Please enter a channel ID or feed URL.');
-      return;
-    }
-
-    this.channelId.set(channelId);
-    this.feedUrl.set(feedUrl);
     this.loading.set(true);
     this.error.set('');
 
     try {
-      const xmlText = await this.corsProxy.fetchText(feedUrl);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlText, 'application/xml');
+      // Parse input to get channel ID and feed URL
+      const parsed = await this.resolveChannelInput(input);
+      if (!parsed) return; // Error already set by resolveChannelInput
 
-      // Check for parsing errors
-      const parserError = doc.querySelector('parsererror');
-      if (parserError) {
-        throw new Error('Invalid RSS feed');
-      }
+      this.channelId.set(parsed.channelId);
+      this.feedUrl.set(parsed.feedUrl);
 
-      // Get channel title from feed
-      const titleElement = doc.querySelector('feed > title');
-      const fetchedTitle = titleElement?.textContent || '';
+      // Fetch and parse the RSS feed to get channel title
+      const xmlText = await this.corsProxy.fetchText(parsed.feedUrl);
+      const feedInfo = this.parseChannelFeed(xmlText);
 
-      if (!fetchedTitle) {
-        throw new Error('Could not find channel title in feed');
-      }
-
-      this.channelTitle.set(fetchedTitle);
+      this.channelTitle.set(feedInfo.title);
 
       // Pre-fill title if empty
       if (!this.title) {
-        this.title = fetchedTitle;
+        this.title = feedInfo.title;
       }
 
-      // Try to get channel image from author URI or construct from channel ID
-      // YouTube doesn't include the avatar in the RSS feed, but we can try to get it
-      // For now, leave it empty and let user provide it
-      this.channelImage.set('');
+      // Set channel image from page metadata or feed
+      if (parsed.thumbnailUrl) {
+        this.channelImage.set(parsed.thumbnailUrl);
+        if (!this.image) {
+          this.image = parsed.thumbnailUrl;
+        }
+      }
     } catch (err) {
       console.error('Error fetching channel:', err);
-      this.error.set('Failed to fetch channel. Please check the ID/URL and try again.');
+      this.error.set('Failed to fetch channel. Please check the input and try again.');
       this.channelTitle.set('');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Resolves user input (channel ID, feed URL, channel URL, or handle URL)
+   * into a channel ID, feed URL, and optional thumbnail URL.
+   */
+  async resolveChannelInput(input: string): Promise<{ channelId: string; feedUrl: string; thumbnailUrl: string } | null> {
+    if (input.includes('youtube.com/feeds/videos.xml')) {
+      // Full feed URL provided
+      const match = input.match(/channel_id=([A-Za-z0-9_-]+)/);
+      const channelId = match ? match[1] : '';
+      // Try to fetch thumbnail from channel page
+      const thumbnailUrl = channelId ? await this.fetchChannelThumbnail(channelId) : '';
+      return { channelId, feedUrl: input, thumbnailUrl };
+    }
+
+    if (input.includes('youtube.com/channel/')) {
+      // Channel page URL with ID
+      const match = input.match(/youtube\.com\/channel\/([A-Za-z0-9_-]+)/);
+      if (match) {
+        const channelId = match[1];
+        const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+        const thumbnailUrl = await this.fetchChannelThumbnail(channelId);
+        return { channelId, feedUrl, thumbnailUrl };
+      }
+    }
+
+    if (input.includes('youtube.com/@') || input.startsWith('@')) {
+      // Handle URL or bare handle - resolve by fetching the channel page
+      let channelUrl: string;
+      if (input.startsWith('@')) {
+        channelUrl = `https://www.youtube.com/${input}`;
+      } else {
+        // Normalize: ensure it has the protocol
+        channelUrl = input.startsWith('http') ? input : `https://${input}`;
+      }
+
+      const pageInfo = await this.resolveHandleUrl(channelUrl);
+      if (!pageInfo) {
+        this.error.set('Could not resolve YouTube handle. Please check the URL and try again.');
+        return null;
+      }
+      return pageInfo;
+    }
+
+    // Assume it's a channel ID (with or without the UC prefix pattern)
+    const channelId = input;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    const thumbnailUrl = await this.fetchChannelThumbnail(channelId);
+    return { channelId, feedUrl, thumbnailUrl };
+  }
+
+  /**
+   * Fetches a YouTube channel page (by handle URL) and extracts
+   * the channel ID and thumbnail from the HTML metadata.
+   */
+  async resolveHandleUrl(channelUrl: string): Promise<{ channelId: string; feedUrl: string; thumbnailUrl: string } | null> {
+    try {
+      const html = await this.corsProxy.fetchText(channelUrl);
+
+      const channelId = this.extractChannelIdFromHtml(html);
+      if (!channelId) {
+        return null;
+      }
+
+      const thumbnailUrl = this.extractThumbnailFromHtml(html);
+      const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+
+      return { channelId, feedUrl, thumbnailUrl };
+    } catch (err) {
+      console.error('Error resolving handle URL:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches the channel page by channel ID to extract the thumbnail.
+   */
+  async fetchChannelThumbnail(channelId: string): Promise<string> {
+    try {
+      const url = `https://www.youtube.com/channel/${channelId}`;
+      const html = await this.corsProxy.fetchText(url);
+      return this.extractThumbnailFromHtml(html);
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Extracts the channel ID from YouTube page HTML.
+   * Looks for patterns like:
+   * - <meta itemprop="channelId" content="UC...">
+   * - <link rel="canonical" href="https://www.youtube.com/channel/UC...">
+   * - "channelId":"UC..."
+   * - <meta property="og:url" content="https://www.youtube.com/channel/UC...">
+   */
+  extractChannelIdFromHtml(html: string): string {
+    // Try meta itemprop="channelId"
+    const metaMatch = html.match(/<meta\s+itemprop=["']channelId["']\s+content=["']([^"']+)["']/i);
+    if (metaMatch) return metaMatch[1];
+
+    // Try canonical link
+    const canonicalMatch = html.match(/<link\s+rel=["']canonical["']\s+href=["']https?:\/\/www\.youtube\.com\/channel\/([A-Za-z0-9_-]+)["']/i);
+    if (canonicalMatch) return canonicalMatch[1];
+
+    // Try og:url meta tag
+    const ogMatch = html.match(/<meta\s+property=["']og:url["']\s+content=["']https?:\/\/www\.youtube\.com\/channel\/([A-Za-z0-9_-]+)["']/i);
+    if (ogMatch) return ogMatch[1];
+
+    // Try JSON-LD or inline script data
+    const jsonMatch = html.match(/"channelId"\s*:\s*"([A-Za-z0-9_-]+)"/);
+    if (jsonMatch) return jsonMatch[1];
+
+    // Try externalId in ytInitialData
+    const externalIdMatch = html.match(/"externalId"\s*:\s*"([A-Za-z0-9_-]+)"/);
+    if (externalIdMatch) return externalIdMatch[1];
+
+    return '';
+  }
+
+  /**
+   * Extracts the channel thumbnail/avatar URL from YouTube page HTML.
+   * Looks for og:image meta tag which contains the channel avatar.
+   */
+  extractThumbnailFromHtml(html: string): string {
+    // Try og:image meta tag (usually the channel avatar)
+    const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+    if (ogImageMatch) return ogImageMatch[1];
+
+    // Try name="og:image" variant
+    const ogImageNameMatch = html.match(/<meta\s+name=["']og:image["']\s+content=["']([^"']+)["']/i);
+    if (ogImageNameMatch) return ogImageNameMatch[1];
+
+    // Try twitter:image
+    const twitterImageMatch = html.match(/<meta\s+(?:name|property)=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+    if (twitterImageMatch) return twitterImageMatch[1];
+
+    return '';
+  }
+
+  /**
+   * Parses the RSS feed XML and extracts the channel title.
+   */
+  parseChannelFeed(xmlText: string): { title: string } {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'application/xml');
+
+    // Check for parsing errors
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      throw new Error('Invalid RSS feed');
+    }
+
+    // Get channel title from feed
+    const titleElement = doc.querySelector('feed > title');
+    const title = titleElement?.textContent || '';
+
+    if (!title) {
+      throw new Error('Could not find channel title in feed');
+    }
+
+    return { title };
   }
 
   cancel(): void {
