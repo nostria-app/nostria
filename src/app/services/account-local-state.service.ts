@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
+import { LoggerService } from './logger.service';
 import { DeviceNotificationPreferences } from './database.service';
 
 /**
@@ -134,6 +135,7 @@ export const ANONYMOUS_PUBKEY = 'anonymous';
 })
 export class AccountLocalStateService {
   private localStorage = inject(LocalStorageService);
+  private readonly logger = inject(LoggerService);
 
   // In-memory cache of account states to avoid repeated localStorage reads
   private cachedStates: AccountStatesRoot | null = null;
@@ -171,7 +173,7 @@ export class AccountLocalStateService {
       this.cachedStates = {};
       return this.cachedStates;
     } catch (error) {
-      console.error('Failed to load account states:', error);
+      this.logger.error('Failed to load account states:', error);
       this.cachedStates = {};
       return this.cachedStates;
     }
@@ -185,7 +187,7 @@ export class AccountLocalStateService {
       this.cachedStates = states;
       this.localStorage.setItem(ACCOUNT_STATE_KEY, JSON.stringify(states));
     } catch (error) {
-      console.error('Failed to save account states:', error);
+      this.logger.error('Failed to save account states:', error);
     }
   }
 

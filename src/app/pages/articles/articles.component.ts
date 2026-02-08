@@ -28,6 +28,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ArticlesSettingsDialogComponent } from './articles-settings-dialog/articles-settings-dialog.component';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { LoggerService } from '../../services/logger.service';
 
 const PAGE_SIZE = 30;
 const RELAY_SET_KIND = 30002;
@@ -72,6 +73,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   followSetsService = inject(FollowSetsService);
+  private readonly logger = inject(LoggerService);
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
@@ -611,7 +613,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       );
 
       if (cachedArticles.length > 0) {
-        console.log('[Articles] Loaded', cachedArticles.length, 'cached articles from database');
+        this.logger.debug('[Articles] Loaded', cachedArticles.length, 'cached articles from database');
 
         // Update event map with cached articles
         cachedArticles.forEach(article => {
@@ -629,7 +631,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         this.updateArticlesList();
       }
     } catch (error) {
-      console.error('[Articles] Error loading cached articles:', error);
+      this.logger.error('[Articles] Error loading cached articles:', error);
     }
   }
 
@@ -650,7 +652,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       );
 
       if (cachedEvent) {
-        console.log('[Articles] Loaded relay set from database:', cachedEvent);
+        this.logger.debug('[Articles] Loaded relay set from database:', cachedEvent);
         this.articlesRelaySet.set(cachedEvent);
         const relays = cachedEvent.tags
           .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -691,7 +693,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         const event = foundEvent as Event;
         // Only update if newer than cached
         if (!cachedEvent || event.created_at > cachedEvent.created_at) {
-          console.log('[Articles] Found newer relay set from relays, updating...');
+          this.logger.debug('[Articles] Found newer relay set from relays, updating...');
           this.articlesRelaySet.set(event);
           const relays = event.tags
             .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -701,11 +703,11 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
           // Persist to database
           const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
           await this.database.saveEvent({ ...event, dTag });
-          console.log('[Articles] Saved relay set to database');
+          this.logger.debug('[Articles] Saved relay set to database');
         }
       }
     } catch (error) {
-      console.error('[Articles] Error loading articles relay set:', error);
+      this.logger.error('[Articles] Error loading articles relay set:', error);
     }
   }
 
@@ -725,12 +727,12 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
     const following = this.followingPubkeys();
     if (following.length === 0) {
-      console.log('[Articles] No following list available');
+      this.logger.debug('[Articles] No following list available');
       this.loading.set(false);
       return;
     }
 
-    console.log('[Articles] Starting subscription for', following.length, 'following users');
+    this.logger.debug('[Articles] Starting subscription for', following.length, 'following users');
 
     // Get account relays
     const accountRelays = this.accountRelay.getRelayUrls();
@@ -739,12 +741,12 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     const customArticlesRelays = this.articlesRelays();
     const baseRelays = [...new Set([...accountRelays, ...customArticlesRelays])];
 
-    console.log('[Articles] Account relays:', accountRelays);
-    console.log('[Articles] Custom articles relays:', customArticlesRelays);
-    console.log('[Articles] Base relays:', baseRelays);
+    this.logger.debug('[Articles] Account relays:', accountRelays);
+    this.logger.debug('[Articles] Custom articles relays:', customArticlesRelays);
+    this.logger.debug('[Articles] Base relays:', baseRelays);
 
     if (baseRelays.length === 0) {
-      console.warn('[Articles] No relays available for loading articles');
+      this.logger.warn('[Articles] No relays available for loading articles');
       this.loading.set(false);
       return;
     }
@@ -759,7 +761,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     // Set a timeout to stop loading even if no events arrive
     const loadingTimeout = setTimeout(() => {
       if (this.loading()) {
-        console.log('[Articles] No events received within timeout, stopping loading state');
+        this.logger.debug('[Articles] No events received within timeout, stopping loading state');
         this.loading.set(false);
       }
     }, 5000);
@@ -850,12 +852,12 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       allRelayUrls = this.utilities.anonymousRelays;
     }
 
-    console.log('[Articles] Starting public subscription with relays:', allRelayUrls);
+    this.logger.debug('[Articles] Starting public subscription with relays:', allRelayUrls);
 
     // Set a timeout to stop loading even if no events arrive
     const loadingTimeout = setTimeout(() => {
       if (this.loading()) {
-        console.log('[Articles] Public: No events received within timeout, stopping loading state');
+        this.logger.debug('[Articles] Public: No events received within timeout, stopping loading state');
         this.loading.set(false);
       }
     }, 5000);
@@ -914,7 +916,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     const dTagValue = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
     // Fire and forget - don't block the UI thread
     this.database.saveEvent({ ...event, dTag: dTagValue }).catch(error => {
-      console.error('[Articles] Error saving article to database:', error);
+      this.logger.error('[Articles] Error saving article to database:', error);
     });
   }
 

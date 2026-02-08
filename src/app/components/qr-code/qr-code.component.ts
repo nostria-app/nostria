@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import encodeQR from 'qr';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'qr-code',
@@ -35,6 +36,7 @@ export class QrCodeComponent implements AfterViewInit {
   svgData = signal<SafeHtml>('');
 
   private sanitizer = inject(DomSanitizer);
+  private readonly logger = inject(LoggerService);
 
   ngAfterViewInit() {
     // Generate QR code when component initializes
@@ -59,7 +61,7 @@ export class QrCodeComponent implements AfterViewInit {
         this.generateSvgQR();
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      this.logger.error('Error generating QR code:', error);
     }
   }
 

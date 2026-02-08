@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RssParserService } from '../../../services/rss-parser.service';
+import { LoggerService } from '../../../services/logger.service';
 import { PlaylistTrack } from '../../../interfaces';
 
 export interface CreatePlaylistDialogData {
@@ -37,6 +38,7 @@ export class CreatePlaylistDialogComponent {
   private data = inject(MAT_DIALOG_DATA);
   private fb = inject(FormBuilder);
   private rssParser = inject(RssParserService);
+  private logger = inject(LoggerService);
 
   playlistForm: FormGroup;
   importedTracks: PlaylistTrack[] = [];
@@ -83,7 +85,7 @@ export class CreatePlaylistDialogComponent {
       }));
 
     } catch (error) {
-      console.error('Failed to parse RSS', error);
+      this.logger.error('Failed to parse RSS', error);
       // TODO: Show error to user
     } finally {
       this.isParsingRss.set(false);

@@ -1236,7 +1236,7 @@ export class App implements OnInit, OnDestroy {
                 verticalPosition: 'bottom',
               });
             } catch (error) {
-              console.error('Failed to add wallet:', error);
+              this.logger.error('Failed to add wallet:', error);
               this.snackBar.open(
                 $localize`:@@app.snackbar.wallet-failed:Failed to add wallet. Please check the connection string.`,
                 $localize`:@@app.snackbar.dismiss:Dismiss`,
@@ -2090,7 +2090,7 @@ export class App implements OnInit, OnDestroy {
     const currentUrl = this.router.url;
     const isStreamRoute = currentUrl.startsWith('/stream/');
 
-    console.log('[App] exitFullscreen called, currentUrl:', currentUrl, 'isStreamRoute:', isStreamRoute);
+    this.logger.debug('[App] exitFullscreen called, currentUrl:', currentUrl, 'isStreamRoute:', isStreamRoute);
 
     this.media.exitFullscreen();
     // Also turn off fullscreen media player mode so it doesn't auto-open next time
@@ -2100,7 +2100,7 @@ export class App implements OnInit, OnDestroy {
 
     // Navigate to streams page if we were on a stream route
     if (isStreamRoute) {
-      console.log('[App] Navigating to /streams');
+      this.logger.debug('[App] Navigating to /streams');
       this.router.navigate(['/streams']);
     }
   }

@@ -19,6 +19,7 @@ import { Poll, PollResponse, PollResults } from '../../interfaces';
 import { PollCardComponent } from '../../components/poll-card/poll-card.component';
 import { PollDetailsDialogComponent } from '../../components/poll-details-dialog/poll-details-dialog.component';
 import { ClipboardService } from '../../services/clipboard.service';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-polls',
@@ -45,6 +46,7 @@ export class PollsComponent {
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
   private clipboard = inject(ClipboardService);
+  private logger = inject(LoggerService);
 
   polls = this.pollService.polls;
   drafts = this.pollService.drafts;
@@ -75,7 +77,7 @@ export class PollsComponent {
         await this.loadPollResults(poll);
       }
     } catch (error) {
-      console.error('Failed to load polls:', error);
+      this.logger.error('Failed to load polls:', error);
       this.snackBar.open('Failed to load polls from Nostr', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -112,7 +114,7 @@ export class PollsComponent {
       currentMap.set(poll.id, { responses, results });
       this.pollResults.set(new Map(currentMap));
     } catch (error) {
-      console.error(`Failed to load results for poll ${poll.id}:`, error);
+      this.logger.error(`Failed to load results for poll ${poll.id}:`, error);
     }
   }
 
@@ -178,7 +180,7 @@ export class PollsComponent {
       // Reload with fresh data
       await this.loadPollResults(poll);
     } catch (error) {
-      console.error('Failed to submit vote:', error);
+      this.logger.error('Failed to submit vote:', error);
       this.snackBar.open('Failed to submit vote', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -258,7 +260,7 @@ export class PollsComponent {
 
       await this.clipboard.copyText(nevent, 'Poll address copied to clipboard!');
     } catch (error) {
-      console.error('Failed to copy nevent address:', error);
+      this.logger.error('Failed to copy nevent address:', error);
       this.snackBar.open('Failed to copy address', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -297,7 +299,7 @@ export class PollsComponent {
 
       await this.clipboard.copyJson(eventData, 'Event data copied to clipboard!');
     } catch (error) {
-      console.error('Failed to copy event data:', error);
+      this.logger.error('Failed to copy event data:', error);
       this.snackBar.open('Failed to copy event data', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',

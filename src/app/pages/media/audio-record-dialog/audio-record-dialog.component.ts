@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AudioPlayerComponent } from '../../../components/audio-player/audio-player.component';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-audio-record-dialog',
@@ -26,6 +27,7 @@ import { AudioPlayerComponent } from '../../../components/audio-player/audio-pla
 export class AudioRecordDialogComponent implements OnDestroy, AfterViewInit {
   private dialogRef = inject(MatDialogRef<AudioRecordDialogComponent>);
   private snackBar = inject(MatSnackBar);
+  private readonly logger = inject(LoggerService);
 
   // Recording state
   isRecording = signal(false);
@@ -74,7 +76,7 @@ export class AudioRecordDialogComponent implements OnDestroy, AfterViewInit {
       this.stream.set(stream);
       this.setupAudioVisualization(stream);
     } catch (error) {
-      console.error('Failed to access microphone:', error);
+      this.logger.error('Failed to access microphone:', error);
       this.snackBar.open('Failed to access microphone. Please check permissions.', 'Close', {
         duration: 3000,
       });
@@ -161,8 +163,6 @@ export class AudioRecordDialogComponent implements OnDestroy, AfterViewInit {
       const stream = this.stream();
       if (!stream) return;
 
-      console.log('[AudioRecorder] Starting recording...');
-
       // Prefer audio/mp4 (AAC) if available, otherwise webm/opus
       let mimeType = 'audio/mp4';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -229,7 +229,7 @@ export class AudioRecordDialogComponent implements OnDestroy, AfterViewInit {
       }, 100);
 
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      this.logger.error('Failed to start recording:', error);
       this.snackBar.open('Failed to start recording.', 'Close', { duration: 3000 });
     }
   }

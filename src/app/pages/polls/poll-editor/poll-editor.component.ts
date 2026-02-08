@@ -11,6 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { PollService } from '../../../services/poll.service';
+import { LoggerService } from '../../../services/logger.service';
 import { PollDraft } from '../../../interfaces';
 
 @Component({
@@ -35,6 +36,7 @@ export class PollEditorComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private logger = inject(LoggerService);
 
   currentPoll = this.pollService.currentEditingPoll;
   isSaving = signal(false);
@@ -193,7 +195,7 @@ export class PollEditorComponent implements OnInit {
       });
       this.router.navigate(['/polls']);
     } catch (error) {
-      console.error('Failed to publish poll:', error);
+      this.logger.error('Failed to publish poll:', error);
       this.snackBar.open('Failed to publish poll', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',

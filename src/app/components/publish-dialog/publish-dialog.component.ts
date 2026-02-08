@@ -16,6 +16,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface PublishDialogData {
   event?: Event;
@@ -60,7 +61,7 @@ export class PublishDialogComponent {
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
   private utilities = inject(UtilitiesService);
-  // relayService = inject(RelayService);
+  private readonly logger = inject(LoggerService);
 
   selectedOptions = signal<Set<'account' | 'author' | 'mentioned' | 'custom'>>(new Set(['account']));
   customRelayInput = signal<string>('');
@@ -127,7 +128,7 @@ export class PublishDialogComponent {
       const relays = await this.discoveryRelay.getUserRelayUrls(this.data.event.pubkey);
       this.authorRelays.set(relays || []);
     } catch (error) {
-      console.error('Error loading author relays:', error);
+      this.logger.error('Error loading author relays:', error);
       this.authorRelays.set([]);
     } finally {
       this.loadingAuthorRelays.set(false);
@@ -229,7 +230,7 @@ export class PublishDialogComponent {
       const allRelays = await this.getAllRelaysForPubkeys(mentionedPubkeys);
       this.mentionedRelays.set(allRelays);
     } catch (error) {
-      console.error('Error loading mentioned users relays:', error);
+      this.logger.error('Error loading mentioned users relays:', error);
       this.mentionedRelays.set([]);
     } finally {
       this.loadingMentionedRelays.set(false);
@@ -331,9 +332,9 @@ export class PublishDialogComponent {
   }
 
   async publish(): Promise<void> {
-    console.log('Publish button clicked!');
+    this.logger.debug('Publish button clicked!');
     const targetRelays = this.getTargetRelays();
-    console.log('Target relays:', targetRelays);
+    this.logger.debug('Target relays:', targetRelays);
 
     if (targetRelays.length === 0) {
       alert('No relays selected for publishing');
@@ -343,11 +344,11 @@ export class PublishDialogComponent {
     // Get the event to publish
     let eventToPublish: Event;
     if (this.customMode()) {
-      console.log('Custom mode - parsing event');
+      this.logger.debug('Custom mode - parsing event');
       // Parse and validate custom event JSON
       const parsedEvent = this.parseCustomEvent();
       if (!parsedEvent) {
-        console.log('Failed to parse custom event');
+        this.logger.debug('Failed to parse custom event');
         return;
       }
 
@@ -355,25 +356,25 @@ export class PublishDialogComponent {
       const needsSigning = !('id' in parsedEvent) || !('sig' in parsedEvent);
 
       if (needsSigning) {
-        console.log('Event needs signing - triggering signature process');
+        this.logger.debug('Event needs signing - triggering signature process');
         try {
           // Sign the event using NostrService
           eventToPublish = await this.nostrService.signEvent(parsedEvent);
-          console.log('Event signed successfully:', eventToPublish);
+          this.logger.debug('Event signed successfully:', eventToPublish);
 
           // Update the custom event JSON to show the signed version
           this.customEventJson.set(JSON.stringify(eventToPublish, null, 2));
         } catch (error) {
-          console.error('Error signing event:', error);
+          this.logger.error('Error signing event:', error);
           alert('Failed to sign event: ' + (error instanceof Error ? error.message : 'Unknown error'));
           return;
         }
       } else {
-        console.log('Event already signed, using as-is');
+        this.logger.debug('Event already signed, using as-is');
         eventToPublish = parsedEvent as Event;
       }
     } else {
-      console.log('Normal mode - using provided event');
+      this.logger.debug('Normal mode - using provided event');
       if (!this.data.event) {
         alert('No event to publish');
         return;
@@ -381,7 +382,7 @@ export class PublishDialogComponent {
       eventToPublish = this.data.event;
     }
 
-    console.log('Event to publish:', eventToPublish);
+    this.logger.debug('Event to publish:', eventToPublish);
     this.isPublishing.set(true);
 
     // Initialize publish results
@@ -396,7 +397,7 @@ export class PublishDialogComponent {
       const publishPromises = await this.accountRelay.publishToRelay(eventToPublish, targetRelays);
 
       if (!publishPromises) {
-        console.error('Error during publishing: No promises returned.');
+        this.logger.error('Error during publishing: No promises returned.');
         return;
       }
 
@@ -413,7 +414,7 @@ export class PublishDialogComponent {
         })
       );
     } catch (error) {
-      console.error('Error during publishing:', error);
+      this.logger.error('Error during publishing:', error);
     } finally {
       this.isPublishing.set(false);
     }
@@ -421,7 +422,7 @@ export class PublishDialogComponent {
 
   parseCustomEvent(): Event | UnsignedEvent | null {
     const jsonString = this.customEventJson().trim();
-    console.log('Parsing custom event, JSON length:', jsonString.length);
+    this.logger.debug('Parsing custom event, JSON length:', jsonString.length);
 
     if (!jsonString) {
       this.customEventError.set('Please enter an event JSON');
@@ -430,42 +431,42 @@ export class PublishDialogComponent {
 
     try {
       const parsed = JSON.parse(jsonString);
-      console.log('JSON parsed successfully:', parsed);
+      this.logger.debug('JSON parsed successfully:', parsed);
 
       // Validate required event fields with error reporting
       // Note: id and sig are now optional - they will be added during signing
       if (parsed.pubkey && typeof parsed.pubkey !== 'string') {
         this.customEventError.set('Event "pubkey" field must be a string (or omitted for signing)');
-        console.log('Validation failed: pubkey is not a string', parsed.pubkey);
+        this.logger.debug('Validation failed: pubkey is not a string', parsed.pubkey);
         return null;
       }
       // Auto-generate created_at if missing (similar to how id/sig are auto-generated during signing)
       if (parsed.created_at === undefined || parsed.created_at === null) {
         parsed.created_at = Math.floor(Date.now() / 1000);
-        console.log('Auto-generated created_at:', parsed.created_at);
+        this.logger.debug('Auto-generated created_at:', parsed.created_at);
       } else if (typeof parsed.created_at !== 'number') {
         this.customEventError.set('Event "created_at" field must be a number (Unix timestamp) or omitted for auto-generation');
-        console.log('Validation failed: created_at is not a number', typeof parsed.created_at, parsed.created_at);
+        this.logger.debug('Validation failed: created_at is not a number', typeof parsed.created_at, parsed.created_at);
         return null;
       }
       if (typeof parsed.kind !== 'number') {
         this.customEventError.set('Event must have a valid "kind" field');
-        console.log('Validation failed: kind is not a number', typeof parsed.kind, parsed.kind);
+        this.logger.debug('Validation failed: kind is not a number', typeof parsed.kind, parsed.kind);
         return null;
       }
       if (!Array.isArray(parsed.tags)) {
         this.customEventError.set('Event must have a valid "tags" array');
-        console.log('Validation failed: tags is not an array', parsed.tags);
+        this.logger.debug('Validation failed: tags is not an array', parsed.tags);
         return null;
       }
       if (typeof parsed.content !== 'string') {
         this.customEventError.set('Event must have a valid "content" field (string)');
-        console.log('Validation failed: content is not a string', typeof parsed.content);
+        this.logger.debug('Validation failed: content is not a string', typeof parsed.content);
         return null;
       }
 
       this.customEventError.set('');
-      console.log('Event parsed successfully:', parsed);
+      this.logger.debug('Event parsed successfully:', parsed);
 
       const event = parsed as Event | UnsignedEvent;
 
@@ -495,7 +496,7 @@ export class PublishDialogComponent {
     const customModeActive = this.customMode();
     const customEventJsonEmpty = !this.customEventJson().trim();
 
-    console.log('canPublish check:', {
+    this.logger.debug('canPublish check:', {
       isPublishing,
       targetRelaysCount,
       customModeActive,

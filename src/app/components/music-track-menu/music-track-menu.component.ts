@@ -20,6 +20,7 @@ import { UserRelaysService } from '../../services/relays/user-relays';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 
@@ -150,6 +151,7 @@ export class MusicTrackMenuComponent {
   private layout = inject(LayoutService);
   private eventService = inject(EventService);
   private userRelaysService = inject(UserRelaysService);
+  private logger = inject(LoggerService);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -385,7 +387,7 @@ export class MusicTrackMenuComponent {
         this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Error adding to playlist:', error);
+      this.logger.error('Error adding to playlist:', error);
       this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
     }
   }

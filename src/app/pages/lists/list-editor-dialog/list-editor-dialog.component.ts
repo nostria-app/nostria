@@ -13,6 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ListType, ListData, ListItem } from '../lists.component';
+import { LoggerService } from '../../../services/logger.service';
 
 interface EditorData {
   listType: ListType;
@@ -43,6 +44,7 @@ interface EditorData {
 export class ListEditorDialogComponent implements OnInit {
   dialogRef = inject(MatDialogRef<ListEditorDialogComponent>);
   data = inject<EditorData>(MAT_DIALOG_DATA);
+  private logger = inject(LoggerService);
 
   listType: ListType;
   mode: 'create' | 'edit';
@@ -528,7 +530,7 @@ export class ListEditorDialogComponent implements OnInit {
       // Reset file input
       input.value = '';
     } catch (error) {
-      console.error('Failed to import list:', error);
+      this.logger.error('Failed to import list:', error);
       alert('Failed to import list. Please check the file format.');
     }
   }

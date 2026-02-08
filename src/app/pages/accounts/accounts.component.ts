@@ -389,7 +389,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
       await navigator.clipboard.writeText(text);
       this.snackBar.open(`${label} copied to clipboard`, 'Dismiss', { duration: 3000 });
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      this.logger.error('Failed to copy to clipboard:', error);
       this.snackBar.open('Failed to copy to clipboard', 'Dismiss', { duration: 3000 });
     }
   }
@@ -433,7 +433,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
 
       this.snackBar.open('Credentials downloaded successfully', 'Dismiss', { duration: 3000 });
     } catch (error) {
-      console.error('Failed to download credentials:', error);
+      this.logger.error('Failed to download credentials:', error);
       this.snackBar.open('Failed to download credentials. Could not decrypt private key.', 'Dismiss', { duration: 3000 });
     }
   }
@@ -460,7 +460,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
         },
       });
     } catch (error) {
-      console.error('Failed to export QR code:', error);
+      this.logger.error('Failed to export QR code:', error);
       this.snackBar.open('Failed to export QR code. Could not decrypt private key.', 'Dismiss', { duration: 3000 });
     }
   }
@@ -699,7 +699,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
       this.snackBar.open('PIN reset to default (0000) successfully', 'Dismiss', { duration: 3000 });
       this.cancelResettingPin();
     } catch (error) {
-      console.error('Failed to reset PIN:', error);
+      this.logger.error('Failed to reset PIN:', error);
       this.snackBar.open('Failed to reset PIN. Please check your current PIN and try again.', 'Dismiss', { duration: 5000 });
     }
   }
@@ -766,7 +766,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
       this.snackBar.open('PIN changed successfully', 'Dismiss', { duration: 3000 });
       this.cancelChangingPin();
     } catch (error) {
-      console.error('Failed to change PIN:', error);
+      this.logger.error('Failed to change PIN:', error);
       this.snackBar.open('Failed to change PIN. Please check your old PIN and try again.', 'Dismiss', { duration: 5000 });
     }
   }
@@ -780,7 +780,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
         this.loadHistory();
       }
     } catch (error) {
-      console.error('Failed to refresh subscription:', error);
+      this.logger.error('Failed to refresh subscription:', error);
     }
   }
 
@@ -791,7 +791,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (history) => this.subscriptionHistory.set(history),
-        error: (err) => console.error('Failed to load subscription history:', err)
+        error: (err) => this.logger.error('Failed to load subscription history:', err)
       });
 
     this.premiumApi.getPaymentHistory()
@@ -802,7 +802,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
           this.isLoadingHistory.set(false);
         },
         error: (err) => {
-          console.error('Failed to load payment history:', err);
+          this.logger.error('Failed to load payment history:', err);
           this.isLoadingHistory.set(false);
         }
       });
@@ -836,9 +836,9 @@ export class AccountsComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        console.log('Username operation completed successfully, refreshing subscription');
+        this.logger.debug('Username operation completed successfully, refreshing subscription');
         this.accountState.refreshSubscription().catch(error => {
-          console.error('Failed to refresh subscription after username update:', error);
+          this.logger.error('Failed to refresh subscription after username update:', error);
         });
       }
     });

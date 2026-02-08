@@ -834,7 +834,7 @@ export class ArticleComponent implements OnDestroy {
         this.isPaused.set(false);
       }
     } catch (err) {
-      console.error('AI Speech error:', err);
+      this.logger.error('AI Speech error:', err);
       // Fallback to native?
       this.startNativeSpeech(text);
     } finally {
@@ -1040,7 +1040,7 @@ export class ArticleComponent implements OnDestroy {
       }
 
     } catch (err) {
-      console.error('Translation error', err);
+      this.logger.error('Translation error', err);
     } finally {
       this.isTranslating.set(false);
     }

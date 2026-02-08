@@ -43,6 +43,7 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../share
 import { EventImageService } from '../../../services/event-image.service';
 import { NoteEditorDialogData } from '../../../interfaces/note-editor';
 import { UserRelaysService } from '../../../services/relays/user-relays';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -80,6 +81,7 @@ export class EventMenuComponent {
   private appRef = inject(ApplicationRef);
   private environmentInjector = inject(EnvironmentInjector);
   private platformId = inject(PLATFORM_ID);
+  private logger = inject(LoggerService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -226,7 +228,7 @@ export class EventMenuComponent {
       dialogRef.close(true);
       return true;
     } catch (error) {
-      console.error('Failed to load model', error);
+      this.logger.error('Failed to load model', error);
       dialogRef.close(false);
       this.snackBar.open(`Failed to load model: ${error}`, 'Dismiss', { duration: 3000 });
       return false;
@@ -697,7 +699,7 @@ export class EventMenuComponent {
         this.snackBar.open('Failed to copy screenshot', 'Dismiss', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to copy event as image:', error);
+      this.logger.error('Failed to copy event as image:', error);
       this.snackBar.open('Failed to generate screenshot', 'Dismiss', { duration: 3000 });
     }
   }

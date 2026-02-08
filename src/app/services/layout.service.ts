@@ -1894,7 +1894,7 @@ export class LayoutService implements OnDestroy {
         return false;
       }
     } catch (error) {
-      console.error('Error publishing media:', error);
+      this.logger.error('Error publishing media:', error);
       this.snackBar.open('Failed to publish media', 'Close', {
         duration: 3000,
       });
@@ -1999,7 +1999,7 @@ export class LayoutService implements OnDestroy {
           thumbnailUrls.push(...uniqueUrls);
         }
       } catch (error) {
-        console.error('Failed to upload thumbnail during publish:', error);
+        this.logger.error('Failed to upload thumbnail during publish:', error);
       }
     } else if (thumbnailUrl) {
       // If thumbnail URL is provided but no blob was uploaded, use just that URL
@@ -2144,7 +2144,7 @@ export class LayoutService implements OnDestroy {
     // We need the banner height to calculate the optimal scroll position
     // const bannerHeight = this.getBannerHeight();
 
-    console.log('Scrolling to optimal position:', scrollPosition);
+    this.logger.debug('Scrolling to optimal position:', scrollPosition);
     // // Calculate scroll position that shows half of the banner
     // // We divide banner height by 2 to show half of it
     // const scrollPosition = bannerHeight / 2;
@@ -2565,7 +2565,7 @@ export class LayoutService implements OnDestroy {
         );
       }
     } catch (error) {
-      console.error('Error publishing:', error);
+      this.logger.error('Error publishing:', error);
       this.snackBar.open(`Failed to save ${itemName}`, 'Close', {
         duration: 5000,
         horizontalPosition: 'center',
@@ -2598,7 +2598,7 @@ export class LayoutService implements OnDestroy {
         for (const column of Array.from(columnContents)) {
           if (column.scrollTop > 0) {
             position = column.scrollTop;
-            console.log(`📍 Found scroll in column-content:`, position, 'px');
+            this.logger.debug(`Found scroll in column-content:`, position, 'px');
             break;
           }
         }
@@ -2756,11 +2756,11 @@ export class LayoutService implements OnDestroy {
   scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    console.log('[LayoutService] scrollLayoutToTop called with panel:', panel);
+    this.logger.debug('[LayoutService] scrollLayoutToTop called with panel:', panel);
     const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
     const panelContainer = document.querySelector(panelSelector);
     if (panelContainer) {
-      console.log('[LayoutService] Scrolling', panelSelector, 'to top');
+      this.logger.debug('[LayoutService] Scrolling', panelSelector, 'to top');
       panelContainer.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'instant' });
     }
   }

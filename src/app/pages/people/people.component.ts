@@ -859,7 +859,7 @@ export class PeopleComponent implements OnDestroy {
         this.followSetProfiles.set(profiles);
       }
     }).catch(error => {
-      console.error('Failed to load follow set profiles in background:', error);
+      this.logger.error('Failed to load follow set profiles in background:', error);
     });
   }
 

@@ -16,6 +16,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
 import { EventService } from '../../services/event';
+import { LoggerService } from '../../services/logger.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
@@ -41,6 +42,7 @@ export class DeleteEventComponent implements OnInit {
   private readonly dataService = inject(DataService);
   private readonly nostrService = inject(NostrService);
   private readonly eventService = inject(EventService);
+  private readonly logger = inject(LoggerService);
 
   deleteForm: FormGroup;
   event = signal<Event | null>(null);
@@ -129,7 +131,7 @@ export class DeleteEventComponent implements OnInit {
         this.event.set(null);
       }
     } catch (error) {
-      console.error('Error looking up event:', error);
+      this.logger.error('Error looking up event:', error);
       this.snackBar.open('Error looking up event', 'Dismiss', {
         duration: 3000,
       });
@@ -201,7 +203,7 @@ export class DeleteEventComponent implements OnInit {
         });
       }
     } catch (error) {
-      console.error('Error deleting event:', error);
+      this.logger.error('Error deleting event:', error);
       this.snackBar.open('Error publishing deletion request', 'Dismiss', {
         duration: 3000,
       });
