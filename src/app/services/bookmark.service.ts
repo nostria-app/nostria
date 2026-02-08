@@ -261,15 +261,9 @@ export class BookmarkService {
     // Query for all bookmark lists (kind 30003)
     const events = await this.database.getEventsByPubkeyAndKind(pubkey, 30003);
 
-    // Filter out YouTube bookmarks (they have a 't' tag with 'youtube')
-    const filteredEvents = events.filter(event => {
-      const tTags = event.tags.filter(t => t[0] === 't');
-      return !tTags.some(t => t[1] === 'youtube');
-    });
-
     // Deduplicate by d-tag (keep only the latest event for each d-tag)
     const deduplicatedMap = new Map<string, Event>();
-    for (const event of filteredEvents) {
+    for (const event of events) {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1];
       if (!dTag) continue;
 

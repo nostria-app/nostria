@@ -3,7 +3,6 @@ import { Component, inject, signal, effect, computed } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -17,16 +16,19 @@ import { NostrService } from '../../services/nostr.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { MediaItem } from '../../interfaces';
-import { Event, Filter } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DatePipe, SlicePipe } from '@angular/common';
 
-interface YouTubeChannel {
-  id: string;
+interface YouTubeChannelEntry {
+  channelId: string;
   title: string;
   description: string;
   image: string;
   feedUrl: string;
+}
+
+interface YouTubeChannel extends YouTubeChannelEntry {
   videos: YouTubeVideo[];
   loading: boolean;
   error?: string;
@@ -50,7 +52,6 @@ interface YouTubeVideo {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatCardModule,
     MatTooltipModule,
     MatMenuModule,
     MatDialogModule,
@@ -228,7 +229,7 @@ interface YouTubeVideo {
           }
 
           <!-- Channel sections -->
-          @for (channel of channels(); track channel.id) {
+          @for (channel of channels(); track channel.channelId) {
             <section class="channel-section">
               <div class="channel-header">
                 <div class="channel-info">
@@ -253,8 +254,11 @@ interface YouTubeVideo {
                   <button mat-icon-button (click)="refreshChannel(channel)" [disabled]="channel.loading" matTooltip="Refresh">
                     <mat-icon>refresh</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="toggleChannel(channel.id)" [matTooltip]="isChannelCollapsed(channel.id) ? 'Expand' : 'Collapse'">
-                    <mat-icon>{{ isChannelCollapsed(channel.id) ? 'expand_more' : 'expand_less' }}</mat-icon>
+                  <button mat-icon-button (click)="removeChannel(channel.channelId)" matTooltip="Remove channel">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="toggleChannel(channel.channelId)" [matTooltip]="isChannelCollapsed(channel.channelId) ? 'Expand' : 'Collapse'">
+                    <mat-icon>{{ isChannelCollapsed(channel.channelId) ? 'expand_more' : 'expand_less' }}</mat-icon>
                   </button>
                 </div>
               </div>
@@ -266,7 +270,7 @@ interface YouTubeVideo {
                 </div>
               }
 
-              @if (!isChannelCollapsed(channel.id)) {
+              @if (!isChannelCollapsed(channel.channelId)) {
                 @if (channel.videos.length > 0) {
                   <div class="videos-grid">
                     @for (video of channel.videos; track video.videoId) {
@@ -329,6 +333,7 @@ export class YouTubeComponent {
 
   readonly loading = signal(true);
   readonly channels = signal<YouTubeChannel[]>([]);
+  readonly channelEntries = signal<YouTubeChannelEntry[]>([]);
   readonly currentVideo = signal<YouTubeVideo | null>(null);
   readonly collapsedChannels = signal<Set<string>>(new Set());
 
@@ -386,38 +391,62 @@ export class YouTubeComponent {
     image: string;
   }): Promise<void> {
     try {
-      const tags: string[][] = [
-        ['d', data.channelId],
-        ['t', 'youtube'],
-        ['title', data.title],
-        ['r', data.feedUrl],
-      ];
+      const entry: YouTubeChannelEntry = {
+        channelId: data.channelId,
+        title: data.title,
+        description: data.description,
+        image: data.image,
+        feedUrl: data.feedUrl,
+      };
 
-      if (data.description) {
-        tags.push(['description', data.description]);
-      }
+      // Get existing channels and add the new one
+      const existing = this.channelEntries();
+      const updated = [...existing, entry];
 
-      if (data.image) {
-        tags.push(['image', data.image]);
-      }
-
-      const event = this.nostrService.createEvent(30003, '', tags);
-      const signedEvent = await this.nostrService.signEvent(event);
-
-      if (!signedEvent) {
-        throw new Error('Failed to sign event');
-      }
-
-      await this.accountRelay.publish(signedEvent);
+      await this.publishYouTubeEvent(updated);
 
       this.snackBar.open('YouTube channel added!', 'Close', { duration: 3000 });
 
       // Reload channels to include the new one
       await this.loadYouTubeBookmarks();
     } catch (error) {
-      console.error('Error creating YouTube bookmark set:', error);
+      console.error('Error creating YouTube bookmark:', error);
       this.snackBar.open('Failed to add channel. Please try again.', 'Close', { duration: 3000 });
     }
+  }
+
+  async removeChannel(channelId: string): Promise<void> {
+    try {
+      const existing = this.channelEntries();
+      const updated = existing.filter(e => e.channelId !== channelId);
+
+      await this.publishYouTubeEvent(updated);
+
+      this.snackBar.open('YouTube channel removed.', 'Close', { duration: 3000 });
+
+      // Remove from local state immediately
+      this.channels.update(channels => channels.filter(c => c.channelId !== channelId));
+      this.channelEntries.set(updated);
+    } catch (error) {
+      console.error('Error removing YouTube channel:', error);
+      this.snackBar.open('Failed to remove channel. Please try again.', 'Close', { duration: 3000 });
+    }
+  }
+
+  private async publishYouTubeEvent(entries: YouTubeChannelEntry[]): Promise<void> {
+    const content = JSON.stringify(entries);
+    const tags: string[][] = [
+      ['d', 'youtube-channels'],
+    ];
+
+    const event = this.nostrService.createEvent(30078, content, tags);
+    const signedEvent = await this.nostrService.signEvent(event);
+
+    if (!signedEvent) {
+      throw new Error('Failed to sign event');
+    }
+
+    await this.accountRelay.publish(signedEvent);
   }
 
   async loadYouTubeBookmarks(): Promise<void> {
@@ -426,27 +455,40 @@ export class YouTubeComponent {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) return;
 
-      // Fetch bookmark sets (kind 30003) with "youtube" tag
+      // Fetch the single kind 30078 YouTube channels event
       const events = await this.accountRelay.getMany<Event>({
-        kinds: [30003],
+        kinds: [30078],
         authors: [pubkey],
-        '#t': ['youtube'],
-      } as Filter);
+        '#d': ['youtube-channels'],
+      });
 
       if (events.length === 0) {
         this.channels.set([]);
+        this.channelEntries.set([]);
         this.loading.set(false);
         return;
       }
 
-      // Parse each bookmark set into a channel
-      const channelList: YouTubeChannel[] = [];
-      for (const event of events) {
-        const channel = this.parseBookmarkEvent(event);
-        if (channel) {
-          channelList.push(channel);
-        }
+      // Use the most recent event
+      const latestEvent = events.reduce((a, b) =>
+        a.created_at > b.created_at ? a : b
+      );
+
+      // Parse channels from content JSON
+      let entries: YouTubeChannelEntry[] = [];
+      try {
+        entries = JSON.parse(latestEvent.content);
+      } catch {
+        console.error('Failed to parse YouTube channels event content');
       }
+
+      this.channelEntries.set(entries);
+
+      const channelList: YouTubeChannel[] = entries.map(entry => ({
+        ...entry,
+        videos: [],
+        loading: false,
+      }));
 
       this.channels.set(channelList);
 
@@ -461,48 +503,25 @@ export class YouTubeComponent {
     }
   }
 
-  private parseBookmarkEvent(event: Event): YouTubeChannel | null {
-    const tags = event.tags;
-    const dTag = tags.find(t => t[0] === 'd')?.[1];
-    const title = tags.find(t => t[0] === 'title')?.[1] || 'Unknown Channel';
-    const description = tags.find(t => t[0] === 'description')?.[1] || '';
-    const image = tags.find(t => t[0] === 'image')?.[1] || '';
-    const feedUrl = tags.find(t => t[0] === 'r')?.[1];
-
-    if (!feedUrl || !dTag) {
-      return null;
-    }
-
-    return {
-      id: dTag,
-      title,
-      description,
-      image,
-      feedUrl,
-      videos: [],
-      loading: false,
-    };
-  }
-
   async fetchChannelVideos(channel: YouTubeChannel): Promise<void> {
     // Update channel loading state
     this.channels.update(channels =>
-      channels.map(c => (c.id === channel.id ? { ...c, loading: true, error: undefined } : c))
+      channels.map(c => (c.channelId === channel.channelId ? { ...c, loading: true, error: undefined } : c))
     );
 
     try {
       // Use our CORS proxy to fetch the RSS feed
       const xmlText = await this.corsProxy.fetchText(channel.feedUrl);
-      const videos = this.parseRssFeed(xmlText, channel.title, channel.id);
+      const videos = this.parseRssFeed(xmlText, channel.title, channel.channelId);
 
       this.channels.update(channels =>
-        channels.map(c => (c.id === channel.id ? { ...c, videos, loading: false } : c))
+        channels.map(c => (c.channelId === channel.channelId ? { ...c, videos, loading: false } : c))
       );
     } catch (error) {
       console.error(`Error fetching videos for ${channel.title}:`, error);
       this.channels.update(channels =>
         channels.map(c =>
-          c.id === channel.id
+          c.channelId === channel.channelId
             ? { ...c, loading: false, error: 'Failed to load videos. Try refreshing.' }
             : c
         )
