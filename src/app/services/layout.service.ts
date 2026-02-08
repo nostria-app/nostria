@@ -1131,6 +1131,14 @@ export class LayoutService implements OnDestroy {
         if (decoded.kind === kinds.LongFormArticle) {
           // Route to article page in primary outlet
           this.openArticleAsPrimary(value);
+        } else if (decoded.kind === 34139) {
+          // Music playlist - route directly to music playlist page
+          const npub = nip19.npubEncode(decoded.pubkey);
+          this.openMusicPlaylist(npub, decoded.identifier);
+        } else if (decoded.kind === 36787) {
+          // Music track - route directly to song detail page
+          const npub = nip19.npubEncode(decoded.pubkey);
+          this.openSongDetail(npub, decoded.identifier);
         } else {
           // Route to event page in primary outlet
           this.openEventAsPrimary(value);
