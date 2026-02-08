@@ -1246,24 +1246,12 @@ export class FeedService {
         return;
       }
 
-      this.logger.info(`[loadCustomFeed] 🚀 Loading custom feed with ${pubkeysArray.length} unique users (ALL will be used, no algorithm filtering)`);
-
-      // Clear existing events and lastRetrieved to force a full historical fetch
-      // This is important for Follow Sets where the users might have changed
-      const existingEvents = feedData.events();
-      if (existingEvents.length > 0) {
-        this.logger.info(`[loadCustomFeed] 🧹 Clearing ${existingEvents.length} existing events to fetch fresh data for Follow Set users`);
-        feedData.events.set([]);
-        feedData.pendingEvents?.set([]);
-
-        // Also clear lastRetrieved to ensure we fetch historical events, not just new ones
-        if (feedData.feed.lastRetrieved) {
-          this.logger.info(`[loadCustomFeed] 🧹 Clearing lastRetrieved timestamp to fetch historical events`);
-          feedData.feed.lastRetrieved = undefined;
-        }
-      }
+      this.logger.info(`[loadCustomFeed] Loading custom feed with ${pubkeysArray.length} unique users (ALL will be used, no algorithm filtering)`);
 
       // Fetch events from ALL specified users (no algorithm filtering)
+      // Note: We no longer clear cached events here. Cached events provide instant display
+      // while fresh data is fetched from relays. The fetchEventsFromUsers method handles
+      // merging new events with existing ones (or queuing them as pending if initialLoadComplete).
       await this.fetchEventsFromUsers(pubkeysArray, feedData);
 
       this.logger.info(`[loadCustomFeed] ✅ Loaded custom feed with ${pubkeysArray.length} users`);
@@ -3007,8 +2995,8 @@ export class FeedService {
     const feedData = this.data.get(activeFeedId);
     if (!feedData || !feedData.lastCheckTimestamp) return;
 
-    // Skip if feed is paused (no active subscription)
-    if (!feedData.subscription) return;
+    // Skip if initial load hasn't completed yet (feed is still loading)
+    if (!feedData.initialLoadComplete) return;
 
     // Set checking state for UI indicator
     feedData.isCheckingForNewEvents?.set(true);
@@ -3034,32 +3022,41 @@ export class FeedService {
 
     // Get events newer than the last check timestamp
     let newEvents: Event[] = [];
+    const sinceTimestamp = feedData.lastCheckTimestamp;
 
     if (feed.source === 'following') {
-      newEvents = await this.fetchNewEventsForFollowing(feedData, currentTime);
+      newEvents = await this.fetchNewEventsForFollowing(feedData, sinceTimestamp);
     } else if (feed.source === 'custom') {
-      newEvents = await this.fetchNewEventsForCustom(feedData, currentTime);
+      newEvents = await this.fetchNewEventsForCustom(feedData, sinceTimestamp);
+    } else if (feed.source === 'for-you') {
+      newEvents = await this.fetchNewEventsForFollowing(feedData, sinceTimestamp);
     } else {
       // Public feed - use standard filter with since parameter
-      newEvents = await this.fetchNewEventsStandard(feedData, currentTime);
+      newEvents = await this.fetchNewEventsStandard(feedData, sinceTimestamp);
     }
 
     // Update pending events if we found any new ones
     if (newEvents.length > 0) {
-      const currentPending = feedData.pendingEvents() || [];
-      const allPending = [...newEvents, ...currentPending];
+      // Filter out events already displayed in the feed
+      const existingIds = new Set(feedData.events().map(e => e.id));
+      const filteredNewEvents = newEvents.filter(e => !existingIds.has(e.id) && !this.accountState.muted(e));
 
-      // Remove duplicates and sort by created_at descending
-      const uniquePending = Array.from(
-        new Map(allPending.map(event => [event.id, event])).values()
-      ).sort((a, b) => b.created_at - a.created_at);
+      if (filteredNewEvents.length > 0) {
+        const currentPending = feedData.pendingEvents() || [];
+        const allPending = [...filteredNewEvents, ...currentPending];
 
-      feedData.pendingEvents.set(uniquePending);
+        // Remove duplicates and sort by created_at descending
+        const uniquePending = Array.from(
+          new Map(allPending.map(event => [event.id, event])).values()
+        ).sort((a, b) => b.created_at - a.created_at);
 
-      // Update reactive signal
-      this._feedData.update(map => new Map(map));
+        feedData.pendingEvents.set(uniquePending);
 
-      this.logger.debug(`Found ${newEvents.length} new events for column ${columnId}`);
+        // Update reactive signal
+        this._feedData.update(map => new Map(map));
+
+        this.logger.debug(`Found ${filteredNewEvents.length} new events for column ${columnId}`);
+      }
     }
 
     // Update last check timestamp
