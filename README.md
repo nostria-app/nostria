@@ -171,7 +171,6 @@ bubblewrap build
 - Account - This is accounts of the user within the app.
 - Users - This is Nostr users. "User" and "Users" refer to Nostr users, not the current user of the app.
 
-
 ## Developer Notes
 
 SVG to ICO: https://redketchup.io/icon-converter
@@ -179,6 +178,42 @@ SVG to ICO: https://redketchup.io/icon-converter
 Sizes: 16, 32, 48, 180, 192, 512
 
 Extract PNG from ICO: https://cloudconvert.com/ico-to-png
+
+## Loop
+
+```
+# Process all tasks labeled "ready" in the GitHub repository, and create a branch and PR for each task.
+ralphy --opencode --model github-copilot/claude-opus-4.6 --github nostria-app/nostria --github-label "ready"
+
+
+ralphy --opencode --model opencode/glm-4.7-free "task"
+
+ralphy --github owner/repo
+ralphy --github owner/repo --github-label "ready"
+
+ralphy --parallel                  # 3 agents default
+ralphy --parallel --max-parallel 5 # 5 agents
+
+ralphy --branch-per-task                # branch per task
+ralphy --branch-per-task --create-pr    # + create PRs
+ralphy --branch-per-task --draft-pr     # + draft PRs
+ralphy --base-branch main               # branch from main
+
+ralphy "test the login flow" --browser    # force enable
+ralphy "add checkout" --no-browser        # force disable
+ralphy "build feature"                    # auto-detect (default)
+
+When enabled, the AI gets browser commands:
+
+agent-browser open <url> - navigate to URL
+agent-browser snapshot - get element refs (@e1, @e2)
+agent-browser click @e1 - click element
+agent-browser type @e1 "text" - type into input
+agent-browser screenshot <file> - capture screenshot
+
+
+ralphy --copilot --model "claude-opus-4.5" --prd PRD.md -- --allow-all-tools --allow-all-urls --stream on
+```
 
 ## License
 
