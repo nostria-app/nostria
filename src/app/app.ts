@@ -497,9 +497,13 @@ export class App implements OnInit, OnDestroy {
 
       // For the People item, add follow sets as children
       if (item.path === 'people') {
-        // Sort follow sets alphabetically by title for user control (users can prefix with numbers)
+        // Sort follow sets: Favorites first, then alphabetically by title
         const sortedFollowSets = [...followSets]
-          .sort((a, b) => a.title.localeCompare(b.title));
+          .sort((a, b) => {
+            if (a.dTag === 'nostria-favorites') return -1;
+            if (b.dTag === 'nostria-favorites') return 1;
+            return a.title.localeCompare(b.title);
+          });
 
         const followSetChildren: NavItem[] = sortedFollowSets.map(set => ({
           path: `/people/list/${set.dTag}`,
