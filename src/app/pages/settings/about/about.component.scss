@@ -12,20 +12,26 @@
 
 .credits-section {
   margin-top: 1rem;
-}
 
-.credits-section h3 {
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+  h3 {
+    margin-bottom: 0.5rem;
+  }
 }
 
 .links-section {
   margin-top: 1rem;
-}
 
-.links-section h3 {
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+  h3 {
+    margin-bottom: 0.5rem;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+  }
 }
 
 .logo-container {

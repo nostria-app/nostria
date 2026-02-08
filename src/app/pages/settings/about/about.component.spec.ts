@@ -52,6 +52,34 @@ describe('AboutComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('Useful Links', () => {
+    it('should render all useful links with icons and labels', () => {
+      fixture.detectChanges();
+      const linksSection = fixture.nativeElement.querySelector('.links-section');
+      expect(linksSection).toBeTruthy();
+
+      const links = linksSection.querySelectorAll('a');
+      expect(links.length).toBe(3);
+
+      for (const link of links) {
+        const icon = link.querySelector('mat-icon');
+        const label = link.querySelector('span');
+        expect(icon).toBeTruthy();
+        expect(label).toBeTruthy();
+        expect(label.textContent.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should align link icons and labels with flexbox', () => {
+      fixture.detectChanges();
+      const linksSection = fixture.nativeElement.querySelector('.links-section');
+      const link: HTMLAnchorElement = linksSection.querySelector('a');
+      const styles = getComputedStyle(link);
+      expect(styles.display).toBe('flex');
+      expect(styles.alignItems).toBe('center');
+    });
+  });
+
   describe('goBack', () => {
     it('should use location.back() when right panel has no content', () => {
       (mockRightPanel.hasContent as unknown as ReturnType<typeof signal>).set(false);
