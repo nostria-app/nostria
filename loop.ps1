@@ -28,6 +28,21 @@ function Get-TaskCount {
   return 0
 }
 
+function Sync-Git {
+  Write-Log "Syncing with remote..."
+  & git fetch origin
+  & git pull --rebase origin main
+  $status = & git status --porcelain
+  if ($status) {
+    & git add -A
+    & git commit -m "feat: complete ralphy task"
+    & git push origin main
+    Write-Log "Commit and push complete."
+  } else {
+    Write-Log "No changes to commit. Repo is up to date."
+  }
+}
+
 Write-Host ""
 Write-Host "Ralphy GitHub issue watcher started."
 Write-Host "Polling every $PollInterval seconds for issues labeled `"$Label`"..."
@@ -48,17 +63,8 @@ while ($true) {
 
     & ralphy --opencode --model $Model --github $Repo --github-label $Label
 
-    Write-Log "Ralphy finished. Committing and pushing changes..."
-
-    $status = & git status --porcelain
-    if ($status) {
-      & git add -A
-      & git commit -m "feat: complete ralphy task from issue labeled '$Label'"
-      & git push
-      Write-Log "Commit and push complete."
-    } else {
-      Write-Log "No changes to commit."
-    }
+    Write-Log "Ralphy finished. Syncing..."
+    Sync-Git
 
   } else {
     $idleCount++
@@ -73,19 +79,14 @@ while ($true) {
 
       $idleCount = 0
 
+      # Fetch + pull before starting work
+      & git fetch origin
+      & git pull --rebase origin main
+
       & ralphy --opencode --model $Model --prd IMPROVEMENTS.md --max-iterations 1
 
-      Write-Log "Improvement task finished. Committing and pushing changes..."
-
-      $status = & git status --porcelain
-      if ($status) {
-        & git add -A
-        & git commit -m "chore: codebase improvement from idle run"
-        & git push
-        Write-Log "Commit and push complete."
-      } else {
-        Write-Log "No changes to commit."
-      }
+      Write-Log "Improvement task finished. Syncing..."
+      Sync-Git
     }
   }
 
