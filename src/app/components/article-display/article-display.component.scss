@@ -427,6 +427,30 @@
     @media (max-width: 600px) {
       justify-content: space-around;
     }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .count-button {
+      min-width: auto;
+      padding: 4px 8px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+      height: 32px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+        color: var(--mat-sys-on-surface);
+      }
+
+      span {
+        font-size: 0.75rem;
+      }
+    }
   }
 }
 

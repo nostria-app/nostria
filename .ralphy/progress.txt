@@ -12,3 +12,5 @@
 - [✓] 2026-02-08 12:17 - (BUG) Mute word "GM" doesn't mute posts including "GM" but mutes npubs including "gm" :)
 - [✓] 2026-02-08 12:30 - (BUG) Every outgoing DM is loading for ~10 sec
 - [✓] 2026-02-08 13:00 - Auto update feed
+- [✓] 2026-02-08 17:30 - Custom feed doesn't appear to load (query) for events?
+- [✓] 2026-02-08 17:41 - "Signing Request" dialog does not disappear when there was already request to sign

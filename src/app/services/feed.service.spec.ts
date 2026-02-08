@@ -151,6 +151,184 @@ describe('FeedService', () => {
     });
   });
 
+  describe('updateFeedIncremental - reactivity', () => {
+    it('should trigger _feedData reactivity when queuing events to pending', () => {
+      const service = createServiceForIncrementalFollowingTests();
+      (service as any).logger = {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      };
+
+      const existingEvent = makeEvent('existing', 50);
+      const feedData: any = {
+        feed: { id: 'custom-feed', kinds: [0] },
+        events: signal<Event[]>([existingEvent]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: true,
+        lastTimestamp: Date.now(),
+      };
+
+      // Track the initial _feedData reference
+      const initialFeedData = (service as any)._feedData();
+
+      // Build a userEventsMap with new events
+      const userEventsMap = new Map<string, Event[]>();
+      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+      (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
+
+      // Pending events should have the new event
+      expect(feedData.pendingEvents().length).toBe(1);
+      expect(feedData.pendingEvents()[0].id).toBe('new-1');
+
+      // _feedData signal should have been updated (new reference)
+      const updatedFeedData = (service as any)._feedData();
+      expect(updatedFeedData).not.toBe(initialFeedData);
+    });
+
+    it('should trigger _feedData reactivity when merging events directly', () => {
+      const service = createServiceForIncrementalFollowingTests();
+      (service as any).logger = {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      };
+
+      const feedData: any = {
+        feed: { id: 'custom-feed', kinds: [0] },
+        events: signal<Event[]>([]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: false,
+        lastTimestamp: Date.now(),
+      };
+
+      // Track the initial _feedData reference
+      const initialFeedData = (service as any)._feedData();
+
+      const userEventsMap = new Map<string, Event[]>();
+      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+      (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
+
+      // Events should be merged directly
+      expect(feedData.events().length).toBe(1);
+      expect(feedData.events()[0].id).toBe('new-1');
+
+      // _feedData signal should have been updated (new reference)
+      const updatedFeedData = (service as any)._feedData();
+      expect(updatedFeedData).not.toBe(initialFeedData);
+    });
+  });
+
+  describe('finalizeIncrementalFeed - reactivity', () => {
+    it('should trigger _feedData reactivity when queuing events to pending', () => {
+      const service = createServiceForIncrementalFollowingTests();
+      (service as any).logger = {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      };
+      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
+      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
+
+      const existingEvent = makeEvent('existing', 50);
+      const feedData: any = {
+        feed: { id: 'custom-feed', kinds: [0] },
+        events: signal<Event[]>([existingEvent]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: true,
+        isRefreshing: signal(true),
+        lastTimestamp: Date.now(),
+      };
+
+      const initialFeedData = (service as any)._feedData();
+
+      const userEventsMap = new Map<string, Event[]>();
+      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+      // Pending events should have the new event
+      expect(feedData.pendingEvents().length).toBe(1);
+      expect(feedData.pendingEvents()[0].id).toBe('new-1');
+
+      // _feedData signal should have been updated (new reference)
+      const updatedFeedData = (service as any)._feedData();
+      expect(updatedFeedData).not.toBe(initialFeedData);
+    });
+
+    it('should trigger _feedData reactivity when merging events directly on empty feed', () => {
+      const service = createServiceForIncrementalFollowingTests();
+      (service as any).logger = {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      };
+      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
+      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
+
+      const feedData: any = {
+        feed: { id: 'custom-feed', kinds: [0] },
+        events: signal<Event[]>([]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: false,
+        isRefreshing: signal(true),
+        lastTimestamp: Date.now(),
+      };
+
+      const initialFeedData = (service as any)._feedData();
+
+      const userEventsMap = new Map<string, Event[]>();
+      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+      // Events should be merged directly
+      expect(feedData.events().length).toBe(1);
+      expect(feedData.events()[0].id).toBe('new-1');
+
+      // _feedData signal should have been updated (new reference)
+      const updatedFeedData = (service as any)._feedData();
+      expect(updatedFeedData).not.toBe(initialFeedData);
+
+      // isRefreshing should be set to false
+      expect(feedData.isRefreshing()).toBeFalse();
+    });
+
+    it('should mark initialLoadComplete and stop refreshing after finalize', () => {
+      const service = createServiceForIncrementalFollowingTests();
+      (service as any).logger = {
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      };
+      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
+      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
+
+      const feedData: any = {
+        feed: { id: 'custom-feed', kinds: [0] },
+        events: signal<Event[]>([]),
+        pendingEvents: signal<Event[]>([]),
+        initialLoadComplete: false,
+        isRefreshing: signal(true),
+      };
+
+      const userEventsMap = new Map<string, Event[]>();
+      // Empty map - no events fetched
+
+      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+      expect(feedData.initialLoadComplete).toBeTrue();
+      expect(feedData.isRefreshing()).toBeFalse();
+    });
+  });
+
   describe('checkColumnForNewEvents', () => {
     it('should use lastCheckTimestamp as sinceTimestamp, not currentTime', async () => {
       const service = createServiceForNewEventsTests();

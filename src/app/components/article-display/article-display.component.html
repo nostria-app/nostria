@@ -244,8 +244,18 @@
       </button>
 
       @if (event()) {
-      <app-reaction-button [event]="event()!" [view]="'icon'"></app-reaction-button>
-      <app-zap-button [event]="event()!"></app-zap-button>
+      <div class="action-group">
+        <app-reaction-button [event]="event()!" [view]="'icon'"></app-reaction-button>
+        <button mat-button class="count-button" (click)="openReactionsDialog('likes')">
+          <span>{{ reactionCount() }}</span>
+        </button>
+      </div>
+      <div class="action-group">
+        <app-zap-button [event]="event()!"></app-zap-button>
+        <button mat-button class="count-button" (click)="openReactionsDialog('zaps')">
+          <span>{{ formatZapAmount(zapTotal()) }}</span>
+        </button>
+      </div>
       <app-repost-button [event]="event()!" [view]="'icon'"></app-repost-button>
       <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
       }
