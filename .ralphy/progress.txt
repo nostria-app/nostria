@@ -6,3 +6,6 @@
 - [✓] 2026-02-08 10:54 - Back button fails to do anything when opening up "About" from the "Home" component
 - [✓] 2026-02-08 11:01 - The "Useful Links" at the bottom of About page is not aligned properly
 - [✓] 2026-02-08 11:37 - Change the YouTube implementation to use kind 30078
+- [✓] 2026-02-08 11:49 - Automatically set the "Image URL" for YouTube Channel
+- [✓] 2026-02-08 11:58 - Hijack URLs for 34139 (music playlist) that is linked to other apps and open them in same app
+- [✓] 2026-02-08 12:06 - Create a "Migrate" button on the top of the YouTube component to migrate old bookmarks
