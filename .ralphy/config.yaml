@@ -1,35 +1,37 @@
 # Ralphy Configuration
 # https://github.com/michaelshimeles/ralphy
 
-# Project info (auto-detected, edit if needed)
 project:
   name: "nostria"
   language: "TypeScript"
   framework: "Angular"
-  description: ""  # Add a brief description
+  description: "Nostr social client built with Angular 21+, Material 3, and nostr-tools"
 
-# Commands (auto-detected from package.json/pyproject.toml)
 commands:
-  test: "npm test"
+  test: "npm run test"
   lint: "npm run lint"
   build: "npm run build"
 
-# Rules - instructions the AI MUST follow
-# These are injected into every prompt
 rules:
-  # Examples:
-  # - "Always use TypeScript strict mode"
-  # - "Follow the error handling pattern in src/utils/errors.ts"
-  # - "All API endpoints must have input validation with Zod"
-  # - "Use server actions instead of API routes in Next.js"
-  #
-  # Skills/playbooks (optional):
-  # - "Before coding, read and follow any relevant skill/playbook docs under .opencode/skills, .claude/skills, or .github/skills."
+  - "Read and follow AGENTS.md before making any changes"
+  - "Use Angular 21+ standalone components only - NO NgModules, do NOT set standalone: true (it's default)"
+  - "Always use ChangeDetection.OnPush"
+  - "Use signals (signal, computed) for state, input() for inputs, output() for outputs, inject() for DI"
+  - "Use native control flow (@if, @for, @switch) - never *ngIf, *ngFor, *ngSwitch"
+  - "Use fetch() for HTTP requests, NOT HttpClient"
+  - "Nostr timestamps are in SECONDS (Math.floor(Date.now() / 1000)), never milliseconds"
+  - "Use CSS variables from Material 3 (--mat-sys-surface, --mat-sys-primary, etc.) - never hardcode colors"
+  - "Never set font-weight in CSS"
+  - "Use CustomDialogComponent, NOT Angular Material dialogs"
+  - "Guard browser APIs with isPlatformBrowser for SSR safety"
+  - "Strict TypeScript - no implicit any, avoid any, use unknown when uncertain"
+  - "2-space indent, single quotes, CRLF line endings"
+  - "Do NOT use @HostBinding/@HostListener - use host: {} in decorator"
+  - "Do NOT use ngClass/ngStyle - use class/style bindings"
+  - "Before coding, read any relevant skill/playbook docs under .opencode/skills, .claude/skills, or .github/skills"
 
-# Boundaries - files/folders the AI should not modify
 boundaries:
   never_touch:
-    # Examples:
-    # - "src/legacy/**"
-    # - "migrations/**"
-    # - "*.lock"
+    - "src/app/api/**"
+    - "*.lock"
+    - "package-lock.json"

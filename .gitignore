@@ -57,3 +57,7 @@ Thumbs.db
 target/rust-analyzer/*
 ssr-debug-output.html
 src-android/*
+
+# Ralphy
+.ralphy-worktrees/
+.ralphy-sandboxes/
