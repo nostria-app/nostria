@@ -9,3 +9,4 @@
 - [✓] 2026-02-08 11:49 - Automatically set the "Image URL" for YouTube Channel
 - [✓] 2026-02-08 11:58 - Hijack URLs for 34139 (music playlist) that is linked to other apps and open them in same app
 - [✓] 2026-02-08 12:06 - Create a "Migrate" button on the top of the YouTube component to migrate old bookmarks
+- [✓] 2026-02-08 12:17 - (BUG) Mute word "GM" doesn't mute posts including "GM" but mutes npubs including "gm" :)
