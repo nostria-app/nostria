@@ -139,6 +139,17 @@ export class MediaPlayerService implements OnInitialized {
   private lastPodcastPositionSave = 0;
   private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
   private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
+  
+  // Flag to track if media session handlers have been initialized
+  private mediaSessionInitialized = false;
+
+  /**
+   * Check if the Media Session API is supported
+   * The Media Session API is not available in some embedded WebViews (e.g., Keychat on Android)
+   */
+  private get isMediaSessionSupported(): boolean {
+    return !!(typeof navigator !== 'undefined' && navigator.mediaSession);
+  }
 
   constructor() {
     if (!this.app.isBrowser()) {
@@ -153,33 +164,65 @@ export class MediaPlayerService implements OnInitialized {
         this.initialize();
       }
     });
+  }
 
-    navigator.mediaSession.setActionHandler('play', async () => {
-      // Use the centralized resume method
-      await this.resume();
-    });
+  /**
+   * Initialize Media Session API handlers
+   * 
+   * This method is called lazily when playback starts (not during service construction)
+   * to avoid crashes during Angular bootstrap in environments where the Media Session API
+   * is not available (e.g., embedded Android WebViews like Keychat).
+   * 
+   * The Media Session API allows integration with system media controls (play/pause buttons,
+   * lock screen controls, etc.), but is not universally supported. This method:
+   * - Checks if the API is supported before attempting to use it
+   * - Sets up action handlers for play, pause, seek, and track navigation
+   * - Only initializes once (tracked by mediaSessionInitialized flag)
+   * - Catches and logs any initialization errors without crashing the app
+   * 
+   * @see isMediaSessionSupported for feature detection logic
+   */
+  private initializeMediaSession(): void {
+    // Skip if already initialized or not supported
+    if (this.mediaSessionInitialized || !this.isMediaSessionSupported) {
+      return;
+    }
 
-    navigator.mediaSession.setActionHandler('pause', () => {
-      // Use the centralized pause method
-      this.pause();
-    });
+    try {
+      navigator.mediaSession.setActionHandler('play', async () => {
+        // Use the centralized resume method
+        await this.resume();
+      });
 
-    navigator.mediaSession.setActionHandler('seekbackward', () => {
-      this.rewind(10);
-    });
-    navigator.mediaSession.setActionHandler('seekforward', () => {
-      this.forward(10);
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      if (this.canPrevious()) {
-        this.previous();
-      }
-    });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      if (this.canNext()) {
-        this.next();
-      }
-    });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        // Use the centralized pause method
+        this.pause();
+      });
+
+      navigator.mediaSession.setActionHandler('seekbackward', () => {
+        this.rewind(10);
+      });
+      
+      navigator.mediaSession.setActionHandler('seekforward', () => {
+        this.forward(10);
+      });
+      
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (this.canPrevious()) {
+          this.previous();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (this.canNext()) {
+          this.next();
+        }
+      });
+
+      this.mediaSessionInitialized = true;
+    } catch (error) {
+      console.warn('Failed to initialize Media Session API handlers:', error);
+    }
   }
 
   initialize(): void {
@@ -440,7 +483,9 @@ export class MediaPlayerService implements OnInitialized {
     // this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
 
     // Update media session
-    navigator.mediaSession.playbackState = 'none';
+    if (this.isMediaSessionSupported) {
+      navigator.mediaSession.playbackState = 'none';
+    }
 
     console.log('Media player completely exited and hidden');
 
@@ -993,7 +1038,9 @@ export class MediaPlayerService implements OnInitialized {
       this.start();
     } else {
       console.log('No next media item available, stopping playback');
-      navigator.mediaSession.playbackState = 'none';
+      if (this.isMediaSessionSupported) {
+        navigator.mediaSession.playbackState = 'none';
+      }
     }
   };
 
@@ -1186,14 +1233,19 @@ export class MediaPlayerService implements OnInitialized {
       this._isPaused.set(false);
     }
 
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: file.title,
-      artist: file.artist,
-      album: 'Nostria',
-      artwork: [{ src: file.artwork }],
-    });
+    // Initialize media session handlers lazily on first playback
+    this.initializeMediaSession();
 
-    navigator.mediaSession.playbackState = 'playing';
+    if (this.isMediaSessionSupported) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: file.title,
+        artist: file.artist,
+        album: 'Nostria',
+        artwork: [{ src: file.artwork }],
+      });
+
+      navigator.mediaSession.playbackState = 'playing';
+    }
   }
 
   private setupVideoPlayback(file: MediaItem) {
@@ -1444,7 +1496,9 @@ export class MediaPlayerService implements OnInitialized {
       }
     }
 
-    navigator.mediaSession.playbackState = 'playing';
+    if (this.isMediaSessionSupported) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
   }
 
   pause() {
@@ -1469,7 +1523,9 @@ export class MediaPlayerService implements OnInitialized {
         }
       }
       this._isPaused.set(true);
-      navigator.mediaSession.playbackState = 'none';
+      if (this.isMediaSessionSupported) {
+        navigator.mediaSession.playbackState = 'none';
+      }
       return;
     }
 
@@ -1490,7 +1546,9 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     this._isPaused.set(true);
-    navigator.mediaSession.playbackState = 'paused';
+    if (this.isMediaSessionSupported) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   }
 
   async pictureInPicture(): Promise<void> {
@@ -1756,7 +1814,9 @@ export class MediaPlayerService implements OnInitialized {
     this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
 
     // Update media session
-    navigator.mediaSession.playbackState = 'none';
+    if (this.isMediaSessionSupported) {
+      navigator.mediaSession.playbackState = 'none';
+    }
 
     console.log('Media queue completely cleared');
   }
