@@ -257,9 +257,8 @@ export class EventProcessorService {
     }
 
     // Check for muted words in content
-    const content = event.content?.toLowerCase() || '';
     const mutedWords = this.reportingService.mutedWords();
-    if (mutedWords.some(word => content.includes(word.toLowerCase()))) {
+    if (ReportingService.contentContainsMutedWord(event.content, mutedWords)) {
       return 'muted_word';
     }
 
@@ -274,7 +273,7 @@ export class EventProcessorService {
 
   /**
    * Check if an author's profile contains any muted words.
-   * Checks name, display_name, and nip05 fields.
+   * Checks name, display_name, and nip05 fields using word boundary matching.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -294,7 +293,7 @@ export class EventProcessorService {
 
     const profileData = profile.data;
     
-    // Build a combined string of profile fields to check
+    // Build a list of profile fields to check
     const fieldsToCheck: string[] = [];
     
     if (profileData.name) {
@@ -313,11 +312,8 @@ export class EventProcessorService {
       });
     }
 
-    // Check if any muted word appears in any of the profile fields
-    return mutedWords.some(word => {
-      const lowerWord = word.toLowerCase();
-      return fieldsToCheck.some(field => field.includes(lowerWord));
-    });
+    // Check if any muted word appears as a whole word in any of the profile fields
+    return ReportingService.fieldsContainMutedWord(fieldsToCheck, mutedWords);
   }
 
   /**
