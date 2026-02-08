@@ -48,9 +48,17 @@ while ($true) {
 
     & ralphy --opencode --model $Model --github $Repo --github-label $Label
 
-    Write-Log "Ralphy finished. Pushing changes..."
-    & git push
-    Write-Log "Push complete."
+    Write-Log "Ralphy finished. Committing and pushing changes..."
+
+    $status = & git status --porcelain
+    if ($status) {
+      & git add -A
+      & git commit -m "feat: complete ralphy task from issue labeled '$Label'"
+      & git push
+      Write-Log "Commit and push complete."
+    } else {
+      Write-Log "No changes to commit."
+    }
 
   } else {
     $idleCount++
@@ -67,9 +75,17 @@ while ($true) {
 
       & ralphy --opencode --model $Model --prd IMPROVEMENTS.md --max-iterations 1
 
-      Write-Log "Improvement task finished. Pushing changes..."
-      & git push
-      Write-Log "Push complete."
+      Write-Log "Improvement task finished. Committing and pushing changes..."
+
+      $status = & git status --porcelain
+      if ($status) {
+        & git add -A
+        & git commit -m "chore: codebase improvement from idle run"
+        & git push
+        Write-Log "Commit and push complete."
+      } else {
+        Write-Log "No changes to commit."
+      }
     }
   }
 
