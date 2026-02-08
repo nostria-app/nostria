@@ -2245,6 +2245,9 @@ export class FeedService {
             return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
           });
 
+          // Trigger reactivity update so pending count is recalculated in UI
+          this._feedData.update(map => new Map(map));
+
           this.logger.debug(
             `Incremental update: ${processedUsers}/${totalUsers} users processed, ${trulyNewEvents.length} events queued to pending`
           );
@@ -2255,6 +2258,9 @@ export class FeedService {
 
         // Update the feed with merged events
         feedData.events.set(mergedEvents);
+
+        // Trigger reactivity update for components
+        this._feedData.update(map => new Map(map));
 
         // Update last timestamp for pagination
         feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
@@ -2302,6 +2308,9 @@ export class FeedService {
             return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
           });
 
+          // Trigger reactivity update so pending count is recalculated in UI
+          this._feedData.update(map => new Map(map));
+
           // Save pending events to cache as well for persistence
           const allEventsForCache = [...existingEvents, ...trulyNewEvents];
           this.saveCachedEvents(feedData.feed.id, allEventsForCache);
@@ -2316,6 +2325,9 @@ export class FeedService {
 
         // Update feed data with merged events
         feedData.events.set(mergedEvents);
+
+        // Trigger reactivity update for components
+        this._feedData.update(map => new Map(map));
 
         // Save to cache after final update
         this.saveCachedEvents(feedData.feed.id, mergedEvents);
