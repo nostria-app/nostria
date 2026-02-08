@@ -3,3 +3,4 @@
 - [✓] 2026-02-08 09:17 - Add nature category for emoji selector
 - [✓] 2026-02-08 09:41 - Failed to parse "nprofile"
 - [✓] 2026-02-08 10:40 - Favorites as first on People drop-down menu
+- [✓] 2026-02-08 10:54 - Back button fails to do anything when opening up "About" from the "Home" component
