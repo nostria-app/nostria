@@ -27,6 +27,8 @@ function createComponent(): YouTubeComponent {
   (component as any).channelEntries = signal<YouTubeChannelEntry[]>([]);
   (component as any).currentVideo = signal(null);
   (component as any).collapsedChannels = signal(new Set<string>());
+  (component as any).migrating = signal(false);
+  (component as any).oldBookmarkCount = signal(0);
 
   // Mock services
   (component as any).accountState = {
@@ -337,6 +339,367 @@ describe('YouTubeComponent', () => {
       expect((component as any).snackBar.open).toHaveBeenCalledWith(
         'YouTube channel added!', 'Close', { duration: 3000 }
       );
+    });
+  });
+
+  describe('parseOldBookmarkEvent', () => {
+    it('should parse an old kind 30003 bookmark event', () => {
+      const component = createComponent();
+
+      const event: Event = {
+        id: 'old-event-id',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-nasa'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UCLA_DiR1FfKNvjuUpBHmylQ'],
+          ['title', 'NASA'],
+          ['description', 'NASA official channel'],
+          ['image', 'https://example.com/nasa.jpg'],
+        ],
+        sig: 'sig',
+      };
+
+      const result = component.parseOldBookmarkEvent(event);
+
+      expect(result).toEqual({
+        channelId: 'UCLA_DiR1FfKNvjuUpBHmylQ',
+        title: 'NASA',
+        description: 'NASA official channel',
+        image: 'https://example.com/nasa.jpg',
+        feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCLA_DiR1FfKNvjuUpBHmylQ',
+      });
+    });
+
+    it('should return null when feed URL is missing', () => {
+      const component = createComponent();
+
+      const event: Event = {
+        id: 'old-event-id',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-test'],
+          ['t', 'youtube'],
+          ['title', 'Test'],
+        ],
+        sig: 'sig',
+      };
+
+      expect(component.parseOldBookmarkEvent(event)).toBeNull();
+    });
+
+    it('should return null when channel ID cannot be extracted from feed URL', () => {
+      const component = createComponent();
+
+      const event: Event = {
+        id: 'old-event-id',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-test'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml'],
+        ],
+        sig: 'sig',
+      };
+
+      expect(component.parseOldBookmarkEvent(event)).toBeNull();
+    });
+
+    it('should default title to Unknown Channel when missing', () => {
+      const component = createComponent();
+
+      const event: Event = {
+        id: 'old-event-id',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-test'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UC123'],
+        ],
+        sig: 'sig',
+      };
+
+      const result = component.parseOldBookmarkEvent(event);
+      expect(result?.title).toBe('Unknown Channel');
+      expect(result?.description).toBe('');
+      expect(result?.image).toBe('');
+    });
+  });
+
+  describe('checkForOldBookmarks', () => {
+    it('should count old bookmarks that are not already imported', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([sampleEntry]);
+
+      const oldEvent: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-nasa'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UCnewChannel'],
+          ['title', 'New Channel'],
+        ],
+        sig: 'sig',
+      };
+
+      (component as any).accountRelay.getMany.and.resolveTo([oldEvent]);
+
+      await component.checkForOldBookmarks();
+
+      expect(component.oldBookmarkCount()).toBe(1);
+    });
+
+    it('should not count channels already in the new format', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([sampleEntry]);
+
+      const oldEvent: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-existing'],
+          ['t', 'youtube'],
+          ['r', `https://www.youtube.com/feeds/videos.xml?channel_id=${sampleEntry.channelId}`],
+          ['title', 'Existing Channel'],
+        ],
+        sig: 'sig',
+      };
+
+      (component as any).accountRelay.getMany.and.resolveTo([oldEvent]);
+
+      await component.checkForOldBookmarks();
+
+      expect(component.oldBookmarkCount()).toBe(0);
+    });
+
+    it('should set count to 0 when no old bookmarks exist', async () => {
+      const component = createComponent();
+
+      (component as any).accountRelay.getMany.and.resolveTo([]);
+
+      await component.checkForOldBookmarks();
+
+      expect(component.oldBookmarkCount()).toBe(0);
+    });
+  });
+
+  describe('migrateOldBookmarks', () => {
+    it('should migrate old bookmarks to the new format', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([]);
+
+      const oldEvent: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-nasa'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UCLA_DiR1FfKNvjuUpBHmylQ'],
+          ['title', 'NASA'],
+          ['description', 'NASA channel'],
+          ['image', 'https://example.com/nasa.jpg'],
+        ],
+        sig: 'sig',
+      };
+
+      // First call returns old events, second call (after migration) returns new format
+      (component as any).accountRelay.getMany.and.callFake((filter: any) => {
+        if (filter.kinds[0] === 30003) {
+          return Promise.resolve([oldEvent]);
+        }
+        return Promise.resolve([]);
+      });
+      (component as any).corsProxy.fetchText.and.resolveTo('<feed></feed>');
+
+      await component.migrateOldBookmarks();
+
+      expect((component as any).nostrService.createEvent).toHaveBeenCalledWith(
+        30078,
+        JSON.stringify([{
+          channelId: 'UCLA_DiR1FfKNvjuUpBHmylQ',
+          title: 'NASA',
+          description: 'NASA channel',
+          image: 'https://example.com/nasa.jpg',
+          feedUrl: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCLA_DiR1FfKNvjuUpBHmylQ',
+        }]),
+        [['d', 'youtube-channels']]
+      );
+      expect((component as any).snackBar.open).toHaveBeenCalledWith(
+        'Migrated 1 channel successfully!', 'Close', { duration: 3000 }
+      );
+      expect(component.oldBookmarkCount()).toBe(0);
+    });
+
+    it('should skip channels already in the new format', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([sampleEntry]);
+
+      const oldEvent: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-existing'],
+          ['t', 'youtube'],
+          ['r', `https://www.youtube.com/feeds/videos.xml?channel_id=${sampleEntry.channelId}`],
+          ['title', 'Existing Channel'],
+        ],
+        sig: 'sig',
+      };
+
+      (component as any).accountRelay.getMany.and.resolveTo([oldEvent]);
+
+      await component.migrateOldBookmarks();
+
+      expect((component as any).nostrService.createEvent).not.toHaveBeenCalled();
+      expect((component as any).snackBar.open).toHaveBeenCalledWith(
+        'All channels already imported.', 'Close', { duration: 3000 }
+      );
+    });
+
+    it('should show message when no old bookmarks found', async () => {
+      const component = createComponent();
+
+      (component as any).accountRelay.getMany.and.resolveTo([]);
+
+      await component.migrateOldBookmarks();
+
+      expect((component as any).snackBar.open).toHaveBeenCalledWith(
+        'No old bookmarks found.', 'Close', { duration: 3000 }
+      );
+    });
+
+    it('should handle multiple old bookmarks and deduplicate', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([]);
+
+      const oldEvent1: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-ch1'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UC111'],
+          ['title', 'Channel 1'],
+        ],
+        sig: 'sig',
+      };
+
+      const oldEvent2: Event = {
+        id: 'old-2',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-ch1-dup'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UC111'],
+          ['title', 'Channel 1 Duplicate'],
+        ],
+        sig: 'sig',
+      };
+
+      const oldEvent3: Event = {
+        id: 'old-3',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-ch2'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UC222'],
+          ['title', 'Channel 2'],
+        ],
+        sig: 'sig',
+      };
+
+      (component as any).accountRelay.getMany.and.callFake((filter: any) => {
+        if (filter.kinds[0] === 30003) {
+          return Promise.resolve([oldEvent1, oldEvent2, oldEvent3]);
+        }
+        return Promise.resolve([]);
+      });
+      (component as any).corsProxy.fetchText.and.resolveTo('<feed></feed>');
+
+      await component.migrateOldBookmarks();
+
+      // Should only migrate 2 unique channels (not the duplicate)
+      expect((component as any).snackBar.open).toHaveBeenCalledWith(
+        'Migrated 2 channels successfully!', 'Close', { duration: 3000 }
+      );
+    });
+
+    it('should set migrating signal during migration', async () => {
+      const component = createComponent();
+
+      (component as any).accountRelay.getMany.and.resolveTo([]);
+
+      expect(component.migrating()).toBe(false);
+
+      const promise = component.migrateOldBookmarks();
+
+      await promise;
+
+      expect(component.migrating()).toBe(false);
+    });
+
+    it('should show error snackbar when migration fails', async () => {
+      const component = createComponent();
+      (component as any).channelEntries.set([]);
+
+      const oldEvent: Event = {
+        id: 'old-1',
+        kind: 30003,
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: 'test-pubkey',
+        content: '',
+        tags: [
+          ['d', 'youtube-ch1'],
+          ['t', 'youtube'],
+          ['r', 'https://www.youtube.com/feeds/videos.xml?channel_id=UC111'],
+          ['title', 'Channel 1'],
+        ],
+        sig: 'sig',
+      };
+
+      (component as any).accountRelay.getMany.and.resolveTo([oldEvent]);
+      (component as any).nostrService.signEvent.and.rejectWith(new Error('Sign failed'));
+
+      await component.migrateOldBookmarks();
+
+      expect((component as any).snackBar.open).toHaveBeenCalledWith(
+        'Failed to migrate bookmarks. Please try again.', 'Close', { duration: 3000 }
+      );
+      expect(component.migrating()).toBe(false);
     });
   });
 });

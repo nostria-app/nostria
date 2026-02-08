@@ -16,7 +16,7 @@ import { NostrService } from '../../services/nostr.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { MediaItem } from '../../interfaces';
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DatePipe, SlicePipe } from '@angular/common';
 
@@ -163,6 +163,16 @@ interface YouTubeVideo {
             <mat-icon class="premium-icon">diamond</mat-icon>
           </h1>
           <div class="header-actions">
+            @if (oldBookmarkCount() > 0) {
+              <button mat-flat-button (click)="migrateOldBookmarks()" [disabled]="migrating()" matTooltip="Import channels from old bookmark format">
+                <mat-icon>sync</mat-icon>
+                @if (migrating()) {
+                  Migrating...
+                } @else {
+                  Migrate ({{ oldBookmarkCount() }})
+                }
+              </button>
+            }
             <button mat-flat-button (click)="openAddChannelDialog()" matTooltip="Add YouTube channel">
               <mat-icon>add</mat-icon>
               Add Channel
@@ -336,6 +346,8 @@ export class YouTubeComponent {
   readonly channelEntries = signal<YouTubeChannelEntry[]>([]);
   readonly currentVideo = signal<YouTubeVideo | null>(null);
   readonly collapsedChannels = signal<Set<string>>(new Set());
+  readonly migrating = signal(false);
+  readonly oldBookmarkCount = signal(0);
 
   readonly isPremium = computed(() => {
     const subscription = this.accountState.subscription();
@@ -346,7 +358,10 @@ export class YouTubeComponent {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey && this.isPremium()) {
-        setTimeout(() => this.loadYouTubeBookmarks(), 0);
+        setTimeout(() => {
+          this.loadYouTubeBookmarks();
+          this.checkForOldBookmarks();
+        }, 0);
       }
     });
   }
@@ -500,6 +515,100 @@ export class YouTubeComponent {
       console.error('Error loading YouTube bookmarks:', error);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async checkForOldBookmarks(): Promise<void> {
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) return;
+
+      const oldEvents = await this.accountRelay.getMany<Event>({
+        kinds: [30003],
+        authors: [pubkey],
+        '#t': ['youtube'],
+      } as Filter);
+
+      // Count channels that are not already in the new format
+      const existingIds = new Set(this.channelEntries().map(e => e.channelId));
+      const newChannels = oldEvents.filter(event => {
+        const channel = this.parseOldBookmarkEvent(event);
+        return channel && !existingIds.has(channel.channelId);
+      });
+
+      this.oldBookmarkCount.set(newChannels.length);
+    } catch (error) {
+      console.error('Error checking for old bookmarks:', error);
+    }
+  }
+
+  parseOldBookmarkEvent(event: Event): YouTubeChannelEntry | null {
+    const tags = event.tags;
+    const feedUrl = tags.find(t => t[0] === 'r')?.[1];
+    if (!feedUrl) return null;
+
+    const title = tags.find(t => t[0] === 'title')?.[1] || 'Unknown Channel';
+    const description = tags.find(t => t[0] === 'description')?.[1] || '';
+    const image = tags.find(t => t[0] === 'image')?.[1] || '';
+
+    // Extract channel ID from feed URL
+    const match = feedUrl.match(/channel_id=([A-Za-z0-9_-]+)/);
+    const channelId = match?.[1] || '';
+    if (!channelId) return null;
+
+    return { channelId, title, description, image, feedUrl };
+  }
+
+  async migrateOldBookmarks(): Promise<void> {
+    this.migrating.set(true);
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) return;
+
+      const oldEvents = await this.accountRelay.getMany<Event>({
+        kinds: [30003],
+        authors: [pubkey],
+        '#t': ['youtube'],
+      } as Filter);
+
+      if (oldEvents.length === 0) {
+        this.snackBar.open('No old bookmarks found.', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const existingIds = new Set(this.channelEntries().map(e => e.channelId));
+      const newEntries: YouTubeChannelEntry[] = [];
+
+      for (const event of oldEvents) {
+        const entry = this.parseOldBookmarkEvent(event);
+        if (entry && !existingIds.has(entry.channelId)) {
+          newEntries.push(entry);
+          existingIds.add(entry.channelId);
+        }
+      }
+
+      if (newEntries.length === 0) {
+        this.snackBar.open('All channels already imported.', 'Close', { duration: 3000 });
+        this.oldBookmarkCount.set(0);
+        return;
+      }
+
+      const updated = [...this.channelEntries(), ...newEntries];
+      await this.publishYouTubeEvent(updated);
+
+      this.snackBar.open(
+        `Migrated ${newEntries.length} channel${newEntries.length > 1 ? 's' : ''} successfully!`,
+        'Close',
+        { duration: 3000 }
+      );
+
+      this.oldBookmarkCount.set(0);
+      await this.loadYouTubeBookmarks();
+    } catch (error) {
+      console.error('Error migrating old bookmarks:', error);
+      this.snackBar.open('Failed to migrate bookmarks. Please try again.', 'Close', { duration: 3000 });
+    } finally {
+      this.migrating.set(false);
     }
   }
 
