@@ -30,17 +30,26 @@ function Get-TaskCount {
 
 function Sync-Git {
   Write-Log "Syncing with remote..."
-  & git fetch origin
-  & git pull --rebase origin main
+
+  # If there are uncommitted changes (e.g. .ralphy/progress.txt), amend them
+  # into ralphy's last commit instead of creating a separate commit.
   $status = & git status --porcelain
   if ($status) {
     & git add -A
-    & git commit -m "feat: complete ralphy task"
-    & git push origin main
-    Write-Log "Commit and push complete."
-  } else {
-    Write-Log "No changes to commit. Repo is up to date."
+    # Check if ralphy already made a commit that hasn't been pushed
+    $ahead = & git rev-list --count "origin/main..HEAD"
+    if ([int]$ahead -gt 0) {
+      Write-Log "Amending leftover files into ralphy's commit..."
+      & git commit --amend --no-edit
+    } else {
+      & git commit -m "feat: complete ralphy task"
+    }
   }
+
+  & git fetch origin
+  & git pull --rebase origin main
+  & git push origin main
+  Write-Log "Sync complete."
 }
 
 Write-Host ""

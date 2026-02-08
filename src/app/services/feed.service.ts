@@ -53,6 +53,7 @@ export interface FeedItem {
   isRefreshing?: WritableSignal<boolean>; // Track when feed is actively refreshing/loading
   hasMore?: WritableSignal<boolean>;
   pendingEvents?: WritableSignal<Event[]>;
+  isCheckingForNewEvents?: WritableSignal<boolean>; // Track when actively checking relays for new events
   lastCheckTimestamp?: number;
   initialLoadComplete?: boolean; // Track when initial relay loading is done
 }
@@ -485,10 +486,10 @@ export class FeedService {
         await this.subscribeToFeed(activeFeed);
         this.logger.debug('Subscribed to active feed:', activeFeedId);
 
-        // Start checking for new events every 60 seconds
+        // Start checking for new events every 30 seconds
         this.newEventCheckInterval = setInterval(() => {
           this.checkForNewEvents();
-        }, 60000);
+        }, 30000);
       }
     }
 
@@ -640,6 +641,7 @@ export class FeedService {
       isRefreshing: signal<boolean>(true),
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
+      isCheckingForNewEvents: signal<boolean>(false),
       lastCheckTimestamp: Math.floor(Date.now() / 1000),
       initialLoadComplete: initialLoadComplete,
     };
@@ -873,6 +875,7 @@ export class FeedService {
       isRefreshing: signal<boolean>(true), // Start as refreshing since we're loading content
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
+      isCheckingForNewEvents: signal<boolean>(false),
       lastCheckTimestamp: Math.floor(Date.now() / 1000),
       initialLoadComplete: initialLoadComplete,
     };
@@ -2941,6 +2944,10 @@ export class FeedService {
     return this.data.get(columnId)?.isRefreshing;
   }
 
+  getColumnCheckingState(columnId: string): Signal<boolean> | undefined {
+    return this.data.get(columnId)?.isCheckingForNewEvents;
+  }
+
   getColumnHasMore(columnId: string): Signal<boolean> | undefined {
     return this.data.get(columnId)?.hasMore;
   }
@@ -3003,7 +3010,16 @@ export class FeedService {
     // Skip if feed is paused (no active subscription)
     if (!feedData.subscription) return;
 
-    await this.checkColumnForNewEvents(activeFeedId);
+    // Set checking state for UI indicator
+    feedData.isCheckingForNewEvents?.set(true);
+    this._feedData.update(map => new Map(map));
+
+    try {
+      await this.checkColumnForNewEvents(activeFeedId);
+    } finally {
+      feedData.isCheckingForNewEvents?.set(false);
+      this._feedData.update(map => new Map(map));
+    }
   }
 
   /**

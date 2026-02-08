@@ -57,6 +57,13 @@
             </button>
             }
           </mat-menu>
+
+          <!-- Activity indicator - shows when checking relays for new events -->
+          @if (isCheckingForNewEvents()) {
+          <div class="checking-indicator">
+            <div class="checking-indicator-bar"></div>
+          </div>
+          }
           }
         </div>
 
