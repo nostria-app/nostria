@@ -42,12 +42,21 @@ import { UserRelayService } from '../../../services/relays/user-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { BadgeService } from '../../../services/badge.service';
 import { BadgeHoverCardService } from '../../../services/badge-hover-card.service';
+import { DataService } from '../../../services/data.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
+import { SettingsService } from '../../../services/settings.service';
 
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../../components/create-list-dialog/create-list-dialog.component';
+
+interface MutualFollowProfile {
+  pubkey: string;
+  picture?: string;
+  displayName?: string;
+}
 
 @Component({
   selector: 'app-profile-header',
@@ -92,6 +101,40 @@ export class ProfileHeaderComponent implements OnDestroy {
   private router = inject(Router);
   private trustService = inject(TrustService);
   private followSetsService = inject(FollowSetsService);
+  private dataService = inject(DataService);
+  private imageCacheService = inject(ImageCacheService);
+  readonly settingsService = inject(SettingsService);
+
+  // Mutual followers ("Followers you know")
+  mutualFollowing = signal<string[]>([]);
+  mutualFollowingProfiles = signal<MutualFollowProfile[]>([]);
+
+  mutualFollowingText = computed(() => {
+    const count = this.mutualFollowing().length;
+    if (count === 0) return '';
+
+    const profiles = this.mutualFollowingProfiles();
+    const names = profiles
+      .map(p => p.displayName)
+      .filter((n): n is string => !!n && n !== 'Unknown');
+
+    if (count === 1) {
+      return names.length > 0 ? `Followed by ${names[0]}` : '1 follower in common';
+    } else if (count === 2) {
+      return names.length === 2
+        ? `Followed by ${names[0]} and ${names[1]}`
+        : `${count} followers in common`;
+    } else {
+      const remaining = count - names.length;
+      if (names.length === 0) {
+        return `${count} followers in common`;
+      } else if (names.length === 1) {
+        return `Followed by ${names[0]} and ${remaining} other${remaining !== 1 ? 's' : ''} you follow`;
+      } else {
+        return `Followed by ${names[0]}, ${names[1]} and ${remaining} other${remaining !== 1 ? 's' : ''} you follow`;
+      }
+    }
+  });
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -567,8 +610,88 @@ export class ProfileHeaderComponent implements OnDestroy {
       this.faviconVisible.set(true);
     });
 
+    // Load mutual followers ("Followers you know") when profile's following list is available
+    // DEFERRED: Wait for cached events to load before computing mutual followers
+    effect(() => {
+      const profilePubkey = this.pubkey();
+      const myPubkey = this.accountState.pubkey();
+      const theirFollowingList = this.profileState.followingList();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
+
+      // Reset when profile changes
+      untracked(() => {
+        this.mutualFollowing.set([]);
+        this.mutualFollowingProfiles.set([]);
+      });
+
+      // Don't compute for own profile, when not logged in, or before data is ready
+      if (!profilePubkey || !myPubkey || profilePubkey === myPubkey || !cachedLoaded) {
+        return;
+      }
+
+      if (theirFollowingList.length === 0) {
+        return;
+      }
+
+      untracked(() => {
+        this.computeMutualFollowing(theirFollowingList);
+      });
+    });
+
     // Load favorites from localStorage
     // No need to load favorites here as the service handles it automatically
+  }
+
+  /**
+   * Compute mutual followers: people the current user follows who also follow the viewed profile.
+   * Uses the profile's following list (already loaded via profileState) to find overlap with
+   * the current user's following list.
+   */
+  private async computeMutualFollowing(theirFollowingList: string[]): Promise<void> {
+    try {
+      const myFollowing = this.accountState.followingList();
+      if (myFollowing.length === 0) {
+        return;
+      }
+
+      const theirFollowingSet = new Set(theirFollowingList);
+      const mutual = myFollowing.filter(p => theirFollowingSet.has(p));
+      this.mutualFollowing.set(mutual);
+
+      // Load profile data for the first 3 mutual followers for avatar display
+      if (mutual.length > 0) {
+        const profilesToLoad = mutual.slice(0, 3);
+        const profiles = await Promise.all(
+          profilesToLoad.map(async pubkey => {
+            try {
+              const profile = await this.dataService.getProfile(pubkey);
+              return {
+                pubkey,
+                picture: profile?.data?.picture,
+                displayName: profile?.data?.display_name || profile?.data?.name || undefined,
+              } as MutualFollowProfile;
+            } catch {
+              return { pubkey } as MutualFollowProfile;
+            }
+          })
+        );
+        this.mutualFollowingProfiles.set(profiles);
+      }
+    } catch (error) {
+      this.logger.debug('Error computing mutual following:', error);
+    }
+  }
+
+  getOptimizedImageUrl(url: string): string {
+    if (!this.settingsService.settings().imageCacheEnabled) {
+      return url;
+    }
+    return this.imageCacheService.getOptimizedImageUrl(url);
+  }
+
+  onMutualAvatarError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
   }
 
   async blockUser(): Promise<void> {

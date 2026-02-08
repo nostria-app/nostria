@@ -179,6 +179,16 @@ Sizes: 16, 32, 48, 180, 192, 512
 
 Extract PNG from ICO: https://cloudconvert.com/ico-to-png
 
+## Token for Loop
+
+https://github.com/settings/personal-access-tokens
+
+Specific to the repo. Issues (read/write).
+
+setx GITHUB_TOKEN "ghp_yourTokenHere"
+
+echo %GITHUB_TOKEN%
+
 ## Loop
 
 ```
