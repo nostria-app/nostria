@@ -11,7 +11,7 @@ param(
   [string]$Label = "ready",
   [int]$PollInterval = 60,
   [int]$IdleThreshold = 60,
-  [int]$TaskTimeout = 30          # Minutes before a ralphy task is killed
+  [int]$TaskTimeout = 120         # Minutes before a ralphy task is killed
 )
 
 function Write-Log {
@@ -45,9 +45,17 @@ function Run-WithTimeout {
     & taskkill /PID $process.Id /T /F 2>$null
     # Kill any lingering opencode processes
     Get-Process -Name "opencode" -ErrorAction SilentlyContinue | Stop-Process -Force
-    Write-Log "Process killed. Reverting uncommitted changes..."
-    & git checkout -- .
-    & git clean -fd
+
+    # Preserve any work done so far instead of reverting
+    $status = & git status --porcelain
+    if ($status) {
+      Write-Log "Committing partial progress (timeout)..."
+      & git add -A
+      & git commit -m "wip: partial progress before timeout"
+      Write-Log "Partial progress committed."
+    } else {
+      Write-Log "No uncommitted changes to preserve."
+    }
     return $false
   }
 
@@ -128,7 +136,8 @@ while ($true) {
       Write-Log "Ralphy finished. Syncing..."
       Sync-Git -CommitMsg $commitMsg
     } else {
-      Write-Log "Task timed out or failed. Skipping sync."
+      Write-Log "Ralphy timed out. Syncing partial progress..."
+      Sync-Git -CommitMsg "wip: partial progress on task (timeout)"
     }
 
   } else {
@@ -155,7 +164,8 @@ while ($true) {
         Write-Log "Improvement task finished. Syncing..."
         Sync-Git -CommitMsg "chore: codebase improvement"
       } else {
-        Write-Log "Improvement task timed out or failed. Skipping sync."
+        Write-Log "Improvement task timed out. Syncing partial progress..."
+        Sync-Git -CommitMsg "wip: partial improvement progress (timeout)"
       }
     }
   }
