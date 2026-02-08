@@ -11,3 +11,4 @@
 - [✓] 2026-02-08 12:06 - Create a "Migrate" button on the top of the YouTube component to migrate old bookmarks
 - [✓] 2026-02-08 12:17 - (BUG) Mute word "GM" doesn't mute posts including "GM" but mutes npubs including "gm" :)
 - [✓] 2026-02-08 12:30 - (BUG) Every outgoing DM is loading for ~10 sec
+- [✓] 2026-02-08 13:00 - Auto update feed

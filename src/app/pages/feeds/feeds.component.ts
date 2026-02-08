@@ -656,6 +656,16 @@ export class FeedsComponent implements OnDestroy {
     return 0;
   });
 
+  // Check if active feed is currently checking relays for new events
+  isCheckingForNewEvents = computed(() => {
+    const feed = this.activeFeed();
+    if (!feed) return false;
+
+    const feedDataMap = this.feedService.feedDataReactive();
+    const feedData = feedDataMap.get(feed.id);
+    return feedData?.isCheckingForNewEvents?.() ?? false;
+  });
+
   // Helper method to check if a specific feed is paused
   isFeedPaused(feedId: string): boolean {
     const feedDataMap = this.feedService.feedDataReactive();
@@ -969,6 +979,27 @@ export class FeedsComponent implements OnDestroy {
       // Store current values for next comparison
       previousFeedId = currentFeedId;
       previousFeedKinds = [...currentKinds];
+    });
+
+    // Auto-load new posts when user is scrolled to top
+    // This eliminates the need to click the "X new posts" button when already at the top
+    effect(() => {
+      const pendingCount = this.activeFeedPendingCount();
+      const scrolledToTop = this.feedsScrolledToTop();
+      const feed = this.activeFeed();
+
+      if (pendingCount > 0 && scrolledToTop && feed) {
+        untracked(() => {
+          this.logger.debug(`Auto-loading ${pendingCount} pending events (user is scrolled to top)`);
+          this.feedService.loadPendingEvents(feed.id);
+
+          // Reset rendered count to initial batch for performance
+          this.renderedEventCounts.update(counts => ({
+            ...counts,
+            [feed.id]: this.INITIAL_RENDER_COUNT,
+          }));
+        });
+      }
     });
 
     // Set up scroll listener for header auto-hide

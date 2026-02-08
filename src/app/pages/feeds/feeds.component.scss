@@ -160,6 +160,38 @@ app-user-profile {
       display: flex;
       align-items: center;
       min-width: 0;
+      position: relative;
+
+      // Activity indicator when checking relays for new events
+      .checking-indicator {
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        overflow: hidden;
+        border-radius: 1px;
+
+        .checking-indicator-bar {
+          width: 40%;
+          height: 100%;
+          background-color: var(--mat-sys-primary);
+          border-radius: 1px;
+          animation: checking-slide 1.2s ease-in-out infinite;
+        }
+      }
+    }
+
+    @keyframes checking-slide {
+      0% {
+        transform: translateX(-100%);
+      }
+      50% {
+        transform: translateX(200%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
     }
 
     // Static Feed Display (for unauthenticated users)
