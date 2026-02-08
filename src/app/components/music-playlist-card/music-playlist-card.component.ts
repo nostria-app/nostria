@@ -416,8 +416,8 @@ export class MusicPlaylistCardComponent {
     if (this._isLiked()) return;
 
     const ev = this.event();
-    this.reactionService.addLike(ev).then(success => {
-      if (success) {
+    this.reactionService.addLike(ev).then(result => {
+      if (result.success) {
         this._isLiked.set(true);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {

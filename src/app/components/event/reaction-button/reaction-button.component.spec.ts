@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ReactionButtonComponent } from './reaction-button.component';
 
 describe('ReactionButtonComponent', () => {
@@ -75,6 +76,107 @@ describe('ReactionButtonComponent', () => {
       expect(categoryIds).toContain('objects');
       expect(categoryIds).toContain('symbols');
       expect(categoryIds).toContain('flags');
+    });
+  });
+
+  describe('signing error handling', () => {
+    it('should initially have showSigningErrorDialog as false', () => {
+      expect(component.showSigningErrorDialog()).toBe(false);
+    });
+
+    it('should initially have empty signingErrorMessage', () => {
+      expect(component.signingErrorMessage()).toBe('');
+    });
+
+    it('should detect extension not found error as extension error', () => {
+      const result = component.isExtensionError(
+        'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.'
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should detect NIP-07 error as extension error', () => {
+      const result = component.isExtensionError(
+        'NIP-07 extension is not available'
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should detect generic extension error', () => {
+      const result = component.isExtensionError(
+        'The extension did not respond'
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should not treat undefined error as extension error', () => {
+      const result = component.isExtensionError(undefined);
+      expect(result).toBe(false);
+    });
+
+    it('should not treat generic publish error as extension error', () => {
+      const result = component.isExtensionError(
+        'Failed to publish to relays'
+      );
+      expect(result).toBe(false);
+    });
+
+    it('should show dialog for extension errors', () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const snackBarSpy = spyOn(snackBar, 'open');
+
+      component.handleReactionError(
+        'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.',
+        'Failed to add reaction. Please try again.'
+      );
+
+      expect(component.showSigningErrorDialog()).toBe(true);
+      expect(component.signingErrorMessage()).toContain('Nostr extension not found');
+      expect(snackBarSpy).not.toHaveBeenCalled();
+    });
+
+    it('should show snackbar for non-extension errors', () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const snackBarSpy = spyOn(snackBar, 'open');
+
+      component.handleReactionError(
+        undefined,
+        'Failed to add reaction. Please try again.'
+      );
+
+      expect(component.showSigningErrorDialog()).toBe(false);
+      expect(snackBarSpy).toHaveBeenCalledWith(
+        'Failed to add reaction. Please try again.',
+        'Dismiss',
+        { duration: 3000 }
+      );
+    });
+
+    it('should show snackbar for generic errors', () => {
+      const snackBar = TestBed.inject(MatSnackBar);
+      const snackBarSpy = spyOn(snackBar, 'open');
+
+      component.handleReactionError(
+        'Some network error',
+        'Failed to add reaction. Please try again.'
+      );
+
+      expect(component.showSigningErrorDialog()).toBe(false);
+      expect(snackBarSpy).toHaveBeenCalledWith(
+        'Failed to add reaction. Please try again.',
+        'Dismiss',
+        { duration: 3000 }
+      );
+    });
+
+    it('should close signing error dialog and clear message', () => {
+      component.showSigningErrorDialog.set(true);
+      component.signingErrorMessage.set('Some error');
+
+      component.closeSigningErrorDialog();
+
+      expect(component.showSigningErrorDialog()).toBe(false);
+      expect(component.signingErrorMessage()).toBe('');
     });
   });
 });

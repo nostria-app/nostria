@@ -22,6 +22,7 @@ import { AudioPlayerComponent } from '../../../components/audio-player/audio-pla
 import { VideoControlsComponent } from '../../../components/video-controls/video-controls.component';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
+import { toggleFullscreen } from '../../../utils/fullscreen';
 
 @Component({
   selector: 'app-media-details',
@@ -218,17 +219,9 @@ export class MediaDetailsComponent {
 
   async onVideoFullscreenToggle(): Promise<void> {
     const videoWrapper = document.querySelector('.video-wrapper');
-    if (!videoWrapper) return;
+    const video = this.videoElement()?.nativeElement;
 
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await videoWrapper.requestFullscreen();
-      }
-    } catch {
-      // Fullscreen not supported
-    }
+    await toggleFullscreen(videoWrapper, video);
   }
 
   async onVideoPipToggle(): Promise<void> {

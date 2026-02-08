@@ -373,3 +373,33 @@
   }
   }
 </div>
+
+@if (showSigningErrorDialog()) {
+<app-custom-dialog
+  [title]="'Signing Error'"
+  [width]="'480px'"
+  (closed)="closeSigningErrorDialog()">
+
+  <div dialog-content>
+    <div class="signing-error-content">
+      <mat-icon class="signing-error-icon">error_outline</mat-icon>
+      <p class="signing-error-description">
+        Your browser extension for signing Nostr events could not be reached. This can happen if:
+      </p>
+      <ul class="signing-error-reasons">
+        <li>The extension (e.g. Alby, nos2x) has been disabled or uninstalled</li>
+        <li>The extension is not responding</li>
+        <li>The browser was updated and the extension needs to be re-enabled</li>
+      </ul>
+      <p class="signing-error-suggestion">
+        Please check that your NIP-07 signing extension is installed and enabled, then try again.
+        Alternatively, you can log out and log back in using your nsec key.
+      </p>
+    </div>
+  </div>
+
+  <div dialog-actions>
+    <button mat-flat-button (click)="closeSigningErrorDialog()">Close</button>
+  </div>
+</app-custom-dialog>
+}
