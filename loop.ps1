@@ -10,13 +10,51 @@ param(
   [string]$Repo = "nostria-app/nostria",
   [string]$Label = "ready",
   [int]$PollInterval = 60,
-  [int]$IdleThreshold = 60
+  [int]$IdleThreshold = 60,
+  [int]$TaskTimeout = 30          # Minutes before a ralphy task is killed
 )
 
 function Write-Log {
   param([string]$Message)
   $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   Write-Host "[$timestamp] $Message"
+}
+
+function Run-WithTimeout {
+  param(
+    [string]$Description,
+    [string[]]$Arguments,
+    [int]$TimeoutMinutes = $TaskTimeout
+  )
+
+  Write-Log "Starting: $Description (timeout: ${TimeoutMinutes}m)"
+
+  # Build the command string for cmd.exe so it resolves .cmd shims from PATH
+  $argString = ($Arguments | ForEach-Object {
+    if ($_ -match '\s') { "`"$_`"" } else { $_ }
+  }) -join " "
+  $cmdLine = "ralphy $argString"
+
+  $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $cmdLine `
+    -NoNewWindow -PassThru
+  $exited = $process.WaitForExit($TimeoutMinutes * 60 * 1000)
+
+  if (-not $exited) {
+    Write-Log "TIMEOUT: Task exceeded ${TimeoutMinutes}m. Killing..."
+    # Kill the cmd.exe process tree
+    & taskkill /PID $process.Id /T /F 2>$null
+    # Kill any lingering opencode processes
+    Get-Process -Name "opencode" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Write-Log "Process killed. Reverting uncommitted changes..."
+    & git checkout -- .
+    & git clean -fd
+    return $false
+  }
+
+  if ($process.ExitCode -ne 0) {
+    Write-Log "WARNING: Ralphy exited with code $($process.ExitCode)"
+  }
+  return $true
 }
 
 function Get-TaskCount {
@@ -83,10 +121,15 @@ while ($true) {
       }
     }
 
-    & ralphy --opencode --model $Model --github $Repo --github-label $Label
+    $taskArgs = @("--opencode", "--model", $Model, "--github", $Repo, "--github-label", $Label)
+    $success = Run-WithTimeout -Description "Issue tasks" -Arguments $taskArgs
 
-    Write-Log "Ralphy finished. Syncing..."
-    Sync-Git -CommitMsg $commitMsg
+    if ($success) {
+      Write-Log "Ralphy finished. Syncing..."
+      Sync-Git -CommitMsg $commitMsg
+    } else {
+      Write-Log "Task timed out or failed. Skipping sync."
+    }
 
   } else {
     $idleCount++
@@ -105,10 +148,15 @@ while ($true) {
       & git fetch origin
       & git pull --rebase origin main
 
-      & ralphy --opencode --model $Model --prd IMPROVEMENTS.md --max-iterations 1
+      $improvArgs = @("--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "1")
+      $success = Run-WithTimeout -Description "Idle improvement" -Arguments $improvArgs
 
-      Write-Log "Improvement task finished. Syncing..."
-      Sync-Git -CommitMsg "chore: codebase improvement"
+      if ($success) {
+        Write-Log "Improvement task finished. Syncing..."
+        Sync-Git -CommitMsg "chore: codebase improvement"
+      } else {
+        Write-Log "Improvement task timed out or failed. Skipping sync."
+      }
     }
   }
 
