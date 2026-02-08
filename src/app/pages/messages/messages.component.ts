@@ -1127,7 +1127,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Send a direct message using both NIP-04 and NIP-44
+   * Send a direct message using both NIP-04 and NIP-44.
+   * Uses optimistic UI: the message appears immediately while
+   * relay publishing happens in the background.
    */
   async sendMessage(): Promise<void> {
     const messageText = this.newMessageText().trim();
@@ -1143,11 +1145,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!myPubkey) {
         throw new Error('You need to be logged in to send messages');
       }
-
-      // Get relays to publish to
-      // TODO: Important, get all relays for the user we are sending DM to and include
-      // it in this array for publishing the DM!!
-      // const relays = this.relay.getAccountRelayUrls();
 
       // Ensure relays are discovered for the receiver
       await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
@@ -1166,20 +1163,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const selectedChat = this.selectedChat()!;
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
-      // Send to the primary recipient (currently selected chat)
-      let finalMessage: DirectMessage;
+      // Create the message (encrypts + signs, but does NOT publish yet)
+      let result: { message: DirectMessage; publish: () => Promise<void> };
 
       if (useModernEncryption) {
-        // Use NIP-44 encryption
-        finalMessage = await this.sendNip44Message(
+        result = await this.createNip44Message(
           messageText,
           receiverPubkey,
           myPubkey,
           replyToMessage?.id
         );
       } else {
-        // Use NIP-04 encryption for backwards compatibility
-        finalMessage = await this.sendNip04Message(
+        result = await this.createNip04Message(
           messageText,
           receiverPubkey,
           myPubkey,
@@ -1187,18 +1182,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         );
       }
 
-      // Create a pending message with the actual message ID to show immediately in the UI
+      const finalMessage = result.message;
+
+      // Create a pending message to show immediately in the UI
       const pendingMessage: DirectMessage = {
         ...finalMessage,
         pending: true,
         received: false,
       };
 
-      // Add to the pending messages so the user sees feedback
+      // Add to pending messages so the user sees feedback right away
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
       // Add the message to the messaging service to update the chat's lastMessage
-      // This will be picked up by subscriptions later and the pending version will be removed
       const updatedMessage = {
         ...finalMessage,
         pending: false,
@@ -1207,14 +1203,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
 
+      // Release the send button immediately - message is visible in the UI
       this.isSending.set(false);
 
-      // Show success notification
-      // this.snackBar.open('Message sent', 'Close', {
-      //   duration: 3000,
-      //   horizontalPosition: 'center',
-      //   verticalPosition: 'bottom',
-      // });
+      // Publish to relays in the background (fire-and-forget from UI perspective)
+      result.publish().catch(err => {
+        this.logger.error('Background relay publishing failed', err);
+      });
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
@@ -1658,14 +1653,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Send a message using NIP-04 encryption (legacy)
+   * Create a NIP-04 encrypted message (legacy).
+   * Returns the message for UI display and a publish function for background relay delivery.
    */
-  private async sendNip04Message(
+  private async createNip04Message(
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<DirectMessage> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
@@ -1690,11 +1686,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Sign and finalize the event
       const signedEvent = await this.nostr.signEvent(event);
 
-      // Publish to relays
-      await this.publishToRelays(signedEvent, receiverPubkey);
-
-      // Return the message object
-      return {
+      // Return the message for immediate UI display and a publish function for background delivery
+      const message: DirectMessage = {
         id: signedEvent.id,
         pubkey: myPubkey,
         created_at: signedEvent.created_at,
@@ -1703,21 +1696,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags: signedEvent.tags,
         encryptionType: 'nip04',
       };
+
+      const publish = () => this.publishToRelays(signedEvent, receiverPubkey);
+
+      return { message, publish };
     } catch (error) {
-      this.logger.error('Failed to send NIP-04 message', error);
+      this.logger.error('Failed to create NIP-04 message', error);
       throw error;
     }
   }
 
   /**
-   * Send a message using NIP-44 encryption (modern)
+   * Create a NIP-44 encrypted message (modern).
+   * Returns the message for UI display and a publish function for background relay delivery.
    */
-  private async sendNip44Message(
+  private async createNip44Message(
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<DirectMessage> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
 
@@ -1743,7 +1741,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const eventText = JSON.stringify(rumorWithId);
 
       // Step 2: Create the seal (kind 13) - encrypt the rumor
-      // For Note to Self, we only need one seal encrypted to ourselves
       const sealedContent = await this.encryption.encryptNip44(eventText, receiverPubkey);
 
       const sealedMessage = {
@@ -1779,16 +1776,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Sign the gift wrap with the ephemeral key
       const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-      // For Note to Self: Only publish one gift wrap to self
-      // For regular messages: Create and publish two gift wraps (one for recipient, one for self)
-      if (isNoteToSelf) {
-        // Note to Self: Only one gift wrap needed
-        await Promise.allSettled([
-          this.publishToUserDmRelays(signedGiftWrap, myPubkey), // Gift wrap → own DM relays
-          this.publishToAccountRelays(signedGiftWrap), // Gift wrap → account relays (for sync across devices)
-        ]);
-      } else {
-        // Regular message: Create second gift wrap for self
+      // Prepare the second gift wrap for self (for regular messages, not note-to-self)
+      let signedGiftWrap2: NostrEvent | null = null;
+      if (!isNoteToSelf) {
         const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
 
         const sealedMessage2 = {
@@ -1815,22 +1805,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           content: giftWrapContent2,
         };
 
-        const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
-
-        // Publish both gift wraps:
-        // - Recipient's gift wrap → recipient's DM relays + account relays + discovery relays (fallback)
-        // - Sender's gift wrap (self) → sender's DM relays + account relays (for sync across devices)
-        await Promise.allSettled([
-          this.publishToUserDmRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's DM relays
-          this.publishToAccountRelays(signedGiftWrap), // Gift wrap for receiver → account relays (backup)
-          this.publishToDiscoveryRelays(signedGiftWrap), // Gift wrap for receiver → discovery relays (fallback)
-          this.publishToUserDmRelays(signedGiftWrap2, myPubkey), // Gift wrap for sender → sender's DM relays (for other devices)
-          this.publishToAccountRelays(signedGiftWrap2), // Gift wrap for sender (self) → account relays
-        ]);
+        signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
       }
 
-      // Return the message object based on the original rumor
-      return {
+      // Return the message for immediate UI display
+      const message: DirectMessage = {
         id: rumorId,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
@@ -1839,8 +1818,30 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags: unsignedMessage.tags,
         encryptionType: 'nip44',
       };
+
+      // Return a publish function that handles all relay publishing in the background
+      const publish = async () => {
+        if (isNoteToSelf) {
+          // Note to Self: Only one gift wrap needed
+          await Promise.allSettled([
+            this.publishToUserDmRelays(signedGiftWrap, myPubkey),
+            this.publishToAccountRelays(signedGiftWrap),
+          ]);
+        } else {
+          // Regular message: publish both gift wraps
+          await Promise.allSettled([
+            this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
+            this.publishToAccountRelays(signedGiftWrap),
+            this.publishToDiscoveryRelays(signedGiftWrap),
+            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
+            this.publishToAccountRelays(signedGiftWrap2!),
+          ]);
+        }
+      };
+
+      return { message, publish };
     } catch (error) {
-      this.logger.error('Failed to send NIP-44 message', error);
+      this.logger.error('Failed to create NIP-44 message', error);
       throw error;
     }
   }
