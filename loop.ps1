@@ -29,6 +29,8 @@ function Get-TaskCount {
 }
 
 function Sync-Git {
+  param([string]$CommitMsg = "feat: complete ralphy task")
+
   Write-Log "Syncing with remote..."
 
   # If there are uncommitted changes (e.g. .ralphy/progress.txt), amend them
@@ -42,7 +44,7 @@ function Sync-Git {
       Write-Log "Amending leftover files into ralphy's commit..."
       & git commit --amend --no-edit
     } else {
-      & git commit -m "feat: complete ralphy task"
+      & git commit -m $CommitMsg
     }
   }
 
@@ -70,10 +72,21 @@ while ($true) {
     Write-Log "Found $taskCount issue(s). Running ralphy..."
     $idleCount = 0
 
+    # Grab issue titles before ralphy removes the labels
+    $issueTitles = & gh issue list --repo $Repo --label $Label --json title --jq ".[].title" 2>$null
+    $commitMsg = "feat: complete ralphy task"
+    if ($issueTitles) {
+      # Use the first issue title as the commit message
+      $firstTitle = ($issueTitles -split "`n")[0].Trim()
+      if ($firstTitle) {
+        $commitMsg = "feat: $firstTitle"
+      }
+    }
+
     & ralphy --opencode --model $Model --github $Repo --github-label $Label
 
     Write-Log "Ralphy finished. Syncing..."
-    Sync-Git
+    Sync-Git -CommitMsg $commitMsg
 
   } else {
     $idleCount++
@@ -95,7 +108,7 @@ while ($true) {
       & ralphy --opencode --model $Model --prd IMPROVEMENTS.md --max-iterations 1
 
       Write-Log "Improvement task finished. Syncing..."
-      Sync-Git
+      Sync-Git -CommitMsg "chore: codebase improvement"
     }
   }
 
