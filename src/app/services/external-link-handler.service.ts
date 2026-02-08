@@ -32,6 +32,7 @@ export class ExternalLinkHandlerService {
     'jumble.social',
     'nostrudel.ninja',
     'nostter.app',
+    'sunami.app',
   ];
 
   /**
@@ -131,8 +132,8 @@ export class ExternalLinkHandlerService {
       // - coracle.social: /people/nprofile..., /notes/nevent...
       // - nostrudel.ninja: /u/npub..., /n/nevent...
 
-      // Pattern 1: Path prefix patterns like /e/, /p/, /profile/, /note/, /users/, /people/, /u/, /n/
-      const prefixMatch = path.match(/^\/(p|profile|e|event|a|article|note|notes|users|people|u|n)\/([a-zA-Z0-9]+)/i);
+      // Pattern 1: Path prefix patterns like /e/, /p/, /profile/, /note/, /users/, /people/, /u/, /n/, /release/
+      const prefixMatch = path.match(/^\/(p|profile|e|event|a|article|note|notes|users|people|u|n|release)\/([a-zA-Z0-9]+)/i);
 
       if (prefixMatch) {
         const [, type, identifier] = prefixMatch;
@@ -263,7 +264,7 @@ export class ExternalLinkHandlerService {
     // Route mappings based on path prefix
     const profileTypes = ['p', 'profile', 'users', 'people', 'u'];
     const eventTypes = ['e', 'event', 'note', 'notes', 'n'];
-    const articleTypes = ['a', 'article'];
+    const articleTypes = ['a', 'article', 'release'];
 
     if (profileTypes.includes(type)) {
       // For profile types, decode nprofile to get npub
@@ -272,6 +273,10 @@ export class ExternalLinkHandlerService {
     } else if (eventTypes.includes(type)) {
       return `/e/${identifier}`;
     } else if (articleTypes.includes(type)) {
+      // For naddr identifiers, decode and route to specific section (e.g. music)
+      if (identifier.toLowerCase().startsWith('naddr1')) {
+        return this.mapNaddrToRoute(identifier);
+      }
       return `/a/${identifier}`;
     }
 
@@ -301,10 +306,39 @@ export class ExternalLinkHandlerService {
 
     // Article/address identifiers
     if (lowerIdentifier.startsWith('naddr1')) {
-      return `/a/${identifier}`;
+      return this.mapNaddrToRoute(identifier);
     }
 
     return null;
+  }
+
+  /**
+   * Decode an naddr1 identifier and route music kinds to the music section.
+   * Falls back to /a/{naddr} for non-music addressable events.
+   */
+  private mapNaddrToRoute(identifier: string): string | null {
+    try {
+      const decoded = nip19.decode(identifier);
+      if (decoded.type === 'naddr') {
+        const data = decoded.data as { kind: number; pubkey: string; identifier: string };
+        const npub = nip19.npubEncode(data.pubkey);
+
+        if (data.kind === 34139) {
+          // Music playlist - route directly to music playlist page
+          return `/music/playlist/${npub}/${data.identifier}`;
+        }
+
+        if (data.kind === 36787) {
+          // Music track - route directly to song detail page
+          return `/music/song/${npub}/${data.identifier}`;
+        }
+      }
+    } catch (error) {
+      this.logger.warn('[ExternalLinkHandler] Failed to decode naddr:', identifier, error);
+    }
+
+    // Fallback to generic article/addressable route
+    return `/a/${identifier}`;
   }
 
   /**
