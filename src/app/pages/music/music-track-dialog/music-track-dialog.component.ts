@@ -21,6 +21,7 @@ import { RelaysService } from '../../../services/relays/relays';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
+import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MusicTermsDialogComponent } from '../music-terms-dialog/music-terms-dialog.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -77,6 +78,7 @@ export class MusicTrackDialogComponent {
   private pool = inject(RelayPoolService);
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
+  private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -510,7 +512,7 @@ export class MusicTrackDialogComponent {
   private async promptDeleteFile(fileType: string, url: string): Promise<void> {
     const hash = this.extractHashFromUrl(url);
     if (!hash) {
-      console.log(`Could not extract hash from ${fileType} URL:`, url);
+      this.logger.debug(`Could not extract hash from ${fileType} URL:`, url);
       return;
     }
 
@@ -530,7 +532,7 @@ export class MusicTrackDialogComponent {
         await this.mediaService.deleteFile(hash);
         this.snackBar.open(`Previous ${fileType} deleted`, 'Close', { duration: 2000 });
       } catch (error) {
-        console.error(`Failed to delete ${fileType}:`, error);
+        this.logger.error(`Failed to delete ${fileType}:`, error);
         this.snackBar.open(`Failed to delete ${fileType}`, 'Close', { duration: 3000 });
       }
     }
@@ -615,7 +617,7 @@ export class MusicTrackDialogComponent {
         this.audioFile.set(null);
       }
     } catch (error) {
-      console.error('Error uploading audio:', error);
+      this.logger.error('Error uploading audio:', error);
       this.snackBar.open('Error uploading audio', 'Close', { duration: 3000 });
       this.audioFile.set(null);
     } finally {
@@ -716,7 +718,7 @@ export class MusicTrackDialogComponent {
         }
       }
     } catch (error) {
-      console.error('Error extracting audio metadata:', error);
+      this.logger.error('Error extracting audio metadata:', error);
       // Fallback to filename for title
       const currentTitle = this.trackForm.get('title')?.value;
       if (forceUpdate || !currentTitle) {
@@ -737,7 +739,7 @@ export class MusicTrackDialogComponent {
       await this.handleImageFile(file);
       this.snackBar.open('Album art extracted and uploaded', 'Close', { duration: 2000 });
     } catch (error) {
-      console.error('Error uploading extracted cover art:', error);
+      this.logger.error('Error uploading extracted cover art:', error);
     }
   }
 
@@ -810,7 +812,7 @@ export class MusicTrackDialogComponent {
         this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      this.logger.error('Error uploading image:', error);
       this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
     } finally {
       this.isUploadingImage.set(false);
@@ -1220,7 +1222,7 @@ export class MusicTrackDialogComponent {
         await this.pool.publish(relayUrls, signedEvent);
         published = true;
       } catch (error) {
-        console.warn('Failed to publish:', error);
+        this.logger.warn('Failed to publish:', error);
       }
 
       if (published) {
@@ -1236,7 +1238,7 @@ export class MusicTrackDialogComponent {
         this.snackBar.open(message, 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Error publishing track:', error);
+      this.logger.error('Error publishing track:', error);
       this.snackBar.open('Error publishing track', 'Close', { duration: 3000 });
     } finally {
       this.isPublishing.set(false);

@@ -28,6 +28,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { BadgeService } from '../../../services/badge.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -63,6 +64,7 @@ export class BadgeEditorComponent {
   private utilities = inject(UtilitiesService);
   private badgeService = inject(BadgeService);
   private panelNav = inject(PanelNavigationService);
+  private readonly logger = inject(LoggerService);
 
   // Determine if editing an existing badge
   isEditing = signal(false);
@@ -174,7 +176,7 @@ export class BadgeEditorComponent {
       this.tags.set(tagValues);
 
     } catch (error) {
-      console.error('Error loading badge for edit:', error);
+      this.logger.error('Error loading badge for edit:', error);
       this.snackBar.open('Failed to load badge data', 'Close', { duration: 3000 });
     }
   }
@@ -377,7 +379,6 @@ export class BadgeEditorComponent {
       }
 
       const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, '', tags);
-      console.log('Badge definition event:', definitionEvent);
 
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(definitionEvent);
@@ -390,7 +391,7 @@ export class BadgeEditorComponent {
       const npub = this.utilities.getNpubFromPubkey(pubkey);
       this.layout.openBadgesPage(npub || pubkey);
     } catch (error) {
-      console.error('Error publishing badge:', error);
+      this.logger.error('Error publishing badge:', error);
       this.snackBar.open(
         `Failed to publish badge: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'Close',

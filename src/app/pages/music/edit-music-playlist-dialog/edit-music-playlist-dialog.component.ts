@@ -24,6 +24,7 @@ import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelecti
 import { MentionInputService } from '../../../services/mention-input.service';
 import { NostrRecord } from '../../../interfaces';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 
@@ -85,8 +86,7 @@ export class EditMusicPlaylistDialogComponent {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private mentionInputService = inject(MentionInputService);
-
-  // Media server availability
+  private readonly logger = inject(LoggerService);
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   playlistForm: FormGroup;
@@ -189,7 +189,7 @@ export class EditMusicPlaylistDialogComponent {
       const avatar = profile?.data?.picture || null;
       this.currentUserProfile.set({ name, avatar });
     } catch (error) {
-      console.error('Failed to load current user profile:', error);
+      this.logger.error('Failed to load current user profile:', error);
     }
   }
 
@@ -390,7 +390,7 @@ export class EditMusicPlaylistDialogComponent {
       try {
         const servers = this.mediaService.mediaServers();
         if (servers.length === 0) {
-          console.error('No media servers available');
+          this.logger.error('No media servers available');
           return;
         }
         const result = await this.mediaService.uploadFile(file, false, servers);
@@ -402,7 +402,7 @@ export class EditMusicPlaylistDialogComponent {
           }
         }
       } catch (error) {
-        console.error('Failed to upload image:', error);
+        this.logger.error('Failed to upload image:', error);
       } finally {
         this.isUploading.set(false);
       }
@@ -480,7 +480,7 @@ export class EditMusicPlaylistDialogComponent {
         this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to upload image:', error);
+      this.logger.error('Failed to upload image:', error);
       this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
     } finally {
       this.isUploading.set(false);
@@ -535,7 +535,7 @@ export class EditMusicPlaylistDialogComponent {
           await this.mediaService.deleteFile(hash);
           this.snackBar.open(`Old ${fileType} deleted`, 'Close', { duration: 2000 });
         } catch (error) {
-          console.error(`Failed to delete old ${fileType}:`, error);
+          this.logger.error(`Failed to delete old ${fileType}:`, error);
           this.snackBar.open(`Failed to delete old ${fileType}`, 'Close', { duration: 3000 });
         }
       }
@@ -809,7 +809,7 @@ export class EditMusicPlaylistDialogComponent {
         this.snackBar.open('Failed to update playlist', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to update playlist:', error);
+      this.logger.error('Failed to update playlist:', error);
       this.snackBar.open('Failed to update playlist', 'Close', { duration: 3000 });
     } finally {
       this.isSaving.set(false);

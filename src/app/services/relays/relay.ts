@@ -1196,7 +1196,7 @@ export abstract class RelayServiceBase {
           onEvent(evt as T);
         },
         onclose: (reasons) => {
-          console.log('Pool closed', reasons);
+          this.logger.debug('Pool closed', reasons);
           if (onEose) {
             this.logger.debug('End of stored events reached');
             onEose();

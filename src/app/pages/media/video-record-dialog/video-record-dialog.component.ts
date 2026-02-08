@@ -7,6 +7,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VideoFilterService } from '../../../services/video-filter.service';
+import { LoggerService } from '../../../services/logger.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
@@ -27,6 +28,7 @@ import { CustomDialogRef } from '../../../services/custom-dialog.service';
 export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>);
   private snackBar = inject(MatSnackBar);
+  private logger = inject(LoggerService);
   filterService = inject(VideoFilterService);
 
   @ViewChild('cameraPreview') cameraPreview?: ElementRef<HTMLVideoElement>;
@@ -101,7 +103,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       if (initialized) {
         this.startFilterRendering();
       } else {
-        console.warn('WebGL filters not available, falling back to standard video');
+        this.logger.warn('WebGL filters not available, falling back to standard video');
       }
     }
   }
@@ -161,17 +163,17 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         await new Promise<void>((resolve) => {
           videoElement.onloadedmetadata = () => {
             videoElement.play().then(() => {
-              console.log('[VideoRecorder] Video playback started, dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+              this.logger.debug('[VideoRecorder] Video playback started with dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
               resolve();
             }).catch(err => {
-              console.error('[VideoRecorder] Failed to play video:', err);
+              this.logger.error('[VideoRecorder] Failed to play video:', err);
               resolve();
             });
           };
         });
       }
     } catch (error) {
-      console.error('Failed to start camera preview:', error);
+      this.logger.error('Failed to start camera preview:', error);
       this.snackBar.open('Failed to access camera. Please check permissions.', 'Close', {
         duration: 3000,
       });
@@ -180,10 +182,6 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   async startRecording(): Promise<void> {
     try {
-      console.log('[VideoRecorder] Starting recording...');
-      console.log('[VideoRecorder] isShortForm value:', this.isShortForm);
-      console.log('[VideoRecorder] selectedFilter:', this.selectedFilter());
-
       // If no stream exists, start camera preview first
       if (!this.stream()) {
         await this.startCameraPreview();
@@ -195,8 +193,6 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       const canvas = this.filterCanvas?.nativeElement;
 
       if (canvas && canvas.width > 0 && canvas.height > 0) {
-        console.log('[VideoRecorder] Using canvas stream, dimensions:', canvas.width, 'x', canvas.height);
-
         // Capture stream from canvas which has the filter and aspect ratio applied
         // Try to match the camera stream's frame rate, default to 30fps
         const cameraStream = this.stream();
@@ -204,13 +200,10 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         const frameRate = videoTrack?.getSettings().frameRate || 30;
 
         recordingStream = canvas.captureStream(frameRate);
-        console.log('[VideoRecorder] Canvas stream created with framerate:', frameRate);
-        console.log('[VideoRecorder] Canvas stream video tracks:', recordingStream.getVideoTracks().length);
 
         // Add audio from the original camera stream
         if (cameraStream) {
           const audioTracks = cameraStream.getAudioTracks();
-          console.log('[VideoRecorder] Adding audio tracks:', audioTracks.length);
           // Check if audio tracks exist and aren't already in the recording stream
           const existingAudioTracks = recordingStream.getAudioTracks();
           audioTracks.forEach(track => {
@@ -221,7 +214,6 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
           });
         }
       } else {
-        console.log('[VideoRecorder] Canvas not ready, falling back to camera stream');
         // Use original camera stream without filter
         const stream = this.stream();
         if (!stream) {
@@ -238,19 +230,15 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       this.recordedChunks = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        console.log('[VideoRecorder] ondataavailable fired, size:', event.data.size);
         if (event.data && event.data.size > 0) {
           this.recordedChunks.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        console.log('[VideoRecorder] MediaRecorder onstop event fired');
-        console.log('[VideoRecorder] Recorded chunks count:', this.recordedChunks.length);
         const blob = new Blob(this.recordedChunks, {
           type: mediaRecorder.mimeType,
         });
-        console.log('[VideoRecorder] Created blob, size:', blob.size, 'bytes');
         this.recordedBlob.set(blob);
         this.recordedUrl.set(URL.createObjectURL(blob));
         this.isPreviewing.set(true);
@@ -258,17 +246,11 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       };
 
       mediaRecorder.onerror = (event: Event) => {
-        console.error('[VideoRecorder] MediaRecorder error:', event);
-      };
-
-      mediaRecorder.onstart = () => {
-        console.log('[VideoRecorder] MediaRecorder onstart event fired');
+        this.logger.error('[VideoRecorder] MediaRecorder error:', event);
       };
 
       this.mediaRecorder.set(mediaRecorder);
-      console.log('[VideoRecorder] Starting MediaRecorder...');
       mediaRecorder.start();
-      console.log('[VideoRecorder] MediaRecorder started, state:', mediaRecorder.state);
       this.isRecording.set(true);
       this.recordingProgress.set(0);
 
@@ -277,35 +259,23 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
       // Auto-stop after MAX_DURATION_MS only if short form is enabled
       if (this.isShortForm) {
-        console.log('[VideoRecorder] Short form enabled, setting timer for', this.MAX_DURATION_MS, 'ms');
-        const timerStartTime = Date.now();
         this.recordingTimer = window.setTimeout(() => {
-          const actualElapsed = Date.now() - timerStartTime;
-          console.log('[VideoRecorder] ⏰ TIMER FIRED! Actual elapsed time:', actualElapsed, 'ms');
-          console.log('[VideoRecorder] Attempting to stop recording...');
           // Force stop the recording at exactly 6.3 seconds
           const recorder = this.mediaRecorder();
-          console.log('[VideoRecorder] MediaRecorder state:', recorder?.state);
-          console.log('[VideoRecorder] isRecording signal:', this.isRecording());
 
           if (recorder && recorder.state === 'recording') {
-            console.log('[VideoRecorder] Stopping recorder now...');
             // Request data before stopping to ensure we get all chunks
             recorder.requestData();
             recorder.stop();
             this.isRecording.set(false);
             this.cleanupTimers();
-            console.log('[VideoRecorder] Recording stopped successfully');
           } else {
-            console.warn('[VideoRecorder] Cannot stop - recorder state is:', recorder?.state);
+            this.logger.warn('[VideoRecorder] Cannot stop - recorder state is:', recorder?.state);
           }
         }, this.MAX_DURATION_MS);
-        console.log('[VideoRecorder] Timer ID:', this.recordingTimer);
-      } else {
-        console.log('[VideoRecorder] Short form disabled, no auto-stop timer set');
       }
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      this.logger.error('Failed to start recording:', error);
       this.snackBar.open('Failed to access camera. Please check permissions.', 'Close', {
         duration: 3000,
       });
@@ -314,8 +284,6 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   stopRecording(): void {
-    console.log('[VideoRecorder] stopRecording() called manually');
-    console.log('[VideoRecorder] Stack trace:', new Error().stack);
     const recorder = this.mediaRecorder();
     if (recorder && this.isRecording()) {
       recorder.stop();
@@ -354,15 +322,11 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   private cleanupTimers(): void {
-    console.log('[VideoRecorder] cleanupTimers() called');
-    console.log('[VideoRecorder] Stack trace:', new Error().stack);
     if (this.recordingTimer) {
-      console.log('[VideoRecorder] Clearing recording timer:', this.recordingTimer);
       clearTimeout(this.recordingTimer);
       this.recordingTimer = null;
     }
     if (this.progressTimer) {
-      console.log('[VideoRecorder] Clearing progress timer:', this.progressTimer);
       clearInterval(this.progressTimer);
       this.progressTimer = null;
     }

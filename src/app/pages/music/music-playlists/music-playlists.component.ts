@@ -16,6 +16,7 @@ import { MusicDataService } from '../../../services/music-data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { ListFilterMenuComponent, ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -271,8 +272,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
   private followSetsService = inject(FollowSetsService);
-
-  // Input kept for potential future use with RightPanelService
+  private readonly logger = inject(LoggerService);
   sourceInput = input<'following' | 'public' | undefined>(undefined);
 
   allPlaylists = signal<Event[]>([]);
@@ -480,7 +480,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for loading playlists');
+      this.logger.warn('No relays available for loading playlists');
       this.loading.set(false);
       return;
     }

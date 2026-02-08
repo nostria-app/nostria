@@ -4,6 +4,7 @@ import { UtilitiesService } from '../utilities.service';
 import { ObservedRelayStats, Nip11Info } from '../database.service';
 import { DatabaseService } from '../database.service';
 import { LocalSettingsService } from '../local-settings.service';
+import { LoggerService } from '../logger.service';
 
 export interface RelayStats {
   url: string;
@@ -69,6 +70,7 @@ export class RelaysService {
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   private readonly database = inject(DatabaseService);
+  private readonly logger = inject(LoggerService);
 
   // Map of relay URL to relay statistics
   private relayStats = new Map<string, RelayStats>();
@@ -146,7 +148,7 @@ export class RelaysService {
         }
       }
     } catch (error) {
-      console.warn('Failed to load NIP-11 cache from localStorage:', error);
+      this.logger.warn('Failed to load NIP-11 cache from localStorage:', error);
       // Clear corrupted cache
       localStorage.removeItem(this.NIP11_STORAGE_KEY);
     }
@@ -171,7 +173,7 @@ export class RelaysService {
 
       localStorage.setItem(this.NIP11_STORAGE_KEY, JSON.stringify({ entries }));
     } catch (error) {
-      console.warn('Failed to save NIP-11 cache to localStorage:', error);
+      this.logger.warn('Failed to save NIP-11 cache to localStorage:', error);
     }
   }
 
@@ -453,7 +455,7 @@ export class RelaysService {
       const secureRelays = observedRelays.filter(relay => this.utilities.isSecureRelayUrl(relay.url));
       this.observedRelaysSignal.set(secureRelays);
     } catch (error) {
-      console.error('Failed to load observed relays from storage:', error);
+      this.logger.error('Failed to load observed relays from storage:', error);
     }
   }
 
@@ -530,7 +532,7 @@ export class RelaysService {
       // Update the signal with fresh data
       this.loadObservedRelays();
     } catch (error) {
-      console.error('Failed to save relay stats to storage:', error);
+      this.logger.error('Failed to save relay stats to storage:', error);
     }
   }
 
@@ -599,7 +601,7 @@ export class RelaysService {
       try {
         await this.saveRelayStatsToStorage(stats);
       } catch (error) {
-        console.error(`Failed to persist initial relay stats for ${url}:`, error);
+        this.logger.error(`Failed to persist initial relay stats for ${url}:`, error);
       }
     }
   }
@@ -662,14 +664,14 @@ export class RelaysService {
       });
 
       if (!response.ok) {
-        console.warn(`NIP-11 fetch failed for ${relayUrl}: ${response.status}`);
+        this.logger.warn(`NIP-11 fetch failed for ${relayUrl}: ${response.status}`);
         return null;
       }
 
       const data = (await response.json()) as Nip11RelayInfo;
       return data;
     } catch (error) {
-      console.warn(`Failed to fetch NIP-11 info for ${relayUrl}:`, error);
+      this.logger.warn(`Failed to fetch NIP-11 info for ${relayUrl}:`, error);
       return null;
     }
   }

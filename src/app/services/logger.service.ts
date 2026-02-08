@@ -23,7 +23,8 @@ export class LoggerService {
   };
 
   // Current log level - can be changed at runtime
-  logLevel: LogLevel = 'info';
+  // Default to 'warn' to reduce console noise in production
+  logLevel: LogLevel = 'warn';
   logOverlay = false;
   lastDebug = '';
   lastInfo = '';
@@ -31,14 +32,13 @@ export class LoggerService {
 
   constructor() {
     this.logLevel = this.getStoredLogLevel();
-    console.log(`LoggerService initialized with log level: ${this.logLevel}`);
   }
 
   private getStoredLogLevel(): LogLevel {
-    if (!this.isBrowser()) return 'info'; // Default to info level if not in browser context
+    if (!this.isBrowser()) return 'warn'; // Default to warn level if not in browser context
 
     const storedLevel = localStorage.getItem(this.LOG_LEVEL_KEY) as LogLevel | null;
-    return storedLevel || 'info'; // Default to info level
+    return storedLevel || 'warn'; // Default to warn level
   }
 
   setLogLevel(level: LogLevel): void {

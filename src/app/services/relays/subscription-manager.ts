@@ -509,7 +509,7 @@ export class SubscriptionManagerService {
    * Log current metrics to console
    */
   logMetrics(): void {
-    console.log(this.getMetricsReport());
+    this.logger.debug(this.getMetricsReport());
   }
 
   /**

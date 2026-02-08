@@ -266,16 +266,12 @@ export class SettingsService {
   }
 
   async updateSettings(updatedSettings: Partial<UserSettings>): Promise<void> {
-    console.log('updateSettings called with:', updatedSettings);
-    console.log('Current settings before update:', this.settings());
-
     // Update the local settings
     const newSettings = {
       ...this.settings(),
       ...updatedSettings,
     };
 
-    console.log('New settings after merge:', newSettings);
     this.settings.set(newSettings);
 
     // Skip publishing for preview accounts - they cannot sign events
@@ -288,7 +284,6 @@ export class SettingsService {
     // Create and publish the event
     try {
       const content = JSON.stringify(newSettings);
-      console.log('Settings content to publish:', content);
       const tags = [['d', 'nostria:settings']];
 
       const unsignedEvent = this.nostrService.createEvent(kinds.Application, content, tags);
@@ -296,10 +291,8 @@ export class SettingsService {
 
       const publishResult = await this.accountRelay.publish(signedEvent);
       this.logger.info('Settings published', publishResult);
-      console.log('Settings published successfully:', publishResult);
     } catch (error) {
       this.logger.error('Failed to save settings', error);
-      console.error('Failed to save settings:', error);
       throw error;
     }
   }
@@ -321,26 +314,20 @@ export class SettingsService {
     if (currentValue) {
       // Note: We don't automatically clear cache when disabling to preserve offline functionality
       // Users can manually clear cache in the settings if needed
-      console.log('[Settings] Image cache disabled, existing cache preserved');
+      this.logger.debug('[Settings] Image cache disabled, existing cache preserved');
     }
   }
 
   async toggleReportTypeVisibility(reportType: string): Promise<void> {
-    console.log('toggleReportTypeVisibility called with:', reportType);
     const currentSettings = this.settings();
-    console.log('Current settings:', currentSettings);
 
     const settingKey =
       `hide${reportType.charAt(0).toUpperCase() + reportType.slice(1)}` as keyof UserSettings;
     const currentValue = currentSettings[settingKey] as boolean;
 
-    console.log(`Setting key: ${settingKey}, current value: ${currentValue}`);
-
     const newSettings = {
       [settingKey]: !currentValue,
     } as Partial<UserSettings>;
-
-    console.log('New settings to update:', newSettings);
 
     await this.updateSettings(newSettings);
   }

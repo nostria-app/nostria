@@ -20,6 +20,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
@@ -59,6 +60,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private panelNav = inject(PanelNavigationService);
+  private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
   private dialog = inject(MatDialog);
@@ -151,7 +153,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
             decodedPubkey = decoded.data;
           }
         } catch (e) {
-          console.error('Failed to decode npub:', e);
+          this.logger.error('Failed to decode npub:', e);
         }
       }
 
@@ -170,7 +172,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available');
+      this.logger.warn('No relays available');
       this.loading.set(false);
       return;
     }

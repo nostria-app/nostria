@@ -25,6 +25,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DataService } from '../../services/data.service';
 import { NostrRecord } from '../../interfaces';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-badges',
@@ -58,6 +59,7 @@ export class BadgesComponent implements OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly logger = inject(LoggerService);
 
   isUpdating = signal<boolean>(false);
   isInitialLoading = signal<boolean>(true);
@@ -143,7 +145,6 @@ export class BadgesComponent implements OnDestroy {
       const appAuthenticated = this.app.authenticated();
 
       if (appInitialized && appAuthenticated) {
-        console.log('appInitialized && appAuthenticated');
 
         // Run the loading logic untracked to prevent infinite loops
         untracked(async () => {
@@ -164,7 +165,7 @@ export class BadgesComponent implements OnDestroy {
             // Load only what the active tab needs.
             await this.ensureTabDataLoaded(this.activeTabIndex(), targetPubkey);
           } catch (err) {
-            console.error('Error loading badges:', err);
+            this.logger.error('Error loading badges:', err);
             this.isInitialLoading.set(false);
           }
         });
@@ -182,7 +183,7 @@ export class BadgesComponent implements OnDestroy {
         try {
           await this.ensureTabDataLoaded(index, pubkey);
         } catch (err) {
-          console.error('Error loading tab data:', err);
+          this.logger.error('Error loading tab data:', err);
         }
       });
 
@@ -366,14 +367,12 @@ export class BadgesComponent implements OnDestroy {
   }
 
   viewBadgeDetailsById(id: string, slug: string): void {
-    console.log('Viewing badge details:', id, slug);
     this.layout.openBadge(id, undefined, {
       queryParams: { tab: this.activeTabIndex() },
     });
   }
 
   viewBadgeDetails(badge: NostrEvent): void {
-    console.log('Viewing badge details:', badge);
 
     // For BadgeDefinition events (kind 30009), construct the id from pubkey and d-tag
     if (badge.kind === 30009) {
@@ -391,7 +390,7 @@ export class BadgesComponent implements OnDestroy {
     const id = this.utilities.getATagValueFromEvent(badge);
 
     if (!id) {
-      console.error('Badge has no a-tag reference');
+      this.logger.error('Badge has no a-tag reference');
       return;
     }
 
@@ -443,7 +442,7 @@ export class BadgesComponent implements OnDestroy {
 
       const aTag = this.getBadgeATag(badgeAward);
       if (!aTag) {
-        console.error('Badge has no a-tag reference');
+        this.logger.error('Badge has no a-tag reference');
         return;
       }
 
@@ -488,7 +487,7 @@ export class BadgesComponent implements OnDestroy {
       // Reload accepted badges to update the UI
       await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
     } catch (err) {
-      console.error('Error accepting badge:', err);
+      this.logger.error('Error accepting badge:', err);
     } finally {
       this.isUpdating.set(false);
     }
@@ -498,7 +497,7 @@ export class BadgesComponent implements OnDestroy {
     // Extract badge information from the NostrEvent
     const aTags = badgeEvent.tags.filter(t => t[0] === 'a');
     if (aTags.length === 0) {
-      console.error('Badge event has no a-tag');
+      this.logger.error('Badge event has no a-tag');
       return;
     }
 
@@ -523,28 +522,22 @@ export class BadgesComponent implements OnDestroy {
   async removeBadge(badge: AcceptedBadge) {
     if (this.isUpdating()) return;
 
-    console.log('Removing badge:', badge);
-
     try {
       this.isUpdating.set(true);
 
       // The aTag is an array, get the identifier from position 1
       const aTagValue = badge.aTag[1];
       if (!aTagValue) {
-        console.error('Badge has no a-tag reference');
+        this.logger.error('Badge has no a-tag reference');
         return;
       }
-
-      console.log('Looking for a-tag value:', aTagValue);
 
       // Get current profile badges event
       const currentEvent = this.profileBadgesEvent();
       if (!currentEvent) {
-        console.error('No profile badges event found');
+        this.logger.error('No profile badges event found');
         return;
       }
-
-      console.log('Current event tags:', currentEvent.tags);
 
       // Filter out the badge we want to remove (both a-tag and matching e-tag)
       const aTags = currentEvent.tags.filter(tag => tag[0] === 'a');
@@ -553,7 +546,7 @@ export class BadgesComponent implements OnDestroy {
       // Find the index of the badge to remove
       const aTagIndex = aTags.findIndex(tag => tag[1] === aTagValue);
       if (aTagIndex === -1) {
-        console.error('Badge not found in profile badges');
+        this.logger.error('Badge not found in profile badges');
         return;
       }
 
@@ -592,7 +585,7 @@ export class BadgesComponent implements OnDestroy {
       // Reload accepted badges to update the UI
       await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
     } catch (err) {
-      console.error('Error removing badge:', err);
+      this.logger.error('Error removing badge:', err);
     } finally {
       this.isUpdating.set(false);
     }
@@ -604,26 +597,21 @@ export class BadgesComponent implements OnDestroy {
   async onBadgeDropped(event: CdkDragDrop<unknown>) {
     // If dropped in the same position, do nothing
     if (event.previousIndex === event.currentIndex) {
-      console.log('Badge dropped in same position, no change needed');
       return;
     }
-
-    console.log(`Moving badge from position ${event.previousIndex} to ${event.currentIndex}`);
 
     try {
       this.isUpdating.set(true);
 
       const currentAccepted = [...this.accepted()];
-      console.log('Current badge order:', currentAccepted.map(b => b.slug));
 
       // Reorder the array based on drag-drop
       moveItemInArray(currentAccepted, event.previousIndex, event.currentIndex);
-      console.log('New badge order:', currentAccepted.map(b => b.slug));
 
       // Get the current profile badges event
       const currentEvent = this.badgeService.profileBadgesEvent();
       if (!currentEvent) {
-        console.error('No profile badges event found');
+        this.logger.error('No profile badges event found');
         return;
       }
 
@@ -648,7 +636,6 @@ export class BadgesComponent implements OnDestroy {
         }
       }
 
-      console.log('New tags array:', tags);
 
       // Create and sign the new event
       const unsignedEvent: UnsignedEvent = {
@@ -660,7 +647,6 @@ export class BadgesComponent implements OnDestroy {
       };
 
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      console.log('Signed reordered event:', signedEvent);
 
       await this.accountRelay.publish(signedEvent);
       await this.database.saveEvent(signedEvent);
@@ -671,9 +657,8 @@ export class BadgesComponent implements OnDestroy {
       // Reload accepted badges
       await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
 
-      console.log('Badge reordering complete');
     } catch (err) {
-      console.error('Error reordering badges:', err);
+      this.logger.error('Error reordering badges:', err);
     } finally {
       this.isUpdating.set(false);
     }

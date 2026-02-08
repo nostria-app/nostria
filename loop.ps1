@@ -29,22 +29,41 @@ function Run-WithTimeout {
 
   Write-Log "Starting: $Description (timeout: ${TimeoutMinutes}m)"
 
-  # Build the command string for cmd.exe so it resolves .cmd shims from PATH
-  $argString = ($Arguments | ForEach-Object {
-    if ($_ -match '\s') { "`"$_`"" } else { $_ }
-  }) -join " "
-  $cmdLine = "ralphy $argString"
+  # Strategy: run ralphy synchronously with '&' so its spinner and output
+  # render natively in the terminal. A background job enforces the timeout
+  # by killing ralphy/opencode processes after the deadline, and writes a
+  # flag file so we can reliably detect timeout vs normal exit.
 
-  $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $cmdLine `
-    -NoNewWindow -PassThru
-  $exited = $process.WaitForExit($TimeoutMinutes * 60 * 1000)
+  $timeoutSec = $TimeoutMinutes * 60
+  $timeoutFlag = Join-Path $env:TEMP "ralphy-timeout-$PID.flag"
+  Remove-Item $timeoutFlag -ErrorAction SilentlyContinue
 
-  if (-not $exited) {
-    Write-Log "TIMEOUT: Task exceeded ${TimeoutMinutes}m. Killing..."
-    # Kill the cmd.exe process tree
-    & taskkill /PID $process.Id /T /F 2>$null
-    # Kill any lingering opencode processes
+  # Start a watchdog timer in a background job
+  $watchdog = Start-Job -ScriptBlock {
+    param($timeoutSec, $timeoutFlag)
+    Start-Sleep -Seconds $timeoutSec
+    # Timeout expired - write flag file and kill processes
+    "timeout" | Out-File $timeoutFlag -Force
+    Get-Process -Name "ralphy*" -ErrorAction SilentlyContinue | Stop-Process -Force
     Get-Process -Name "opencode" -ErrorAction SilentlyContinue | Stop-Process -Force
+  } -ArgumentList $timeoutSec, $timeoutFlag
+
+  # Run ralphy synchronously -- output goes directly to the console.
+  # cmd.exe /c is needed to resolve the .cmd shim on Windows.
+  & cmd.exe /c "ralphy $($Arguments -join ' ')"
+  $exitCode = $LASTEXITCODE
+
+  # Clean up the watchdog
+  Stop-Job $watchdog -ErrorAction SilentlyContinue
+  Remove-Job $watchdog -ErrorAction SilentlyContinue
+
+  # Check if we were killed by timeout
+  $didTimeout = Test-Path $timeoutFlag
+  Remove-Item $timeoutFlag -ErrorAction SilentlyContinue
+
+  if ($didTimeout) {
+    Write-Host ""
+    Write-Log "TIMEOUT: Task exceeded ${TimeoutMinutes}m. Killed."
 
     # Preserve any work done so far instead of reverting
     $status = & git status --porcelain
@@ -59,8 +78,8 @@ function Run-WithTimeout {
     return $false
   }
 
-  if ($process.ExitCode -ne 0) {
-    Write-Log "WARNING: Ralphy exited with code $($process.ExitCode)"
+  if ($exitCode -ne 0) {
+    Write-Log "WARNING: Ralphy exited with code $exitCode"
   }
   return $true
 }
@@ -129,7 +148,7 @@ while ($true) {
       }
     }
 
-    $taskArgs = @("--opencode", "--model", $Model, "--github", $Repo, "--github-label", $Label)
+    $taskArgs = @("-v", "--opencode", "--model", $Model, "--github", $Repo, "--github-label", $Label)
     $success = Run-WithTimeout -Description "Issue tasks" -Arguments $taskArgs
 
     if ($success) {
@@ -157,7 +176,7 @@ while ($true) {
       & git fetch origin
       & git pull --rebase origin main
 
-      $improvArgs = @("--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "1")
+      $improvArgs = @("-v", "--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "1")
       $success = Run-WithTimeout -Description "Idle improvement" -Arguments $improvArgs
 
       if ($success) {

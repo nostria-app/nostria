@@ -1396,7 +1396,7 @@ export class EventService {
 
       return parents;
     } catch (error) {
-      console.error('Error loading parent events:', error);
+      this.logger.error('Error loading parent events:', error);
       return [];
     }
   }
@@ -1944,7 +1944,7 @@ export class EventService {
       const result = dialogRef.afterClosed()();
       if (result !== undefined) {
         if (result?.published) {
-          console.log('Note published successfully:', result.event);
+          this.logger.debug('Note published successfully:', result.event);
         }
       } else {
         // Keep checking if not closed yet
@@ -1972,7 +1972,7 @@ export class EventService {
     return new Promise((resolve) => {
       dialogRef.afterClosed().subscribe((result) => {
         if (result?.published) {
-          console.log('Comment published successfully:', result.event);
+          this.logger.debug('Comment published successfully:', result.event);
         }
         resolve(result);
       });
@@ -1998,7 +1998,7 @@ export class EventService {
     return new Promise((resolve) => {
       dialogRef.afterClosed().subscribe((result) => {
         if (result?.published) {
-          console.log('Comment reply published successfully:', result.event);
+          this.logger.debug('Comment reply published successfully:', result.event);
         }
         resolve(result);
       });
@@ -2067,7 +2067,7 @@ export class EventService {
           return signedEvent;
         }
       } catch (error) {
-        console.error('Failed to create audio reply:', error);
+        this.logger.error('Failed to create audio reply:', error);
       }
     }
 

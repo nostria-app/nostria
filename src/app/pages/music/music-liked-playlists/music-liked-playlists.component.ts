@@ -11,6 +11,7 @@ import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -228,6 +229,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private router = inject(Router);
+  private readonly logger = inject(LoggerService);
 
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
@@ -304,7 +306,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for loading liked playlists');
+      this.logger.warn('No relays available for loading liked playlists');
       this.loading.set(false);
       return;
     }

@@ -3,6 +3,7 @@ import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { DatabaseService } from '../database.service';
+import { LoggerService } from '../logger.service';
 import { kinds } from 'nostr-tools';
 
 @Injectable({
@@ -13,6 +14,7 @@ export class UserRelaysService {
   private readonly relaysService = inject(RelaysService);
   private readonly utilitiesService = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
+  private readonly logger = inject(LoggerService);
 
   // High-performance cache with timestamp tracking
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
@@ -134,7 +136,7 @@ export class UserRelaysService {
       }
 
     } catch (error) {
-      console.error('Error fetching user relays:', error);
+      this.logger.error('Error fetching user relays:', error);
 
       // If we already have database relays, keep using them
       if (dbRelays.length > 0) {
@@ -154,7 +156,7 @@ export class UserRelaysService {
           this.cacheTimestamps.set(pubkey, Date.now());
         }
       } catch (hintsError) {
-        console.error('Error fetching relay hints:', hintsError);
+        this.logger.error('Error fetching relay hints:', hintsError);
         relays = [];
       }
     }
@@ -244,7 +246,7 @@ export class UserRelaysService {
       return uniqueNormalizedRelays;
 
     } catch (error) {
-      console.error('Error fetching user relays for publishing:', error);
+      this.logger.error('Error fetching user relays for publishing:', error);
       return [];
     }
   }
@@ -314,26 +316,26 @@ export class UserRelaysService {
    * @returns Promise<string[]> - Array of DM relay URLs
    */
   async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
-    console.log(`[UserRelaysService] getUserDmRelaysForPublishing called for pubkey: ${pubkey.slice(0, 16)}...`);
+    this.logger.debug(`[UserRelaysService] getUserDmRelaysForPublishing called for pubkey: ${pubkey.slice(0, 16)}...`);
 
     try {
       // Get DM relays from discovery service (kind 10050, falls back to kind 10002)
       const dmRelays = await this.discoveryRelayService.getUserDmRelayUrls(pubkey);
-      console.log(`[UserRelaysService] discoveryRelayService.getUserDmRelayUrls returned:`, dmRelays);
+      this.logger.debug(`[UserRelaysService] discoveryRelayService.getUserDmRelayUrls returned:`, dmRelays);
 
       // Also get fallback relays in case DM relays are not set
       const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
-      console.log(`[UserRelaysService] relaysService.getFallbackRelaysForPubkey returned:`, fallbackRelays);
+      this.logger.debug(`[UserRelaysService] relaysService.getFallbackRelaysForPubkey returned:`, fallbackRelays);
 
       // Combine and deduplicate
       const allRelays = [...dmRelays, ...fallbackRelays];
       const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
 
-      console.log(`[UserRelaysService] Final relays for DM publishing to ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
+      this.logger.debug(`[UserRelaysService] Final relays for DM publishing to ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
 
       return uniqueNormalizedRelays;
     } catch (error) {
-      console.error('[UserRelaysService] Error fetching user DM relays for publishing:', error);
+      this.logger.error('[UserRelaysService] Error fetching user DM relays for publishing:', error);
       // Fall back to regular relay list
       return this.getUserRelaysForPublishing(pubkey);
     }

@@ -436,7 +436,6 @@ export class ProfileHeaderComponent implements OnDestroy {
     effect(() => {
       const currentPubkey = this.pubkey();
       if (currentPubkey) {
-        console.debug('LOCATION 4:');
         this.npub.set(this.utilities.getNpubFromPubkey(currentPubkey));
       }
     });

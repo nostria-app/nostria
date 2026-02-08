@@ -21,6 +21,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { LoggerService } from '../../../services/logger.service';
 
 interface ExternalIdentity {
   platform: string;
@@ -57,6 +58,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   media = inject(MediaService);
   private location = inject(Location);
   private snackBar = inject(MatSnackBar);
+  private readonly logger = inject(LoggerService);
   private profileService = inject(Profile);
   profile = signal<ProfileData | null>(null);
   pubkey = '';
@@ -349,7 +351,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
         throw new Error(result.error || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      this.logger.error('Error updating profile:', error);
       this.snackBar.open(
         `Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'Close',

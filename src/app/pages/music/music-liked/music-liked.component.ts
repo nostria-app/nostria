@@ -14,6 +14,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { DataService } from '../../../services/data.service';
 import { MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 const PAGE_SIZE = 24;
@@ -249,6 +250,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private router = inject(Router);
   private mediaPlayer = inject(MediaPlayerService);
   private dataService = inject(DataService);
+  private readonly logger = inject(LoggerService);
 
   allTracks = signal<Event[]>([]);
   loading = signal(true);
@@ -325,7 +327,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for loading liked songs');
+      this.logger.warn('No relays available for loading liked songs');
       this.loading.set(false);
       return;
     }

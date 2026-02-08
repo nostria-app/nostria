@@ -158,7 +158,7 @@ export class MessagingService implements NostriaService {
     const maxRetries = 10;
     const retryDelay = 2000; // 2 seconds
 
-    console.log('[MessagingService] startDmSubscriptionWithRetry called', {
+    this.logger.debug('[MessagingService] startDmSubscriptionWithRetry called', {
       retryCount,
       isRelayInitialized: this.relay.isInitialized(),
       relayUrls: this.relay.getRelayUrls(),
@@ -167,25 +167,21 @@ export class MessagingService implements NostriaService {
     // Check if relays are initialized
     if (!this.relay.isInitialized()) {
       if (retryCount < maxRetries) {
-        console.log(`[MessagingService] Waiting for relay initialization (attempt ${retryCount + 1}/${maxRetries})`);
         this.logger.debug(`Waiting for relay initialization before starting DM subscription (attempt ${retryCount + 1}/${maxRetries})`);
         setTimeout(() => {
           this.startDmSubscriptionWithRetry(retryCount + 1);
         }, retryDelay);
         return;
       } else {
-        console.warn('[MessagingService] Max retries reached waiting for relay initialization');
         this.logger.warn('Max retries reached waiting for relay initialization, attempting subscription anyway');
       }
     }
 
-    console.log('[MessagingService] Starting DM subscription...');
+    this.logger.debug('Starting DM subscription...');
     const sub = await this.subscribeToIncomingMessages();
     if (sub) {
-      console.log('[MessagingService] DM subscription started successfully');
       this.logger.info('DM subscription started successfully');
     } else {
-      console.warn('[MessagingService] Failed to start DM subscription');
       this.logger.warn('Failed to start DM subscription');
     }
   }
@@ -252,7 +248,7 @@ export class MessagingService implements NostriaService {
         messages: new Map([[message.id, message]]),
       };
 
-      console.log('[MessagingService] Created new chat with message', {
+      this.logger.debug('Created new chat with message', {
         chatId,
         messageId: message.id,
         isOutgoing: message.isOutgoing,
@@ -275,7 +271,7 @@ export class MessagingService implements NostriaService {
         hasLegacyMessages: chat.hasLegacyMessages || message.encryptionType === 'nip04',
       };
 
-      console.log('[MessagingService] Updated chat with message', {
+      this.logger.debug('Updated chat with message', {
         chatId,
         messageId: message.id,
         isOutgoing: message.isOutgoing,
@@ -626,7 +622,7 @@ export class MessagingService implements NostriaService {
       const discoveryRelays = this.discoveryRelay.getRelayUrls();
       const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
 
-      console.log('[MessagingService] refreshChats relay setup:', {
+      this.logger.debug('refreshChats relay setup:', {
         dmRelayUrls,
         accountRelays,
         discoveryRelays,
@@ -947,7 +943,7 @@ export class MessagingService implements NostriaService {
           }
         },
         async () => {
-          console.log('End of data for incoming messages.');
+          this.logger.debug('End of data for incoming messages.');
 
           // Wait for all pending decryption operations to complete
           this.logger.info(`Waiting for ${pendingDecryptions.length} pending decryption operations...`);
@@ -1085,7 +1081,7 @@ export class MessagingService implements NostriaService {
           }
         },
         async () => {
-          console.log('End of data for incoming messages.');
+          this.logger.debug('End of data for incoming messages.');
 
           // Wait for all pending decryption operations to complete
           this.logger.info(`Waiting for ${pendingDecryptions2.length} pending decryption operations (sub2)...`);
@@ -1313,7 +1309,7 @@ export class MessagingService implements NostriaService {
     const discoveryRelays = this.discoveryRelay.getRelayUrls();
     const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
 
-    console.log('[MessagingService] subscribeToIncomingMessages relay setup:', {
+    this.logger.debug('subscribeToIncomingMessages relay setup:', {
       dmRelayUrls,
       accountRelays,
       discoveryRelays,
@@ -1345,7 +1341,7 @@ export class MessagingService implements NostriaService {
       since: since,
     };
 
-    console.log('[MessagingService] subscribeToIncomingMessages filters:', {
+    this.logger.debug('subscribeToIncomingMessages filters:', {
       filterTagged,
       filterAuthored,
       sinceDate: new Date(since * 1000).toISOString(),

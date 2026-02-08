@@ -89,7 +89,6 @@ export class EventPageComponent {
     // The URL contains "(right:e/..." when the event is in the right panel
     const outletCheck = this.route.outlet === 'right';
     const urlCheck = this.router.url.includes('(right:');
-    console.log('[EventPage] isInRightPanel check - outlet:', this.route.outlet, 'outletCheck:', outletCheck, 'urlCheck:', urlCheck);
     return outletCheck || urlCheck;
   });
 
@@ -373,16 +372,13 @@ export class EventPageComponent {
   deletionReason = signal<string | null>(null);
 
   constructor() {
-    console.log('[EventPage]', this.instanceId, 'constructor - outlet:', this.route.outlet, 'url:', this.router.url);
     // this.item = this.route.snapshot.data['data'];
-    console.log('EventPageComponent initialized with data:', this.item);
 
     // Load saved reply filter from local storage
     this.loadSavedReplyFilter();
 
     if (this.transferState.hasKey(EVENT_STATE_KEY)) {
       const data = this.transferState.get<EventData | null>(EVENT_STATE_KEY, null);
-      console.log('Transferred data:', data);
       if (data) {
         this.item = data;
       }
@@ -392,22 +388,18 @@ export class EventPageComponent {
     // Check for router navigation state
     const navigation = this.router.currentNavigation();
     if (navigation?.extras.state?.['event']) {
-      console.log('Router state event data:', navigation.extras.state['event']);
       this.event.set(navigation.extras.state['event'] as Event);
     }
     // Check for pre-loaded reply count from feed
     if (navigation?.extras.state?.['replyCount'] !== undefined) {
-      console.log('Router state reply count:', navigation.extras.state['replyCount']);
       this.initialReplyCount.set(navigation.extras.state['replyCount'] as number);
     }
     // Check for pre-loaded parent event from feed
     if (navigation?.extras.state?.['parentEvent']) {
-      console.log('Router state parent event:', navigation.extras.state['parentEvent']);
       this.initialParentEvent.set(navigation.extras.state['parentEvent'] as Event);
     }
     // Check for pre-loaded replies from thread view (for instant rendering)
     if (navigation?.extras.state?.['replies']) {
-      console.log('Router state replies:', navigation.extras.state['replies']);
       this.initialReplies.set(navigation.extras.state['replies'] as ThreadedEvent[]);
     }
 
@@ -438,7 +430,6 @@ export class EventPageComponent {
             // Scroll to top when navigating to a new event
             // Use panel-aware scrolling to avoid scrolling the wrong panel
             const panel = this.isInRightPanel() ? 'right' : 'left';
-            console.log('[EventPage]', this.instanceId, 'effect scroll - isInRightPanel:', this.isInRightPanel(), 'outlet:', this.route.outlet, 'panel:', panel);
             setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
           }
         });
@@ -609,7 +600,6 @@ export class EventPageComponent {
 
       // Scroll to top after loading - use panel-aware scrolling
       const panel = this.isInRightPanel() ? 'right' : 'left';
-      console.log('[EventPage] loadEvent finally scroll - isInRightPanel:', this.isInRightPanel(), 'outlet:', this.route.outlet, 'panel:', panel);
       setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
   }

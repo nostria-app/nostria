@@ -17,6 +17,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
+import { LoggerService } from '../../../services/logger.service';
 
 export type BadgeLayout = 'vertical' | 'horizontal';
 
@@ -55,6 +56,7 @@ export class BadgeComponent {
   @Output() removeClicked = new EventEmitter<void>();
 
   badgeService = inject(BadgeService);
+  private readonly logger = inject(LoggerService);
 
   // Parsed badge data as signals
   id = signal<string>('');
@@ -121,7 +123,7 @@ export class BadgeComponent {
           }
         })
         .catch(err => {
-          console.error('Error loading badge definition:', err);
+          this.logger.error('Error loading badge definition:', err);
           this.error.set('Failed to load badge');
           this.definition.set(undefined);
         });
@@ -177,7 +179,7 @@ export class BadgeComponent {
           }
         })
         .catch(err => {
-          console.error('Error loading badge definition:', err);
+          this.logger.error('Error loading badge definition:', err);
           this.error.set('Failed to load badge');
           this.definition.set(undefined);
         });

@@ -335,14 +335,6 @@ export class RelayPoolService {
       throw new Error('All relays have failed authentication, cannot publish');
     }
 
-    console.log('[RelayPoolService] DEBUG publish called:', {
-      relayCount: filteredUrls.length,
-      relayUrls: filteredUrls,
-      eventKind: event.kind,
-      eventId: event.id,
-      timeout: timeoutMs,
-    });
-
     // Add any new relays to the pool
     this.addRelays(filteredUrls);
 
@@ -351,10 +343,6 @@ export class RelayPoolService {
 
     try {
       const publishPromises = this.#pool.publish(filteredUrls, event, { onauth: authCallback });
-
-      console.log('[RelayPoolService] DEBUG: Got publish promises:', {
-        promiseCount: publishPromises.length,
-      });
 
       // Add timeout to the publish operation
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -376,17 +364,6 @@ export class RelayPoolService {
         return await Promise.allSettled(publishPromises);
       });
 
-      console.log('[RelayPoolService] DEBUG: Publish results:', {
-        totalResults: results.length,
-        fulfilled: results.filter(r => r.status === 'fulfilled').length,
-        rejected: results.filter(r => r.status === 'rejected').length,
-        details: results.map((r, i) => ({
-          relay: filteredUrls[i],
-          status: r.status,
-          reason: r.status === 'rejected' ? r.reason : undefined,
-        })),
-      });
-
       // Track publish results
       results.forEach((result, index) => {
         const relayUrl = filteredUrls[index];
@@ -400,7 +377,7 @@ export class RelayPoolService {
           if (!errorMsg || errorMsg.trim() === '') {
             errorMsg = 'Unknown error (relay returned empty response)';
           }
-          console.warn('[RelayPoolService] Failed to publish to relay:', {
+          this.logger.warn('[RelayPoolService] Failed to publish to relay:', {
             relay: relayUrl,
             reason: errorMsg,
           });
@@ -416,7 +393,7 @@ export class RelayPoolService {
       });
 
     } catch (error) {
-      console.error('[RelayPoolService] Error publishing event:', error);
+      this.logger.error('[RelayPoolService] Error publishing event:', error);
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {

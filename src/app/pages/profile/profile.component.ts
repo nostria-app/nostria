@@ -304,7 +304,6 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     // Check for router navigation state (browser only)
     const navigation = this.app.isBrowser() ? this.router.currentNavigation() : null;
     if (navigation?.extras.state?.['event']) {
-      console.log('Router state event data for profile:', navigation.extras.state['event']);
       // Handle the event data as needed for profile context
     }
 
@@ -731,7 +730,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   getTruncatedPubkey(): string {
     const pubkey = this.pubkey();
     if (!this.utilities.isValidPubkey(pubkey)) {
-      console.warn('Invalid pubkey in getTruncatedPubkey:', pubkey);
+      this.logger.warn('Invalid pubkey in getTruncatedPubkey:', pubkey);
       return this.utilities.formatInvalidPubkey(pubkey);
     }
     return this.utilities.getTruncatedNpub(pubkey);
@@ -742,7 +741,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
     // Validate pubkey first
     if (!this.utilities.isValidPubkey(pubkey)) {
-      console.warn('Invalid pubkey in getFormattedNpub:', pubkey);
+      this.logger.warn('Invalid pubkey in getFormattedNpub:', pubkey);
       throw new Error('Cannot format invalid pubkey as npub');
     }
 
@@ -808,7 +807,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       const npub = this.getFormattedNpub();
       this.copyToClipboard(npub, 'npub');
     } catch (error) {
-      console.warn('Failed to copy npub:', error);
+      this.logger.warn('Failed to copy npub:', error);
       this.snackBar.open('Unable to copy invalid pubkey', 'Close', { duration: 3000 });
     }
   }
@@ -836,7 +835,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
       this.copyToClipboard(nprofile, 'nprofile');
     } catch (error) {
-      console.warn('Failed to copy nprofile:', error);
+      this.logger.warn('Failed to copy nprofile:', error);
       this.snackBar.open('Unable to copy invalid pubkey', 'Close', { duration: 3000 });
     }
   }

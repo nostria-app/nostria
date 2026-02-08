@@ -334,7 +334,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           await this.database.saveEvent(followingEvent);
         } else {
           // Fallback to storage only if relay fetch fails
-          console.warn('Could not fetch following list from relay, falling back to storage');
+          this.logger.warn('Could not fetch following list from relay, falling back to storage');
           followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
         }
 
@@ -905,7 +905,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       newInfo.set(url, info);
       this.nip11Info.set(newInfo);
     } catch (error) {
-      console.error(`Error fetching NIP-11 info for ${url}:`, error);
+        this.logger.error(`Error fetching NIP-11 info for ${url}:`, error);
       // Store null to indicate fetch was attempted but failed
       const currentInfo = this.nip11Info();
       const newInfo = new Map(currentInfo);

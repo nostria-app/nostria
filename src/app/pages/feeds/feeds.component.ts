@@ -519,7 +519,7 @@ export class FeedsComponent implements OnDestroy {
     const feed = dynFeed || activeFeed;
 
     if (!feed) {
-      console.log('[allColumnEvents] No active feed');
+      this.logger.debug('[allColumnEvents] No active feed');
       return eventsMap;
     }
 
@@ -543,22 +543,6 @@ export class FeedsComponent implements OnDestroy {
 
     // Filter based on feed-specific settings (each feed has its own kinds, showReplies, showReposts)
     events = this.filterEventsByFeedSettings(events, feed);
-
-    // Always log for debugging
-    console.log(`[allColumnEvents] Feed "${feed.label}" (${feed.id}):`, {
-      type: feed.type,
-      source: feed.source,
-      feedDataExists: feedDataMap.has(feed.id),
-      rawEvents: rawEventCount,
-      filteredEvents: events.length,
-      feedFilter: {
-        showReplies: feed.showReplies ?? false,
-        showReposts: feed.showReposts ?? true,
-        kinds: feed.kinds,
-      },
-      isDragging,
-      isDynamic: !!dynFeed
-    });
 
     eventsMap.set(feed.id, events);
 
@@ -731,7 +715,7 @@ export class FeedsComponent implements OnDestroy {
             await this.feedService.subscribe();
             this.isLoading.set(false);
           } catch (error) {
-            console.error('Error initializing feeds:', error);
+            this.logger.error('Error initializing feeds:', error);
             this.isLoading.set(false);
           }
         });
@@ -1653,7 +1637,7 @@ export class FeedsComponent implements OnDestroy {
 
   onColumnDrop(event: CdkDragDrop<FeedConfig[]>): void {
     // Column reordering is deprecated - feeds no longer have columns
-    console.warn('Column reordering is no longer supported - feeds are now flat structures');
+    this.logger.warn('Column reordering is no longer supported - feeds are now flat structures');
     return;
   }
 
@@ -1821,7 +1805,6 @@ export class FeedsComponent implements OnDestroy {
   }
 
   ngOnDestroy() {
-    console.log('🧹 FeedsComponent destroying...');
     this.logger.debug('Cleaning up resources...');
 
     // Clean up query params subscription
@@ -2276,7 +2259,7 @@ export class FeedsComponent implements OnDestroy {
     title?: string;
     tracks: { url: string; title?: string; artist?: string }[];
   }): void {
-    console.log('Playing M3U playlist:', playlistData);
+
 
     if (!playlistData.tracks || playlistData.tracks.length === 0) return;
 

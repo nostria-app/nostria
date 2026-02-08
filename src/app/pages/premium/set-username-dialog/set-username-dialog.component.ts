@@ -16,6 +16,7 @@ import { UsernameService } from '../../../services/username';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
 import { Profile } from '../../../services/profile';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface SetUsernameDialogData {
   currentUsername?: string | null;
@@ -276,6 +277,7 @@ export class SetUsernameDialogComponent implements OnDestroy {
   private accountService = inject(AccountService);
   private accountState = inject(AccountStateService);
   private profileService = inject(Profile);
+  private logger = inject(LoggerService);
   private dialogRef = inject(MatDialogRef<SetUsernameDialogComponent>);
   private dialogData = inject<SetUsernameDialogData>(MAT_DIALOG_DATA, { optional: true });
 
@@ -332,11 +334,9 @@ export class SetUsernameDialogComponent implements OnDestroy {
       this.existingNip05.set(currentProfile.data.nip05);
       // Default to updating NIP-05 only if user already has one
       this.shouldUpdateNip05 = true;
-      console.log('User has existing NIP-05, defaulting shouldUpdateNip05 to true:', currentProfile.data.nip05);
     } else {
       // For users without NIP-05, default to NOT setting it
       this.shouldUpdateNip05 = false;
-      console.log('User has NO existing NIP-05, defaulting shouldUpdateNip05 to false');
     }
 
     // Setup username validation
@@ -409,9 +409,6 @@ export class SetUsernameDialogComponent implements OnDestroy {
       // Update NIP-05 in profile only if user explicitly requested it
       // For users without existing NIP-05, they must check the checkbox
       // For users with existing NIP-05, they can choose whether to update
-      console.log('shouldUpdateNip05 value:', this.shouldUpdateNip05);
-      console.log('hasExistingNip05:', this.hasExistingNip05());
-
       if (this.shouldUpdateNip05) {
         const currentProfile = this.accountState.profile();
         const newNip05 = `${username}@nostria.app`;
@@ -445,7 +442,7 @@ export class SetUsernameDialogComponent implements OnDestroy {
 
       this.dialogRef.close(true);
     } catch (error) {
-      console.error('Failed to set username:', error);
+      this.logger.error('Failed to set username:', error);
 
       let errorMessage = 'Failed to set username. Please try again.';
 

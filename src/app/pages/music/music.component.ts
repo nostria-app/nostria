@@ -33,6 +33,7 @@ import { MusicSettingsDialogComponent } from './music-settings-dialog/music-sett
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -79,6 +80,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private musicData = inject(MusicDataService);
   followSetsService = inject(FollowSetsService);
+  private readonly logger = inject(LoggerService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -492,7 +494,7 @@ export class MusicComponent implements OnInit, OnDestroy {
    */
   private async loadFromDatabase(): Promise<void> {
     try {
-      console.log('[Music] Loading from database...');
+      this.logger.debug('[Music] Loading from database...');
 
       // Load tracks from database
       const cachedTracks = await this.database.getEventsByKind(MUSIC_KIND);
@@ -511,7 +513,7 @@ export class MusicComponent implements OnInit, OnDestroy {
 
       if (this.trackMap.size > 0) {
         this.allTracks.set(Array.from(this.trackMap.values()));
-        console.log(`[Music] Loaded ${this.trackMap.size} tracks from database`);
+        this.logger.debug(`[Music] Loaded ${this.trackMap.size} tracks from database`);
       }
 
       // Load playlists from database
@@ -531,7 +533,7 @@ export class MusicComponent implements OnInit, OnDestroy {
 
       if (this.playlistMap.size > 0) {
         this.allPlaylists.set(Array.from(this.playlistMap.values()));
-        console.log(`[Music] Loaded ${this.playlistMap.size} playlists from database`);
+        this.logger.debug(`[Music] Loaded ${this.playlistMap.size} playlists from database`);
       }
 
       // If we have cached data, stop showing loading spinner immediately
@@ -539,7 +541,7 @@ export class MusicComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       }
     } catch (error) {
-      console.error('[Music] Error loading from database:', error);
+      this.logger.error('[Music] Error loading from database:', error);
     }
   }
 
@@ -565,7 +567,7 @@ export class MusicComponent implements OnInit, OnDestroy {
       );
 
       if (cachedEvent) {
-        console.log('[Music] Loaded relay set from database:', cachedEvent);
+        this.logger.debug('[Music] Loaded relay set from database:', cachedEvent);
         this.musicRelaySet.set(cachedEvent);
         const relays = cachedEvent.tags
           .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -606,7 +608,7 @@ export class MusicComponent implements OnInit, OnDestroy {
         const event = foundEvent as Event;
         // Only update if newer than cached
         if (!cachedEvent || event.created_at > cachedEvent.created_at) {
-          console.log('[Music] Found newer relay set from relays, updating...');
+          this.logger.debug('[Music] Found newer relay set from relays, updating...');
           this.musicRelaySet.set(event);
           const relays = event.tags
             .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
@@ -616,11 +618,11 @@ export class MusicComponent implements OnInit, OnDestroy {
           // Persist to database
           const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
           await this.database.saveEvent({ ...event, dTag });
-          console.log('[Music] Saved relay set to database');
+          this.logger.debug('[Music] Saved relay set to database');
         }
       }
     } catch (error) {
-      console.error('Error loading music relay set:', error);
+      this.logger.error('Error loading music relay set:', error);
     }
   }
 
@@ -637,12 +639,8 @@ export class MusicComponent implements OnInit, OnDestroy {
       allRelayUrls = this.utilities.anonymousRelays;
     }
 
-    console.log('[Music] Account relays:', accountRelays);
-    console.log('[Music] Custom music relays:', customMusicRelays);
-    console.log('[Music] All relays:', allRelayUrls);
-
     if (allRelayUrls.length === 0) {
-      console.warn('No relays available for loading music');
+      this.logger.warn('No relays available for loading music');
       this.loading.set(false);
       return;
     }
@@ -687,7 +685,7 @@ export class MusicComponent implements OnInit, OnDestroy {
 
       // Save to database for caching
       this.database.saveEvent({ ...event, dTag }).catch(err =>
-        console.warn('[Music] Failed to save track to database:', err)
+        this.logger.warn('[Music] Failed to save track to database:', err)
       );
 
       if (!tracksLoaded) {
@@ -717,7 +715,7 @@ export class MusicComponent implements OnInit, OnDestroy {
 
       // Save to database for caching
       this.database.saveEvent({ ...event, dTag }).catch(err =>
-        console.warn('[Music] Failed to save playlist to database:', err)
+        this.logger.warn('[Music] Failed to save playlist to database:', err)
       );
 
       if (!playlistsLoaded) {
@@ -1086,7 +1084,7 @@ export class MusicComponent implements OnInit, OnDestroy {
         }
       }
     } catch (error) {
-      console.error('Error playing liked songs:', error);
+      this.logger.error('Error playing liked songs:', error);
     } finally {
       this.isLoadingLikedSongs.set(false);
     }

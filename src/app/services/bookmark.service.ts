@@ -10,6 +10,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
 import { EncryptionService } from './encryption.service';
 import { UtilitiesService } from './utilities.service';
+import { LoggerService } from './logger.service';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -43,6 +44,7 @@ export class BookmarkService {
   database = inject(DatabaseService);
   encryption = inject(EncryptionService);
   private utilities = inject(UtilitiesService);
+  private logger = inject(LoggerService);
 
   // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
@@ -218,7 +220,7 @@ export class BookmarkService {
           }
         },
         () => {
-          console.log('🔖 End of stored bookmark lists (EOSE)');
+          this.logger.debug('🔖 End of stored bookmark lists (EOSE)');
           // Only reload if any new events were saved
           if (this.needsReloadAfterEose) {
             this.needsReloadAfterEose = false;
@@ -227,7 +229,7 @@ export class BookmarkService {
         }
       );
     } catch (error) {
-      console.error('Failed to subscribe to bookmark lists:', error);
+      this.logger.error('Failed to subscribe to bookmark lists:', error);
     }
   }
 
@@ -294,7 +296,7 @@ export class BookmarkService {
       };
     });
 
-    console.log(`[BookmarkService] ✅ Loaded ${lists.length} bookmark lists (from ${events.length} events)`);
+    this.logger.debug(`[BookmarkService] ✅ Loaded ${lists.length} bookmark lists (from ${events.length} events)`);
     this.bookmarkLists.set(lists);
   }
 
@@ -314,12 +316,12 @@ export class BookmarkService {
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      console.error('[BookmarkService] No pubkey for decryption');
+      this.logger.error('[BookmarkService] No pubkey for decryption');
       return;
     }
 
     try {
-      console.log(`[BookmarkService] Decrypting private list "${list.name}" (${listId})...`);
+      this.logger.debug(`[BookmarkService] Decrypting private list "${list.name}" (${listId})...`);
       const decryptedContent = await this.encryption.decryptNip44(list.event.content, pubkey);
       const bookmarks: [string, string][] = JSON.parse(decryptedContent);
 
@@ -345,9 +347,9 @@ export class BookmarkService {
       );
       this.bookmarkLists.set(updatedLists);
 
-      console.log(`[BookmarkService] ✅ Decrypted ${bookmarks.length} bookmarks in list "${list.name}"`);
+      this.logger.debug(`[BookmarkService] ✅ Decrypted ${bookmarks.length} bookmarks in list "${list.name}"`);
     } catch (error) {
-      console.error(`[BookmarkService] ❌ Failed to decrypt private list "${list.name}":`, error);
+      this.logger.error(`[BookmarkService] ❌ Failed to decrypt private list "${list.name}":`, error);
     }
   }
 
@@ -436,7 +438,7 @@ export class BookmarkService {
           const decryptedContent = await this.encryption.decryptNip44(event.content, userPubkey);
           bookmarks = JSON.parse(decryptedContent);
         } catch (error) {
-          console.error('Failed to decrypt private list content:', error);
+          this.logger.error('Failed to decrypt private list content:', error);
           bookmarks = [];
         }
       }
@@ -596,7 +598,7 @@ export class BookmarkService {
     // Use custom ID if provided, otherwise generate a timestamp-based one
     const dTag = customId || Date.now().toString();
 
-    console.log(`[BookmarkService] Creating bookmark list "${name}", isPrivate: ${isPrivate}`);
+    this.logger.debug(`[BookmarkService] Creating bookmark list "${name}", isPrivate: ${isPrivate}`);
 
     const tags: string[][] = [
       ['d', dTag],
@@ -609,7 +611,7 @@ export class BookmarkService {
     if (isPrivate) {
       const emptyBookmarks: [string, string][] = [];
       content = await this.encryption.encryptNip44(JSON.stringify(emptyBookmarks), userPubkey);
-      console.log(`[BookmarkService] Encrypted empty array for private list, content length: ${content.length}`);
+      this.logger.debug(`[BookmarkService] Encrypted empty array for private list, content length: ${content.length}`);
     }
 
     const event: Event = {
@@ -638,18 +640,18 @@ export class BookmarkService {
   async updateBookmarkList(listId: string, name: string): Promise<void> {
     const list = this.bookmarkLists().find(l => l.id === listId);
     if (!list) {
-      console.error('List not found:', listId);
+      this.logger.error('List not found:', listId);
       return;
     }
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      console.error('No pubkey available');
+      this.logger.error('No pubkey available');
       return;
     }
 
     if (!list.event) {
-      console.error('No event available for list:', listId);
+      this.logger.error('No event available for list:', listId);
       return;
     }
 
@@ -666,7 +668,7 @@ export class BookmarkService {
     };
 
     // Per NIP-51: title is always plain text (in tags array, not encrypted)
-    console.log(`[BookmarkService] Updating list ${listId}, isPrivate: ${list.isPrivate}, title is plain text per NIP-51`);
+    this.logger.debug(`[BookmarkService] Updating list ${listId}, isPrivate: ${list.isPrivate}, title is plain text per NIP-51`);
 
     // Update the title tag (always plain text)
     const titleTagIndex = event.tags.findIndex(t => t[0] === 'title');
@@ -687,18 +689,18 @@ export class BookmarkService {
   async toggleListPrivacy(listId: string): Promise<void> {
     const list = this.bookmarkLists().find(l => l.id === listId);
     if (!list || !list.event) {
-      console.error('List not found:', listId);
+      this.logger.error('List not found:', listId);
       return;
     }
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      console.error('No pubkey available');
+      this.logger.error('No pubkey available');
       return;
     }
 
     const newIsPrivate = !list.isPrivate;
-    console.log(`[BookmarkService] Toggling list "${list.name}" (d-tag: ${listId}) from ${list.isPrivate ? 'private' : 'public'} to ${newIsPrivate ? 'private' : 'public'}`);
+    this.logger.debug(`[BookmarkService] Toggling list "${list.name}" (d-tag: ${listId}) from ${list.isPrivate ? 'private' : 'public'} to ${newIsPrivate ? 'private' : 'public'}`);
 
     // Extract bookmark tags (e, a, t)
     const bookmarkTags = list.event.tags.filter(tag =>
@@ -710,8 +712,8 @@ export class BookmarkService {
       tag[0] === 'd' || tag[0] === 'title' || tag[0] === 'description' || tag[0] === 'image'
     );
 
-    console.log(`[BookmarkService] Metadata tags:`, metadataTags);
-    console.log(`[BookmarkService] Bookmark tags count: ${bookmarkTags.length}`);
+    this.logger.debug(`[BookmarkService] Metadata tags:`, metadataTags);
+    this.logger.debug(`[BookmarkService] Bookmark tags count: ${bookmarkTags.length}`);
 
     let newContent = '';
     let newTags = [...metadataTags];
@@ -721,7 +723,7 @@ export class BookmarkService {
       // Always encrypt an array (even if empty) so the app knows it's private
       const bookmarksJson = JSON.stringify(bookmarkTags);
       newContent = await this.encryption.encryptNip44(bookmarksJson, pubkey);
-      console.log(`[BookmarkService] Encrypted ${bookmarkTags.length} bookmarks, content length: ${newContent.length}`);
+      this.logger.debug(`[BookmarkService] Encrypted ${bookmarkTags.length} bookmarks, content length: ${newContent.length}`);
     } else {
       // Moving from private to public: decrypt content and put in tags
       if (list.event.content) {
@@ -730,7 +732,7 @@ export class BookmarkService {
           const decryptedBookmarks: [string, string][] = JSON.parse(decryptedContent);
           newTags = [...metadataTags, ...decryptedBookmarks];
         } catch (error) {
-          console.error('Failed to decrypt content:', error);
+          this.logger.error('Failed to decrypt content:', error);
           return;
         }
       }
@@ -746,9 +748,9 @@ export class BookmarkService {
       sig: ''
     };
 
-    console.log(`[BookmarkService] Publishing toggled list with ${newTags.length} tags, content length: ${newContent.length}`);
+    this.logger.debug(`[BookmarkService] Publishing toggled list with ${newTags.length} tags, content length: ${newContent.length}`);
     await this.publish(event, listId);
-    console.log(`[BookmarkService] ✅ List "${list.name}" is now ${newIsPrivate ? 'private' : 'public'}`);
+    this.logger.debug(`[BookmarkService] ✅ List "${list.name}" is now ${newIsPrivate ? 'private' : 'public'}`);
   }
 
   async deleteBookmarkList(listId: string): Promise<void> {
@@ -805,7 +807,7 @@ export class BookmarkService {
     // Use saveReplaceableEvent for kind 30003 (parameterized replaceable) to ensure old versions are replaced
     if (signedEvent.kind === 30003) {
       const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1];
-      console.log(`[BookmarkService] Saving replaceable event with d-tag: "${dTag}"`);
+      this.logger.debug(`[BookmarkService] Saving replaceable event with d-tag: "${dTag}"`);
       await this.database.saveReplaceableEvent({ ...signedEvent, dTag });
       // Reload lists from database to update UI immediately
       await this.loadBookmarkLists();
@@ -851,7 +853,7 @@ export class BookmarkService {
         );
       }
     } catch (error) {
-      console.error('Error publishing bookmarks:', error);
+      this.logger.error('Error publishing bookmarks:', error);
       this.snackBar.open('Failed to save bookmarks', 'Close', {
         duration: 5000,
         horizontalPosition: 'center',

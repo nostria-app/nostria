@@ -685,7 +685,7 @@ export class NostrService implements NostriaService {
     };
 
     const onEvent = async (event: Event) => {
-      console.log('Received event on account subscription:', event);
+      this.logger.debug('Received event on account subscription:', event);
 
       // Save all events to storage using new DatabaseService
       try {
@@ -786,7 +786,7 @@ export class NostrService implements NostriaService {
     };
 
     const onEose = () => {
-      console.log('EOSE on account subscription - initial data loaded');
+      this.logger.debug('EOSE on account subscription - initial data loaded');
       this.logger.info('Account subscription EOSE - fresh data loaded from relays');
 
       // Mark as initialized without showing loading overlay
@@ -1650,8 +1650,6 @@ export class NostrService implements NostriaService {
 
     const bunkerParsed = await parseBunkerInput(remoteSigningUrl);
 
-    console.log(bunkerParsed);
-
     try {
       // Parse the URL
       if (!remoteSigningUrl.startsWith('bunker://')) {
@@ -1741,7 +1739,7 @@ export class NostrService implements NostriaService {
                 }
               }
             } catch (e) {
-              console.error('Error processing NIP-46 response:', e);
+              this.logger.error('Error processing NIP-46 response:', e);
             }
           }
         }
@@ -1754,7 +1752,6 @@ export class NostrService implements NostriaService {
         await Promise.race([bunker.connect(), errorPromise]);
 
         const remotePublicKey = await Promise.race([bunker.getPublicKey(), errorPromise]) as string;
-        console.log('Remote Public Key:', remotePublicKey);
 
         this.logger.info('Using remote signer account');
         // jack
