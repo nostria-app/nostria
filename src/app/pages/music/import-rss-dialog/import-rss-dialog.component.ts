@@ -18,6 +18,7 @@ import { RelaysService } from '../../../services/relays/relays';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
+import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 
 const MUSIC_KIND = 36787;
@@ -77,6 +78,7 @@ export class ImportRssDialogComponent {
   private pool = inject(RelayPoolService);
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
+  private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
 
   // Form state
@@ -225,7 +227,7 @@ export class ImportRssDialogComponent {
       this.hasFetched.set(true);
       this.snackBar.open(`Found ${parsedTracks.length} tracks`, 'Close', { duration: 2000 });
     } catch (error) {
-      console.error('Error fetching RSS:', error);
+      this.logger.error('Error fetching RSS:', error);
       this.snackBar.open(`Error: ${error instanceof Error ? error.message : 'Failed to fetch RSS'}`, 'Close', { duration: 3000 });
     } finally {
       this.isFetching.set(false);
@@ -443,7 +445,7 @@ export class ImportRssDialogComponent {
 
         const signedEvent = await this.nostrService.signEvent(eventTemplate);
         if (!signedEvent) {
-          console.warn('Failed to sign event for track:', track.title);
+          this.logger.warn('Failed to sign event for track:', track.title);
           continue;
         }
 
@@ -452,7 +454,7 @@ export class ImportRssDialogComponent {
           await this.pool.publish(relayUrls, signedEvent);
           publishedEvents.push(signedEvent);
         } catch (error) {
-          console.warn('Failed to publish track:', track.title, error);
+          this.logger.warn('Failed to publish track:', track.title, error);
         }
 
         // Small delay between publishes
@@ -466,7 +468,7 @@ export class ImportRssDialogComponent {
         this.snackBar.open('Failed to publish any tracks', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Error publishing tracks:', error);
+      this.logger.error('Error publishing tracks:', error);
       this.snackBar.open('Error publishing tracks', 'Close', { duration: 3000 });
     } finally {
       this.isPublishing.set(false);

@@ -633,7 +633,7 @@ export class ReportingService {
 
       return signedEvent;
     } catch (error) {
-      console.error('Error creating fresh mute list event:', error);
+      this.logger.error('Error creating fresh mute list event:', error);
       return null;
     }
   }
@@ -650,7 +650,7 @@ export class ReportingService {
       this.accountState.muteList.set(signedEvent);
       return signedEvent;
     } catch (error) {
-      console.error('Error creating fresh mute list event:', error);
+      this.logger.error('Error creating fresh mute list event:', error);
       return null;
     }
   }

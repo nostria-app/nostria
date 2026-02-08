@@ -264,7 +264,7 @@ export class FeedService {
           const storedFeeds = this.getFeedsFromStorage(pubkey);
           const isFirstTimeUser = storedFeeds === null;
 
-          console.log(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} settingsLoaded=${settingsLoaded} isFirstTimeUser=${isFirstTimeUser}`);
+          this.logger.debug(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} settingsLoaded=${settingsLoaded} isFirstTimeUser=${isFirstTimeUser}`);
 
           // For first-time users with local feeds: Can load immediately
           // For users with synced feeds or returning users: Wait for settings to be loaded
@@ -272,23 +272,23 @@ export class FeedService {
           if (isFirstTimeUser && !settingsLoaded) {
             // First-time user but settings not loaded yet - wait for settings
             // to check if there are synced feeds from another device
-            console.log(`⏳ [FeedService] First-time user, waiting for settings to load to check for synced feeds`);
+            this.logger.debug(`⏳ [FeedService] First-time user, waiting for settings to load to check for synced feeds`);
             return;
           }
 
           if (!isFirstTimeUser && !initialized) {
             // Returning user but not initialized yet - wait for relay data
-            console.log(`⏳ [FeedService] Returning user, waiting for initialization`);
+            this.logger.debug(`⏳ [FeedService] Returning user, waiting for initialization`);
             return;
           }
 
           // Settings must be loaded to properly check for synced feeds
           if (!settingsLoaded) {
-            console.log(`⏳ [FeedService] Waiting for settings to load before loading feeds`);
+            this.logger.debug(`⏳ [FeedService] Waiting for settings to load before loading feeds`);
             return;
           }
 
-          console.log(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
+          this.logger.debug(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
           loadingForPubkey = pubkey;
           // Reset signals before loading new feeds
           this._feedsLoaded.set(false);
@@ -696,32 +696,32 @@ export class FeedService {
 
     // Load feed data based on source type
     if (feed.source === 'following') {
-      console.log(`📍 Loading FOLLOWING feed for ${feed.id}`);
+      this.logger.debug(`📍 Loading FOLLOWING feed for ${feed.id}`);
       this.loadFollowingFeed(item).catch((err) =>
         this.logger.error(`Error loading following feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'for-you') {
-      console.log(`📍 Loading FOR-YOU feed for ${feed.id}`);
+      this.logger.debug(`📍 Loading FOR-YOU feed for ${feed.id}`);
       this.loadForYouFeed(item).catch((err) =>
         this.logger.error(`Error loading for-you feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'custom') {
-      console.log(`📍 Loading CUSTOM feed for ${feed.id}`);
+      this.logger.debug(`📍 Loading CUSTOM feed for ${feed.id}`);
       this.loadCustomFeed(item).catch((err) =>
         this.logger.error(`Error loading custom feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'search') {
-      console.log(`📍 Loading SEARCH feed for ${feed.id} with query: ${feed.searchQuery}`);
+      this.logger.debug(`📍 Loading SEARCH feed for ${feed.id} with query: ${feed.searchQuery}`);
       this.loadSearchFeed(item).catch((err) =>
         this.logger.error(`Error loading search feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'interests') {
-      console.log(`📍 Loading INTERESTS feed for ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
+      this.logger.debug(`📍 Loading INTERESTS feed for ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
       this.loadInterestsFeed(item).catch((err) =>
         this.logger.error(`Error loading interests feed for ${feed.id}:`, err)
       );
     } else {
-      console.log(`📍 Loading GLOBAL/OTHER feed for ${feed.id}, source:`, feed.source);
+      this.logger.debug(`📍 Loading GLOBAL/OTHER feed for ${feed.id}, source:`, feed.source);
 
       // Subscribe to relay events using the appropriate relay service
       let sub: { unsubscribe: () => void } | { close: () => void } | null = null;
@@ -733,25 +733,25 @@ export class FeedService {
       ) {
         // Use custom relays for this feed via RelayPoolService
         this.logger.debug(`Using custom relays for feed ${feed.id}:`, feed.customRelays);
-        console.log(`🚀 Using RelayPoolService.subscribe with custom relays:`, feed.customRelays);
-        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        this.logger.debug(`🚀 Using RelayPoolService.subscribe with custom relays:`, feed.customRelays);
+        this.logger.debug(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
 
         sub = this.relayPool.subscribe(feed.customRelays, item.filter, (event: Event) => {
-          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+          this.logger.debug(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Save event to database
           this.saveEventToDatabase(event);
 
           // Filter out muted events
           if (this.accountState.muted(event)) {
-            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
           const currentEvents = item.events();
           // Queue events if initial load is complete AND there are existing events
           if (item.initialLoadComplete && currentEvents.length > 0) {
-            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
@@ -760,7 +760,7 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            console.log(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               if (events.some(e => e.id === event.id)) {
                 return events;
@@ -777,25 +777,25 @@ export class FeedService {
       } else {
         // Use account relays (default)
         this.logger.debug(`Using account relays for feed ${feed.id}`);
-        console.log(`🚀 Using AccountRelayService.subscribe`);
-        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        this.logger.debug(`🚀 Using AccountRelayService.subscribe`);
+        this.logger.debug(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
 
         sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
-          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+          this.logger.debug(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Save event to database
           this.saveEventToDatabase(event);
 
           // Filter out muted events
           if (this.accountState.muted(event)) {
-            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
           const currentEvents = item.events();
           // Queue events if initial load is complete AND there are existing events
           if (item.initialLoadComplete && currentEvents.length > 0) {
-            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
@@ -804,7 +804,7 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            console.log(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               if (events.some(e => e.id === event.id)) {
                 return events;
@@ -936,32 +936,32 @@ export class FeedService {
     // This allows cached events to display immediately while fresh data loads
     // If the source is following, fetch from ALL following users
     if (feed.source === 'following') {
-      console.log(`📍 Loading FOLLOWING feed for feed ${feed.id}`);
+      this.logger.debug(`📍 Loading FOLLOWING feed for feed ${feed.id}`);
       this.loadFollowingFeed(item).catch(err =>
         this.logger.error(`Error loading following feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'for-you') {
-      console.log(`📍 Loading FOR-YOU feed for feed ${feed.id}`);
+      this.logger.debug(`📍 Loading FOR-YOU feed for feed ${feed.id}`);
       this.loadForYouFeed(item).catch(err =>
         this.logger.error(`Error loading for-you feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'custom') {
-      console.log(`📍 Loading CUSTOM feed for feed ${feed.id}`);
+      this.logger.debug(`📍 Loading CUSTOM feed for feed ${feed.id}`);
       this.loadCustomFeed(item).catch(err =>
         this.logger.error(`Error loading custom feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'search') {
-      console.log(`📍 Loading SEARCH feed for feed ${feed.id} with query: ${feed.searchQuery}`);
+      this.logger.debug(`📍 Loading SEARCH feed for feed ${feed.id} with query: ${feed.searchQuery}`);
       this.loadSearchFeed(item).catch(err =>
         this.logger.error(`Error loading search feed for ${feed.id}:`, err)
       );
     } else if (feed.source === 'interests') {
-      console.log(`📍 Loading INTERESTS feed for feed ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
+      this.logger.debug(`📍 Loading INTERESTS feed for feed ${feed.id} with hashtags: ${feed.customInterestHashtags?.join(', ')}`);
       this.loadInterestsFeed(item).catch(err =>
         this.logger.error(`Error loading interests feed for ${feed.id}:`, err)
       );
     } else {
-      console.log(`📍 Loading GLOBAL/OTHER feed for feed ${feed.id}, source:`, feed.source);
+      this.logger.debug(`📍 Loading GLOBAL/OTHER feed for feed ${feed.id}, source:`, feed.source);
 
       // Subscribe to relay events using the appropriate relay service
       let sub: { unsubscribe: () => void } | { close: () => void } | null = null;
@@ -973,18 +973,18 @@ export class FeedService {
       ) {
         // Use custom relays for this feed via RelayPoolService
         this.logger.debug(`Using custom relays for feed ${feed.id}:`, feed.customRelays);
-        console.log(`🚀 Using RelayPoolService.subscribe with custom relays:`, feed.customRelays);
-        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        this.logger.debug(`🚀 Using RelayPoolService.subscribe with custom relays:`, feed.customRelays);
+        this.logger.debug(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
 
         sub = this.relayPool.subscribe(feed.customRelays, item.filter, (event: Event) => {
-          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+          this.logger.debug(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Save event to database for Summary page queries
           this.saveEventToDatabase(event);
 
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
-            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
@@ -992,7 +992,7 @@ export class FeedService {
           // Queue events if initial load is complete AND there are existing events
           // If there are zero events, show new events directly (don't force user to click "new posts" button)
           if (item.initialLoadComplete && currentEvents.length > 0) {
-            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
               if (pending.some(e => e.id === event.id)) {
@@ -1003,7 +1003,7 @@ export class FeedService {
             });
           } else {
             // Initial load not complete OR no existing events - render relay events directly
-            console.log(`➕ Adding relay event to empty feed for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`➕ Adding relay event to empty feed for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
               if (events.some(e => e.id === event.id)) {
@@ -1022,18 +1022,18 @@ export class FeedService {
       } else {
         // Use account relays (default)
         this.logger.debug(`Using account relays for feed ${feed.id}`);
-        console.log(`🚀 Using AccountRelayService.subscribe`);
-        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        this.logger.debug(`🚀 Using AccountRelayService.subscribe`);
+        this.logger.debug(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
 
         sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
-          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+          this.logger.debug(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Save event to database for Summary page queries
           this.saveEventToDatabase(event);
 
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
-            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
@@ -1041,7 +1041,7 @@ export class FeedService {
           // Queue events if initial load is complete AND there are existing events
           // If there are zero events, show new events directly (don't force user to click "new posts" button)
           if (item.initialLoadComplete && currentEvents.length > 0) {
-            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
               if (pending.some(e => e.id === event.id)) {
@@ -1052,7 +1052,7 @@ export class FeedService {
             });
           } else {
             // Initial load not complete OR no existing events - render relay events directly
-            console.log(`➕ Adding relay event to empty feed for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            this.logger.debug(`➕ Adding relay event to empty feed for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
               if (events.some(e => e.id === event.id)) {
@@ -1071,7 +1071,7 @@ export class FeedService {
       }
 
       item.subscription = sub;
-      console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
+      this.logger.debug(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
 
       // For empty feeds, mark initial load as complete after 2 seconds
       // This allows initial burst of events to render, then subsequent events queue
@@ -1818,7 +1818,7 @@ export class FeedService {
    */
   private async loadForYouFeed(feedData: FeedItem) {
     try {
-      console.log('🚀 [For You] loadForYouFeed STARTED');
+      this.logger.debug('🚀 [For You] loadForYouFeed STARTED');
       const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
       // Hardcoded popular pubkeys for INSTANT first load - no waiting for anything
@@ -1837,10 +1837,10 @@ export class FeedService {
       // Wait for account relay to be ready before fetching content
       // Account relay is required since discovery relay only handles relay lists (kind 10002/3)
       let accountRelayInitialized = this.accountRelay.isInitialized();
-      console.log(`⚡ [For You] Account relay initialized: ${accountRelayInitialized}`);
+      this.logger.debug(`⚡ [For You] Account relay initialized: ${accountRelayInitialized}`);
 
       if (!accountRelayInitialized) {
-        console.log('⚡ [For You] Waiting for account relay to initialize...');
+        this.logger.debug('⚡ [For You] Waiting for account relay to initialize...');
 
         // Wait up to 5 seconds for account relay to be ready
         const MAX_WAIT_MS = 5000;
@@ -1853,11 +1853,11 @@ export class FeedService {
         }
 
         accountRelayInitialized = this.accountRelay.isInitialized();
-        console.log(`⚡ [For You] After waiting ${waitedMs}ms, account relay initialized: ${accountRelayInitialized}`);
+        this.logger.debug(`⚡ [For You] After waiting ${waitedMs}ms, account relay initialized: ${accountRelayInitialized}`);
       }
 
       if (!accountRelayInitialized) {
-        console.log('⚡ [For You] Account relay not ready after waiting, cannot fetch content');
+        this.logger.debug('⚡ [For You] Account relay not ready after waiting, cannot fetch content');
         this.logger.warn('Account relay not ready, cannot load For You feed');
         return;
       }
@@ -1870,22 +1870,22 @@ export class FeedService {
       const limitedFollowing = followingList.slice(-20);
       limitedFollowing.forEach(pubkey => immediatePubkeys.add(pubkey));
 
-      console.log(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+      this.logger.debug(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
       this.logger.info(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
 
       const immediatePubkeysArray = Array.from(immediatePubkeys);
       await this.fetchEventsFromUsersFast(immediatePubkeysArray, feedData);
 
-      console.log(`⚡ [For You] Events after fetch: ${feedData.events().length}`);
+      this.logger.debug(`⚡ [For You] Events after fetch: ${feedData.events().length}`);
 
       // PHASE 1: Background enhancement - add starter pack users and algorithm recommendations
       // This runs in background and doesn't block the UI
       this.enhanceForYouFeedInBackground(feedData, isArticlesFeed ?? false);
 
       this.logger.debug(`Loaded For You feed with initial ${immediatePubkeysArray.length} users`);
-      console.log('🏁 [For You] loadForYouFeed COMPLETED');
+      this.logger.debug('🏁 [For You] loadForYouFeed COMPLETED');
     } catch (error) {
-      console.error('❌ [For You] loadForYouFeed ERROR:', error);
+      this.logger.error('❌ [For You] loadForYouFeed ERROR:', error);
       this.logger.error('Error loading For You feed:', error);
     }
   }
@@ -1895,7 +1895,7 @@ export class FeedService {
    * Runs after initial content is shown to add more diverse content
    */
   private async enhanceForYouFeedInBackground(feedData: FeedItem, isArticlesFeed: boolean) {
-    console.log('🔄 [For You Background] Starting enhancement...');
+    this.logger.debug('🔄 [For You Background] Starting enhancement...');
 
     // Wait for account relay to be ready (but don't block UI)
     const MAX_WAIT_MS = 5000;
@@ -1907,15 +1907,15 @@ export class FeedService {
       waitedMs += POLL_INTERVAL_MS;
     }
 
-    console.log(`🔄 [For You Background] Waited ${waitedMs}ms for account relay`);
+    this.logger.debug(`🔄 [For You Background] Waited ${waitedMs}ms for account relay`);
 
     if (!this.accountRelay.isInitialized()) {
-      console.log('🔄 [For You Background] Account relay not ready, skipping');
+      this.logger.debug('🔄 [For You Background] Account relay not ready, skipping');
       this.logger.warn('Account relay not ready for background enhancement, skipping');
       return;
     }
 
-    console.log('🔄 [For You Background] Account relay ready, fetching additional content...');
+    this.logger.debug('🔄 [For You Background] Account relay ready, fetching additional content...');
 
     try {
       const additionalPubkeys = new Set<string>();
@@ -1926,12 +1926,12 @@ export class FeedService {
         : await this.algorithms.getRecommendedUsers(5);
 
       topEngagedUsers.forEach(user => additionalPubkeys.add(user.pubkey));
-      console.log(`🔄 [For You Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
+      this.logger.debug(`🔄 [For You Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
       this.logger.debug(`[Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
 
       // Fetch starter packs in background (with very short timeout)
       try {
-        console.log('🔄 [For You Background] Fetching starter packs...');
+        this.logger.debug('🔄 [For You Background] Fetching starter packs...');
         const starterPackPromise = this.followset.fetchStarterPacks('popular');
         const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
         const result = await Promise.race([starterPackPromise, timeoutPromise]);
@@ -1940,30 +1940,30 @@ export class FeedService {
           const popularPack = result.find(pack => pack.dTag === 'popular');
           if (popularPack) {
             popularPack.pubkeys.slice(0, 10).forEach(pubkey => additionalPubkeys.add(pubkey));
-            console.log(`🔄 [For You Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
+            this.logger.debug(`🔄 [For You Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
             this.logger.debug(`[Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
           }
         } else {
-          console.log('🔄 [For You Background] No starter pack result or timed out');
+          this.logger.debug('🔄 [For You Background] No starter pack result or timed out');
         }
       } catch (error) {
-        console.log('🔄 [For You Background] Starter pack fetch failed:', error);
+        this.logger.debug('🔄 [For You Background] Starter pack fetch failed:', error);
         this.logger.debug('[Background] Starter pack fetch failed, continuing without');
       }
 
-      console.log(`🔄 [For You Background] Total additional pubkeys: ${additionalPubkeys.size}`);
+      this.logger.debug(`🔄 [For You Background] Total additional pubkeys: ${additionalPubkeys.size}`);
 
       if (additionalPubkeys.size > 0) {
         const pubkeysArray = Array.from(additionalPubkeys);
-        console.log(`🔄 [For You Background] Fetching events from ${pubkeysArray.length} additional users...`);
+        this.logger.debug(`🔄 [For You Background] Fetching events from ${pubkeysArray.length} additional users...`);
         // Use fast fetch instead of slow outbox model for better performance
         await this.fetchEventsFromUsersFast(pubkeysArray, feedData);
-        console.log(`🔄 [For You Background] Completed, total events: ${feedData.events().length}`);
+        this.logger.debug(`🔄 [For You Background] Completed, total events: ${feedData.events().length}`);
       } else {
-        console.log('🔄 [For You Background] No additional pubkeys to fetch');
+        this.logger.debug('🔄 [For You Background] No additional pubkeys to fetch');
       }
     } catch (error) {
-      console.error('🔄 [For You Background] Error:', error);
+      this.logger.error('🔄 [For You Background] Error:', error);
       this.logger.error('Error in background enhancement:', error);
     }
   }
@@ -1983,7 +1983,7 @@ export class FeedService {
     const DELAY_BETWEEN_BATCHES_MS = 100; // Small delay to prevent "too fast" errors
 
     try {
-      console.log(`⚡ [Fast Fetch] Starting batched fetch for ${pubkeys.length} authors (${Math.ceil(pubkeys.length / BATCH_SIZE)} batches)`);
+      this.logger.debug(`⚡ [Fast Fetch] Starting batched fetch for ${pubkeys.length} authors (${Math.ceil(pubkeys.length / BATCH_SIZE)} batches)`);
 
       // Split pubkeys into batches to respect relay limits
       const batches: string[][] = [];
@@ -2020,10 +2020,10 @@ export class FeedService {
 
           try {
             const events = await this.accountRelay.getMany<Event>(filter, { timeout: TIMEOUT_MS });
-            console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1}/${batches.length}: got ${events.length} events`);
+            this.logger.debug(`⚡ [Fast Fetch] Batch ${batchIndex + 1}/${batches.length}: got ${events.length} events`);
             return events;
           } catch (error) {
-            console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1} failed:`, error);
+            this.logger.debug(`⚡ [Fast Fetch] Batch ${batchIndex + 1} failed:`, error);
             return [];
           }
         });
@@ -2040,7 +2040,7 @@ export class FeedService {
       const events = allEvents;
 
       if (events.length > 0) {
-        console.log(`⚡ [Fast Fetch] Got ${events.length} total events from ${batches.length} batches`);
+        this.logger.debug(`⚡ [Fast Fetch] Got ${events.length} total events from ${batches.length} batches`);
         this.logger.info(`[Fast Fetch] Got ${events.length} events from account relays`);
 
         // Filter and add events to feed
@@ -2060,7 +2060,7 @@ export class FeedService {
           });
 
           // Signal that initial content is ready - this unblocks profile loading
-          console.log(`✅ [Fast Fetch] Feed has ${validEvents.length} events - signaling content ready`);
+          this.logger.debug(`✅ [Fast Fetch] Feed has ${validEvents.length} events - signaling content ready`);
           this._hasInitialContent.set(true);
           this.appState.feedHasInitialContent.set(true); // Signal via shared state
 
@@ -2071,7 +2071,7 @@ export class FeedService {
           validEvents.forEach(event => this.saveEventToDatabase(event));
         }
       } else {
-        console.log(`⚠️ [Fast Fetch] No events received from any batch`);
+        this.logger.debug(`⚠️ [Fast Fetch] No events received from any batch`);
       }
 
       // Mark initial load as complete so new events get queued
@@ -2416,7 +2416,7 @@ export class FeedService {
    * This ensures we get ALL events without gaps caused by users who post at different frequencies.
    */
   async loadMoreEvents(columnId: string) {
-    console.log('[FeedService] loadMoreEvents called for column:', columnId);
+    this.logger.debug('[FeedService] loadMoreEvents called for column:', columnId);
 
     const feedData = this.data.get(columnId);
     if (!feedData || !feedData.isLoadingMore || !feedData.hasMore) {
@@ -2426,12 +2426,12 @@ export class FeedService {
 
     // Prevent multiple simultaneous loads
     if (feedData.isLoadingMore() || !feedData.hasMore()) {
-      console.log(`[FeedService] Skipping load more: isLoading=${feedData.isLoadingMore()}, hasMore=${feedData.hasMore()}`);
+      this.logger.debug(`[FeedService] Skipping load more: isLoading=${feedData.isLoadingMore()}, hasMore=${feedData.hasMore()}`);
       this.logger.debug(`Skipping load more for column ${columnId}: already loading or no more data`);
       return;
     }
 
-    console.log('[FeedService] Starting pagination load...');
+    this.logger.debug('[FeedService] Starting pagination load...');
     feedData.isLoadingMore.set(true);
 
     try {

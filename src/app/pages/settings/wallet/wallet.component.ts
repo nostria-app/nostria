@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SettingsService } from '../../../services/settings.service';
+import { LoggerService } from '../../../services/logger.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 
@@ -39,6 +40,7 @@ interface ZapAmount {
 })
 export class WalletSettingsComponent implements OnInit, OnDestroy {
   private settingsService = inject(SettingsService);
+  private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
@@ -122,7 +124,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
         { duration: 2000 }
       );
     } catch (error) {
-      console.error('Failed to save quick zap setting:', error);
+      this.logger.error('Failed to save quick zap setting:', error);
       this.quickZapEnabled.set(!newValue); // Revert
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
@@ -143,7 +145,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
         duration: 2000,
       });
     } catch (error) {
-      console.error('Failed to save quick zap amount:', error);
+      this.logger.error('Failed to save quick zap amount:', error);
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
   }
@@ -162,7 +164,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
         { duration: 2000 }
       );
     } catch (error) {
-      console.error('Failed to save hide wallet amounts setting:', error);
+      this.logger.error('Failed to save hide wallet amounts setting:', error);
       this.hideWalletAmounts.set(!newValue); // Revert
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
@@ -238,7 +240,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
         zapQuickAmounts: enabledAmounts,
       });
     } catch (error) {
-      console.error('Failed to save zap amounts:', error);
+      this.logger.error('Failed to save zap amounts:', error);
       this.snackBar.open('Failed to save settings', 'Dismiss', {
         duration: 3000,
       });

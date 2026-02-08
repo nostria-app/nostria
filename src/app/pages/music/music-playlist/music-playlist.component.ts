@@ -335,7 +335,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available');
+      this.logger.warn('No relays available');
       this.loading.set(false);
       return;
     }
@@ -349,7 +349,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
           decodedPubkey = decoded.data;
         }
       } catch (e) {
-        console.error('Failed to decode npub:', e);
+        this.logger.error('Failed to decode npub:', e);
       }
     }
 

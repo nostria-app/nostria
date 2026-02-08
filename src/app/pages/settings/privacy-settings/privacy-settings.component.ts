@@ -23,6 +23,7 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -56,6 +57,7 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   router = inject(Router);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
+  private logger = inject(LoggerService);
 
   ngOnInit(): void {
     // Only set page title if not in right panel (right panel has its own title)
@@ -143,9 +145,8 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     try {
       await this.reportingService.addWordToMuteListAndPublish(word);
       this.newMutedWord = '';
-      console.log(`Successfully added word to mute list: ${word}`);
     } catch (error) {
-      console.error('Failed to add word to mute list:', error);
+      this.logger.error('Failed to add word to mute list:', error);
     }
   }
 
@@ -156,9 +157,8 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     try {
       await this.reportingService.addTagToMuteListAndPublish(tag);
       this.newMutedTag = '';
-      console.log(`Successfully added tag to mute list: ${tag}`);
     } catch (error) {
-      console.error('Failed to add tag to mute list:', error);
+      this.logger.error('Failed to add tag to mute list:', error);
     }
   }
 
@@ -168,28 +168,24 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
         case 'account':
           // Use the reporting service to unblock the user
           await this.reportingService.unblockUser(value);
-          console.log(`Successfully removed user from mute list: ${value}`);
           break;
         case 'word':
           // Remove word from mute list and publish
           await this.reportingService.removeFromMuteListAndPublish({ type: 'word', value });
-          console.log(`Successfully removed word from mute list: ${value}`);
           break;
         case 'tag':
           // Remove tag from mute list and publish
           await this.reportingService.removeFromMuteListAndPublish({ type: 't', value });
-          console.log(`Successfully removed tag from mute list: ${value}`);
           break;
         case 'thread':
           // Remove thread from mute list and publish
           await this.reportingService.removeFromMuteListAndPublish({ type: 'e', value });
-          console.log(`Successfully removed thread from mute list: ${value}`);
           break;
         default:
-          console.warn(`Unknown mute item type: ${type}`);
+          this.logger.warn(`Unknown mute item type: ${type}`);
       }
     } catch (error) {
-      console.error(`Failed to remove ${type} from mute list:`, error);
+      this.logger.error(`Failed to remove ${type} from mute list:`, error);
     }
   }
 
@@ -197,7 +193,7 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     try {
       await this.settingsService.toggleSocialSharingPreview();
     } catch (error) {
-      console.error('Failed to toggle social sharing preview setting', error);
+      this.logger.error('Failed to toggle social sharing preview setting', error);
     }
   }
 
@@ -209,27 +205,23 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     try {
       await this.settingsService.toggleImageCache();
     } catch (error) {
-      console.error('Failed to toggle image cache setting', error);
+      this.logger.error('Failed to toggle image cache setting', error);
     }
   }
 
   async clearImageCache(): Promise<void> {
     try {
       await this.imageCacheService.clearAllCache();
-      console.log('Image cache cleared successfully');
     } catch (error) {
-      console.error('Failed to clear image cache', error);
+      this.logger.error('Failed to clear image cache', error);
     }
   }
 
   async toggleReportTypeVisibility(reportType: string): Promise<void> {
-    console.log('toggleReportTypeVisibility called with:', reportType);
-    console.log('Current settings before toggle:', this.settingsService.settings());
     try {
       await this.settingsService.toggleReportTypeVisibility(reportType);
-      console.log('Settings after toggle:', this.settingsService.settings());
     } catch (error) {
-      console.error('Failed to toggle report type visibility setting', error);
+      this.logger.error('Failed to toggle report type visibility setting', error);
     }
   }
 

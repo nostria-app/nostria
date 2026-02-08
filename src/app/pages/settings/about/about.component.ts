@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LayoutService } from '../../../services/layout.service';
+import { LoggerService } from '../../../services/logger.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -37,6 +38,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly layout = inject(LayoutService);
+  private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
   version = signal('Loading...');
   commitSha = signal<string | undefined>(undefined);
@@ -110,7 +112,7 @@ export class AboutComponent implements OnInit, OnDestroy {
       if (manifestData.version) {
         this.version.set(manifestData.version);
       } else {
-        console.warn('Version not found in manifest.webmanifest');
+        this.logger.warn('Version not found in manifest.webmanifest');
         this.version.set('1.0.0'); // Fallback version
       }
 
@@ -125,7 +127,7 @@ export class AboutComponent implements OnInit, OnDestroy {
         this.buildDate.set(manifestData.buildDate);
       }
     } catch (error) {
-      console.error('Error fetching manifest.webmanifest:', error);
+      this.logger.error('Error fetching manifest.webmanifest:', error);
       this.version.set('1.0.0'); // Fallback version
     }
   }

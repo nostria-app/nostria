@@ -18,6 +18,7 @@ import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { MusicDataService, ArtistData } from '../../../services/music-data.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 
@@ -48,6 +49,7 @@ export class ArtistsComponent implements OnDestroy {
   private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private musicData = inject(MusicDataService);
+  private readonly logger = inject(LoggerService);
 
   allTracks = signal<Event[]>([]);
   preloadedArtists = signal<ArtistData[] | null>(null);
@@ -172,7 +174,7 @@ export class ArtistsComponent implements OnDestroy {
         this.allTracks.set(Array.from(this.trackMap.values()));
       }
     } catch (error) {
-      console.error('[Artists] Failed to load from database:', error);
+      this.logger.error('[Artists] Failed to load from database:', error);
     }
   }
 
@@ -180,7 +182,7 @@ export class ArtistsComponent implements OnDestroy {
     const accountRelays = this.accountRelay.getRelayUrls();
 
     if (accountRelays.length === 0) {
-      console.warn('[Artists] No account relays available');
+      this.logger.warn('[Artists] No account relays available');
       this.loading.set(false);
       return;
     }
@@ -200,7 +202,7 @@ export class ArtistsComponent implements OnDestroy {
         this.allTracks.set(Array.from(this.trackMap.values()));
 
         this.database.saveEvent({ ...event, dTag }).catch((err: Error) =>
-          console.warn('[Artists] Failed to save track to database:', err)
+          this.logger.warn('[Artists] Failed to save track to database:', err)
         );
       }
     });

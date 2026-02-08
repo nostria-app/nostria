@@ -1893,7 +1893,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    console.log('[MessagesComponent] Publishing to discovery relays:', discoveryRelayUrls);
+    this.logger.debug('[MessagesComponent] Publishing to discovery relays:', discoveryRelayUrls);
 
     // Use the SimplePool to publish directly to discovery relays
     const pool = this.discoveryRelay.getPool();
@@ -1964,7 +1964,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.debug('Calling selectChat');
       this.selectChat(tempChat);
     } catch (error) {
-      console.error('Error starting chat:', error);
+      this.logger.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
     }
   }

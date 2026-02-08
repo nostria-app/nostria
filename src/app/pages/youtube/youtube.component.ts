@@ -15,6 +15,7 @@ import { CorsProxyService } from '../../services/cors-proxy.service';
 import { NostrService } from '../../services/nostr.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
+import { LoggerService } from '../../services/logger.service';
 import { MediaItem } from '../../interfaces';
 import { Event, Filter } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -336,6 +337,7 @@ export class YouTubeComponent {
   private readonly nostrService = inject(NostrService);
   private readonly mediaPlayer = inject(MediaPlayerService);
   private readonly layout = inject(LayoutService);
+  private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
@@ -425,7 +427,7 @@ export class YouTubeComponent {
       // Reload channels to include the new one
       await this.loadYouTubeBookmarks();
     } catch (error) {
-      console.error('Error creating YouTube bookmark:', error);
+      this.logger.error('Error creating YouTube bookmark:', error);
       this.snackBar.open('Failed to add channel. Please try again.', 'Close', { duration: 3000 });
     }
   }
@@ -443,7 +445,7 @@ export class YouTubeComponent {
       this.channels.update(channels => channels.filter(c => c.channelId !== channelId));
       this.channelEntries.set(updated);
     } catch (error) {
-      console.error('Error removing YouTube channel:', error);
+      this.logger.error('Error removing YouTube channel:', error);
       this.snackBar.open('Failed to remove channel. Please try again.', 'Close', { duration: 3000 });
     }
   }
@@ -494,7 +496,7 @@ export class YouTubeComponent {
       try {
         entries = JSON.parse(latestEvent.content);
       } catch {
-        console.error('Failed to parse YouTube channels event content');
+        this.logger.error('Failed to parse YouTube channels event content');
       }
 
       this.channelEntries.set(entries);
@@ -512,7 +514,7 @@ export class YouTubeComponent {
         this.fetchChannelVideos(channel);
       }
     } catch (error) {
-      console.error('Error loading YouTube bookmarks:', error);
+      this.logger.error('Error loading YouTube bookmarks:', error);
     } finally {
       this.loading.set(false);
     }
@@ -538,7 +540,7 @@ export class YouTubeComponent {
 
       this.oldBookmarkCount.set(newChannels.length);
     } catch (error) {
-      console.error('Error checking for old bookmarks:', error);
+      this.logger.error('Error checking for old bookmarks:', error);
     }
   }
 
@@ -605,7 +607,7 @@ export class YouTubeComponent {
       this.oldBookmarkCount.set(0);
       await this.loadYouTubeBookmarks();
     } catch (error) {
-      console.error('Error migrating old bookmarks:', error);
+      this.logger.error('Error migrating old bookmarks:', error);
       this.snackBar.open('Failed to migrate bookmarks. Please try again.', 'Close', { duration: 3000 });
     } finally {
       this.migrating.set(false);
@@ -627,7 +629,7 @@ export class YouTubeComponent {
         channels.map(c => (c.channelId === channel.channelId ? { ...c, videos, loading: false } : c))
       );
     } catch (error) {
-      console.error(`Error fetching videos for ${channel.title}:`, error);
+      this.logger.error(`Error fetching videos for ${channel.title}:`, error);
       this.channels.update(channels =>
         channels.map(c =>
           c.channelId === channel.channelId

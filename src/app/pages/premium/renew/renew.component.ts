@@ -19,6 +19,7 @@ import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 import { ApplicationService } from '../../../services/application.service';
+import { LoggerService } from '../../../services/logger.service';
 import { environment } from '../../../../environments/environment';
 import { PremiumApiService } from '../../../services/premium-api.service';
 
@@ -78,6 +79,7 @@ export class RenewComponent implements OnDestroy {
   private premiumApi = inject(PremiumApiService);
   accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
+  private readonly logger = inject(LoggerService);
   environment = environment;
 
   paymentFormGroup = this.formBuilder.group({
@@ -197,7 +199,7 @@ export class RenewComponent implements OnDestroy {
     const selectedPrice = this.selectedPrice().priceCents;
 
     if (!selectedPrice) {
-      console.error(
+      this.logger.error(
         'No price found for selected tier and payment option ',
         selectedTier.key,
         selectedPaymentOption
@@ -332,7 +334,7 @@ export class RenewComponent implements OnDestroy {
         this.currentStep.set(2);
       }, 2000);
     } catch (e: unknown) {
-      console.error('Failed to renew subscription:', e);
+      this.logger.error('Failed to renew subscription:', e);
       const errorMessage = (e as { error?: { error?: string } })?.error?.error || 'Failed to renew subscription. Please try again.';
       this.snackBar.open(errorMessage, 'Ok', { 
         duration: 5000 

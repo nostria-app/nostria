@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
+import { LoggerService } from '../../../services/logger.service';
 import { DatePipe } from '@angular/common';
 import { SetUsernameDialogComponent, SetUsernameDialogData } from '../set-username-dialog/set-username-dialog.component';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -19,6 +20,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 })
 export class PremiumSettings implements OnInit {
   accountState = inject(AccountStateService);
+  private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private rightPanel = inject(RightPanelService);
 
@@ -31,7 +33,7 @@ export class PremiumSettings implements OnInit {
     try {
       await this.accountState.refreshSubscription();
     } catch (error) {
-      console.error('Failed to refresh subscription on premium settings page load:', error);
+      this.logger.error('Failed to refresh subscription on premium settings page load:', error);
     }
   }
 
@@ -50,9 +52,9 @@ export class PremiumSettings implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Username was set/changed successfully, refresh subscription to show new username
-        console.log('Username operation completed successfully, refreshing subscription');
+        this.logger.debug('Username operation completed successfully, refreshing subscription');
         this.accountState.refreshSubscription().catch(error => {
-          console.error('Failed to refresh subscription after username update:', error);
+          this.logger.error('Failed to refresh subscription after username update:', error);
         });
       }
     });

@@ -165,7 +165,6 @@ export class ProfileState {
     try {
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
     } catch (err) {
-      console.error('Failed to ensure relays for pubkey:', err);
       this.logger.error('Failed to ensure relays for pubkey:', err);
     }
   }
@@ -191,7 +190,7 @@ export class ProfileState {
   reloadCurrentProfile(): void {
     const currentPubkey = this.pubkey();
     if (currentPubkey) {
-      console.log('ProfileState: Reloading current profile data for', currentPubkey);
+      this.logger.debug('Reloading current profile data for', currentPubkey);
       this.forceReloadProfileData(currentPubkey);
     }
   }
@@ -1096,7 +1095,7 @@ export class ProfileState {
             newNote =>
               !existing.some(existingNote => existingNote.event.id === newNote.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`
           );
 
@@ -1119,7 +1118,7 @@ export class ProfileState {
             newReply =>
               !existing.some(existingReply => existingReply.event.id === newReply.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`
           );
 
@@ -1142,7 +1141,7 @@ export class ProfileState {
             newRepost =>
               !existing.some(existingRepost => existingRepost.event.id === newRepost.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new reposts (${newReposts.length - filtered.length} duplicates filtered)`
           );
 
@@ -1165,7 +1164,7 @@ export class ProfileState {
             newReaction =>
               !existing.some(existingReaction => existingReaction.event.id === newReaction.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new reactions (${newReactions.length - filtered.length} duplicates filtered)`
           );
 
@@ -1187,7 +1186,7 @@ export class ProfileState {
           const filtered = newAudio.filter(
             newItem => !existing.some(existingItem => existingItem.event.id === newItem.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new audio (${newAudio.length - filtered.length} duplicates filtered)`
           );
 
@@ -1209,7 +1208,7 @@ export class ProfileState {
           const filtered = newMedia.filter(
             newItem => !existing.some(existingItem => existingItem.event.id === newItem.event.id)
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new media (${newMedia.length - filtered.length} duplicates filtered)`
           );
 
@@ -1408,7 +1407,7 @@ export class ProfileState {
                 existingArticle => existingArticle.event.id === newArticle.event.id
               )
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`
           );
 
@@ -1562,7 +1561,7 @@ export class ProfileState {
                 existingMediaItem => existingMediaItem.event.id === newMediaItem.event.id
               )
           );
-          console.log(
+          this.logger.debug(
             `Adding ${filtered.length} new media items (${newMedia.length - filtered.length} duplicates filtered)`
           );
 

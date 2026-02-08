@@ -20,6 +20,7 @@ import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confi
 import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { LoggerService } from '../../../services/logger.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { RightPanelService } from '../../../services/right-panel.service';
 
@@ -53,6 +54,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly favoritesService = inject(FavoritesService);
   private readonly accountState = inject(AccountStateService);
+  private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
 
   goBack(): void {
@@ -191,7 +193,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
 
       // Favorites are handled by the service automatically
     } catch (error) {
-      console.error('Error loading algorithm data:', error);
+      this.logger.error('Error loading algorithm data:', error);
       this.snackBar.open('Failed to load algorithm data', 'Close', {
         duration: 3000,
       });
@@ -219,7 +221,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
         });
         await this.loadData();
       } catch (error) {
-        console.error('Error resetting user metrics:', error);
+        this.logger.error('Error resetting user metrics:', error);
         this.snackBar.open('Failed to reset user metrics', 'Close', {
           duration: 3000,
         });
@@ -246,7 +248,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
         });
         await this.loadData();
       } catch (error) {
-        console.error('Error resetting all metrics:', error);
+        this.logger.error('Error resetting all metrics:', error);
         this.snackBar.open('Failed to reset all metrics', 'Close', {
           duration: 3000,
         });
@@ -276,7 +278,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
     try {
       return this.utilities.getTruncatedNpub(pubkey);
     } catch (error) {
-      console.warn('Invalid pubkey format:', pubkey, error);
+      this.logger.warn('Invalid pubkey format:', pubkey, error);
       // Return a truncated version of the raw pubkey as fallback
       if (pubkey && pubkey.length > 16) {
         return `${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}`;
@@ -288,7 +290,7 @@ export class AlgorithmComponent implements OnInit, OnDestroy {
   getDisplayName(pubkey: string): string {
     // Remove debugger statement and validate pubkey first
     if (!this.utilities.isValidPubkey(pubkey)) {
-      console.warn('Invalid pubkey in getDisplayName:', pubkey);
+      this.logger.warn('Invalid pubkey in getDisplayName:', pubkey);
       return this.getTruncatedPubkey(pubkey);
     }
 

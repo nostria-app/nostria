@@ -622,7 +622,7 @@ export class Calendar {
 
   // View mode management
   onViewModeChange(mode: 'month' | 'week' | 'agenda'): void {
-    console.log('View mode change requested:', mode);
+    this.logger.debug('View mode change requested:', mode);
     this.viewMode.set(mode);
   }
 
@@ -825,7 +825,6 @@ export class Calendar {
 
       // Sign and publish the RSVP
       // TODO: Implement signing with user's private key
-      console.log('Publishing RSVP:', rsvpEvent);
     } catch (error) {
       this.logger.error('Error responding to event', error);
     }
@@ -853,7 +852,6 @@ export class Calendar {
 
       // Sign and publish the deletion
       // TODO: Implement signing with user's private key
-      console.log('Publishing deletion:', deletionEvent);
 
       // Remove from local state
       const updatedEvents = this.events().filter(e => e.id !== event.id);
@@ -1063,7 +1061,6 @@ export class Calendar {
         break;
       case 'edit':
         // TODO: Implement edit functionality
-        console.log('Edit event:', event);
         break;
       case 'delete':
         await this.deleteEvent(event);

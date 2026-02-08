@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CorsProxyService } from '../../../services/cors-proxy.service';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface AddYouTubeChannelData {
   channelId: string;
@@ -181,6 +182,7 @@ export interface AddYouTubeChannelData {
 export class AddYouTubeChannelDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<AddYouTubeChannelDialogComponent>);
   private readonly corsProxy = inject(CorsProxyService);
+  private readonly logger = inject(LoggerService);
 
   channelInput = '';
   title = '';
@@ -241,7 +243,7 @@ export class AddYouTubeChannelDialogComponent {
         }
       }
     } catch (err) {
-      console.error('Error fetching channel:', err);
+      this.logger.error('Error fetching channel:', err);
       this.error.set('Failed to fetch channel. Please check the input and try again.');
       this.channelTitle.set('');
     } finally {
@@ -317,7 +319,7 @@ export class AddYouTubeChannelDialogComponent {
 
       return { channelId, feedUrl, thumbnailUrl };
     } catch (err) {
-      console.error('Error resolving handle URL:', err);
+      this.logger.error('Error resolving handle URL:', err);
       return null;
     }
   }

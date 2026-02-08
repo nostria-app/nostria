@@ -132,7 +132,7 @@ export class ProfileMediaComponent {
     try {
       await this.profileState.loadMoreMedia();
     } catch (error) {
-      console.error('Failed to load more media:', error);
+      this.logger.error('Failed to load more media:', error);
       this.error.set('Failed to load more media. Please try again.');
     }
   }

@@ -20,6 +20,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { LoggerService } from '../../../services/logger.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -65,6 +66,7 @@ export class BadgeDetailsComponent {
   private readonly utilities = inject(UtilitiesService);
   private readonly layout = inject(LayoutService);
   private readonly panelNav = inject(PanelNavigationService);
+  private readonly logger = inject(LoggerService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -135,7 +137,7 @@ export class BadgeDetailsComponent {
 
       this.badge.set(badgeInfo);
     } catch (err) {
-      console.error('Error fetching badge:', err);
+      this.logger.error('Error fetching badge:', err);
       this.error.set('Failed to load badge details');
     } finally {
       this.loading.set(false);
@@ -219,12 +221,6 @@ export class BadgeDetailsComponent {
       }
 
       // TODO: Implement actual badge award publishing through NostrService
-      // This would create and publish BadgeAward events for each recipient
-      console.log('Publishing badge awards:', {
-        badge: badge.slug,
-        creator: badge.creator,
-        recipients: pubkeys,
-      });
 
       this.snackBar.open(`Badge awarded to ${pubkeys.length} recipients`, 'Close', {
         duration: 3000,
@@ -234,7 +230,7 @@ export class BadgeDetailsComponent {
       this.recipientPubkeys.reset();
       this.issuingBadge.set(false);
     } catch (err) {
-      console.error('Error publishing badge reward:', err);
+      this.logger.error('Error publishing badge reward:', err);
       this.snackBar.open('Failed to publish badge reward', 'Close', {
         duration: 3000,
       });

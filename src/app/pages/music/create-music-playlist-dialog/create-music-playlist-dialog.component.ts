@@ -12,6 +12,7 @@ import { MusicPlaylistService, CreateMusicPlaylistData, MusicPlaylist } from '..
 import { MediaService } from '../../../services/media.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface CreateMusicPlaylistDialogData {
   // Optional track to add immediately after creation
@@ -45,8 +46,7 @@ export class CreateMusicPlaylistDialogComponent {
   private mediaService = inject(MediaService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
-
-  // Media server availability
+  private readonly logger = inject(LoggerService);
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   playlistForm: FormGroup;
@@ -106,7 +106,7 @@ export class CreateMusicPlaylistDialogComponent {
       try {
         const servers = this.mediaService.mediaServers();
         if (servers.length === 0) {
-          console.error('No media servers available');
+          this.logger.error('No media servers available');
           return;
         }
         const result = await this.mediaService.uploadFile(file, false, servers);
@@ -118,7 +118,7 @@ export class CreateMusicPlaylistDialogComponent {
           }
         }
       } catch (error) {
-        console.error('Failed to upload image:', error);
+        this.logger.error('Failed to upload image:', error);
       } finally {
         this.isUploading.set(false);
       }
@@ -188,7 +188,7 @@ export class CreateMusicPlaylistDialogComponent {
         this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
       }
     } catch (error) {
-      console.error('Failed to upload image:', error);
+      this.logger.error('Failed to upload image:', error);
       this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
     } finally {
       this.isUploading.set(false);
@@ -267,7 +267,7 @@ export class CreateMusicPlaylistDialogComponent {
         this.closed.emit(null);
       }
     } catch (error) {
-      console.error('Failed to create playlist:', error);
+      this.logger.error('Failed to create playlist:', error);
       this.closed.emit(null);
     } finally {
       this.isCreating.set(false);

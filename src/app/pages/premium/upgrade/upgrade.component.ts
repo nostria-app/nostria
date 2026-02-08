@@ -19,6 +19,7 @@ import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 import { ApplicationService } from '../../../services/application.service';
+import { LoggerService } from '../../../services/logger.service';
 import { environment } from '../../../../environments/environment';
 import { Payment } from '../../../api/models';
 import { UsernameService } from '../../../services/username';
@@ -77,6 +78,7 @@ export class UpgradeComponent implements OnDestroy {
   private paymentService = inject(PaymentService);
   private accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
+  private readonly logger = inject(LoggerService);
   environment = environment;
 
   usernameFormGroup = this.formBuilder.group({
@@ -212,7 +214,7 @@ export class UpgradeComponent implements OnDestroy {
     const selectedPrice = this.selectedPrice().priceCents;
 
     if (!selectedPrice) {
-      console.error(
+      this.logger.error(
         'No price found for selected tier and payment option ',
         selectedTier.key,
         selectedPaymentOption

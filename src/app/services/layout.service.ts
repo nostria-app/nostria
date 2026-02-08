@@ -539,17 +539,9 @@ export class LayoutService implements OnDestroy {
    */
   debugScrollState(): void {
     if (!this.contentWrapper) {
-      console.log('No content wrapper found');
+      this.logger.debug('No content wrapper found');
       return;
     }
-
-    let scrollTimeout: any;
-    this.contentWrapper.addEventListener('scroll', function () {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        console.log('Scroll event triggered (debounced)');
-      }, 200);
-    });
 
     const scrollTop = this.contentWrapper.scrollTop;
     const scrollHeight = this.contentWrapper.scrollHeight;
@@ -558,21 +550,6 @@ export class LayoutService implements OnDestroy {
 
     const calculatedAtTop = scrollTop <= threshold;
     const calculatedAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
-
-    console.log('Scroll Debug State:', {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-      threshold,
-      calculatedAtTop,
-      calculatedAtBottom,
-      signalAtTop: this.scrolledToTop(),
-      signalAtBottom: this.scrolledToBottom(),
-      signalsMatch: {
-        top: calculatedAtTop === this.scrolledToTop(),
-        bottom: calculatedAtBottom === this.scrolledToBottom(),
-      },
-    });
   }
 
   /**
@@ -1000,7 +977,7 @@ export class LayoutService implements OnDestroy {
     // Trim the input to remove leading/trailing whitespace
     const trimmedValue = event.target.value.trim();
 
-    console.log('onSearchInput called with value:', trimmedValue);
+    this.logger.debug('onSearchInput called with value:', trimmedValue);
 
     // Handle Nostr entities immediately (npub, nevent, naddr, etc.) - route directly, don't search
     if (this.isNostrEntity(trimmedValue) || trimmedValue.startsWith('nostr:')) {
@@ -1016,7 +993,7 @@ export class LayoutService implements OnDestroy {
     // Debounce logic to wait until user finishes typing for special searches
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
-      console.log('Handle search called!');
+      this.logger.debug('Handle search called!');
       this.handleSearch(trimmedValue);
     }, 750);
   }
@@ -1032,7 +1009,7 @@ export class LayoutService implements OnDestroy {
         await this.handleNostrEntity(value.substring(6));
         return;
       } catch (error) {
-        console.error('Failed to parse nostr URL:', error);
+        this.logger.error('Failed to parse nostr URL:', error);
         this.toast('Invalid nostr URL format');
         return;
       }
@@ -1044,7 +1021,7 @@ export class LayoutService implements OnDestroy {
         await this.handleNostrEntity(value);
         return;
       } catch (error) {
-        console.warn('Failed to handle nostr entity:', value, error);
+        this.logger.warn('Failed to handle nostr entity:', value, error);
         // For entities that aren't recognized as valid nostr entities, continue with other logic
       }
     }
@@ -1092,7 +1069,7 @@ export class LayoutService implements OnDestroy {
         const decoded = nip19.decode(value).data as ProfilePointer;
         this.openProfileAsPrimary(decoded.pubkey);
       } catch (error) {
-        console.warn('Failed to decode nprofile:', value, error);
+        this.logger.warn('Failed to decode nprofile:', value, error);
         this.toast('Invalid profile format', 3000, 'error-snackbar');
       }
       return;
@@ -1104,7 +1081,7 @@ export class LayoutService implements OnDestroy {
         // Open in primary outlet and clear right panel
         this.openEventAsPrimary(value);
       } catch (error) {
-        console.warn('Failed to decode nevent:', value, error);
+        this.logger.warn('Failed to decode nevent:', value, error);
         this.toast('Invalid event format', 3000, 'error-snackbar');
       }
       return;
@@ -1114,10 +1091,10 @@ export class LayoutService implements OnDestroy {
       this.toggleSearch();
       try {
         // Open in primary outlet and clear right panel
-        console.log('Opening note:', value);
+        this.logger.debug('Opening note:', value);
         this.openEventAsPrimary(value);
       } catch (error) {
-        console.warn('Failed to handle note:', value, error);
+        this.logger.warn('Failed to handle note:', value, error);
         this.toast('Invalid note format', 3000, 'error-snackbar');
       }
       return;
@@ -1144,7 +1121,7 @@ export class LayoutService implements OnDestroy {
           this.openEventAsPrimary(value);
         }
       } catch (error) {
-        console.warn('Failed to decode naddr:', value, error);
+        this.logger.warn('Failed to decode naddr:', value, error);
         this.toast('Invalid address format', 3000, 'error-snackbar');
       }
       return;
@@ -1779,7 +1756,7 @@ export class LayoutService implements OnDestroy {
             this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
           }
         } catch (error) {
-          console.error('Failed to upload/publish audio:', error);
+          this.logger.error('Failed to upload/publish audio:', error);
           this.mediaService.uploading.set(false);
           this.snackBar.open('Failed to publish audio clip.', 'Close', { duration: 3000 });
         }

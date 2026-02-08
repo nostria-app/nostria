@@ -127,8 +127,8 @@ export class DetailsComponent implements OnInit {
     const event = await this.database.getEventByPubkeyAndKind(this.npub(), 0);
 
     if (event) {
-      console.log('Broadcasting metadata event:', event);
-      // console.log('Relay URLs:', this.profileState.relay?.relayUrls);
+      this.logger.debug('Broadcasting metadata event:', event);
+      // this.logger.debug('Relay URLs:', this.profileState.relay?.relayUrls);
       // await this.relay.publish(event, this.profileState.relay?.relayUrls);
       await this.accountRelay.publish(event);
     }
@@ -138,8 +138,8 @@ export class DetailsComponent implements OnInit {
     const event = await this.database.getEventByPubkeyAndKind(this.npub(), kinds.RelayList);
 
     if (event) {
-      console.log('Broadcasting Relay List event:', event);
-      console.log('Relay URLs:', this.discoveryRelay.getRelayUrls());
+      this.logger.debug('Broadcasting Relay List event:', event);
+      this.logger.debug('Relay URLs:', this.discoveryRelay.getRelayUrls());
       await this.discoveryRelay.publish(event);
     }
   }

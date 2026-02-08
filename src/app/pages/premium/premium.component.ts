@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { ApplicationService } from '../../services/application.service';
+import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatListModule } from '@angular/material/list';
 import { CommonModule } from '@angular/common';
@@ -40,6 +41,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   premiumApi = inject(PremiumApiService);
+  private logger = inject(LoggerService);
   environment = environment;
   private dialog = inject(MatDialog);
   private destroy$ = new Subject<void>();
@@ -90,7 +92,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
         this.loadHistory();
       }
     } catch (error) {
-      console.error('Failed to refresh subscription on premium page load:', error);
+      this.logger.error('Failed to refresh subscription on premium page load:', error);
     }
   }
 
@@ -107,7 +109,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (history) => this.subscriptionHistory.set(history),
-        error: (err) => console.error('Failed to load subscription history:', err)
+        error: (err) => this.logger.error('Failed to load subscription history:', err)
       });
 
     this.premiumApi.getPaymentHistory()
@@ -118,7 +120,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
           this.isLoadingHistory.set(false);
         },
         error: (err) => {
-          console.error('Failed to load payment history:', err);
+          this.logger.error('Failed to load payment history:', err);
           this.isLoadingHistory.set(false);
         }
       });
@@ -153,9 +155,9 @@ export class PremiumComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Username was set/changed successfully, refresh subscription to show new username
-        console.log('Username operation completed successfully, refreshing subscription');
+        this.logger.debug('Username operation completed successfully, refreshing subscription');
         this.accountState.refreshSubscription().catch(error => {
-          console.error('Failed to refresh subscription after username update:', error);
+          this.logger.error('Failed to refresh subscription after username update:', error);
         });
       }
     });

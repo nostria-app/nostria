@@ -16,6 +16,7 @@ import { MusicDataService } from '../../../services/music-data.service';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 const PAGE_SIZE = 24;
@@ -277,8 +278,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
   private followSetsService = inject(FollowSetsService);
-
-  // Input for when opened via RightPanelService
+  private readonly logger = inject(LoggerService);
   sourceInput = input<'following' | 'public' | undefined>(undefined);
 
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
@@ -480,7 +480,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for loading tracks');
+      this.logger.warn('No relays available for loading tracks');
       this.loading.set(false);
       return;
     }

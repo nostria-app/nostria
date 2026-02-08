@@ -35,6 +35,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
+import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
 
@@ -81,6 +82,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private dataService = inject(DataService);
   private layout = inject(LayoutService);
+  private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
@@ -314,7 +316,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         this.notificationFilters.set(filters);
       }
     } catch (error) {
-      console.error('Failed to load notification filters from localStorage', error);
+      this.logger.error('Failed to load notification filters from localStorage', error);
     }
   }
 
@@ -389,7 +391,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const notification = this.notifications().find(n => n.id === notificationId);
 
     if (!notification || notification.type !== NotificationType.RELAY_PUBLISHING) {
-      console.error('Cannot republish: notification not found or wrong type');
+      this.logger.error('Cannot republish: notification not found or wrong type');
       return;
     }
 
@@ -397,7 +399,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const allRelayUrls = relayNotification.relayPromises?.map(rp => rp.relayUrl) || [];
 
     if (allRelayUrls.length === 0) {
-      console.error('Cannot republish: no relay URLs found');
+      this.logger.error('Cannot republish: no relay URLs found');
       return;
     }
 
@@ -436,7 +438,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         verticalPosition: 'bottom'
       });
     } catch (error) {
-      console.error('Failed to refresh notifications:', error);
+      this.logger.error('Failed to refresh notifications:', error);
       this.snackBar.open('Failed to refresh notifications', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -846,7 +848,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
       this.oldestTimestamp.set(newSince * 1000);
     } catch (error) {
-      console.error('Failed to load more notifications:', error);
+      this.logger.error('Failed to load more notifications:', error);
     } finally {
       this.isLoadingMore.set(false);
     }
