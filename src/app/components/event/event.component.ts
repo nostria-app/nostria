@@ -254,7 +254,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.accountLocalState.getActionsDisplayMode(pubkey);
   });
 
-  onActionsDisplayModeToggle(event: MouseEvent): void {
+  onActionsDisplayModeToggle(event: globalThis.Event): void {
     event.preventDefault();
     event.stopPropagation();
     const pubkey = this.accountState.pubkey();
@@ -269,6 +269,26 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.accountLocalState.setActionsDisplayModeReplies(pubkey, nextMode);
     } else {
       this.accountLocalState.setActionsDisplayMode(pubkey, nextMode);
+    }
+  }
+
+  // Long press on bookmark for touch devices
+  private bookmarkLongPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private bookmarkLongPressed = false;
+
+  onBookmarkLongPressStart(event: TouchEvent): void {
+    this.bookmarkLongPressed = false;
+    this.bookmarkLongPressTimeout = setTimeout(() => {
+      this.bookmarkLongPressed = true;
+      event.preventDefault();
+      this.onActionsDisplayModeToggle(event);
+    }, 500);
+  }
+
+  onBookmarkLongPressEnd(): void {
+    if (this.bookmarkLongPressTimeout) {
+      clearTimeout(this.bookmarkLongPressTimeout);
+      this.bookmarkLongPressTimeout = null;
     }
   }
 
@@ -2146,6 +2166,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   async onBookmarkClick(event: MouseEvent) {
     event.stopPropagation();
+    // Skip bookmark action if this was a long press (display mode toggle)
+    if (this.bookmarkLongPressed) {
+      this.bookmarkLongPressed = false;
+      return;
+    }
     const targetItem = this.repostedRecord() || this.record();
     if (targetItem) {
       if (targetItem.event.kind === 32100) {
