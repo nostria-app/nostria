@@ -14,10 +14,10 @@ import { formatDuration } from '../../utils/format-duration';
   styleUrls: ['./audio-player.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @Input() src = '';
-  @Input() waveform: number[] = [];
-  @Input() duration = 0;
+export class AudioPlayerComponent implements AfterViewInit, OnDestroy {
+  src = input('');
+  waveform = input<number[]>([]);
+  duration = input(0);
 
   @ViewChild('audioElement') audioRef!: ElementRef<HTMLAudioElement>;
 
@@ -38,7 +38,7 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
       if (duration && isFinite(duration)) {
         this.totalDuration.set(duration);
       } else {
-        this.totalDuration.set(this.duration);
+        this.totalDuration.set(this.duration());
       }
     });
 
@@ -49,10 +49,10 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
       this.isPlaying.set(false);
 
       // If network error (2) or not supported (4), try blob fallback
-      if (this.src && !this.isRetryingWithBlob && (error?.code === 2 || error?.code === 4)) {
+      if (this.src() && !this.isRetryingWithBlob && (error?.code === 2 || error?.code === 4)) {
         console.log('Attempting to load audio as Blob...');
         this.isRetryingWithBlob = true;
-        await this.loadAsBlob(this.src);
+        await this.loadAsBlob(this.src());
       }
     });
 
@@ -135,18 +135,20 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
   formatTime = formatDuration;
 
   private maxWaveformValue = 100;
+  private isFirstSrcChange = true;
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['src']) {
+  constructor() {
+    effect(() => {
+      const src = this.src();
       // Cleanup previous blob
       if (this.blobUrl) {
         URL.revokeObjectURL(this.blobUrl);
         this.blobUrl = null;
       }
       this.isRetryingWithBlob = false;
-      this.currentSrc.set(this.src);
+      this.currentSrc.set(src);
 
-      if (!changes['src'].firstChange) {
+      if (!this.isFirstSrcChange) {
         const audio = this.audioRef?.nativeElement;
         if (audio) {
           audio.load();
@@ -154,21 +156,28 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
           this.currentTime.set(0);
         }
       }
-    }
+      this.isFirstSrcChange = false;
+    });
 
-    if (this.waveform && this.waveform.length > 0) {
-      this.maxWaveformValue = Math.max(...this.waveform, 1);
-    }
-
-    // If we have a duration input, set it initially.
-    // This helps when audio metadata hasn't loaded yet or is infinite (streaming/webm).
-    if (this.duration) {
-      // Only set if we don't have a valid audio duration yet
-      const audio = this.audioRef?.nativeElement;
-      if (!audio || !audio.duration || !isFinite(audio.duration)) {
-        this.totalDuration.set(this.duration);
+    effect(() => {
+      const waveform = this.waveform();
+      if (waveform && waveform.length > 0) {
+        this.maxWaveformValue = Math.max(...waveform, 1);
       }
-    }
+    });
+
+    effect(() => {
+      const duration = this.duration();
+      // If we have a duration input, set it initially.
+      // This helps when audio metadata hasn't loaded yet or is infinite (streaming/webm).
+      if (duration) {
+        // Only set if we don't have a valid audio duration yet
+        const audio = this.audioRef?.nativeElement;
+        if (!audio || !audio.duration || !isFinite(audio.duration)) {
+          this.totalDuration.set(duration);
+        }
+      }
+    });
   }
 
   getWaveformBarHeight(val: number): number {
@@ -179,7 +188,7 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
 
   onWaveformClick(event: MouseEvent) {
     // Only handle click if we have a waveform, otherwise slider handles it
-    if (this.waveform.length === 0) return;
+    if (this.waveform().length === 0) return;
 
     const container = event.currentTarget as HTMLElement;
     const rect = container.getBoundingClientRect();

@@ -8,11 +8,11 @@
   </button>
 
   <div class="waveform-container" (click)="onWaveformClick($event); $event.stopPropagation()">
-    @if (waveform.length > 0) {
+    @if (waveform().length > 0) {
     <div class="waveform">
-      @for (bar of waveform; track $index) {
+      @for (bar of waveform(); track $index) {
       <div class="bar" [style.height.%]="getWaveformBarHeight(bar)"
-        [class.active]="$index / waveform.length <= currentTime() / (totalDuration() || 1)">
+        [class.active]="$index / waveform().length <= currentTime() / (totalDuration() || 1)">
       </div>
       }
     </div>
