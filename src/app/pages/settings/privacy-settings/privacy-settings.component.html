@@ -35,6 +35,8 @@
       <mat-checkbox [checked]="settingsService.settings().googleFaviconEnabled" (change)="toggleGoogleFavicon()">
         <span i18n="@@settings.privacy.google-favicon.enable">Enable Google API for favicons</span>
       </mat-checkbox>
+      <app-info-tooltip [content]="googleFaviconInfoContent"
+        ariaLabel="Learn about Google favicon API"></app-info-tooltip>
     </div>
 
     @if (settingsService.settings().imageCacheEnabled) {
@@ -297,6 +299,31 @@
     <mat-card-content>
       <p i18n="@@settings.privacy.info.social.description">When enabled, content previews will be shown for external
         links shared in posts.</p>
+    </mat-card-content>
+  </ng-template>
+
+  <ng-template #googleFaviconInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">image</mat-icon>
+          <span i18n="@@settings.privacy.info.google-favicon.title">Google Favicon API</span>
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p i18n="@@settings.privacy.info.google-favicon.p1">
+        When enabled, favicons (small website icons) are fetched using Google's favicon service,
+        which provides reliable icons for most websites.
+      </p>
+      <p i18n="@@settings.privacy.info.google-favicon.p2">
+        <strong>Privacy note:</strong> This sends the domain names you visit to Google's servers.
+        Google may log these requests and associate them with your IP address.
+      </p>
+      <p i18n="@@settings.privacy.info.google-favicon.p3">
+        When disabled (default), favicons are fetched directly from each website's server,
+        which is more private but may fail for some sites that don't have a standard favicon.ico file.
+      </p>
     </mat-card-content>
   </ng-template>
 </div>
