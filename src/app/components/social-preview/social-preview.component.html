@@ -1,6 +1,6 @@
 @if (preview(); as preview) {
   <a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank" rel="noopener noreferrer">
-    <mat-card [class.compact-preview]="!preview.title && !preview.image">
+    <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)">
       <div class="preview-content">
         <div class="thumbnail-container">
           @if (preview.loading) {
@@ -30,7 +30,9 @@
           @if (preview.loading) {
             <div class="loading-text">
               <div class="loading-placeholder title-placeholder"></div>
-              <div class="loading-placeholder description-placeholder"></div>
+              @if (!compact()) {
+                <div class="loading-placeholder description-placeholder"></div>
+              }
               <div class="loading-placeholder url-placeholder"></div>
             </div>
           } @else if (preview.error) {
@@ -42,9 +44,11 @@
             <div class="preview-title">
               {{ preview.title || 'No title available' }}
             </div>
-            <div class="preview-description">
-              {{ preview.description || 'No description available' }}
-            </div>
+            @if (!compact()) {
+              <div class="preview-description">
+                {{ preview.description || 'No description available' }}
+              </div>
+            }
             <div class="preview-url">{{ preview.url }}</div>
           }
         </div>

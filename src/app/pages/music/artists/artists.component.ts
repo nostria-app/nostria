@@ -1,5 +1,5 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, signal, computed, OnDestroy, ElementRef, viewChild } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { MusicDataService, ArtistData } from '../../../services/music-data.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { LoggerService } from '../../../services/logger.service';
 
@@ -46,15 +47,23 @@ export class ArtistsComponent implements OnDestroy {
   private database = inject(DatabaseService);
   private dataService = inject(DataService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private musicData = inject(MusicDataService);
+  private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
+
+  searchInput = viewChild<ElementRef>('searchInput');
 
   allTracks = signal<Event[]>([]);
   preloadedArtists = signal<ArtistData[] | null>(null);
   loading = signal(true);
   sortBy = signal<SortOption>('name-asc');
+
+  // Search functionality
+  searchQuery = signal('');
+  showSearch = signal(false);
 
   private trackSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
@@ -114,6 +123,16 @@ export class ArtistsComponent implements OnDestroy {
       default:
         return artists;
     }
+  });
+
+  /**
+   * Filtered artists based on search query
+   */
+  filteredArtists = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.artists();
+    const lowerQuery = query.toLowerCase();
+    return this.artists().filter(artist => artist.name.toLowerCase().includes(lowerQuery));
   });
 
   constructor() {
@@ -219,7 +238,32 @@ export class ArtistsComponent implements OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
+    } else {
+      this.router.navigate(['/music']);
+    }
+  }
+
+  toggleSearch(): void {
+    const wasVisible = this.showSearch();
+    this.showSearch.set(!wasVisible);
+    if (!wasVisible) {
+      setTimeout(() => {
+        this.searchInput()?.nativeElement?.focus();
+      }, 0);
+    } else {
+      this.searchQuery.set('');
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  onSearchInput(event: InputEvent): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
   }
 
   getArtistPicture(pubkey: string): string | null {

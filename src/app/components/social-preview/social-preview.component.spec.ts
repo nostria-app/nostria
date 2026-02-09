@@ -1,0 +1,198 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { SocialPreviewComponent } from './social-preview.component';
+import { OpenGraphService } from '../../services/opengraph.service';
+
+describe('SocialPreviewComponent', () => {
+  let component: SocialPreviewComponent;
+  let fixture: ComponentFixture<SocialPreviewComponent>;
+  let mockOpenGraphService: jasmine.SpyObj<OpenGraphService>;
+
+  beforeEach(async () => {
+    mockOpenGraphService = jasmine.createSpyObj('OpenGraphService', ['getOpenGraphData']);
+    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+      url: 'https://example.com',
+      title: 'Example Title',
+      description: 'Example description text',
+      image: 'https://example.com/image.jpg',
+      loading: false,
+      error: false,
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [SocialPreviewComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OpenGraphService, useValue: mockOpenGraphService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SocialPreviewComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should default compact to false', () => {
+    expect(component.compact()).toBeFalse();
+  });
+
+  it('should accept compact input', () => {
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+    expect(component.compact()).toBeTrue();
+  });
+
+  it('should load preview when url is set', async () => {
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledWith('https://example.com');
+    expect(component.preview().title).toBe('Example Title');
+    expect(component.preview().description).toBe('Example description text');
+    expect(component.preview().image).toBe('https://example.com/image.jpg');
+  });
+
+  it('should apply compact-preview class when compact input is true', async () => {
+    fixture.componentRef.setInput('compact', true);
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const card = fixture.nativeElement.querySelector('mat-card');
+    expect(card.classList.contains('compact-preview')).toBeTrue();
+  });
+
+  it('should not apply compact-preview class when compact is false and preview has title and image', async () => {
+    fixture.componentRef.setInput('compact', false);
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const card = fixture.nativeElement.querySelector('mat-card');
+    expect(card.classList.contains('compact-preview')).toBeFalse();
+  });
+
+  it('should hide description in compact mode', async () => {
+    fixture.componentRef.setInput('compact', true);
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const description = fixture.nativeElement.querySelector('.preview-description');
+    expect(description).toBeNull();
+  });
+
+  it('should show description in full mode', async () => {
+    fixture.componentRef.setInput('compact', false);
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const description = fixture.nativeElement.querySelector('.preview-description');
+    expect(description).toBeTruthy();
+    expect(description.textContent).toContain('Example description text');
+  });
+
+  it('should show title in both compact and full modes', async () => {
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const title = fixture.nativeElement.querySelector('.preview-title');
+    expect(title).toBeTruthy();
+    expect(title.textContent).toContain('Example Title');
+
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+    const compactTitle = fixture.nativeElement.querySelector('.preview-title');
+    expect(compactTitle).toBeTruthy();
+    expect(compactTitle.textContent).toContain('Example Title');
+  });
+
+  it('should show URL in both compact and full modes', async () => {
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const url = fixture.nativeElement.querySelector('.preview-url');
+    expect(url).toBeTruthy();
+    expect(url.textContent).toContain('https://example.com');
+
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+    const compactUrl = fixture.nativeElement.querySelector('.preview-url');
+    expect(compactUrl).toBeTruthy();
+    expect(compactUrl.textContent).toContain('https://example.com');
+  });
+
+  it('should hide description loading placeholder in compact mode', async () => {
+    // Set up a pending promise to keep loading state
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
+
+    fixture.componentRef.setInput('compact', true);
+    component.url = 'https://example.com/slow';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const descPlaceholder = fixture.nativeElement.querySelector('.description-placeholder');
+    expect(descPlaceholder).toBeNull();
+  });
+
+  it('should show description loading placeholder in full mode', async () => {
+    // Set up a pending promise to keep loading state
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
+
+    fixture.componentRef.setInput('compact', false);
+    component.url = 'https://example.com/slow';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const descPlaceholder = fixture.nativeElement.querySelector('.description-placeholder');
+    expect(descPlaceholder).toBeTruthy();
+  });
+
+  it('should apply compact-preview class when no title and no image (auto-compact)', async () => {
+    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+      url: 'https://example.com',
+      title: '',
+      description: '',
+      image: '',
+      loading: false,
+      error: false,
+    });
+
+    fixture.componentRef.setInput('compact', false);
+    component.url = 'https://example.com';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const card = fixture.nativeElement.querySelector('mat-card');
+    expect(card.classList.contains('compact-preview')).toBeTrue();
+  });
+
+  it('should handle error state', async () => {
+    mockOpenGraphService.getOpenGraphData.and.rejectWith(new Error('Network error'));
+
+    component.url = 'https://example.com/error';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    expect(component.preview().error).toBeTrue();
+  });
+});
