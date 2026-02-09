@@ -91,12 +91,12 @@
       <h1 class="profile-name">
         {{ name() }}
         @if (isPremium()) {
-        @if (isPremiumPlus()) {
-        <mat-icon class="premium-indicator premium-plus"
-          matTooltip="This user is a Nostria Premium+ subscriber">workspace_premium</mat-icon>
-        } @else {
-        <mat-icon class="premium-indicator" matTooltip="This user is a Nostria Premium subscriber">star</mat-icon>
-        }
+        <img
+          class="premium-indicator"
+          [class.premium-plus]="isPremiumPlus()"
+          src="/icons/nostria.png"
+          [matTooltip]="isPremiumPlus() ? 'This user is a Nostria Premium+ subscriber' : 'This user is a Nostria Premium subscriber'"
+          alt="Nostria Premium" />
         }
         @if (isFavorite()) {
         <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
