@@ -39,6 +39,8 @@
   box-shadow: none !important;
   min-width: 0; // Allow shrinking in flex layouts
   width: 100%; // Ensure card fills the container
+  container-type: inline-size;
+  container-name: note-card;
 
   &.plain {
     border: none;
@@ -107,6 +109,12 @@
     gap: 2px;
     padding-bottom: 4px;
     margin-bottom: 4px;
+  }
+}
+
+@container note-card (max-width: 480px) {
+  .action-button .hide-label-small {
+    display: none;
   }
 }
 
