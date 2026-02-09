@@ -37,3 +37,5 @@
 - [✓] 2026-02-09 12:30 - Migrate `@Input()` in `src/app/pages/profile/profile-reads/profile-reads.component.ts` (line 53)
 - [✓] 2026-02-09 14:49 - Migrate `@Output()` in `src/app/pages/badges/badge/badge.component.ts` (lines 54-56) -- 3 EventEmitter outputs
 - [✓] 2026-02-09 14:58 - Refactor `src/app/pages/calendar/event-details-dialog/event-details-dialog.component.ts` (lines 295-298) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
+- [✓] 2026-02-09 17:51 - Refactor `src/app/pages/bookmarks/bookmark-category-dialog/bookmark-category-dialog.component.ts` (lines 68-71) -- `MAT_DIALOG_DATA` + `MatDialogRef` constructor injection
+- [✓] 2026-02-09 17:55 - Refactor `src/app/pages/media-queue/add-media-dialog/add-media-dialog.ts` (lines 35-38) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection

@@ -24,8 +24,8 @@ Replace `@Input()` with `input()` and `@Output()` with `output()` per Angular 21
 These Angular components use constructor-based DI instead of `inject()`.
 
 - [x] Refactor `src/app/pages/calendar/event-details-dialog/event-details-dialog.component.ts` (lines 295-298) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
-- [ ] Refactor `src/app/pages/bookmarks/bookmark-category-dialog/bookmark-category-dialog.component.ts` (lines 68-71) -- `MAT_DIALOG_DATA` + `MatDialogRef` constructor injection
-- [ ] Refactor `src/app/pages/media-queue/add-media-dialog/add-media-dialog.ts` (lines 35-38) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
+- [x] Refactor `src/app/pages/bookmarks/bookmark-category-dialog/bookmark-category-dialog.component.ts` (lines 68-71) -- `MAT_DIALOG_DATA` + `MatDialogRef` constructor injection
+- [x] Refactor `src/app/pages/media-queue/add-media-dialog/add-media-dialog.ts` (lines 35-38) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
 
 ---
 
