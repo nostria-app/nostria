@@ -229,7 +229,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   onLikeHoverLeave(): void {
     this.quickReactionTimeout = setTimeout(() => {
       this.showQuickReactions.set(false);
-    }, 200);
+    }, 100);
   }
 
   onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {

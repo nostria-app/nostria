@@ -124,7 +124,8 @@
   position: absolute;
   bottom: calc(100% + 4px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px) scale(0.95);
+  transform: translateX(-50%) scale(0.3);
+  transform-origin: bottom center;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -137,11 +138,11 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.18s ease-out, transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.visible {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateX(-50%) scale(1);
     pointer-events: auto;
   }
 }
