@@ -98,6 +98,8 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   socialSharingInfoContent!: TemplateRef<unknown>;
   @ViewChild('trackingRemovalInfoContent')
   trackingRemovalInfoContent!: TemplateRef<unknown>;
+  @ViewChild('googleFaviconInfoContent')
+  googleFaviconInfoContent!: TemplateRef<unknown>;
 
   // Compute muted lists using getTags utility function
   mutedAccounts = computed(() => {
