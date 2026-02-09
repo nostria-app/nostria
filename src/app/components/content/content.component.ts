@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked, input } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
@@ -39,7 +39,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
-  private _content = signal<string>('');
+  content = input<string | undefined>('');
 
   // Input for the event (to access tags for mentions/articles)
   event = input<NostrEvent | null>(null);
@@ -104,25 +104,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     return proxyTag ? proxyTag[1] : null;
   });
 
-  @Input() set content(value: string) {
-    const newContent = value || '';
-    const currentContent = this._content();
-
-    // Only update if content actually changed
-    if (newContent !== currentContent) {
-      this._content.set(newContent);
-    }
-  }
-
-  get content(): string {
-    return this._content();
-  }
-
   constructor() {
     // Effect to parse content when it changes and component is visible
     effect(() => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
-      const currentContent = this._content() as string;
+      const currentContent = this.content() || '';
 
       if (!shouldRender) {
         return;
