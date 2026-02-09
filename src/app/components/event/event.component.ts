@@ -17,6 +17,7 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
@@ -188,8 +189,54 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
+
+  // Quick reaction hover popup
+  showQuickReactions = signal<boolean>(false);
+  private quickReactionTimeout: ReturnType<typeof setTimeout> | null = null;
+  readonly defaultQuickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
+
+  recentEmojis = computed<RecentEmoji[]>(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return [];
+    return this.accountLocalState.getRecentEmojis(pubkey).slice(0, 6);
+  });
+
+  quickReactionEmojis = computed<string[]>(() => {
+    const recent = this.recentEmojis();
+    if (recent.length > 0) {
+      // Merge recent (up to 4) with defaults to fill 6 slots, no duplicates
+      const emojis = recent.slice(0, 4).map(r => r.emoji);
+      for (const def of this.defaultQuickReactions) {
+        if (emojis.length >= 6) break;
+        if (!emojis.includes(def)) emojis.push(def);
+      }
+      return emojis;
+    }
+    return this.defaultQuickReactions;
+  });
+
+  onLikeHoverEnter(): void {
+    if (this.quickReactionTimeout) {
+      clearTimeout(this.quickReactionTimeout);
+      this.quickReactionTimeout = null;
+    }
+    this.showQuickReactions.set(true);
+  }
+
+  onLikeHoverLeave(): void {
+    this.quickReactionTimeout = setTimeout(() => {
+      this.showQuickReactions.set(false);
+    }, 300);
+  }
+
+  onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
+    event.stopPropagation();
+    this.showQuickReactions.set(false);
+    reactionBtn.addReaction(emoji);
+  }
 
   // Computed to check if event author is muted/blocked
   // CRITICAL: Filter out muted content from rendering

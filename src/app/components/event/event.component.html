@@ -698,10 +698,26 @@
     <!-- Action buttons row with labels -->
     <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
       <!-- Like/Reactions -->
-      <div class="action-button like-action" (click)="reactionBtn.openMenu(); $event.stopPropagation()">
+      <div class="action-button like-action like-hover-container"
+        (click)="reactionBtn.openMenu(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
+        (mouseleave)="onLikeHoverLeave()">
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         <span class="action-label">Like</span>
+
+        <!-- Quick reaction hover popup -->
+        @if (showQuickReactions()) {
+        <div class="quick-reaction-popup" (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
+          @for (emoji of quickReactionEmojis(); track emoji) {
+          <button class="quick-emoji-btn" (click)="onQuickReaction(emoji, reactionBtn, $event)" type="button">{{ emoji
+            }}</button>
+          }
+          <button class="quick-emoji-btn quick-emoji-more" (click)="reactionBtn.openMenu(); $event.stopPropagation()"
+            type="button">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+        }
       </div>
 
       <!-- Comment -->
