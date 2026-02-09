@@ -23,7 +23,7 @@
         <div class="item-meta">
           @if (getCustomEmojiUrl(reaction.event)) {
           <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content" class="reaction-emoji-img"
-            [title]="reaction.event.content">>
+            [title]="reaction.event.content">
           } @else {
           <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
           }

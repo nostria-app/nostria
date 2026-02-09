@@ -680,7 +680,13 @@
         @if (repostCount() > 0) {
         <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
           <span class="stat-count">{{ repostCount() }}</span>
-          <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
+          <span class="stat-label">{{ repostCount() === 1 ? 'repost' : 'reposts' }}</span>
+        </button>
+        }
+        @if (quoteCount() > 0) {
+        <button class="engagement-stat" (click)="toggleReactionsSummary('quotes'); $event.stopPropagation()">
+          <span class="stat-count">{{ quoteCount() }}</span>
+          <span class="stat-label">{{ quoteCount() === 1 ? 'quote' : 'quotes' }}</span>
         </button>
         }
         @if (totalZapAmount() > 0) {

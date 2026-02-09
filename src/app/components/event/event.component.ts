@@ -641,6 +641,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.likes().length > 0
       || this.replyCount() > 0
       || this.repostCount() > 0
+      || this.quoteCount() > 0
       || this.totalZapAmount() > 0;
   });
 
