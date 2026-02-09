@@ -86,13 +86,12 @@ function Run-WithTimeout {
 
 function Get-NextPrd {
   # Returns the path to the first PRD file in prd/ that still has unchecked
-  # tasks (lines matching "- [ ]"). Skips template.md. Returns $null when all
-  # PRD files are exhausted or none exist.
+  # tasks (lines matching "- [ ]"). Returns $null when all PRD files are
+  # exhausted or none exist.
   $prdDir = Join-Path $PSScriptRoot "prd"
   if (-not (Test-Path $prdDir)) { return $null }
 
   $files = Get-ChildItem -Path $prdDir -Filter "*.md" |
-    Where-Object { $_.Name -ne "template.md" } |
     Sort-Object Name
 
   foreach ($f in $files) {
