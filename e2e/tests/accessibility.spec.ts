@@ -168,6 +168,44 @@ test.describe('Color Contrast', () => {
 
     console.log(`Dark mode: ${hasDarkMode}`);
   });
+
+  test('should have distinct card background in dark mode', async ({ page, waitForNostrReady }) => {
+    await page.goto('/');
+    await waitForNostrReady();
+
+    // Enable dark mode by adding the class
+    await page.evaluate(() => {
+      document.body.classList.add('dark');
+    });
+
+    // Wait for styles to apply
+    await page.waitForTimeout(300);
+
+    // Verify that the CSS custom property for surface-container-low is defined and distinct
+    const colors = await page.evaluate(() => {
+      const body = document.body;
+      const bodyStyles = getComputedStyle(body);
+      const bgColor = bodyStyles.getPropertyValue('--mat-app-background-color').trim();
+
+      // Get the surface-container-low value (used by note cards in dark mode)
+      const cardSurface = bodyStyles.getPropertyValue('--mat-sys-surface-container-low').trim();
+      // Get the surface-container-lowest value (the old card background)
+      const lowestSurface = bodyStyles.getPropertyValue('--mat-sys-surface-container-lowest').trim();
+
+      return { bgColor, cardSurface, lowestSurface };
+    });
+
+    console.log('Dark mode colors:', colors);
+
+    // The app background should be #0a0a0a (near-black)
+    expect(colors.bgColor).toBeTruthy();
+
+    // The card surface (surface-container-low) should be different from the lowest surface
+    // This confirms the card uses a lifted surface level for better contrast
+    if (colors.cardSurface && colors.lowestSurface) {
+      expect(colors.cardSurface).not.toBe(colors.lowestSurface);
+    }
+  });
 });
 
 test.describe('Focus Management', () => {

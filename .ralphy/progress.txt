@@ -16,3 +16,10 @@
 - [✓] 2026-02-08 17:41 - "Signing Request" dialog does not disappear when there was already request to sign
 - [✓] 2026-02-08 21:04 - Show better error when extension is unavailable
 - [✓] 2026-02-09 00:03 - Tagging account with special characters might not work
+- [✓] 2026-02-09 01:29 - Add support for press and hold to open profile card
+- [✓] 2026-02-09 01:35 - (BUG) Wallet add dialog shows broken icon placeholder
+- [✓] 2026-02-09 01:41 - Reduce visual dominance of “replied to” line and adjust spacing in repost cards
+- [✓] 2026-02-09 01:46 - Lower visual priority of NIP-05 and timestamp
+- [✓] 2026-02-09 01:51 - Reorder note card 'overflow menu' by usage priority
+- [✓] 2026-02-09 02:00 - Show reaction statistics directly under posts
+- [✓] 2026-02-09 02:04 - Dark mode: clearer visual separation of posts

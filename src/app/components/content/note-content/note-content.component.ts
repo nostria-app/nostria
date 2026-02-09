@@ -162,6 +162,17 @@ export class NoteContentComponent implements OnDestroy {
   private touchStartY = 0;
   private readonly SWIPE_THRESHOLD = 50;
 
+  // Long press support for mention hover cards on touch devices
+  private longPressTimeout?: number;
+  private longPressTrigger: HTMLElement | null = null;
+  private longPressPubkey: string | null = null;
+  private mentionTouchStartX = 0;
+  private mentionTouchStartY = 0;
+  private readonly LONG_PRESS_DURATION = 500;
+  private readonly LONG_PRESS_MOVE_THRESHOLD = 10;
+  private isTouchTriggered = false;
+  private backdropSubscription?: Subscription;
+
   // Computed: Group consecutive images into display items for Instagram-style carousel
   // Images separated only by linebreaks or whitespace are treated as a single group
   displayItems = computed<DisplayItem[]>(() => {
@@ -1220,6 +1231,88 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
+   * Handle touch start on mention link for long-press hover card (mobile)
+   */
+  onMentionTouchStart(event: TouchEvent, token: ContentToken): void {
+    if (event.touches.length !== 1) {
+      this.cancelMentionLongPress();
+      return;
+    }
+
+    // Extract pubkey from token (same logic as onMentionMouseEnter)
+    let pubkey: string | undefined;
+
+    if (token.nostrData) {
+      const { type, data } = token.nostrData;
+      const record = data as Record<string, unknown>;
+      pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
+    } else if (token.content) {
+      const nostrUri = token.content;
+      if (nostrUri.startsWith('nostr:npub') || nostrUri.startsWith('nostr:nprofile')) {
+        const identifier = nostrUri.replace('nostr:', '');
+        const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
+        if (hexPubkey) {
+          pubkey = hexPubkey;
+        }
+      }
+    }
+
+    if (!pubkey) return;
+
+    const touch = event.touches[0];
+    this.mentionTouchStartX = touch.clientX;
+    this.mentionTouchStartY = touch.clientY;
+    this.longPressTrigger = event.target as HTMLElement;
+    this.longPressPubkey = pubkey;
+
+    this.longPressTimeout = window.setTimeout(() => {
+      if (this.longPressTrigger) {
+        // Close existing hover card
+        if (this.overlayRef) {
+          this.closeHoverCard();
+        }
+        this.isMouseOverTrigger.set(true);
+        this.isTouchTriggered = true;
+        this.showMentionHoverCard(this.longPressTrigger, this.longPressPubkey!);
+      }
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  /**
+   * Handle touch move on mention link - cancels long-press if finger moves
+   */
+  onMentionTouchMove(event: TouchEvent): void {
+    if (!this.longPressTimeout || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - this.mentionTouchStartX);
+    const deltaY = Math.abs(touch.clientY - this.mentionTouchStartY);
+
+    if (deltaX > this.LONG_PRESS_MOVE_THRESHOLD || deltaY > this.LONG_PRESS_MOVE_THRESHOLD) {
+      this.cancelMentionLongPress();
+    }
+  }
+
+  /**
+   * Handle touch end on mention link - cancels any pending long-press
+   */
+  onMentionTouchEnd(): void {
+    this.cancelMentionLongPress();
+  }
+
+  /**
+   * Cancel a pending mention long-press timer
+   */
+  private cancelMentionLongPress(): void {
+    if (this.longPressTimeout) {
+      window.clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = undefined;
+    }
+    this.longPressTrigger = null;
+    this.longPressPubkey = null;
+  }
+
+  /**
    * Show hover card for a mention
    */
   private showMentionHoverCard(element: HTMLElement, pubkey: string): void {
@@ -1264,6 +1357,8 @@ export class NoteContentComponent implements OnDestroy {
     this.overlayRef = this.overlay.create({
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.close(),
+      hasBackdrop: this.isTouchTriggered,
+      backdropClass: this.isTouchTriggered ? 'cdk-overlay-transparent-backdrop' : '',
     });
 
     const portal = new ComponentPortal(ProfileHoverCardComponent, this.viewContainerRef);
@@ -1272,6 +1367,14 @@ export class NoteContentComponent implements OnDestroy {
     console.log('[NoteContent] Setting pubkey on hover card instance:', pubkey);
     componentRef.setInput('pubkey', pubkey);
     this.hoverCardComponentRef = componentRef;
+
+    // On touch devices, close when backdrop is tapped
+    if (this.isTouchTriggered) {
+      this.backdropSubscription = this.overlayRef.backdropClick().subscribe(() => {
+        this.closeHoverCard();
+      });
+      this.isTouchTriggered = false;
+    }
 
     // Track mouse over card
     const cardElement = this.overlayRef.overlayElement;
@@ -1322,6 +1425,11 @@ export class NoteContentComponent implements OnDestroy {
     if (this.closeTimeout) {
       clearTimeout(this.closeTimeout);
       this.closeTimeout = undefined;
+    }
+    this.cancelMentionLongPress();
+    if (this.backdropSubscription) {
+      this.backdropSubscription.unsubscribe();
+      this.backdropSubscription = undefined;
     }
     if (this.overlayRef) {
       this.overlayRef.dispose();

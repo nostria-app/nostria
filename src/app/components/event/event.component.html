@@ -607,6 +607,18 @@
   <app-zap-display [eventId]="targetItem.event.id"></app-zap-display>
   } -->
 
+  @if (!hideFooter() && !compact() && supportsReactions()) {
+  <app-reaction-stats
+    [reactions]="likes()"
+    [replyCount]="replyCount()"
+    [repostCount]="repostCount()"
+    [quoteCount]="quoteCount()"
+    [totalZapAmount]="totalZapAmount()"
+    [zapCount]="zapCount()"
+    (tabClicked)="openReactionsDialog($event)">
+  </app-reaction-stats>
+  }
+
   @if (!hideFooter()) {
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
@@ -615,21 +627,11 @@
       <div class="reaction-group">
         <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
           (reactionChanged)="loadReactions(true)"></app-reaction-button>
-        @if (!compact()) {
-        <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
-          <span>{{ reactions().events.length }}</span>
-        </button>
-        }
       </div>
 
       <!-- Comment -->
       <div class="reaction-group">
         <app-reply-button [event]="targetItem.event"></app-reply-button>
-        @if (!compact()) {
-        <button mat-button class="count-button" disabled>
-          <span>{{ replyCount() }}</span>
-        </button>
-        }
       </div>
 
       <!-- Share -->
@@ -638,11 +640,6 @@
           matTooltip="Share" matTooltipPosition="below">
           <mat-icon>share</mat-icon>
         </button>
-        @if (!compact()) {
-        <button mat-button class="count-button" (click)="openReactionsDialog('reposts'); $event.stopPropagation()">
-          <span>{{ repostCount() }}</span>
-        </button>
-        }
       </div>
 
       <!-- Zap -->
@@ -650,21 +647,6 @@
         <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-        @if (!compact()) {
-        <button mat-button class="count-button" (click)="openReactionsDialog('zaps'); $event.stopPropagation()">
-          @if (isLoadingZaps()) {
-          <mat-spinner diameter="16"></mat-spinner>
-          } @else {
-          <span>
-            @if (totalZapAmount() > 0) {
-            {{ formatZapAmount(totalZapAmount()) }} sats
-            } @else {
-            0
-            }
-          </span>
-          }
-        </button>
-        }
       </div>
 
       <!-- View All button (compact mode only) -->

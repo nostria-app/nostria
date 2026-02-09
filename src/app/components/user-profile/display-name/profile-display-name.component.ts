@@ -353,6 +353,31 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
+   * Handles touch start for long-press hover card (mobile)
+   */
+  onTouchStart(event: TouchEvent): void {
+    this.linkElement = event.currentTarget as HTMLElement;
+    if (this.linkElement) {
+      this.hoverCardService.onTouchStart(event, this.linkElement, this.pubkey());
+    }
+  }
+
+  /**
+   * Handles touch move - cancels long-press if finger moves
+   */
+  onTouchMove(event: TouchEvent): void {
+    this.hoverCardService.onTouchMove(event);
+  }
+
+  /**
+   * Handles touch end - cancels any pending long-press
+   */
+  onTouchEnd(): void {
+    this.linkElement = null;
+    this.hoverCardService.onTouchEnd();
+  }
+
+  /**
    * Handles navigation to profile - uses layout.openProfile to support two-column view
    */
   onProfileClick(event: MouseEvent): void {

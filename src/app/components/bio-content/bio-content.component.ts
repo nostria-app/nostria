@@ -14,6 +14,7 @@ import { nip19 } from 'nostr-tools';
 import type { ProfilePointer } from 'nostr-tools/nip19';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { Subscription } from 'rxjs';
 import { ProfileHoverCardComponent } from '../user-profile/hover-card/profile-hover-card.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
@@ -48,7 +49,9 @@ interface BioToken {
              (click)="onMentionClick(token)"
              (keydown.enter)="onMentionClick(token)"
              (mouseenter)="onMentionMouseEnter($event, token)"
-             (mouseleave)="onMentionMouseLeave()">&#64;{{ token.displayName }}</a>
+             (mouseleave)="onMentionMouseLeave()"
+             (touchstart)="onMentionTouchStart($event, token)" (touchmove)="onMentionTouchMove($event)"
+             (touchend)="onMentionTouchEnd()" (touchcancel)="onMentionTouchEnd()">&#64;{{ token.displayName }}</a>
         }
       }
     }
@@ -107,6 +110,17 @@ export class BioContentComponent implements OnDestroy {
   private isMouseOverTrigger = signal(false);
   private isMouseOverCard = signal(false);
 
+  // Long press support for touch devices
+  private longPressTimeout?: number;
+  private longPressTrigger: HTMLElement | null = null;
+  private longPressPubkey: string | null = null;
+  private mentionTouchStartX = 0;
+  private mentionTouchStartY = 0;
+  private readonly LONG_PRESS_DURATION = 500;
+  private readonly LONG_PRESS_MOVE_THRESHOLD = 10;
+  private isTouchTriggered = false;
+  private backdropSubscription?: Subscription;
+
   constructor() {
     effect(async () => {
       const content = this.content();
@@ -121,6 +135,7 @@ export class BioContentComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.cleanupHoverCard();
+    this.cancelMentionLongPress();
     if (this.hoverTimeout) {
       clearTimeout(this.hoverTimeout);
     }
@@ -319,6 +334,55 @@ export class BioContentComponent implements OnDestroy {
     this.scheduleClose();
   }
 
+  onMentionTouchStart(event: TouchEvent, token: BioToken): void {
+    if (!token.pubkey || event.touches.length !== 1) {
+      this.cancelMentionLongPress();
+      return;
+    }
+
+    const touch = event.touches[0];
+    this.mentionTouchStartX = touch.clientX;
+    this.mentionTouchStartY = touch.clientY;
+    this.longPressTrigger = event.target as HTMLElement;
+    this.longPressPubkey = token.pubkey;
+
+    this.longPressTimeout = window.setTimeout(() => {
+      if (this.longPressTrigger) {
+        if (this.overlayRef) {
+          this.cleanupHoverCard();
+        }
+        this.isMouseOverTrigger.set(true);
+        this.isTouchTriggered = true;
+        this.showHoverCard(this.longPressTrigger, this.longPressPubkey!);
+      }
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  onMentionTouchMove(event: TouchEvent): void {
+    if (!this.longPressTimeout || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - this.mentionTouchStartX);
+    const deltaY = Math.abs(touch.clientY - this.mentionTouchStartY);
+
+    if (deltaX > this.LONG_PRESS_MOVE_THRESHOLD || deltaY > this.LONG_PRESS_MOVE_THRESHOLD) {
+      this.cancelMentionLongPress();
+    }
+  }
+
+  onMentionTouchEnd(): void {
+    this.cancelMentionLongPress();
+  }
+
+  private cancelMentionLongPress(): void {
+    if (this.longPressTimeout) {
+      window.clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = undefined;
+    }
+    this.longPressTrigger = null;
+    this.longPressPubkey = null;
+  }
+
   private showHoverCard(element: HTMLElement, pubkey: string): void {
     const positionStrategy = this.overlay
       .position()
@@ -359,6 +423,8 @@ export class BioContentComponent implements OnDestroy {
     this.overlayRef = this.overlay.create({
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.close(),
+      hasBackdrop: this.isTouchTriggered,
+      backdropClass: this.isTouchTriggered ? 'cdk-overlay-transparent-backdrop' : '',
     });
 
     const portal = new ComponentPortal(ProfileHoverCardComponent, this.viewContainerRef);
@@ -366,6 +432,14 @@ export class BioContentComponent implements OnDestroy {
 
     componentRef.setInput('pubkey', pubkey);
     this.hoverCardComponentRef = componentRef;
+
+    // On touch devices, close when backdrop is tapped
+    if (this.isTouchTriggered) {
+      this.backdropSubscription = this.overlayRef.backdropClick().subscribe(() => {
+        this.cleanupHoverCard();
+      });
+      this.isTouchTriggered = false;
+    }
 
     // Track mouse over card
     const cardElement = this.overlayRef.overlayElement;
@@ -403,6 +477,10 @@ export class BioContentComponent implements OnDestroy {
   }
 
   private cleanupHoverCard(): void {
+    if (this.backdropSubscription) {
+      this.backdropSubscription.unsubscribe();
+      this.backdropSubscription = undefined;
+    }
     if (this.overlayRef) {
       this.overlayRef.detach();
       this.overlayRef.dispose();

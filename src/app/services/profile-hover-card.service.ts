@@ -1,4 +1,5 @@
-import { Injectable, inject, signal, OnDestroy, NgZone, Type } from '@angular/core';
+import { Injectable, inject, signal, OnDestroy, NgZone, Type, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
@@ -7,7 +8,8 @@ import { filter } from 'rxjs/operators';
 
 /**
  * Service to manage profile hover cards across the application
- * Provides a unified way to display profile hover cards with consistent behavior
+ * Provides a unified way to display profile hover cards with consistent behavior.
+ * On touch devices, supports long-press (press and hold) to open hover cards.
  */
 @Injectable({
   providedIn: 'root',
@@ -16,6 +18,7 @@ export class ProfileHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
   private router = inject(Router);
   private ngZone = inject(NgZone);
+  private platformId = inject(PLATFORM_ID);
 
   // Track active overlay and component references
   private overlayRef: OverlayRef | null = null;
@@ -32,6 +35,15 @@ export class ProfileHoverCardService implements OnDestroy {
   // Timers
   private hoverTimeout?: number;
   private closeTimeout?: number;
+
+  // Long press support for touch devices
+  private longPressTimeout?: number;
+  private longPressTrigger: HTMLElement | null = null;
+  private longPressPubkey: string | null = null;
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private readonly LONG_PRESS_DURATION = 500;
+  private readonly MOVE_THRESHOLD = 10;
 
   // Scroll listener bound function
   private scrollListener = this.onScroll.bind(this);
@@ -53,6 +65,7 @@ export class ProfileHoverCardService implements OnDestroy {
           window.clearTimeout(this.closeTimeout);
           this.closeTimeout = undefined;
         }
+        this.cancelLongPress();
         this.closeHoverCard();
       });
   }
@@ -148,6 +161,9 @@ export class ProfileHoverCardService implements OnDestroy {
       this.isMouseOverTrigger.set(false);
       return;
     }
+
+    // Detect if this was triggered by touch (long-press sets longPressTrigger before calling showHoverCard)
+    const isTouchTriggered = this.longPressTrigger === element;
 
     // Get element position and viewport dimensions
     const rect = element.getBoundingClientRect();
@@ -334,8 +350,16 @@ export class ProfileHoverCardService implements OnDestroy {
     this.overlayRef = this.overlay.create({
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.close(),
-      hasBackdrop: false,
+      hasBackdrop: isTouchTriggered,
+      backdropClass: isTouchTriggered ? 'cdk-overlay-transparent-backdrop' : '',
     });
+
+    // Close on backdrop click (touch devices)
+    if (isTouchTriggered) {
+      this.overlayRef.backdropClick().subscribe(() => {
+        this.closeHoverCard();
+      });
+    }
 
     const portal = new ComponentPortal(this.ProfileHoverCardComponentType!);
     const componentRef = this.overlayRef.attach(portal);
@@ -431,11 +455,77 @@ export class ProfileHoverCardService implements OnDestroy {
   }
 
   /**
+   * Handles touch start event for long-press detection.
+   * Call this from components on (touchstart) events.
+   * @param event The touch event
+   * @param element The HTML element to attach the hover card to
+   * @param pubkey The public key of the profile to display
+   */
+  onTouchStart(event: TouchEvent, element: HTMLElement, pubkey: string): void {
+    if (!isPlatformBrowser(this.platformId) || event.touches.length !== 1) {
+      this.cancelLongPress();
+      return;
+    }
+
+    const touch = event.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.longPressTrigger = element;
+    this.longPressPubkey = pubkey;
+
+    this.longPressTimeout = window.setTimeout(() => {
+      if (this.longPressTrigger === element) {
+        this.ngZone.run(() => {
+          this.showHoverCard(element, pubkey, 0);
+        });
+      }
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  /**
+   * Handles touch move event - cancels long-press if finger moves too far.
+   * Call this from components on (touchmove) events.
+   * @param event The touch event
+   */
+  onTouchMove(event: TouchEvent): void {
+    if (!this.longPressTimeout || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - this.touchStartX);
+    const deltaY = Math.abs(touch.clientY - this.touchStartY);
+
+    if (deltaX > this.MOVE_THRESHOLD || deltaY > this.MOVE_THRESHOLD) {
+      this.cancelLongPress();
+    }
+  }
+
+  /**
+   * Handles touch end event - cancels any pending long-press.
+   * Call this from components on (touchend) and (touchcancel) events.
+   */
+  onTouchEnd(): void {
+    this.cancelLongPress();
+  }
+
+  /**
+   * Cancels a pending long-press timer
+   */
+  private cancelLongPress(): void {
+    if (this.longPressTimeout) {
+      window.clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = undefined;
+    }
+    this.longPressTrigger = null;
+    this.longPressPubkey = null;
+  }
+
+  /**
    * Clean up on service destruction
    */
   ngOnDestroy(): void {
     // Remove scroll listener on destroy
     window.removeEventListener('scroll', this.scrollListener, { capture: true });
+    this.cancelLongPress();
     this.closeHoverCard();
   }
 }

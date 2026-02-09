@@ -25,8 +25,10 @@
     <div class="user-profile-avatar-container">
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
-        [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
+        [attr.data-tooltip]="getTooltipContent()" #avatarElement
         (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
+        (touchstart)="onTouchStart($event, avatarElement)" (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
         (click)="onProfileClick($event)">
         @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
@@ -64,7 +66,9 @@
     @if (view() === 'comfortable') {
     <div class="user-profile-content">
       <div class="user-profile-name-text" #nameElement (mouseenter)="onMouseEnter($event, nameElement)"
-        (mouseleave)="onMouseLeave()">
+        (mouseleave)="onMouseLeave()"
+        (touchstart)="onTouchStart($event, nameElement)" (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()">
         <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </div>
     </div>
@@ -85,14 +89,20 @@
     <div class="user-profile-content">
       <!-- Name section -->
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
+        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()"
+        (touchstart)="onTouchStart($event, nameElement)" (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
+        (click)="onProfileClick($event)">
         <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link" #npubElement
-        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()" (click)="onProfileClick($event)">
+        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()"
+        (touchstart)="onTouchStart($event, npubElement)" (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
+        (click)="onProfileClick($event)">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
       }
