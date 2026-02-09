@@ -127,7 +127,7 @@ interface NavItem {
   followSetId?: string;
   mediaSettings?: boolean;
   badge?: () => number | null; // Function that returns badge count or null
-  queryParams?: { [key: string]: string }; // Query parameters for navigation
+  queryParams?: Record<string, string>; // Query parameters for navigation
 }
 
 @Component({

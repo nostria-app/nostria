@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { OpenGraphService } from '../../services/opengraph.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -25,17 +25,14 @@ export class SocialPreviewComponent {
   /** When true, renders a smaller preview with thumbnail + title + URL only (no description). */
   compact = input<boolean>(false);
 
-  // Input for raw url
-  private _url = signal<string>('');
+  url = input<string>('');
   preview = signal<SocialPreview>({ url: '', loading: false, error: false });
 
-  @Input() set url(value: string) {
-    this._url.set(value || '');
-    this.loadSocialPreview(value);
-  }
-
-  get url() {
-    return this._url();
+  constructor() {
+    effect(() => {
+      const url = this.url();
+      this.loadSocialPreview(url);
+    });
   }
 
   async loadSocialPreview(url: string): Promise<void> {
