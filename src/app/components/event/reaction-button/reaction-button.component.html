@@ -3,7 +3,7 @@
   <!-- Icon view with reaction picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"
-    (click)="$event.stopPropagation()" matTooltip="React" matTooltipPosition="below">
+    (click)="$event.stopPropagation()">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content" class="emoji-icon-img">
