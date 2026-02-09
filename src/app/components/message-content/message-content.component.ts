@@ -39,7 +39,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak';
+  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -87,6 +87,10 @@ interface EventMention {
         <span class="text-content">{{ part.content }}</span>
       } @else if (part.type === 'linebreak') {
         <br />
+      } @else if (part.type === 'image') {
+        <img class="message-image" [src]="part.content" alt="Image" loading="lazy" (click)="onImageClick($event, part.content)" />
+      } @else if (part.type === 'video') {
+        <video class="message-video" [src]="part.content" controls preload="metadata"></video>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
@@ -199,6 +203,28 @@ interface EventMention {
       &:hover {
         text-decoration: underline;
       }
+    }
+
+    .message-image {
+      display: block;
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+      margin: 4px 0;
+      cursor: pointer;
+      object-fit: contain;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+
+    .message-video {
+      display: block;
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+      margin: 4px 0;
     }
     
     .nostr-mention {
@@ -456,6 +482,19 @@ export class MessageContentComponent {
   // Regex to match URLs
   private readonly urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
 
+  // Image extensions for URL detection
+  private readonly imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)(\?.*)?$/i;
+  // Video extensions for URL detection
+  private readonly videoExtensions = /\.(mp4|webm|ogg|mov)(\?.*)?$/i;
+  // Known image hosting patterns (e.g., giphy)
+  private readonly imageHostPatterns = [
+    /\.giphy\.com\/.+/i,
+    /image\.nostr\.build\/.+/i,
+    /nostr\.build\/i\/.+/i,
+    /void\.cat\/.+\.(jpg|jpeg|png|gif|webp|avif)/i,
+    /imgproxy\..+/i,
+  ];
+
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
 
@@ -527,7 +566,7 @@ export class MessageContentComponent {
         }
 
         parts.push({
-          type: 'url',
+          type: this.getUrlMediaType(cleanUrl),
           content: cleanUrl,
           id: this.partIdCounter++,
         });
@@ -807,5 +846,30 @@ export class MessageContentComponent {
     event.preventDefault();
     event.stopPropagation();
     this.layout.openEvent(nostrEvent.id, nostrEvent);
+  }
+
+  onImageClick(event: MouseEvent, url: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  /**
+   * Determine if a URL points to an image, video, or is a regular link.
+   */
+  private getUrlMediaType(url: string): 'image' | 'video' | 'url' {
+    if (this.imageExtensions.test(url)) {
+      return 'image';
+    }
+    if (this.videoExtensions.test(url)) {
+      return 'video';
+    }
+    // Check known image hosting patterns
+    for (const pattern of this.imageHostPatterns) {
+      if (pattern.test(url)) {
+        return 'image';
+      }
+    }
+    return 'url';
   }
 }
