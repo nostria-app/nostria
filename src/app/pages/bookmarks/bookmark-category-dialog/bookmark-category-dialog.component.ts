@@ -1,4 +1,4 @@
-import { Component, Inject, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -32,11 +32,16 @@ interface DialogData {
   ],
   templateUrl: './bookmark-category-dialog.component.html',
   styleUrls: ['./bookmark-category-dialog.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BookmarkCategoryDialogComponent {
   private logger = inject(LoggerService);
+  private data = inject<DialogData>(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<BookmarkCategoryDialogComponent>);
 
-  categories = signal<BookmarkCategory[]>([]);
+  categories = signal<BookmarkCategory[]>(
+    this.data.categories.filter(cat => cat.id !== 'all')
+  );
   availableColors = [
     '#f44336', // Red
     '#e91e63', // Pink
@@ -65,13 +70,7 @@ export class BookmarkCategoryDialogComponent {
 
   editingCategory: { index: number; name: string; color: string } | null = null;
 
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: DialogData,
-    private dialogRef: MatDialogRef<BookmarkCategoryDialogComponent>
-  ) {
-    // Skip the "All" category which is always fixed
-    const categoriesWithoutAll = data.categories.filter(cat => cat.id !== 'all');
-    this.categories.set(categoriesWithoutAll);
+  constructor() {
     this.logger.debug('BookmarkCategoryDialog initialized with categories:', this.categories());
   }
 
