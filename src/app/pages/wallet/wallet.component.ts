@@ -116,7 +116,6 @@ export class WalletComponent {
   openAddWalletDialog(): void {
     this.customDialog.open(AddWalletDialogComponent, {
       title: $localize`:@@wallet.add.title:Add Wallet`,
-      headerIcon: 'add',
       width: '500px',
     });
   }
