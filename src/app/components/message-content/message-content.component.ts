@@ -30,6 +30,7 @@ import { EmojiSetMentionComponent } from '../emoji-set-mention/emoji-set-mention
 import { NoteContentComponent } from '../content/note-content/note-content.component';
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
+import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
@@ -79,6 +80,7 @@ interface EventMention {
     NoteContentComponent,
     PhotoEventComponent,
     EventHeaderComponent,
+    InlineVideoPlayerComponent,
     AgoPipe,
     TimestampPipe,
   ],
@@ -91,7 +93,9 @@ interface EventMention {
       } @else if (part.type === 'image') {
         <img class="message-image" [src]="part.content" alt="Image" loading="lazy" (click)="onImageClick($event, part.content)" />
       } @else if (part.type === 'video') {
-        <video class="message-video" [src]="part.content" controls preload="metadata"></video>
+        <div class="message-video-container">
+          <app-inline-video-player [src]="part.content" />
+        </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
@@ -220,12 +224,17 @@ interface EventMention {
       }
     }
 
-    .message-video {
+    .message-video-container {
       display: block;
       max-width: 100%;
-      max-height: 300px;
       border-radius: 8px;
       margin: 4px 0;
+      overflow: hidden;
+
+      app-inline-video-player {
+        display: block;
+        max-height: 400px;
+      }
     }
     
     .nostr-mention {
