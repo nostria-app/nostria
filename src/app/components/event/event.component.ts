@@ -204,18 +204,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.accountLocalState.getRecentEmojis(pubkey).slice(0, 6);
   });
 
-  quickReactionEmojis = computed<string[]>(() => {
+  quickReactionEmojis = computed<{ emoji: string; url?: string }[]>(() => {
     const recent = this.recentEmojis();
     if (recent.length > 0) {
       // Merge recent (up to 4) with defaults to fill 6 slots, no duplicates
-      const emojis = recent.slice(0, 4).map(r => r.emoji);
+      const emojis: { emoji: string; url?: string }[] = recent.slice(0, 4).map(r => ({ emoji: r.emoji, url: r.url }));
       for (const def of this.defaultQuickReactions) {
         if (emojis.length >= 6) break;
-        if (!emojis.includes(def)) emojis.push(def);
+        if (!emojis.some(e => e.emoji === def)) emojis.push({ emoji: def });
       }
       return emojis;
     }
-    return this.defaultQuickReactions;
+    return this.defaultQuickReactions.map(e => ({ emoji: e }));
   });
 
   onLikeHoverEnter(): void {
@@ -236,6 +236,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     event.stopPropagation();
     this.showQuickReactions.set(false);
     reactionBtn.addReaction(emoji);
+  }
+
+  isCustomEmoji(emoji: string): boolean {
+    return emoji.startsWith(':') && emoji.endsWith(':');
   }
 
   // Computed to check if event author is muted/blocked

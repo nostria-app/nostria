@@ -170,6 +170,12 @@
     background-color: var(--mat-sys-surface-container-highest);
   }
 
+  .quick-custom-emoji-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
   &.quick-emoji-more {
     color: var(--mat-sys-on-surface-variant);
     font-size: 18px;
