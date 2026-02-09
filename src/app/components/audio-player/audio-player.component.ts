@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, signal, ViewChild, ElementRef, AfterViewInit, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, signal, ViewChild, ElementRef, AfterViewInit, OnDestroy, effect } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';

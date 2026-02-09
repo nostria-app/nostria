@@ -10,8 +10,8 @@ The AI agent will execute each unchecked task sequentially. Pick ONE unchecked t
 
 Replace `@Input()` with `input()` and `@Output()` with `output()` per Angular 21+ conventions.
 
-- [ ] Migrate `@Input()` and `@Output()` in `src/app/components/rich-text-editor/rich-text-editor.component.ts` (lines 57-63) -- 2 inputs, 2 outputs with setter/EventEmitter patterns
-- [ ] Migrate `@Input()` in `src/app/components/content/content.component.ts` (line 107) -- setter-based input
+- [x] Migrate `@Input()` and `@Output()` in `src/app/components/rich-text-editor/rich-text-editor.component.ts` (lines 57-63) -- 2 inputs, 2 outputs with setter/EventEmitter patterns
+- [x] Migrate `@Input()` in `src/app/components/content/content.component.ts` (line 107) -- setter-based input
 - [ ] Migrate `@Input()` in `src/app/components/audio-player/audio-player.component.ts` (lines 18-20) -- 3 simple inputs
 - [ ] Migrate `@Input()` in `src/app/components/social-preview/social-preview.component.ts` (line 29) -- setter-based input
 - [ ] Migrate `@Input()` in `src/app/pages/profile/profile-reads/profile-reads.component.ts` (line 53)

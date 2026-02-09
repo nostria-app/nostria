@@ -547,6 +547,47 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return myLikes.find(r => r.event.pubkey === userPubkey);
   });
 
+  // Top 3 most used emojis in reactions
+  topEmojis = computed<{ emoji: string; url?: string; count: number }[]>(() => {
+    const reactions = this.likes();
+    if (!reactions || reactions.length === 0) return [];
+
+    // Count emoji occurrences
+    const emojiCounts = new Map<string, { count: number; url?: string }>();
+
+    for (const reaction of reactions) {
+      let content = reaction.event.content || '+';
+      // Normalize '+' to heart emoji for display
+      if (content === '+') {
+        content = '❤️';
+      }
+
+      const existing = emojiCounts.get(content);
+      if (existing) {
+        existing.count++;
+      } else {
+        // Check for custom emoji URL in tags
+        let url: string | undefined;
+        if (content.startsWith(':') && content.endsWith(':')) {
+          const shortcode = content.slice(1, -1);
+          const emojiTag = reaction.event.tags.find(
+            (tag: string[]) => tag[0] === 'emoji' && tag[1] === shortcode
+          );
+          if (emojiTag && emojiTag[2]) {
+            url = emojiTag[2];
+          }
+        }
+        emojiCounts.set(content, { count: 1, url });
+      }
+    }
+
+    // Sort by count descending and take top 3
+    return Array.from(emojiCounts.entries())
+      .map(([emoji, data]) => ({ emoji, url: data.url, count: data.count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  });
+
   // Zap-related state
   zaps = signal<
     {
