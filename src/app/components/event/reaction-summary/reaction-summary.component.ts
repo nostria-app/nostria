@@ -45,6 +45,7 @@ export class ReactionSummaryComponent {
   totalZapAmount = input<number>(0);
   zapCount = input<number>(0);
   initialTab = input<ReactionSummaryTab>('reactions');
+  hideTabs = input<boolean>(false);
 
   selectedTab = signal<ReactionSummaryTab>('reactions');
 

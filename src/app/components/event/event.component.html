@@ -623,13 +623,15 @@
       </div>
 
       <!-- Comment -->
-      <div class="action-button comment-action" (click)="$event.stopPropagation()">
-        <app-reply-button [event]="targetItem.event"></app-reply-button>
+      <div class="action-button comment-action" role="button" tabindex="0"
+        (click)="replyBtn.onClick($event); $event.stopPropagation()">
+        <app-reply-button #replyBtn [event]="targetItem.event"></app-reply-button>
         <span class="action-label">Comment</span>
       </div>
 
       <!-- Share -->
-      <div class="action-button share-action" role="button" tabindex="0" (click)="openShareDialog(); $event.stopPropagation()">
+      <div class="action-button share-action" role="button" tabindex="0"
+        (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon>share</mat-icon>
         <span class="action-label">Share</span>
       </div>
@@ -733,7 +735,8 @@
   <div class="reactions-summary-container" [@expandCollapse]>
     <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
       [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
-      [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()">
+      [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+      [hideTabs]="true">
     </app-reaction-summary>
   </div>
   }
