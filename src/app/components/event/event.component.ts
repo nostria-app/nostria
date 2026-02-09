@@ -197,6 +197,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return true;
     }
 
+    // Check if event content contains muted words, hashtags, or is a muted event
+    if (this.reportingService.isContentBlocked(currentEvent)) {
+      this.logger.debug('[EventComponent] Event content is muted (content filter):', currentEvent.id.substring(0, 8));
+      return true;
+    }
+
     return false;
   });
 

@@ -33,6 +33,7 @@ import { EncryptionService } from './encryption.service';
 import { LocalSettingsService } from './local-settings.service';
 import { FollowingDataService } from './following-data.service';
 import { SettingsService, SyncedFeedConfig } from './settings.service';
+import { EventProcessorService } from './event-processor.service';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -195,6 +196,7 @@ export class FeedService {
   private readonly localSettings = inject(LocalSettingsService);
   private readonly followingData = inject(FollowingDataService);
   private readonly settingsService = inject(SettingsService);
+  private readonly eventProcessor = inject(EventProcessorService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -662,6 +664,8 @@ export class FeedService {
       cachedEvents = await this.loadCachedEvents(feed.id);
 
       if (cachedEvents.length > 0) {
+        // Filter cached events through mute filters (muted words, users, hashtags, etc.)
+        cachedEvents = this.eventProcessor.filterEvents(cachedEvents);
         item.events.set(cachedEvents);
         const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
         item.lastCheckTimestamp = mostRecentTimestamp;
@@ -743,7 +747,7 @@ export class FeedService {
           this.saveEventToDatabase(event);
 
           // Filter out muted events
-          if (this.accountState.muted(event)) {
+          if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) {
             this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
@@ -787,7 +791,7 @@ export class FeedService {
           this.saveEventToDatabase(event);
 
           // Filter out muted events
-          if (this.accountState.muted(event)) {
+          if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) {
             this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
@@ -889,20 +893,22 @@ export class FeedService {
     });
 
     // NOW load cached events asynchronously and update the signal
-    const cachedEvents = await this.loadCachedEvents(feed.id);
+    let cachedEventsForDyn = await this.loadCachedEvents(feed.id);
 
-    if (cachedEvents.length > 0) {
+    if (cachedEventsForDyn.length > 0) {
+      // Filter cached events through mute filters (muted words, users, hashtags, etc.)
+      cachedEventsForDyn = this.eventProcessor.filterEvents(cachedEventsForDyn);
       // Update the events signal with cached events
-      item.events.set(cachedEvents);
+      item.events.set(cachedEventsForDyn);
 
       // Update lastCheckTimestamp based on most recent cached event
-      const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+      const mostRecentTimestamp = Math.max(...cachedEventsForDyn.map(e => e.created_at));
       item.lastCheckTimestamp = mostRecentTimestamp;
 
-      this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+      this.logger.info(`🚀 Rendered ${cachedEventsForDyn.length} cached events for feed ${feed.id}`);
       
       // Prefetch profiles for cached events in background
-      this.prefetchProfilesForEvents(cachedEvents);
+      this.prefetchProfilesForEvents(cachedEventsForDyn);
     }
 
     // Build filter based on feed configuration
@@ -924,12 +930,12 @@ export class FeedService {
     // IMPORTANT: Only use lastRetrieved if we have cached events to display.
     // If there are very few cached events (< 5), also ignore lastRetrieved to fetch more historical data.
     // This helps when a feed was created but only fetched a few recent events.
-    const hasSubstantialCache = cachedEvents.length >= 5;
+    const hasSubstantialCache = cachedEventsForDyn.length >= 5;
     if (feed.lastRetrieved && item.filter && hasSubstantialCache) {
       item.filter.since = feed.lastRetrieved;
-      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events (${cachedEvents.length} cached)`);
+      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events (${cachedEventsForDyn.length} cached)`);
     } else if (feed.lastRetrieved && !hasSubstantialCache) {
-      this.logger.info(`📅 Feed ${feed.id}: Only ${cachedEvents.length} cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
+      this.logger.info(`📅 Feed ${feed.id}: Only ${cachedEventsForDyn.length} cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
     }
 
     // Now start loading fresh events in the BACKGROUND (don't await)
@@ -983,7 +989,7 @@ export class FeedService {
           this.saveEventToDatabase(event);
 
           // Filter out live events that are muted.
-          if (this.accountState.muted(event)) {
+          if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) {
             this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
@@ -1032,7 +1038,7 @@ export class FeedService {
           this.saveEventToDatabase(event);
 
           // Filter out live events that are muted.
-          if (this.accountState.muted(event)) {
+          if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) {
             this.logger.debug(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
@@ -1315,7 +1321,7 @@ export class FeedService {
       // Filter out duplicates and muted events
       const newEvents = events.filter(event => {
         if (existingIds.has(event.id)) return false;
-        if (this.accountState.muted(event)) return false;
+        if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) return false;
         return true;
       });
 
@@ -1414,7 +1420,7 @@ export class FeedService {
       // Filter out duplicates and muted events
       const newEvents = allEvents.filter((event: Event) => {
         if (existingIds.has(event.id)) return false;
-        if (this.accountState.muted(event)) return false;
+        if (!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true })) return false;
         return true;
       });
 
@@ -1567,7 +1573,7 @@ export class FeedService {
 
     // Filter out muted events and events that don't match column's kinds
     const filteredEvents = newEvents.filter(
-      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+      event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
     );
 
     if (filteredEvents.length === 0) return;
@@ -1617,7 +1623,7 @@ export class FeedService {
 
     // Filter out muted events and events that don't match the column's kinds
     const filteredEvents = newEvents.filter(
-      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+      event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
     );
 
     if (filteredEvents.length === 0) return;
@@ -1716,7 +1722,7 @@ export class FeedService {
 
     // Filter out muted events and events that don't match the column's kinds
     const filteredEvents = allEvents.filter(
-      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+      event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
     );
 
     const existingEvents = feedData.events();
@@ -2046,7 +2052,7 @@ export class FeedService {
         // Filter and add events to feed
         const allowedKinds = new Set(feedData.feed.kinds);
         const validEvents = events.filter(
-          event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+          event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
         );
 
         if (validEvents.length > 0) {
@@ -2219,7 +2225,7 @@ export class FeedService {
     // Get allowed kinds for this column and filter events
     const allowedKinds = new Set(feedData.feed.kinds);
     const newEvents = aggregatedEvents.filter(
-      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+      event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
     );
 
     if (newEvents.length > 0) {
@@ -2282,7 +2288,7 @@ export class FeedService {
     // Get allowed kinds for this column and filter events
     const allowedKinds = new Set(feedData.feed.kinds);
     const newEvents = aggregatedEvents.filter(
-      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+      event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
     );
 
     if (newEvents.length > 0) {
@@ -3051,7 +3057,7 @@ export class FeedService {
     if (newEvents.length > 0) {
       // Filter out events already displayed in the feed
       const existingIds = new Set(feedData.events().map(e => e.id));
-      const filteredNewEvents = newEvents.filter(e => !existingIds.has(e.id) && !this.accountState.muted(e));
+      const filteredNewEvents = newEvents.filter(e => !existingIds.has(e.id) && this.eventProcessor.shouldAcceptEvent(e, { skipStats: true }));
 
       if (filteredNewEvents.length > 0) {
         const currentPending = feedData.pendingEvents() || [];
