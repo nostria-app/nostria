@@ -536,6 +536,9 @@ export class ArticleComponent implements OnDestroy {
   isJsonContent = signal<boolean>(false);
   jsonData = signal<Record<string, unknown> | unknown[] | null>(null);
 
+  // Content loading state
+  contentLoading = signal<boolean>(false);
+
   // Computed property that returns the parsed content signal value
   parsedContent = computed(() => this._parsedContent()); // Effect to handle async content parsing
 
@@ -545,6 +548,7 @@ export class ArticleComponent implements OnDestroy {
       this._parsedContent.set('');
       this.isJsonContent.set(false);
       this.jsonData.set(null);
+      this.contentLoading.set(false);
       return;
     }
 
@@ -554,12 +558,15 @@ export class ArticleComponent implements OnDestroy {
       this.isJsonContent.set(true);
       this.jsonData.set(jsonResult.data);
       this._parsedContent.set(''); // Clear markdown content
+      this.contentLoading.set(false);
       return;
     }
 
     this.isJsonContent.set(false);
     this.jsonData.set(null);
+    this.contentLoading.set(true);
     this._parsedContent.set(await this.formatService.markdownToHtml(content));
+    this.contentLoading.set(false);
 
     // Set up image click listeners after content is rendered
     setTimeout(() => {
@@ -580,6 +587,7 @@ export class ArticleComponent implements OnDestroy {
     isJsonContent: this.isJsonContent(),
     jsonData: this.jsonData(),
     parsedContent: this.parsedContent(),
+    contentLoading: this.contentLoading(),
     id: this.id(),
     link: this.link,
   }));

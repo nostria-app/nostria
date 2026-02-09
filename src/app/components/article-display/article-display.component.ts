@@ -38,6 +38,7 @@ export interface ArticleData {
   summary: string;
   image: string;
   parsedContent: SafeHtml;
+  contentLoading: boolean;
   hashtags: string[];
   authorPubkey: string;
   publishedAt: Date | null;
@@ -210,6 +211,7 @@ export class ArticleDisplayComponent {
   publishedAtTimestamp = computed(() => this.article().publishedAtTimestamp);
   link = computed(() => this.article().link);
   id = computed(() => this.article().id);
+  contentLoading = computed(() => this.article().contentLoading);
   isJsonContent = computed(() => this.article().isJsonContent);
   jsonData = computed(() => this.article().jsonData);
 

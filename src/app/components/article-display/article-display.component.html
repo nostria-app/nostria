@@ -183,7 +183,12 @@
 
   <!-- Article Content -->
   <main class="article-content">
-    @if (isJsonContent()) {
+    @if (contentLoading()) {
+    <div class="content-loading">
+      <mat-progress-spinner diameter="32" mode="indeterminate"></mat-progress-spinner>
+      <span>Loading content...</span>
+    </div>
+    } @else if (isJsonContent()) {
     <div class="json-content">
       @if (jsonData(); as data) {
       @if (getObjectKeys(data).length > 0) {
