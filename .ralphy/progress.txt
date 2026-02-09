@@ -15,3 +15,4 @@
 - [✓] 2026-02-08 17:30 - Custom feed doesn't appear to load (query) for events?
 - [✓] 2026-02-08 17:41 - "Signing Request" dialog does not disappear when there was already request to sign
 - [✓] 2026-02-08 21:04 - Show better error when extension is unavailable
+- [✓] 2026-02-09 00:03 - Tagging account with special characters might not work

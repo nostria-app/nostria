@@ -2111,11 +2111,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const detection = this.mentionDetection();
     if (!detection) return;
 
-    // Generate display name
-    let name = selection.displayName || 'unknown';
-    // Sanitize name to avoid issues with regex or confusing characters if needed
-    // For now, just ensure it doesn't have newlines
-    name = name.replace(/\s+/g, '_');
+    // Generate display name and sanitize for safe mention matching
+    const name = this.mentionInputService.sanitizeDisplayName(selection.displayName || 'unknown');
 
     let textToInsert = `@${name}`;
 

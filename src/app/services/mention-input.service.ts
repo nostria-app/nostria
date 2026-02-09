@@ -172,6 +172,29 @@ export class MentionInputService {
   }
 
   /**
+   * Sanitize a display name for use as a mention token in content text.
+   * Replaces whitespace with underscores and strips characters that could
+   * break mention matching:
+   * - Apostrophes/quotes (mobile keyboards may auto-correct to smart quotes)
+   * - Regex metacharacters that could break content processing
+   * - Other special punctuation
+   * Preserves letters (including Unicode), digits, underscores, hyphens, and dots.
+   */
+  sanitizeDisplayName(displayName: string): string {
+    let name = displayName
+      .replace(/\s+/g, '_')
+      .replace(/['\u2018\u2019\u201A\u201B"\u201C\u201D\u201E\u201F`\u00B4]/g, '')
+      .replace(/[*+?^${}()|[\]\\#@!~<>,;:]/g, '')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+
+    if (!name) {
+      name = 'user';
+    }
+    return name;
+  }
+
+  /**
    * Extract the current word being typed (for mention detection)
    */
   getCurrentWord(text: string, cursorPosition: number): { word: string; start: number; end: number } {
