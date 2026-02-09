@@ -696,7 +696,10 @@
     }
 
     <!-- Action buttons row with labels -->
-    <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
+    <div class="actions-row" [class.compact]="compact()"
+      [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
+      [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
+      [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
       <!-- Like/Reactions -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.openMenu(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
@@ -750,7 +753,8 @@
       </div>
 
       <!-- Bookmark (right side) -->
-      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)"
+        (contextmenu)="onActionsDisplayModeToggle($event)">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
         <span class="action-label">Bookmark</span>
       </div>
