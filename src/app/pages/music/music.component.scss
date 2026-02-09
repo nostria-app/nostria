@@ -409,8 +409,8 @@
   }
 }
 
-// Your Records special card
-.your-records-card {
+// My Music special card
+.my-music-card {
   display: flex;
   flex-direction: column;
   border-radius: var(--mat-sys-corner-medium);
@@ -426,7 +426,7 @@
     outline: none;
   }
 
-  .your-records-cover {
+  .my-music-cover {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -442,18 +442,18 @@
     }
   }
 
-  .your-records-info {
+  .my-music-info {
     display: flex;
     flex-direction: column;
     padding: 0.75rem;
     gap: 0.25rem;
 
-    .your-records-title {
+    .my-music-title {
       font-size: 0.875rem;
       color: var(--mat-sys-on-surface);
     }
 
-    .your-records-meta {
+    .my-music-meta {
       font-size: 0.75rem;
       color: var(--mat-sys-on-surface-variant);
     }

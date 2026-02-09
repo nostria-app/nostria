@@ -1,8 +1,10 @@
 import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -12,6 +14,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { DataService } from '../../../services/data.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { LoggerService } from '../../../services/logger.service';
@@ -26,10 +29,51 @@ const PAGE_SIZE = 24;
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
+    MatMenuModule,
     MusicEventComponent,
   ],
   template: `
+    <div class="panel-header">
+      <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2 class="panel-title title-font" i18n="@@music.liked.title">Liked Songs</h2>
+      <span class="panel-header-spacer"></span>
+      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'" class="hide-small">
+        <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+      </button>
+      <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #moreOptionsMenu="matMenu">
+        <button mat-menu-item (click)="toggleSearch()">
+          <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+          <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
+        </button>
+      </mat-menu>
+    </div>
+
     <div class="music-liked-container">
+      <div class="search-bar" [class.hidden]="!showSearch()">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input #searchInput type="text" class="search-input" placeholder="Search liked songs..."
+          [value]="searchQuery()" (input)="onSearchInput($any($event))" />
+        <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
+          aria-label="Clear search">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      @if (showSearch() && searchQuery()) {
+        <div class="search-results-info">
+          @if (filteredTracks().length > 0) {
+            <span>Found {{ filteredTracks().length }} result{{ filteredTracks().length === 1 ? '' : 's' }} for "{{ searchQuery() }}"</span>
+          } @else {
+            <span>No results found for "{{ searchQuery() }}"</span>
+          }
+        </div>
+      }
+
       <div class="page-header">
         <div class="header-info">
           <div class="header-icon">
@@ -90,6 +134,95 @@ const PAGE_SIZE = 24;
   styles: [`
     :host {
       display: block;
+    }
+
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+      .panel-title {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      .panel-header-spacer {
+        flex: 1;
+      }
+    }
+
+    :host-context(.dark) .panel-header {
+      background-color: rgba(18, 18, 18, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background-color: var(--mat-sys-surface-container);
+      border-radius: var(--mat-sys-corner-large);
+      margin-bottom: 0.5rem;
+
+      &.hidden {
+        display: none;
+      }
+
+      .search-icon {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .search-input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        color: var(--mat-sys-on-surface);
+        outline: none;
+        padding: 0;
+
+        &::placeholder {
+          color: var(--mat-sys-on-surface-variant);
+        }
+      }
+
+      .clear-search-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        flex-shrink: 0;
+
+        &.invisible {
+          visibility: hidden;
+        }
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .search-results-info {
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface-variant);
     }
     
     .music-liked-container {
@@ -248,14 +381,20 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private mediaPlayer = inject(MediaPlayerService);
   private dataService = inject(DataService);
+  private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
 
   allTracks = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
+
+  // Search functionality
+  searchQuery = signal('');
+  showSearch = signal(false);
 
   private reactionSubscription: { close: () => void } | null = null;
   private trackSubscription: { close: () => void } | null = null;
@@ -264,17 +403,36 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private intersectionObserver: IntersectionObserver | null = null;
 
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
+  searchInput = viewChild<ElementRef>('searchInput');
 
   isAuthenticated = computed(() => this.app.authenticated());
 
-  displayedTracks = computed(() => {
-    return this.allTracks().slice(0, this.displayLimit());
+  private trackMatchesSearch(track: Event, query: string): boolean {
+    if (!query) return true;
+    const lowerQuery = query.toLowerCase();
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const artistTag = track.tags.find(t => t[0] === 'artist');
+    if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
+    if (hashtags.some(tag => tag?.includes(lowerQuery))) return true;
+    return false;
+  }
+
+  filteredTracks = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.allTracks();
+    return this.allTracks().filter(track => this.trackMatchesSearch(track, query));
   });
 
-  tracksCount = computed(() => this.allTracks().length);
+  displayedTracks = computed(() => {
+    return this.filteredTracks().slice(0, this.displayLimit());
+  });
+
+  tracksCount = computed(() => this.filteredTracks().length);
 
   hasMore = computed(() => {
-    return this.allTracks().length > this.displayLimit();
+    return this.filteredTracks().length > this.displayLimit();
   });
 
   constructor() {
@@ -532,6 +690,31 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
+    } else {
+      this.router.navigate(['/music']);
+    }
+  }
+
+  toggleSearch(): void {
+    const wasVisible = this.showSearch();
+    this.showSearch.set(!wasVisible);
+    if (!wasVisible) {
+      setTimeout(() => {
+        this.searchInput()?.nativeElement?.focus();
+      }, 0);
+    } else {
+      this.searchQuery.set('');
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  onSearchInput(event: InputEvent): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
   }
 }

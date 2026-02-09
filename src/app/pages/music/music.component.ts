@@ -749,7 +749,7 @@ export class MusicComponent implements OnInit, OnDestroy {
     this.layout.openMusicLikedPlaylists();
   }
 
-  goToYourRecords(): void {
+  goToMyMusic(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
       const npub = nip19.npubEncode(pubkey);

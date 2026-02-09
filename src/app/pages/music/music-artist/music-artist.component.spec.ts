@@ -105,32 +105,30 @@ describe('MusicArtistComponent', () => {
     });
   });
 
-  describe('isOwnProfile', () => {
-    it('should be true when current and viewing pubkeys match', () => {
+  describe('heading title consistency', () => {
+    it('should use panelTitle for heading when viewing own profile', () => {
       const pubkey = 'abc123';
       const component = createComponent({
         currentPubkey: pubkey,
         viewingPubkey: pubkey,
+        profileName: 'Alice',
       });
 
-      expect(component.isOwnProfile()).toBe(true);
+      // Both panelTitle and heading should show 'My Music', not the artist name
+      expect(component.panelTitle()).toBe('My Music');
+      expect(component.panelTitle()).not.toBe(component.artistName());
     });
 
-    it('should be false when pubkeys differ', () => {
+    it('should use panelTitle matching artistName for other profiles', () => {
       const component = createComponent({
         currentPubkey: 'abc123',
         viewingPubkey: 'def456',
+        profileName: 'Bob',
       });
 
-      expect(component.isOwnProfile()).toBe(false);
-    });
-
-    it('should be false when not authenticated', () => {
-      const component = createComponent({
-        viewingPubkey: 'def456',
-      });
-
-      expect(component.isOwnProfile()).toBe(false);
+      // For other profiles, panelTitle should match artistName
+      expect(component.panelTitle()).toBe('Bob');
+      expect(component.panelTitle()).toBe(component.artistName());
     });
   });
 });

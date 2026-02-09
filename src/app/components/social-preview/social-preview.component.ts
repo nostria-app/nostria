@@ -22,6 +22,9 @@ interface SocialPreview {
 export class SocialPreviewComponent {
   openGraphService = inject(OpenGraphService);
 
+  /** When true, renders a smaller preview with thumbnail + title + URL only (no description). */
+  compact = input<boolean>(false);
+
   // Input for raw url
   private _url = signal<string>('');
   preview = signal<SocialPreview>({ url: '', loading: false, error: false });
