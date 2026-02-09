@@ -125,6 +125,8 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   trackCount = computed(() => this.tracks().length);
   playlistCount = computed(() => this.playlists().length);
 
+  panelTitle = computed(() => this.isOwnProfile() ? $localize`:@@music.myMusic:My Music` : this.artistName());
+
   selectedTabIndex = signal(0);
 
   constructor() {

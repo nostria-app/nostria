@@ -24,3 +24,5 @@
 - [✓] 2026-02-09 02:00 - Show reaction statistics directly under posts
 - [✓] 2026-02-09 02:04 - Dark mode: clearer visual separation of posts
 - [✓] 2026-02-09 06:04 - (Bug) Muted words not filtering posts
+- [✓] 2026-02-09 06:28 - Video content in messages should use video UI controls
+- [✓] 2026-02-09 06:35 - Add a loading indicator when rendering article content
