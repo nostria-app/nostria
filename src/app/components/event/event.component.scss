@@ -128,11 +128,6 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
 
-  &:hover {
-    background-color: var(--mat-sys-surface-container-high);
-    color: var(--mat-sys-on-surface);
-  }
-
   &:focus-visible {
     outline: 2px solid var(--mat-sys-primary);
     outline-offset: -2px;
@@ -144,13 +139,14 @@
     width: 22px;
     height: 22px;
     line-height: 22px;
+    flex-shrink: 0;
   }
 
   .action-label {
     font-size: 13px;
     text-transform: none;
     letter-spacing: 0;
-    line-height: 1;
+    line-height: 22px;
     white-space: nowrap;
   }
 
@@ -159,6 +155,18 @@
   // their own mat-icon-button internally. We need to strip that button's styling
   // so only the icon itself is visible, sized consistently with direct mat-icons.
   ::ng-deep {
+
+    // Normalize host elements of child components
+    app-reaction-button,
+    app-reply-button,
+    app-zap-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
 
     // Strip all mat-icon-button styling from child components
     button[mat-icon-button],
@@ -171,6 +179,8 @@
       align-items: center;
       justify-content: center;
       overflow: visible;
+      min-width: 0;
+      min-height: 0;
 
       .mat-mdc-button-touch-target {
         display: none;
@@ -195,13 +205,15 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      width: 22px;
+      height: 22px;
 
       .quick-zap-badge {
-        display: none; // Hide badge in this context, stats shown separately
+        display: none;
       }
 
       .hover-menu {
-        display: none; // Hide hover menu in action row
+        display: none;
       }
 
       .zap-button {
@@ -216,6 +228,8 @@
       align-items: center;
       justify-content: center;
       gap: 0;
+      width: 22px;
+      height: 22px;
     }
   }
 }
@@ -223,36 +237,58 @@
 .like-action {
   &:hover {
     color: #e91e63;
-    background-color: rgba(233, 30, 99, 0.08);
+
+    .action-label {
+      color: #e91e63;
+    }
+
+    ::ng-deep mat-icon,
+    ::ng-deep .emoji-icon {
+      color: #e91e63;
+    }
   }
 
   ::ng-deep {
 
-    .like-button.liked mat-icon,
-    .emoji-icon,
     .reacted mat-icon,
     button.reacted {
       color: #e91e63;
     }
   }
 
-  // When reacted, show the active color
+  // When reacted, show the active color on icon and label
   &:has(::ng-deep .reacted) {
     color: #e91e63;
+
+    .action-label {
+      color: #e91e63;
+    }
   }
 }
 
 .comment-action {
   &:hover {
     color: var(--mat-sys-primary);
-    background-color: rgba(var(--mat-sys-primary-rgb), 0.08);
+
+    >mat-icon,
+    .action-label {
+      color: var(--mat-sys-primary);
+    }
+
+    ::ng-deep mat-icon {
+      color: var(--mat-sys-primary);
+    }
   }
 }
 
 .share-action {
   &:hover {
-    color: var(--mat-sys-secondary);
-    background-color: rgba(var(--mat-sys-secondary-rgb), 0.08);
+    color: var(--mat-sys-primary);
+
+    >mat-icon,
+    .action-label {
+      color: var(--mat-sys-primary);
+    }
   }
 }
 
@@ -263,8 +299,20 @@
     color: var(--nostria-bitcoin);
   }
 
+  ::ng-deep mat-icon {
+    color: var(--nostria-bitcoin);
+  }
+
   &:hover {
-    background-color: rgba(255, 107, 26, 0.08);
+    color: #ff8c42;
+
+    .action-label {
+      color: #ff8c42;
+    }
+
+    ::ng-deep mat-icon {
+      color: #ff8c42;
+    }
   }
 }
 
@@ -273,7 +321,11 @@
 
   &:hover {
     color: var(--mat-sys-tertiary);
-    background-color: rgba(var(--mat-sys-tertiary-rgb), 0.08);
+
+    >mat-icon,
+    .action-label {
+      color: var(--mat-sys-tertiary);
+    }
   }
 }
 
