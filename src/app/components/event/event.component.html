@@ -709,8 +709,8 @@
         <span class="action-label">Like</span>
 
         <!-- Quick reaction hover popup -->
-        @if (showQuickReactions()) {
-        <div class="quick-reaction-popup" (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
+        <div class="quick-reaction-popup" [class.visible]="showQuickReactions()" (mouseenter)="onLikeHoverEnter()"
+          (mouseleave)="onLikeHoverLeave()">
           @for (item of quickReactionEmojis(); track item.emoji) {
           <button class="quick-emoji-btn" (click)="onQuickReaction(item.emoji, reactionBtn, $event)" type="button">
             @if (item.url) {
@@ -727,7 +727,6 @@
             <mat-icon>add</mat-icon>
           </button>
         </div>
-        }
       </div>
 
       <!-- Comment -->

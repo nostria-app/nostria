@@ -124,7 +124,7 @@
   position: absolute;
   bottom: calc(100% + 4px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(4px) scale(0.95);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -135,18 +135,14 @@
   box-shadow: var(--mat-sys-level2);
   z-index: 10;
   white-space: nowrap;
-  animation: quickReactionFadeIn 0.15s ease-out;
-}
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 
-@keyframes quickReactionFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(4px) scale(0.95);
-  }
-
-  to {
+  &.visible {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
+    pointer-events: auto;
   }
 }
 
