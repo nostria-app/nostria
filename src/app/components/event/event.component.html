@@ -127,8 +127,9 @@
     <app-profile-update-event [event]="targetItem.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     <!-- Images and URLs for collapsed content -->
@@ -140,13 +141,13 @@
     @if (mainCollapsedMedia().images.length > 0) {
     <div class="collapsed-images">
       @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
-           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
+        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
       } @else {
       <div class="image-grid">
         @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy" 
-             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        <img [src]="image" alt="Image" loading="lazy"
+          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
         }
       </div>
       }
@@ -244,8 +245,8 @@
           <app-profile-update-event [event]="rootRecordData.event"></app-profile-update-event>
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentCollapsed()"></app-content>
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
+            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentCollapsed()"></app-content>
           }
         </mat-card-content>
         @if (isRootContentLong()) {
@@ -353,8 +354,8 @@
           <app-profile-update-event [event]="parentRecordData.event"></app-profile-update-event>
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-            [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentCollapsed()"></app-content>
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
+            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentCollapsed()"></app-content>
           }
         </mat-card-content>
         @if (isParentContentLong()) {
@@ -456,8 +457,9 @@
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -468,13 +470,13 @@
     @if (mainCollapsedMedia().images.length > 0) {
     <div class="collapsed-images">
       @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
-           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
+        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
       } @else {
       <div class="image-grid">
         @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy" 
-             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        <img [src]="image" alt="Image" loading="lazy"
+          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
         }
       </div>
       }
@@ -563,8 +565,9 @@
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-        [disableExpansion]="navigationDisabled()" [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     <!-- Images and URLs for collapsed content (normal event) -->
@@ -576,13 +579,13 @@
     @if (mainCollapsedMedia().images.length > 0) {
     <div class="collapsed-images">
       @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy" 
-           (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
+      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
+        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
       } @else {
       <div class="image-grid">
         @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy" 
-             (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
+        <img [src]="image" alt="Image" loading="lazy"
+          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
         }
       </div>
       }
@@ -607,56 +610,82 @@
   <app-zap-display [eventId]="targetItem.event.id"></app-zap-display>
   } -->
 
-  @if (!hideFooter() && !compact() && supportsReactions()) {
-  <app-reaction-stats
-    [reactions]="likes()"
-    [replyCount]="replyCount()"
-    [repostCount]="repostCount()"
-    [quoteCount]="quoteCount()"
-    [totalZapAmount]="totalZapAmount()"
-    [zapCount]="zapCount()"
-    (tabClicked)="openReactionsDialog($event)">
-  </app-reaction-stats>
-  }
-
   @if (!hideFooter()) {
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
-    <div class="reactions-row" [class.compact]="compact()">
+    <!-- Action buttons row with labels -->
+    <div class="actions-row" [class.compact]="compact()">
       <!-- Like/Reactions -->
-      <div class="reaction-group">
+      <button mat-button class="action-button like-action" (click)="$event.stopPropagation()">
         <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
-          (reactionChanged)="loadReactions(true)"></app-reaction-button>
-      </div>
+          (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+        <span class="action-label">Like</span>
+      </button>
 
       <!-- Comment -->
-      <div class="reaction-group">
+      <button mat-button class="action-button comment-action" (click)="$event.stopPropagation()">
         <app-reply-button [event]="targetItem.event"></app-reply-button>
-      </div>
+        <span class="action-label">Comment</span>
+      </button>
 
       <!-- Share -->
-      <div class="reaction-group">
-        <button mat-icon-button class="share-button" (click)="openShareDialog(); $event.stopPropagation()"
-          matTooltip="Share" matTooltipPosition="below">
-          <mat-icon>share</mat-icon>
-        </button>
-      </div>
+      <button mat-button class="action-button share-action" (click)="openShareDialog(); $event.stopPropagation()">
+        <mat-icon>share</mat-icon>
+        <span class="action-label">Share</span>
+      </button>
 
       <!-- Zap -->
-      <div class="reaction-group">
+      <button mat-button class="action-button zap-action" (click)="$event.stopPropagation()">
         <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-      </div>
+        <span class="action-label">Zap</span>
+      </button>
 
-      <!-- View All button (compact mode only) -->
-      @if (compact()) {
-      <button mat-icon-button class="view-all-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()"
-        matTooltip="View all reactions">
-        <mat-icon>more_horiz</mat-icon>
+      <!-- Bookmark (right side) -->
+      <button mat-button class="action-button bookmark-action" (click)="onBookmarkClick($event)">
+        <mat-icon>{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
+        <span class="action-label">Bookmark</span>
+      </button>
+    </div>
+
+    <!-- Engagement stats row (below actions) -->
+    @if (!compact() && hasAnyEngagement()) {
+    <div class="engagement-stats-row">
+      @if (likes().length > 0) {
+      <button class="engagement-stat" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+        <span class="stat-count">{{ likes().length }}</span>
+        <span class="stat-label">{{ likes().length === 1 ? 'reaction' : 'reactions' }}</span>
+      </button>
+      }
+      @if (replyCount() > 0) {
+      <button class="engagement-stat" (click)="navigateToComments($event)">
+        <span class="stat-count">{{ replyCount() }}</span>
+        <span class="stat-label">{{ replyCount() === 1 ? 'comment' : 'comments' }}</span>
+      </button>
+      }
+      @if (repostCount() > 0) {
+      <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
+        <span class="stat-count">{{ repostCount() }}</span>
+        <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
+      </button>
+      }
+      @if (totalZapAmount() > 0) {
+      <button class="engagement-stat zap-stat" (click)="toggleReactionsSummary('zaps'); $event.stopPropagation()">
+        <span class="stat-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+        <span class="stat-label">sats</span>
       </button>
       }
     </div>
+    }
+    }
+
+    <!-- Compact mode: view all button -->
+    @if (compact() && supportsReactions()) {
+    <button mat-icon-button class="view-all-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()"
+      matTooltip="View all reactions">
+      <mat-icon>more_horiz</mat-icon>
+    </button>
     }
 
     <div class="note-footer-right hide-small footer-right-group">
@@ -683,29 +712,18 @@
           [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
       </div>
       }
-
-
     </div>
-    <button mat-icon-button class="bookmark-button" (click)="onBookmarkClick($event)">
-      <mat-icon [matTooltip]="getBookmarkTooltip(targetItem.event)" matTooltipPosition="below">
-        {{ getBookmarkIcon(targetItem.event) }}
-      </mat-icon>
-    </button>
   </mat-card-actions>
   }
 
-  @if (!hideFooter() && !compact() && supportsReactions()) {
-  <app-reaction-summary
-    [reactions]="likes()"
-    [replyCount]="replyCount()"
-    [repostCount]="repostCount()"
-    [quoteCount]="quoteCount()"
-    [reposts]="reposts()"
-    [quotes]="quotes()"
-    [zaps]="zaps()"
-    [totalZapAmount]="totalZapAmount()"
-    [zapCount]="zapCount()">
-  </app-reaction-summary>
+  <!-- Expandable reactions summary panel -->
+  @if (!hideFooter() && !compact() && supportsReactions() && showReactionsSummary()) {
+  <div class="reactions-summary-container" [@expandCollapse]>
+    <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
+      [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
+      [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()">
+    </app-reaction-summary>
+  </div>
   }
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {

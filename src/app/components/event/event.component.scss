@@ -97,6 +97,166 @@
   }
 }
 
+// New Facebook-style actions row with labels
+.actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+
+  &.compact {
+    gap: 2px;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+}
+
+.action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  min-width: 64px;
+  border-radius: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+  }
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .action-label {
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  // Hide the internal button styling from child components
+  ::ng-deep {
+    button[mat-icon-button] {
+      width: auto;
+      height: auto;
+      padding: 0;
+      line-height: 1;
+
+      .mat-mdc-button-touch-target {
+        display: none;
+      }
+
+      .mat-mdc-button-ripple,
+      .mat-mdc-button-persistent-ripple {
+        display: none;
+      }
+    }
+  }
+}
+
+.like-action {
+  &:hover {
+    color: #e91e63;
+    background-color: rgba(233, 30, 99, 0.08);
+  }
+
+  ::ng-deep {
+
+    .like-button.liked mat-icon,
+    .emoji-icon {
+      color: #e91e63;
+    }
+  }
+}
+
+.comment-action {
+  &:hover {
+    color: var(--mat-sys-primary);
+    background-color: rgba(var(--mat-sys-primary-rgb), 0.08);
+  }
+}
+
+.share-action {
+  &:hover {
+    color: var(--mat-sys-secondary);
+    background-color: rgba(var(--mat-sys-secondary-rgb), 0.08);
+  }
+}
+
+.zap-action {
+  color: var(--nostria-bitcoin);
+
+  &:hover {
+    background-color: rgba(255, 107, 26, 0.08);
+  }
+}
+
+.bookmark-action {
+  margin-left: auto;
+
+  &:hover {
+    color: var(--mat-sys-tertiary);
+    background-color: rgba(var(--mat-sys-tertiary-rgb), 0.08);
+  }
+}
+
+// Engagement stats row below actions
+.engagement-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 8px;
+  flex-wrap: wrap;
+}
+
+.engagement-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+  }
+
+  .stat-count {
+    color: var(--mat-sys-on-surface);
+  }
+
+  .stat-label {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.zap-stat {
+    .stat-count {
+      color: var(--nostria-bitcoin);
+    }
+  }
+}
+
+// Container for animated reactions summary
+.reactions-summary-container {
+  overflow: hidden;
+}
+
 .reaction-group {
   display: flex;
   align-items: center;
