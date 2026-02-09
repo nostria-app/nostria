@@ -287,7 +287,8 @@
 
   .user-profile-npub {
     color: var(--mat-sys-on-surface-variant);
-    font-size: 14px;
+    font-size: 13px;
+    opacity: 0.8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
