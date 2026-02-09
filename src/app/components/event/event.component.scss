@@ -101,6 +101,8 @@
   justify-content: space-between;
   gap: 4px;
   width: 100%;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding-top: 4px;
 
   &.compact {
     gap: 2px;
@@ -358,11 +360,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
-  margin-bottom: 4px;
   flex-wrap: wrap;
   width: 100%;
   border-top: 1px solid var(--mat-sys-outline-variant);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
 .engagement-stats-left {
