@@ -10,9 +10,8 @@ import {
   AfterViewInit,
   computed,
   ChangeDetectionStrategy,
-  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -63,7 +62,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private data = inject(DataService);
   private logger = inject(LoggerService);
   private elementRef = inject(ElementRef);
-  private platformId = inject(PLATFORM_ID);
+
   readonly utilities = inject(UtilitiesService);
   settingsService = inject(SettingsService);
   private readonly sharedRelay = inject(SharedRelayService);
@@ -564,24 +563,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Shows tooltip briefly on touch devices without interfering with scrolling
-   */
-  showTooltipOnTouch(event: TouchEvent): void {
-    // Only handle if it's a single touch (not a gesture)
-    if (event.touches.length === 1) {
-      const element = event.currentTarget as HTMLElement;
-
-      // Add a temporary class to show the tooltip
-      element.classList.add('show-tooltip');
-
-      // Remove the class after 2 seconds
-      setTimeout(() => {
-        element.classList.remove('show-tooltip');
-      }, 2000);
-    }
-  }
-
-  /**
    * Shows the profile hover card (for desktop mouse hover)
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
@@ -598,6 +579,31 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   onMouseLeave(): void {
     this.hoverCardService.hideHoverCard();
+  }
+
+  /**
+   * Handles touch start for long-press hover card (mobile)
+   */
+  onTouchStart(event: TouchEvent, triggerElement: HTMLElement): void {
+    if (this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
+      return;
+    }
+
+    this.hoverCardService.onTouchStart(event, triggerElement, this.pubkey());
+  }
+
+  /**
+   * Handles touch move - cancels long-press if finger moves
+   */
+  onTouchMove(event: TouchEvent): void {
+    this.hoverCardService.onTouchMove(event);
+  }
+
+  /**
+   * Handles touch end - cancels any pending long-press
+   */
+  onTouchEnd(): void {
+    this.hoverCardService.onTouchEnd();
   }
 
   /**

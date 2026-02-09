@@ -52,6 +52,7 @@ import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
+import { ReactionStatsComponent } from './reaction-stats/reaction-stats.component';
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
 import { PlaylistService } from '../../services/playlist.service';
@@ -107,6 +108,7 @@ interface CollapsedContentMedia {
     ZapButtonComponent,
     ContentWarningComponent,
     SocialPreviewComponent,
+    ReactionStatsComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',

@@ -34,7 +34,7 @@
 
 .note-card {
   margin-bottom: 12px;
-  // Use lightest surface for content cards - maximum readability in both light and dark mode
+  // Use lightest surface for content cards - maximum readability in light mode
   background-color: var(--mat-sys-surface-container-lowest);
   box-shadow: none !important;
   min-width: 0; // Allow shrinking in flex layouts
@@ -47,6 +47,12 @@
   &.selected {
     cursor: default;
   }
+}
+
+// Dark mode: lift cards above the near-black background for better visual separation
+:host-context(.dark) .note-card {
+  background-color: var(--mat-sys-surface-container-low);
+  border-color: var(--mat-sys-outline-variant);
 }
 
 .note-footer {
@@ -161,32 +167,6 @@
     &:hover {
       color: var(--mat-sys-primary);
       background-color: transparent;
-    }
-  }
-
-  .count-button {
-    min-width: auto !important;
-    padding: 4px 8px !important;
-    color: #666 !important;
-    font-size: 12px !important;
-    height: 32px !important;
-
-    &:not([disabled]) {
-      cursor: pointer;
-
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.05) !important;
-        color: #333 !important;
-      }
-    }
-
-    &[disabled] {
-      cursor: default;
-    }
-
-    span {
-      font-size: 12px;
-      font-weight: 500;
     }
   }
 }
@@ -467,16 +447,6 @@
       min-width: 36px; // Reduced from 40px
       height: 36px; // Reduced from 40px
     }
-
-    .count-button {
-      padding: 2px 6px !important; // Reduced from 4px 8px
-      height: 28px !important; // Reduced from 32px
-      font-size: 11px !important; // Reduced from 12px
-
-      span {
-        font-size: 11px; // Reduced from 12px
-      }
-    }
   }
 }
 
@@ -498,16 +468,6 @@
 
       mat-icon {
         font-size: 18px; // Reduced icon size
-      }
-    }
-
-    .count-button {
-      padding: 1px 4px !important; // Further reduced
-      height: 24px !important; // Further reduced from 28px
-      font-size: 10px !important; // Further reduced from 11px
-
-      span {
-        font-size: 10px; // Further reduced from 11px
       }
     }
   }
@@ -541,14 +501,14 @@
     mat-card-content.collapsed::after {
       background: linear-gradient(to bottom,
           transparent,
-          var(--mat-sys-surface-container-lowest)) !important;
+          var(--mat-sys-surface-container-low)) !important;
     }
   }
 
   .main-content-wrapper.collapsed::after {
     background: linear-gradient(to bottom,
         transparent,
-        var(--mat-sys-surface-container-lowest)) !important;
+        var(--mat-sys-surface-container-low)) !important;
   }
 }
 
