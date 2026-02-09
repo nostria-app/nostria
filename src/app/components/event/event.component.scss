@@ -123,9 +123,9 @@
 .quick-reaction-popup {
   position: absolute;
   bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.3);
-  transform-origin: bottom center;
+  left: 0;
+  transform: scale(0.3);
+  transform-origin: bottom left;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -142,7 +142,7 @@
 
   &.visible {
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    transform: scale(1);
     pointer-events: auto;
   }
 }
