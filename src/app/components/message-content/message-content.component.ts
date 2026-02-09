@@ -13,6 +13,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
@@ -471,6 +472,7 @@ export class MessageContentComponent {
   private userRelayService = inject(UserRelayService);
   private parsing = inject(ParsingService);
   private readonly logger = inject(LoggerService);
+  private readonly dialog = inject(MatDialog);
 
   content = input.required<string>();
 
@@ -851,7 +853,19 @@ export class MessageContentComponent {
   onImageClick(event: MouseEvent, url: string): void {
     event.preventDefault();
     event.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
+    import('../media-preview-dialog/media-preview.component').then(({ MediaPreviewDialogComponent }) => {
+      this.dialog.open(MediaPreviewDialogComponent, {
+        data: {
+          mediaUrl: url,
+          mediaType: 'image',
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
+      });
+    });
   }
 
   /**
