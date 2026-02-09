@@ -46,7 +46,7 @@ describe('SocialPreviewComponent', () => {
   });
 
   it('should load preview when url is set', async () => {
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -58,7 +58,7 @@ describe('SocialPreviewComponent', () => {
 
   it('should apply compact-preview class when compact input is true', async () => {
     fixture.componentRef.setInput('compact', true);
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -69,7 +69,7 @@ describe('SocialPreviewComponent', () => {
 
   it('should not apply compact-preview class when compact is false and preview has title and image', async () => {
     fixture.componentRef.setInput('compact', false);
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -80,7 +80,7 @@ describe('SocialPreviewComponent', () => {
 
   it('should hide description in compact mode', async () => {
     fixture.componentRef.setInput('compact', true);
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -91,7 +91,7 @@ describe('SocialPreviewComponent', () => {
 
   it('should show description in full mode', async () => {
     fixture.componentRef.setInput('compact', false);
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -102,7 +102,7 @@ describe('SocialPreviewComponent', () => {
   });
 
   it('should show title in both compact and full modes', async () => {
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -119,7 +119,7 @@ describe('SocialPreviewComponent', () => {
   });
 
   it('should show URL in both compact and full modes', async () => {
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -141,7 +141,7 @@ describe('SocialPreviewComponent', () => {
     mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
 
     fixture.componentRef.setInput('compact', true);
-    component.url = 'https://example.com/slow';
+    fixture.componentRef.setInput('url', 'https://example.com/slow');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -156,7 +156,7 @@ describe('SocialPreviewComponent', () => {
     mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
 
     fixture.componentRef.setInput('compact', false);
-    component.url = 'https://example.com/slow';
+    fixture.componentRef.setInput('url', 'https://example.com/slow');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -176,7 +176,7 @@ describe('SocialPreviewComponent', () => {
     });
 
     fixture.componentRef.setInput('compact', false);
-    component.url = 'https://example.com';
+    fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -188,11 +188,55 @@ describe('SocialPreviewComponent', () => {
   it('should handle error state', async () => {
     mockOpenGraphService.getOpenGraphData.and.rejectWith(new Error('Network error'));
 
-    component.url = 'https://example.com/error';
+    fixture.componentRef.setInput('url', 'https://example.com/error');
     fixture.detectChanges();
     await fixture.whenStable();
 
     fixture.detectChanges();
     expect(component.preview().error).toBeTrue();
+  });
+
+  it('should default url to empty string', () => {
+    expect(component.url()).toBe('');
+  });
+
+  it('should reset preview when url is set to empty', async () => {
+    fixture.componentRef.setInput('url', 'https://example.com');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.preview().title).toBe('Example Title');
+
+    fixture.componentRef.setInput('url', '');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.preview().url).toBe('');
+    expect(component.preview().loading).toBeFalse();
+    expect(component.preview().error).toBeFalse();
+  });
+
+  it('should reload preview when url changes', async () => {
+    fixture.componentRef.setInput('url', 'https://example.com');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledWith('https://example.com');
+
+    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+      url: 'https://other.com',
+      title: 'Other Title',
+      description: 'Other description',
+      image: '',
+      loading: false,
+      error: false,
+    });
+
+    fixture.componentRef.setInput('url', 'https://other.com');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledWith('https://other.com');
+    expect(component.preview().title).toBe('Other Title');
   });
 });

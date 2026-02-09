@@ -12,7 +12,7 @@ Replace `@Input()` with `input()` and `@Output()` with `output()` per Angular 21
 
 - [x] Migrate `@Input()` and `@Output()` in `src/app/components/rich-text-editor/rich-text-editor.component.ts` (lines 57-63) -- 2 inputs, 2 outputs with setter/EventEmitter patterns
 - [x] Migrate `@Input()` in `src/app/components/content/content.component.ts` (line 107) -- setter-based input
-- [ ] Migrate `@Input()` in `src/app/components/audio-player/audio-player.component.ts` (lines 18-20) -- 3 simple inputs
+- [x] Migrate `@Input()` in `src/app/components/audio-player/audio-player.component.ts` (lines 18-20) -- 3 simple inputs
 - [ ] Migrate `@Input()` in `src/app/components/social-preview/social-preview.component.ts` (line 29) -- setter-based input
 - [ ] Migrate `@Input()` in `src/app/pages/profile/profile-reads/profile-reads.component.ts` (line 53)
 - [ ] Migrate `@Output()` in `src/app/pages/badges/badge/badge.component.ts` (lines 54-56) -- 3 EventEmitter outputs
