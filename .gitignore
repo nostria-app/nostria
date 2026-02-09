@@ -2,6 +2,7 @@
 
 nul
 lint-output.txt
+lint_output.txt
 zapstore
 .env
 android.keystore
