@@ -356,4 +356,11 @@ export class NoteEditorService {
   replaceMention(detection: MentionDetectionResult, replacementText: string) {
     return this.mentionInputService.replaceMention(detection, replacementText);
   }
+
+  /**
+   * Sanitize a display name for use as a mention token in content text.
+   */
+  sanitizeDisplayName(displayName: string): string {
+    return this.mentionInputService.sanitizeDisplayName(displayName);
+  }
 }

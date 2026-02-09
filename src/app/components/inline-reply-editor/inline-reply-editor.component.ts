@@ -433,8 +433,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const detection = this.mentionDetection();
     if (!detection) return;
 
-    let name = selection.displayName || 'unknown';
-    name = name.replace(/\s+/g, '_');
+    // Sanitize display name for safe mention matching
+    const name = this.noteEditorService.sanitizeDisplayName(selection.displayName || 'unknown');
     let textToInsert = `@${name}`;
 
     if (this.mentionMap.has(textToInsert) && this.mentionMap.get(textToInsert) !== selection.nprofileUri) {
