@@ -352,14 +352,17 @@
   }
 }
 
-// Engagement stats row below actions
+// Engagement stats row above actions
 .engagement-stats-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 0 0 0;
+  padding: 8px 0;
+  margin-bottom: 4px;
   flex-wrap: wrap;
   width: 100%;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
 .engagement-stats-left {
@@ -436,6 +439,7 @@
 // Container for animated reactions summary
 .reactions-summary-container {
   overflow: hidden;
+  width: 100%;
 }
 
 .reaction-group {

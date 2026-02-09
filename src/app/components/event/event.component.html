@@ -613,45 +613,8 @@
   @if (!hideFooter()) {
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
-    <!-- Action buttons row with labels -->
-    <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
-      <!-- Like/Reactions -->
-      <div class="action-button like-action" (click)="reactionBtn.openMenu(); $event.stopPropagation()">
-        <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
-          [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
-        <span class="action-label">Like</span>
-      </div>
 
-      <!-- Comment -->
-      <div class="action-button comment-action" role="button" tabindex="0"
-        (click)="replyBtn.onClick($event); $event.stopPropagation()">
-        <app-reply-button class="action-icon" #replyBtn [event]="targetItem.event"></app-reply-button>
-        <span class="action-label">Reply</span>
-      </div>
-
-      <!-- Share -->
-      <div class="action-button share-action" role="button" tabindex="0"
-        (click)="openShareDialog(); $event.stopPropagation()">
-        <mat-icon class="action-icon">share</mat-icon>
-        <span class="action-label">Share</span>
-      </div>
-
-      <!-- Zap -->
-      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
-        <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"
-          [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
-        </app-zap-button>
-        <span class="action-label">Zap</span>
-      </div>
-
-      <!-- Bookmark (right side) -->
-      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
-        <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
-        <span class="action-label">Bookmark</span>
-      </div>
-    </div>
-
-    <!-- Engagement stats row (below actions) -->
+    <!-- Engagement stats row (above actions) -->
     @if (!compact() && (hasAnyEngagement() || hasProofOfWork(targetItem.event) || (shouldShowClientTag() &&
     getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
     <div class="engagement-stats-row">
@@ -719,7 +682,56 @@
         }
       </div>
     </div>
+
+    <!-- Expandable reactions summary panel -->
+    @if (showReactionsSummary()) {
+    <div class="reactions-summary-container" [@expandCollapse]>
+      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
+        [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
+        [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+        [hideTabs]="true">
+      </app-reaction-summary>
+    </div>
     }
+    }
+
+    <!-- Action buttons row with labels -->
+    <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
+      <!-- Like/Reactions -->
+      <div class="action-button like-action" (click)="reactionBtn.openMenu(); $event.stopPropagation()">
+        <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
+          [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+        <span class="action-label">Like</span>
+      </div>
+
+      <!-- Comment -->
+      <div class="action-button comment-action" role="button" tabindex="0"
+        (click)="replyBtn.onClick($event); $event.stopPropagation()">
+        <app-reply-button class="action-icon" #replyBtn [event]="targetItem.event"></app-reply-button>
+        <span class="action-label">Reply</span>
+      </div>
+
+      <!-- Share -->
+      <div class="action-button share-action" role="button" tabindex="0"
+        (click)="openShareDialog(); $event.stopPropagation()">
+        <mat-icon class="action-icon">share</mat-icon>
+        <span class="action-label">Share</span>
+      </div>
+
+      <!-- Zap -->
+      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
+        <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"
+          [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
+        </app-zap-button>
+        <span class="action-label">Zap</span>
+      </div>
+
+      <!-- Bookmark (right side) -->
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
+        <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
+        <span class="action-label">Bookmark</span>
+      </div>
+    </div>
     }
 
     <!-- Compact mode: view all button -->
@@ -734,16 +746,6 @@
   </mat-card-actions>
   }
 
-  <!-- Expandable reactions summary panel -->
-  @if (!hideFooter() && !compact() && supportsReactions() && showReactionsSummary()) {
-  <div class="reactions-summary-container" [@expandCollapse]>
-    <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
-      [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
-      [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-      [hideTabs]="true">
-    </app-reaction-summary>
-  </div>
-  }
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {
 <div class="event-content">
