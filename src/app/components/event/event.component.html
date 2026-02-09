@@ -708,9 +708,16 @@
         <!-- Quick reaction hover popup -->
         @if (showQuickReactions()) {
         <div class="quick-reaction-popup" (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
-          @for (emoji of quickReactionEmojis(); track emoji) {
-          <button class="quick-emoji-btn" (click)="onQuickReaction(emoji, reactionBtn, $event)" type="button">{{ emoji
-            }}</button>
+          @for (item of quickReactionEmojis(); track item.emoji) {
+          <button class="quick-emoji-btn" (click)="onQuickReaction(item.emoji, reactionBtn, $event)" type="button">
+            @if (item.url) {
+            <img [src]="item.url" [alt]="item.emoji" [title]="item.emoji" class="quick-custom-emoji-img">
+            } @else if (isCustomEmoji(item.emoji)) {
+            <span class="quick-custom-emoji-text">{{ item.emoji }}</span>
+            } @else {
+            {{ item.emoji }}
+            }
+          </button>
           }
           <button class="quick-emoji-btn quick-emoji-more" (click)="reactionBtn.openMenu(); $event.stopPropagation()"
             type="button">
