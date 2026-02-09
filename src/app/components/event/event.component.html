@@ -652,30 +652,42 @@
     <!-- Engagement stats row (below actions) -->
     @if (!compact() && hasAnyEngagement()) {
     <div class="engagement-stats-row">
-      @if (likes().length > 0) {
-      <button class="engagement-stat" (click)="toggleReactionsSummary(); $event.stopPropagation()">
-        <span class="stat-count">{{ likes().length }}</span>
-        <span class="stat-label">{{ likes().length === 1 ? 'reaction' : 'reactions' }}</span>
-      </button>
-      }
-      @if (replyCount() > 0) {
-      <button class="engagement-stat" (click)="navigateToComments($event)">
-        <span class="stat-count">{{ replyCount() }}</span>
-        <span class="stat-label">{{ replyCount() === 1 ? 'comment' : 'comments' }}</span>
-      </button>
-      }
-      @if (repostCount() > 0) {
-      <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
-        <span class="stat-count">{{ repostCount() }}</span>
-        <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
-      </button>
-      }
-      @if (totalZapAmount() > 0) {
-      <button class="engagement-stat zap-stat" (click)="toggleReactionsSummary('zaps'); $event.stopPropagation()">
-        <span class="stat-count">{{ formatZapAmount(totalZapAmount()) }}</span>
-        <span class="stat-label">sats</span>
-      </button>
-      }
+      <div class="engagement-stats-left">
+        @if (likes().length > 0) {
+        <button class="engagement-stat" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+          <span class="aggregated-emojis">
+            @for (emoji of topEmojis(); track emoji.emoji) {
+            @if (emoji.url) {
+            <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
+            } @else {
+            <span class="emoji-item">{{ emoji.emoji }}</span>
+            }
+            }
+          </span>
+          <span class="stat-count">{{ likes().length }}</span>
+        </button>
+        }
+        @if (replyCount() > 0) {
+        <button class="engagement-stat" (click)="navigateToComments($event)">
+          <span class="stat-count">{{ replyCount() }}</span>
+          <span class="stat-label">{{ replyCount() === 1 ? 'comment' : 'comments' }}</span>
+        </button>
+        }
+      </div>
+      <div class="engagement-stats-right">
+        @if (repostCount() > 0) {
+        <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
+          <span class="stat-count">{{ repostCount() }}</span>
+          <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
+        </button>
+        }
+        @if (totalZapAmount() > 0) {
+        <button class="engagement-stat zap-stat" (click)="toggleReactionsSummary('zaps'); $event.stopPropagation()">
+          <span class="stat-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+          <span class="stat-label">sats</span>
+        </button>
+        }
+      </div>
     </div>
     }
     }

@@ -57,18 +57,13 @@
 
 .note-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0;
   padding: 8px 12px;
   // Match note content background for cohesive look
   // Horizontal padding matches video player controls (12px)
   background-color: transparent;
   border-radius: 0 0 12px 12px;
-
-  // When there are no reactions (photo/video events), push footer-right to the end
-  &:has(.footer-right-group:first-child) {
-    justify-content: flex-end;
-  }
 }
 
 .reactions-row {
@@ -213,9 +208,45 @@
 .engagement-stats-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 4px 8px;
+  justify-content: space-between;
+  padding: 8px 0 0 0;
   flex-wrap: wrap;
+  width: 100%;
+}
+
+.engagement-stats-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.engagement-stats-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.aggregated-emojis {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+
+  .emoji-item {
+    font-size: 16px;
+    line-height: 1;
+    margin-left: -4px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  .custom-emoji {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    object-fit: contain;
+  }
 }
 
 .engagement-stat {
