@@ -255,6 +255,8 @@
     font-size: var(--text-base);
     line-height: 1.7;
     color: var(--mat-sys-on-surface);
+    overflow-wrap: break-word;
+    word-break: break-word;
 
     // Markdown styling
     h1,
@@ -434,6 +436,8 @@
     a {
       color: var(--mat-sys-primary);
       text-decoration: none;
+      overflow-wrap: break-word;
+      word-break: break-all;
 
       &:hover {
         text-decoration: underline;

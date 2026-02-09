@@ -216,6 +216,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       summary: art.summary,
       image: art.image,
       parsedContent: this.markdownHtml(),
+      contentLoading: false,
       hashtags: art.tags,
       authorPubkey: this.accountState.pubkey() || '',
       publishedAt: null,
