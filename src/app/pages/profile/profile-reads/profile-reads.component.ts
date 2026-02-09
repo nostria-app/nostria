@@ -1,4 +1,4 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy, computed, untracked } from '@angular/core';
+import { Component, inject, signal, input, effect, ChangeDetectionStrategy, computed, untracked } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -49,8 +49,8 @@ interface ArticleEngagement {
   styleUrl: './profile-reads.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileReadsComponent implements OnChanges {
-  @Input() isVisible = false;
+export class ProfileReadsComponent {
+  isVisible = input(false);
 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -129,6 +129,17 @@ export class ProfileReadsComponent implements OnChanges {
       });
     });
 
+    // Effect to reload reads when visibility changes to true
+    effect(() => {
+      const visible = this.isVisible();
+      if (visible) {
+        untracked(() => {
+          this.logger.debug('Profile reads tab became visible, reloading data');
+          this.loadReads();
+        });
+      }
+    });
+
     // Effect to load engagement data when articles change
     effect(() => {
       const articles = this.sortedArticles();
@@ -142,18 +153,6 @@ export class ProfileReadsComponent implements OnChanges {
         this.loadEngagementForArticles(newArticles.map(a => a.event));
       }
     });
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    // Check if visibility changed to true
-    if (
-      changes['isVisible'] &&
-      changes['isVisible'].currentValue === true &&
-      (!changes['isVisible'].firstChange || changes['isVisible'].previousValue === false)
-    ) {
-      this.logger.debug('Profile reads tab became visible, reloading data');
-      this.loadReads();
-    }
   }
 
   // Get the pubkey from the parent route
