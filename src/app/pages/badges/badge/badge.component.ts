@@ -3,9 +3,8 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
-  Output,
-  EventEmitter,
   untracked,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
@@ -51,9 +50,9 @@ export class BadgeComponent {
   recipientName = input<string | null>(null);
   utilities = inject(UtilitiesService);
 
-  @Output() acceptClicked = new EventEmitter<void>();
-  @Output() viewClicked = new EventEmitter<void>();
-  @Output() removeClicked = new EventEmitter<void>();
+  acceptClicked = output<void>();
+  viewClicked = output<void>();
+  removeClicked = output<void>();
 
   badgeService = inject(BadgeService);
   private readonly logger = inject(LoggerService);
