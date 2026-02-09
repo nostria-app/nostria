@@ -50,6 +50,7 @@ export class ContentNotificationService implements OnDestroy {
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MIN_TIME_BETWEEN_CHECKS_MS = 30 * 1000; // 30 seconds minimum between checks
+  private readonly OVERLAP_BUFFER_SECONDS = 60; // 1 minute overlap to catch events missed due to relay delays
   private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
   private lastCheckTime = 0;
   private visibilityChangeHandler: (() => void) | null = null;
@@ -72,6 +73,31 @@ export class ContentNotificationService implements OnDestroy {
       this.accountLocalState.setNotificationLastCheck(pubkey, 0);
     }
     this.logger.info('ContentNotificationService last check timestamp reset for account');
+  }
+
+  /**
+   * Handle account change by reloading the last check timestamp for the new account
+   * and resetting the rate limiter so an immediate check can proceed.
+   * This must be called when the active account changes to ensure polling
+   * uses the correct state for the new account.
+   */
+  async onAccountChanged(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.debug('[AccountChange] No pubkey, skipping account change handling');
+      return;
+    }
+
+    this.logger.info(`[AccountChange] Handling account change for ${pubkey.substring(0, 8)}...`);
+
+    // Reset the rate limiter so an immediate check is not blocked
+    this.lastCheckTime = 0;
+
+    // Reload the last check timestamp for the new account from storage
+    const timestamp = await this.getLastCheckTimestamp();
+    this._lastCheckTimestamp.set(timestamp);
+
+    this.logger.info(`[AccountChange] Loaded lastCheckTimestamp for new account: ${timestamp} (${timestamp > 0 ? new Date(timestamp * 1000).toISOString() : 'never checked'})`);
   }
 
   // Track if we're currently checking for new content
@@ -288,6 +314,14 @@ export class ContentNotificationService implements OnDestroy {
       // The signal is not account-specific and can be stale after account switches
       let since = await this.getLastCheckTimestamp();
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+      // Apply overlap buffer for returning checks to catch events missed due to relay delays.
+      // Events can be missed if relays were slow to receive/index them, or if the relay
+      // timeout (5s) expired before all events were returned. The deduplication logic in
+      // createContentNotification() prevents this from creating duplicate notifications.
+      if (since > 0) {
+        since = since - this.OVERLAP_BUFFER_SECONDS;
+      }
 
       // Default to 7 days back maximum to avoid loading too much history
       // This applies when: since is 0 (first time), since is very old, or cache was cleared
