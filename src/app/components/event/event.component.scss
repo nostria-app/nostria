@@ -1000,6 +1000,29 @@
   }
 }
 
+.collapsed-videos {
+  margin-top: 8px;
+  margin-bottom: 8px;
+
+  video {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    max-height: 400px;
+
+    &:not(:last-child) {
+      margin-bottom: 8px;
+    }
+  }
+
+  .show-more-videos-btn {
+    width: 100%;
+    margin-top: 4px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+  }
+}
+
 .collapsed-urls {
   margin-top: 8px;
   margin-bottom: 8px;

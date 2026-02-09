@@ -72,6 +72,7 @@ type EventCardAppearance = 'card' | 'plain';
 
 interface CollapsedContentMedia {
   images: string[];
+  videos: string[];
   urls: string[];
 }
 
@@ -354,6 +355,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Expansion state for main event content
   isMainContentExpanded = signal<boolean>(false);
+  collapsedVideosExpanded = signal<boolean>(false);
 
   // Content length threshold for showing "Show more" button (in characters)
   private readonly CONTENT_LENGTH_THRESHOLD = 500;
@@ -388,14 +390,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    */
   private extractCollapsedMedia(content: string): CollapsedContentMedia {
     const images: string[] = [];
+    const videos: string[] = [];
     const urls: string[] = [];
 
     // Simple regex patterns to extract content
     const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
+    const videoRegex = /(https?:\/\/[^\s]+\.(mp4|webm|mov|ogg|m4v|mkv|avi)(\?[^\s]*)?)/gi;
     const urlRegex = /https?:\/\/[^\s<]+/gi;
 
     // Track seen URLs to avoid duplicates
     const seenImages = new Set<string>();
+    const seenVideos = new Set<string>();
     const seenUrls = new Set<string>();
 
     // Extract images first
@@ -408,18 +413,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    // Extract all other URLs (excluding images)
+    // Extract videos
+    while ((match = videoRegex.exec(content)) !== null) {
+      const url = match[0];
+      if (!seenVideos.has(url)) {
+        seenVideos.add(url);
+        videos.push(url);
+      }
+    }
+
+    // Extract all other URLs (excluding images and videos)
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(content)) !== null) {
       const url = match[0];
-      // Skip if it's an image or already seen
-      if (!seenImages.has(url) && !seenUrls.has(url)) {
+      // Skip if it's an image, video, or already seen
+      if (!seenImages.has(url) && !seenVideos.has(url) && !seenUrls.has(url)) {
         seenUrls.add(url);
         urls.push(url);
       }
     }
 
-    return { images, urls };
+    return { images, videos, urls };
   }
 
   // Check if root event content should be collapsible (content is long enough)
@@ -486,30 +500,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // These will be shown below the truncated text
   mainCollapsedMedia = computed<CollapsedContentMedia>(() => {
     // Only show previews when content is collapsed
-    if (!this.isMainContentCollapsed()) return { images: [], urls: [] };
+    if (!this.isMainContentCollapsed()) return { images: [], videos: [], urls: [] };
 
     const targetItem = this.targetRecord();
-    if (!targetItem) return { images: [], urls: [] };
+    if (!targetItem) return { images: [], videos: [], urls: [] };
 
     const content = targetItem.event.content || '';
     return this.extractCollapsedMedia(content);
   });
 
   rootCollapsedMedia = computed<CollapsedContentMedia>(() => {
-    if (!this.isRootContentLong() || this.isRootEventExpanded()) return { images: [], urls: [] };
+    if (!this.isRootContentLong() || this.isRootEventExpanded()) return { images: [], videos: [], urls: [] };
 
     const rootRecordData = this.rootRecord();
-    if (!rootRecordData) return { images: [], urls: [] };
+    if (!rootRecordData) return { images: [], videos: [], urls: [] };
 
     const content = rootRecordData.event.content || '';
     return this.extractCollapsedMedia(content);
   });
 
   parentCollapsedMedia = computed<CollapsedContentMedia>(() => {
-    if (!this.isParentContentLong() || this.isParentEventExpanded()) return { images: [], urls: [] };
+    if (!this.isParentContentLong() || this.isParentEventExpanded()) return { images: [], videos: [], urls: [] };
 
     const parentRecordData = this.parentRecord();
-    if (!parentRecordData) return { images: [], urls: [] };
+    if (!parentRecordData) return { images: [], videos: [], urls: [] };
 
     const content = parentRecordData.event.content || '';
     return this.extractCollapsedMedia(content);
@@ -2396,6 +2410,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   /**
    * Open collapsed image in MediaPreviewDialog
    */
+  toggleCollapsedVideos(event: MouseEvent) {
+    event.stopPropagation();
+    this.collapsedVideosExpanded.update(v => !v);
+  }
+
   onCollapsedImageClick(event: MouseEvent, imageUrl: string, allImages: string[]) {
     event.stopPropagation(); // Prevent card click
 
