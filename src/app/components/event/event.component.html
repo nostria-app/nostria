@@ -616,9 +616,9 @@
     <!-- Action buttons row with labels -->
     <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
       <!-- Like/Reactions -->
-      <div class="action-button like-action" (click)="$event.stopPropagation()">
-        <app-reaction-button class="action-icon" [event]="targetItem.event" [reactionsFromParent]="reactions()"
-          (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+      <div class="action-button like-action" (click)="reactionBtn.openMenu(); $event.stopPropagation()">
+        <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
+          [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         <span class="action-label">Like</span>
       </div>
 
@@ -637,9 +637,9 @@
       </div>
 
       <!-- Zap -->
-      <div class="action-button zap-action" (click)="$event.stopPropagation()">
-        <app-zap-button class="action-icon" [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
-          (zapSent)="onZapSent($event)">
+      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
+        <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"
+          [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
         </app-zap-button>
         <span class="action-label">Zap</span>
       </div>

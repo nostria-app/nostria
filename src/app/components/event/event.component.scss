@@ -108,10 +108,15 @@
 }
 
 // Reply actions: show only labels, hide icons
+// Use width/height/overflow instead of display:none to keep elements
+// in the DOM for menu trigger positioning (e.g., emoji picker)
 .actions-row.reply-actions {
   .action-button {
     .action-icon {
-      display: none;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      flex-shrink: 0;
     }
 
     .action-label {

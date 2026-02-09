@@ -306,6 +306,16 @@ export class ZapButtonComponent {
     return amount.toString();
   }
 
+  /** Public method to trigger zap from parent (e.g., when label is clicked). */
+  onClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.quickZapEnabled()) {
+      this.sendQuickZap(event);
+    } else {
+      this.openZapDialog(event);
+    }
+  }
+
   // Quick zap functionality
   async sendQuickZap(event: MouseEvent): Promise<void> {
     event.stopPropagation();

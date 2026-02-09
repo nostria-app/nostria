@@ -315,6 +315,11 @@ export class ReactionButtonComponent {
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
   private readonly menuTriggerFull = viewChild<MatMenuTrigger>('menuTriggerFull');
 
+  /** Opens the reaction picker menu. Called from parent when label is clicked. */
+  openMenu(): void {
+    this.menuTrigger()?.openMenu();
+  }
+
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   customEmojis = signal<{ shortcode: string; url: string }[]>([]);
