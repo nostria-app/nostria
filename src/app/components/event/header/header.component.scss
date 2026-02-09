@@ -25,6 +25,14 @@ mat-card-header {
   margin-right: 0.4rem;
   font-size: 13px;
   opacity: 0.8;
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+    opacity: 1;
+  }
 }
 
 .edited-indicator {
