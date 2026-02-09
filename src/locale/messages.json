@@ -120,6 +120,7 @@
     "settings.privacy.image-cache.title": "Image Cache Service",
     "settings.privacy.image-cache.enable": "Enable image cache",
     "settings.privacy.image-cache.clear": "Clear Cache",
+    "settings.privacy.google-favicon.enable": "Enable Google API for favicons",
     "settings.privacy.social-sharing.title": "Social Sharing Options",
     "settings.privacy.social-sharing.enable": "Enable social sharing preview",
     "settings.privacy.reported.title": "Reported Content Settings",

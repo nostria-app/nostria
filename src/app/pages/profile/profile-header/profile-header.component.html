@@ -91,10 +91,7 @@
       <h1 class="profile-name">
         {{ name() }}
         @if (isPremium()) {
-        <img
-          class="premium-indicator"
-          [class.premium-plus]="isPremiumPlus()"
-          src="/icons/nostria.png"
+        <img class="premium-indicator" [class.premium-plus]="isPremiumPlus()" src="/icons/nostria.png"
           [matTooltip]="isPremiumPlus() ? 'This user is a Nostria Premium+ subscriber' : 'This user is a Nostria Premium subscriber'"
           alt="Nostria Premium" />
         }
@@ -135,11 +132,13 @@
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
         <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard(verifiedId.value)"
-          (keydown.enter)="copyNip05ToClipboard(verifiedId.value)" (keydown.space)="copyNip05ToClipboard(verifiedId.value)" tabindex="0" role="button"
+          (keydown.enter)="copyNip05ToClipboard(verifiedId.value)"
+          (keydown.space)="copyNip05ToClipboard(verifiedId.value)" tabindex="0" role="button"
           [attr.aria-label]="'Copy ' + verifiedId.value + ' to clipboard'">{{ verifiedId.value }}</span>
 
-        @if (verifiedFaviconUrls()[i] && faviconVisible()) {
-        <img [src]="verifiedFaviconUrls()[i]" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
+        @if (verifiedFaviconUrls()[i] && isFaviconVisible(i)) {
+        <img [src]="getCurrentFaviconUrl(i)" alt="favicon" class="verified-favicon"
+          (error)="onFaviconError($event, i)" />
         }
       </div>
       }
