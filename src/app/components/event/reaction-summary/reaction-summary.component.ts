@@ -1,12 +1,14 @@
-import { Component, ChangeDetectionStrategy, input, computed, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed, signal, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../../interfaces';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
+import { ContentComponent } from '../../content/content.component';
+import { EventHeaderComponent } from '../header/header.component';
 
-export type ReactionSummaryTab = 'reactions' | 'comments' | 'reposts' | 'quotes' | 'zaps';
+export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
 export interface ZapInfo {
   receipt: Event;
@@ -25,6 +27,8 @@ export interface ZapInfo {
     MatRippleModule,
     UserProfileComponent,
     AgoPipe,
+    ContentComponent,
+    EventHeaderComponent,
   ],
   templateUrl: './reaction-summary.component.html',
   styleUrl: './reaction-summary.component.scss',
@@ -40,15 +44,23 @@ export class ReactionSummaryComponent {
   zaps = input<ZapInfo[]>([]);
   totalZapAmount = input<number>(0);
   zapCount = input<number>(0);
+  initialTab = input<ReactionSummaryTab>('reactions');
 
   selectedTab = signal<ReactionSummaryTab>('reactions');
 
-  tabs: ReactionSummaryTab[] = ['reactions', 'comments', 'reposts', 'quotes', 'zaps'];
+  tabs: ReactionSummaryTab[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+
+  constructor() {
+    // Set initial tab when input changes
+    effect(() => {
+      const tab = this.initialTab();
+      this.selectedTab.set(tab);
+    });
+  }
 
   tabLabel(tab: ReactionSummaryTab): string {
     switch (tab) {
       case 'reactions': return 'Reactions';
-      case 'comments': return 'Comments';
       case 'reposts': return 'Reposts';
       case 'quotes': return 'Quotes';
       case 'zaps': return 'Zaps';
@@ -58,7 +70,6 @@ export class ReactionSummaryComponent {
   tabCount(tab: ReactionSummaryTab): number | string {
     switch (tab) {
       case 'reactions': return this.reactions().length;
-      case 'comments': return this.replyCount();
       case 'reposts': return this.repostCount();
       case 'quotes': return this.quoteCount();
       case 'zaps': return this.zapCount();

@@ -1,10 +1,7 @@
 <div class="reaction-summary">
   <div class="summary-tabs">
     @for (tab of tabs; track tab) {
-    <button class="summary-tab"
-      [class.active]="selectedTab() === tab"
-      matRipple
-      (click)="onTabClick(tab, $event)">
+    <button class="summary-tab" [class.active]="selectedTab() === tab" matRipple (click)="onTabClick(tab, $event)">
       <span class="tab-label">{{ tabLabel(tab) }}</span>
       <span class="tab-count">{{ tabCount(tab) }}</span>
     </button>
@@ -23,10 +20,8 @@
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
           @if (getCustomEmojiUrl(reaction.event)) {
-          <img [src]="getCustomEmojiUrl(reaction.event)!"
-            [alt]="reaction.event.content"
-            class="reaction-emoji-img"
-            [title]="reaction.event.content">
+          <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content" class="reaction-emoji-img"
+            [title]="reaction.event.content">>
           } @else {
           <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
           }
@@ -35,14 +30,6 @@
       </div>
       }
     </div>
-    }
-    }
-
-    @case ('comments') {
-    @if (replyCount() === 0) {
-    <div class="empty-state">No comments yet</div>
-    } @else {
-    <div class="empty-state">{{ replyCount() }} {{ replyCount() === 1 ? 'comment' : 'comments' }}</div>
     }
     }
 
@@ -65,11 +52,13 @@
     @if (quotes().length === 0) {
     <div class="empty-state">No quotes yet</div>
     } @else {
-    <div class="content-list">
+    <div class="quotes-list">
       @for (quote of sortedQuotes(); track quote.event.id) {
-      <div class="list-item">
-        <app-user-profile [pubkey]="quote.event.pubkey" view="compact"></app-user-profile>
-        <span class="item-time">{{ quote.event.created_at | ago }}</span>
+      <div class="quote-item">
+        <app-event-header [event]="quote.event" [compact]="true"></app-event-header>
+        <div class="quote-content">
+          <app-content [content]="quote.event.content" [event]="quote.event"></app-content>
+        </div>
       </div>
       }
     </div>

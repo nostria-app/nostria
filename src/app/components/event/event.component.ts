@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -52,7 +53,7 @@ import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
-import { ReactionStatsComponent } from './reaction-stats/reaction-stats.component';
+
 import { ReactionSummaryComponent } from './reaction-summary/reaction-summary.component';
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
@@ -109,12 +110,23 @@ interface CollapsedContentMedia {
     ZapButtonComponent,
     ContentWarningComponent,
     SocialPreviewComponent,
-    ReactionStatsComponent,
     ReactionSummaryComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  animations: [
+    trigger('expandCollapse', [
+      transition(':enter', [
+        style({ height: '0', opacity: 0, overflow: 'hidden' }),
+        animate('200ms ease-out', style({ height: '*', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        style({ height: '*', opacity: 1, overflow: 'hidden' }),
+        animate('200ms ease-in', style({ height: '0', opacity: 0 }))
+      ])
+    ])
+  ],
 })
 export class EventComponent implements AfterViewInit, OnDestroy {
   id = input<string | null | undefined>();
@@ -263,7 +275,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private isPrimaryMediaPost(content: string): boolean {
     if (!content) return false;
     if (!this.contentHasMedia(content)) return false;
-    
+
     // If content has media AND is short (under threshold), it's a media post
     // If content has media but is long, it's a text post with embedded media (should be collapsible)
     return content.length <= this.CONTENT_LENGTH_THRESHOLD;
@@ -276,15 +288,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private extractCollapsedMedia(content: string): CollapsedContentMedia {
     const images: string[] = [];
     const urls: string[] = [];
-    
+
     // Simple regex patterns to extract content
     const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
     const urlRegex = /https?:\/\/[^\s<]+/gi;
-    
+
     // Track seen URLs to avoid duplicates
     const seenImages = new Set<string>();
     const seenUrls = new Set<string>();
-    
+
     // Extract images first
     let match;
     while ((match = imageRegex.exec(content)) !== null) {
@@ -294,7 +306,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         images.push(url);
       }
     }
-    
+
     // Extract all other URLs (excluding images)
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(content)) !== null) {
@@ -305,7 +317,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         urls.push(url);
       }
     }
-    
+
     return { images, urls };
   }
 
@@ -374,30 +386,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   mainCollapsedMedia = computed<CollapsedContentMedia>(() => {
     // Only show previews when content is collapsed
     if (!this.isMainContentCollapsed()) return { images: [], urls: [] };
-    
+
     const targetItem = this.targetRecord();
     if (!targetItem) return { images: [], urls: [] };
-    
+
     const content = targetItem.event.content || '';
     return this.extractCollapsedMedia(content);
   });
 
   rootCollapsedMedia = computed<CollapsedContentMedia>(() => {
     if (!this.isRootContentLong() || this.isRootEventExpanded()) return { images: [], urls: [] };
-    
+
     const rootRecordData = this.rootRecord();
     if (!rootRecordData) return { images: [], urls: [] };
-    
+
     const content = rootRecordData.event.content || '';
     return this.extractCollapsedMedia(content);
   });
 
   parentCollapsedMedia = computed<CollapsedContentMedia>(() => {
     if (!this.isParentContentLong() || this.isParentEventExpanded()) return { images: [], urls: [] };
-    
+
     const parentRecordData = this.parentRecord();
     if (!parentRecordData) return { images: [], urls: [] };
-    
+
     const content = parentRecordData.event.content || '';
     return this.extractCollapsedMedia(content);
   });
@@ -577,6 +589,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   quoteCount = computed<number>(() => {
     return this.quotes().length;
+  });
+
+  // Reactions summary panel state
+  showReactionsSummary = signal<boolean>(false);
+  reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
+
+  // Check if there's any engagement to show stats row
+  hasAnyEngagement = computed<boolean>(() => {
+    return this.likes().length > 0
+      || this.replyCount() > 0
+      || this.repostCount() > 0
+      || this.totalZapAmount() > 0;
   });
 
   // Check if this is a repost event (kind 6 or 16)
@@ -1681,6 +1705,36 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * Toggle the reactions summary panel visibility
+   * @param tab Optional tab to open to (defaults to 'reactions')
+   */
+  toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
+    const isCurrentlyVisible = this.showReactionsSummary();
+    const currentTab = this.reactionsSummaryTab();
+
+    if (isCurrentlyVisible && currentTab === tab) {
+      // If clicking the same tab while visible, close the panel
+      this.showReactionsSummary.set(false);
+    } else {
+      // Open panel and switch to the requested tab
+      this.reactionsSummaryTab.set(tab);
+      this.showReactionsSummary.set(true);
+    }
+  }
+
+  /**
+   * Navigate to the event page to view comments
+   */
+  navigateToComments(event: MouseEvent) {
+    event.stopPropagation();
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
+
+    // Navigate to the event page which will load all comments
+    this.layout.openEvent(targetRecordData.event.id, targetRecordData.event);
+  }
+
   private getEventPreviewTitle(content: string): string {
     const cleaned = content.replace(/\s+/g, ' ').trim();
     if (!cleaned) return 'Event';
@@ -2196,7 +2250,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    */
   onCollapsedImageClick(event: MouseEvent, imageUrl: string, allImages: string[]) {
     event.stopPropagation(); // Prevent card click
-    
+
     const currentIndex = allImages.indexOf(imageUrl);
     const mediaItems = allImages.map((url, index) => ({
       url,

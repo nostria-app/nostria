@@ -1,16 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  Input,
-  Output,
-  EventEmitter,
   inject,
   signal,
   AfterViewInit,
   ViewChild,
   ElementRef,
-  OnChanges,
-  SimpleChanges,
+  input,
+  output,
+  effect,
 } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -53,14 +51,12 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
   styleUrl: './rich-text-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RichTextEditorComponent implements AfterViewInit, OnChanges {
-  @Input() content = '';
-  @Output() contentChange = new EventEmitter<string>();
+export class RichTextEditorComponent implements AfterViewInit {
+  readonly content = input('');
+  readonly contentChange = output<string>();
 
-  @Input() set richTextMode(value: boolean) {
-    this.isRichTextMode.set(value);
-  }
-  @Output() richTextModeChange = new EventEmitter<boolean>();
+  readonly richTextMode = input(true);
+  readonly richTextModeChange = output<boolean>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -74,6 +70,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   floatingToolbarPosition = signal<FloatingToolbarPosition>({ top: 0, left: 0 });
   private dragCounter = 0;
   private isInternalChange = false; // Flag to track internal vs external changes
+  private viewInitialized = false;
 
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
@@ -81,8 +78,25 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   private dialog = inject(MatDialog);
   private localSettingsService = inject(LocalSettingsService);
 
+  constructor() {
+    // Sync richTextMode input to internal signal
+    effect(() => {
+      this.isRichTextMode.set(this.richTextMode());
+    });
+
+    // React to external content changes
+    effect(() => {
+      const newContent = this.content();
+      if (this.viewInitialized && !this.isInternalChange) {
+        this.setContent(newContent || '');
+      }
+      this.isInternalChange = false;
+    });
+  }
+
   ngAfterViewInit() {
-    this.setContent(this.content || '');
+    this.viewInitialized = true;
+    this.setContent(this.content() || '');
 
     // Reset drag counter when component initializes
     this.dragCounter = 0;
@@ -90,15 +104,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    // Only react to external content changes, not internal ones
-    if (changes['content'] && !changes['content'].firstChange && !this.isInternalChange) {
-      this.setContent(changes['content'].currentValue || '');
-    }
-    // Reset the flag after processing
-    this.isInternalChange = false;
   }
 
   setContent(content: string) {
@@ -812,13 +817,12 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Update model from editor content
       const markdown = this.convertRichTextToMarkdown();
       this.isInternalChange = true;
-      this.content = markdown;
       this.contentChange.emit(markdown);
     } else {
       // For markdown mode, insert at cursor position
       const textarea = this.markdownTextarea.nativeElement;
       const cursorPosition = textarea.selectionStart || 0;
-      const currentContent = this.content || '';
+      const currentContent = this.markdownContent() || '';
 
       const newContent =
         currentContent.substring(0, cursorPosition) +
@@ -826,7 +830,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         currentContent.substring(cursorPosition);
 
       this.isInternalChange = true;
-      this.content = newContent;
       this.markdownContent.set(newContent);
       this.contentChange.emit(newContent);
 
@@ -862,19 +865,17 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Update model from editor content
       const markdown = this.convertRichTextToMarkdown();
       this.isInternalChange = true;
-      this.content = markdown;
       this.contentChange.emit(markdown);
     } else {
       // For markdown mode, insert at cursor position
       const textarea = this.markdownTextarea.nativeElement;
       const cursorPosition = textarea.selectionStart || 0;
-      const currentContent = this.content || '';
+      const currentContent = this.markdownContent() || '';
 
       const newContent =
         currentContent.substring(0, cursorPosition) + text + currentContent.substring(cursorPosition);
 
       this.isInternalChange = true;
-      this.content = newContent;
       this.markdownContent.set(newContent);
       this.contentChange.emit(newContent);
 
