@@ -77,6 +77,7 @@ import { SettingsService } from '../../services/settings.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -139,6 +140,7 @@ interface MessageGroup {
     LinkifyPipe,
     MessageContentComponent,
     NamePipe,
+    EmojiPickerComponent,
   ],
   templateUrl: './messages.component.html',
   styleUrl: './messages.component.scss',
@@ -1218,6 +1220,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.messageInput?.nativeElement?.focus();
+  }
+
+  /**
+   * Insert an emoji at the current cursor position in the message input
+   */
+  insertEmoji(emoji: string): void {
+    const textarea = this.messageInput?.nativeElement;
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentText = this.newMessageText();
+      const newText = currentText.substring(0, start) + emoji + currentText.substring(end);
+      this.newMessageText.set(newText);
+
+      // Restore cursor position after emoji
+      setTimeout(() => {
+        const newPos = start + emoji.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+      });
+    } else {
+      this.newMessageText.update(text => text + emoji);
+    }
   }
 
   /**

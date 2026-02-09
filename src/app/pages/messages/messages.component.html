@@ -531,6 +531,15 @@
           <input type="file" #mediaFileInput (change)="onMediaFileSelected($event)" accept="image/*,video/*"
             class="hidden-file-input" aria-label="Upload media files" />
 
+          <!-- Emoji picker button -->
+          <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" class="emoji-button"
+            [disabled]="isSending()" matTooltip="Emoji">
+            <mat-icon>sentiment_satisfied</mat-icon>
+          </button>
+          <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
+            <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
+          </mat-menu>
+
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
             (keydown)="onMessageKeydown($event)" rows="1" cdkTextareaAutosize cdkAutosizeMinRows="1"
