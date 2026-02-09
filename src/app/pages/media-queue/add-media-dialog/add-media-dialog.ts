@@ -1,8 +1,7 @@
-import { Component, Inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
-  MatDialog,
   MAT_DIALOG_DATA,
   MatDialogRef,
   MatDialogModule,
@@ -32,10 +31,10 @@ export interface AddMediaDialogData {
   ],
 })
 export class AddMediaDialog {
-  constructor(
-    public dialogRef: MatDialogRef<AddMediaDialogData>,
-    @Inject(MAT_DIALOG_DATA) public data: AddMediaDialogData
-  ) {
+  private dialogRef = inject(MatDialogRef<AddMediaDialog>);
+  data: AddMediaDialogData = inject<AddMediaDialogData>(MAT_DIALOG_DATA);
+
+  constructor() {
     // Default to true if not specified
     if (this.data.playImmediately === undefined) {
       this.data.playImmediately = true;
