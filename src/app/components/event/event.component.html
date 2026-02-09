@@ -153,6 +153,23 @@
       }
     </div>
     }
+    @if (mainCollapsedMedia().videos.length > 0) {
+    <div class="collapsed-videos">
+      <video [src]="mainCollapsedMedia().videos[0]" controls preload="metadata"
+        (click)="$event.stopPropagation()"></video>
+      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
+      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
+        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
+        'videos' }}
+      </button>
+      }
+      @if (collapsedVideosExpanded()) {
+      @for (video of mainCollapsedMedia().videos.slice(1); track video) {
+      <video [src]="video" controls preload="metadata" (click)="$event.stopPropagation()"></video>
+      }
+      }
+    </div>
+    }
     @if (mainCollapsedMedia().urls.length > 0) {
     <div class="collapsed-urls">
       @for (url of mainCollapsedMedia().urls; track url) {
@@ -268,6 +285,23 @@
           }
         </div>
         }
+        @if (rootCollapsedMedia().videos.length > 0) {
+        <div class="collapsed-videos">
+          <video [src]="rootCollapsedMedia().videos[0]" controls preload="metadata"
+            (click)="$event.stopPropagation()"></video>
+          @if (rootCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
+          <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
+            +{{ rootCollapsedMedia().videos.length - 1 }} more {{ rootCollapsedMedia().videos.length - 1 === 1 ? 'video'
+            : 'videos' }}
+          </button>
+          }
+          @if (collapsedVideosExpanded()) {
+          @for (video of rootCollapsedMedia().videos.slice(1); track video) {
+          <video [src]="video" controls preload="metadata" (click)="$event.stopPropagation()"></video>
+          }
+          }
+        </div>
+        }
         @if (rootCollapsedMedia().urls.length > 0) {
         <div class="collapsed-urls">
           @for (url of rootCollapsedMedia().urls; track url) {
@@ -377,6 +411,23 @@
           }
         </div>
         }
+        @if (parentCollapsedMedia().videos.length > 0) {
+        <div class="collapsed-videos">
+          <video [src]="parentCollapsedMedia().videos[0]" controls preload="metadata"
+            (click)="$event.stopPropagation()"></video>
+          @if (parentCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
+          <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
+            +{{ parentCollapsedMedia().videos.length - 1 }} more {{ parentCollapsedMedia().videos.length - 1 === 1 ?
+            'video' : 'videos' }}
+          </button>
+          }
+          @if (collapsedVideosExpanded()) {
+          @for (video of parentCollapsedMedia().videos.slice(1); track video) {
+          <video [src]="video" controls preload="metadata" (click)="$event.stopPropagation()"></video>
+          }
+          }
+        </div>
+        }
         @if (parentCollapsedMedia().urls.length > 0) {
         <div class="collapsed-urls">
           @for (url of parentCollapsedMedia().urls; track url) {
@@ -479,6 +530,23 @@
           (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
         }
       </div>
+      }
+    </div>
+    }
+    @if (mainCollapsedMedia().videos.length > 0) {
+    <div class="collapsed-videos">
+      <video [src]="mainCollapsedMedia().videos[0]" controls preload="metadata"
+        (click)="$event.stopPropagation()"></video>
+      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
+      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
+        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
+        'videos' }}
+      </button>
+      }
+      @if (collapsedVideosExpanded()) {
+      @for (video of mainCollapsedMedia().videos.slice(1); track video) {
+      <video [src]="video" controls preload="metadata" (click)="$event.stopPropagation()"></video>
+      }
       }
     </div>
     }
@@ -588,6 +656,23 @@
           (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
         }
       </div>
+      }
+    </div>
+    }
+    @if (mainCollapsedMedia().videos.length > 0) {
+    <div class="collapsed-videos">
+      <video [src]="mainCollapsedMedia().videos[0]" controls preload="metadata"
+        (click)="$event.stopPropagation()"></video>
+      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
+      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
+        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
+        'videos' }}
+      </button>
+      }
+      @if (collapsedVideosExpanded()) {
+      @for (video of mainCollapsedMedia().videos.slice(1); track video) {
+      <video [src]="video" controls preload="metadata" (click)="$event.stopPropagation()"></video>
+      }
       }
     </div>
     }
