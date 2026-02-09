@@ -693,6 +693,20 @@
     </button>
   </mat-card-actions>
   }
+
+  @if (!hideFooter() && !compact() && supportsReactions()) {
+  <app-reaction-summary
+    [reactions]="likes()"
+    [replyCount]="replyCount()"
+    [repostCount]="repostCount()"
+    [quoteCount]="quoteCount()"
+    [reposts]="reposts()"
+    [quotes]="quotes()"
+    [zaps]="zaps()"
+    [totalZapAmount]="totalZapAmount()"
+    [zapCount]="zapCount()">
+  </app-reaction-summary>
+  }
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {
 <div class="event-content">

@@ -1,0 +1,104 @@
+<div class="reaction-summary">
+  <div class="summary-tabs">
+    @for (tab of tabs; track tab) {
+    <button class="summary-tab"
+      [class.active]="selectedTab() === tab"
+      matRipple
+      (click)="onTabClick(tab, $event)">
+      <span class="tab-label">{{ tabLabel(tab) }}</span>
+      <span class="tab-count">{{ tabCount(tab) }}</span>
+    </button>
+    }
+  </div>
+
+  <div class="summary-content">
+    @switch (selectedTab()) {
+    @case ('reactions') {
+    @if (reactions().length === 0) {
+    <div class="empty-state">No reactions yet</div>
+    } @else {
+    <div class="content-list">
+      @for (reaction of sortedReactions(); track reaction.event.id) {
+      <div class="list-item">
+        <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
+        <div class="item-meta">
+          @if (getCustomEmojiUrl(reaction.event)) {
+          <img [src]="getCustomEmojiUrl(reaction.event)!"
+            [alt]="reaction.event.content"
+            class="reaction-emoji-img"
+            [title]="reaction.event.content">
+          } @else {
+          <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+          }
+          <span class="item-time">{{ reaction.event.created_at | ago }}</span>
+        </div>
+      </div>
+      }
+    </div>
+    }
+    }
+
+    @case ('comments') {
+    @if (replyCount() === 0) {
+    <div class="empty-state">No comments yet</div>
+    } @else {
+    <div class="empty-state">{{ replyCount() }} {{ replyCount() === 1 ? 'comment' : 'comments' }}</div>
+    }
+    }
+
+    @case ('reposts') {
+    @if (reposts().length === 0) {
+    <div class="empty-state">No reposts yet</div>
+    } @else {
+    <div class="content-list">
+      @for (repost of sortedReposts(); track repost.event.id) {
+      <div class="list-item">
+        <app-user-profile [pubkey]="repost.event.pubkey" view="compact"></app-user-profile>
+        <span class="item-time">{{ repost.event.created_at | ago }}</span>
+      </div>
+      }
+    </div>
+    }
+    }
+
+    @case ('quotes') {
+    @if (quotes().length === 0) {
+    <div class="empty-state">No quotes yet</div>
+    } @else {
+    <div class="content-list">
+      @for (quote of sortedQuotes(); track quote.event.id) {
+      <div class="list-item">
+        <app-user-profile [pubkey]="quote.event.pubkey" view="compact"></app-user-profile>
+        <span class="item-time">{{ quote.event.created_at | ago }}</span>
+      </div>
+      }
+    </div>
+    }
+    }
+
+    @case ('zaps') {
+    @if (zaps().length === 0) {
+    <div class="empty-state">No zaps yet</div>
+    } @else {
+    <div class="content-list">
+      @for (zap of sortedZaps(); track zap.receipt.id) {
+      <div class="list-item zap-item">
+        <app-user-profile [pubkey]="zap.senderPubkey" view="compact"></app-user-profile>
+        <div class="item-meta">
+          <span class="zap-amount">{{ formatAmount(zap.amount) }} sats</span>
+          <span class="item-time">{{ zap.timestamp | ago }}</span>
+        </div>
+      </div>
+      @if (zap.comment) {
+      <div class="zap-comment">
+        <mat-icon class="comment-icon">format_quote</mat-icon>
+        <span class="comment-text">{{ zap.comment }}</span>
+      </div>
+      }
+      }
+    </div>
+    }
+    }
+    }
+  </div>
+</div>
