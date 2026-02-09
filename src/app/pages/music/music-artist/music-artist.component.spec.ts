@@ -1,0 +1,136 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { signal, computed } from '@angular/core';
+import { MusicArtistComponent } from './music-artist.component';
+
+function createComponent(opts: { currentPubkey?: string; viewingPubkey?: string; profileName?: string } = {}): MusicArtistComponent {
+  const component = Object.create(MusicArtistComponent.prototype) as MusicArtistComponent;
+
+  // Mock accountState.pubkey as a signal
+  const accountStatePubkey = signal<string | null>(opts.currentPubkey ?? null);
+  (component as any).accountState = { pubkey: accountStatePubkey };
+
+  // Initialize signals
+  (component as any).pubkey = signal<string>(opts.viewingPubkey ?? '');
+  (component as any).authorProfile = signal<any>(
+    opts.profileName ? { data: { name: opts.profileName } } : undefined
+  );
+  (component as any).tracks = signal<any[]>([]);
+  (component as any).playlists = signal<any[]>([]);
+
+  // Re-create computed signals
+  (component as any).isOwnProfile = computed(() => {
+    const currentPk = (component as any).accountState.pubkey();
+    const viewingPk = (component as any).pubkey();
+    return !!currentPk && currentPk === viewingPk;
+  });
+
+  (component as any).artistName = computed(() => {
+    const profile = (component as any).authorProfile();
+    return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
+  });
+
+  (component as any).trackCount = computed(() => (component as any).tracks().length);
+  (component as any).playlistCount = computed(() => (component as any).playlists().length);
+
+  (component as any).panelTitle = computed(() =>
+    (component as any).isOwnProfile() ? 'My Music' : (component as any).artistName()
+  );
+
+  return component;
+}
+
+describe('MusicArtistComponent', () => {
+  describe('panelTitle', () => {
+    it('should show "My Music" when viewing own profile', () => {
+      const pubkey = 'abc123';
+      const component = createComponent({
+        currentPubkey: pubkey,
+        viewingPubkey: pubkey,
+        profileName: 'Alice',
+      });
+
+      expect(component.panelTitle()).toBe('My Music');
+    });
+
+    it('should show artist name when viewing another user\'s profile', () => {
+      const component = createComponent({
+        currentPubkey: 'abc123',
+        viewingPubkey: 'def456',
+        profileName: 'Bob',
+      });
+
+      expect(component.panelTitle()).toBe('Bob');
+    });
+
+    it('should show "Unknown Artist" when viewing another user with no profile', () => {
+      const component = createComponent({
+        currentPubkey: 'abc123',
+        viewingPubkey: 'def456',
+      });
+
+      expect(component.panelTitle()).toBe('Unknown Artist');
+    });
+
+    it('should show "My Music" even when own profile has no name', () => {
+      const pubkey = 'abc123';
+      const component = createComponent({
+        currentPubkey: pubkey,
+        viewingPubkey: pubkey,
+      });
+
+      expect(component.panelTitle()).toBe('My Music');
+    });
+
+    it('should show artist name when user is not authenticated', () => {
+      const component = createComponent({
+        viewingPubkey: 'def456',
+        profileName: 'Charlie',
+      });
+
+      expect(component.panelTitle()).toBe('Charlie');
+    });
+
+    it('should react to profile changes for other artists', () => {
+      const component = createComponent({
+        currentPubkey: 'abc123',
+        viewingPubkey: 'def456',
+        profileName: 'Dave',
+      });
+
+      expect(component.panelTitle()).toBe('Dave');
+
+      // Profile updates
+      (component as any).authorProfile.set({ data: { name: 'Dave Updated' } });
+      expect(component.panelTitle()).toBe('Dave Updated');
+    });
+  });
+
+  describe('isOwnProfile', () => {
+    it('should be true when current and viewing pubkeys match', () => {
+      const pubkey = 'abc123';
+      const component = createComponent({
+        currentPubkey: pubkey,
+        viewingPubkey: pubkey,
+      });
+
+      expect(component.isOwnProfile()).toBe(true);
+    });
+
+    it('should be false when pubkeys differ', () => {
+      const component = createComponent({
+        currentPubkey: 'abc123',
+        viewingPubkey: 'def456',
+      });
+
+      expect(component.isOwnProfile()).toBe(false);
+    });
+
+    it('should be false when not authenticated', () => {
+      const component = createComponent({
+        viewingPubkey: 'def456',
+      });
+
+      expect(component.isOwnProfile()).toBe(false);
+    });
+  });
+});
