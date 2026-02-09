@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# loop.ps1 - Ralphy GitHub issue watcher with idle improvement runs
+# loop.ps1 - Ralphy GitHub issue watcher with idle PRD and improvement runs
 # Works on both Windows and Linux (PowerShell 7+ / pwsh)
 #
 # Usage: pwsh loop.ps1
@@ -84,6 +84,26 @@ function Run-WithTimeout {
   return $true
 }
 
+function Get-NextPrd {
+  # Returns the path to the first PRD file in prd/ that still has unchecked
+  # tasks (lines matching "- [ ]"). Skips template.md. Returns $null when all
+  # PRD files are exhausted or none exist.
+  $prdDir = Join-Path $PSScriptRoot "prd"
+  if (-not (Test-Path $prdDir)) { return $null }
+
+  $files = Get-ChildItem -Path $prdDir -Filter "*.md" |
+    Where-Object { $_.Name -ne "template.md" } |
+    Sort-Object Name
+
+  foreach ($f in $files) {
+    $content = Get-Content $f.FullName -Raw
+    if ($content -match "\- \[ \]") {
+      return $f.FullName
+    }
+  }
+  return $null
+}
+
 function Get-TaskCount {
   $output = & ralphy --opencode --model $Model --github $Repo --github-label $Label --dry-run --max-iterations 1 2>&1 | Out-String
   $clean = $output -replace "\x1b\[[0-9;]*m", ""
@@ -122,7 +142,7 @@ function Sync-Git {
 Write-Host ""
 Write-Host "Ralphy GitHub issue watcher started."
 Write-Host "Polling every $PollInterval seconds for issues labeled `"$Label`"..."
-Write-Host "After $IdleThreshold minutes idle, will run codebase improvements."
+Write-Host "After $IdleThreshold minutes idle, will run PRD tasks (then improvements when exhausted)."
 Write-Host "Press Ctrl+C to stop."
 Write-Host ""
 
@@ -166,9 +186,6 @@ while ($true) {
     if ($idleCount -ge $IdleThreshold) {
       Write-Host ""
       Write-Host "============================================================"
-      Write-Log "Idle for $IdleThreshold minutes. Running codebase improvements..."
-      Write-Host "============================================================"
-      Write-Host ""
 
       $idleCount = 0
 
@@ -176,15 +193,40 @@ while ($true) {
       & git fetch origin
       & git pull --rebase origin main
 
-      $improvArgs = @("-v", "--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "5")
-      $success = Run-WithTimeout -Description "Idle improvement" -Arguments $improvArgs
+      # Try PRD files first; fall back to IMPROVEMENTS.md when exhausted
+      $prdFile = Get-NextPrd
 
-      if ($success) {
-        Write-Log "Improvement task finished. Syncing..."
-        Sync-Git -CommitMsg "chore: codebase improvement"
+      if ($prdFile) {
+        $prdName = Split-Path $prdFile -Leaf
+        Write-Log "Idle for $IdleThreshold minutes. Running PRD: $prdName"
+        Write-Host "============================================================"
+        Write-Host ""
+
+        $prdArgs = @("-v", "--opencode", "--model", $Model, "--prd", $prdFile, "--max-iterations", "5")
+        $success = Run-WithTimeout -Description "PRD: $prdName" -Arguments $prdArgs
+
+        if ($success) {
+          Write-Log "PRD task finished. Syncing..."
+          Sync-Git -CommitMsg "feat: complete PRD task ($prdName)"
+        } else {
+          Write-Log "PRD task timed out. Syncing partial progress..."
+          Sync-Git -CommitMsg "wip: partial PRD progress ($prdName, timeout)"
+        }
       } else {
-        Write-Log "Improvement task timed out. Syncing partial progress..."
-        Sync-Git -CommitMsg "wip: partial improvement progress (timeout)"
+        Write-Log "Idle for $IdleThreshold minutes. No pending PRDs. Running codebase improvements..."
+        Write-Host "============================================================"
+        Write-Host ""
+
+        $improvArgs = @("-v", "--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "5")
+        $success = Run-WithTimeout -Description "Idle improvement" -Arguments $improvArgs
+
+        if ($success) {
+          Write-Log "Improvement task finished. Syncing..."
+          Sync-Git -CommitMsg "chore: codebase improvement"
+        } else {
+          Write-Log "Improvement task timed out. Syncing partial progress..."
+          Sync-Git -CommitMsg "wip: partial improvement progress (timeout)"
+        }
       }
     }
   }
