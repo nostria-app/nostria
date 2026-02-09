@@ -209,6 +209,14 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async toggleGoogleFavicon(): Promise<void> {
+    try {
+      await this.settingsService.toggleGoogleFavicon();
+    } catch (error) {
+      this.logger.error('Failed to toggle Google favicon setting', error);
+    }
+  }
+
   async clearImageCache(): Promise<void> {
     try {
       await this.imageCacheService.clearAllCache();

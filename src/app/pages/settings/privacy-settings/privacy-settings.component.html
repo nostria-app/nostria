@@ -31,6 +31,12 @@
         ariaLabel="Learn about image cache service"></app-info-tooltip>
     </div>
 
+    <div class="settings-option">
+      <mat-checkbox [checked]="settingsService.settings().googleFaviconEnabled" (change)="toggleGoogleFavicon()">
+        <span i18n="@@settings.privacy.google-favicon.enable">Enable Google API for favicons</span>
+      </mat-checkbox>
+    </div>
+
     @if (settingsService.settings().imageCacheEnabled) {
     <div class="cache-actions">
       <button mat-raised-button color="warn" (click)="clearImageCache()">

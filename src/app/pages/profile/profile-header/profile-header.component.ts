@@ -308,18 +308,33 @@ export class ProfileHeaderComponent implements OnDestroy {
 
       // Normalize domain and remove any path fragments
       const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
-      return this.getFaviconUrl(clean);
+      return clean; // Return domain, not full URL - we'll compute URL dynamically
     });
   });
 
   // Legacy computed for backwards compatibility - returns first favicon URL
   verifiedFaviconUrl = computed(() => {
     const urls = this.verifiedFaviconUrls();
-    return urls.length > 0 ? urls[0] : '';
+    return urls.length > 0 ? this.getFaviconUrl(urls[0]) : '';
   });
 
-  // Track favicon visibility to hide if loading fails
-  faviconVisible = signal<boolean>(true);
+  // Track per-favicon state: which indexes tried .png fallback, which failed completely
+  faviconTriedPng = signal<Set<number>>(new Set());
+  faviconFailed = signal<Set<number>>(new Set());
+
+  // Check if a specific favicon should be visible (not failed)
+  isFaviconVisible(index: number): boolean {
+    return !this.faviconFailed().has(index);
+  }
+
+  // Get the current favicon URL for an index (with .png fallback handling)
+  getCurrentFaviconUrl(index: number): string {
+    const domain = this.verifiedFaviconUrls()[index];
+    if (!domain) return '';
+
+    const usePng = this.faviconTriedPng().has(index);
+    return this.getFaviconUrl(domain, usePng);
+  }
 
   name = computed(() => {
     const profileData = this.profile();
@@ -469,7 +484,7 @@ export class ProfileHeaderComponent implements OnDestroy {
 
       // Add delay to avoid competing with more important queries
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       // Verify we're still on the same profile
       if (this.pubkey() !== profilePubkey) return;
 
@@ -520,17 +535,17 @@ export class ProfileHeaderComponent implements OnDestroy {
     effect(async () => {
       const currentPubkey = this.pubkey();
       const cachedLoaded = this.profileState.cachedEventsLoaded();
-      
+
       if (currentPubkey && cachedLoaded) {
         // Clear badges first to prevent showing stale data from previous profile
         this.badgeService.clear();
         // Clear timed out badges and cancel any pending timeouts
         this.clearBadgeTimeouts();
-        
+
         // Add a small delay to ensure timeline queries complete first
         // This prevents badge queries from competing with more important data
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         // Double-check we're still on the same profile after delay
         if (this.pubkey() === currentPubkey) {
           await this.badgeService.loadAcceptedBadges(currentPubkey);
@@ -586,10 +601,10 @@ export class ProfileHeaderComponent implements OnDestroy {
       if (currentPubkey && enabled && cachedLoaded) {
         // Add delay to avoid competing with more important queries
         await new Promise(resolve => setTimeout(resolve, 400));
-        
+
         // Verify we're still on the same profile
         if (this.pubkey() !== currentPubkey) return;
-        
+
         const metrics = await this.trustService.fetchMetrics(currentPubkey);
         untracked(() => {
           this.trustRank.set(metrics?.rank);
@@ -601,12 +616,13 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // Reset favicon visibility whenever the verified identifier value changes
+    // Reset favicon state whenever the verified identifiers change
     effect(() => {
       // Touch the signal so the effect depends on it
-      this.verifiedIdentifier();
-      // Show favicon optimistically; if it fails to load, onFaviconError will hide it
-      this.faviconVisible.set(true);
+      this.verifiedIdentifiers();
+      // Reset favicon fallback states when profile changes
+      this.faviconTriedPng.set(new Set());
+      this.faviconFailed.set(new Set());
     });
 
     // Load mutual followers ("Followers you know") when profile's following list is available
@@ -961,45 +977,20 @@ export class ProfileHeaderComponent implements OnDestroy {
     return 'linear-gradient(135deg, #8e44ad, #3498db)';
   }
 
-  // Helper to get favicon via Google s2 service
-  // Extract the base registered domain (strip subdomains) using a small heuristic
-  private extractBaseDomain(domain: string): string {
-    if (!domain) return domain;
-
-    // Remove port if present
+  // Helper to get favicon URL - uses Google API when enabled, direct server request otherwise
+  getFaviconUrl(domain: string, usePng = false): string {
+    if (!domain) return '';
+    // Remove port if present and normalize
     const host = domain.split(':')[0].toLowerCase();
 
-    // If it's an IP address, return as-is
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
-
-    const parts = host.split('.').filter(Boolean);
-    if (parts.length <= 2) return host; // no subdomain to strip
-
-    // Common second-level domains where base includes three parts (example.co.uk)
-    const secondLevel = new Set([
-      'co.uk',
-      'org.uk',
-      'ac.uk',
-      'gov.uk',
-      'com.au',
-      'net.au',
-      'co.nz',
-      'co.jp',
-    ]);
-
-    const lastTwo = parts.slice(-2).join('.');
-    if (secondLevel.has(lastTwo) && parts.length >= 3) {
-      // Return last 3 parts (example.co.uk)
-      return parts.slice(-3).join('.');
+    // Use Google's favicon service when enabled (better reliability, but privacy tradeoff)
+    if (this.settingsService.settings().googleFaviconEnabled) {
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
     }
 
-    // Default: return last 2 parts (example.com)
-    return parts.slice(-2).join('.');
-  }
-
-  getFaviconUrl(domain: string): string {
-    const base = this.extractBaseDomain(domain);
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(base)}&sz=64`;
+    // Direct server request (better privacy, but may fail for some sites)
+    const extension = usePng ? 'png' : 'ico';
+    return `https://${host}/favicon.${extension}`;
   }
 
   /**
@@ -1370,14 +1361,34 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   /**
-   * Hide favicon if it fails to load and mark as not visible
+   * Handle favicon load error - try .png fallback first, then hide if that fails too
    */
-  onFaviconError(event: Event): void {
-    this.faviconVisible.set(false);
+  onFaviconError(event: Event, index: number): void {
     const img = event.target as HTMLImageElement | null;
-    if (img) {
-      img.style.display = 'none';
+    if (!img) return;
+
+    const triedPng = this.faviconTriedPng();
+
+    // If we haven't tried .png yet and Google favicon is not enabled, try it
+    if (!triedPng.has(index) && !this.settingsService.settings().googleFaviconEnabled) {
+      // Mark that we're trying .png
+      const newTriedPng = new Set(triedPng);
+      newTriedPng.add(index);
+      this.faviconTriedPng.set(newTriedPng);
+
+      // Update the image src to try .png
+      const domain = this.verifiedFaviconUrls()[index];
+      if (domain) {
+        img.src = this.getFaviconUrl(domain, true);
+        return; // Don't hide yet, let it try to load .png
+      }
     }
+
+    // Both .ico and .png failed (or Google API failed) - hide this favicon
+    const newFailed = new Set(this.faviconFailed());
+    newFailed.add(index);
+    this.faviconFailed.set(newFailed);
+    img.style.display = 'none';
   }
 
   /**

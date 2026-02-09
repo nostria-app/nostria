@@ -70,6 +70,8 @@ export interface UserSettings {
   autoPlayVideos?: boolean; // Auto-play all videos (muted)
   // Custom feeds - synced across devices via kind 30078
   customFeeds?: SyncedFeedConfig[];
+  // Favicon settings
+  googleFaviconEnabled?: boolean; // Use Google API for favicons (privacy tradeoff)
   // Add more settings as needed
 }
 
@@ -106,6 +108,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoPlayVideos: false, // Off by default - user must opt-in
   // Custom feeds - empty by default, will be populated from FeedService
   customFeeds: undefined,
+  // Favicon settings - disabled by default for privacy
+  googleFaviconEnabled: false,
 };
 
 @Injectable({
@@ -316,6 +320,13 @@ export class SettingsService {
       // Users can manually clear cache in the settings if needed
       this.logger.debug('[Settings] Image cache disabled, existing cache preserved');
     }
+  }
+
+  async toggleGoogleFavicon(): Promise<void> {
+    const currentValue = this.settings().googleFaviconEnabled;
+    await this.updateSettings({
+      googleFaviconEnabled: !currentValue,
+    });
   }
 
   async toggleReportTypeVisibility(reportType: string): Promise<void> {
