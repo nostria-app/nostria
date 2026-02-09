@@ -75,6 +75,8 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { SpeechService } from '../../services/speech.service';
 import { SettingsService } from '../../services/settings.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { MediaService } from '../../services/media.service';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -127,6 +129,7 @@ interface MessageGroup {
     MatSnackBarModule,
     MatTabsModule,
     MatSidenavModule,
+    MatProgressBarModule,
     TextFieldModule,
     RouterModule,
     LoadingOverlayComponent,
@@ -164,6 +167,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly speechService = inject(SpeechService);
   private readonly settings = inject(SettingsService);
   readonly localSettings = inject(LocalSettingsService);
+  readonly mediaService = inject(MediaService);
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -172,6 +176,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isSending = signal<boolean>(false);
   isVoiceListening = signal<boolean>(false);
   isVoiceTranscribing = signal<boolean>(false);
+  isUploading = signal<boolean>(false);
+  uploadStatus = signal<string>('');
+  mediaPreviewUrl = signal<string | null>(null);
+  mediaPreviewType = signal<'image' | 'video' | null>(null);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
@@ -394,16 +402,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
-    
+
     const noteToSelf = this.messaging.sortedChats().find(item => item.chat.pubkey === myPubkey);
     if (!noteToSelf) return null;
-    
+
     // Apply search filter
     if (query && !this.chatMatchesSearch(noteToSelf.chat, query)) return null;
-    
+
     // Apply hidden filter
     if (!showHidden && this.isChatHidden(noteToSelf.chat.id)) return null;
-    
+
     return noteToSelf;
   });
 
@@ -459,6 +467,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // ViewChild for message input to auto-focus
   @ViewChild('messageInput', { static: false })
   messageInput?: ElementRef<HTMLTextAreaElement>;
+
+  // ViewChild for file upload input
+  @ViewChild('mediaFileInput', { static: false })
+  mediaFileInput?: ElementRef<HTMLInputElement>;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
@@ -1099,6 +1111,147 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Open file dialog for uploading media
+   */
+  openFileDialog(): void {
+    if (!this.mediaFileInput?.nativeElement) {
+      return;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.mediaFileInput.nativeElement.click();
+  }
+
+  /**
+   * Open media library chooser dialog
+   */
+  async openMediaChooser(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { MediaChooserDialogComponent } = await import('../../components/media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
+      title: 'Choose from Library',
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: false,
+        mediaType: 'all',
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.items?.length) {
+        const item = result.items[0];
+        this.insertMediaUrl(item.url, item.type);
+      }
+    });
+  }
+
+  /**
+   * Handle file selection from the file input
+   */
+  onMediaFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.uploadMediaFile(input.files[0]);
+    }
+    input.value = '';
+  }
+
+  /**
+   * Upload a media file and insert the URL into the message
+   */
+  private async uploadMediaFile(file: File): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.isUploading.set(true);
+    this.uploadStatus.set('Uploading...');
+
+    try {
+      await this.mediaService.load();
+
+      const result = await this.mediaService.uploadFile(
+        file,
+        false,
+        this.mediaService.mediaServers()
+      );
+
+      if (result.status === 'success' && result.item) {
+        this.insertMediaUrl(result.item.url, result.item.type);
+      } else {
+        this.snackBar.open(result.message || 'Upload failed', 'Dismiss', { duration: 5000 });
+      }
+    } catch (err) {
+      this.logger.error('Failed to upload media file', err);
+      this.snackBar.open('Failed to upload media', 'Dismiss', { duration: 5000 });
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  /**
+   * Insert media URL into the message text and show preview
+   */
+  private insertMediaUrl(url: string, mimeType: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + url);
+
+    // Set preview
+    if (mimeType.startsWith('image/')) {
+      this.mediaPreviewUrl.set(url);
+      this.mediaPreviewType.set('image');
+    } else if (mimeType.startsWith('video/')) {
+      this.mediaPreviewUrl.set(url);
+      this.mediaPreviewType.set('video');
+    }
+
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  /**
+   * Remove the media preview
+   */
+  removeMediaPreview(): void {
+    const previewUrl = this.mediaPreviewUrl();
+    if (previewUrl) {
+      // Remove the URL from the message text
+      const currentText = this.newMessageText();
+      const newText = currentText
+        .split('\n')
+        .filter(line => line.trim() !== previewUrl)
+        .join('\n');
+      this.newMessageText.set(newText);
+    }
+    this.mediaPreviewUrl.set(null);
+    this.mediaPreviewType.set(null);
+  }
+
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
+  }
+
+  private showMediaServerWarning(): void {
+    this.snackBar.open('You need to configure a media server before uploading files.', 'Setup', { duration: 5000 })
+      .onAction().subscribe(() => {
+        this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      });
+  }
+
+  /**
    * Handle keyboard events in the message input
    * Desktop: Enter sends message, Shift+Enter adds newline
    * Mobile: Enter adds newline (must use send button to send)
@@ -1158,6 +1311,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Clear the input and reply context
       this.newMessageText.set('');
       this.replyingToMessage.set(null);
+      this.mediaPreviewUrl.set(null);
+      this.mediaPreviewType.set(null);
 
       // Determine which encryption to use based on chat and client capabilities
       const selectedChat = this.selectedChat()!;
