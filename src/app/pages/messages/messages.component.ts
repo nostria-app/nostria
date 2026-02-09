@@ -178,8 +178,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isVoiceTranscribing = signal<boolean>(false);
   isUploading = signal<boolean>(false);
   uploadStatus = signal<string>('');
-  mediaPreviewUrl = signal<string | null>(null);
-  mediaPreviewType = signal<'image' | 'video' | null>(null);
+  mediaPreviews = signal<{ url: string; type: 'image' | 'video' }[]>([]);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
@@ -1143,15 +1142,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       width: '700px',
       maxWidth: '95vw',
       data: {
-        multiple: false,
+        multiple: true,
         mediaType: 'all',
       },
     });
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result?.items?.length) {
-        const item = result.items[0];
-        this.insertMediaUrl(item.url, item.type);
+        for (const item of result.items) {
+          this.insertMediaUrl(item.url, item.type);
+        }
       }
     });
   }
@@ -1210,34 +1210,31 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
     this.newMessageText.set(currentText + separator + url);
 
-    // Set preview
+    // Add preview
     if (mimeType.startsWith('image/')) {
-      this.mediaPreviewUrl.set(url);
-      this.mediaPreviewType.set('image');
+      this.mediaPreviews.update(previews => [...previews, { url, type: 'image' }]);
     } else if (mimeType.startsWith('video/')) {
-      this.mediaPreviewUrl.set(url);
-      this.mediaPreviewType.set('video');
+      this.mediaPreviews.update(previews => [...previews, { url, type: 'video' }]);
     }
 
     this.messageInput?.nativeElement?.focus();
   }
 
   /**
-   * Remove the media preview
+   * Remove a specific media preview by index
    */
-  removeMediaPreview(): void {
-    const previewUrl = this.mediaPreviewUrl();
-    if (previewUrl) {
+  removeMediaPreview(index: number): void {
+    const preview = this.mediaPreviews()[index];
+    if (preview) {
       // Remove the URL from the message text
       const currentText = this.newMessageText();
       const newText = currentText
         .split('\n')
-        .filter(line => line.trim() !== previewUrl)
+        .filter(line => line.trim() !== preview.url)
         .join('\n');
       this.newMessageText.set(newText);
     }
-    this.mediaPreviewUrl.set(null);
-    this.mediaPreviewType.set(null);
+    this.mediaPreviews.update(previews => previews.filter((_, i) => i !== index));
   }
 
   private hasConfiguredMediaServers(): boolean {
@@ -1311,8 +1308,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Clear the input and reply context
       this.newMessageText.set('');
       this.replyingToMessage.set(null);
-      this.mediaPreviewUrl.set(null);
-      this.mediaPreviewType.set(null);
+      this.mediaPreviews.set([]);
 
       // Determine which encryption to use based on chat and client capabilities
       const selectedChat = this.selectedChat()!;

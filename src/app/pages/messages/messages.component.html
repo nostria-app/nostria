@@ -491,18 +491,22 @@
         </div>
         }
 
-        <!-- Media preview -->
-        @if (mediaPreviewUrl()) {
+        <!-- Media previews -->
+        @if (mediaPreviews().length > 0) {
         <div class="media-preview-container">
-          @if (mediaPreviewType() === 'image') {
-          <img [src]="mediaPreviewUrl()!" class="media-preview-thumb" alt="Media preview">
-          } @else if (mediaPreviewType() === 'video') {
-          <video [src]="mediaPreviewUrl()!" class="media-preview-thumb" muted></video>
+          @for (preview of mediaPreviews(); track preview.url; let i = $index) {
+          <div class="media-preview-item">
+            @if (preview.type === 'image') {
+            <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+            } @else if (preview.type === 'video') {
+            <video [src]="preview.url" class="media-preview-thumb" muted></video>
+            }
+            <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
+              matTooltip="Remove media">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
           }
-          <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview()"
-            matTooltip="Remove media">
-            <mat-icon>close</mat-icon>
-          </button>
         </div>
         }
 
