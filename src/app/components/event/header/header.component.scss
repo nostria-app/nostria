@@ -23,11 +23,14 @@ mat-card-header {
 .date-link {
   cursor: pointer;
   margin-right: 0.4rem;
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 .edited-indicator {
   color: var(--mat-sys-outline);
-  font-size: 0.8rem;
+  font-size: 13px;
+  opacity: 0.8;
   cursor: default;
   margin-right: 0.4rem;
 }
