@@ -15,7 +15,7 @@ Replace `@Input()` with `input()` and `@Output()` with `output()` per Angular 21
 - [x] Migrate `@Input()` in `src/app/components/audio-player/audio-player.component.ts` (lines 18-20) -- 3 simple inputs
 - [x] Migrate `@Input()` in `src/app/components/social-preview/social-preview.component.ts` (line 29) -- setter-based input
 - [x] Migrate `@Input()` in `src/app/pages/profile/profile-reads/profile-reads.component.ts` (line 53)
-- [ ] Migrate `@Output()` in `src/app/pages/badges/badge/badge.component.ts` (lines 54-56) -- 3 EventEmitter outputs
+- [x] Migrate `@Output()` in `src/app/pages/badges/badge/badge.component.ts` (lines 54-56) -- 3 EventEmitter outputs
 
 ---
 
@@ -23,7 +23,7 @@ Replace `@Input()` with `input()` and `@Output()` with `output()` per Angular 21
 
 These Angular components use constructor-based DI instead of `inject()`.
 
-- [ ] Refactor `src/app/pages/calendar/event-details-dialog/event-details-dialog.component.ts` (lines 295-298) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
+- [x] Refactor `src/app/pages/calendar/event-details-dialog/event-details-dialog.component.ts` (lines 295-298) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
 - [ ] Refactor `src/app/pages/bookmarks/bookmark-category-dialog/bookmark-category-dialog.component.ts` (lines 68-71) -- `MAT_DIALOG_DATA` + `MatDialogRef` constructor injection
 - [ ] Refactor `src/app/pages/media-queue/add-media-dialog/add-media-dialog.ts` (lines 35-38) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
 
