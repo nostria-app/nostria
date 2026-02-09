@@ -652,7 +652,8 @@
     </div>
 
     <!-- Engagement stats row (below actions) -->
-    @if (!compact() && (hasAnyEngagement() || hasProofOfWork(targetItem.event) || (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
+    @if (!compact() && (hasAnyEngagement() || hasProofOfWork(targetItem.event) || (shouldShowClientTag() &&
+    getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
     <div class="engagement-stats-row">
       <div class="engagement-stats-left">
         @if (likes().length > 0) {
