@@ -112,12 +112,12 @@
 
 .action-button {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   padding: 8px 12px;
-  min-width: 64px;
+  min-width: 0;
   border: none;
   background: none;
   border-radius: 8px;
@@ -139,7 +139,7 @@
   }
 
   // Direct mat-icon children (Share, Bookmark)
-  > mat-icon {
+  >mat-icon {
     font-size: 22px;
     width: 22px;
     height: 22px;
@@ -147,7 +147,7 @@
   }
 
   .action-label {
-    font-size: 11px;
+    font-size: 13px;
     text-transform: none;
     letter-spacing: 0;
     line-height: 1;
@@ -159,6 +159,7 @@
   // their own mat-icon-button internally. We need to strip that button's styling
   // so only the icon itself is visible, sized consistently with direct mat-icons.
   ::ng-deep {
+
     // Strip all mat-icon-button styling from child components
     button[mat-icon-button],
     .mat-mdc-icon-button {
@@ -226,6 +227,7 @@
   }
 
   ::ng-deep {
+
     .like-button.liked mat-icon,
     .emoji-icon,
     .reacted mat-icon,
@@ -300,12 +302,12 @@
 .aggregated-emojis {
   display: inline-flex;
   align-items: center;
-  margin-right: 4px;
+  margin-right: 2px;
 
   .emoji-item {
     font-size: 16px;
     line-height: 1;
-    margin-left: -4px;
+    margin-left: -6px;
 
     &:first-child {
       margin-left: 0;

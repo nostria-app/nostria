@@ -1,4 +1,5 @@
 <div class="reaction-summary">
+  @if (!hideTabs()) {
   <div class="summary-tabs">
     @for (tab of tabs; track tab) {
     <button class="summary-tab" [class.active]="selectedTab() === tab" matRipple (click)="onTabClick(tab, $event)">
@@ -7,6 +8,7 @@
     </button>
     }
   </div>
+  }
 
   <div class="summary-content">
     @switch (selectedTab()) {
