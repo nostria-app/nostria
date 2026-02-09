@@ -1004,11 +1004,10 @@
   margin-top: 8px;
   margin-bottom: 8px;
 
-  video {
-    width: 100%;
-    border-radius: 8px;
+  app-inline-video-player {
     display: block;
-    max-height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
 
     &:not(:last-child) {
       margin-bottom: 8px;

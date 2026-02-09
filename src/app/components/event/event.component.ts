@@ -67,12 +67,19 @@ import { IntersectionObserverService } from '../../services/intersection-observe
 import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
+interface CollapsedVideoInfo {
+  url: string;
+  poster?: string;
+  aspectRatio?: string;
+}
+
 interface CollapsedContentMedia {
   images: string[];
-  videos: string[];
+  videos: CollapsedVideoInfo[];
   urls: string[];
 }
 
@@ -113,6 +120,7 @@ interface CollapsedContentMedia {
     ContentWarningComponent,
     SocialPreviewComponent,
     ReactionSummaryComponent,
+    InlineVideoPlayerComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -388,9 +396,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Extract images and URLs from collapsed content
    * Images will be shown in an album layout, URLs will be shown as link previews
    */
-  private extractCollapsedMedia(content: string): CollapsedContentMedia {
+  private extractCollapsedMedia(content: string, event?: Event): CollapsedContentMedia {
     const images: string[] = [];
-    const videos: string[] = [];
+    const videos: CollapsedVideoInfo[] = [];
     const urls: string[] = [];
 
     // Simple regex patterns to extract content
@@ -418,7 +426,24 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const url = match[0];
       if (!seenVideos.has(url)) {
         seenVideos.add(url);
-        videos.push(url);
+        // Look up imeta tag for this video URL
+        const videoInfo: CollapsedVideoInfo = { url };
+        if (event) {
+          const imetaTag = event.tags.find(t => t[0] === 'imeta' && t.some(v => v === `url ${url}`));
+          if (imetaTag) {
+            const parsed = this.utilities.parseImetaTag(imetaTag);
+            if (parsed['image']) {
+              videoInfo.poster = parsed['image'];
+            }
+            if (parsed['dim']) {
+              const [w, h] = parsed['dim'].split('x').map(Number);
+              if (w && h) {
+                videoInfo.aspectRatio = `${w} / ${h}`;
+              }
+            }
+          }
+        }
+        videos.push(videoInfo);
       }
     }
 
@@ -506,7 +531,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!targetItem) return { images: [], videos: [], urls: [] };
 
     const content = targetItem.event.content || '';
-    return this.extractCollapsedMedia(content);
+    return this.extractCollapsedMedia(content, targetItem.event);
   });
 
   rootCollapsedMedia = computed<CollapsedContentMedia>(() => {
@@ -516,7 +541,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!rootRecordData) return { images: [], videos: [], urls: [] };
 
     const content = rootRecordData.event.content || '';
-    return this.extractCollapsedMedia(content);
+    return this.extractCollapsedMedia(content, rootRecordData.event);
   });
 
   parentCollapsedMedia = computed<CollapsedContentMedia>(() => {
@@ -526,7 +551,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!parentRecordData) return { images: [], videos: [], urls: [] };
 
     const content = parentRecordData.event.content || '';
-    return this.extractCollapsedMedia(content);
+    return this.extractCollapsedMedia(content, parentRecordData.event);
   });
 
   // Check if this event card should be clickable (only kind 1)
