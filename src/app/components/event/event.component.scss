@@ -192,10 +192,10 @@
   }
 }
 
-// Reply actions: show only labels, hide icons
+// Labels-only mode: hide icons, show labels
 // Use width/height/overflow instead of display:none to keep elements
 // in the DOM for menu trigger positioning (e.g., emoji picker)
-.actions-row.reply-actions {
+.actions-row.mode-labels-only {
   .action-button {
     .action-icon {
       width: 0;
@@ -210,10 +210,19 @@
   }
 }
 
-// When container is narrow, hide labels for original posts (icons only)
-// Reply actions always keep labels-only regardless of width
+// Icons-only mode: hide labels, show icons
+.actions-row.mode-icons-only {
+  .action-button {
+    .action-label {
+      display: none;
+    }
+  }
+}
+
+// When container is narrow, hide labels for icons-and-labels mode (icons only)
+// Labels-only and icons-only modes are not affected by container width
 @container note-card (max-width: 480px) {
-  .actions-row:not(.reply-actions) .action-button .action-label {
+  .actions-row.mode-icons-and-labels .action-button .action-label {
     display: none;
   }
 }

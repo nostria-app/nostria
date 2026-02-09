@@ -92,6 +92,8 @@ interface AccountLocalState {
   recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
   signingCount?: number; // Number of signing operations performed with nsec
   boardsViewMode?: string; // View mode for boards: 'compact' or 'standard'
+  actionsDisplayMode?: string; // Display mode for action buttons on original posts: 'labels-only', 'icons-and-labels', 'icons-only'
+  actionsDisplayModeReplies?: string; // Display mode for action buttons on replies: 'labels-only', 'icons-and-labels', 'icons-only'
 }
 
 /**
@@ -154,6 +156,9 @@ export class AccountLocalStateService {
 
   // Signal to trigger reactivity when signing count changes
   private signingCountVersion = signal(0);
+
+  // Signal to trigger reactivity when actions display mode changes
+  actionsDisplayModeVersion = signal(0);
 
   /**
    * Get all account states from cache or localStorage
@@ -392,6 +397,40 @@ export class AccountLocalStateService {
    */
   setBoardsViewMode(pubkey: string, viewMode: string | null | undefined): void {
     this.updateAccountState(pubkey, { boardsViewMode: viewMode || undefined });
+  }
+
+  /**
+   * Get actions display mode for original posts
+   */
+  getActionsDisplayMode(pubkey: string): string {
+    this.actionsDisplayModeVersion(); // subscribe to changes
+    const state = this.getAccountState(pubkey);
+    return state.actionsDisplayMode || 'icons-and-labels';
+  }
+
+  /**
+   * Get actions display mode for replies
+   */
+  getActionsDisplayModeReplies(pubkey: string): string {
+    this.actionsDisplayModeVersion(); // subscribe to changes
+    const state = this.getAccountState(pubkey);
+    return state.actionsDisplayModeReplies || 'labels-only';
+  }
+
+  /**
+   * Set actions display mode for original posts
+   */
+  setActionsDisplayMode(pubkey: string, mode: string): void {
+    this.updateAccountState(pubkey, { actionsDisplayMode: mode });
+    this.actionsDisplayModeVersion.update(v => v + 1);
+  }
+
+  /**
+   * Set actions display mode for replies
+   */
+  setActionsDisplayModeReplies(pubkey: string, mode: string): void {
+    this.updateAccountState(pubkey, { actionsDisplayModeReplies: mode });
+    this.actionsDisplayModeVersion.update(v => v + 1);
   }
 
   /**

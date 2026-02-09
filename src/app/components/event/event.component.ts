@@ -242,6 +242,36 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return emoji.startsWith(':') && emoji.endsWith(':');
   }
 
+  // Display mode for action buttons: 'labels-only', 'icons-and-labels', 'icons-only'
+  actionsDisplayMode = computed<string>(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return this.isReply() ? 'labels-only' : 'icons-and-labels';
+    }
+    if (this.isReply()) {
+      return this.accountLocalState.getActionsDisplayModeReplies(pubkey);
+    }
+    return this.accountLocalState.getActionsDisplayMode(pubkey);
+  });
+
+  onActionsDisplayModeToggle(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const modes = ['icons-and-labels', 'labels-only', 'icons-only'];
+    const currentMode = this.actionsDisplayMode();
+    const currentIndex = modes.indexOf(currentMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+
+    if (this.isReply()) {
+      this.accountLocalState.setActionsDisplayModeReplies(pubkey, nextMode);
+    } else {
+      this.accountLocalState.setActionsDisplayMode(pubkey, nextMode);
+    }
+  }
+
   // Computed to check if event author is muted/blocked
   // CRITICAL: Filter out muted content from rendering
   // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
