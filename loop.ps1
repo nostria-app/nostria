@@ -176,7 +176,7 @@ while ($true) {
       & git fetch origin
       & git pull --rebase origin main
 
-      $improvArgs = @("-v", "--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "1")
+      $improvArgs = @("-v", "--opencode", "--model", $Model, "--prd", "IMPROVEMENTS.md", "--max-iterations", "5")
       $success = Run-WithTimeout -Description "Idle improvement" -Arguments $improvArgs
 
       if ($success) {
