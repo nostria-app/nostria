@@ -482,33 +482,78 @@
           </button>
         </div>
         }
-        <div class="message-input-row">
-        <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-          (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
-          (keydown)="onMessageKeydown($event)" rows="1" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6"></textarea>
-        @if (isVoiceListening()) {
-        <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
-          [disabled]="isSending()" matTooltip="Stop recording">
-          <mat-icon class="pulse-icon">stop</mat-icon>
-        </button>
-        } @else {
-        <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
-          [disabled]="isVoiceTranscribing() || isSending()" matTooltip="Voice input">
-          @if (isVoiceTranscribing()) {
-          <mat-icon class="spinning-icon">sync</mat-icon>
-          } @else {
-          <mat-icon>mic</mat-icon>
-          }
-        </button>
+
+        <!-- Upload progress -->
+        @if (isUploading()) {
+        <div class="upload-progress-bar">
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          <span class="upload-status-text">{{ uploadStatus() || 'Uploading...' }}</span>
+        </div>
         }
-        <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
-          (click)="sendMessage()" matTooltip="Send message">
-          @if (isSending()) {
-          <mat-spinner diameter="24"></mat-spinner>
-          } @else {
-          <mat-icon>send</mat-icon>
+
+        <!-- Media preview -->
+        @if (mediaPreviewUrl()) {
+        <div class="media-preview-container">
+          @if (mediaPreviewType() === 'image') {
+          <img [src]="mediaPreviewUrl()!" class="media-preview-thumb" alt="Media preview">
+          } @else if (mediaPreviewType() === 'video') {
+          <video [src]="mediaPreviewUrl()!" class="media-preview-thumb" muted></video>
           }
-        </button>
+          <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview()"
+            matTooltip="Remove media">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+
+        <div class="message-input-row">
+          <!-- Media menu button -->
+          <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu" class="media-button"
+            [disabled]="isUploading() || isSending()" matTooltip="Add media">
+            <mat-icon>perm_media</mat-icon>
+          </button>
+          <mat-menu #mediaMenu="matMenu">
+            <button mat-menu-item (click)="openFileDialog()">
+              <mat-icon>upload</mat-icon>
+              <span>Upload media</span>
+            </button>
+            <button mat-menu-item (click)="openMediaChooser()">
+              <mat-icon>photo_library</mat-icon>
+              <span>Choose from library</span>
+            </button>
+          </mat-menu>
+
+          <!-- Hidden file input -->
+          <input type="file" #mediaFileInput (change)="onMediaFileSelected($event)" accept="image/*,video/*"
+            class="hidden-file-input" aria-label="Upload media files" />
+
+          <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
+            (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
+            (keydown)="onMessageKeydown($event)" rows="1" cdkTextareaAutosize cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="6"></textarea>
+          @if (isVoiceListening()) {
+          <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
+            [disabled]="isSending()" matTooltip="Stop recording">
+            <mat-icon class="pulse-icon">stop</mat-icon>
+          </button>
+          } @else {
+          <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
+            [disabled]="isVoiceTranscribing() || isSending()" matTooltip="Voice input">
+            @if (isVoiceTranscribing()) {
+            <mat-icon class="spinning-icon">sync</mat-icon>
+            } @else {
+            <mat-icon>mic</mat-icon>
+            }
+          </button>
+          }
+          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+            (click)="sendMessage()" matTooltip="Send message">
+            @if (isSending()) {
+            <mat-spinner diameter="24"></mat-spinner>
+            } @else {
+            <mat-icon>send</mat-icon>
+            }
+          </button>
         </div>
       </div>
     </div>
