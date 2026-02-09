@@ -1,4 +1,4 @@
-import { Component, Inject, signal, inject } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -292,10 +292,8 @@ export class EventDetailsDialogComponent {
   private chroniaCalendar = inject(ChroniaCalendarService);
   private ethiopianCalendar = inject(EthiopianCalendarService);
 
-  constructor(
-    public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
-  ) { }
+  private dialogRef = inject(MatDialogRef<EventDetailsDialogComponent>);
+  data = inject<EventDetailsDialogData>(MAT_DIALOG_DATA);
 
   get isCurrentUserEvent(): boolean {
     return this.data.currentUserPubkey === this.data.event.pubkey;
