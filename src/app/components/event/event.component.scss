@@ -422,11 +422,11 @@
   margin-left: auto;
 
   &:hover {
-    color: var(--mat-sys-tertiary);
+    color: var(--mat-sys-primary);
 
     >mat-icon,
     .action-label {
-      color: var(--mat-sys-tertiary);
+      color: var(--mat-sys-primary);
     }
   }
 }
