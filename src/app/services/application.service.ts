@@ -167,6 +167,10 @@ export class ApplicationService {
       }
 
       untracked(async () => {
+        // Reset polling state for the new account before checking
+        // This ensures the correct lastCheckTimestamp is loaded and the rate limiter is cleared
+        await this.contentNotificationService.onAccountChanged();
+
         const lastCheck = this.contentNotificationService.lastCheckTimestamp();
         const isFirstTime = lastCheck === 0;
 
