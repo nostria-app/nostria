@@ -101,19 +101,29 @@
   justify-content: space-between;
   gap: 4px;
   width: 100%;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  padding-bottom: 8px;
-  margin-bottom: 8px;
 
   &.compact {
     gap: 2px;
-    padding-bottom: 4px;
-    margin-bottom: 4px;
   }
 }
 
+// Reply actions: show only labels, hide icons
+.actions-row.reply-actions {
+  .action-button {
+    .action-icon {
+      display: none;
+    }
+
+    .action-label {
+      display: inline;
+    }
+  }
+}
+
+// When container is narrow, hide labels for original posts (icons only)
+// Reply actions always keep labels-only regardless of width
 @container note-card (max-width: 480px) {
-  .action-button .hide-label-small {
+  .actions-row:not(.reply-actions) .action-button .action-label {
     display: none;
   }
 }
@@ -342,7 +352,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0 0 0;
+  padding: 4px 0 0 0;
   flex-wrap: wrap;
   width: 100%;
 }
@@ -351,12 +361,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .engagement-stats-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .aggregated-emojis {
@@ -564,7 +576,7 @@
   align-items: center;
   justify-content: center;
   opacity: 0.6;
-  padding: 8px;
+  padding: 4px;
 
   .client-logo {
     width: 20px;

@@ -614,10 +614,10 @@
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
     <!-- Action buttons row with labels -->
-    <div class="actions-row" [class.compact]="compact()">
+    <div class="actions-row" [class.compact]="compact()" [class.reply-actions]="isReply()">
       <!-- Like/Reactions -->
       <div class="action-button like-action" (click)="$event.stopPropagation()">
-        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
+        <app-reaction-button class="action-icon" [event]="targetItem.event" [reactionsFromParent]="reactions()"
           (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         <span class="action-label">Like</span>
       </div>
@@ -625,34 +625,34 @@
       <!-- Comment -->
       <div class="action-button comment-action" role="button" tabindex="0"
         (click)="replyBtn.onClick($event); $event.stopPropagation()">
-        <app-reply-button #replyBtn [event]="targetItem.event"></app-reply-button>
-        <span class="action-label">Comment</span>
+        <app-reply-button class="action-icon" #replyBtn [event]="targetItem.event"></app-reply-button>
+        <span class="action-label">Reply</span>
       </div>
 
       <!-- Share -->
       <div class="action-button share-action" role="button" tabindex="0"
         (click)="openShareDialog(); $event.stopPropagation()">
-        <mat-icon>share</mat-icon>
-        <span class="action-label hide-label-small">Share</span>
+        <mat-icon class="action-icon">share</mat-icon>
+        <span class="action-label">Share</span>
       </div>
 
       <!-- Zap -->
       <div class="action-button zap-action" (click)="$event.stopPropagation()">
-        <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
+        <app-zap-button class="action-icon" [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-        <span class="action-label hide-label-small">Zap</span>
+        <span class="action-label">Zap</span>
       </div>
 
       <!-- Bookmark (right side) -->
       <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
-        <mat-icon>{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
-        <span class="action-label hide-label-small">Bookmark</span>
+        <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
+        <span class="action-label">Bookmark</span>
       </div>
     </div>
 
     <!-- Engagement stats row (below actions) -->
-    @if (!compact() && hasAnyEngagement()) {
+    @if (!compact() && (hasAnyEngagement() || hasProofOfWork(targetItem.event) || (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
     <div class="engagement-stats-row">
       <div class="engagement-stats-left">
         @if (likes().length > 0) {
@@ -675,12 +675,10 @@
           <span class="stat-label">{{ replyCount() === 1 ? 'comment' : 'comments' }}</span>
         </button>
         }
-      </div>
-      <div class="engagement-stats-right">
         @if (repostCount() > 0) {
         <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
           <span class="stat-count">{{ repostCount() }}</span>
-          <span class="stat-label">{{ repostCount() === 1 ? 'repost' : 'reposts' }}</span>
+          <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
         </button>
         }
         @if (quoteCount() > 0) {
@@ -696,6 +694,29 @@
         </button>
         }
       </div>
+      <div class="engagement-stats-right">
+        @if (hasGeohash(targetItem.event)) {
+        <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
+          [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
+          (click)="$event.stopPropagation()">
+          <mat-icon>location_on</mat-icon>
+        </a>
+        }
+        @if (hasProofOfWork(targetItem.event)) {
+        <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
+          <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
+          <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
+        </div>
+        }
+        @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
+        <div class="client-indicator"
+          [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
+          matTooltipPosition="below">
+          <img [src]="getClientLogo(getClientTag(targetItem.event))"
+            [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
+        </div>
+        }
+      </div>
     </div>
     }
     }
@@ -708,31 +729,7 @@
     </button>
     }
 
-    <div class="note-footer-right hide-small footer-right-group">
-      @if (hasGeohash(targetItem.event)) {
-      <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
-        [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
-        (click)="$event.stopPropagation()">
-        <mat-icon>location_on</mat-icon>
-      </a>
-      }
 
-      @if (hasProofOfWork(targetItem.event)) {
-      <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
-        <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
-        <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
-      </div>
-      }
-
-      @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
-      <div class="client-indicator"
-        [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
-        matTooltipPosition="below">
-        <img [src]="getClientLogo(getClientTag(targetItem.event))"
-          [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
-      </div>
-      }
-    </div>
   </mat-card-actions>
   }
 
