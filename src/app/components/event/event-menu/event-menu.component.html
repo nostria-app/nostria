@@ -26,17 +26,6 @@
     }
   </button>
   }
-  @if (showAiOptions()) {
-  <button mat-menu-item (click)="translate()">
-    <mat-icon>translate</mat-icon>
-    Translate
-  </button>
-  <button mat-menu-item (click)="readAloud()">
-    <mat-icon>record_voice_over</mat-icon>
-    Read Aloud
-  </button>
-  <mat-divider></mat-divider>
-  }
   <button mat-menu-item (click)="shareEventDialog()">
     <mat-icon>share</mat-icon>
     Share
@@ -72,6 +61,13 @@
     Play in Media Player
   </button>
   }
+  @if (showAiOptions()) {
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="translate()">
+    <mat-icon>translate</mat-icon>
+    Translate
+  </button>
+  }
   <mat-divider></mat-divider>
   @if (isOurEvent() && isTextNote()) {
   <button mat-menu-item (click)="editEvent()">
@@ -93,6 +89,12 @@
   <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
     <mat-icon>block</mat-icon>
     <span>Block User</span>
+  </button>
+  }
+  @if (showAiOptions()) {
+  <button mat-menu-item (click)="readAloud()">
+    <mat-icon>record_voice_over</mat-icon>
+    Read Aloud
   </button>
   }
 </mat-menu>
