@@ -633,7 +633,7 @@
       <div class="action-button share-action" role="button" tabindex="0"
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon>share</mat-icon>
-        <span class="action-label">Share</span>
+        <span class="action-label hide-label-small">Share</span>
       </div>
 
       <!-- Zap -->
@@ -641,13 +641,13 @@
         <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-        <span class="action-label">Zap</span>
+        <span class="action-label hide-label-small">Zap</span>
       </div>
 
       <!-- Bookmark (right side) -->
       <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
         <mat-icon>{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
-        <span class="action-label">Bookmark</span>
+        <span class="action-label hide-label-small">Bookmark</span>
       </div>
     </div>
 
