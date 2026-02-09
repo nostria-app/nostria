@@ -616,37 +616,37 @@
     <!-- Action buttons row with labels -->
     <div class="actions-row" [class.compact]="compact()">
       <!-- Like/Reactions -->
-      <button mat-button class="action-button like-action" (click)="$event.stopPropagation()">
+      <div class="action-button like-action" (click)="$event.stopPropagation()">
         <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
           (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         <span class="action-label">Like</span>
-      </button>
+      </div>
 
       <!-- Comment -->
-      <button mat-button class="action-button comment-action" (click)="$event.stopPropagation()">
+      <div class="action-button comment-action" (click)="$event.stopPropagation()">
         <app-reply-button [event]="targetItem.event"></app-reply-button>
         <span class="action-label">Comment</span>
-      </button>
+      </div>
 
       <!-- Share -->
-      <button mat-button class="action-button share-action" (click)="openShareDialog(); $event.stopPropagation()">
+      <div class="action-button share-action" role="button" tabindex="0" (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon>share</mat-icon>
         <span class="action-label">Share</span>
-      </button>
+      </div>
 
       <!-- Zap -->
-      <button mat-button class="action-button zap-action" (click)="$event.stopPropagation()">
+      <div class="action-button zap-action" (click)="$event.stopPropagation()">
         <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
         <span class="action-label">Zap</span>
-      </button>
+      </div>
 
       <!-- Bookmark (right side) -->
-      <button mat-button class="action-button bookmark-action" (click)="onBookmarkClick($event)">
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
         <mat-icon>{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
         <span class="action-label">Bookmark</span>
-      </button>
+      </div>
     </div>
 
     <!-- Engagement stats row (below actions) -->
