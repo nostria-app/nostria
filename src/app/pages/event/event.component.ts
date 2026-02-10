@@ -371,6 +371,12 @@ export class EventPageComponent {
   showCompletionStatus = signal(false);
   deepResolutionProgress = signal<string>('');
 
+  // Scroll management - prevents disruptive auto-scroll when user has manually scrolled
+  private currentLoadGeneration = 0;
+  private userHasScrolledDuringLoad = false;
+  private scrollDetectionCleanup: (() => void) | null = null;
+  private isPerformingAutoScroll = false;
+
   // Track if the event has been deleted (NIP-09)
   isDeleted = signal(false);
   deletionReason = signal<string | null>(null);
@@ -378,7 +384,10 @@ export class EventPageComponent {
   constructor() {
     if (this.app.isBrowser()) {
       this.eventFocus.activate();
-      this.destroyRef.onDestroy(() => this.eventFocus.deactivate());
+      this.destroyRef.onDestroy(() => {
+        this.eventFocus.deactivate();
+        this.scrollDetectionCleanup?.();
+      });
     }
 
     // this.item = this.route.snapshot.data['data'];
@@ -434,12 +443,12 @@ export class EventPageComponent {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
           if (id) {
-            await this.loadEvent(id);
-
-            // Scroll to top when navigating to a new event
+            // Scroll to top immediately when navigating to a new event
             // Use panel-aware scrolling to avoid scrolling the wrong panel
             const panel = this.isInRightPanel() ? 'right' : 'left';
-            setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
+            this.layout.scrollLayoutToTop(true, panel);
+
+            await this.loadEvent(id);
           }
         });
       }
@@ -475,6 +484,13 @@ export class EventPageComponent {
     // this.logger.info('loadEvent called with nevent:', nevent);
 
     try {
+      // Increment load generation to cancel any stale auto-scroll operations
+      this.currentLoadGeneration++;
+      this.userHasScrolledDuringLoad = false;
+      if (this.app.isBrowser()) {
+        this.setupUserScrollDetection();
+      }
+
       this.isLoading.set(true);
       this.isLoadingParents.set(true);
       this.isLoadingReplies.set(true);
@@ -611,9 +627,6 @@ export class EventPageComponent {
         setTimeout(() => this.showCompletionStatus.set(false), 3000);
       }
 
-      // Scroll to top after loading - use panel-aware scrolling
-      const panel = this.isInRightPanel() ? 'right' : 'left';
-      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
   }
 
@@ -643,43 +656,87 @@ export class EventPageComponent {
 
   /**
    * Scrolls to the main event with retry logic to handle async content loading
-   * Retries multiple times with increasing delays to ensure DOM is fully rendered
-   * Uses the component's own DOM to avoid affecting other panels
-   * The CSS scroll-margin-top on #main-event handles the toolbar offset
+   * Retries a limited number of times to ensure DOM is rendered.
+   * Skips scrolling if the user has manually scrolled since the load started.
+   * Uses the component's own DOM to avoid affecting other panels.
+   * The CSS scroll-margin-top on #main-event handles the toolbar offset.
    */
-  private scrollToMainEventWithRetry(attempt = 0, maxAttempts = 5): void {
+  private scrollToMainEventWithRetry(attempt = 0, maxAttempts = 3): void {
+    const loadGeneration = this.currentLoadGeneration;
+
+    // Don't scroll if user has already scrolled or a new load started
+    if (this.userHasScrolledDuringLoad || loadGeneration !== this.currentLoadGeneration) return;
+
     // Query within component's own DOM to avoid finding element in wrong panel
     const mainEventElement = this.elementRef.nativeElement.querySelector('#main-event') as HTMLElement | null;
 
     if (mainEventElement) {
       // Wait for next animation frame to ensure rendering is complete
       requestAnimationFrame(() => {
-        // Additional timeout to ensure all content (including images) has loaded
+        if (this.userHasScrolledDuringLoad || loadGeneration !== this.currentLoadGeneration) return;
+
         setTimeout(() => {
-          const mainEventElement = this.elementRef.nativeElement.querySelector('#main-event') as HTMLElement | null;
-          if (mainEventElement) {
-            // Find the scrollable container (panel) for this component
-            const scrollContainer = this.findScrollContainer(mainEventElement);
+          if (this.userHasScrolledDuringLoad || loadGeneration !== this.currentLoadGeneration) return;
+
+          const el = this.elementRef.nativeElement.querySelector('#main-event') as HTMLElement | null;
+          if (el) {
+            const scrollContainer = this.findScrollContainer(el);
             if (scrollContainer) {
-              // Calculate the offset to scroll to
               const containerRect = scrollContainer.getBoundingClientRect();
-              const elementRect = mainEventElement.getBoundingClientRect();
+              const elementRect = el.getBoundingClientRect();
               const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top);
+
+              this.isPerformingAutoScroll = true;
               scrollContainer.scrollTo({
                 top: scrollTop,
-                behavior: attempt === 0 ? 'instant' : 'smooth',
+                behavior: 'instant',
               });
+              // Clear the flag after the scroll event has propagated
+              setTimeout(() => { this.isPerformingAutoScroll = false; }, 50);
             }
           }
-        }, 250);
+        }, 150);
       });
     } else if (attempt < maxAttempts) {
       // Element not found yet, retry with exponential backoff
-      const delay = Math.min(200 * Math.pow(1.5, attempt), 1000); // Max 1 second
+      const delay = Math.min(200 * Math.pow(1.5, attempt), 600);
       setTimeout(() => {
+        if (this.userHasScrolledDuringLoad || loadGeneration !== this.currentLoadGeneration) return;
         this.scrollToMainEventWithRetry(attempt + 1, maxAttempts);
       }, delay);
     }
+  }
+
+  /**
+   * Sets up a scroll listener on the panel container to detect user-initiated scrolls.
+   * When detected, auto-scroll operations are suppressed for the current load.
+   */
+  private setupUserScrollDetection(): void {
+    this.scrollDetectionCleanup?.();
+    this.scrollDetectionCleanup = null;
+
+    const generation = this.currentLoadGeneration;
+
+    // Delay setup slightly so the initial scroll-to-top doesn't trigger detection
+    setTimeout(() => {
+      if (generation !== this.currentLoadGeneration) return;
+
+      const scrollContainer = this.findScrollContainer(this.elementRef.nativeElement);
+      if (!scrollContainer) return;
+
+      const handler = () => {
+        // Ignore programmatic auto-scrolls
+        if (this.isPerformingAutoScroll) return;
+        if (generation !== this.currentLoadGeneration) return;
+
+        this.userHasScrolledDuringLoad = true;
+        // Once detected, remove the listener — no need to keep listening
+        scrollContainer.removeEventListener('scroll', handler);
+      };
+
+      scrollContainer.addEventListener('scroll', handler, { passive: true });
+      this.scrollDetectionCleanup = () => scrollContainer.removeEventListener('scroll', handler);
+    }, 300);
   }
 
   /**
