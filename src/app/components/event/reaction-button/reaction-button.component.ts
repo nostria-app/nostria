@@ -398,7 +398,7 @@ export class ReactionButtonComponent {
   readonly emojiCategories = EMOJI_CATEGORIES;
 
   // Quick reactions for the picker
-  readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
+  readonly quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
