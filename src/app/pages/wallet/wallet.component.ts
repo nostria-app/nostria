@@ -267,8 +267,13 @@ export class WalletComponent {
     this.donationError.set(null);
 
     try {
-      const request = await new LN(connectionString).pay('nostria@coinos.io', USD(amount));
-      console.log('Payment request created:', request);
+      const ln = new LN(connectionString);
+      try {
+        const request = await ln.pay('nostria@coinos.io', USD(amount));
+        console.log('Payment request created:', request);
+      } finally {
+        ln.close();
+      }
 
       this.donationSuccess.set(true);
       this.snackBar.open(`Thank you for your $${amount.toFixed(2)} donation!`, 'Dismiss', {
