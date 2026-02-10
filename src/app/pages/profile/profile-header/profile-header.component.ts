@@ -258,13 +258,7 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   // Computed to get website URL with protocol prefix
   websiteUrl = computed(() => {
-    const websiteData = this.profile()?.data.website;
-    if (!websiteData) {
-      return '';
-    }
-
-    // Get the first website if it's an array
-    const website = Array.isArray(websiteData) ? websiteData[0] : websiteData;
+    const website = this.profile()?.data.website;
     if (!website) {
       return '';
     }
@@ -272,69 +266,30 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.getWebsiteUrl(website);
   });
 
-  // Computed to get all websites as an array
-  websites = computed(() => {
-    const websiteData = this.profile()?.data.website;
-    if (!websiteData) {
-      return [];
-    }
-    return Array.isArray(websiteData) ? websiteData : [websiteData];
-  });
-
-  // Add signal for verified identifiers (supports multiple NIP-05 addresses)
-  verifiedIdentifiers = signal<{
+  // Add signal for verified identifier
+  verifiedIdentifier = signal<{
     value: string;
     valid: boolean;
     status: string;
-  }[]>([]);
+  }>({ value: '', valid: false, status: '' });
 
-  // Legacy signal for backwards compatibility - returns first identifier
-  verifiedIdentifier = computed(() => {
-    const identifiers = this.verifiedIdentifiers();
-    return identifiers.length > 0
-      ? identifiers[0]
-      : { value: '', valid: false, status: '' };
-  });
-
-  // Computed favicon URLs for all verified NIP-05 identifiers
-  verifiedFaviconUrls = computed(() => {
-    return this.verifiedIdentifiers().map(identifier => {
-      const value = identifier.value;
-      if (!value) return '';
-
-      // Extract domain from possible formats like 'user@domain.com' or 'domain.com'
-      const domain = value.includes('@') ? value.split('@')[1] : value;
-      if (!domain) return '';
-
-      // Normalize domain and remove any path fragments
-      const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
-      return clean; // Return domain, not full URL - we'll compute URL dynamically
-    });
-  });
-
-  // Legacy computed for backwards compatibility - returns first favicon URL
+  // Computed favicon URL for verified NIP-05 identifier
   verifiedFaviconUrl = computed(() => {
-    const urls = this.verifiedFaviconUrls();
-    return urls.length > 0 ? this.getFaviconUrl(urls[0]) : '';
-  });
+    const value = this.verifiedIdentifier().value;
+    if (!value) return '';
 
-  // Track per-favicon state: which indexes tried .png fallback, which failed completely
-  faviconTriedPng = signal<Set<number>>(new Set());
-  faviconFailed = signal<Set<number>>(new Set());
-
-  // Check if a specific favicon should be visible (not failed)
-  isFaviconVisible(index: number): boolean {
-    return !this.faviconFailed().has(index);
-  }
-
-  // Get the current favicon URL for an index (with .png fallback handling)
-  getCurrentFaviconUrl(index: number): string {
-    const domain = this.verifiedFaviconUrls()[index];
+    // Extract domain from possible formats like 'user@domain.com' or 'domain.com'
+    const domain = value.includes('@') ? value.split('@')[1] : value;
     if (!domain) return '';
 
-    const usePng = this.faviconTriedPng().has(index);
-    return this.getFaviconUrl(domain, usePng);
-  }
+    // Normalize domain and remove any path fragments
+    const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+    return this.getFaviconUrl(clean);
+  });
+
+  // Track favicon state
+  faviconTriedPng = signal<boolean>(false);
+  faviconFailed = signal<boolean>(false);
 
   name = computed(() => {
     const profileData = this.profile();
@@ -432,7 +387,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.zapService.getLightningAddress(profileData) !== null;
   });
 
-  // Computed to get the primary lightning address (first one if multiple exist)
+  // Computed to get the primary lightning address
   lightningAddress = computed(() => {
     const profileData = this.profile()?.data;
     if (!profileData) return null;
@@ -440,9 +395,9 @@ export class ProfileHeaderComponent implements OnDestroy {
     const lud16 = profileData.lud16;
     const lud06 = profileData.lud06;
 
-    // lud16 takes priority over lud06, use first value if array
+    // lud16 takes priority over lud06
     if (lud16) {
-      return Array.isArray(lud16) ? lud16[0] : lud16;
+      return lud16;
     }
     return lud06 || null;
   });
@@ -515,17 +470,17 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // Add effect to verify identifiers when profile changes
+    // Add effect to verify identifier when profile changes
     effect(async () => {
       const currentProfile = this.profile();
       if (currentProfile?.data.nip05) {
-        const results = await this.getVerifiedIdentifiers();
+        const result = await this.getVerifiedIdentifier();
         untracked(() => {
-          this.verifiedIdentifiers.set(results);
+          this.verifiedIdentifier.set(result);
         });
       } else {
         untracked(() => {
-          this.verifiedIdentifiers.set([]);
+          this.verifiedIdentifier.set({ value: '', valid: false, status: '' });
         });
       }
     });
@@ -616,13 +571,13 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // Reset favicon state whenever the verified identifiers change
+    // Reset favicon state whenever the verified identifier changes
     effect(() => {
       // Touch the signal so the effect depends on it
-      this.verifiedIdentifiers();
+      this.verifiedIdentifier();
       // Reset favicon fallback states when profile changes
-      this.faviconTriedPng.set(new Set());
-      this.faviconFailed.set(new Set());
+      this.faviconTriedPng.set(false);
+      this.faviconFailed.set(false);
     });
 
     // Load mutual followers ("Followers you know") when profile's following list is available
@@ -1011,57 +966,51 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   /**
-   * Verify all NIP-05 identifiers for the profile
+   * Verify the NIP-05 identifier for the profile
    */
-  private async getVerifiedIdentifiers(): Promise<{
+  private async getVerifiedIdentifier(): Promise<{
     value: string;
     valid: boolean;
     status: string;
-  }[]> {
+  }> {
     const metadata = this.profile();
     if (!metadata || !metadata.data.nip05) {
-      return [];
+      return { value: '', valid: false, status: '' };
     }
 
-    const nip05Data = metadata.data.nip05;
-    const nip05List = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
+    const nip05 = metadata.data.nip05;
+    if (!nip05 || typeof nip05 !== 'string') {
+      return { value: '', valid: false, status: '' };
+    }
 
-    const results: { value: string; valid: boolean; status: string }[] = [];
+    const value = this.utilities.parseNip05(nip05);
+    if (!value) return { value: '', valid: false, status: '' };
 
-    for (const nip05 of nip05List) {
-      if (!nip05 || typeof nip05 !== 'string') continue;
+    if (isNip05(nip05)) {
+      try {
+        const profile = await queryProfile(nip05);
 
-      const value = this.utilities.parseNip05(nip05);
-      if (!value) continue; // Skip if parseNip05 returns null
-
-      if (isNip05(nip05)) {
-        try {
-          const profile = await queryProfile(nip05);
-
-          if (profile) {
-            if (profile.pubkey === metadata.event.pubkey) {
-              results.push({ value, valid: true, status: 'Verified valid' });
-            } else {
-              this.logger.warn(
-                'NIP-05 profile pubkey mismatch:',
-                profile.pubkey,
-                metadata.event.pubkey
-              );
-              results.push({ value, valid: false, status: 'Pubkey mismatch' });
-            }
+        if (profile) {
+          if (profile.pubkey === metadata.event.pubkey) {
+            return { value, valid: true, status: 'Verified valid' };
           } else {
-            results.push({ value, valid: false, status: 'Profile not found' });
+            this.logger.warn(
+              'NIP-05 profile pubkey mismatch:',
+              profile.pubkey,
+              metadata.event.pubkey
+            );
+            return { value, valid: false, status: 'Pubkey mismatch' };
           }
-        } catch (error) {
-          this.logger.warn('Error verifying NIP-05:', nip05, error);
-          results.push({ value, valid: false, status: 'Verification failed' });
+        } else {
+          return { value, valid: false, status: 'Profile not found' };
         }
-      } else {
-        results.push({ value, valid: false, status: 'Invalid NIP-05 format' });
+      } catch (error) {
+        this.logger.warn('Error verifying NIP-05:', nip05, error);
+        return { value, valid: false, status: 'Verification failed' };
       }
+    } else {
+      return { value, valid: false, status: 'Invalid NIP-05 format' };
     }
-
-    return results;
   }
 
   // Add methods for QR code visibility
@@ -1100,17 +1049,15 @@ export class ProfileHeaderComponent implements OnDestroy {
     const profile = this.profile();
     const lud16 = profile?.data.lud16;
     const lud06 = profile?.data.lud06;
-    // Get first lightning address (lud16 takes priority)
-    const lightningAddress = lud16
-      ? (Array.isArray(lud16) ? lud16[0] : lud16)
-      : lud06;
+    // Get lightning address (lud16 takes priority)
+    const lightningAddress = lud16 || lud06;
     if (lightningAddress) {
       this.layout.copyToClipboard(lightningAddress, 'lightning address');
     }
   }
 
-  copyNip05ToClipboard(value?: string): void {
-    const nip05Value = value || this.verifiedIdentifier().value;
+  copyNip05ToClipboard(): void {
+    const nip05Value = this.verifiedIdentifier().value;
     if (nip05Value) {
       this.layout.copyToClipboard(nip05Value, 'NIP-05');
     }
@@ -1363,31 +1310,29 @@ export class ProfileHeaderComponent implements OnDestroy {
   /**
    * Handle favicon load error - try .png fallback first, then hide if that fails too
    */
-  onFaviconError(event: Event, index: number): void {
+  onFaviconError(event: Event): void {
     const img = event.target as HTMLImageElement | null;
     if (!img) return;
 
-    const triedPng = this.faviconTriedPng();
-
     // If we haven't tried .png yet and Google favicon is not enabled, try it
-    if (!triedPng.has(index) && !this.settingsService.settings().googleFaviconEnabled) {
+    if (!this.faviconTriedPng() && !this.settingsService.settings().googleFaviconEnabled) {
       // Mark that we're trying .png
-      const newTriedPng = new Set(triedPng);
-      newTriedPng.add(index);
-      this.faviconTriedPng.set(newTriedPng);
+      this.faviconTriedPng.set(true);
 
-      // Update the image src to try .png
-      const domain = this.verifiedFaviconUrls()[index];
-      if (domain) {
-        img.src = this.getFaviconUrl(domain, true);
-        return; // Don't hide yet, let it try to load .png
+      // Get domain from verified identifier
+      const value = this.verifiedIdentifier().value;
+      if (value) {
+        const domain = value.includes('@') ? value.split('@')[1] : value;
+        if (domain) {
+          const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+          img.src = this.getFaviconUrl(clean, true);
+          return; // Don't hide yet, let it try to load .png
+        }
       }
     }
 
     // Both .ico and .png failed (or Google API failed) - hide this favicon
-    const newFailed = new Set(this.faviconFailed());
-    newFailed.add(index);
-    this.faviconFailed.set(newFailed);
+    this.faviconFailed.set(true);
     img.style.display = 'none';
   }
 

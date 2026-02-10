@@ -139,56 +139,22 @@
         </mat-form-field>
       </p>
       <!-- Multi-value Website Section -->
-      <div class="multi-value-section">
-        <div class="section-label">
-          <mat-icon>public</mat-icon>
-          <span>Website</span>
-        </div>
-        @for (website of websiteList(); track $index) {
-        <div class="multi-value-row">
-          <mat-form-field class="input-full-width">
-            <mat-label>Website {{ websiteList().length > 1 ? $index + 1 : '' }}</mat-label>
-            <input matInput type="text" [value]="website" (input)="updateWebsite($index, $any($event.target).value)"
-              placeholder="https://" />
-          </mat-form-field>
-          @if (websiteList().length > 1) {
-          <button mat-icon-button (click)="removeWebsite($index)" matTooltip="Remove website" class="remove-row-button">
-            <mat-icon>remove_circle_outline</mat-icon>
-          </button>
-          }
-        </div>
-        }
-        <button mat-stroked-button (click)="addWebsite()" class="add-row-button">
-          <mat-icon>add</mat-icon>
-          Add another website
-        </button>
-      </div>
+      <p>
+        <mat-form-field class="input-full-width">
+          <mat-icon matPrefix>public</mat-icon>
+          <mat-label>Website</mat-label>
+          <input matInput type="text" [(ngModel)]="website" placeholder="https://" />
+        </mat-form-field>
+      </p>
 
-      <!-- Multi-value NIP-05 Section -->
-      <div class="multi-value-section">
-        <div class="section-label">
-          <mat-icon>how_to_reg</mat-icon>
-          <span>E-mail/Domain Identifier (NIP-05)</span>
-        </div>
-        @for (nip05 of nip05List(); track $index) {
-        <div class="multi-value-row">
-          <mat-form-field class="input-full-width">
-            <mat-label>NIP-05 {{ nip05List().length > 1 ? $index + 1 : '' }}</mat-label>
-            <input matInput type="text" [value]="nip05" (input)="updateNip05($index, $any($event.target).value)"
-              placeholder="user@domain.com" />
-          </mat-form-field>
-          @if (nip05List().length > 1) {
-          <button mat-icon-button (click)="removeNip05($index)" matTooltip="Remove NIP-05" class="remove-row-button">
-            <mat-icon>remove_circle_outline</mat-icon>
-          </button>
-          }
-        </div>
-        }
-        <button mat-stroked-button (click)="addNip05()" class="add-row-button">
-          <mat-icon>add</mat-icon>
-          Add another NIP-05
-        </button>
-      </div>
+      <!-- NIP-05 Section -->
+      <p>
+        <mat-form-field class="input-full-width">
+          <mat-icon matPrefix>how_to_reg</mat-icon>
+          <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
+          <input matInput type="text" [(ngModel)]="nip05" placeholder="user@domain.com" />
+        </mat-form-field>
+      </p>
       <p>
         <mat-form-field class="input-full-width">
           <mat-icon matPrefix>currency_bitcoin</mat-icon>

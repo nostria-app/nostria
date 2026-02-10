@@ -5,13 +5,11 @@ import { DataService } from './data.service';
 import { AccountStateService } from './account-state.service';
 import { MediaService } from './media.service';
 import { LoggerService } from './logger.service';
-import { UtilitiesService } from './utilities.service';
 import { Event } from 'nostr-tools';
 import { AccountRelayService } from './relays/account-relay';
 
 /**
  * Interface for profile data
- * Supports both single values and arrays for fields that can have multiple entries
  */
 export interface ProfileData {
   display_name?: string;
@@ -19,10 +17,10 @@ export interface ProfileData {
   about?: string;
   picture?: string;
   banner?: string;
-  website?: string | string[]; // Can have multiple websites
-  lud16?: string | string[]; // Can have multiple lightning addresses (render only first)
+  website?: string;
+  lud16?: string; // Lightning address
   lud06?: string; // Lightning address (deprecated)
-  nip05?: string | string[]; // Can have multiple NIP-05 identifiers
+  nip05?: string; // Nostr address
   [key: string]: unknown; // Allow additional custom fields
 }
 
@@ -67,7 +65,6 @@ export class Profile {
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
   private logger = inject(LoggerService);
-  private utilities = inject(UtilitiesService);
 
   private isUpdating = signal<boolean>(false);
 
@@ -276,23 +273,15 @@ export class Profile {
     // Handle NIP-05 identifier formatting
     if (cleaned.nip05) {
       // If user enters "@domain.com" (root domain), convert to "_@domain.com"
-      if (Array.isArray(cleaned.nip05)) {
-        cleaned.nip05 = cleaned.nip05.map(nip05 => {
-          if (nip05.startsWith('@') && !nip05.startsWith('_@')) {
-            return `_${nip05}`;
-          }
-          return nip05;
-        });
-      } else if (cleaned.nip05.startsWith('@') && !cleaned.nip05.startsWith('_@')) {
+      if (cleaned.nip05.startsWith('@') && !cleaned.nip05.startsWith('_@')) {
         cleaned.nip05 = `_${cleaned.nip05}`;
       }
       // For regular "user@domain.com" format, leave as-is
     }
 
-    // Remove empty string values and empty arrays to keep the profile clean
+    // Remove empty string values to keep the profile clean
     Object.keys(cleaned).forEach(key => {
-      const value = cleaned[key];
-      if (value === '' || (Array.isArray(value) && value.length === 0)) {
+      if (cleaned[key] === '') {
         delete cleaned[key];
       }
     });
@@ -311,48 +300,12 @@ export class Profile {
     const existingProfile = this.accountState.profile();
     const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
 
-    // Generate profile tags from profile data for the new tag-based format
-    const profileTags = this.utilities.profileDataToTags(profileData);
-
-    // Merge profile tags with existing tags (e.g., NIP-39 external identities)
-    // External identity 'i' tags come first, then profile tags
-    const allTags = [...tags, ...profileTags];
-
-    // Create JSON content for backwards compatibility with other clients
-    // Convert arrays to single values for JSON (use first value)
-    const jsonContent = this.prepareProfileJsonContent(profileData);
-
     // Create unsigned event
-    const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(jsonContent), allTags);
+    const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profileData), tags);
 
     // Sign the event
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
     return signedEvent;
-  }
-
-  /**
-   * Prepares profile data for JSON content by converting arrays to single values.
-   * This ensures backwards compatibility with clients that don't support tag-based profiles.
-   * @param profileData Profile data that may contain arrays
-   * @returns Profile data with single values only
-   */
-  private prepareProfileJsonContent(profileData: ProfileData): Record<string, unknown> {
-    const jsonContent: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(profileData)) {
-      if (value === undefined || value === null) continue;
-
-      // For arrays, use the first value for JSON backwards compatibility
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          jsonContent[key] = value[0];
-        }
-      } else {
-        jsonContent[key] = value;
-      }
-    }
-
-    return jsonContent;
   }
 }

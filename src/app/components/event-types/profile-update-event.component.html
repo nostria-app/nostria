@@ -1,5 +1,5 @@
-<div class="profile-update-container" (click)="navigateToProfile()" (keyup.enter)="navigateToProfile()"
-  tabindex="0" role="button" aria-label="View profile">
+<div class="profile-update-container" (click)="navigateToProfile()" (keyup.enter)="navigateToProfile()" tabindex="0"
+  role="button" aria-label="View profile">
 
   <!-- Banner Section -->
   @if (banner()) {
@@ -27,8 +27,8 @@
     <!-- Follow Button -->
     <div class="profile-actions">
       @if (!isFollowing()) {
-      <button mat-mini-fab color="primary" class="follow-button" (click)="followUser($event)"
-        aria-label="Follow user" matTooltip="Follow">
+      <button mat-mini-fab color="primary" class="follow-button" (click)="followUser($event)" aria-label="Follow user"
+        matTooltip="Follow">
         <mat-icon>person_add</mat-icon>
       </button>
       } @else {
@@ -53,14 +53,10 @@
     </div>
 
     <!-- NIP-05 Verification -->
-    @if (nip05List().length > 0) {
-    <div class="profile-nip05-list">
-      @for (nip05 of nip05List(); track nip05) {
-      <div class="profile-nip05">
-        <mat-icon class="nip05-icon">verified</mat-icon>
-        <span class="nip05-text">{{ nip05 }}</span>
-      </div>
-      }
+    @if (nip05()) {
+    <div class="profile-nip05">
+      <mat-icon class="nip05-icon">verified</mat-icon>
+      <span class="nip05-text">{{ nip05() }}</span>
     </div>
     }
 
@@ -73,12 +69,12 @@
 
     <!-- Additional Info -->
     <div class="profile-meta">
-      @for (website of websiteList(); track website) {
+      @if (website()) {
       <div class="meta-item">
         <mat-icon>link</mat-icon>
-        <a [href]="website" target="_blank" rel="noopener noreferrer" class="website-link"
+        <a [href]="website()" target="_blank" rel="noopener noreferrer" class="website-link"
           (click)="$event.stopPropagation()">
-          {{ website }}
+          {{ website() }}
         </a>
       </div>
       }

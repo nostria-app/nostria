@@ -123,22 +123,21 @@
       }
 
       @if (profile()) {
-      <!-- Multiple NIP-05 identifiers -->
-      @for (verifiedId of verifiedIdentifiers(); track verifiedId.value; let i = $index) {
-      <div class="profile-item pointer" title="{{ verifiedId.status }}">
-        @if (verifiedId.valid) {
+      <!-- NIP-05 identifier -->
+      @if (verifiedIdentifier().value) {
+      <div class="profile-item pointer" title="{{ verifiedIdentifier().status }}">
+        @if (verifiedIdentifier().valid) {
         <mat-icon class="verified-icon">verified</mat-icon>
         } @else {
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
-        <span [class.strikethrough]="!verifiedId.valid" (click)="copyNip05ToClipboard(verifiedId.value)"
-          (keydown.enter)="copyNip05ToClipboard(verifiedId.value)"
-          (keydown.space)="copyNip05ToClipboard(verifiedId.value)" tabindex="0" role="button"
-          [attr.aria-label]="'Copy ' + verifiedId.value + ' to clipboard'">{{ verifiedId.value }}</span>
+        <span [class.strikethrough]="!verifiedIdentifier().valid" (click)="copyNip05ToClipboard()"
+          (keydown.enter)="copyNip05ToClipboard()" (keydown.space)="copyNip05ToClipboard()" tabindex="0" role="button"
+          [attr.aria-label]="'Copy ' + verifiedIdentifier().value + ' to clipboard'">{{ verifiedIdentifier().value
+          }}</span>
 
-        @if (verifiedFaviconUrls()[i] && isFaviconVisible(i)) {
-        <img [src]="getCurrentFaviconUrl(i)" alt="favicon" class="verified-favicon"
-          (error)="onFaviconError($event, i)" />
+        @if (verifiedFaviconUrl() && !faviconFailed()) {
+        <img [src]="verifiedFaviconUrl()" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
         }
       </div>
       }
@@ -165,12 +164,12 @@
       }
       }
 
-      <!-- Multiple websites -->
-      @for (website of websites(); track website) {
-      <div class="profile-item" title="{{ getWebsiteUrl(website) }}">
+      <!-- Website -->
+      @if (profile()?.data.website) {
+      <div class="profile-item" title="{{ websiteUrl() }}">
         <mat-icon>link</mat-icon>
-        <span><a [href]="getWebsiteUrl(website)" target="_blank" rel="noopener noreferrer">{{
-            website
+        <span><a [href]="websiteUrl()" target="_blank" rel="noopener noreferrer">{{
+            profile()!.data.website
             }}</a></span>
       </div>
       }
