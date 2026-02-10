@@ -1,7 +1,5 @@
 @if (disableLink()) {
-<span class="profile-link disabled" (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave()"
-  (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
-  (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()">
+<span class="profile-link disabled">
   @if (isLoading() || profile() === null) {
   ...
   } @else if (profile() && !profile().isEmpty && profile().data) {
@@ -17,10 +15,7 @@
   }
 </span>
 } @else {
-<a [attr.href]="profileUrl()" class="profile-link" (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave()"
-  (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
-  (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
-  (click)="onProfileClick($event)">
+<a [attr.href]="profileUrl()" class="profile-link" (click)="onProfileClick($event)">
   @if (isLoading() || profile() === null) {
   ...
   } @else if (profile() && !profile().isEmpty && profile().data) {
