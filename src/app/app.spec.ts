@@ -138,3 +138,71 @@ describe('People nav follow set sorting', () => {
     expect(sorted.length).toBe(0);
   });
 });
+
+/**
+ * Unit tests for search blur dismiss logic.
+ * Verifies that search results are dismissed on in-app focus changes
+ * but NOT when the window/app loses focus (e.g., Alt+Tab).
+ */
+describe('Search blur dismiss logic', () => {
+  /**
+   * Mirrors the onSearchBlur logic from AppComponent (app.ts).
+   * Returns 'keep' if search should stay open, 'dismiss' if it should close,
+   * or 'deferred' if the decision is deferred (async check).
+   */
+  function getBlurAction(
+    relatedTarget: HTMLElement | null,
+    searchContainerContainsTarget: boolean,
+  ): 'keep' | 'dismiss' | 'deferred' {
+    // If focus is moving to another element within the search container, don't close
+    if (relatedTarget && searchContainerContainsTarget) {
+      return 'keep';
+    }
+
+    // If relatedTarget is null, focus may have left the window entirely
+    if (!relatedTarget) {
+      return 'deferred';
+    }
+
+    // Focus moved to another element within the app but outside the search container
+    return 'dismiss';
+  }
+
+  /**
+   * Mirrors the deferred check inside the setTimeout callback.
+   * Returns 'keep' if window lost focus, 'dismiss' otherwise.
+   */
+  function getDeferredAction(documentHasFocus: boolean): 'keep' | 'dismiss' {
+    if (!documentHasFocus) {
+      return 'keep';
+    }
+    return 'dismiss';
+  }
+
+  it('should keep search open when focus moves within the search container', () => {
+    const target = document.createElement('div');
+    const action = getBlurAction(target, true);
+    expect(action).toBe('keep');
+  });
+
+  it('should dismiss search when focus moves to element outside search container', () => {
+    const target = document.createElement('button');
+    const action = getBlurAction(target, false);
+    expect(action).toBe('dismiss');
+  });
+
+  it('should defer decision when relatedTarget is null (potential window blur)', () => {
+    const action = getBlurAction(null, false);
+    expect(action).toBe('deferred');
+  });
+
+  it('should keep search open when deferred check finds window lost focus', () => {
+    const action = getDeferredAction(false);
+    expect(action).toBe('keep');
+  });
+
+  it('should dismiss search when deferred check finds window still has focus', () => {
+    const action = getDeferredAction(true);
+    expect(action).toBe('dismiss');
+  });
+});
