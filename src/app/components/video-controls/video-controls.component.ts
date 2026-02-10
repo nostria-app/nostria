@@ -73,7 +73,6 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '(touchstart)': 'onTouchStart($event)',
     '(click)': 'onOverlayClick($event)',
     '(dblclick)': 'onOverlayDoubleClick($event)',
-    '(document:keydown)': 'onKeyDown($event)',
   },
 })
 export class VideoControlsComponent implements OnDestroy {
@@ -134,6 +133,7 @@ export class VideoControlsComponent implements OnDestroy {
 
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private videoEventCleanup: (() => void) | null = null;
+  private readonly boundOnKeyDown = (event: KeyboardEvent) => this.onKeyDown(event);
 
   // Merged config with defaults
   mergedConfig = computed(() => ({
@@ -187,6 +187,7 @@ export class VideoControlsComponent implements OnDestroy {
       this.mediaQueryList = window.matchMedia('(max-width: 600px)');
       this.isSmallScreen.set(this.mediaQueryList.matches);
       this.mediaQueryList.addEventListener('change', this.onMediaQueryChange);
+      document.addEventListener('keydown', this.boundOnKeyDown);
     }
 
     // Watch for video element changes and attach event listeners
@@ -242,6 +243,8 @@ export class VideoControlsComponent implements OnDestroy {
     document.removeEventListener('touchmove', this.boundProgressTouchMove);
     document.removeEventListener('touchend', this.boundProgressTouchEnd);
     document.removeEventListener('touchcancel', this.boundProgressTouchEnd);
+    // Clean up keyboard listener
+    document.removeEventListener('keydown', this.boundOnKeyDown);
     // Clean up media query listener
     this.mediaQueryList?.removeEventListener('change', this.onMediaQueryChange);
   }

@@ -175,5 +175,15 @@ describe('VideoControlsComponent', () => {
 
       document.body.removeChild(textarea);
     });
+
+    it('should stop handling keys after component is destroyed', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      spyOn(component.playPause, 'emit');
+      fixture.destroy();
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
   });
 });
