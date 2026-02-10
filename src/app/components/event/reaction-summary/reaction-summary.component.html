@@ -1,7 +1,7 @@
 <div class="reaction-summary">
   @if (!hideTabs()) {
   <div class="summary-tabs">
-    @for (tab of tabs; track tab) {
+    @for (tab of visibleTabs(); track tab) {
     <button class="summary-tab" [class.active]="selectedTab() === tab" matRipple (click)="onTabClick(tab, $event)">
       <span class="tab-label">{{ tabLabel(tab) }}</span>
       <span class="tab-count">{{ tabCount(tab) }}</span>

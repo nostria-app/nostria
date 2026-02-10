@@ -432,8 +432,6 @@
 }
 
 .bookmark-action {
-  margin-left: auto;
-
   &:hover {
     color: var(--mat-sys-primary);
 
@@ -442,6 +440,67 @@
       color: var(--mat-sys-primary);
     }
   }
+}
+
+.quote-action {
+  &:hover {
+    color: var(--mat-sys-primary);
+
+    >mat-icon,
+    .action-label {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// Top emojis indicator (right-aligned in actions row)
+.emoji-indicators {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  .aggregated-emojis {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    .emoji-item {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .custom-emoji {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+    }
+  }
+
+  .emoji-more {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+}
+
+// Metadata indicators row (PoW, geohash, client)
+.metadata-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  justify-content: flex-end;
 }
 
 // Engagement stats row above actions
