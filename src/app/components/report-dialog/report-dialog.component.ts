@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -59,6 +59,7 @@ interface RelayPublishResult {
   ],
   templateUrl: './report-dialog.component.html',
   styleUrl: './report-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDialogComponent {
   private dialogRef = inject(MatDialogRef<ReportDialogComponent>);
