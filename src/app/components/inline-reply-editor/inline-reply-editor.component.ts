@@ -7,7 +7,8 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
-  HostListener,
+  DestroyRef,
+  afterNextRender,
   input,
   output,
   ChangeDetectionStrategy,
@@ -140,12 +141,29 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   private imagePlaceholder = inject(ImagePlaceholderService);
   private utilities = inject(UtilitiesService);
   private localSettings = inject(LocalSettingsService);
+  private destroyRef = inject(DestroyRef);
   private publishSubscription?: Subscription;
   private publishInitiated = signal(false);
 
   @ViewChild('contentTextarea') contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
+
+  // Bound reference for document-level mousedown listener
+  private onDocumentClick = (event: MouseEvent): void => {
+    if (!this.isExpanded()) return;
+    // Ignore clicks within 100ms of expansion to prevent immediate collapse
+    if (Date.now() - this.expandedAt < 100) return;
+    if (this.isPublishing() || this.isUploading() || this.content().trim()) return;
+
+    const clickedInside = this.elementRef.nativeElement.contains(event.target);
+    const mentionAutocomplete = document.querySelector('app-mention-autocomplete');
+    const clickedOnMentionAutocomplete = mentionAutocomplete?.contains(event.target as Node);
+
+    if (!clickedInside && !clickedOnMentionAutocomplete) {
+      this.isExpanded.set(false);
+    }
+  };
 
   // Computed properties
   currentAccountPubkey = computed(() => this.accountState.pubkey());
@@ -165,6 +183,15 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
+    // Register document-level event listener (SSR-safe)
+    afterNextRender(() => {
+      document.addEventListener('mousedown', this.onDocumentClick);
+
+      this.destroyRef.onDestroy(() => {
+        document.removeEventListener('mousedown', this.onDocumentClick);
+      });
+    });
+
     // React to replyToEvent changes (when navigating between events)
     effect(() => {
       const event = this.replyToEvent();
@@ -219,22 +246,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
 
   collapseEditor(): void {
     if (!this.content().trim() && !this.isPublishing() && !this.isUploading()) {
-      this.isExpanded.set(false);
-    }
-  }
-
-  @HostListener('document:mousedown', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.isExpanded()) return;
-    // Ignore clicks within 100ms of expansion to prevent immediate collapse
-    if (Date.now() - this.expandedAt < 100) return;
-    if (this.isPublishing() || this.isUploading() || this.content().trim()) return;
-
-    const clickedInside = this.elementRef.nativeElement.contains(event.target);
-    const mentionAutocomplete = document.querySelector('app-mention-autocomplete');
-    const clickedOnMentionAutocomplete = mentionAutocomplete?.contains(event.target as Node);
-
-    if (!clickedInside && !clickedOnMentionAutocomplete) {
       this.isExpanded.set(false);
     }
   }
