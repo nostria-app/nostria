@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,7 +16,6 @@ type ViewMode = 'icon' | 'full';
 @Component({
   selector: 'app-repost-button',
   imports: [
-    CommonModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
