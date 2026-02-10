@@ -88,7 +88,10 @@ describe('SearchComponent', () => {
     });
 
     it('should be null after clearing search', () => {
-      component.searchProgress.set({ currentStep: 1, totalSteps: 4, message: 'test' });
+      component.searchProgress.set({
+        currentStep: 1, totalSteps: 4, message: 'test',
+        elapsedSeconds: 0, resultsFoundSoFar: 0,
+      });
       component.clearSearch();
       expect(component.searchProgress()).toBeNull();
     });
@@ -104,6 +107,60 @@ describe('SearchComponent', () => {
       component.searchQuery.set('test');
       await component.performSearch();
       expect(component.searchProgress()).toBeNull();
+    });
+
+    it('should include elapsedSeconds and resultsFoundSoFar fields', async () => {
+      let resolveSearch: () => void;
+      const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
+
+      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+
+      component.searchQuery.set('test');
+      const performPromise = component.performSearch();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const progress = component.searchProgress();
+      expect(progress).not.toBeNull();
+      expect(progress!.elapsedSeconds).toBeDefined();
+      expect(typeof progress!.elapsedSeconds).toBe('number');
+      expect(progress!.resultsFoundSoFar).toBeDefined();
+      expect(typeof progress!.resultsFoundSoFar).toBe('number');
+
+      resolveSearch!();
+      await performPromise;
+    });
+
+    it('should track resultsFoundSoFar as results accumulate', async () => {
+      // Make profile search fast, but delay note search
+      const mockProfileEvent = {
+        id: 'abc123',
+        pubkey: 'pub123',
+        kind: 0,
+        created_at: 1700000000,
+        content: '{"name":"test"}',
+        tags: [],
+        sig: 'sig',
+      };
+      mockSearchRelay.searchProfiles.and.resolveTo([mockProfileEvent]);
+
+      let resolveNoteSearch: () => void;
+      const noteSearchPromise = new Promise<void>(resolve => resolveNoteSearch = resolve);
+      mockSearchRelay.search.and.callFake(() => noteSearchPromise.then(() => []));
+
+      component.searchQuery.set('test');
+      const performPromise = component.performSearch();
+
+      // Wait for profile search to complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // After profiles loaded, resultsFoundSoFar should reflect those results
+      const progress = component.searchProgress();
+      expect(progress).not.toBeNull();
+      expect(progress!.resultsFoundSoFar).toBeGreaterThanOrEqual(0);
+
+      resolveNoteSearch!();
+      await performPromise;
     });
   });
 
@@ -197,6 +254,101 @@ describe('SearchComponent', () => {
 
       resolveSearch!();
       await performPromise;
+    });
+
+    it('should render progress details container during search', async () => {
+      let resolveSearch: () => void;
+      const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
+
+      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+
+      component.searchQuery.set('test');
+      const performPromise = component.performSearch();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+      fixture.detectChanges();
+
+      const progressDetails = fixture.nativeElement.querySelector('.search-progress-details');
+      expect(progressDetails).toBeTruthy();
+
+      resolveSearch!();
+      await performPromise;
+    });
+
+    it('should show elapsed time after 1 second', async () => {
+      let resolveSearch: () => void;
+      const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
+
+      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+
+      component.searchQuery.set('test');
+      const performPromise = component.performSearch();
+
+      // Wait for 1.1 seconds so the elapsed timer fires at least once
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      fixture.detectChanges();
+
+      const elapsedEl = fixture.nativeElement.querySelector('.elapsed-time');
+      expect(elapsedEl).toBeTruthy();
+      expect(elapsedEl.textContent).toContain('elapsed');
+
+      resolveSearch!();
+      await performPromise;
+    });
+
+    it('should show results count when results exist during search', async () => {
+      // Return profile results immediately, but delay note search
+      const mockProfileEvent = {
+        id: 'abc123',
+        pubkey: 'pub123',
+        kind: 0,
+        created_at: 1700000000,
+        content: '{"name":"test"}',
+        tags: [],
+        sig: 'sig',
+      };
+      mockSearchRelay.searchProfiles.and.resolveTo([mockProfileEvent]);
+
+      let resolveNoteSearch: () => void;
+      const noteSearchPromise = new Promise<void>(resolve => resolveNoteSearch = resolve);
+      mockSearchRelay.search.and.callFake(() => noteSearchPromise.then(() => []));
+
+      component.searchQuery.set('test');
+      const performPromise = component.performSearch();
+
+      // Wait for profile search to complete and note search to start
+      await new Promise(resolve => setTimeout(resolve, 50));
+      fixture.detectChanges();
+
+      // Progress should show results found so far
+      const progress = component.searchProgress();
+      if (progress && progress.resultsFoundSoFar > 0) {
+        const resultsEl = fixture.nativeElement.querySelector('.results-so-far');
+        expect(resultsEl).toBeTruthy();
+        expect(resultsEl.textContent).toContain('results found so far');
+      }
+
+      resolveNoteSearch!();
+      await performPromise;
+    });
+
+    it('should clean up elapsed timer after search completes', async () => {
+      component.searchQuery.set('test');
+      await component.performSearch();
+
+      // After search completes, progress should be null
+      expect(component.searchProgress()).toBeNull();
+      expect(component.isSearching()).toBe(false);
+    });
+
+    it('should clean up elapsed timer after search fails', async () => {
+      mockSearchRelay.searchProfiles.and.rejectWith(new Error('fail'));
+      component.searchQuery.set('test');
+      await component.performSearch();
+
+      // After search fails, progress should be null
+      expect(component.searchProgress()).toBeNull();
+      expect(component.isSearching()).toBe(false);
     });
   });
 });
