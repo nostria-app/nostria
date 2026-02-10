@@ -447,6 +447,10 @@
                 <mat-icon>reply</mat-icon>
                 <span>Reply</span>
               </button>
+              <button mat-menu-item (click)="forwardMessage(message)">
+                <mat-icon>forward</mat-icon>
+                <span>Forward</span>
+              </button>
               <button mat-menu-item (click)="copyMessageContent(message)">
                 <mat-icon>content_copy</mat-icon>
                 <span>Copy</span>
