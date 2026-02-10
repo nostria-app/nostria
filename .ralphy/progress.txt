@@ -55,3 +55,4 @@
 - [✓] 2026-02-10 11:39 - Replace `[ngClass]` in `src/app/components/confirm-dialog/confirm-dialog.component.html` (line 9)
 - [✓] 2026-02-10 14:45 - BUG: Zaps fail across all connected wallets at the same time
 - [✓] 2026-02-10 15:05 - Emoji picker should display fullscreen with custom dialog component on smaller screens
+- [✓] 2026-02-10 15:26 - Quick search results hides when app window unfocused

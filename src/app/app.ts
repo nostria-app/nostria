@@ -1536,6 +1536,7 @@ export class App implements OnInit, OnDestroy {
   /**
    * Handle search container blur event.
    * Closes the search when focus leaves the search container entirely.
+   * Does NOT close when the entire window/app loses focus (e.g., Alt+Tab).
    */
   onSearchBlur(event: FocusEvent): void {
     // Check if the new focus target is still within the search container
@@ -1547,7 +1548,25 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
-    // Focus left the search container
+    // If relatedTarget is null, focus may have left the window entirely (e.g.,
+    // Alt+Tab or clicking another app). Defer the check so the browser can
+    // update document.hasFocus() before we read it.
+    if (!relatedTarget) {
+      setTimeout(() => {
+        if (!document.hasFocus()) {
+          // Window lost focus — don't dismiss the search results
+          return;
+        }
+        // Focus moved to an element that doesn't report as relatedTarget
+        // (e.g., non-focusable area in the app) — dismiss search
+        this.searchFocused.set(false);
+        this.clearSearchInput(false);
+        this.layout.closeSearch();
+      });
+      return;
+    }
+
+    // Focus moved to another element within the app but outside the search container
     this.searchFocused.set(false);
 
     // Dismiss search when focus leaves the container
