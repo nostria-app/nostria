@@ -21,10 +21,9 @@
     <div class="user-profile-avatar-container">
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
-        [attr.data-tooltip]="getTooltipContent()" #avatarElement
-        (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
-        (touchstart)="onTouchStart($event, avatarElement)" (touchmove)="onTouchMove($event)"
-        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
+        [attr.data-tooltip]="getTooltipContent()" #avatarElement (mouseenter)="onMouseEnter($event, avatarElement)"
+        (mouseleave)="onMouseLeave()" (touchstart)="onTouchStart($event, avatarElement)"
+        (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
         (click)="onProfileClick($event)">
         @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
@@ -37,11 +36,9 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon class="default-user-avatar"
-          [class.not-found-avatar]="isProfileNotFound()"
-          [class.error-avatar]="imageLoadError()"
-          [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
-          [style.width]="getDefaultAvatarSize()">
+        <mat-icon class="default-user-avatar" [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()" [style.font-size]="getDefaultAvatarSize()"
+          [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
         }
@@ -60,10 +57,7 @@
     <!-- Comfortable view - show name only -->
     @if (view() === 'comfortable') {
     <div class="user-profile-content">
-      <div class="user-profile-name-text" #nameElement (mouseenter)="onMouseEnter($event, nameElement)"
-        (mouseleave)="onMouseLeave()"
-        (touchstart)="onTouchStart($event, nameElement)" (touchmove)="onTouchMove($event)"
-        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()">
+      <div class="user-profile-name-text">
         <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </div>
     </div>
@@ -83,20 +77,14 @@
     ) {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()"
-        (touchstart)="onTouchStart($event, nameElement)" (touchmove)="onTouchMove($event)"
-        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
+      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-name-link"
         (click)="onProfileClick($event)">
         <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
-      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link" #npubElement
-        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()"
-        (touchstart)="onTouchStart($event, npubElement)" (touchmove)="onTouchMove($event)"
-        (touchend)="onTouchEnd()" (touchcancel)="onTouchEnd()"
+      <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link"
         (click)="onProfileClick($event)">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
@@ -136,10 +124,9 @@
             loading="lazy" />
           }
           } @else {
-          <mat-icon class="default-user-avatar"
-            [class.not-found-avatar]="isProfileNotFound()"
-            [class.error-avatar]="imageLoadError()"
-            [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
+          <mat-icon class="default-user-avatar" [class.not-found-avatar]="isProfileNotFound()"
+            [class.error-avatar]="imageLoadError()" [style.font-size]="'24px'" [style.height]="'24px'"
+            [style.width]="'24px'">
             {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
           </mat-icon>
           }
@@ -165,10 +152,9 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon class="default-user-avatar"
-          [class.not-found-avatar]="isProfileNotFound()"
-          [class.error-avatar]="imageLoadError()"
-          [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
+        <mat-icon class="default-user-avatar" [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()" [style.font-size]="'24px'" [style.height]="'24px'"
+          [style.width]="'24px'">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
         }
@@ -193,10 +179,9 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon class="default-user-avatar"
-          [class.not-found-avatar]="isProfileNotFound()"
-          [class.error-avatar]="imageLoadError()"
-          [style.font-size]="'40px'" [style.height]="'40px'" [style.width]="'40px'">
+        <mat-icon class="default-user-avatar" [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()" [style.font-size]="'40px'" [style.height]="'40px'"
+          [style.width]="'40px'">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
         }
@@ -221,10 +206,9 @@
         loading="lazy" />
       }
       } @else {
-      <mat-icon class="default-user-avatar"
-        [class.not-found-avatar]="isProfileNotFound()"
-        [class.error-avatar]="imageLoadError()"
-        [style.font-size]="'48px'" [style.height]="'48px'" [style.width]="'48px'">
+      <mat-icon class="default-user-avatar" [class.not-found-avatar]="isProfileNotFound()"
+        [class.error-avatar]="imageLoadError()" [style.font-size]="'48px'" [style.height]="'48px'"
+        [style.width]="'48px'">
         {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
       </mat-icon>
       }
