@@ -6,7 +6,7 @@
   Set [hostWidthAuto] to true to make the host width 'auto' instead of '100%'.
   Example: <app-user-profile [hostWidthAuto]="true" ...></app-user-profile>
 -->
-<div [ngClass]="['user-profile', view()]">
+<div class="user-profile" [class]="view()">
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
     @if (view() === 'grid') {
@@ -41,11 +41,10 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon [ngClass]="[
-                'default-user-avatar',
-                isProfileNotFound() ? 'not-found-avatar' : '',
-                imageLoadError() ? 'error-avatar' : '',
-              ]" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
+        <mat-icon class="default-user-avatar"
+          [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()"
+          [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
           [style.width]="getDefaultAvatarSize()">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
@@ -141,11 +140,10 @@
             loading="lazy" />
           }
           } @else {
-          <mat-icon [ngClass]="[
-                  'default-user-avatar',
-                  isProfileNotFound() ? 'not-found-avatar' : '',
-                  imageLoadError() ? 'error-avatar' : '',
-                ]" [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
+          <mat-icon class="default-user-avatar"
+            [class.not-found-avatar]="isProfileNotFound()"
+            [class.error-avatar]="imageLoadError()"
+            [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
             {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
           </mat-icon>
           }
@@ -171,11 +169,10 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon [ngClass]="[
-                'default-user-avatar',
-                isProfileNotFound() ? 'not-found-avatar' : '',
-                imageLoadError() ? 'error-avatar' : '',
-              ]" [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
+        <mat-icon class="default-user-avatar"
+          [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()"
+          [style.font-size]="'24px'" [style.height]="'24px'" [style.width]="'24px'">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
         }
@@ -200,11 +197,10 @@
           loading="lazy" />
         }
         } @else {
-        <mat-icon [ngClass]="[
-                'default-user-avatar',
-                isProfileNotFound() ? 'not-found-avatar' : '',
-                imageLoadError() ? 'error-avatar' : '',
-              ]" [style.font-size]="'40px'" [style.height]="'40px'" [style.width]="'40px'">
+        <mat-icon class="default-user-avatar"
+          [class.not-found-avatar]="isProfileNotFound()"
+          [class.error-avatar]="imageLoadError()"
+          [style.font-size]="'40px'" [style.height]="'40px'" [style.width]="'40px'">
           {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
         </mat-icon>
         }
@@ -229,11 +225,10 @@
         loading="lazy" />
       }
       } @else {
-      <mat-icon [ngClass]="[
-              'default-user-avatar',
-              isProfileNotFound() ? 'not-found-avatar' : '',
-              imageLoadError() ? 'error-avatar' : '',
-            ]" [style.font-size]="'48px'" [style.height]="'48px'" [style.width]="'48px'">
+      <mat-icon class="default-user-avatar"
+        [class.not-found-avatar]="isProfileNotFound()"
+        [class.error-avatar]="imageLoadError()"
+        [style.font-size]="'48px'" [style.height]="'48px'" [style.width]="'48px'">
         {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
       </mat-icon>
       }
