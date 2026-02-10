@@ -43,3 +43,6 @@
 - [✓] 2026-02-10 01:50 - Reactions: single-tap sends default reaction, long-press opens emoji picker
 - [✓] 2026-02-10 05:38 - Add loading progress bar for Custom Search
 - [✓] 2026-02-10 05:47 - Place DM timestamps inside message bubbles (like standard messaging apps)
+- [✓] 2026-02-10 06:51 - Replace `[ngClass]` in `src/app/app.html` (line 36) with `[class]` binding
+- [✓] 2026-02-10 06:57 - Replace `[ngClass]` in `src/app/components/user-profile/user-profile.component.html` (lines 9, 44, 144, 174, 203, 232) -- 6 occurrences, uses array syntax
+- [✓] 2026-02-10 07:02 - Replace `[ngClass]` in `src/app/pages/feeds/feeds.component.html` (line 1)

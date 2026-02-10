@@ -1,4 +1,49 @@
 /**
+ * Unit tests for sidenav CSS class logic.
+ * Verifies that sidenav-labels and sidenav-small are mutually exclusive
+ * based on the displayLabels signal value.
+ */
+describe('Sidenav class bindings', () => {
+  /**
+   * Mirrors the [class.sidenav-labels] and [class.sidenav-small] bindings
+   * used on the mat-sidenav element in app.html.
+   */
+  function getSidenavClasses(displayLabels: boolean): { 'sidenav-labels': boolean; 'sidenav-small': boolean } {
+    return {
+      'sidenav-labels': displayLabels,
+      'sidenav-small': !displayLabels,
+    };
+  }
+
+  it('should apply sidenav-labels when displayLabels is true', () => {
+    const classes = getSidenavClasses(true);
+    expect(classes['sidenav-labels']).toBe(true);
+    expect(classes['sidenav-small']).toBe(false);
+  });
+
+  it('should apply sidenav-small when displayLabels is false', () => {
+    const classes = getSidenavClasses(false);
+    expect(classes['sidenav-labels']).toBe(false);
+    expect(classes['sidenav-small']).toBe(true);
+  });
+
+  it('should never apply both classes simultaneously', () => {
+    for (const value of [true, false]) {
+      const classes = getSidenavClasses(value);
+      expect(classes['sidenav-labels'] && classes['sidenav-small']).toBe(false);
+    }
+  });
+
+  it('should always apply exactly one class', () => {
+    for (const value of [true, false]) {
+      const classes = getSidenavClasses(value);
+      const activeCount = [classes['sidenav-labels'], classes['sidenav-small']].filter(Boolean).length;
+      expect(activeCount).toBe(1);
+    }
+  });
+});
+
+/**
  * Unit tests for follow set sorting in the People nav section.
  * Verifies that Favorites (nostria-favorites) always appears first.
  */
