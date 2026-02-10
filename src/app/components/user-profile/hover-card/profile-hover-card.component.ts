@@ -7,7 +7,6 @@ import {
   inject,
   untracked,
   ViewEncapsulation,
-  HostListener,
 } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
@@ -65,6 +64,9 @@ interface ProfileData {
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
   encapsulation: ViewEncapsulation.None,
+  host: {
+    '(click)': 'onCardClick($event)',
+  },
 })
 export class ProfileHoverCardComponent {
   private dataService = inject(DataService);
@@ -483,7 +485,6 @@ export class ProfileHoverCardComponent {
     // The menuOpened/menuClosed handlers will manage the actual state
   }
 
-  @HostListener('click', ['$event'])
   onCardClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     // Close hover card when clicking on any link or button (except menu button)
