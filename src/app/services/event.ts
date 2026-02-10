@@ -397,47 +397,59 @@ export class EventService {
    * @returns The deletion request event if found and valid, null otherwise
    */
   async checkDeletionRequest(event: Event): Promise<Event | null> {
-    try {
-      // Query for kind 5 events that reference this event ID
-      // and are authored by the same pubkey as the event
-      const filter: Filter = {
-        kinds: [kinds.EventDeletion], // kind 5
-        authors: [event.pubkey],
-        '#e': [event.id],
-      };
+    // Use subscription cache to prevent duplicate queries for the same event
+    const cacheKey = `deletion-${event.id}`;
+    return this.subscriptionCache.getOrCreateSubscription<Event | null>(
+      cacheKey,
+      [event.id],
+      'deletion',
+      async () => {
+        try {
+          // Query for kind 5 events that reference this event ID
+          // and are authored by the same pubkey as the event
+          const filter: Filter = {
+            kinds: [kinds.EventDeletion], // kind 5
+            authors: [event.pubkey],
+            '#e': [event.id],
+          };
 
-      // Use account relays and any relays we know the author uses
-      const relays = this.accountRelay.getRelayUrls();
-      const authorRelays = await this.discoveryRelay.getUserRelayUrls(event.pubkey);
-      const combinedRelays = [...new Set([...relays, ...authorRelays])];
+          // Only query the author's relays — deletion events are authored by them
+          const authorRelays = await this.discoveryRelay.getUserRelayUrls(event.pubkey);
 
-      this.logger.debug(`[Deletion Check] Checking for deletion request for event ${event.id}`);
+          if (authorRelays.length === 0) {
+            this.logger.debug(`[Deletion Check] No relays found for author ${event.pubkey.substring(0, 8)}, skipping`);
+            return null;
+          }
 
-      const deletionEvents = await this.relayPool.query(combinedRelays, filter, 5000);
+          this.logger.debug(`[Deletion Check] Checking for deletion request for event ${event.id} across ${authorRelays.length} author relays`);
 
-      if (deletionEvents && deletionEvents.length > 0) {
-        // Validate the deletion request
-        const deletionEvent = deletionEvents[0];
+          const deletionEvents = await this.relayPool.query(authorRelays, filter, 5000);
 
-        // Check that the deletion event references this event in an 'e' tag
-        const hasValidETag = deletionEvent.tags.some(
-          tag => tag[0] === 'e' && tag[1] === event.id
-        );
+          if (deletionEvents && deletionEvents.length > 0) {
+            // Validate the deletion request
+            const deletionEvent = deletionEvents[0];
 
-        if (hasValidETag && deletionEvent.pubkey === event.pubkey) {
-          this.logger.info(`[Deletion Check] Found valid deletion request for event ${event.id}`, {
-            deletionEventId: deletionEvent.id,
-            content: deletionEvent.content || '(no reason given)',
-          });
-          return deletionEvent;
+            // Check that the deletion event references this event in an 'e' tag
+            const hasValidETag = deletionEvent.tags.some(
+              tag => tag[0] === 'e' && tag[1] === event.id
+            );
+
+            if (hasValidETag && deletionEvent.pubkey === event.pubkey) {
+              this.logger.info(`[Deletion Check] Found valid deletion request for event ${event.id}`, {
+                deletionEventId: deletionEvent.id,
+                content: deletionEvent.content || '(no reason given)',
+              });
+              return deletionEvent;
+            }
+          }
+
+          return null;
+        } catch (error) {
+          this.logger.error('[Deletion Check] Error checking for deletion request:', error);
+          return null;
         }
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error('[Deletion Check] Error checking for deletion request:', error);
-      return null;
-    }
+      },
+    );
   }
 
   /**

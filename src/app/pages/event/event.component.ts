@@ -516,6 +516,7 @@ export class EventPageComponent {
       // Use progressive loading to show content as it becomes available
       const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
       let mainEvent: Event | undefined;
+      let deletionCheckStarted = false;
 
       for await (const partialData of progressiveLoader) {
         // Update signals with partial data as it becomes available
@@ -535,8 +536,11 @@ export class EventPageComponent {
           this.isLoading.set(false);
 
           // Check for deletion request for the main event (NIP-09)
-          // This runs asynchronously so it doesn't block the UI
-          this.checkDeletionRequestForEvent(partialData.event);
+          // Only check once per loadEvent call to avoid duplicate queries
+          if (!deletionCheckStarted) {
+            deletionCheckStarted = true;
+            this.checkDeletionRequestForEvent(partialData.event);
+          }
         }
 
         if (partialData.parents !== undefined) {
