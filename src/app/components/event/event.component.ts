@@ -753,6 +753,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   reposts = signal<NostrRecord[]>([]);
   quotes = signal<NostrRecord[]>([]);
   private _replyCountInternal = signal<number>(0);
+  private _replyEventsInternal = signal<Event[]>([]);
+
+  // Build threaded replies from internally loaded reply events for passing to thread view
+  private threadedRepliesFromInteractions = computed<ThreadedEvent[]>(() => {
+    const events = this._replyEventsInternal();
+    if (events.length === 0) return [];
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return [];
+    return this.eventService.buildThreadTree(events, targetRecordData.event.id, true);
+  });
 
   // Reply count - uses parent-provided value if available, otherwise uses internally loaded value
   replyCount = computed<number>(() => {
@@ -1102,6 +1112,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions
         this.hasLoadedInteractions.set(false);
+        this.hasLoadedEdit = false;
 
         // Re-register with shared IntersectionObserver when event changes
         // This ensures we observe the correct event when component is reused
@@ -1327,31 +1338,38 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       });
     });
 
-    // Effect to load NIP-41 edit events for kind 1 notes
-    effect(() => {
-      const event = this.event() || this.record()?.event;
-
-      // Only load edits for kind 1 (short text notes)
-      if (!event || event.kind !== 1) {
-        return;
-      }
-
-      untracked(async () => {
-        this.isLoadingEdit.set(true);
-        try {
-          const editRecord = await this.eventService.loadLatestEdit(
-            event.id,
-            event.pubkey
-          );
-          this.latestEditEvent.set(editRecord);
-        } catch (error) {
-          this.logger.error('Error loading edit event:', error);
-        } finally {
-          this.isLoadingEdit.set(false);
-        }
-      });
-    });
   }
+
+  /**
+   * Load NIP-41 edit events for kind 1 notes.
+   * Only loads edits when this event is the main/focused event on the page
+   * (navigationDisabled=true), not for replies in threads or events in timelines.
+   */
+  private async loadLatestEditForEvent(): Promise<void> {
+    if (this.hasLoadedEdit) return;
+
+    // Only load edits for the main focused event, not replies or timeline items
+    if (!this.navigationDisabled()) return;
+
+    const event = this.event() || this.record()?.event;
+    if (!event || event.kind !== 1) return;
+
+    this.hasLoadedEdit = true;
+    this.isLoadingEdit.set(true);
+    try {
+      const editRecord = await this.eventService.loadLatestEdit(
+        event.id,
+        event.pubkey
+      );
+      this.latestEditEvent.set(editRecord);
+    } catch (error) {
+      this.logger.error('Error loading edit event:', error);
+    } finally {
+      this.isLoadingEdit.set(false);
+    }
+  }
+
+  private hasLoadedEdit = false;
 
   ngAfterViewInit(): void {
     // Set up IntersectionObserver for lazy loading
@@ -1400,6 +1418,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               // loadAllInteractions now also loads quotes
               this.loadAllInteractions();
               this.loadZaps();
+              this.loadLatestEditForEvent();
             } else {
               this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
             }
@@ -1458,6 +1477,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
         this.loadAllInteractions();
         this.loadZaps();
+        this.loadLatestEditForEvent();
       }
     }
   }
@@ -1585,6 +1605,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // Only update internal reply count if we actually loaded it (not skipped)
       if (!skipReplies) {
         this._replyCountInternal.set(interactions.replyCount);
+        this._replyEventsInternal.set(interactions.replyEvents);
       }
     } catch (error) {
       this.logger.error('Error loading event interactions:', error);
@@ -1913,8 +1934,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
 
-    // Navigate to the event page which will load all comments
-    this.layout.openEvent(targetRecordData.event.id, targetRecordData.event);
+    // Pass reply count and threaded replies for instant rendering in the thread view
+    const threadedReplies = this.repliesFromParent() ?? this.threadedRepliesFromInteractions();
+    this.layout.openEvent(targetRecordData.event.id, targetRecordData.event, undefined, {
+      replyCount: this.replyCount(),
+      parentEvent: this.parentEvent() ?? undefined,
+      replies: threadedReplies.length > 0 ? threadedReplies : undefined,
+    });
   }
 
   private getEventPreviewTitle(content: string): string {
@@ -2349,10 +2375,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     // Navigate to the target event (reposted event for reposts, regular event otherwise)
     // Pass reply count, replies, and parent event for instant rendering in the thread view
+    const threadedReplies = this.repliesFromParent() ?? this.threadedRepliesFromInteractions();
     this.layout.openEvent(targetEvent.id, targetEvent, undefined, {
       replyCount: this.replyCount(),
       parentEvent: this.parentEvent() ?? undefined,
-      replies: this.repliesFromParent()
+      replies: threadedReplies.length > 0 ? threadedReplies : undefined,
     });
   }
 

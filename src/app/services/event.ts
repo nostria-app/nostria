@@ -47,6 +47,7 @@ export interface EventInteractions {
   reposts: NostrRecord[];
   reports: ReportEvents;
   replyCount: number;
+  replyEvents: Event[];
   quotes: NostrRecord[];
 }
 
@@ -940,6 +941,7 @@ export class EventService {
           // Count replies only if we didn't skip them
           // When skipReplies is true, the caller already has the reply count from parent
           let replyCount = 0;
+          let replyEventsResult: Event[] = [];
           if (!skipReplies) {
             // Count replies (kind 1 events that are actual thread replies to this event)
             // IMPORTANT: An event having an e-tag referencing this event doesn't mean it's a reply!
@@ -963,6 +965,7 @@ export class EventService {
               return replyId === eventId || (rootId === eventId && !replyId);
             });
             replyCount = replyRecords.length;
+            replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
           }
 
           // Process reactions
@@ -1026,6 +1029,7 @@ export class EventService {
               data: reportCounts,
             },
             replyCount, // 0 if skipReplies was true (caller should use replyCountFromParent)
+            replyEvents: replyEventsResult, // empty if skipReplies was true
             quotes: [], // Quotes are loaded separately
           };
         } catch (error) {
@@ -1035,6 +1039,7 @@ export class EventService {
             reposts: [],
             reports: { events: [], data: new Map() },
             replyCount: 0,
+            replyEvents: [],
             quotes: [],
           };
         }
