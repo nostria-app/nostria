@@ -1,7 +1,6 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { DeletionFilterService } from './deletion-filter.service';
 import { ReportingService } from './reporting.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
@@ -13,7 +12,7 @@ export interface EventProcessingResult {
   /** Whether the event should be accepted */
   accepted: boolean;
   /** Reason for rejection (if not accepted) */
-  reason?: 'deleted' | 'muted_user' | 'muted_event' | 'muted_hashtag' | 'muted_word' | 'expired';
+  reason?: 'muted_user' | 'muted_event' | 'muted_hashtag' | 'muted_word' | 'expired';
   /** The processed event (may be modified in future) */
   event: Event;
 }
@@ -25,7 +24,6 @@ export interface EventProcessingStats {
   total: number;
   accepted: number;
   rejected: {
-    deleted: number;
     muted_user: number;
     muted_event: number;
     muted_hashtag: number;
@@ -51,7 +49,6 @@ export interface EventProcessingStats {
 })
 export class EventProcessorService {
   private readonly logger = inject(LoggerService);
-  private readonly deletionFilter = inject(DeletionFilterService);
   private readonly reportingService = inject(ReportingService);
   private readonly utilities = inject(UtilitiesService);
   private readonly dataService = inject(DataService);
@@ -61,7 +58,6 @@ export class EventProcessorService {
     total: 0,
     accepted: 0,
     rejected: {
-      deleted: 0,
       muted_user: 0,
       muted_event: 0,
       muted_hashtag: 0,
@@ -77,7 +73,7 @@ export class EventProcessorService {
   readonly totalProcessed = computed(() => this._stats().total);
   readonly totalRejected = computed(() => {
     const s = this._stats();
-    return s.rejected.deleted + s.rejected.muted_user + s.rejected.muted_event +
+    return s.rejected.muted_user + s.rejected.muted_event +
       s.rejected.muted_hashtag + s.rejected.muted_word + s.rejected.expired;
   });
 
@@ -89,8 +85,6 @@ export class EventProcessorService {
    * @returns Processing result indicating whether to accept the event
    */
   processEvent(event: Event, options: {
-    /** Skip deletion check (useful if checking own events) */
-    skipDeletionCheck?: boolean;
     /** Skip mute check (useful for DMs or specific contexts) */
     skipMuteCheck?: boolean;
     /** Skip expiration check */
@@ -109,17 +103,7 @@ export class EventProcessorService {
       };
     }
 
-    // 2. Check if event was deleted by author (NIP-09)
-    if (!options.skipDeletionCheck && this.deletionFilter.isDeleted(event)) {
-      this.incrementStat('deleted');
-      return {
-        accepted: false,
-        reason: 'deleted',
-        event,
-      };
-    }
-
-    // 3. Check mute list (NIP-51)
+    // 2. Check mute list (NIP-51)
     if (!options.skipMuteCheck) {
       const muteResult = this.checkMuteFilters(event);
       if (muteResult) {
@@ -148,7 +132,6 @@ export class EventProcessorService {
    * @returns Array of accepted events
    */
   filterEvents(events: Event[], options: {
-    skipDeletionCheck?: boolean;
     skipMuteCheck?: boolean;
     skipExpirationCheck?: boolean;
   } = {}): Event[] {
@@ -164,7 +147,6 @@ export class EventProcessorService {
    * @returns true if event should be accepted, false otherwise
    */
   shouldAcceptEvent(event: Event, options: {
-    skipDeletionCheck?: boolean;
     skipMuteCheck?: boolean;
     skipExpirationCheck?: boolean;
     /** Don't update stats (for preview/checking without side effects) */
@@ -172,10 +154,6 @@ export class EventProcessorService {
   } = {}): boolean {
     // Quick checks without stats
     if (!options.skipExpirationCheck && this.utilities.isEventExpired(event)) {
-      return false;
-    }
-
-    if (!options.skipDeletionCheck && this.deletionFilter.isDeleted(event)) {
       return false;
     }
 
@@ -197,7 +175,6 @@ export class EventProcessorService {
   createFilteredEventHandler<T extends Event = Event>(
     onEvent: (event: T) => void,
     options: {
-      skipDeletionCheck?: boolean;
       skipMuteCheck?: boolean;
       skipExpirationCheck?: boolean;
     } = {}
@@ -220,7 +197,6 @@ export class EventProcessorService {
       total: 0,
       accepted: 0,
       rejected: {
-        deleted: 0,
         muted_user: 0,
         muted_event: 0,
         muted_hashtag: 0,
@@ -319,7 +295,7 @@ export class EventProcessorService {
   /**
    * Increment a stat counter
    */
-  private incrementStat(stat: 'total' | 'accepted' | 'deleted' | 'muted_user' | 'muted_event' | 'muted_hashtag' | 'muted_word' | 'expired'): void {
+  private incrementStat(stat: 'total' | 'accepted' | 'muted_user' | 'muted_event' | 'muted_hashtag' | 'muted_word' | 'expired'): void {
     this._stats.update(current => {
       const updated = { ...current };
       if (stat === 'total') {

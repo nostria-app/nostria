@@ -135,7 +135,7 @@ export class FollowSetsService {
       let dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, 30000);
 
       // Filter out deleted events
-      dbEvents = dbEvents.filter(event => !this.deletionFilter.isDeleted(event));
+      dbEvents = await this.deletionFilter.filterDeletedEventsFromDatabase(dbEvents);
 
       if (dbEvents.length > 0) {
         // Parse database events immediately (without decryption)
@@ -199,9 +199,11 @@ export class FollowSetsService {
         );
 
         // Convert all events to FollowSet objects (without decryption), filtering out deleted events
-        const sets = events
-          .filter(record => !this.deletionFilter.isDeleted(record.event))
-          .map(record => this.parseFollowSetEventSync(record.event))
+        const filteredEvents = await this.deletionFilter.filterDeletedEventsFromDatabase(
+          events.map(record => record.event)
+        );
+        const sets = filteredEvents
+          .map(event => this.parseFollowSetEventSync(event))
           .filter((set): set is FollowSet => set !== null);
 
         // Deduplicate by dTag, keeping only the newest event for each dTag
