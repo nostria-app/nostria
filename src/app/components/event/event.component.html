@@ -709,34 +709,6 @@
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
 
-    <!-- Metadata indicators (PoW, geohash, client) -->
-    @if (!compact() && (hasProofOfWork(targetItem.event) || hasGeohash(targetItem.event) || (shouldShowClientTag() &&
-    getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
-    <div class="metadata-indicators">
-      @if (hasGeohash(targetItem.event)) {
-      <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
-        [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
-        (click)="$event.stopPropagation()">
-        <mat-icon>location_on</mat-icon>
-      </a>
-      }
-      @if (hasProofOfWork(targetItem.event)) {
-      <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
-        <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
-        <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
-      </div>
-      }
-      @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
-      <div class="client-indicator"
-        [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
-        matTooltipPosition="below">
-        <img [src]="getClientLogo(getClientTag(targetItem.event))"
-          [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
-      </div>
-      }
-    </div>
-    }
-
     <!-- Unified action toolbar -->
     <div class="actions-row" [class.compact]="compact()"
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
@@ -837,6 +809,34 @@
         [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
         [hideTabs]="false">
       </app-reaction-summary>
+
+      <!-- Metadata indicators (PoW, geohash, client) - shown inside expanded panel -->
+      @if (!compact() && (hasProofOfWork(targetItem.event) || hasGeohash(targetItem.event) || (shouldShowClientTag() &&
+      getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
+      <div class="metadata-indicators">
+        @if (hasGeohash(targetItem.event)) {
+        <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
+          [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
+          (click)="$event.stopPropagation()">
+          <mat-icon>location_on</mat-icon>
+        </a>
+        }
+        @if (hasProofOfWork(targetItem.event)) {
+        <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
+          <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
+          <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
+        </div>
+        }
+        @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
+        <div class="client-indicator"
+          [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
+          matTooltipPosition="below">
+          <img [src]="getClientLogo(getClientTag(targetItem.event))"
+            [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
+        </div>
+        }
+      </div>
+      }
     </div>
     }
     }
