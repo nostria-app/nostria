@@ -345,7 +345,7 @@
                 <mat-icon class="text-red-500">lock</mat-icon>
                 } @else {
                 <mat-icon
-                  [ngClass]="relay.isConnected ? 'text-green-500' : relay.isOffline ? 'text-red-500' : 'text-orange-500'">
+                  [class]="relay.isConnected ? 'text-green-500' : relay.isOffline ? 'text-red-500' : 'text-orange-500'">
                   {{
                   relay.isConnected
                   ? 'wifi'
@@ -485,7 +485,7 @@
                 <mat-icon class="detail-icon">speed</mat-icon>
                 <span class="detail-label" i18n="@@settings.relays.observed.performance-score">Performance Score:</span>
                 <span class="detail-value">
-                  <span class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
+                  <span [class]="'performance-badge ' + getPerformanceClass(getRelayPerformanceScore(relay.url))">
                     {{ getRelayPerformanceScore(relay.url) }}%
                   </span>
                 </span>

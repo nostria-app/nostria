@@ -763,9 +763,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this._replyCountInternal();
   });
 
-  // Combined count of reposts + quotes for display
+  // Count of reposts only (quotes are shown separately)
   repostCount = computed<number>(() => {
-    return this.reposts().length + this.quotes().length;
+    return this.reposts().length;
   });
 
   quoteCount = computed<number>(() => {
