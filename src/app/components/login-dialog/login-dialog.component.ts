@@ -42,7 +42,6 @@ enum LoginStep {
 
 @Component({
   selector: 'app-unified-login-dialog',
-  standalone: true,
   imports: [
     MatDialogModule,
     MatButtonModule,

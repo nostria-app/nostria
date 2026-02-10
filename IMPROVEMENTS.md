@@ -50,10 +50,10 @@ The codebase has migrated away from `*ngIf`, `*ngFor`, `*ngSwitch`, and `[ngStyl
 
 - [x] Replace `@HostListener` in `src/app/components/note-editor-dialog/note-editor-dialog.component.ts` (lines 672, 1924) -- `document:mousedown` and `document:keydown`
 - [x] Replace `@HostListener` in `src/app/components/inline-reply-editor/inline-reply-editor.component.ts` (line 226) -- `document:mousedown`
-- [ ] Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
-- [ ] Replace `@HostListener` in `src/app/components/video-controls/video-controls.component.ts` (line 317) -- `document:keydown`
-- [ ] Replace `@HostListener` in `src/app/components/user-profile/hover-card/profile-hover-card.component.ts` (line 486) -- `click`
-- [ ] Replace `@HostListener` in `src/app/components/media-preview-dialog/media-preview.component.ts` (line 166) -- `window:keydown`
+- [x] Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
+- [x] Replace `@HostListener` in `src/app/components/video-controls/video-controls.component.ts` (line 317) -- `document:keydown`
+- [x] Replace `@HostListener` in `src/app/components/user-profile/hover-card/profile-hover-card.component.ts` (line 486) -- `click`
+- [x] Replace `@HostListener` in `src/app/components/media-preview-dialog/media-preview.component.ts` (line 166) -- `window:keydown`
 
 ---
 
@@ -61,7 +61,7 @@ The codebase has migrated away from `*ngIf`, `*ngFor`, `*ngSwitch`, and `[ngStyl
 
 Default in Angular 21+, should not be set explicitly.
 
-- [ ] Remove `standalone: true` from `src/app/components/login-dialog/login-dialog.component.ts` (line 45)
+- [x] Remove `standalone: true` from `src/app/components/login-dialog/login-dialog.component.ts` (line 45)
 
 ---
 
