@@ -8,11 +8,9 @@ import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { ContentComponent } from '../content/content.component';
-import { UtilitiesService } from '../../services/utilities.service';
 
 /**
  * Profile metadata structure for kind 0 events
- * Supports both single values and arrays for multi-value fields
  */
 interface ProfileMetadata {
   name?: string;
@@ -21,9 +19,9 @@ interface ProfileMetadata {
   about?: string;
   picture?: string;
   banner?: string;
-  website?: string | string[];
-  nip05?: string | string[];
-  lud16?: string | string[];
+  website?: string;
+  nip05?: string;
+  lud16?: string;
   lud06?: string;
 }
 
@@ -48,35 +46,15 @@ interface ProfileMetadata {
 export class ProfileUpdateEventComponent {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
-  private utilities = inject(UtilitiesService);
 
   event = input.required<NostrEvent>();
 
-  // Parse the profile metadata from the event content, checking tags first
+  // Parse the profile metadata from the event content
   profile = computed<ProfileMetadata | null>(() => {
     const nostrEvent = this.event();
     if (!nostrEvent || nostrEvent.kind !== 0) return null;
 
     try {
-      // Check if event has profile tags (new format)
-      if (this.utilities.hasProfileTags(nostrEvent.tags)) {
-        const fromTags = this.utilities.parseProfileFromTags(nostrEvent.tags);
-
-        // Try to parse JSON content as well for fallback/merge
-        let fromContent: Record<string, unknown> = {};
-        try {
-          if (nostrEvent.content) {
-            fromContent = JSON.parse(nostrEvent.content);
-          }
-        } catch {
-          // Content parsing failed, use tags only
-        }
-
-        // Merge with tags taking priority
-        return this.utilities.mergeProfileData(fromTags, fromContent) as ProfileMetadata;
-      }
-
-      // Fall back to traditional JSON content parsing
       return JSON.parse(nostrEvent.content) as ProfileMetadata;
     } catch {
       return null;
@@ -96,50 +74,28 @@ export class ProfileUpdateEventComponent {
     return profile?.name || null;
   });
 
-  // Get NIP-05 identifiers as array (supports multiple values)
-  nip05List = computed<string[]>(() => {
-    const profile = this.profile();
-    if (!profile?.nip05) return [];
-
-    const nip05Data = profile.nip05;
-    const values = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
-
-    // Clean up each NIP-05 value
-    return values.map(nip05 => {
-      if (nip05.startsWith('_@')) {
-        return nip05.substring(2); // Remove leading _@ for root identifiers
-      }
-      return nip05;
-    }).filter(v => v && v.trim() !== '');
-  });
-
-  // Get first NIP-05 for backwards compatibility
+  // Get NIP-05 identifier
   nip05 = computed(() => {
-    const list = this.nip05List();
-    return list.length > 0 ? list[0] : null;
+    const profile = this.profile();
+    if (!profile?.nip05) return null;
+    // Parse NIP-05 to show in a cleaner format
+    const nip05 = profile.nip05;
+    if (nip05.startsWith('_@')) {
+      return nip05.substring(2); // Remove leading _@ for root identifiers
+    }
+    return nip05;
   });
 
-  // Get lightning address (first value only, as per requirements)
+  // Get lightning address
   lightningAddress = computed(() => {
     const profile = this.profile();
-    if (!profile?.lud16) return null;
-    const lud16Data = profile.lud16;
-    return Array.isArray(lud16Data) ? lud16Data[0] || null : lud16Data;
+    return profile?.lud16 || null;
   });
 
-  // Get websites as array (supports multiple values)
-  websiteList = computed<string[]>(() => {
-    const profile = this.profile();
-    if (!profile?.website) return [];
-    const websiteData = profile.website;
-    const values = Array.isArray(websiteData) ? websiteData : [websiteData];
-    return values.filter(v => v && v.trim() !== '');
-  });
-
-  // Get first website for backwards compatibility
+  // Get website
   website = computed(() => {
-    const list = this.websiteList();
-    return list.length > 0 ? list[0] : null;
+    const profile = this.profile();
+    return profile?.website || null;
   });
 
   // Get about/bio
