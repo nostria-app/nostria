@@ -5,6 +5,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { SearchRelayListKind } from './relays/search-relay';
+import { TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
 
 /**
  * Important event kinds that should be republished when user edits their relays
@@ -17,6 +18,7 @@ export const IMPORTANT_EVENT_KINDS = [
   kinds.RelayList,           // 10002 - Relay list
   kinds.BookmarkList,        // 10003 - Bookmark list
   SearchRelayListKind,       // 10007 - Search relays list
+  TRUST_PROVIDER_LIST_KIND,  // 10040 - NIP-85 Trusted Service Providers
   kinds.DirectMessageRelaysList, // 10050 - DM Relays list
   10063,                     // Media server list (BUD-03)
 ];
@@ -139,6 +141,8 @@ export class EventRepublishService {
         return 'Bookmark List';
       case SearchRelayListKind:
         return 'Search Relays';
+      case TRUST_PROVIDER_LIST_KIND:
+        return 'Trust Providers';
       case kinds.DirectMessageRelaysList:
         return 'DM Relays';
       case 10063:

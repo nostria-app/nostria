@@ -324,7 +324,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       label: 'Settings: Trust',
       icon: 'verified_user',
       action: () => this.router.navigate(['/settings/trust']),
-      keywords: ['trust', 'verify', 'web of trust', 'reputation']
+      keywords: ['trust', 'verify', 'web of trust', 'reputation', 'nip-85', 'providers', 'brainstorm']
     },
     {
       id: 'nav-wallet',
@@ -362,7 +362,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['premium', 'subscription', 'upgrade', 'pro']
     },
 
-// Navigation - AI Features
+    // Navigation - AI Features
     {
       id: 'nav-ai',
       label: 'Open AI Features',
@@ -465,7 +465,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     cmd.action();
   }
 
-openNoteEditor() {
+  openNoteEditor() {
     this.eventService.createNote();
   }
 

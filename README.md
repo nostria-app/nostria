@@ -79,6 +79,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-68: Picture-first feeds](https://github.com/nostr-protocol/nips/blob/master/68.md)
 - [x] [NIP-71: Video Events](https://github.com/nostr-protocol/nips/blob/master/71.md)
 - [x] [NIP-75: Zap Goals](https://github.com/nostr-protocol/nips/blob/master/75.md)
+- [x] [NIP-85: Trusted Assertions (Web of Trust)](https://nostrhub.io/naddr1qvzqqqrcvypzq3svyhng9ld8sv44950j957j9vchdktj7cxumsep9mvvjthc2pjuqy88wumn8ghj7mn0wvhxcmmv9uqpyarjw4ehgety94shxum9wf6xjmmwwv9rup67)
 - [x] [BUD-01: Server requirements and blob retrieval](https://github.com/hzrd149/blossom/blob/master/buds/01.md)
 - [x] [BUD-02: Blob upload and management](https://github.com/hzrd149/blossom/blob/master/buds/02.md)
 - [x] [BUD-03: User Server List](https://github.com/hzrd149/blossom/blob/master/buds/03.md)
