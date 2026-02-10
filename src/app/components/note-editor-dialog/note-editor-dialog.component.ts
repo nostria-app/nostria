@@ -8,7 +8,8 @@ import {
   AfterViewInit,
   OnDestroy,
   OnInit,
-  HostListener,
+  DestroyRef,
+  afterNextRender,
   input,
   output,
   ChangeDetectionStrategy,
@@ -177,6 +178,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -669,8 +671,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   /**
    * Handle clicks outside the component to collapse editor (inline mode only)
    */
-  @HostListener('document:mousedown', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  private onDocumentClick = (event: MouseEvent): void => {
     // Only apply in inline mode when expanded
     if (!this.inlineMode() || !this.isExpanded()) return;
 
@@ -685,7 +686,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!clickedInside && !clickedOnMentionAutocomplete) {
       this.isExpanded.set(false);
     }
-  }
+  };
 
   ngOnDestroy() {
     // Clear auto-save timer on destroy
@@ -763,6 +764,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           }
         }
       }
+    });
+    // Register document-level event listeners (SSR-safe)
+    afterNextRender(() => {
+      document.addEventListener('mousedown', this.onDocumentClick);
+      document.addEventListener('keydown', this.handleGlobalKeydown);
+
+      this.destroyRef.onDestroy(() => {
+        document.removeEventListener('mousedown', this.onDocumentClick);
+        document.removeEventListener('keydown', this.handleGlobalKeydown);
+      });
     });
   }
 
@@ -1921,8 +1932,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  @HostListener('document:keydown', ['$event'])
-  handleGlobalKeydown(event: KeyboardEvent) {
+  private handleGlobalKeydown = (event: KeyboardEvent): void => {
     // Alt+D (Windows/Linux) or Cmd+D (Mac) shortcut to toggle dictation
     if (this.platformService.hasModifierKey(event) && (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
       event.preventDefault();
@@ -1930,7 +1940,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.toggleRecording();
       }
     }
-  }
+  };
 
   onContentKeyDown(event: KeyboardEvent): void {
     const mentionConfig = this.mentionConfig();
