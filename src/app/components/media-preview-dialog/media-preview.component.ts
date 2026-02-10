@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, HostListener, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,6 +28,7 @@ interface MediaPreviewData {
     '(swipeleft)': 'onSwipeLeft()',
     '(mousemove)': 'onMouseMove()',
     '(touchstart)': 'onTouchInteraction()',
+    '(window:keydown)': 'handleKeyboardEvent($event)',
   },
 })
 export class MediaPreviewDialogComponent implements OnDestroy {
@@ -163,7 +164,6 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   }
 
   // Keyboard navigation
-  @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
     if (!this.hasMultipleItems()) return;
 
