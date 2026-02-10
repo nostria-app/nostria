@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -24,6 +24,7 @@ type ViewMode = 'icon' | 'full';
   ],
   templateUrl: './repost-button.component.html',
   styleUrls: ['./repost-button.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RepostButtonComponent {
   private readonly eventService = inject(EventService);
