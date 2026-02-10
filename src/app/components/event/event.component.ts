@@ -1930,20 +1930,35 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Navigate to the event page to view comments
+   * Open the note editor dialog to reply to this event
    */
-  navigateToComments(event: MouseEvent) {
+  async openReplyEditor(event: MouseEvent) {
     event.stopPropagation();
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
 
-    // Pass reply count and threaded replies for instant rendering in the thread view
-    const threadedReplies = this.repliesFromParent() ?? this.threadedRepliesFromInteractions();
-    this.layout.openEvent(targetRecordData.event.id, targetRecordData.event, undefined, {
-      replyCount: this.replyCount(),
-      parentEvent: this.parentEvent() ?? undefined,
-      replies: threadedReplies.length > 0 ? threadedReplies : undefined,
-    });
+    // Check if user is logged in
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const ev = targetRecordData.event;
+    if (ev.kind === kinds.ShortTextNote) {
+      const eventTags = this.eventService.getEventTags(ev);
+      this.eventService.createNote({
+        replyTo: {
+          id: ev.id,
+          pubkey: ev.pubkey,
+          rootId: eventTags.rootId,
+          event: ev,
+        },
+      });
+    } else {
+      this.eventService.createComment(ev);
+    }
   }
 
   private getEventPreviewTitle(content: string): string {
