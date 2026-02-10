@@ -239,12 +239,12 @@
       </div>
       } @else {
       <!-- Apply different container classes based on viewMode() -->
-      <div class="people-container" [ngClass]="{
-              'comfortable-list': viewMode() === 'comfortable',
-              'medium-grid': viewMode() === 'medium',
-              'small-grid': viewMode() === 'small',
-              'details-list': viewMode() === 'details'
-            }">
+      <div class="people-container"
+        [class.comfortable-list]="viewMode() === 'comfortable'"
+        [class.medium-grid]="viewMode() === 'medium'"
+        [class.small-grid]="viewMode() === 'small'"
+        [class.details-list]="viewMode() === 'details'"
+        >
         @for (pubkey of visiblePeople(); track pubkey) {
         <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
           (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
