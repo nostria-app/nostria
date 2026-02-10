@@ -11,7 +11,7 @@ import {
   untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -69,7 +69,6 @@ import { formatDuration } from '../../utils/format-duration';
 @Component({
   selector: 'app-feeds',
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,

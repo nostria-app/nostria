@@ -1,4 +1,7 @@
-<div class="home-container" #homeContainer [ngClass]="columnLayout()">
+<div class="home-container" #homeContainer
+  [class.one-column-layout]="columnLayout() === 'one-column-layout'"
+  [class.two-columns-layout]="columnLayout() === 'two-columns-layout'"
+  [class.three-columns-layout]="columnLayout() === 'three-columns-layout'">
 
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
