@@ -34,6 +34,7 @@ import { LocalSettingsService } from './local-settings.service';
 import { FollowingDataService } from './following-data.service';
 import { SettingsService, SyncedFeedConfig } from './settings.service';
 import { EventProcessorService } from './event-processor.service';
+import { EventFocusService } from './event-focus.service';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -180,6 +181,7 @@ export class FeedService {
   private readonly searchRelay = inject(SearchRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
+  private readonly eventFocus = inject(EventFocusService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly dataService = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
@@ -254,6 +256,7 @@ export class FeedService {
       const initialized = this.accountState.initialized();
       // Wait for settings to be loaded so we can check for synced feeds from kind 30078
       const settingsLoaded = this.settingsService.settingsLoaded();
+      const isEventFocused = this.eventFocus.isEventFocused();
 
       // Skip if already loading for this pubkey
       if (pubkey === loadingForPubkey) {
@@ -262,6 +265,11 @@ export class FeedService {
 
       if (pubkey) {
         untracked(async () => {
+          if (isEventFocused) {
+            this.logger.debug('⏳ [FeedService] Event focused, delaying feed load');
+            return;
+          }
+
           // Check if this is a first-time user (no stored feeds)
           const storedFeeds = this.getFeedsFromStorage(pubkey);
           const isFirstTimeUser = storedFeeds === null;
@@ -343,6 +351,9 @@ export class FeedService {
    */
   private prefetchProfilesForEvents(events: Event[]): void {
     if (!events || events.length === 0) return;
+    if (this.eventFocus.isEventFocused()) {
+      return;
+    }
 
     // Extract unique author pubkeys
     const authorPubkeys = new Set<string>();
@@ -465,6 +476,11 @@ export class FeedService {
       return;
     }
 
+    if (this.eventFocus.isEventFocused()) {
+      this.logger.debug('Event focused - skipping feed subscription');
+      return;
+    }
+
     // Don't subscribe if the Feeds page is not active
     if (!this._feedsPageActive()) {
       this.logger.debug('Feeds page not active - skipping feed subscription');
@@ -535,6 +551,12 @@ export class FeedService {
     // Don't set active feed if there's no active account
     if (!this.accountState.account()) {
       this.logger.debug('No active account - skipping setActiveFeed');
+      return;
+    }
+
+    if (this.eventFocus.isEventFocused()) {
+      this.logger.debug('Event focused - skipping setActiveFeed subscription');
+      this._activeFeedId.set(feedId);
       return;
     }
 
@@ -670,7 +692,7 @@ export class FeedService {
         const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
         item.lastCheckTimestamp = mostRecentTimestamp;
         this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
-        
+
         // Prefetch profiles for cached events in background
         this.prefetchProfilesForEvents(cachedEvents);
       }
@@ -906,7 +928,7 @@ export class FeedService {
       item.lastCheckTimestamp = mostRecentTimestamp;
 
       this.logger.info(`🚀 Rendered ${cachedEventsForDyn.length} cached events for feed ${feed.id}`);
-      
+
       // Prefetch profiles for cached events in background
       this.prefetchProfilesForEvents(cachedEventsForDyn);
     }
@@ -1503,7 +1525,7 @@ export class FeedService {
           if (cachedEvents.length > 0 && feedData.events().length === 0) {
             this.handleFollowingIncrementalUpdate(feedData, cachedEvents);
             this.logger.debug(`📦 Loaded ${cachedEvents.length} cached events immediately`);
-            
+
             // Signal initial content ready immediately when cache is loaded
             // This provides the fastest possible time-to-first-render
             if (!this._hasInitialContent()) {
@@ -1650,7 +1672,7 @@ export class FeedService {
 
         // Mark initial load as complete after first batch is shown
         feedData.initialLoadComplete = true;
-        
+
         // Signal that initial content is ready - this helps with perceived performance
         // and allows other components (like profile loading) to proceed
         if (!this._hasInitialContent()) {
@@ -2099,6 +2121,11 @@ export class FeedService {
    * Runs after fast fetch completes, adds more events to pending queue
    */
   private fetchEventsFromUsersBackground(pubkeys: string[], feedData: FeedItem) {
+    if (this.eventFocus.isEventFocused()) {
+      setTimeout(() => this.fetchEventsFromUsersBackground(pubkeys, feedData), 2000);
+      return;
+    }
+
     // Use requestIdleCallback to defer this work
     const performBackgroundFetch = async () => {
       try {

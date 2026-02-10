@@ -16,6 +16,7 @@ import { Wallets } from './wallets';
 import { Cache } from './cache';
 import { AccountRelayService } from './relays/account-relay';
 import { PublishService } from './publish.service';
+import { EventFocusService } from './event-focus.service';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -47,6 +48,7 @@ export class AccountStateService implements OnDestroy {
   private readonly cache = inject(Cache);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly publishService = inject(PublishService);
+  private readonly eventFocus = inject(EventFocusService);
 
   private destroy$ = new Subject<void>();
 
@@ -191,11 +193,36 @@ export class AccountStateService implements OnDestroy {
           [...currentPubkeys].every(pubkey => this.lastPreloadedAccountPubkeys.has(pubkey));
 
         if (!hasSameAccounts) {
-          // REMOVED, don't preload profiles.
-          this.preloadAccountProfiles(accounts);
+          this.scheduleAccountProfilePreload(accounts);
         }
       }
     });
+  }
+
+  private scheduleAccountProfilePreload(accounts: NostrUser[]): void {
+    if (this.eventFocus.isEventFocused()) {
+      setTimeout(() => this.scheduleAccountProfilePreload(accounts), 2000);
+      return;
+    }
+
+    const maxPreloadAccounts = 3;
+    const activePubkey = this.account()?.pubkey;
+    const prioritized = activePubkey
+      ? [
+        ...accounts.filter(account => account.pubkey === activePubkey),
+        ...accounts.filter(account => account.pubkey !== activePubkey),
+      ]
+      : accounts;
+
+    const accountsToPreload = prioritized.slice(0, maxPreloadAccounts);
+    const runPreload = () => this.preloadAccountProfiles(accountsToPreload);
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => runPreload(), { timeout: 2000 });
+      return;
+    }
+
+    setTimeout(() => runPreload(), 2000);
   }
 
   hasFeature(feature: Feature): boolean {

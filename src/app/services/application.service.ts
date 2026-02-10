@@ -23,6 +23,7 @@ import { SleepModeService } from './sleep-mode.service';
 import { FavoritesService } from './favorites.service';
 import { ContentNotificationService } from './content-notification.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { EventFocusService } from './event-focus.service';
 
 @Injectable({
   providedIn: 'root',
@@ -46,6 +47,7 @@ export class ApplicationService {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly eventFocus = inject(EventFocusService);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
@@ -73,12 +75,18 @@ export class ApplicationService {
     effect(async () => {
       const followingList = this.accountState.followingList();
       const pubkey = this.accountState.pubkey();
+      const isEventFocused = this.eventFocus.isEventFocused();
 
       this.logger.debug(`[Profile Loading Effect] Triggered - Account: ${pubkey?.substring(0, 8) || 'none'}..., Following: ${followingList.length}`);
 
       // Don't process if there's no account
       if (!this.accountState.account() || !pubkey) {
         this.logger.debug('[Profile Loading Effect] Skipping - no account');
+        return;
+      }
+
+      if (isEventFocused) {
+        this.logger.debug('[Profile Loading Effect] Skipping - event focused');
         return;
       }
 

@@ -122,7 +122,7 @@ export class MediaChooserDialogComponent {
       } else if (mediaType === 'files') {
         this.activeTab.set('files');
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   setActiveTab(tab: 'images' | 'videos' | 'files'): void {
@@ -152,7 +152,7 @@ export class MediaChooserDialogComponent {
 
   toggleItemSelection(item: MediaItem): void {
     const selected = new Set(this.selectedItems());
-    
+
     if (selected.has(item.sha256)) {
       selected.delete(item.sha256);
     } else {
@@ -162,7 +162,7 @@ export class MediaChooserDialogComponent {
       }
       selected.add(item.sha256);
     }
-    
+
     this.selectedItems.set(selected);
   }
 

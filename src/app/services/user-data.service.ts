@@ -11,6 +11,7 @@ import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayService } from './relays/user-relay';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
+import { EventFocusService } from './event-focus.service';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -38,9 +39,12 @@ export class UserDataService {
   private readonly relaysService = inject(RelaysService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly eventFocus = inject(EventFocusService);
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
+  private readonly maxPendingProfilesDuringFocus = 15;
+  private readonly profilePendingWaitMs = 1200;
 
   /**
    * Save events to database in background (non-blocking)
@@ -222,6 +226,10 @@ export class UserDataService {
       }
     }
 
+    if (this.eventFocus.isEventFocused() && this.pendingProfileRequests.size >= this.maxPendingProfilesDuringFocus) {
+      await this.waitForProfileSlot(this.maxPendingProfilesDuringFocus, this.profilePendingWaitMs);
+    }
+
     // CRITICAL: Create and set the promise SYNCHRONOUSLY before any await
     // Only log when pending count is high (indicates potential issue)
     if (this.pendingProfileRequests.size > 10) {
@@ -252,6 +260,26 @@ export class UserDataService {
         this.pendingProfileRequests.delete(pubkey);
       }, 5000);
     }
+  }
+
+  private async waitForProfileSlot(maxPending: number, timeoutMs: number): Promise<void> {
+    if (this.pendingProfileRequests.size < maxPending) {
+      return;
+    }
+
+    await new Promise<void>(resolve => {
+      const startTime = Date.now();
+      const checkSlot = () => {
+        const elapsed = Date.now() - startTime;
+        if (this.pendingProfileRequests.size < maxPending || elapsed >= timeoutMs) {
+          resolve();
+          return;
+        }
+        setTimeout(checkSlot, 50);
+      };
+
+      checkSlot();
+    });
   }
 
   private async loadProfile(

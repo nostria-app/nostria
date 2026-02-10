@@ -77,15 +77,12 @@ export class StreamsSettingsDialogComponent implements OnInit {
 
   constructor() {
     // Effect to sync relays when streamsRelaySet changes
-    effect(
-      () => {
-        const set = this.streamsRelaySet();
-        if (set.relays.length > 0) {
-          this.relays.set([...set.relays]);
-        }
-      },
-      { allowSignalWrites: true }
-    );
+    effect(() => {
+      const set = this.streamsRelaySet();
+      if (set.relays.length > 0) {
+        this.relays.set([...set.relays]);
+      }
+    });
   }
 
   ngOnInit(): void {

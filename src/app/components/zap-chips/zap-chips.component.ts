@@ -142,7 +142,7 @@ export class ZapChipsComponent {
         this.loadedPubkeys.add(zapper.pubkey);
         this.loadProfile(zapper.pubkey);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   private loadProfile(pubkey: string) {

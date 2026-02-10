@@ -299,7 +299,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         this.showPublic.set(true);
         this.selectedListFilter.set('public');
       }
-    }, { allowSignalWrites: true });
+    });
 
     // Load cached articles from database first
     this.loadCachedArticles();

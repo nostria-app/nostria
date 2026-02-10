@@ -91,7 +91,7 @@ export class ArticlesSettingsDialogComponent implements OnInit {
       if (set.relays.length > 0) {
         this.relays.set([...set.relays]);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   ngOnInit(): void {

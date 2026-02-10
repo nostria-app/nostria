@@ -1650,9 +1650,8 @@ export class EventService {
 
       const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
-      // Prefetch profiles for all reply authors - await to ensure cache is populated
-      // before components try to render. This loads from storage quickly.
-      await this.prefetchProfilesForReplies(filteredReplies, parents);
+      // Prefetch profiles for reply authors in the background to prioritize thread loading.
+      this.deferReplyProfilePrefetch(filteredReplies, parents);
 
       // Build thread tree starting from the target event (reposted content for reposts)
       // This will only include downstream descendants of the target event
@@ -1692,8 +1691,8 @@ export class EventService {
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);
 
-        // Prefetch profiles for reply authors - await to ensure cache is populated
-        await this.prefetchProfilesForReplies(filteredReplies, []);
+        // Prefetch profiles for reply authors in the background to prioritize thread loading.
+        this.deferReplyProfilePrefetch(filteredReplies, []);
 
         // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
         const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
@@ -1734,6 +1733,25 @@ export class EventService {
       emoji,
       count,
     }));
+  }
+
+  private deferReplyProfilePrefetch(replies: Event[], parents: Event[]): void {
+    if (replies.length === 0 && parents.length === 0) {
+      return;
+    }
+
+    const runPrefetch = () => {
+      this.prefetchProfilesForReplies(replies, parents).catch(error => {
+        this.logger.debug('[Thread Prefetch] Profile prefetch failed:', error);
+      });
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => runPrefetch(), { timeout: 2000 });
+      return;
+    }
+
+    setTimeout(() => runPrefetch(), 0);
   }
 
   /**
