@@ -252,7 +252,7 @@ import { Event, nip19, kinds } from 'nostr-tools';
         border-top: none;
         border-radius: 0 0 8px 8px;
         box-shadow: var(--mat-sys-level3);
-        max-height: 400px;
+        max-height: 70vh;
         overflow-y: auto;
         overflow-x: hidden;
         z-index: 1000;
@@ -272,7 +272,7 @@ import { Event, nip19, kinds } from 'nostr-tools';
           left: 16px;
           right: 16px;
           width: auto;
-          max-height: 400px; /* Account for toolbar (64px) and mobile menu (80px) */
+          max-height: 60vh; /* Account for toolbar (64px) and mobile menu (80px) */
           border-radius: 12px;
           margin: 0;
           z-index: 1000;
@@ -551,7 +551,7 @@ export class SearchResultsComponent {
   getVisibleProfiles(): SearchResultProfile[] {
     const profiles = this.searchService.searchResults();
     if (this.searchService.activeTab() === 'all') {
-      return profiles.slice(0, 5); // Show max 5 in 'all' view
+      return profiles.slice(0, 10); // Show max 10 in 'all' view
     }
     return profiles;
   }
