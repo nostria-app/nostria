@@ -737,17 +737,6 @@
     </div>
     }
 
-    <!-- Expandable reactions summary panel -->
-    @if (showReactionsSummary()) {
-    <div class="reactions-summary-container" [@expandCollapse]>
-      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
-        [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
-        [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-        [hideTabs]="false">
-      </app-reaction-summary>
-    </div>
-    }
-
     <!-- Unified action toolbar -->
     <div class="actions-row" [class.compact]="compact()"
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
@@ -760,10 +749,9 @@
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         @if (likes().length > 0) {
-        <span class="action-label">{{ likes().length }}</span>
-        } @else {
-        <span class="action-label">Like</span>
+        <span class="action-count">{{ likes().length }}</span>
         }
+        <span class="action-text">Like</span>
 
         <!-- Quick reaction hover popup -->
         <div class="quick-reaction-popup" [class.visible]="showQuickReactions()" (mouseenter)="onLikeHoverEnter()"
@@ -787,14 +775,12 @@
       </div>
 
       <!-- Comments (opens event page) -->
-      <div class="action-button comment-action" role="button" tabindex="0"
-        (click)="navigateToComments($event)">
+      <div class="action-button comment-action" role="button" tabindex="0" (click)="navigateToComments($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
-        <span class="action-label">{{ replyCount() }}</span>
-        } @else {
-        <span class="action-label">Reply</span>
+        <span class="action-count">{{ replyCount() }}</span>
         }
+        <span class="action-text">Reply</span>
       </div>
 
       <!-- Share with count -->
@@ -802,10 +788,9 @@
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
         @if (repostCount() > 0) {
-        <span class="action-label">{{ repostCount() }}</span>
-        } @else {
-        <span class="action-label">Share</span>
+        <span class="action-count">{{ repostCount() }}</span>
         }
+        <span class="action-text">Share</span>
       </div>
 
       <!-- Quotes -->
@@ -813,7 +798,8 @@
       <div class="action-button quote-action" role="button" tabindex="0"
         (click)="toggleReactionsSummary('quotes'); $event.stopPropagation()">
         <mat-icon class="action-icon">format_quote</mat-icon>
-        <span class="action-label">{{ quoteCount() }}</span>
+        <span class="action-count">{{ quoteCount() }}</span>
+        <span class="action-text">Quotes</span>
       </div>
       }
 
@@ -823,16 +809,15 @@
           [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
         </app-zap-button>
         @if (totalZapAmount() > 0) {
-        <span class="action-label">{{ formatZapAmount(totalZapAmount()) }}</span>
-        } @else {
-        <span class="action-label">Zap</span>
+        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
         }
+        <span class="action-text">Zap</span>
       </div>
 
       <!-- Bookmark (inline) -->
       <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
-        <span class="action-label">Bookmark</span>
+        <span class="action-text">Bookmark</span>
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
@@ -853,6 +838,17 @@
       </div>
       }
     </div>
+
+    <!-- Expandable reactions summary panel (below the toolbar border) -->
+    @if (showReactionsSummary()) {
+    <div class="reactions-summary-container" [@expandCollapse]>
+      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
+        [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
+        [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+        [hideTabs]="false">
+      </app-reaction-summary>
+    </div>
+    }
     }
 
     <!-- Compact mode: view all button -->
