@@ -1917,16 +1917,33 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    */
   toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
     const isCurrentlyVisible = this.showReactionsSummary();
+    // If the requested tab has no data, pick the first tab that does
+    const resolvedTab = this.resolveTabWithData(tab);
     const currentTab = this.reactionsSummaryTab();
 
-    if (isCurrentlyVisible && currentTab === tab) {
+    if (isCurrentlyVisible && currentTab === resolvedTab) {
       // If clicking the same tab while visible, close the panel
       this.showReactionsSummary.set(false);
     } else {
-      // Open panel and switch to the requested tab
-      this.reactionsSummaryTab.set(tab);
+      this.reactionsSummaryTab.set(resolvedTab);
       this.showReactionsSummary.set(true);
     }
+  }
+
+  private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
+    const tabHasData: Record<string, () => boolean> = {
+      reactions: () => this.likes().length > 0,
+      reposts: () => this.repostCount() > 0,
+      quotes: () => this.quoteCount() > 0,
+      zaps: () => this.zapCount() > 0,
+    };
+
+    if (tabHasData[preferredTab]()) {
+      return preferredTab;
+    }
+
+    const tabs: ('reactions' | 'reposts' | 'quotes' | 'zaps')[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+    return tabs.find(t => tabHasData[t]()) ?? preferredTab;
   }
 
   /**
