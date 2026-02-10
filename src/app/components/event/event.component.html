@@ -783,25 +783,15 @@
         <span class="action-text">Reply</span>
       </div>
 
-      <!-- Share with count -->
+      <!-- Share with count (reposts + quotes) -->
       <div class="action-button share-action" role="button" tabindex="0"
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
-        @if (repostCount() > 0) {
-        <span class="action-count">{{ repostCount() }}</span>
+        @if (shareCount() > 0) {
+        <span class="action-count">{{ shareCount() }}</span>
         }
         <span class="action-text">Share</span>
       </div>
-
-      <!-- Quotes -->
-      @if (quoteCount() > 0) {
-      <div class="action-button quote-action" role="button" tabindex="0"
-        (click)="toggleReactionsSummary('quotes'); $event.stopPropagation()">
-        <mat-icon class="action-icon">format_quote</mat-icon>
-        <span class="action-count">{{ quoteCount() }}</span>
-        <span class="action-text">Quotes</span>
-      </div>
-      }
 
       <!-- Zap with sats -->
       <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
