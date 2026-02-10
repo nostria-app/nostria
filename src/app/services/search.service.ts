@@ -571,13 +571,72 @@ export class SearchService {
   }
 
   /**
-   * Enrich search results with Web of Trust scores and sort by WoT rank
+   * Calculate a relevance score for a profile against a search query.
+   * Lower score = more relevant.
+   *
+   * Scoring tiers:
+   *   0 - Exact match on name or NIP-05 username (e.g. query "hus" matches name "hus")
+   *   1 - Starts-with match on name or NIP-05 username
+   *   2 - Exact match on display_name
+   *   3 - Starts-with match on display_name
+   *   4 - Contains match on name, display_name, or NIP-05
+   *   5 - Contains match only in about field
+   *   6 - No match (fallback)
+   */
+  getRelevanceScore(profile: SearchResultProfile, query: string): number {
+    const searchTerm = query.toLowerCase().trim();
+    if (!searchTerm) return 6;
+
+    const data = profile.data as Record<string, unknown>;
+    const name = (typeof data?.['name'] === 'string' ? data['name'] : '').toLowerCase();
+    const displayName = (typeof data?.['display_name'] === 'string' ? data['display_name'] : '').toLowerCase();
+    const nip05Raw = data?.['nip05'];
+    const nip05Full = (typeof nip05Raw === 'string' ? nip05Raw : Array.isArray(nip05Raw) ? nip05Raw[0] : '').toLowerCase();
+    // Extract NIP-05 username (part before @)
+    const nip05User = nip05Full.includes('@') ? nip05Full.split('@')[0] : nip05Full;
+    const about = (typeof data?.['about'] === 'string' ? data['about'] : '').toLowerCase();
+
+    // Tier 0: Exact match on name or NIP-05 username
+    if (name === searchTerm || (nip05User && nip05User === searchTerm)) {
+      return 0;
+    }
+
+    // Tier 1: Starts-with match on name or NIP-05 username
+    if (name.startsWith(searchTerm) || (nip05User && nip05User.startsWith(searchTerm))) {
+      return 1;
+    }
+
+    // Tier 2: Exact match on display_name
+    if (displayName === searchTerm) {
+      return 2;
+    }
+
+    // Tier 3: Starts-with match on display_name
+    if (displayName.startsWith(searchTerm)) {
+      return 3;
+    }
+
+    // Tier 4: Contains match on name, display_name, or NIP-05
+    if (name.includes(searchTerm) || displayName.includes(searchTerm) || nip05Full.includes(searchTerm)) {
+      return 4;
+    }
+
+    // Tier 5: Contains match only in about
+    if (about.includes(searchTerm)) {
+      return 5;
+    }
+
+    return 6;
+  }
+
+  /**
+   * Enrich search results with Web of Trust scores and sort by relevance + WoT rank
    * @param results - The search results to enrich
    * @param queryContext - The search query that triggered this enrichment (for race condition prevention)
    */
   private async enrichWithWoTScoresAndSort(results: SearchResultProfile[], queryContext?: string): Promise<void> {
-    // Sort by source priority first (following > cached > remote)
-    const sortedResults = this.sortBySourcePriority(results);
+    // Sort by source priority and relevance first
+    const sortedResults = this.sortByRelevance(results, queryContext);
 
     // Always set results immediately to show something to the user
     untracked(() => {
@@ -612,8 +671,8 @@ export class SearchService {
         };
       });
 
-      // Sort by source priority first (following > cached > remote),
-      // then by WoT rank within each source group (lower is better)
+      // Sort by source priority, then relevance, then WoT rank
+      const query = queryContext || '';
       enrichedResults.sort((a, b) => {
         // Primary sort: source priority (following > cached > remote)
         const sourcePriority = { following: 0, cached: 1, remote: 2 };
@@ -622,7 +681,14 @@ export class SearchService {
           return sourceCompare;
         }
 
-        // Secondary sort: WoT rank (lower is better, undefined ranks at the end)
+        // Secondary sort: relevance score (lower is better)
+        const relevanceA = this.getRelevanceScore(a, query);
+        const relevanceB = this.getRelevanceScore(b, query);
+        if (relevanceA !== relevanceB) {
+          return relevanceA - relevanceB;
+        }
+
+        // Tertiary sort: WoT rank (lower is better, undefined ranks at the end)
         if (a.wotRank !== undefined && b.wotRank !== undefined) {
           return a.wotRank - b.wotRank;
         }
@@ -646,21 +712,29 @@ export class SearchService {
       this.logger.debug(`Enriched ${enrichedResults.length} profiles with WoT scores`);
     } catch (error) {
       this.logger.error('Failed to enrich results with WoT scores', error);
-      // Fall back to source-sorted results (already set at the start)
+      // Fall back to relevance-sorted results (already set at the start)
     }
   }
 
   /**
-   * Sort results by source priority: following > cached > remote
+   * Sort results by source priority and relevance score.
+   * Within each source group, profiles with better relevance scores appear first.
    */
-  private sortBySourcePriority(results: SearchResultProfile[]): SearchResultProfile[] {
+  private sortByRelevance(results: SearchResultProfile[], query?: string): SearchResultProfile[] {
     const sourcePriority: Record<string, number> = { following: 0, cached: 1, remote: 2 };
+    const searchTerm = query || '';
     const sorted = [...results].sort((a, b) => {
       const priorityA = sourcePriority[a.source] ?? 99;
       const priorityB = sourcePriority[b.source] ?? 99;
-      return priorityA - priorityB;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Within same source group, sort by relevance
+      const relevanceA = this.getRelevanceScore(a, searchTerm);
+      const relevanceB = this.getRelevanceScore(b, searchTerm);
+      return relevanceA - relevanceB;
     });
-    console.log('Sorted results by source:', sorted.map(r => ({ source: r.source, name: r.data?.name || r.data?.display_name })));
     return sorted;
   }
 
