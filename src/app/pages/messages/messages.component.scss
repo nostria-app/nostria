@@ -751,22 +751,13 @@
   }
 }
 
-// Time displayed on the side of message bubbles
-.message-time-side {
-  flex-shrink: 0;
+// Time displayed inside message bubbles (inline with meta)
+.message-time {
   font-size: var(--text-2xs);
-  opacity: 0.5;
-  align-self: center;
   white-space: nowrap;
-  min-width: 40px;
   // Prevent iOS Safari from auto-zooming text
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-
-  @media (max-width: 699px) {
-    font-size: var(--text-2xs);
-    min-width: 36px;
-  }
 }
 
 .message-bubble-container {
@@ -778,11 +769,6 @@
   overflow-wrap: break-word;
   min-width: 0;
   position: relative;
-
-  // Push time to edges using margin-auto on bubble
-  .message-time-side {
-    margin-left: 0;
-  }
 
   .message-bubble {
     margin-right: auto;
@@ -1222,7 +1208,7 @@
 .message-inline-meta {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   font-size: var(--text-2xs);
   opacity: 0.6;
   margin-left: 6px;

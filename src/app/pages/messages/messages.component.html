@@ -411,6 +411,7 @@
             }
             <app-message-content [content]="message.content"></app-message-content>
             <span class="message-inline-meta">
+              <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
               <!-- Encryption status indicator -->
               @if (message.encryptionType === 'nip44') {
               <mat-icon class="encryption-icon secure" matTooltip="Secure (NIP-17)">verified_user</mat-icon>
@@ -428,7 +429,6 @@
               }
             </span>
           </div>
-          <span class="message-time-side">{{ formatMessageTime(message.created_at) }}</span>
 
           @if (message.failed) {
           <div class="message-actions">

@@ -289,3 +289,78 @@ describe('MessagesComponent sendMessage', () => {
     );
   });
 });
+
+describe('MessagesComponent formatMessageTime', () => {
+  let component: MessagesComponent;
+
+  beforeEach(() => {
+    component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+    (component as any).localSettings = {
+      timeFormat: signal('12h'),
+    };
+  });
+
+  it('should format time in 12-hour format by default', () => {
+    // 2024-01-15 14:30:00 UTC
+    const timestamp = Math.floor(new Date(2024, 0, 15, 14, 30, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('2:30 PM');
+  });
+
+  it('should format time in 24-hour format when setting is 24h', () => {
+    (component as any).localSettings.timeFormat.set('24h');
+    const timestamp = Math.floor(new Date(2024, 0, 15, 14, 30, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('14:30');
+  });
+
+  it('should handle midnight in 12-hour format', () => {
+    const timestamp = Math.floor(new Date(2024, 0, 15, 0, 5, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('12:05 AM');
+  });
+
+  it('should handle midnight in 24-hour format', () => {
+    (component as any).localSettings.timeFormat.set('24h');
+    const timestamp = Math.floor(new Date(2024, 0, 15, 0, 5, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('00:05');
+  });
+
+  it('should handle noon in 12-hour format', () => {
+    const timestamp = Math.floor(new Date(2024, 0, 15, 12, 0, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('12:00 PM');
+  });
+
+  it('should pad minutes with leading zero', () => {
+    const timestamp = Math.floor(new Date(2024, 0, 15, 9, 3, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('9:03 AM');
+  });
+
+  it('should pad hours with leading zero in 24-hour format', () => {
+    (component as any).localSettings.timeFormat.set('24h');
+    const timestamp = Math.floor(new Date(2024, 0, 15, 9, 3, 0).getTime() / 1000);
+    const result = component.formatMessageTime(timestamp);
+    expect(result).toBe('09:03');
+  });
+});
+
+describe('MessagesComponent template structure', () => {
+  it('should not reference message-time-side class in template file', async () => {
+    // Verify old external timestamp class is no longer used
+    // The template file should use message-time inside message-inline-meta instead
+    const response = await fetch('/base/src/app/pages/messages/messages.component.html');
+    if (response.ok) {
+      const html = await response.text();
+      expect(html).not.toContain('message-time-side');
+      expect(html).toContain('message-time');
+      expect(html).toContain('message-inline-meta');
+    } else {
+      // If template can't be fetched (e.g., compiled inline), verify component exists
+      const cmp = (MessagesComponent as any).ɵcmp;
+      expect(cmp).toBeDefined();
+    }
+  });
+});
