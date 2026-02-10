@@ -190,7 +190,7 @@
   }
 }
 
-// Labels-only mode: hide icons, show labels
+// Labels-only mode: hide icons, show labels + counts
 // Use width/height/overflow instead of display:none to keep elements
 // in the DOM for menu trigger positioning (e.g., emoji picker)
 .actions-row.mode-labels-only {
@@ -202,25 +202,46 @@
       flex-shrink: 0;
     }
 
-    .action-label {
+    .action-count {
+      display: inline;
+    }
+
+    .action-text {
       display: inline;
     }
   }
 }
 
-// Icons-only mode: hide labels, show icons
+// Icons-only mode: hide text labels, show icons + counts
 .actions-row.mode-icons-only {
   .action-button {
-    .action-label {
+    .action-text {
       display: none;
+    }
+
+    .action-count {
+      display: inline;
     }
   }
 }
 
-// When container is narrow, hide labels for icons-and-labels mode (icons only)
+// Icons-and-labels mode: show everything
+.actions-row.mode-icons-and-labels {
+  .action-button {
+    .action-count {
+      display: inline;
+    }
+
+    .action-text {
+      display: inline;
+    }
+  }
+}
+
+// When container is narrow, hide text labels for icons-and-labels mode
 // Labels-only and icons-only modes are not affected by container width
 @container note-card (max-width: 480px) {
-  .actions-row.mode-icons-and-labels .action-button .action-label {
+  .actions-row.mode-icons-and-labels .action-button .action-text {
     display: none;
   }
 }
@@ -233,6 +254,7 @@
   gap: 6px;
   padding: 8px 12px;
   min-width: 0;
+  flex: 1;
   border: none;
   background: none;
   border-radius: 8px;
@@ -257,7 +279,15 @@
     flex-shrink: 0;
   }
 
-  .action-label {
+  .action-count {
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 22px;
+    white-space: nowrap;
+  }
+
+  .action-text {
     font-size: 13px;
     text-transform: none;
     letter-spacing: 0;
@@ -353,7 +383,8 @@
   &:hover {
     color: #e91e63;
 
-    .action-label {
+    .action-count,
+    .action-text {
       color: #e91e63;
     }
 
@@ -375,7 +406,8 @@
   &:has(::ng-deep .reacted) {
     color: #e91e63;
 
-    .action-label {
+    .action-count,
+    .action-text {
       color: #e91e63;
     }
   }
@@ -386,7 +418,8 @@
     color: var(--mat-sys-primary);
 
     >mat-icon,
-    .action-label {
+    .action-count,
+    .action-text {
       color: var(--mat-sys-primary);
     }
 
@@ -401,7 +434,8 @@
     color: var(--mat-sys-primary);
 
     >mat-icon,
-    .action-label {
+    .action-count,
+    .action-text {
       color: var(--mat-sys-primary);
     }
   }
@@ -410,7 +444,8 @@
 .zap-action {
   color: var(--nostria-bitcoin);
 
-  .action-label {
+  .action-count,
+  .action-text {
     color: var(--nostria-bitcoin);
   }
 
@@ -421,7 +456,8 @@
   &:hover {
     color: #ff8c42;
 
-    .action-label {
+    .action-count,
+    .action-text {
       color: #ff8c42;
     }
 
@@ -436,7 +472,8 @@
     color: var(--mat-sys-primary);
 
     >mat-icon,
-    .action-label {
+    .action-count,
+    .action-text {
       color: var(--mat-sys-primary);
     }
   }
@@ -447,7 +484,8 @@
     color: var(--mat-sys-primary);
 
     >mat-icon,
-    .action-label {
+    .action-count,
+    .action-text {
       color: var(--mat-sys-primary);
     }
   }
@@ -459,6 +497,7 @@
   align-items: center;
   gap: 4px;
   margin-left: auto;
+  flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 8px;
   cursor: pointer;
