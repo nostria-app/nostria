@@ -515,32 +515,32 @@ export class ZapService {
    * Pay a lightning invoice using NWC via Alby SDK
    */
   async payInvoice(invoice: string): Promise<{ preimage: string; fees_paid?: number }> {
+    this.logger.info('=== Starting NWC Payment via Alby SDK ===');
+    this.logger.debug('Invoice:', invoice);
+
+    const availableWallets = this.wallets.wallets();
+    const walletEntries = Object.entries(availableWallets);
+
+    if (walletEntries.length === 0) {
+      throw new Error('No wallets connected. Please connect a wallet first.');
+    }
+
+    // For now, use the first available wallet
+    const [walletName, wallet] = walletEntries[0];
+    const connectionString = wallet.connections[0];
+
+    this.logger.debug(`Using wallet: ${walletName}`);
+
+    // Use Alby SDK to handle the NWC payment
+    // Always close the LN client after use to release WebSocket connections
+    const ln = new LN(connectionString);
     try {
-      this.logger.info('=== Starting NWC Payment via Alby SDK ===');
-      this.logger.debug('Invoice:', invoice);
-
-      const availableWallets = this.wallets.wallets();
-      const walletEntries = Object.entries(availableWallets);
-
-      if (walletEntries.length === 0) {
-        throw new Error('No wallets connected. Please connect a wallet first.');
-      }
-
-      // For now, use the first available wallet
-      const [walletName, wallet] = walletEntries[0];
-      const connectionString = wallet.connections[0];
-
-      this.logger.debug(`Using wallet: ${walletName}`);
-
-      // Use Alby SDK to handle the NWC payment
-      const ln = new LN(connectionString);
-
       this.logger.debug('Created Alby LN client, making payment...');
       const paymentStartTime = Date.now();
       const result = await ln.pay(invoice);
       const paymentDuration = Date.now() - paymentStartTime;
 
-      this.logger.info(`✅ Payment completed successfully via Alby SDK (took ${paymentDuration}ms)`);
+      this.logger.info(`Payment completed successfully via Alby SDK (took ${paymentDuration}ms)`);
       this.logger.debug('Payment result:', result);
 
       // Extract preimage and fees from Alby SDK result
@@ -576,8 +576,10 @@ export class ZapService {
         fees_paid,
       };
     } catch (error) {
-      this.logger.error('❌ Failed to pay invoice via Alby SDK:', error);
+      this.logger.error('Failed to pay invoice via Alby SDK:', error);
       throw error;
+    } finally {
+      ln.close();
     }
   }
 

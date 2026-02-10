@@ -53,3 +53,4 @@
 - [✓] 2026-02-10 11:30 - Replace `[ngClass]` in `src/app/components/event/repost-button/repost-button.component.html` (line 3)
 - [✓] 2026-02-10 11:34 - Replace `[ngClass]` in `src/app/components/report-dialog/report-dialog.component.html` (line 122)
 - [✓] 2026-02-10 11:39 - Replace `[ngClass]` in `src/app/components/confirm-dialog/confirm-dialog.component.html` (line 9)
+- [✓] 2026-02-10 14:45 - BUG: Zaps fail across all connected wallets at the same time
