@@ -3,6 +3,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ReactionButtonComponent } from './reaction-button.component';
+import { LocalSettingsService } from '../../../services/local-settings.service';
 
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
@@ -76,6 +77,106 @@ describe('ReactionButtonComponent', () => {
       expect(categoryIds).toContain('objects');
       expect(categoryIds).toContain('symbols');
       expect(categoryIds).toContain('flags');
+    });
+  });
+
+  describe('sendDefaultReaction', () => {
+    it('should call addReaction with default emoji from settings', () => {
+      const addReactionSpy = spyOn(component, 'addReaction');
+      const localSettings = TestBed.inject(LocalSettingsService);
+      localSettings.setDefaultReactionEmoji('🔥');
+
+      component.sendDefaultReaction();
+
+      expect(addReactionSpy).toHaveBeenCalledWith('🔥');
+    });
+
+    it('should call addReaction with heart emoji when using default settings', () => {
+      const addReactionSpy = spyOn(component, 'addReaction');
+
+      component.sendDefaultReaction();
+
+      expect(addReactionSpy).toHaveBeenCalledWith('❤️');
+    });
+
+    it('should open menu when default emoji is empty string', () => {
+      const openMenuSpy = spyOn(component, 'openMenu');
+      const addReactionSpy = spyOn(component, 'addReaction');
+      const localSettings = TestBed.inject(LocalSettingsService);
+      localSettings.setDefaultReactionEmoji('');
+
+      component.sendDefaultReaction();
+
+      expect(openMenuSpy).toHaveBeenCalled();
+      expect(addReactionSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('long-press detection', () => {
+    it('should send default reaction on quick pointer up (no long press)', () => {
+      const sendDefaultReactionSpy = spyOn(component, 'sendDefaultReaction');
+      const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
+
+      // Simulate pointer down then quick pointer up
+      component.onPointerDown();
+      component.onPointerUp(pointerEvent);
+
+      expect(sendDefaultReactionSpy).toHaveBeenCalled();
+    });
+
+    it('should open menu on long press', (done) => {
+      const openMenuSpy = spyOn(component, 'openMenu');
+
+      component.onPointerDown();
+
+      // Wait for long-press timer to fire (500ms + buffer)
+      setTimeout(() => {
+        expect(openMenuSpy).toHaveBeenCalled();
+        done();
+      }, 600);
+    });
+
+    it('should not send default reaction after long press completes', (done) => {
+      const sendDefaultReactionSpy = spyOn(component, 'sendDefaultReaction');
+      spyOn(component, 'openMenu');
+
+      component.onPointerDown();
+
+      // Wait for long-press to trigger
+      setTimeout(() => {
+        const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
+        component.onPointerUp(pointerEvent);
+        expect(sendDefaultReactionSpy).not.toHaveBeenCalled();
+        done();
+      }, 600);
+    });
+
+    it('should cancel long press on pointer leave', (done) => {
+      const openMenuSpy = spyOn(component, 'openMenu');
+
+      component.onPointerDown();
+      // Cancel immediately
+      component.onPointerLeave();
+
+      // Wait past the long-press duration
+      setTimeout(() => {
+        expect(openMenuSpy).not.toHaveBeenCalled();
+        done();
+      }, 600);
+    });
+
+    it('should reset longPressTriggered after pointer up', () => {
+      const sendDefaultReactionSpy = spyOn(component, 'sendDefaultReaction');
+
+      // First interaction: quick tap
+      component.onPointerDown();
+      component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
+      expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(1);
+
+      // Second interaction: quick tap should also work
+      component.onPointerDown();
+      component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
+      expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(2);
     });
   });
 

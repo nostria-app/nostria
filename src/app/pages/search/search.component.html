@@ -58,7 +58,23 @@
     @if (isSearching()) {
     <div class="loading-state">
       <mat-spinner diameter="40"></mat-spinner>
-      <p>Searching...</p>
+      @if (searchProgress(); as progress) {
+        <p>{{ progress.message }}</p>
+        @if (progress.totalSteps > 1) {
+          <div class="search-progress">
+            <div class="search-progress-bar">
+              <div class="search-progress-fill"
+                   [style.width.%]="(progress.currentStep / progress.totalSteps) * 100">
+              </div>
+            </div>
+            <span class="search-progress-text">
+              Step {{ progress.currentStep }} of {{ progress.totalSteps }}
+            </span>
+          </div>
+        }
+      } @else {
+        <p>Searching...</p>
+      }
     </div>
     } @else if (totalResults() === 0) {
     <div class="empty-state">

@@ -1,9 +1,12 @@
 <div class="reaction-container">
   @if (view() === 'icon') {
-  <!-- Icon view with reaction picker -->
+  <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-    [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"
-    (click)="$event.stopPropagation()">
+    [disabled]="isLoadingReactions()"
+    (pointerdown)="onPointerDown()"
+    (pointerup)="onPointerUp($event)"
+    (pointerleave)="onPointerLeave()"
+    (click)="$event.stopPropagation(); $event.preventDefault()">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content" class="emoji-icon-img">
@@ -14,6 +17,9 @@
     <mat-icon>favorite_border</mat-icon>
     }
   </button>
+
+  <!-- Hidden menu trigger for programmatic opening -->
+  <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"></div>
 
   <!-- Reaction picker menu -->
   <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">

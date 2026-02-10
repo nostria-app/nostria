@@ -202,6 +202,17 @@ export class SettingsRegistryService {
       popular: true,
     },
     {
+      id: 'default-reaction-emoji',
+      title: $localize`:@@settings.reactions.default-emoji:Default Reaction Emoji`,
+      description: $localize`:@@settings.reactions.default-emoji.description:Choose the emoji sent when you single-tap the reaction button. Long-press opens the full emoji picker.`,
+      keywords: ['reaction', 'emoji', 'like', 'heart', 'default', 'tap', 'quick', 'favorite'],
+      section: 'layout',
+      sectionTitle: $localize`:@@settings.sections.layout:Layout`,
+      icon: 'favorite',
+      route: '/settings/layout',
+      priority: 3,
+    },
+    {
       id: 'event-expiration',
       title: $localize`:@@settings.event-expiration.title:Global Event Expiration`,
       description: $localize`:@@settings.event-expiration.description:When enabled, all events you create will include an expiration tag (NIP-40)`,

@@ -76,6 +76,8 @@ export interface LocalSettings {
    * 'none' means no filtering (default).
    */
   maxTaggedAccountsFilter: MaxTaggedAccountsFilter;
+  /** Default reaction emoji sent on single-tap. Empty string means open picker instead. */
+  defaultReactionEmoji: string;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -99,6 +101,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuItems: [], // Empty means use default order
   contentFilter: { ...DEFAULT_CONTENT_FILTER },
   maxTaggedAccountsFilter: 'none', // No filtering by default
+  defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
 };
 
 /**
@@ -155,6 +158,7 @@ export class LocalSettingsService {
   readonly menuItems = computed(() => this.settings().menuItems);
   readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
   readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 'none');
+  readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [
@@ -539,6 +543,14 @@ export class LocalSettingsService {
    */
   setMaxTaggedAccountsFilter(maxTaggedAccountsFilter: MaxTaggedAccountsFilter): void {
     this.updateSettings({ maxTaggedAccountsFilter });
+  }
+
+  /**
+   * Set default reaction emoji for single-tap reactions.
+   * Empty string means open the emoji picker instead.
+   */
+  setDefaultReactionEmoji(defaultReactionEmoji: string): void {
+    this.updateSettings({ defaultReactionEmoji });
   }
 
   /**

@@ -123,6 +123,37 @@
   }
 }
 
+.search-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 0.5rem;
+
+  .search-progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: var(--mat-sys-surface-container-high);
+    border-radius: 3px;
+    overflow: hidden;
+
+    .search-progress-fill {
+      height: 100%;
+      background-color: var(--mat-sys-primary);
+      border-radius: 3px;
+      transition: width 0.3s ease-out;
+    }
+  }
+
+  .search-progress-text {
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.9;
+  }
+}
+
 .initial-state {
   .features {
     display: grid;

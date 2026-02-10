@@ -797,7 +797,7 @@
       [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
       <!-- Like/Reactions -->
       <div class="action-button like-action like-hover-container"
-        (click)="reactionBtn.openMenu(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
+        (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
         (mouseleave)="onLikeHoverLeave()">
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
