@@ -7,7 +7,6 @@ import {
   effect,
   inject,
   ElementRef,
-  HostListener,
   ChangeDetectionStrategy,
   OnDestroy,
   PLATFORM_ID,
@@ -74,6 +73,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '(touchstart)': 'onTouchStart($event)',
     '(click)': 'onOverlayClick($event)',
     '(dblclick)': 'onOverlayDoubleClick($event)',
+    '(document:keydown)': 'onKeyDown($event)',
   },
 })
 export class VideoControlsComponent implements OnDestroy {
@@ -314,7 +314,6 @@ export class VideoControlsComponent implements OnDestroy {
     }
   }
 
-  @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
     const video = this.videoElement();
     if (!video) return;
