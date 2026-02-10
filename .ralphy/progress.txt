@@ -57,3 +57,4 @@
 - [✓] 2026-02-10 15:05 - Emoji picker should display fullscreen with custom dialog component on smaller screens
 - [✓] 2026-02-10 15:26 - Quick search results hides when app window unfocused
 - [✓] 2026-02-10 15:40 - Add a "More" option with sub menu for the "Create" menu
+- [✓] 2026-02-10 15:51 - Add "Forward" to Messages

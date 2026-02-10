@@ -1619,6 +1619,55 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Forward a message to one or more recipients
+   */
+  async forwardMessage(message: DirectMessage): Promise<void> {
+    const { ForwardMessageDialogComponent } = await import('../../components/forward-message-dialog/forward-message-dialog.component');
+    type ForwardResult = import('../../components/forward-message-dialog/forward-message-dialog.component').ForwardMessageDialogResult;
+
+    const dialogRef = this.customDialog.open<typeof ForwardMessageDialogComponent.prototype, ForwardResult | undefined>(
+      ForwardMessageDialogComponent,
+      {
+        title: 'Forward Message',
+        width: '500px',
+        maxWidth: '90vw',
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      if (result && result.pubkeys?.length) {
+        const pubkeys = (result as ForwardResult).pubkeys;
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const pubkey of pubkeys) {
+          try {
+            await this.messaging.sendDirectMessage(message.content, pubkey);
+            successCount++;
+          } catch (err) {
+            failCount++;
+            this.logger.error('Failed to forward message to', pubkey, err);
+          }
+        }
+
+        if (failCount === 0) {
+          this.snackBar.open(
+            `Message forwarded to ${successCount} recipient${successCount > 1 ? 's' : ''}`,
+            'OK',
+            { duration: 3000 }
+          );
+        } else {
+          this.snackBar.open(
+            `Forwarded to ${successCount}, failed for ${failCount} recipient${failCount > 1 ? 's' : ''}`,
+            'OK',
+            { duration: 5000 }
+          );
+        }
+      }
+    });
+  }
+
+  /**
    * Reset messages cache - clears all decrypted messages from IndexedDB
    */
   async resetLocalMessagesCache(): Promise<void> {
