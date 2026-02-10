@@ -1520,14 +1520,14 @@ export class LayoutService implements OnDestroy {
     // Extract primary path without query params and without right outlet
     const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
     const [primaryPath] = urlWithoutOutlet.split('?');
-    
+
     // Merge existing query params with new ones
     const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
     if (extra?.queryParams) {
       Object.entries(extra.queryParams).forEach(([k, v]) => existingParams.set(k, String(v)));
     }
     const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
-    
+
     const targetUrl = `${primaryPath}(right:b/${badge})${queryString}`;
     this.router.navigateByUrl(targetUrl, { state: { event } });
   }
@@ -1542,14 +1542,14 @@ export class LayoutService implements OnDestroy {
     // Extract primary path without query params and without right outlet
     const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
     const [primaryPath] = urlWithoutOutlet.split('?');
-    
+
     // Preserve existing query params and add/update tab
     const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
     if (tabIndex !== undefined) {
       existingParams.set('tab', String(tabIndex));
     }
     const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
-    
+
     const targetUrl = badgeId
       ? `${primaryPath}(right:badges/edit/${badgeId})${queryString}`
       : `${primaryPath}(right:badges/create)${queryString}`;
@@ -1567,14 +1567,14 @@ export class LayoutService implements OnDestroy {
     // Extract primary path without query params and without right outlet
     const urlWithoutOutlet = currentUrl.split('(')[0] || '/';
     const [primaryPath] = urlWithoutOutlet.split('?');
-    
+
     // Merge existing query params with new ones
     const existingParams = new URLSearchParams(urlWithoutOutlet.includes('?') ? urlWithoutOutlet.split('?')[1] : '');
     if (extra?.queryParams) {
       Object.entries(extra.queryParams).forEach(([k, v]) => existingParams.set(k, String(v)));
     }
     const queryString = existingParams.toString() ? `?${existingParams.toString()}` : '';
-    
+
     const targetUrl = `${primaryPath}(right:badges/details/${badgeId})${queryString}`;
     this.router.navigateByUrl(targetUrl, { state: { event } });
   }
@@ -2141,32 +2141,25 @@ export class LayoutService implements OnDestroy {
    * Scrolls the page to show half of the banner and the full profile picture
    */
   scrollToOptimalPosition(scrollPosition: number): void {
-    // We need the banner height to calculate the optimal scroll position
-    // const bannerHeight = this.getBannerHeight();
-
     this.logger.debug('Scrolling to optimal position:', scrollPosition);
-    // // Calculate scroll position that shows half of the banner
-    // // We divide banner height by 2 to show half of it
-    // const scrollPosition = bannerHeight / 2;
 
-    // Find the content wrapper element
-    const contentWrapper = document.querySelector('.content-wrapper');
-    if (contentWrapper) {
-      // Scroll the content wrapper to the calculated position with smooth animation
-      contentWrapper.scrollTo({
+    // Find the scrollable panel element - profiles render in the left panel
+    const scrollableElement = document.querySelector('.left-panel') || document.querySelector('.mat-drawer-content');
+    if (scrollableElement) {
+      scrollableElement.scrollTo({
         top: scrollPosition,
         behavior: 'smooth',
       });
 
       this.logger.debug(
-        'Scrolled content wrapper to optimal profile view position',
+        'Scrolled panel to optimal profile view position',
         scrollPosition
       );
 
       // Refresh scroll monitoring after programmatic scroll
       setTimeout(() => this.refreshScrollMonitoring(), 300);
     } else {
-      this.logger.error('Could not find mat-drawer-content element for scrolling');
+      this.logger.warn('Could not find scrollable panel element for profile scrolling');
     }
   }
 

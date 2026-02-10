@@ -113,6 +113,10 @@ export class EncryptionPermissionService {
    * Perform the actual decryption using window.nostr
    */
   private async performDecryption(method: 'nip04' | 'nip44', ciphertext: string, pubkey: string): Promise<string> {
+    if (!ciphertext || !pubkey) {
+      throw new Error(`${method} decryption failed: missing ciphertext or pubkey`);
+    }
+
     this.logger.debug(`Performing ${method} decryption with pubkey: ${pubkey.substring(0, 16)}...`);
 
     try {
@@ -121,6 +125,9 @@ export class EncryptionPermissionService {
           throw new Error('Browser extension NIP-04 not available');
         }
         const result = await window.nostr.nip04.decrypt(pubkey, ciphertext);
+        if (result == null) {
+          throw new Error('NIP-04 decryption returned empty result (user may have cancelled)');
+        }
         this.logger.debug(`✅ NIP-04 decryption successful, result length: ${result.length}`);
         return result;
       } else {
@@ -129,6 +136,9 @@ export class EncryptionPermissionService {
         }
         this.logger.debug(`Calling window.nostr.nip44.decrypt with pubkey ${pubkey.substring(0, 16)}...`);
         const result = await window.nostr.nip44.decrypt(pubkey, ciphertext);
+        if (result == null) {
+          throw new Error('NIP-44 decryption returned empty result (user may have cancelled)');
+        }
         this.logger.debug(`✅ NIP-44 decryption successful, result length: ${result.length}`);
         return result;
       }
