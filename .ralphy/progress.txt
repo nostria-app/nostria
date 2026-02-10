@@ -61,3 +61,8 @@
 - [✓] 2026-02-10 16:58 - Replace `@HostListener` in `src/app/components/note-editor-dialog/note-editor-dialog.component.ts` (lines 672, 1924) -- `document:mousedown` and `document:keydown`
 - [✓] 2026-02-10 17:04 - Replace `@HostListener` in `src/app/components/inline-reply-editor/inline-reply-editor.component.ts` (line 226) -- `document:mousedown`
 - [✓] 2026-02-10 17:10 - Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
+- [✓] 2026-02-10 18:14 - Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
+- [✓] 2026-02-10 18:17 - Replace `@HostListener` in `src/app/components/video-controls/video-controls.component.ts` (line 317) -- `document:keydown`
+- [✓] 2026-02-10 18:24 - Replace `@HostListener` in `src/app/components/user-profile/hover-card/profile-hover-card.component.ts` (line 486) -- `click`
+- [✓] 2026-02-10 18:27 - Replace `@HostListener` in `src/app/components/media-preview-dialog/media-preview.component.ts` (line 166) -- `window:keydown`
+- [✓] 2026-02-10 18:30 - Remove `standalone: true` from `src/app/components/login-dialog/login-dialog.component.ts` (line 45)
