@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -22,7 +22,7 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { FollowSetsService } from '../../services/follow-sets.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -63,8 +63,9 @@ const SECTION_LIMIT = 12;
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MusicComponent implements OnInit, OnDestroy {
+export class MusicComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -412,10 +413,6 @@ export class MusicComponent implements OnInit, OnDestroy {
     setTimeout(() => this.updateContainerWidth(), 50);
     // Second update after CSS width transitions complete (transition is ~300ms)
     setTimeout(() => this.updateContainerWidth(), 400);
-  }
-
-  ngOnInit(): void {
-    // Component initialization
   }
 
   /**
