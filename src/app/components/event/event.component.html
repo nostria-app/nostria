@@ -746,8 +746,8 @@
         </div>
       </div>
 
-      <!-- Comments (opens event page) -->
-      <div class="action-button comment-action" role="button" tabindex="0" (click)="navigateToComments($event)">
+      <!-- Reply (opens note editor) -->
+      <div class="action-button comment-action" role="button" tabindex="0" (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
         <span class="action-count">{{ replyCount() }}</span>
