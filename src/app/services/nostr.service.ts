@@ -1,4 +1,4 @@
-import { Injectable, signal, effect, inject, NgZone } from '@angular/core';
+import { Injectable, signal, effect, inject, NgZone, Injector } from '@angular/core';
 import {
   Event,
   EventTemplate,
@@ -38,6 +38,7 @@ import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
+import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -127,6 +128,7 @@ export class NostrService implements NostriaService {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly followSetsService = inject(FollowSetsService);
   private readonly ngZone = inject(NgZone);
+  private readonly injector = inject(Injector);
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -678,6 +680,7 @@ export class NostrService implements NostriaService {
         kinds.RelayList,     // 10002 - relay configuration
         kinds.BookmarkList,  // 10003 - bookmarks
         10007,               // Search relay list
+        TRUST_PROVIDER_LIST_KIND, // 10040 - NIP-85 Trusted Service Providers
         kinds.DirectMessageRelaysList, // 10050 - DM relays
         10063,               // Media server list (BUD-03)
       ],
@@ -771,6 +774,17 @@ export class NostrService implements NostriaService {
           this.logger.info('Updated DM relay list from subscription', {
             pubkey,
             dmRelayCount: event.tags.filter(t => t[0] === 'relay').length,
+          });
+          break;
+        }
+
+        case TRUST_PROVIDER_LIST_KIND: {
+          // Load NIP-85 trusted service provider declarations
+          const trustProviderService = this.injector.get(TrustProviderService);
+          trustProviderService.loadFromEvent(event);
+          this.logger.info('Updated trust provider list from subscription', {
+            pubkey,
+            providerCount: event.tags.length,
           });
           break;
         }

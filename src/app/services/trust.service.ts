@@ -3,6 +3,7 @@ import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService, TrustMetrics } from './database.service';
+import { TrustProviderService } from './trust-provider.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 /**
@@ -17,6 +18,7 @@ export class TrustService {
   private logger = inject(LoggerService);
   private relayPool = inject(RelayPoolService);
   private database = inject(DatabaseService);
+  private trustProviderService = inject(TrustProviderService);
   private injector = inject(Injector);
 
   // In-memory cache for quick access
@@ -122,12 +124,30 @@ export class TrustService {
   }
 
   /**
-   * Fetch metrics from relay and save to database
+   * Resolve relay URLs for fetching kind 30382 assertions.
+   * Uses kind 10040 provider declarations if available, falls back to local setting.
+   */
+  private resolveRelayUrls(): string[] {
+    // Check if user has kind 10040 providers configured for kind 30382
+    if (this.trustProviderService.loaded()) {
+      const providerRelays = this.trustProviderService.getRelayUrlsForKind(30382);
+      if (providerRelays.length > 0) {
+        return providerRelays;
+      }
+    }
+
+    // Fall back to the local trust relay setting
+    return [this.trustRelayUrl()];
+  }
+
+  /**
+   * Fetch metrics from relay and save to database.
+   * Resolves relay URLs from kind 10040 providers, falling back to local setting.
    */
   private async fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
     try {
-      const relay = this.trustRelayUrl();
-      this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relay}`);
+      const relayUrls = this.resolveRelayUrls();
+      this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relayUrls.join(', ')}`);
 
       // Create filter for kind 30382 events with d tag matching pubkey
       const filter: Filter = {
@@ -136,8 +156,8 @@ export class TrustService {
         limit: 1,
       };
 
-      // Fetch events from the trust relay
-      const events = await this.relayPool.query([relay], filter);
+      // Fetch events from all configured trust relays
+      const events = await this.relayPool.query(relayUrls, filter);
 
       if (events.length === 0) {
         // Cache this as 'not found' to avoid repeated queries

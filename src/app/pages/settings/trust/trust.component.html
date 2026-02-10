@@ -18,16 +18,158 @@
   </p>
 
   @if (localSettings.trustEnabled()) {
-  <div>
-    <h2 i18n="@@settings.trust.relay.title">Trust Relay</h2>
-    <p i18n="@@settings.trust.relay.description">
-      Select which relay to use for fetching NIP-85 trusted assertions (kind 30382 events).
-      These relays provide calculated metrics like follower counts, user ranks, and activity
-      statistics.
+  <!-- Brainstorm Activation -->
+  <section class="section">
+    <h2 i18n="@@settings.trust.brainstorm.title">Activate Personalized Scoring</h2>
+    <div class="activation-card">
+      <div class="activation-content">
+        <mat-icon class="activation-icon">psychology</mat-icon>
+        <div>
+          <p i18n="@@settings.trust.brainstorm.description">
+            To get personalized Web of Trust rankings based on your social graph, you need to
+            activate your account with Brainstorm. This generates personalized GrapeRank scores
+            that reflect your unique position in the network.
+          </p>
+          <button mat-flat-button (click)="openBrainstorm()" class="brainstorm-button">
+            <mat-icon>open_in_new</mat-icon>
+            <span i18n="@@settings.trust.brainstorm.activate">Activate on Brainstorm</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trusted Service Providers (NIP-85 Kind 10040) -->
+  <section class="section">
+    <h2 i18n="@@settings.trust.providers.title">Trusted Service Providers</h2>
+    <p class="setting-description" i18n="@@settings.trust.providers.description">
+      Select which service providers to use for Web of Trust calculations. Your provider
+      configuration is published as a kind 10040 event. Providers can be declared publicly
+      (visible to everyone) or privately (encrypted, only visible to you).
+    </p>
+
+    <!-- Known Provider Presets -->
+    <h3 class="subsection-title" i18n="@@settings.trust.providers.available">Available Providers</h3>
+    <div class="provider-presets">
+      @for (provider of knownProviders; track provider.pubkey) {
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-info">
+            <span class="provider-name">{{ provider.name }}</span>
+            <span class="provider-relay">{{ provider.relayUrl }}</span>
+          </div>
+          @if (isProviderConfigured(provider)) {
+          <mat-icon class="configured-icon" matTooltip="Configured"
+            i18n-matTooltip="@@settings.trust.providers.configured">check_circle</mat-icon>
+          }
+        </div>
+        <p class="provider-description">{{ provider.description }}</p>
+        <div class="provider-actions">
+          @if (!isProviderConfigured(provider)) {
+          <button mat-button (click)="addKnownProvider(provider, false)">
+            <mat-icon>add</mat-icon>
+            <span i18n="@@settings.trust.providers.addPublic">Add (Public)</span>
+          </button>
+          <button mat-button (click)="addKnownProvider(provider, true)">
+            <mat-icon>lock</mat-icon>
+            <span i18n="@@settings.trust.providers.addPrivate">Add (Private)</span>
+          </button>
+          } @else {
+          <span class="provider-visibility">
+            @if (isProviderPrivate(provider)) {
+            <mat-icon class="visibility-icon">lock</mat-icon>
+            <span i18n="@@settings.trust.providers.private">Private</span>
+            } @else {
+            <mat-icon class="visibility-icon">public</mat-icon>
+            <span i18n="@@settings.trust.providers.public">Public</span>
+            }
+          </span>
+          <button mat-button (click)="removeKnownProvider(provider)">
+            <mat-icon>remove_circle_outline</mat-icon>
+            <span i18n="@@settings.trust.providers.remove">Remove</span>
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <!-- Currently Configured Providers Summary -->
+    @if (uniquePublicProviders().length > 0 || uniquePrivateProviders().length > 0) {
+    <h3 class="subsection-title" i18n="@@settings.trust.providers.current">Current Configuration</h3>
+    <div class="configured-providers">
+      @for (provider of uniquePublicProviders(); track provider.pubkey) {
+      <div class="configured-provider-item">
+        <mat-icon class="provider-type-icon">public</mat-icon>
+        <div class="provider-details">
+          <span class="provider-label">{{ getProviderName(provider.pubkey) }}</span>
+          <span class="provider-relay-url">{{ provider.relayUrl }}</span>
+          <div class="provider-metrics">
+            @for (metric of provider.metrics; track metric) {
+            <span class="metric-chip">{{ metric }}</span>
+            }
+          </div>
+        </div>
+        <button mat-icon-button (click)="removeProviderByPubkey(provider.pubkey)" matTooltip="Remove"
+          i18n-matTooltip="@@common.remove">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+      @for (provider of uniquePrivateProviders(); track provider.pubkey) {
+      <div class="configured-provider-item private">
+        <mat-icon class="provider-type-icon">lock</mat-icon>
+        <div class="provider-details">
+          <span class="provider-label">{{ getProviderName(provider.pubkey) }}</span>
+          <span class="provider-relay-url">{{ provider.relayUrl }}</span>
+          <div class="provider-metrics">
+            @for (metric of provider.metrics; track metric) {
+            <span class="metric-chip">{{ metric }}</span>
+            }
+          </div>
+        </div>
+        <button mat-icon-button (click)="removeProviderByPubkey(provider.pubkey)" matTooltip="Remove"
+          i18n-matTooltip="@@common.remove">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- Publish Button -->
+    @if (isAuthenticated()) {
+    <div class="publish-section">
+      <button mat-flat-button (click)="publishProviders()" [disabled]="publishStatus() === 'publishing'"
+        class="publish-button">
+        @if (publishStatus() === 'publishing') {
+        <mat-spinner diameter="18"></mat-spinner>
+        <span i18n="@@settings.trust.providers.publishing">Publishing...</span>
+        } @else if (publishStatus() === 'success') {
+        <mat-icon>check</mat-icon>
+        <span i18n="@@settings.trust.providers.published">Published!</span>
+        } @else {
+        <mat-icon>publish</mat-icon>
+        <span i18n="@@settings.trust.providers.publish">Publish Provider Configuration</span>
+        }
+      </button>
+      @if (publishStatus() === 'error') {
+      <p class="publish-error">{{ publishError() }}</p>
+      }
+    </div>
+    }
+    }
+  </section>
+
+  <!-- Fallback Relay Setting -->
+  <section class="section">
+    <h2 i18n="@@settings.trust.relay.title">Fallback Relay</h2>
+    <p class="setting-description" i18n="@@settings.trust.relay.description">
+      This relay is used when no kind 10040 service provider configuration is found.
+      It provides a default source for NIP-85 trusted assertions (kind 30382 events).
     </p>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label i18n="@@settings.trust.relay.label">Trust Relay</mat-label>
+      <mat-label i18n="@@settings.trust.relay.label">Fallback Relay</mat-label>
       <mat-select [ngModel]="localSettings.trustRelay()" (selectionChange)="setTrustRelay($event.value)">
         @for (relay of trustRelays; track relay.url) {
         <mat-option [value]="relay.url">
@@ -40,18 +182,20 @@
       </mat-select>
       <mat-hint i18n="@@settings.trust.relay.current">Current: {{ localSettings.trustRelay() }}</mat-hint>
     </mat-form-field>
+  </section>
 
-    <div class="info-card">
-      <mat-icon>info</mat-icon>
-      <div>
-        <strong i18n="@@settings.trust.about.title">About NIP-85 Trusted Assertions</strong>
-        <p i18n="@@settings.trust.about.description">
-          NIP-85 allows service providers to calculate and publish metrics about users and
-          events that would be too resource-intensive to compute on clients. These include
-          follower counts, user ranks, post counts, zap amounts, and more. The relay setting
-          is stored locally and is not synced across devices.
-        </p>
-      </div>
+  <!-- About NIP-85 -->
+  <div class="info-card">
+    <mat-icon>info</mat-icon>
+    <div>
+      <strong i18n="@@settings.trust.about.title">About NIP-85 Trusted Assertions</strong>
+      <p i18n="@@settings.trust.about.description2">
+        NIP-85 allows service providers to calculate and publish Web of Trust metrics that
+        are too resource-intensive for clients to compute. Kind 10040 events declare your
+        trusted service providers. Kind 30382 events contain the actual metrics (ranks,
+        follower counts, activity stats). Providers can be declared publicly or encrypted
+        privately using NIP-44.
+      </p>
     </div>
   </div>
   }

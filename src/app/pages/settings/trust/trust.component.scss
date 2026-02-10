@@ -14,7 +14,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
-  border-bottom: 1px solid var(--divider-color);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
 
   &:last-child {
     border-bottom: none;
@@ -22,10 +22,22 @@
 }
 
 .setting-description {
-  color: var(--text-secondary);
+  color: var(--mat-sys-on-surface-variant);
   font-size: 0.875rem;
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.subsection-title {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 1.5rem 0 0.75rem;
 }
 
 .full-width {
@@ -38,25 +50,200 @@
 }
 
 .relay-name {
-  font-weight: 500;
+  display: block;
 }
 
 .relay-description {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--mat-sys-on-surface-variant);
   margin-top: 0.25rem;
 }
 
+// Brainstorm activation card
+.activation-card {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.activation-content {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.activation-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.brainstorm-button {
+  margin-top: 0.75rem;
+}
+
+// Provider presets
+.provider-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.provider-card {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+}
+
+.provider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.provider-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.provider-name {
+  font-size: 1rem;
+}
+
+.provider-relay {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: monospace;
+}
+
+.configured-icon {
+  color: var(--mat-success-color);
+}
+
+.provider-description {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0.5rem 0;
+}
+
+.provider-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.provider-visibility {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.813rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.visibility-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+// Configured providers list
+.configured-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.configured-provider-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-small);
+
+  &.private {
+    border-left: 3px solid var(--mat-sys-secondary);
+  }
+}
+
+.provider-type-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.provider-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.provider-label {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.provider-relay-url {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.provider-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+}
+
+.metric-chip {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background-color: var(--mat-sys-surface-container-high);
+  border-radius: var(--mat-sys-corner-full);
+  font-size: 0.688rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: monospace;
+}
+
+// Publish section
+.publish-section {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.publish-button {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.publish-error {
+  color: var(--mat-sys-error);
+  font-size: 0.813rem;
+}
+
+// Info card
 .info-card {
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background-color: var(--surface-variant);
-  border-radius: 8px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-small);
   margin-top: 1.5rem;
 
   mat-icon {
-    color: var(--primary);
+    color: var(--mat-sys-primary);
     flex-shrink: 0;
   }
 
@@ -68,7 +255,7 @@
   p {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--mat-sys-on-surface-variant);
     line-height: 1.5;
   }
 }
