@@ -154,6 +154,29 @@
   }
 }
 
+.search-progress-details {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.8;
+
+  .elapsed-time {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .results-so-far {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--mat-sys-primary);
+  }
+}
+
 .initial-state {
   .features {
     display: grid;

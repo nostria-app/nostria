@@ -34,6 +34,8 @@ export interface SearchProgress {
   currentStep: number;
   totalSteps: number;
   message: string;
+  elapsedSeconds: number;
+  resultsFoundSoFar: number;
 }
 
 interface SearchResultItem {
@@ -86,6 +88,10 @@ export class SearchComponent implements OnInit, OnDestroy {
   isSearching = signal(false);
   hasSearched = signal(false);
   searchProgress = signal<SearchProgress | null>(null);
+
+  // Timer for elapsed time tracking
+  private searchStartTime = 0;
+  private elapsedTimerHandle: ReturnType<typeof setInterval> | null = null;
 
   // Results
   profileResults = signal<SearchResultItem[]>([]);
@@ -159,6 +165,46 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.queryParamsSubscription?.unsubscribe();
+    this.stopElapsedTimer();
+  }
+
+  /**
+   * Helper to create a SearchProgress object with elapsed time and results count.
+   */
+  private makeProgress(currentStep: number, totalSteps: number, message: string): SearchProgress {
+    return {
+      currentStep,
+      totalSteps,
+      message,
+      elapsedSeconds: Math.floor((Date.now() - this.searchStartTime) / 1000),
+      resultsFoundSoFar: this.totalResults(),
+    };
+  }
+
+  /**
+   * Starts a timer that updates the elapsed time in the progress display every second.
+   */
+  private startElapsedTimer(): void {
+    this.searchStartTime = Date.now();
+    this.stopElapsedTimer();
+    this.elapsedTimerHandle = setInterval(() => {
+      const current = this.searchProgress();
+      if (current) {
+        this.searchProgress.set(this.makeProgress(
+          current.currentStep, current.totalSteps, current.message
+        ));
+      }
+    }, 1000);
+  }
+
+  /**
+   * Stops the elapsed time timer.
+   */
+  private stopElapsedTimer(): void {
+    if (this.elapsedTimerHandle !== null) {
+      clearInterval(this.elapsedTimerHandle);
+      this.elapsedTimerHandle = null;
+    }
   }
 
   onSearchKeydown(event: KeyboardEvent) {
@@ -214,9 +260,12 @@ export class SearchComponent implements OnInit, OnDestroy {
       const totalSteps = this.calculateTotalSteps(source, type, kindFilter);
       let currentStep = 0;
 
+      // Start elapsed time tracking
+      this.startElapsedTimer();
+
       // Search based on source preference
       if (source === 'all' || source === 'local') {
-        this.searchProgress.set({ currentStep, totalSteps, message: 'Searching local database...' });
+        this.searchProgress.set(this.makeProgress(currentStep, totalSteps, 'Searching local database...'));
         await this.searchLocal(cleanQuery, type, isHashtagSearch, kindFilter);
         currentStep++;
       }
@@ -227,7 +276,7 @@ export class SearchComponent implements OnInit, OnDestroy {
         );
       }
 
-      this.searchProgress.set({ currentStep: totalSteps, totalSteps, message: 'Search complete' });
+      this.searchProgress.set(this.makeProgress(totalSteps, totalSteps, 'Search complete'));
 
       // Set appropriate tab based on results
       this.selectBestTab();
@@ -237,6 +286,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     } finally {
       this.isSearching.set(false);
       this.searchProgress.set(null);
+      this.stopElapsedTimer();
     }
   }
 
@@ -419,10 +469,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     try {
       if (kindFilter) {
-        this.searchProgress.set({
+        this.searchProgress.set(this.makeProgress(
           currentStep, totalSteps,
-          message: `Querying relays for kind ${kindFilter.join(', ')} events...`,
-        });
+          `Querying relays for kind ${kindFilter.join(', ')} events...`,
+        ));
         const events = await this.searchRelay.search(query, kindFilter, 50);
         const existingIds = new Set(this.noteResults().map(r => r.event.id));
 
@@ -440,10 +490,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
       // Search profiles on relays
       if (type === 'all' || type === 'profiles') {
-        this.searchProgress.set({
+        this.searchProgress.set(this.makeProgress(
           currentStep, totalSteps,
-          message: 'Searching relays for profiles...',
-        });
+          'Searching relays for profiles...',
+        ));
         const profileEvents = await this.searchRelay.searchProfiles(query, 20);
         const existingPubkeys = new Set(this.profileResults().map(r => r.event.pubkey));
 
@@ -461,10 +511,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
       // Search notes on relays
       if (type === 'all' || type === 'notes' || type === 'hashtags') {
-        this.searchProgress.set({
+        this.searchProgress.set(this.makeProgress(
           currentStep, totalSteps,
-          message: 'Searching relays for notes...',
-        });
+          'Searching relays for notes...',
+        ));
         const searchQuery = isHashtagSearch ? query : query;
         const noteEvents = await this.searchRelay.search(searchQuery, [kinds.ShortTextNote], 50);
         const existingIds = new Set(this.noteResults().map(r => r.event.id));
@@ -483,10 +533,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
       // Search articles on relays
       if (type === 'all' || type === 'articles') {
-        this.searchProgress.set({
+        this.searchProgress.set(this.makeProgress(
           currentStep, totalSteps,
-          message: 'Searching relays for articles...',
-        });
+          'Searching relays for articles...',
+        ));
         const articleEvents = await this.searchRelay.search(query, [kinds.LongFormArticle], 20);
         const existingIds = new Set(this.articleResults().map(r => r.event.id));
 

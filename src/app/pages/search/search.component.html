@@ -72,6 +72,14 @@
             </span>
           </div>
         }
+        <div class="search-progress-details">
+          @if (progress.elapsedSeconds > 0) {
+            <span class="elapsed-time">{{ progress.elapsedSeconds }}s elapsed</span>
+          }
+          @if (progress.resultsFoundSoFar > 0) {
+            <span class="results-so-far">{{ progress.resultsFoundSoFar }} results found so far</span>
+          }
+        </div>
       } @else {
         <p>Searching...</p>
       }
