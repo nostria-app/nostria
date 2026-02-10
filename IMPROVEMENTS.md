@@ -48,8 +48,8 @@ The codebase has migrated away from `*ngIf`, `*ngFor`, `*ngSwitch`, and `[ngStyl
 
 ## 4. Replace `@HostListener` with `host: {}` in Component Decorator
 
-- [ ] Replace `@HostListener` in `src/app/components/note-editor-dialog/note-editor-dialog.component.ts` (lines 672, 1924) -- `document:mousedown` and `document:keydown`
-- [ ] Replace `@HostListener` in `src/app/components/inline-reply-editor/inline-reply-editor.component.ts` (line 226) -- `document:mousedown`
+- [x] Replace `@HostListener` in `src/app/components/note-editor-dialog/note-editor-dialog.component.ts` (lines 672, 1924) -- `document:mousedown` and `document:keydown`
+- [x] Replace `@HostListener` in `src/app/components/inline-reply-editor/inline-reply-editor.component.ts` (line 226) -- `document:mousedown`
 - [ ] Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
 - [ ] Replace `@HostListener` in `src/app/components/video-controls/video-controls.component.ts` (line 317) -- `document:keydown`
 - [ ] Replace `@HostListener` in `src/app/components/user-profile/hover-card/profile-hover-card.component.ts` (line 486) -- `click`

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -41,7 +41,10 @@ const SECTION_LIMIT = 12;
 
 @Component({
   selector: 'app-music',
-  host: { 'class': 'panel-with-sticky-header' },
+  host: {
+    'class': 'panel-with-sticky-header',
+    '(window:resize)': 'updateContainerWidth()',
+  },
   imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
@@ -118,11 +121,6 @@ export class MusicComponent implements OnInit, OnDestroy {
   // Search input reference for focusing
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('musicContent') musicContent?: ElementRef<HTMLDivElement>;
-
-  @HostListener('window:resize')
-  onResize(): void {
-    this.updateContainerWidth();
-  }
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
@@ -423,7 +421,7 @@ export class MusicComponent implements OnInit, OnDestroy {
   /**
    * Update the container width for dynamic rendering
    */
-  private updateContainerWidth(): void {
+  updateContainerWidth(): void {
     if (this.musicContent?.nativeElement) {
       this.containerWidth.set(this.musicContent.nativeElement.offsetWidth);
     }

@@ -58,3 +58,6 @@
 - [✓] 2026-02-10 15:26 - Quick search results hides when app window unfocused
 - [✓] 2026-02-10 15:40 - Add a "More" option with sub menu for the "Create" menu
 - [✓] 2026-02-10 15:51 - Add "Forward" to Messages
+- [✓] 2026-02-10 16:58 - Replace `@HostListener` in `src/app/components/note-editor-dialog/note-editor-dialog.component.ts` (lines 672, 1924) -- `document:mousedown` and `document:keydown`
+- [✓] 2026-02-10 17:04 - Replace `@HostListener` in `src/app/components/inline-reply-editor/inline-reply-editor.component.ts` (line 226) -- `document:mousedown`
+- [✓] 2026-02-10 17:10 - Replace `@HostListener` in `src/app/pages/music/music.component.ts` (line 122) -- `window:resize`
