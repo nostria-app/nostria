@@ -11,7 +11,6 @@ import {
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -40,7 +39,6 @@ import { IntersectionObserverService } from '../../services/intersection-observe
   selector: 'app-user-profile',
   imports: [
     ProfileDisplayNameComponent,
-    CommonModule,
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
