@@ -23,7 +23,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
@@ -51,7 +50,6 @@ import { BackupComponent } from '../backup/backup.component';
 @Component({
   selector: 'app-relays-page',
   imports: [
-    CommonModule,
     FormsModule,
     MatCardModule,
     MatListModule,
