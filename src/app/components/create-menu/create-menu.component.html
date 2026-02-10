@@ -8,6 +8,20 @@
         <span class="menu-item-label">{{ option.label }}</span>
       </button>
       }
+      <button class="menu-item more-toggle" (click)="toggleMore()">
+        <mat-icon>{{ showMore() ? 'expand_less' : 'more_horiz' }}</mat-icon>
+        <span class="menu-item-label" i18n="@@create.option.more">More...</span>
+      </button>
+      @if (showMore()) {
+      <div class="more-options">
+        @for (option of moreOptions; track option.label) {
+        <button class="menu-item" (click)="onItemClick(option)">
+          <mat-icon>{{ option.icon }}</mat-icon>
+          <span class="menu-item-label">{{ option.label }}</span>
+        </button>
+        }
+      </div>
+      }
     </div>
   </div>
 </div>

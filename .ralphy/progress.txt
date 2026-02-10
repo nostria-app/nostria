@@ -56,3 +56,4 @@
 - [✓] 2026-02-10 14:45 - BUG: Zaps fail across all connected wallets at the same time
 - [✓] 2026-02-10 15:05 - Emoji picker should display fullscreen with custom dialog component on smaller screens
 - [✓] 2026-02-10 15:26 - Quick search results hides when app window unfocused
+- [✓] 2026-02-10 15:40 - Add a "More" option with sub menu for the "Create" menu

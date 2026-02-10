@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -16,7 +16,9 @@ export class CreateOptionsSheetComponent {
   private layout = inject(LayoutService);
   private eventService = inject(EventService);
 
-  // Creation options
+  showMore = signal(false);
+
+  // Primary creation options
   createOptions = [
     {
       label: $localize`:@@create.option.note:Note`,
@@ -24,14 +26,28 @@ export class CreateOptionsSheetComponent {
       action: () => this.eventService.createNote(),
     },
     {
+      label: $localize`:@@create.option.article:Article`,
+      icon: 'article',
+      action: () => this.layout.createArticle(),
+    },
+    {
       label: $localize`:@@create.option.media:Media`,
       icon: 'add_photo_alternate',
       action: () => this.layout.openMediaCreatorDialog(),
     },
+  ];
+
+  // More options shown when expanded
+  moreOptions = [
     {
-      label: $localize`:@@create.option.article:Article`,
-      icon: 'article',
-      action: () => this.layout.createArticle(),
+      label: $localize`:@@create.option.message:Message`,
+      icon: 'mail',
+      action: () => this.layout.openMessages(),
+    },
+    {
+      label: $localize`:@@create.option.list:List`,
+      icon: 'list',
+      action: () => this.layout.openLists(),
     },
     {
       label: $localize`:@@create.option.video:Video Clip`,
@@ -43,16 +59,25 @@ export class CreateOptionsSheetComponent {
       icon: 'mic',
       action: () => this.layout.openRecordAudioDialog(),
     },
-    // {
-    //   label: 'Upload',
-    //   icon: 'upload',
-    //   action: () => this.layout.uploadMedia(),
-    // },
+    {
+      label: $localize`:@@create.option.music:Music Track`,
+      icon: 'music_note',
+      action: () => this.layout.openMusicUpload(),
+    },
+    {
+      label: $localize`:@@create.option.livestream:Live Stream`,
+      icon: 'live_tv',
+      action: () => this.layout.openLiveStreamDialog(),
+    },
   ];
 
   // Handler for selecting an option
   selectOption(action: () => void): void {
     this.bottomSheetRef.dismiss();
     action();
+  }
+
+  toggleMore(): void {
+    this.showMore.update(v => !v);
   }
 }

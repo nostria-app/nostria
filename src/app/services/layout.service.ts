@@ -1622,6 +1622,27 @@ export class LayoutService implements OnDestroy {
     await this.router.navigate(['/collections/media'], { queryParams: { upload: 'true' } });
   }
 
+  /** Navigate to messages page to compose a new message */
+  openMessages(): void {
+    this.router.navigateByUrl('/messages');
+  }
+
+  /** Navigate to lists page to create a new list */
+  openLists(): void {
+    this.router.navigateByUrl('/lists');
+  }
+
+  /** Navigate to music page to upload a new track */
+  openMusicUpload(): void {
+    this.router.navigateByUrl('/music');
+  }
+
+  /** Open the streaming apps dialog to start a live stream */
+  async openLiveStreamDialog(): Promise<void> {
+    const { StreamingAppsDialogComponent } = await import('../pages/streams/streaming-apps-dialog/streaming-apps-dialog.component');
+    this.dialog.open(StreamingAppsDialogComponent);
+  }
+
   private nostrService = inject(NostrService);
   private mediaService = inject(MediaService);
   private publishService = inject(PublishService);

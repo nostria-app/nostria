@@ -9,4 +9,22 @@
     <span matListItemTitle>{{ option.label }}</span>
   </a>
   }
+
+  <a mat-list-item (click)="toggleMore()" class="more-toggle"
+    (keydown.enter)="toggleMore(); $event.preventDefault()"
+    (keydown.space)="toggleMore(); $event.preventDefault()" tabindex="0">
+    <mat-icon matListItemIcon>{{ showMore() ? 'expand_less' : 'more_horiz' }}</mat-icon>
+    <span matListItemTitle i18n="@@create.option.more">More...</span>
+  </a>
+
+  @if (showMore()) {
+  @for (option of moreOptions; track option.label) {
+  <a mat-list-item (click)="selectOption(option.action)"
+    (keydown.enter)="selectOption(option.action); $event.preventDefault()"
+    (keydown.space)="selectOption(option.action); $event.preventDefault()" tabindex="0">
+    <mat-icon matListItemIcon>{{ option.icon }}</mat-icon>
+    <span matListItemTitle>{{ option.label }}</span>
+  </a>
+  }
+  }
 </mat-nav-list>
