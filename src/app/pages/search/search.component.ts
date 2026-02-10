@@ -30,6 +30,12 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 export type SearchSource = 'all' | 'local' | 'relays';
 export type SearchType = 'all' | 'profiles' | 'notes' | 'articles' | 'hashtags';
 
+export interface SearchProgress {
+  currentStep: number;
+  totalSteps: number;
+  message: string;
+}
+
 interface SearchResultItem {
   event: Event;
   source: 'local' | 'relay';
@@ -79,6 +85,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   searchType = signal<SearchType>('all');
   isSearching = signal(false);
   hasSearched = signal(false);
+  searchProgress = signal<SearchProgress | null>(null);
 
   // Results
   profileResults = signal<SearchResultItem[]>([]);
@@ -203,14 +210,24 @@ export class SearchComponent implements OnInit, OnDestroy {
       // Parse kind filter from query (e.g., "kind:30030")
       const { cleanQuery, kindFilter } = this.parseSearchQuery(query);
 
+      // Calculate total search steps for progress tracking
+      const totalSteps = this.calculateTotalSteps(source, type, kindFilter);
+      let currentStep = 0;
+
       // Search based on source preference
       if (source === 'all' || source === 'local') {
+        this.searchProgress.set({ currentStep, totalSteps, message: 'Searching local database...' });
         await this.searchLocal(cleanQuery, type, isHashtagSearch, kindFilter);
+        currentStep++;
       }
 
       if (source === 'all' || source === 'relays') {
-        await this.searchRelays(cleanQuery, type, isHashtagSearch, kindFilter);
+        currentStep = await this.searchRelaysWithProgress(
+          cleanQuery, type, isHashtagSearch, kindFilter, currentStep, totalSteps
+        );
       }
+
+      this.searchProgress.set({ currentStep: totalSteps, totalSteps, message: 'Search complete' });
 
       // Set appropriate tab based on results
       this.selectBestTab();
@@ -219,6 +236,7 @@ export class SearchComponent implements OnInit, OnDestroy {
       this.layout.toast('Search failed. Please try again.');
     } finally {
       this.isSearching.set(false);
+      this.searchProgress.set(null);
     }
   }
 
@@ -363,12 +381,48 @@ export class SearchComponent implements OnInit, OnDestroy {
     return results.sort((a, b) => b.created_at - a.created_at);
   }
 
-  private async searchRelays(query: string, type: SearchType, isHashtagSearch: boolean, kindFilter?: number[]) {
+  /**
+   * Calculate the total number of search steps for progress tracking.
+   * Steps depend on the source and type filters.
+   */
+  calculateTotalSteps(source: SearchSource, type: SearchType, kindFilter?: number[]): number {
+    let steps = 0;
+
+    // Local search is always 1 step
+    if (source === 'all' || source === 'local') {
+      steps += 1;
+    }
+
+    // Relay search steps depend on type and kind filter
+    if (source === 'all' || source === 'relays') {
+      if (kindFilter) {
+        steps += 1; // Single relay search for specific kind
+      } else if (type === 'all') {
+        steps += 3; // Profiles + Notes + Articles
+      } else {
+        steps += 1; // Single type search
+      }
+    }
+
+    return steps;
+  }
+
+  /**
+   * Search relays with progress tracking, updating the searchProgress signal
+   * as each sub-search completes.
+   */
+  private async searchRelaysWithProgress(
+    query: string, type: SearchType, isHashtagSearch: boolean,
+    kindFilter: number[] | undefined, currentStep: number, totalSteps: number,
+  ): Promise<number> {
     this.logger.debug(`Searching relays for: ${query}`, { kindFilter });
 
     try {
-      // If kind filter is specified, search for those specific kinds
       if (kindFilter) {
+        this.searchProgress.set({
+          currentStep, totalSteps,
+          message: `Querying relays for kind ${kindFilter.join(', ')} events...`,
+        });
         const events = await this.searchRelay.search(query, kindFilter, 50);
         const existingIds = new Set(this.noteResults().map(r => r.event.id));
 
@@ -377,14 +431,19 @@ export class SearchComponent implements OnInit, OnDestroy {
           .map(event => ({
             event,
             source: 'relay' as const,
-            type: 'note' as const, // Use 'note' type for custom kinds
+            type: 'note' as const,
           }));
 
         this.noteResults.update(current => [...current, ...newResults]);
-        return;
+        return currentStep + 1;
       }
+
       // Search profiles on relays
       if (type === 'all' || type === 'profiles') {
+        this.searchProgress.set({
+          currentStep, totalSteps,
+          message: 'Searching relays for profiles...',
+        });
         const profileEvents = await this.searchRelay.searchProfiles(query, 20);
         const existingPubkeys = new Set(this.profileResults().map(r => r.event.pubkey));
 
@@ -397,10 +456,15 @@ export class SearchComponent implements OnInit, OnDestroy {
           }));
 
         this.profileResults.update(current => [...current, ...newProfiles]);
+        currentStep++;
       }
 
       // Search notes on relays
       if (type === 'all' || type === 'notes' || type === 'hashtags') {
+        this.searchProgress.set({
+          currentStep, totalSteps,
+          message: 'Searching relays for notes...',
+        });
         const searchQuery = isHashtagSearch ? query : query;
         const noteEvents = await this.searchRelay.search(searchQuery, [kinds.ShortTextNote], 50);
         const existingIds = new Set(this.noteResults().map(r => r.event.id));
@@ -414,10 +478,15 @@ export class SearchComponent implements OnInit, OnDestroy {
           }));
 
         this.noteResults.update(current => [...current, ...newNotes]);
+        currentStep++;
       }
 
       // Search articles on relays
       if (type === 'all' || type === 'articles') {
+        this.searchProgress.set({
+          currentStep, totalSteps,
+          message: 'Searching relays for articles...',
+        });
         const articleEvents = await this.searchRelay.search(query, [kinds.LongFormArticle], 20);
         const existingIds = new Set(this.articleResults().map(r => r.event.id));
 
@@ -430,10 +499,13 @@ export class SearchComponent implements OnInit, OnDestroy {
           }));
 
         this.articleResults.update(current => [...current, ...newArticles]);
+        currentStep++;
       }
     } catch (error) {
       this.logger.error('Failed to search relays', error);
     }
+
+    return currentStep;
   }
 
   private selectBestTab() {
@@ -474,6 +546,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.noteResults.set([]);
     this.articleResults.set([]);
     this.hasSearched.set(false);
+    this.searchProgress.set(null);
 
     this.router.navigate([], {
       relativeTo: this.route,

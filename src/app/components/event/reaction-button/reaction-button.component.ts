@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +22,7 @@ import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { LoggerService } from '../../../services/logger.service';
+import { LocalSettingsService } from '../../../services/local-settings.service';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 
 // Emoji categories with icons
@@ -310,6 +312,9 @@ export class ReactionButtonComponent {
   private readonly database = inject(DatabaseService);
   private readonly userData = inject(UserDataService);
   private readonly logger = inject(LoggerService);
+  private readonly localSettings = inject(LocalSettingsService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -318,6 +323,65 @@ export class ReactionButtonComponent {
   /** Opens the reaction picker menu. Called from parent when label is clicked. */
   openMenu(): void {
     this.menuTrigger()?.openMenu();
+  }
+
+  // Long-press detection state
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressTriggered = false;
+  private readonly LONG_PRESS_DURATION = 500; // ms
+
+  /**
+   * Send the user's default reaction emoji (from settings) on a single tap.
+   * If the user already reacted, toggle off their reaction instead.
+   */
+  sendDefaultReaction(): void {
+    const defaultEmoji = this.localSettings.defaultReactionEmoji();
+    if (!defaultEmoji) {
+      this.openMenu();
+      return;
+    }
+    this.addReaction(defaultEmoji);
+  }
+
+  /**
+   * Handle pointer down for long-press detection.
+   * Starts a timer; if held long enough, opens the emoji picker menu.
+   */
+  onPointerDown(): void {
+    if (!this.isBrowser) return;
+    this.longPressTriggered = false;
+    this.longPressTimer = setTimeout(() => {
+      this.longPressTriggered = true;
+      this.openMenu();
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  /**
+   * Handle pointer up: if long-press was not triggered, send the default reaction.
+   */
+  onPointerUp(event: PointerEvent): void {
+    if (!this.isBrowser) return;
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    if (!this.longPressTriggered) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.sendDefaultReaction();
+    }
+    this.longPressTriggered = false;
+  }
+
+  /**
+   * Cancel long-press if pointer leaves the element.
+   */
+  onPointerLeave(): void {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressTriggered = false;
   }
 
   isLoadingReactions = signal<boolean>(false);

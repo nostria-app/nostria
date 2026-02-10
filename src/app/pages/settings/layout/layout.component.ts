@@ -9,6 +9,8 @@ import { SettingTextSizeComponent } from '../sections/text-size.component';
 import { SettingFontSelectorComponent } from '../sections/font-selector.component';
 import { RightPanelService } from '../../../services/right-panel.service';
 
+const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏', '🤙', '⚡'];
+
 @Component({
   selector: 'app-layout-settings',
   imports: [
@@ -37,6 +39,23 @@ import { RightPanelService } from '../../../services/right-panel.service';
         <h2 i18n="@@settings.display.title">Display</h2>
         <app-setting-text-size></app-setting-text-size>
         <app-setting-font-selector></app-setting-font-selector>
+      </div>
+
+      <div>
+        <h2 i18n="@@settings.reactions.title">Reactions</h2>
+
+        <div class="setting-item">
+          <span i18n="@@settings.reactions.default-emoji">Default Reaction Emoji</span>
+        </div>
+        <p class="setting-description" i18n="@@settings.reactions.default-emoji.description">Choose the emoji sent when you single-tap the reaction button. Long-press opens the full emoji picker.</p>
+        <div class="default-reaction-picker">
+          @for (emoji of reactionEmojiOptions; track emoji) {
+          <button class="reaction-option" [class.selected]="localSettings.defaultReactionEmoji() === emoji"
+            (click)="setDefaultReactionEmoji(emoji)" type="button">
+            {{ emoji }}
+          </button>
+          }
+        </div>
       </div>
 
       <div>
@@ -85,6 +104,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly localSettings = inject(LocalSettingsService);
   private readonly rightPanel = inject(RightPanelService);
+  readonly reactionEmojiOptions = REACTION_EMOJI_OPTIONS;
 
   ngOnInit(): void {
     // Parent settings component handles the page title
@@ -96,6 +116,10 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.rightPanel.goBack();
+  }
+
+  setDefaultReactionEmoji(emoji: string): void {
+    this.localSettings.setDefaultReactionEmoji(emoji);
   }
 
   toggleStartOnLastRoute(): void {

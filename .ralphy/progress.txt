@@ -39,3 +39,5 @@
 - [✓] 2026-02-09 14:58 - Refactor `src/app/pages/calendar/event-details-dialog/event-details-dialog.component.ts` (lines 295-298) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
 - [✓] 2026-02-09 17:51 - Refactor `src/app/pages/bookmarks/bookmark-category-dialog/bookmark-category-dialog.component.ts` (lines 68-71) -- `MAT_DIALOG_DATA` + `MatDialogRef` constructor injection
 - [✓] 2026-02-09 17:55 - Refactor `src/app/pages/media-queue/add-media-dialog/add-media-dialog.ts` (lines 35-38) -- `MatDialogRef` + `MAT_DIALOG_DATA` constructor injection
+- [✓] 2026-02-10 01:39 - Improve sorting in search results (quick search)
+- [✓] 2026-02-10 01:50 - Reactions: single-tap sends default reaction, long-press opens emoji picker

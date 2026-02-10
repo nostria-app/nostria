@@ -34,3 +34,37 @@ h2:first-child {
   margin-top: 0;
   margin-bottom: 16px;
 }
+
+.default-reaction-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .reaction-option {
+    width: 44px;
+    height: 44px;
+    font-size: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 2px solid var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface-container);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+
+    &:hover {
+      border-color: var(--mat-sys-primary);
+      background: var(--mat-sys-surface-container-high);
+      transform: scale(1.1);
+    }
+
+    &.selected {
+      border-color: var(--mat-sys-primary);
+      background: var(--mat-sys-primary-container);
+    }
+  }
+}
