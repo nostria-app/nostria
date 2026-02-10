@@ -116,7 +116,7 @@ export class FollowSetsService {
         this.followSets.set([]);
         this.hasInitiallyLoaded.set(false);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   /**
@@ -255,31 +255,44 @@ export class FollowSetsService {
       return;
     }
 
-    this.logger.debug(`[FollowSets] Starting background decryption for ${privateSets.length} private lists`);
+    const runDecryption = async () => {
+      this.logger.debug(`[FollowSets] Starting background decryption for ${privateSets.length} private lists`);
 
-    // Process each private set one at a time to avoid overwhelming the extension
-    for (const set of privateSets) {
-      try {
-        const privatePubkeys = await this.parsePrivatePubkeys(set.event!.content);
+      // Process each private set one at a time to avoid overwhelming the extension
+      for (const set of privateSets) {
+        try {
+          const privatePubkeys = await this.parsePrivatePubkeys(set.event!.content);
 
-        if (privatePubkeys.length > 0) {
-          // Update the follow set with decrypted pubkeys
-          this.followSets.update(currentSets => {
-            return currentSets.map(s => {
-              if (s.dTag === set.dTag) {
-                return {
-                  ...s,
-                  pubkeys: [...s.pubkeys, ...privatePubkeys],
-                  decryptionPending: false,
-                };
-              }
-              return s;
+          if (privatePubkeys.length > 0) {
+            // Update the follow set with decrypted pubkeys
+            this.followSets.update(currentSets => {
+              return currentSets.map(s => {
+                if (s.dTag === set.dTag) {
+                  return {
+                    ...s,
+                    pubkeys: [...s.pubkeys, ...privatePubkeys],
+                    decryptionPending: false,
+                  };
+                }
+                return s;
+              });
             });
-          });
 
-          this.logger.debug(`[FollowSets] Decrypted ${privatePubkeys.length} private pubkeys for "${set.title}"`);
-        } else {
-          // No private pubkeys found, just mark as not pending
+            this.logger.debug(`[FollowSets] Decrypted ${privatePubkeys.length} private pubkeys for "${set.title}"`);
+          } else {
+            // No private pubkeys found, just mark as not pending
+            this.followSets.update(currentSets => {
+              return currentSets.map(s => {
+                if (s.dTag === set.dTag) {
+                  return { ...s, decryptionPending: false };
+                }
+                return s;
+              });
+            });
+          }
+        } catch (error) {
+          this.logger.debug(`[FollowSets] Background decryption failed for "${set.title}":`, error);
+          // Mark as not pending even on failure - user may have rejected
           this.followSets.update(currentSets => {
             return currentSets.map(s => {
               if (s.dTag === set.dTag) {
@@ -289,19 +302,19 @@ export class FollowSetsService {
             });
           });
         }
-      } catch (error) {
-        this.logger.debug(`[FollowSets] Background decryption failed for "${set.title}":`, error);
-        // Mark as not pending even on failure - user may have rejected
-        this.followSets.update(currentSets => {
-          return currentSets.map(s => {
-            if (s.dTag === set.dTag) {
-              return { ...s, decryptionPending: false };
-            }
-            return s;
-          });
-        });
       }
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => {
+        void runDecryption();
+      }, { timeout: 2000 });
+      return;
     }
+
+    setTimeout(() => {
+      void runDecryption();
+    }, 2000);
   }
 
   /**

@@ -156,33 +156,34 @@
       <mat-nav-list>
         <!-- Profile avatar when sidenav is minimized - toggles sidenav -->
         @if (!displayLabels()) {
-        <button mat-list-item (click)="toggleSidenav()" class="nav-item profile-nav-item sidenav-minimized-avatar-button"
-           matTooltipPosition="right">
+        <button mat-list-item (click)="toggleSidenav()"
+          class="nav-item profile-nav-item sidenav-minimized-avatar-button" matTooltipPosition="right">
           @if (accountState.profile()?.data?.picture) {
           @if (settings.settings().imageCacheEnabled) {
-          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)"
-            class="sidenav-minimized-avatar" alt="Profile" />
+          <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="sidenav-minimized-avatar"
+            alt="Profile" />
           } @else {
-          <img [src]="accountState.profile()?.data?.picture"
-            class="sidenav-minimized-avatar" alt="Profile" />
+          <img [src]="accountState.profile()?.data?.picture" class="sidenav-minimized-avatar" alt="Profile" />
           }
           } @else {
-          <mat-icon class="sidenav-minimized-icon">{{ app.authenticated() ? 'account_circle' : 'account_circle_off' }}</mat-icon>
+          <mat-icon class="sidenav-minimized-icon">{{ app.authenticated() ? 'account_circle' : 'account_circle_off'
+            }}</mat-icon>
           }
         </button>
         <!-- Settings gear icon - opens profile actions menu -->
-        <button mat-list-item [matMenuTriggerFor]="minimizedProfileActionsMenu" class="nav-item sidenav-minimized-settings-button"
-          matTooltip="Profile & Settings" matTooltipPosition="right">
+        <button mat-list-item [matMenuTriggerFor]="minimizedProfileActionsMenu"
+          class="nav-item sidenav-minimized-settings-button" matTooltip="Profile & Settings" matTooltipPosition="right">
           <mat-icon matListItemIcon>settings</mat-icon>
         </button>
         }
 
-@for (item of navigationItems(); track $index) {
+        @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" [queryParams]="item.queryParams" routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{ exact: item.path === 'people' ? false : true }"
+        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" [queryParams]="item.queryParams"
+          routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: item.path === 'people' ? false : true }"
           (click)="onNavItemClick($event, item)" class="nav-item" [class.expandable-nav-item]="item.expandable">
-          <mat-icon matListItemIcon [matBadge]="item.badge ? item.badge() : null" matBadgeSize="small">{{ item.icon
+          <mat-icon matListItemIcon [matBadge]="item.badge ? item.badge() : null" matBadgeSize="small"
+            aria-hidden="false">{{ item.icon
             }}</mat-icon>
           @if (displayLabels()) {
           <span class="nav-label">{{ item.label }}</span>
@@ -365,8 +366,8 @@
           @else {
           <button class="notification-toolbar" mat-icon-button (click)="navigateToNotifications()"
             i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
-            <mat-icon
-              [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
+            <mat-icon [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null"
+              aria-hidden="false">notifications</mat-icon>
           </button>
           }
         </div>
@@ -476,8 +477,9 @@
   }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-@if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
-  <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()" [class.sidenav-open]="opened()">
+  @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
+  <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
+    [class.sidenav-open]="opened()">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']"
       (click)="$event.preventDefault(); onMobileNavClick('/')" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">

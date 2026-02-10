@@ -8,6 +8,7 @@ import {
   computed,
   input,
   ElementRef,
+  DestroyRef,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
@@ -37,6 +38,7 @@ import { InlineReplyEditorComponent } from '../../components/inline-reply-editor
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { EventFocusService } from '../../services/event-focus.service';
 
 /** Description of the EventPageComponent
  *
@@ -73,7 +75,7 @@ export const REPLY_FILTER_FOLLOWING = 'following';
 export class EventPageComponent {
   // Unique instance ID for debugging
   private instanceId = Math.random().toString(36).substring(7);
-  
+
   // Input for dialog mode - when provided, uses this instead of route params
   dialogEventId = input<string | undefined>(undefined);
   dialogEvent = input<Event | undefined>(undefined);
@@ -113,6 +115,8 @@ export class EventPageComponent {
   accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private elementRef = inject(ElementRef);
+  private readonly eventFocus = inject(EventFocusService);
+  private readonly destroyRef = inject(DestroyRef);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -372,6 +376,11 @@ export class EventPageComponent {
   deletionReason = signal<string | null>(null);
 
   constructor() {
+    if (this.app.isBrowser()) {
+      this.eventFocus.activate();
+      this.destroyRef.onDestroy(() => this.eventFocus.deactivate());
+    }
+
     // this.item = this.route.snapshot.data['data'];
 
     // Load saved reply filter from local storage

@@ -458,7 +458,7 @@ export class PeopleComponent implements OnDestroy {
           this.loadFollowSetProfilesInBackground(pubkeys);
         });
       }
-    }, { allowSignalWrites: true });
+    });
 
     // Setup infinite scroll when sentinel becomes available
     effect(() => {

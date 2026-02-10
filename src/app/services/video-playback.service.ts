@@ -26,14 +26,14 @@ export class VideoPlaybackService {
 
   // The currently playing video element
   private currentlyPlayingVideo = signal<HTMLVideoElement | null>(null);
-  
+
   // Mute state signal - reactive for components to subscribe to
   // Default to true (muted) because browser autoplay requires muted videos
   private _isMuted = signal(true);
-  
+
   // Computed signal that components can read
   readonly isMuted = this._isMuted.asReadonly();
-  
+
   /**
    * Whether auto-play is allowed based on current app state.
    * This specifically prevents videos in the Feeds panel from auto-playing
@@ -61,7 +61,7 @@ export class VideoPlaybackService {
         const persistedMuted = this.accountLocalState.getVolumeMuted(pubkey);
         this._isMuted.set(persistedMuted);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   /**
@@ -119,7 +119,7 @@ export class VideoPlaybackService {
    */
   setMuted(muted: boolean): void {
     this._isMuted.set(muted);
-    
+
     // Persist to account state
     const pubkey = this.accountState.pubkey();
     if (pubkey) {

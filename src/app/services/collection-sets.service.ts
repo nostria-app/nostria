@@ -94,7 +94,7 @@ export class CollectionSetsService {
         this.lastLoadedPubkey = null;
         this.interestSets.set([]);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   /**

@@ -8,6 +8,7 @@ import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
 import { DiscoveryRelayService } from './relays/discovery-relay';
+import { EventFocusService } from './event-focus.service';
 
 // Define InfoRecord locally for type compatibility
 interface InfoRecord {
@@ -44,6 +45,7 @@ export class FollowingService {
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly eventFocus = inject(EventFocusService);
 
   // In-memory cache of all following profiles
   private readonly profilesMap = signal<Map<string, FollowingProfile>>(new Map());
@@ -66,11 +68,17 @@ export class FollowingService {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const followingList = this.accountState.followingList();
+      const isEventFocused = this.eventFocus.isEventFocused();
 
       if (!pubkey || followingList.length === 0) {
         this.logger.debug('[FollowingService] No account or empty following list, clearing profiles');
         this.clear();
         this.previousFollowingList = [];
+        return;
+      }
+
+      if (isEventFocused) {
+        this.logger.debug('[FollowingService] Skipping load - event focused');
         return;
       }
 
@@ -171,9 +179,10 @@ export class FollowingService {
 
         await this.discoveryRelay.load();
 
-        // Fetch in batches of 100, but run all batches in parallel
+        // Fetch in batches of 100 with limited concurrency to reduce CPU spikes
         const fetchBatchSize = 100;
-        const batchPromises: Promise<void>[] = [];
+        const maxConcurrentBatches = 2;
+        const activePromises: Promise<void>[] = [];
 
         for (let i = 0; i < missingPubkeys.length; i += fetchBatchSize) {
           const batch = missingPubkeys.slice(i, i + fetchBatchSize);
@@ -201,42 +210,52 @@ export class FollowingService {
             }
           })();
 
-          batchPromises.push(batchPromise);
+          activePromises.push(batchPromise);
+
+          if (activePromises.length >= maxConcurrentBatches) {
+            await Promise.all(activePromises);
+            activePromises.length = 0;
+          }
         }
 
-        // Wait for all batches to complete in parallel
-        await Promise.all(batchPromises);
+        if (activePromises.length > 0) {
+          await Promise.all(activePromises);
+        }
       }
 
       // PHASE 3: Build the final profiles map with all metadata
-      // Process all profiles in parallel (database queries are fast)
-      await Promise.all(
-        pubkeys.map(async (pk) => {
-          try {
-            const cachedProfile = cachedProfiles.get(pk);
+      // Process profiles in smaller batches to reduce startup CPU spikes
+      const profileBatchSize = 50;
+      for (let i = 0; i < pubkeys.length; i += profileBatchSize) {
+        const batch = pubkeys.slice(i, i + profileBatchSize);
+        await Promise.all(
+          batch.map(async (pk) => {
+            try {
+              const cachedProfile = cachedProfiles.get(pk);
 
-            // Load additional metadata in parallel
-            const [infoRecord, trustMetrics, metricData] = await Promise.all([
-              this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
-              this.database.getInfo(pk, 'trust').catch(() => null),
-              this.metrics.getUserMetric(pk).catch(() => null),
-            ]);
+              // Load additional metadata in parallel
+              const [infoRecord, trustMetrics, metricData] = await Promise.all([
+                this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
+                this.database.getInfo(pk, 'trust').catch(() => null),
+                this.metrics.getUserMetric(pk).catch(() => null),
+              ]);
 
-            newMap.set(pk, {
-              pubkey: pk,
-              event: cachedProfile?.event || null,
-              profile: cachedProfile || null,
-              info: infoRecord || null,
-              trust: trustMetrics as TrustMetrics | null,
-              metric: metricData,
-              lastUpdated: now,
-            });
-          } catch (error) {
-            this.logger.error(`[FollowingService] Failed to load metadata for ${pk}:`, error);
-            newMap.set(pk, this.createMinimalProfile(pk));
-          }
-        })
-      );
+              newMap.set(pk, {
+                pubkey: pk,
+                event: cachedProfile?.event || null,
+                profile: cachedProfile || null,
+                info: infoRecord || null,
+                trust: trustMetrics as TrustMetrics | null,
+                metric: metricData,
+                lastUpdated: now,
+              });
+            } catch (error) {
+              this.logger.error(`[FollowingService] Failed to load metadata for ${pk}:`, error);
+              newMap.set(pk, this.createMinimalProfile(pk));
+            }
+          })
+        );
+      }
 
       // Update the signal with the new map
       this.profilesMap.set(newMap);

@@ -4,6 +4,7 @@ import {
   effect,
   ViewChild,
   afterNextRender,
+  runInInjectionContext,
   computed,
   signal,
   PLATFORM_ID,
@@ -11,6 +12,7 @@ import {
   OnInit,
   ElementRef,
   OnDestroy,
+  Injector,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, RouteReuseStrategy, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -111,6 +113,7 @@ import { PlatformService } from './services/platform.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { RightPanelHeaderService } from './services/right-panel-header.service';
 import { LeftPanelHeaderService } from './services/left-panel-header.service';
+import { EventFocusService } from './services/event-focus.service';
 
 interface NavItem {
   path: string;
@@ -231,6 +234,7 @@ export class App implements OnInit, OnDestroy {
   private readonly nwcService = inject(NwcService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly webPushService = inject(WebPushService);
   private readonly overlay = inject(Overlay);
@@ -238,6 +242,7 @@ export class App implements OnInit, OnDestroy {
   private readonly messagingService = inject(MessagingService);
   private readonly followSetsService = inject(FollowSetsService);
   private readonly platformService = inject(PlatformService);
+  private readonly eventFocus = inject(EventFocusService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -388,6 +393,10 @@ export class App implements OnInit, OnDestroy {
     }
 
     return null;
+  }
+
+  private isEventRoute(url: string): boolean {
+    return url.startsWith('/e/');
   }
 
   /**
@@ -658,7 +667,7 @@ export class App implements OnInit, OnDestroy {
     { path: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
     { path: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
     { path: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
-{ path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
+    { path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
     { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
     { path: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
     { path: 'newsletter', label: $localize`:@@menu.newsletter:Newsletter`, icon: 'campaign', authenticated: true },
@@ -922,7 +931,15 @@ export class App implements OnInit, OnDestroy {
           this.accountLocalState.setLastRoute(pubkey, event.urlAfterRedirects);
           this.logger.debug(`[App] Saved last route for account: ${event.urlAfterRedirects}`);
         }
+
+        if (event.urlAfterRedirects && !this.isEventRoute(event.urlAfterRedirects)) {
+          this.eventFocus.deactivateBootstrap();
+        }
       });
+
+    if (this.isEventRoute(this.initialUrl)) {
+      this.eventFocus.activateBootstrap();
+    }
 
     // Track account changes to reset the restoration flag
     let lastPubkey: string | undefined = undefined;
@@ -979,7 +996,7 @@ export class App implements OnInit, OnDestroy {
         this.hasRestoredRoute = true;
         this.logger.debug('[App] Start on last route is disabled, not restoring');
       }
-    }, { allowSignalWrites: true });
+    });
 
     // Handle launch counter and prompts for authenticated users
     effect(() => {
@@ -1098,35 +1115,27 @@ export class App implements OnInit, OnDestroy {
     this.logger.info('[App] Checking for nostr protocol in current URL');
     await this.checkForNostrProtocolInUrl();
 
-    // Initialize content notification service
-    // This also starts periodic polling for new notifications with visibility awareness
-    this.logger.info('[App] Initializing content notification service');
-    try {
+    this.deferStartupTask('content notifications', async () => {
+      // Initialize content notification service
+      // This also starts periodic polling for new notifications with visibility awareness
+      this.logger.info('[App] Initializing content notification service');
       await this.contentNotificationService.initialize();
       this.logger.info('[App] Content notification service initialized successfully');
       // Note: Periodic polling is now handled internally by ContentNotificationService
       // with visibility awareness (pauses when hidden, checks immediately when visible)
-    } catch (error) {
-      this.logger.error('[App] Failed to initialize content notification service', error);
-    }
+    });
 
-    // Initialize metrics tracking service
-    this.logger.info('[App] Initializing metrics tracking service');
-    try {
+    this.deferStartupTask('metrics tracking', () => {
+      this.logger.info('[App] Initializing metrics tracking service');
       this.metricsTracking.initialize();
       this.logger.info('[App] Metrics tracking service initialized successfully');
-    } catch (error) {
-      this.logger.error('[App] Failed to initialize metrics tracking service', error);
-    }
+    });
 
-    // Start cache cleanup service
-    this.logger.info('[App] Starting cache cleanup service');
-    try {
+    this.deferStartupTask('cache cleanup', () => {
+      this.logger.info('[App] Starting cache cleanup service');
       this.cacheCleanup.start();
       this.logger.info('[App] Cache cleanup service started successfully');
-    } catch (error) {
-      this.logger.error('[App] Failed to start cache cleanup service', error);
-    }
+    });
 
     this.logger.info('[App] ==> ngOnInit completed');
   }
@@ -1194,6 +1203,36 @@ export class App implements OnInit, OnDestroy {
     // Listen for both click and touchend events
     this.document.addEventListener('click', handleBackdropInteraction, { capture: true });
     this.document.addEventListener('touchend', handleBackdropInteraction, { capture: true });
+  }
+
+  private deferStartupTask(taskName: string, task: () => Promise<void> | void): void {
+    if (!this.app.isBrowser()) {
+      return;
+    }
+
+    const runTask = () => {
+      try {
+        const result = task();
+        if (result && typeof (result as Promise<void>).catch === 'function') {
+          (result as Promise<void>).catch(error => {
+            this.logger.error(`[App] Deferred task failed: ${taskName}`, error);
+          });
+        }
+      } catch (error) {
+        this.logger.error(`[App] Deferred task failed: ${taskName}`, error);
+      }
+    };
+
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          window.requestIdleCallback(() => runTask(), { timeout: 2000 });
+          return;
+        }
+
+        setTimeout(() => runTask(), 0);
+      });
+    });
   }
 
   qrScan() {
