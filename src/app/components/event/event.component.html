@@ -127,7 +127,7 @@
     <app-profile-update-event [event]="targetItem.event"></app-profile-update-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event"
+      <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
         [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
     </div>

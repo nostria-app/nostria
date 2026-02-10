@@ -33,7 +33,7 @@
   <mat-sidenav-container class="sidenav-container" [autosize]="true" (backdropClick)="onBackdropClick()">
     <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
-      [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
+      [class.sidenav-labels]="displayLabels()" [class.sidenav-small]="!displayLabels()" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
       (opened)="onSidenavOpened()">
 
