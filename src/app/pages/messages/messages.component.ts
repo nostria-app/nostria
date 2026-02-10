@@ -1246,6 +1246,23 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Open emoji picker in a fullscreen dialog on small screens
+   */
+  async openEmojiPickerDialog(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
+      title: 'Emoji',
+      width: '400px',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertEmoji(result.result);
+      }
+    });
+  }
+
+  /**
    * Remove a specific media preview by index
    */
   removeMediaPreview(index: number): void {

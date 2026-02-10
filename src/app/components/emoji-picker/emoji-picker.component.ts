@@ -139,6 +139,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     </div>
   `,
   styles: [`
+    :host-context(app-emoji-picker-dialog) .emoji-picker {
+      width: 100%;
+      max-height: none;
+      height: 100%;
+    }
+
     .emoji-picker {
       width: 320px;
       max-height: 350px;
@@ -184,10 +190,25 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       }
     }
 
+    :host-context(app-emoji-picker-dialog) .emoji-grid-container {
+      max-height: none;
+      flex: 1;
+    }
+
     .emoji-grid-container {
       overflow-y: auto;
       max-height: 280px;
       padding: 6px;
+    }
+
+    :host-context(app-emoji-picker-dialog) .emoji-grid {
+      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    }
+
+    :host-context(app-emoji-picker-dialog) .emoji-btn {
+      width: 100%;
+      height: 44px;
+      font-size: 1.5rem;
     }
 
     .emoji-grid {

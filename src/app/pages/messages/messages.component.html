@@ -532,6 +532,12 @@
             class="hidden-file-input" aria-label="Upload media files" />
 
           <!-- Emoji picker button -->
+          @if (layout.isHandset()) {
+          <button mat-icon-button type="button" class="emoji-button"
+            [disabled]="isSending()" matTooltip="Emoji" (click)="openEmojiPickerDialog()">
+            <mat-icon>sentiment_satisfied</mat-icon>
+          </button>
+          } @else {
           <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" class="emoji-button"
             [disabled]="isSending()" matTooltip="Emoji">
             <mat-icon>sentiment_satisfied</mat-icon>
@@ -539,6 +545,7 @@
           <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
             <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
           </mat-menu>
+          }
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
