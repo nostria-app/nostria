@@ -669,7 +669,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   likes = computed<NostrRecord[]>(() => {
-    const event = this.event();
+    // Check either the event input or the record signal (for events loaded by ID)
+    const event = this.event() || this.record()?.event;
     if (!event) return [];
     // Return all reactions, not just '+' reactions
     return this.reactions().events;
