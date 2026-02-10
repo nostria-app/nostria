@@ -15,7 +15,6 @@ import { FollowingService } from './following.service';
 import { MetricsTrackingService } from './metrics-tracking.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
-import { DeletionFilterService } from './deletion-filter.service';
 import { SettingsService } from './settings.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
@@ -39,7 +38,6 @@ export class StateService implements NostriaService {
   reporting = inject(ReportingService);
   following = inject(FollowingService);
   metricsTracking = inject(MetricsTrackingService);
-  deletionFilter = inject(DeletionFilterService);
   settingsService = inject(SettingsService);
 
   constructor() {
@@ -132,12 +130,6 @@ export class StateService implements NostriaService {
       this.logger.info(`[StateService] Settings loaded in ${Date.now() - settingsStartTime}ms`);
     })();
 
-    const deletionPromise = (async () => {
-      const deletionStartTime = Date.now();
-      await this.deletionFilter.load(pubkey);
-      this.logger.info(`[StateService] Deletion filter loaded in ${Date.now() - deletionStartTime}ms`);
-    })();
-
     const accountStatePromise = (async () => {
       const accountStartTime = Date.now();
       await this.accountState.load();
@@ -155,7 +147,6 @@ export class StateService implements NostriaService {
     // Wait for all parallel operations to complete
     await Promise.all([
       settingsPromise,
-      deletionPromise,
       accountStatePromise,
       notificationPromise,
     ]);
@@ -192,6 +183,5 @@ export class StateService implements NostriaService {
     this.media.clear();
     this.reporting.clear();
     this.following.clear();
-    this.deletionFilter.clear();
   }
 }

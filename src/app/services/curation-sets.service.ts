@@ -60,13 +60,13 @@ export class CurationSetsService {
       // Try local database first
       let events = await this.database.getEventsByPubkeyAndKind(pubkey, kind);
 
-      // Filter out deleted events
-      events = events.filter(event => !this.deletionFilter.isDeleted(event));
+      // Filter out deleted events (on-demand check from local database)
+      events = await this.deletionFilter.filterDeletedEventsFromDatabase(events);
 
       // If no local data, fetch from relays
       if (events.length === 0) {
         const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, kind);
-        events = relayEvents.filter(event => !this.deletionFilter.isDeleted(event));
+        events = await this.deletionFilter.filterDeletedEventsFromDatabase(relayEvents);
 
         // Save to local database for next time
         for (const event of events) {

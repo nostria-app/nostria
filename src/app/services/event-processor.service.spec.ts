@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { EventProcessorService } from './event-processor.service';
 import { ReportingService } from './reporting.service';
-import { DeletionFilterService } from './deletion-filter.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
@@ -26,7 +25,6 @@ function createMockEvent(overrides: Partial<Event> = {}): Event {
 describe('EventProcessorService', () => {
   let service: EventProcessorService;
   let mockReportingService: jasmine.SpyObj<ReportingService>;
-  let mockDeletionFilter: jasmine.SpyObj<DeletionFilterService>;
   let mockUtilities: jasmine.SpyObj<UtilitiesService>;
   let mockDataService: jasmine.SpyObj<DataService>;
   let mockLogger: jasmine.SpyObj<LoggerService>;
@@ -39,7 +37,6 @@ describe('EventProcessorService', () => {
       'mutedWords',
       'isProfileBlockedByMutedWord',
     ]);
-    mockDeletionFilter = jasmine.createSpyObj('DeletionFilterService', ['isDeleted']);
     mockUtilities = jasmine.createSpyObj('UtilitiesService', ['isEventExpired']);
     mockDataService = jasmine.createSpyObj('DataService', ['getCachedProfile']);
     mockLogger = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error']);
@@ -49,7 +46,6 @@ describe('EventProcessorService', () => {
     mockReportingService.mutedEvents.and.returnValue([]);
     mockReportingService.mutedHashtags.and.returnValue([]);
     mockReportingService.mutedWords.and.returnValue([]);
-    mockDeletionFilter.isDeleted.and.returnValue(false);
     mockUtilities.isEventExpired.and.returnValue(false);
     mockDataService.getCachedProfile.and.returnValue(undefined);
 
@@ -57,7 +53,6 @@ describe('EventProcessorService', () => {
       providers: [
         EventProcessorService,
         { provide: ReportingService, useValue: mockReportingService },
-        { provide: DeletionFilterService, useValue: mockDeletionFilter },
         { provide: UtilitiesService, useValue: mockUtilities },
         { provide: DataService, useValue: mockDataService },
         { provide: LoggerService, useValue: mockLogger },
@@ -144,14 +139,6 @@ describe('EventProcessorService', () => {
       const result = service.processEvent(event);
       expect(result.accepted).toBeFalse();
       expect(result.reason).toBe('expired');
-    });
-
-    it('should reject deleted events', () => {
-      mockDeletionFilter.isDeleted.and.returnValue(true);
-      const event = createMockEvent();
-      const result = service.processEvent(event);
-      expect(result.accepted).toBeFalse();
-      expect(result.reason).toBe('deleted');
     });
 
     it('should skip mute check when skipMuteCheck is true', () => {
