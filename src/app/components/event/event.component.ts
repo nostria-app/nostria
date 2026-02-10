@@ -780,6 +780,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.quotes().length;
   });
 
+  // Combined reposts + quotes count for the Share button
+  shareCount = computed<number>(() => {
+    return this.repostCount() + this.quoteCount();
+  });
+
   // Reactions summary panel state
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
