@@ -117,7 +117,7 @@
       <mat-list-item>
         <div class="result-content">
           <div class="relay-url">{{ result.url }}</div>
-          <div class="result-status" [ngClass]="'status-' + result.status">
+          <div [class]="'result-status status-' + result.status">
             @if (result.status === 'pending') {
             <mat-spinner diameter="16"></mat-spinner>
             <span>Publishing...</span>

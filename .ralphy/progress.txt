@@ -47,3 +47,4 @@
 - [✓] 2026-02-10 06:57 - Replace `[ngClass]` in `src/app/components/user-profile/user-profile.component.html` (lines 9, 44, 144, 174, 203, 232) -- 6 occurrences, uses array syntax
 - [✓] 2026-02-10 07:02 - Replace `[ngClass]` in `src/app/pages/feeds/feeds.component.html` (line 1)
 - [✓] 2026-02-10 07:07 - Replace `[ngClass]` in `src/app/pages/people/people.component.html` (line 242)
+- [✓] 2026-02-10 07:14 - Replace `[ngClass]` in `src/app/pages/settings/relays/relays.component.html` (lines 348, 488)

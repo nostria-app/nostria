@@ -6,7 +6,7 @@
   <button mat-button (click)="cancel()">
     {{ data.cancelText || 'Cancel' }}
   </button>
-  <button mat-flat-button [ngClass]="data.confirmColor" (click)="confirm()">
+  <button mat-flat-button [class]="data.confirmColor" (click)="confirm()">
     {{ data.confirmText || 'Confirm' }}
   </button>
 </mat-dialog-actions>

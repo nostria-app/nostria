@@ -1,5 +1,10 @@
 @if (media.current?.type === 'YouTube' || media.current?.type === 'Video') {
-<div #videoWindow class="video-window" [ngClass]="windowClasses" (mousedown)="onMouseDown($event)">
+<div #videoWindow class="video-window"
+  [class.minimized]="media.videoWindowState().isMinimized"
+  [class.maximized]="media.videoWindowState().isMaximized"
+  [class.dragging]="isDraggingState()"
+  [class.resizing]="isResizingState()"
+  (mousedown)="onMouseDown($event)">
   <!-- Window title bar -->
   <div class="window-titlebar">
     <div class="window-title">

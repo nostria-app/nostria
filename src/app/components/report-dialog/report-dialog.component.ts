@@ -1,5 +1,4 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,7 +43,6 @@ interface RelayPublishResult {
 @Component({
   selector: 'app-report-dialog',
   imports: [
-    CommonModule,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
