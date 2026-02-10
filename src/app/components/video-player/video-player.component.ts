@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, ElementRef, viewChild, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, ElementRef, viewChild, computed } from '@angular/core';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VideoPlayerComponent {
   media = inject(MediaPlayerService);
