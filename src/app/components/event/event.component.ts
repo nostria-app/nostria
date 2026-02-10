@@ -21,7 +21,6 @@ import { AccountLocalStateService, RecentEmoji } from '../../services/account-lo
 import { LoggerService } from '../../services/logger.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
-import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { ReactionButtonComponent } from './reaction-button/reaction-button.component';
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
@@ -92,7 +91,6 @@ interface CollapsedContentMedia {
     AgoPipe,
     TimestampPipe,
     CommonModule,
-    ReplyButtonComponent,
     ReactionButtonComponent,
     EventHeaderComponent,
     ContentComponent,

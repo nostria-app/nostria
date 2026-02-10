@@ -38,11 +38,11 @@ The codebase has migrated away from `*ngIf`, `*ngFor`, `*ngSwitch`, and `[ngStyl
 - [x] Replace `[ngClass]` in `src/app/pages/feeds/feeds.component.html` (line 1)
 - [x] Replace `[ngClass]` in `src/app/pages/people/people.component.html` (line 242)
 - [x] Replace `[ngClass]` in `src/app/pages/settings/relays/relays.component.html` (lines 348, 488)
-- [ ] Replace `[ngClass]` in `src/app/components/publish-dialog/publish-dialog.component.html` (line 120)
-- [ ] Replace `[ngClass]` in `src/app/components/video-player/video-player.component.html` (line 2)
-- [ ] Replace `[ngClass]` in `src/app/components/event/repost-button/repost-button.component.html` (line 3)
-- [ ] Replace `[ngClass]` in `src/app/components/report-dialog/report-dialog.component.html` (line 122)
-- [ ] Replace `[ngClass]` in `src/app/components/confirm-dialog/confirm-dialog.component.html` (line 9)
+- [x] Replace `[ngClass]` in `src/app/components/publish-dialog/publish-dialog.component.html` (line 120)
+- [x] Replace `[ngClass]` in `src/app/components/video-player/video-player.component.html` (line 2)
+- [x] Replace `[ngClass]` in `src/app/components/event/repost-button/repost-button.component.html` (line 3)
+- [x] Replace `[ngClass]` in `src/app/components/report-dialog/report-dialog.component.html` (line 122)
+- [x] Replace `[ngClass]` in `src/app/components/confirm-dialog/confirm-dialog.component.html` (line 9)
 
 ---
 

@@ -709,74 +709,33 @@
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
 
-    <!-- Engagement stats row (above actions) -->
-    @if (!compact() && (hasAnyEngagement() || hasProofOfWork(targetItem.event) || (shouldShowClientTag() &&
+    <!-- Metadata indicators (PoW, geohash, client) -->
+    @if (!compact() && (hasProofOfWork(targetItem.event) || hasGeohash(targetItem.event) || (shouldShowClientTag() &&
     getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))))) {
-    <div class="engagement-stats-row">
-      <div class="engagement-stats-left">
-        @if (likes().length > 0) {
-        <button class="engagement-stat" (click)="toggleReactionsSummary(); $event.stopPropagation()">
-          <span class="aggregated-emojis">
-            @for (emoji of topEmojis(); track emoji.emoji) {
-            @if (emoji.url) {
-            <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
-            } @else {
-            <span class="emoji-item">{{ emoji.emoji }}</span>
-            }
-            }
-          </span>
-          <span class="stat-count">{{ likes().length }}</span>
-        </button>
-        }
-        @if (replyCount() > 0) {
-        <button class="engagement-stat" (click)="navigateToComments($event)">
-          <span class="stat-count">{{ replyCount() }}</span>
-          <span class="stat-label">{{ replyCount() === 1 ? 'comment' : 'comments' }}</span>
-        </button>
-        }
-        @if (repostCount() > 0) {
-        <button class="engagement-stat" (click)="toggleReactionsSummary('reposts'); $event.stopPropagation()">
-          <span class="stat-count">{{ repostCount() }}</span>
-          <span class="stat-label">{{ repostCount() === 1 ? 'share' : 'shares' }}</span>
-        </button>
-        }
-        @if (quoteCount() > 0) {
-        <button class="engagement-stat" (click)="toggleReactionsSummary('quotes'); $event.stopPropagation()">
-          <span class="stat-count">{{ quoteCount() }}</span>
-          <span class="stat-label">{{ quoteCount() === 1 ? 'quote' : 'quotes' }}</span>
-        </button>
-        }
-        @if (totalZapAmount() > 0) {
-        <button class="engagement-stat zap-stat" (click)="toggleReactionsSummary('zaps'); $event.stopPropagation()">
-          <span class="stat-count">{{ formatZapAmount(totalZapAmount()) }}</span>
-          <span class="stat-label">sats</span>
-        </button>
-        }
+    <div class="metadata-indicators">
+      @if (hasGeohash(targetItem.event)) {
+      <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
+        [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
+        (click)="$event.stopPropagation()">
+        <mat-icon>location_on</mat-icon>
+      </a>
+      }
+      @if (hasProofOfWork(targetItem.event)) {
+      <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
+        <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
+        <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
       </div>
-      <div class="engagement-stats-right">
-        @if (hasGeohash(targetItem.event)) {
-        <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="geohash-link"
-          [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
-          (click)="$event.stopPropagation()">
-          <mat-icon>location_on</mat-icon>
-        </a>
-        }
-        @if (hasProofOfWork(targetItem.event)) {
-        <div class="pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)" matTooltipPosition="below">
-          <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
-          <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
-        </div>
-        }
-        @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
-        <div class="client-indicator"
-          [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
-          matTooltipPosition="below">
-          <img [src]="getClientLogo(getClientTag(targetItem.event))"
-            [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
-        </div>
-        }
+      }
+      @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
+      <div class="client-indicator"
+        [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
+        matTooltipPosition="below">
+        <img [src]="getClientLogo(getClientTag(targetItem.event))"
+          [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
       </div>
+      }
     </div>
+    }
 
     <!-- Expandable reactions summary panel -->
     @if (showReactionsSummary()) {
@@ -784,24 +743,27 @@
       <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
         [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
         [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-        [hideTabs]="true">
+        [hideTabs]="false">
       </app-reaction-summary>
     </div>
     }
-    }
 
-    <!-- Action buttons row with labels -->
+    <!-- Unified action toolbar -->
     <div class="actions-row" [class.compact]="compact()"
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
       [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
       [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
-      <!-- Like/Reactions -->
+      <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
         (mouseleave)="onLikeHoverLeave()">
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+        @if (likes().length > 0) {
+        <span class="action-label">{{ likes().length }}</span>
+        } @else {
         <span class="action-label">Like</span>
+        }
 
         <!-- Quick reaction hover popup -->
         <div class="quick-reaction-popup" [class.visible]="showQuickReactions()" (mouseenter)="onLikeHoverEnter()"
@@ -824,35 +786,72 @@
         </div>
       </div>
 
-      <!-- Comment -->
+      <!-- Comments (opens event page) -->
       <div class="action-button comment-action" role="button" tabindex="0"
-        (click)="replyBtn.onClick($event); $event.stopPropagation()">
-        <app-reply-button class="action-icon" #replyBtn [event]="targetItem.event"></app-reply-button>
+        (click)="navigateToComments($event)">
+        <mat-icon class="action-icon">mode_comment</mat-icon>
+        @if (replyCount() > 0) {
+        <span class="action-label">{{ replyCount() }}</span>
+        } @else {
         <span class="action-label">Reply</span>
+        }
       </div>
 
-      <!-- Share -->
+      <!-- Share with count -->
       <div class="action-button share-action" role="button" tabindex="0"
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
+        @if (repostCount() > 0) {
+        <span class="action-label">{{ repostCount() }}</span>
+        } @else {
         <span class="action-label">Share</span>
+        }
       </div>
 
-      <!-- Zap -->
+      <!-- Quotes -->
+      @if (quoteCount() > 0) {
+      <div class="action-button quote-action" role="button" tabindex="0"
+        (click)="toggleReactionsSummary('quotes'); $event.stopPropagation()">
+        <mat-icon class="action-icon">format_quote</mat-icon>
+        <span class="action-label">{{ quoteCount() }}</span>
+      </div>
+      }
+
+      <!-- Zap with sats -->
       <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
         <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"
           [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
         </app-zap-button>
+        @if (totalZapAmount() > 0) {
+        <span class="action-label">{{ formatZapAmount(totalZapAmount()) }}</span>
+        } @else {
         <span class="action-label">Zap</span>
+        }
       </div>
 
-      <!-- Bookmark (right side) -->
-      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)"
-        (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
-        (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
+      <!-- Bookmark (inline) -->
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
         <span class="action-label">Bookmark</span>
       </div>
+
+      <!-- Top emojis indicator (right-aligned) -->
+      @if (!compact() && likes().length > 0) {
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
+        (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
+        (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
+        <span class="aggregated-emojis">
+          @for (emoji of topEmojis(); track emoji.emoji) {
+          @if (emoji.url) {
+          <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
+          } @else {
+          <span class="emoji-item">{{ emoji.emoji }}</span>
+          }
+          }
+        </span>
+        <span class="emoji-more">···</span>
+      </div>
+      }
     </div>
     }
 

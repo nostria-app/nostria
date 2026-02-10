@@ -49,7 +49,14 @@ export class ReactionSummaryComponent {
 
   selectedTab = signal<ReactionSummaryTab>('reactions');
 
-  tabs: ReactionSummaryTab[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+  allTabs: ReactionSummaryTab[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+
+  visibleTabs = computed<ReactionSummaryTab[]>(() => {
+    return this.allTabs.filter(tab => {
+      const count = this.tabCount(tab);
+      return typeof count === 'number' ? count > 0 : parseInt(count, 10) > 0;
+    });
+  });
 
   constructor() {
     // Set initial tab when input changes
