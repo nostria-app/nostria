@@ -472,12 +472,13 @@
 .aggregated-emojis {
   display: inline-flex;
   align-items: center;
+  gap: 0px;
   margin-right: 2px;
 
   .emoji-item {
     font-size: 16px;
     line-height: 1;
-    margin-left: -6px;
+    margin-left: -4px;
 
     &:first-child {
       margin-left: 0;
@@ -485,8 +486,9 @@
   }
 
   .custom-emoji {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
+    margin-left: -1px;
     vertical-align: middle;
     object-fit: contain;
   }
