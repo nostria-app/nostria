@@ -14,8 +14,8 @@ export class TimestampPipe implements PipeTransform {
   private gregorianService = inject(GregorianCalendarService);
   private ethiopianService = inject(EthiopianCalendarService);
 
-  transform(value: number, format = 'medium'): string {
-    if (value === 0) {
+  transform(value: number | null | undefined, format = 'medium'): string {
+    if (value === null || value === undefined || value === 0) {
       return '';
     }
 
