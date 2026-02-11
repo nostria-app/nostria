@@ -121,11 +121,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       name: 'Brainstorm',
       description: 'Default NIP-85 trusted assertions relay',
     },
-    {
-      url: 'wss://nip85.nostr.band',
-      name: 'Nostr Band',
-      description: 'Alternative NIP-85 trusted assertions relay',
-    },
   ];
 
   ngOnInit(): void {
