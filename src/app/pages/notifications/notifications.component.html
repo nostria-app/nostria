@@ -19,6 +19,11 @@
       [class.active-filters]="hasActiveFilters()">
       <mat-icon>tune</mat-icon>
     </button>
+    @if (notifications().length > 0) {
+    <button mat-icon-button (click)="markAllAsRead()" matTooltip="Mark all as read">
+      <mat-icon>done_all</mat-icon>
+    </button>
+    }
     <button mat-icon-button [matMenuTriggerFor]="notificationsMenu" matTooltip="More options">
       <mat-icon>more_vert</mat-icon>
     </button>
@@ -39,10 +44,6 @@
         <span>Refresh</span>
       </button>
       @if (notifications().length > 0) {
-      <button mat-menu-item (click)="markAllAsRead()">
-        <mat-icon>done_all</mat-icon>
-        <span>Mark All Read</span>
-      </button>
       <button mat-menu-item (click)="clearNotifications()">
         <mat-icon>close</mat-icon>
         <span>Clear All</span>
