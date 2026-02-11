@@ -10,6 +10,20 @@
   <mat-card>
     <mat-card-content>
       <div class="file-upload-section">
+        @if (previewProfileImage()) {
+        <div class="section-header">
+          <h3>Profile Image</h3>
+        </div>
+        <div class="preview-container">
+          <div class="preview-wrapper">
+            <img [src]="previewProfileImage()" class="profile-preview" alt="Profile Preview" />
+            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('profile')"
+              matTooltip="Remove profile image">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+        } @else {
         <div class="section-header">
           <h3>Profile Image</h3>
           <div class="toggle-container">
@@ -49,21 +63,24 @@
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
         }
-
-        @if (previewProfileImage()) {
-        <div class="preview-container">
-          <div class="preview-wrapper">
-            <img [src]="previewProfileImage()" class="profile-preview" alt="Profile Preview" />
-            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('profile')"
-              matTooltip="Remove profile image">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        </div>
         }
       </div>
 
       <div class="file-upload-section">
+        @if (previewBanner()) {
+        <div class="section-header">
+          <h3>Profile Banner</h3>
+        </div>
+        <div class="preview-container">
+          <div class="preview-wrapper">
+            <img [src]="previewBanner()" class="banner-preview" alt="Banner Preview" />
+            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('banner')"
+              matTooltip="Remove banner image">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+        } @else {
         <div class="section-header">
           <h3>Profile Banner</h3>
           <div class="toggle-container">
@@ -102,17 +119,6 @@
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
         }
-
-        @if (previewBanner()) {
-        <div class="preview-container">
-          <div class="preview-wrapper">
-            <img [src]="previewBanner()" class="banner-preview" alt="Banner Preview" />
-            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('banner')"
-              matTooltip="Remove banner image">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        </div>
         }
       </div>
 

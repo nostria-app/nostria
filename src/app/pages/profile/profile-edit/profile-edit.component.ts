@@ -116,13 +116,11 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       profileClone.bannerUrl = profileClone.banner || '';
       this.profile.set(profileClone);
 
-      // Set initial toggle states based on existing URLs
+      // Set preview images from existing URLs
       if (profileClone.picture) {
-        this.useProfileImageUrl.set(true);
         this.previewProfileImage.set(profileClone.picture);
       }
       if (profileClone.banner) {
-        this.useBannerUrl.set(true);
         this.previewBanner.set(profileClone.banner);
       }
 
