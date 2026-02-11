@@ -388,6 +388,13 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.zapService.getLightningAddress(profileData) !== null;
   });
 
+  // Computed to get the count of external identities (NIP-39 `i` tags)
+  identityCount = computed(() => {
+    const event = this.profile()?.event;
+    if (!event?.tags) return 0;
+    return event.tags.filter(tag => tag[0] === 'i' && tag[1]).length;
+  });
+
   // Computed to get the primary lightning address
   lightningAddress = computed(() => {
     const profileData = this.profile()?.data;
@@ -1394,6 +1401,20 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     if (currentPubkey) {
       this.layout.openRelaysPage(currentPubkey);
+    }
+  }
+
+  /**
+   * Navigate to links page in right panel
+   */
+  navigateToLinks(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentPubkey = this.pubkey();
+
+    if (currentPubkey) {
+      this.layout.openLinksPage(currentPubkey);
     }
   }
 
