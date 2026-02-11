@@ -6,6 +6,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { Playlist, PlaylistTrack, PlaylistDraft, OnInitialized, MediaItem } from '../interfaces';
 import { Event, Filter } from 'nostr-tools';
 import { formatDuration } from '../utils/format-duration';
+import { LoggerService } from './logger.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,6 +16,9 @@ export class PlaylistService implements OnInitialized {
   private app = inject(ApplicationService);
   private nostrService = inject(NostrService);
   private accountRelay = inject(AccountRelayService);
+  private readonly logger = inject(LoggerService);
+
+  private initialized = false;
 
   // Storage keys
   private readonly PLAYLISTS_STORAGE_KEY = 'nostria-playlists';
@@ -62,23 +66,16 @@ export class PlaylistService implements OnInitialized {
       return;
     }
 
-    effect(() => {
-      if (this.app.initialized()) {
-        this.initialize();
-      }
-    });
-
-    // Reload playlists when account changes
+    // Single effect that handles both initialization and account changes
     effect(() => {
       const pubkey = this.app.accountState.pubkey();
-      if (pubkey && this.app.initialized()) {
-        // Use untracked to prevent signal dependency loop
-        // (cleanupPlaylists reads _playlists which would create a circular dependency)
+      const isInitialized = this.app.initialized();
+      if (isInitialized) {
         untracked(() => {
-          this.loadPlaylistsFromStorage();
-          this.loadDraftsFromStorage();
-          this.cleanupPlaylists();
-          this.fetchSavedPlaylists(pubkey);
+          this.initialize();
+          if (pubkey) {
+            this.fetchSavedPlaylists(pubkey);
+          }
         });
       }
     });
@@ -87,13 +84,8 @@ export class PlaylistService implements OnInitialized {
   initialize(): void {
     this.loadPlaylistsFromStorage();
     this.loadDraftsFromStorage();
-    // Clean up playlists to remove those from other accounts and duplicates
     this.cleanupPlaylists();
-
-    const pubkey = this.getCurrentUserPubkey();
-    if (pubkey) {
-      this.fetchSavedPlaylists(pubkey);
-    }
+    this.initialized = true;
   }
 
   /**
@@ -417,35 +409,28 @@ export class PlaylistService implements OnInitialized {
     }
 
     const playlists = this._playlists();
-    console.log(`Cleaning up ${playlists.length} playlists for pubkey:`, currentPubkey);
 
     // Remove duplicates based on kind:pubkey:dtag (replaceable events)
     // For each unique combination of pubkey and id (d-tag), keep only the newest event
     const playlistMap = new Map<string, Playlist>();
 
     for (const playlist of playlists) {
-      // Generate unique key: kind:pubkey:dtag
-      // For kind 32100 (playlist) events, the unique identifier is pubkey:dtag
       const key = `${playlist.pubkey}:${playlist.id}`;
 
       const existing = playlistMap.get(key);
       if (!existing || playlist.created_at > existing.created_at) {
         playlistMap.set(key, playlist);
-      } else {
-        console.log(`Removing duplicate playlist: ${playlist.title} (older version)`);
       }
     }
 
     // Convert map back to array
     const cleanedPlaylists = Array.from(playlistMap.values());
 
-    console.log(`After deduplication: ${cleanedPlaylists.length} playlists`);
-
     // Update state if anything changed
     if (cleanedPlaylists.length !== playlists.length) {
+      this.logger.debug(`[Playlists] Dedup removed ${playlists.length - cleanedPlaylists.length} duplicates, ${cleanedPlaylists.length} remaining`);
       this._playlists.set(cleanedPlaylists);
       this.savePlaylistsToStorage();
-      console.log(`Cleaned up playlists: removed ${playlists.length - cleanedPlaylists.length} entries`);
     }
   }
 

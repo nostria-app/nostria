@@ -33,8 +33,9 @@ import { LoggerService } from '../../services/logger.service';
 const PAGE_SIZE = 30;
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
-const RELAY_QUERY_TIMEOUT_MS = 3000;
-const BATCH_DELAY_MS = 100;
+const RELAY_QUERY_TIMEOUT_MS = 5000;
+const BATCH_DELAY_MS = 500;
+const MAX_RELAY_SUBSCRIPTIONS = 5;
 
 @Component({
   selector: 'app-articles-discover',
@@ -785,16 +786,22 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Query individual relay lists for each followed user
-   * This ensures we get articles even if they're not on our main relays
+   * Query individual relay lists for followed users, grouped by relay URL.
+   * Instead of subscribing per-user (which creates hundreds of subscriptions),
+   * we group users by their relay URLs and batch queries per relay.
    */
   private async queryIndividualRelays(pubkeys: string[]): Promise<void> {
-    const BATCH_SIZE = 10;
+    // Get the base relays we already queried so we can skip those
+    const accountRelays = new Set(this.accountRelay.getRelayUrls());
+    const customArticlesRelays = new Set(this.articlesRelays());
 
-    for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
-      const batch = pubkeys.slice(i, i + BATCH_SIZE);
+    // Collect relay → pubkeys mapping
+    const relayToPubkeys = new Map<string, Set<string>>();
+    const LOOKUP_BATCH_SIZE = 20;
 
-      // Get relay lists for this batch of users
+    for (let i = 0; i < pubkeys.length; i += LOOKUP_BATCH_SIZE) {
+      const batch = pubkeys.slice(i, i + LOOKUP_BATCH_SIZE);
+
       const relayPromises = batch.map(async (pubkey) => {
         const relays = await this.userRelays.getUserRelays(pubkey);
         return { pubkey, relays };
@@ -802,27 +809,58 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
       const relayResults = await Promise.all(relayPromises);
 
-      // Query each user's relays for their articles
       for (const { pubkey, relays } of relayResults) {
-        if (relays.length === 0) continue;
+        for (const relay of relays) {
+          // Skip relays we already queried in the main subscription
+          if (accountRelays.has(relay) || customArticlesRelays.has(relay)) continue;
 
+          if (!relayToPubkeys.has(relay)) {
+            relayToPubkeys.set(relay, new Set());
+          }
+          relayToPubkeys.get(relay)!.add(pubkey);
+        }
+      }
+    }
+
+    // Sort relays by number of users (most users first = most useful)
+    const sortedRelays = Array.from(relayToPubkeys.entries())
+      .sort((a, b) => b[1].size - a[1].size);
+
+    this.logger.debug('[Articles] Grouped users into', sortedRelays.length, 'additional relays');
+
+    // Query in batches of MAX_RELAY_SUBSCRIPTIONS relays at a time
+    for (let i = 0; i < sortedRelays.length; i += MAX_RELAY_SUBSCRIPTIONS) {
+      const relayBatch = sortedRelays.slice(i, i + MAX_RELAY_SUBSCRIPTIONS);
+
+      const subscriptions: { close: () => void }[] = [];
+
+      for (const [relayUrl, pubkeySet] of relayBatch) {
+        const authors = Array.from(pubkeySet);
         const filter: Filter = {
           kinds: [kinds.LongFormArticle],
-          authors: [pubkey],
-          limit: 20,
+          authors,
+          limit: 50,
         };
 
-        // Don't wait for these subscriptions, just let them populate in the background
-        const sub = this.pool.subscribe(relays, filter, (event: Event) => {
+        const sub = this.pool.subscribe([relayUrl], filter, (event: Event) => {
           this.handleArticleEvent(event);
         });
 
-        // Close after timeout
-        setTimeout(() => sub.close(), RELAY_QUERY_TIMEOUT_MS);
+        subscriptions.push(sub);
       }
 
-      // Small delay between batches to avoid overwhelming the system
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      // Wait for subscriptions to complete, then close
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          subscriptions.forEach(sub => sub.close());
+          resolve();
+        }, RELAY_QUERY_TIMEOUT_MS);
+      });
+
+      // Delay between batches to avoid overwhelming relays
+      if (i + MAX_RELAY_SUBSCRIPTIONS < sortedRelays.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
     }
   }
 

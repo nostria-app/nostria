@@ -169,10 +169,11 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return [];
 
-    return event.tags
+    const tags = event.tags
       .filter(tag => tag[0] === 't')
       .map(tag => tag[1])
       .filter(Boolean);
+    return [...new Set(tags)];
   });
 
   // Truncated content for preview (always show preview in feeds)
