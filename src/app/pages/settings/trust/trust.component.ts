@@ -228,7 +228,7 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       await Promise.all(
         batch.map(async (pubkey) => {
           try {
-            await this.trustService.fetchMetrics(pubkey);
+            await this.trustService.fetchMetrics(pubkey, true);
           } catch {
             // Continue on individual failures
           } finally {

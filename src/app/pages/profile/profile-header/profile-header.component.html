@@ -71,7 +71,7 @@
     <div class="profile-info">
       <div class="profile-menu-actions">
         @if (isOwnProfile()) {
-        <button mat-flat-button routerLink="edit" class="hide-small">
+        <button mat-flat-button (click)="navigateToEditProfile()" class="hide-small">
           <mat-icon>edit</mat-icon> Edit Profile
         </button>
         } @else {

@@ -221,6 +221,7 @@ export class PanelNavigationService {
     'badges/details': { type: 'detail', title: 'Badge Details' },
     'badges/create': { type: 'detail', title: 'Create Badge' },
     'badges/edit': { type: 'detail', title: 'Edit Badge' },
+    'profile-edit': { type: 'detail', title: 'Edit Profile' },
     'user-badges': { type: 'detail', title: 'User Badges' },
     'collections/media/details': { type: 'detail', title: 'Media Details' },
     'playlists/edit': { type: 'detail', title: 'Edit Playlist' },
@@ -574,14 +575,14 @@ export class PanelNavigationService {
       // URL format: /badges(right:b/...)?tab=1
       // We need to extract: /badges and ?tab=1 separately
       const currentUrl = this.router.url;
-      
+
       // Extract query params from the end of the URL (after the closing paren or after primary path)
       const queryMatch = currentUrl.match(/\?[^(]+$/);
       const queryString = queryMatch ? queryMatch[0] : '';
-      
+
       // Extract primary path (before the opening paren)
       const primaryPath = currentUrl.split('(')[0] || '/';
-      
+
       this.router.navigateByUrl(primaryPath + queryString);
       return;
     }
@@ -591,18 +592,18 @@ export class PanelNavigationService {
     const prev = newStack[newStack.length - 1];
     this._rightStack.set(newStack);
     this._isBackNavigation = true;
-    
+
     // Navigate to previous right panel route using navigateByUrl
     // URL format: /badges(right:b/...)?tab=1
     const currentUrl = this.router.url;
-    
+
     // Extract query params from the end of the URL
     const queryMatch = currentUrl.match(/\?[^(]+$/);
     const queryString = queryMatch ? queryMatch[0] : '';
-    
+
     // Extract primary path (before the opening paren)
     const primaryPath = currentUrl.split('(')[0] || '/';
-    
+
     const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
     this.router.navigateByUrl(targetUrl);
   }
@@ -781,10 +782,10 @@ export class PanelNavigationService {
       // Check if we have router-based right panel content
       const rightStack = this._rightStack();
       const hasRouterRightContent = rightStack.length > 0;
-      
+
       // Check what URL the browser is trying to navigate to
       const newPath = window.location.pathname + window.location.search;
-      
+
       // Parse the new URL to see if it has a right outlet
       const tree = this.router.parseUrl(newPath);
       const rightGroup = tree.root.children['right'];
@@ -799,13 +800,13 @@ export class PanelNavigationService {
         // they opened the right panel. We should:
         // 1. Restore the browser history to prevent the navigation
         // 2. Close our right panel manually (go back in right stack)
-        
+
         if (this._urlBeforePopstate) {
           this._handlingPopstate = true;
-          
+
           // Push the current URL back to cancel the browser's back navigation
           window.history.pushState(null, '', this._urlBeforePopstate);
-          
+
           // First check if there's dynamic RightPanelService content to handle
           if (this._rightPanelBackCallback) {
             const handled = this._rightPanelBackCallback();
@@ -815,10 +816,10 @@ export class PanelNavigationService {
               return;
             }
           }
-          
+
           // Now handle router-based right panel back navigation
           this.handleGoBackRight(this._urlBeforePopstate);
-          
+
           this._handlingPopstate = false;
         }
       } else if (newRightPath && hasRouterRightContent) {
@@ -837,10 +838,10 @@ export class PanelNavigationService {
           if (this._urlBeforePopstate) {
             this._handlingPopstate = true;
             window.history.pushState(null, '', this._urlBeforePopstate);
-            
+
             const handled = this._rightPanelBackCallback();
             this._handlingPopstate = false;
-            
+
             if (!handled) {
               // Not handled, restore browser state and let navigation proceed
               window.history.back();
@@ -867,7 +868,7 @@ export class PanelNavigationService {
       const queryMatch = currentUrl.match(/\?[^(]+$/);
       const queryString = queryMatch ? queryMatch[0] : '';
       const primaryPath = currentUrl.split('(')[0] || '/';
-      
+
       this.router.navigateByUrl(primaryPath + queryString);
       return;
     }
@@ -877,12 +878,12 @@ export class PanelNavigationService {
     const prev = newStack[newStack.length - 1];
     this._rightStack.set(newStack);
     this._isBackNavigation = true;
-    
+
     // Navigate to previous right panel route
     const queryMatch = currentUrl.match(/\?[^(]+$/);
     const queryString = queryMatch ? queryMatch[0] : '';
     const primaryPath = currentUrl.split('(')[0] || '/';
-    
+
     const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
     this.router.navigateByUrl(targetUrl);
   }

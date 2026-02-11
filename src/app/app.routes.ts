@@ -61,12 +61,6 @@ function createProfileChildren(): Routes {
       title: 'About',
     },
     {
-      path: 'edit',
-      loadComponent: () =>
-        import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
-      title: 'Edit Profile',
-    },
-    {
       path: 'following',
       loadComponent: () =>
         import('./pages/profile/following/following.component').then(m => m.FollowingComponent),
@@ -107,6 +101,12 @@ export const routes: Routes = [
     path: 'share-target',
     loadComponent: () =>
       import('./pages/share-target/share-target.component').then(m => m.ShareTargetComponent),
+  },
+  {
+    path: 'profile-edit',
+    loadComponent: () =>
+      import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
+    title: 'Edit Profile',
   },
   {
     path: 'f',
@@ -850,6 +850,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/user-links/user-links.component').then(m => m.UserLinksComponent),
     title: 'Links',
+  },
+  {
+    path: 'profile-edit',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
+    title: 'Edit Profile',
   },
 
   { path: '**', redirectTo: '/' },

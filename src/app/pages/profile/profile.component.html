@@ -93,7 +93,7 @@
       </button>
 
       @if (isOwnProfile()) {
-      <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
+      <button mat-menu-item (click)="navigateToEditProfile()">
         <mat-icon>edit</mat-icon>
         <span>Edit Profile</span>
       </button>
@@ -228,19 +228,20 @@
       <div class="loading-spinner-section">
         <mat-spinner diameter="48"></mat-spinner>
         @if (deepDiscoveryStatus(); as status) {
-          <p class="loading-message">Deep discovery in progress</p>
-          <p class="loading-submessage">{{ status.message }}</p>
-          @if (status.phase === 'observed-relays' && status.totalBatches > 0) {
-            <div class="discovery-progress">
-              <div class="discovery-progress-bar">
-                <div class="discovery-progress-fill" [style.width.%]="(status.currentBatch / status.totalBatches) * 100"></div>
-              </div>
-              <span class="discovery-progress-text">{{ status.currentBatch }} / {{ status.totalBatches }}</span>
+        <p class="loading-message">Deep discovery in progress</p>
+        <p class="loading-submessage">{{ status.message }}</p>
+        @if (status.phase === 'observed-relays' && status.totalBatches > 0) {
+        <div class="discovery-progress">
+          <div class="discovery-progress-bar">
+            <div class="discovery-progress-fill" [style.width.%]="(status.currentBatch / status.totalBatches) * 100">
             </div>
-          }
+          </div>
+          <span class="discovery-progress-text">{{ status.currentBatch }} / {{ status.totalBatches }}</span>
+        </div>
+        }
         } @else {
-          <p class="loading-message">Loading profile...</p>
-          <p class="loading-submessage">Fetching user data from the network</p>
+        <p class="loading-message">Loading profile...</p>
+        <p class="loading-submessage">Fetching user data from the network</p>
         }
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
-import { Location } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -22,6 +22,7 @@ import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 
 interface ExternalIdentity {
   platform: string;
@@ -58,7 +59,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   accountRelay = inject(AccountRelayService);
   router = inject(Router);
   media = inject(MediaService);
-  private location = inject(Location);
+  private panelNav = inject(PanelNavigationService);
   private snackBar = inject(MatSnackBar);
   private readonly logger = inject(LoggerService);
   private profileService = inject(Profile);
@@ -94,9 +95,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     effect(() => {
       const account = this.accountState.account();
 
-      // If the account changes while on edit screen, redirect to main profile page.
+      // If the account changes while on edit screen, navigate back.
       if (account?.pubkey != this.pubkey) {
-        this.router.navigate(['/p', this.pubkey], { replaceUrl: true });
+        this.panelNav.goBackRight();
       }
     });
   }
@@ -178,11 +179,11 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.location.back();
+    this.panelNav.goBackRight();
   }
 
   cancelEdit() {
-    this.router.navigate(['/p', this.pubkey], { replaceUrl: true });
+    this.panelNav.goBackRight();
   }
 
   // Template-safe getters and setters for form fields
@@ -324,9 +325,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
       if (result.success) {
         this.loading.set(false);
-        this.router.navigate(['/p', this.accountState.pubkey()], {
-          replaceUrl: true,
-        });
+        this.panelNav.goBackRight();
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }

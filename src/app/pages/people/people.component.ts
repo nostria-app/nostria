@@ -594,23 +594,24 @@ export class PeopleComponent implements OnDestroy {
    * Handle refresh trust ranks button click
    */
   onRefreshTrustRanks(): void {
-    this.downloadTrustRanksForCurrentList();
+    this.downloadTrustRanksForCurrentList(true);
   }
 
   /**
    * Download trust ranks for all people in the current filtered list
+   * @param forceRefresh If true, bypasses all caches and fetches fresh data from relay
    */
-  private async downloadTrustRanksForCurrentList(): Promise<void> {
+  private async downloadTrustRanksForCurrentList(forceRefresh = false): Promise<void> {
     const pubkeys = this.sortedPeople();
     if (pubkeys.length === 0) {
       return;
     }
 
-    this.logger.info(`[People] Downloading trust ranks for ${pubkeys.length} people`);
+    this.logger.info(`[People] Downloading trust ranks for ${pubkeys.length} people (force: ${forceRefresh})`);
 
     try {
       // Use batch fetch from TrustService for efficiency
-      await this.trustService.fetchMetricsBatch(pubkeys);
+      await this.trustService.fetchMetricsBatch(pubkeys, forceRefresh);
       this.logger.info(`[People] Trust ranks download completed for ${pubkeys.length} people`);
     } catch (error) {
       this.logger.error('[People] Failed to download trust ranks:', error);
