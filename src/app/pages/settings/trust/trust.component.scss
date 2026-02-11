@@ -2,7 +2,6 @@
   display: block;
 }
 
-// Content area mobile padding
 .content-medium {
   @media (max-width: 768px) {
     padding-bottom: 80px;
@@ -32,219 +31,97 @@
   margin-bottom: 2rem;
 }
 
-.subsection-title {
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--mat-sys-on-surface-variant);
-  margin: 1.5rem 0 0.75rem;
+// Scoring service cards
+.service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.full-width {
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.relay-option {
-  padding: 0.25rem 0;
-}
-
-.relay-name {
-  display: block;
-}
-
-.relay-description {
-  font-size: 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
-  margin-top: 0.25rem;
-}
-
-// Brainstorm activation card
-.activation-card {
+.service-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   background-color: var(--mat-sys-surface-container);
   border-radius: var(--mat-sys-corner-medium);
   padding: 1rem;
-  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+  border-left: 3px solid transparent;
 
-  &.activated {
-    border-left: 3px solid var(--mat-success-color);
+  &.enabled {
+    border-left-color: var(--mat-success-color);
   }
 }
 
-.activation-content {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+.service-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.activation-icon {
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.service-name {
+  font-size: 1rem;
+}
+
+.service-active-icon {
+  color: var(--mat-success-color);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.service-description {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0.25rem 0 0;
+}
+
+.service-actions {
+  flex-shrink: 0;
+}
+
+.error-text {
+  color: var(--mat-sys-error);
+  font-size: 0.813rem;
+  margin-top: 0.5rem;
+}
+
+// Callout card (personalized scoring)
+.callout-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+}
+
+.callout-icon {
   color: var(--mat-sys-primary);
   flex-shrink: 0;
   font-size: 28px;
   width: 28px;
   height: 28px;
+}
 
-  &.activated-icon {
-    color: var(--mat-success-color);
+.callout-content {
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.5;
   }
 }
 
-.brainstorm-button {
-  margin-top: 0.75rem;
+.callout-action {
+  margin-top: 0.5rem;
 }
 
-// Provider presets
-.provider-presets {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.provider-card {
-  background-color: var(--mat-sys-surface-container);
-  border-radius: var(--mat-sys-corner-medium);
-  padding: 1rem;
-}
-
-.provider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.provider-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.provider-name {
-  font-size: 1rem;
-}
-
-.provider-relay {
-  font-size: 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
-  font-family: monospace;
-}
-
-.configured-icon {
-  color: var(--mat-success-color);
-}
-
-.provider-description {
-  font-size: 0.875rem;
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0.5rem 0;
-}
-
-.provider-actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.provider-visibility {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.813rem;
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.visibility-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-}
-
-// Configured providers list
-.configured-providers {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.configured-provider-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: var(--mat-sys-corner-small);
-
-  &.private {
-    border-left: 3px solid var(--mat-sys-secondary);
-  }
-}
-
-.provider-type-icon {
-  color: var(--mat-sys-on-surface-variant);
-  flex-shrink: 0;
-  margin-top: 0.125rem;
-}
-
-.provider-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.provider-label {
-  display: block;
-  font-size: 0.875rem;
-}
-
-.provider-relay-url {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
-  font-family: monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.provider-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.375rem;
-}
-
-.metric-chip {
-  display: inline-block;
-  padding: 0.125rem 0.5rem;
-  background-color: var(--mat-sys-surface-container-high);
-  border-radius: var(--mat-sys-corner-full);
-  font-size: 0.688rem;
-  color: var(--mat-sys-on-surface-variant);
-  font-family: monospace;
-}
-
-// Publish section
-.publish-section {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.publish-button {
-  align-self: flex-start;
-
-  mat-icon,
-  mat-spinner,
-  span {
-    vertical-align: middle;
-  }
-}
-
-.publish-error {
-  color: var(--mat-sys-error);
-  font-size: 0.813rem;
-}
-
-// Refresh trust ranks section
+// Refresh section
 .refresh-section {
   display: flex;
   flex-direction: column;
@@ -274,33 +151,6 @@
 .refresh-progress-label {
   font-size: 0.8125rem;
   color: var(--mat-sys-on-surface-variant);
-}
-
-// Info card
-.info-card {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: var(--mat-sys-corner-small);
-  margin-top: 1.5rem;
-
-  mat-icon {
-    color: var(--mat-sys-primary);
-    flex-shrink: 0;
-  }
-
-  strong {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.875rem;
-    color: var(--mat-sys-on-surface-variant);
-    line-height: 1.5;
-  }
 }
 
 h2 {

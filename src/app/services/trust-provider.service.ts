@@ -43,7 +43,7 @@ export const TRUST_PROVIDER_LIST_KIND = 10040;
 export const KNOWN_PROVIDERS: KnownProvider[] = [
   {
     name: 'Brainstorm',
-    description: 'Personalized Web of Trust scoring using GrapeRank algorithm',
+    description: 'Calculates reputation scores based on your social connections',
     pubkey: '3d842afecd5e293f28b6627933704a3fb8ce153aa91d790ab11f6a752d44a42d',
     relayUrl: 'wss://nip85.brainstorm.world',
     supportedMetrics: [
