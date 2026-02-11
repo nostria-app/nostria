@@ -88,7 +88,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   autoRelayAuth: false,
   addClientTag: true,
   showClientTag: true,
-  trustEnabled: false,
+  trustEnabled: true,
   trustRelay: 'wss://nip85.brainstorm.world',
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
