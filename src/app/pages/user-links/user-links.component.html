@@ -1,111 +1,100 @@
-<div class="user-links-container">
-  <div class="links-header">
-    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
 
-    <div class="profile-mini">
-      @if (viewingProfile(); as profile) {
-      <div class="profile-mini-avatar">
-        @if (profile.data?.picture) {
-        <img [src]="profile.data.picture" alt="Profile picture" />
-        } @else {
-        <mat-icon>account_circle</mat-icon>
-        }
-      </div>
-      <h1 class="profile-mini-name">{{ getProfileDisplayName() }}'s Links</h1>
-      } @else {
-      <div class="profile-mini-avatar">
-        <mat-icon>account_circle</mat-icon>
-      </div>
-      <h1 class="profile-mini-name">Links</h1>
-      }
-    </div>
+  @if (viewingProfile(); as profile) {
+  @if (profile.data?.picture) {
+  <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" />
+  }
+  <h2 class="panel-title title-font">{{ getProfileDisplayName() }}'s Links</h2>
+  } @else {
+  <h2 class="panel-title title-font">Links</h2>
+  }
 
-    @if (identityCount() > 0) {
-    <button mat-icon-button (click)="verifyAll()" matTooltip="Verify all" class="verify-all-button">
-      <mat-icon>verified</mat-icon>
-    </button>
-    }
+  <span class="panel-header-spacer"></span>
+
+  @if (identityCount() > 0) {
+  <button mat-icon-button (click)="verifyAll()" matTooltip="Verify all">
+    <mat-icon>verified</mat-icon>
+  </button>
+  }
+</div>
+
+<div class="links-content">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading external identities...</p>
   </div>
-
-  <div class="links-content">
-    @if (isLoading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading external identities...</p>
-    </div>
-    } @else if (error()) {
-    <div class="error-container">
-      <mat-icon>error</mat-icon>
-      <p>{{ error() }}</p>
-    </div>
-    } @else if (identities().length === 0) {
-    <div class="empty-list">
-      <mat-icon>link_off</mat-icon>
-      <p>This user has no external identities linked.</p>
-    </div>
-    } @else {
-    <div class="links-list">
-      @for (identity of identities(); track identity.platform + ':' + identity.identity; let i = $index) {
-      <mat-card class="identity-card">
-        <div class="identity-card-content">
-          <div class="identity-main">
-            <div class="identity-icon">
-              <mat-icon>{{ identity.icon }}</mat-icon>
-            </div>
-            <div class="identity-info">
-              <div class="identity-platform">{{ identity.displayName }}</div>
-              <div class="identity-username">
-                @if (identity.profileUrl) {
-                <a [href]="identity.profileUrl" target="_blank" rel="noopener noreferrer">
-                  {{ identity.identity }}
-                </a>
-                } @else {
-                {{ identity.identity }}
-                }
-              </div>
-            </div>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon>error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  } @else if (identities().length === 0) {
+  <div class="empty-list">
+    <mat-icon>link_off</mat-icon>
+    <p>This user has no external identities linked.</p>
+  </div>
+  } @else {
+  <div class="links-list">
+    @for (identity of identities(); track identity.platform + ':' + identity.identity; let i = $index) {
+    <mat-card class="identity-card">
+      <div class="identity-card-content">
+        <div class="identity-main">
+          <div class="identity-icon">
+            <mat-icon>{{ identity.icon }}</mat-icon>
           </div>
-
-          <div class="identity-actions">
-            <!-- Verification status -->
-            <div class="verification-badge" [class]="getVerificationClass(identity.verificationStatus)"
-              [matTooltip]="getVerificationTooltip(identity)">
-              @if (identity.verificationStatus === 'verifying') {
-              <mat-spinner diameter="18"></mat-spinner>
+          <div class="identity-info">
+            <div class="identity-platform">{{ identity.displayName }}</div>
+            <div class="identity-username">
+              @if (identity.profileUrl) {
+              <a [href]="identity.profileUrl" target="_blank" rel="noopener noreferrer">
+                {{ identity.identity }}
+              </a>
               } @else {
-              <mat-icon>{{ getVerificationIcon(identity.verificationStatus) }}</mat-icon>
+              {{ identity.identity }}
               }
             </div>
+          </div>
 
-            <!-- Retry verification button (shown only for verifiable platforms that failed) -->
-            @if (identity.proof && identity.verificationStatus === 'failed') {
-            <button mat-icon-button (click)="verifyIdentity(i)" matTooltip="Retry verification" class="retry-button">
-              <mat-icon>refresh</mat-icon>
-            </button>
-            }
-
-            <!-- View proof link -->
-            @if (identity.proofUrl) {
-            <button mat-icon-button (click)="openProof(identity, $event)" matTooltip="View proof">
-              <mat-icon>open_in_new</mat-icon>
-            </button>
+          <!-- Verification status -->
+          <div class="verification-badge" [class]="getVerificationClass(identity.verificationStatus)"
+            [matTooltip]="getVerificationTooltip(identity)">
+            @if (identity.verificationStatus === 'verifying') {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>{{ getVerificationIcon(identity.verificationStatus) }}</mat-icon>
             }
           </div>
-        </div>
 
-        <!-- Verification details when failed -->
-        @if (identity.verificationStatus === 'failed' && identity.verificationError) {
-        <mat-divider></mat-divider>
-        <div class="verification-error">
-          <mat-icon>info_outline</mat-icon>
-          <span>{{ identity.verificationError }}</span>
+          <!-- Retry verification button (shown only for verifiable platforms that failed) -->
+          @if (identity.proof && identity.verificationStatus === 'failed') {
+          <button mat-icon-button (click)="verifyIdentity(i)" matTooltip="Retry verification" class="retry-button">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          }
+
+          <!-- View proof link -->
+          @if (identity.proofUrl) {
+          <button mat-icon-button (click)="openProof(identity, $event)" matTooltip="View proof">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+          }
         </div>
-        }
-      </mat-card>
+      </div>
+
+      <!-- Verification details when failed -->
+      @if (identity.verificationStatus === 'failed' && identity.verificationError) {
+      <mat-divider></mat-divider>
+      <div class="verification-error">
+        <mat-icon>info_outline</mat-icon>
+        <span>{{ identity.verificationError }}</span>
+      </div>
       }
-    </div>
+    </mat-card>
     }
   </div>
+  }
 </div>

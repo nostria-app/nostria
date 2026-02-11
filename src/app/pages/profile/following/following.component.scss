@@ -4,37 +4,46 @@
   overflow: hidden; // Prevent this from causing parent scrolling
 }
 
-.following-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.following-header {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.panel-header {
   position: sticky;
   top: 0;
-  z-index: 3;
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
-  margin-bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  /* Ensure no margin at bottom */
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
 }
 
-.back-button {
-  margin-right: 8px;
-  flex-shrink: 0;
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel-header-spacer {
+  flex: 1;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
   flex-shrink: 0;
 
   .search-container {
@@ -110,48 +119,6 @@
   }
 }
 
-.profile-mini {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-
-  &-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-    flex-shrink: 0;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: var(--mat-caption-text-color, #757575);
-    }
-  }
-
-  &-name {
-    margin: 0;
-    font-size: 18px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
 // Tab styles - Fix for sticky tabs
 .following-tabs {
   display: flex;
@@ -162,8 +129,8 @@
 
   ::ng-deep .mat-mdc-tab-header {
     position: sticky;
-    top: 72px;
-    /* Adjust to exactly match the header height */
+    top: 56px;
+    /* Match panel-header min-height */
     z-index: 2;
     background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
     border-top: none;

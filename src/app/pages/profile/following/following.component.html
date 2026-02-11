@@ -1,26 +1,19 @@
-<div class="following-container" @slideInOut #followingContainer>
-  <div class="following-header" @profileShrink>
-    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
+<div @slideInOut #followingContainer>
+  <div class="panel-header" @profileShrink>
+    <button mat-icon-button (click)="goBack()" matTooltip="Back">
       <mat-icon>arrow_back</mat-icon>
     </button>
 
-    <div class="profile-mini">
-      @if (userProfile(); as profile) {
-      <div class="profile-mini-avatar">
-        @if (profile.picture) {
-        <img [src]="profile.picture" alt="Profile picture" />
-        } @else {
-        <mat-icon>account_circle</mat-icon>
-        }
-      </div>
-      <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
-      } @else {
-      <div class="profile-mini-avatar">
-        <mat-icon>account_circle</mat-icon>
-      </div>
-      <h1 class="profile-mini-name">Following</h1>
-      }
-    </div>
+    @if (userProfile(); as profile) {
+    @if (profile.picture) {
+    <img class="profile-avatar" [src]="profile.picture" alt="Profile picture" />
+    }
+    <h2 class="panel-title title-font">{{ profile.name }}'s Following</h2>
+    } @else {
+    <h2 class="panel-title title-font">Following</h2>
+    }
+
+    <span class="panel-header-spacer"></span>
 
     <div class="header-controls">
       <!-- Sort button with menu -->
