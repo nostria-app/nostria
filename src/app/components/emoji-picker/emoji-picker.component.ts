@@ -4,6 +4,8 @@ import {
   signal,
   computed,
   inject,
+  effect,
+  untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +15,15 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { EmojiSetService } from '../../services/emoji-set.service';
+import { UserDataService } from '../../services/user-data.service';
+import { LoggerService } from '../../services/logger.service';
+
+interface EmojiSetGroup {
+  id: string;
+  title: string;
+  emojis: { shortcode: string; url: string }[];
+}
 
 const EMOJI_CATEGORIES = [
   { id: 'smileys', label: 'Smileys', icon: 'sentiment_satisfied', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
@@ -85,8 +96,14 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
             {{ emoji }}
           </button>
           }
+          @for (emoji of filteredCustomEmojis(); track emoji.shortcode) {
+          <button class="emoji-btn custom-emoji" (click)="selectCustomEmoji(emoji.shortcode, emoji.url); $event.stopPropagation()"
+            [matTooltip]="emoji.shortcode">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+          </button>
+          }
         </div>
-        @if (filteredEmojis().length === 0) {
+        @if (filteredEmojis().length === 0 && filteredCustomEmojis().length === 0) {
         <div class="no-results">No emojis found</div>
         }
       </div>
@@ -135,6 +152,29 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
               </button>
               }
             </div>
+          </div>
+        </mat-tab>
+        }
+
+        @if (emojiSets().length > 0) {
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon matTooltip="Custom Emojis">add_reaction</mat-icon>
+          </ng-template>
+          <div class="emoji-grid-container">
+            @for (set of emojiSets(); track set.id) {
+            <div class="emoji-set-section">
+              <div class="set-title">{{ set.title }}</div>
+              <div class="emoji-grid">
+                @for (emoji of set.emojis; track emoji.shortcode) {
+                <button class="emoji-btn custom-emoji" (click)="selectCustomEmoji(emoji.shortcode, emoji.url); $event.stopPropagation()"
+                  [matTooltip]="emoji.shortcode">
+                  <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+                </button>
+                }
+              </div>
+            </div>
+            }
           </div>
         </mat-tab>
         }
@@ -355,12 +395,27 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
         height: 32px;
       }
     }
+
+    .emoji-set-section {
+      margin-bottom: 8px;
+
+      .set-title {
+        padding: 4px 6px 2px;
+        font-size: 0.75rem;
+        opacity: 0.6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmojiPickerComponent {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly accountState = inject(AccountStateService);
+  private readonly emojiSetService = inject(EmojiSetService);
+  private readonly userData = inject(UserDataService);
+  private readonly logger = inject(LoggerService);
 
   /** Emitted when an emoji is selected */
   emojiSelected = output<string>();
@@ -369,13 +424,62 @@ export class EmojiPickerComponent {
   searchQuery = signal('');
   activeTabIndex = signal(0);
   recentEmojis = signal<RecentEmoji[]>([]);
+  emojiSets = signal<EmojiSetGroup[]>([]);
 
   constructor() {
-    // Load recent emojis
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const recent = this.accountLocalState.getRecentEmojis(pubkey);
-      this.recentEmojis.set(recent);
+    // Load recent emojis and custom emoji sets
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) return;
+
+      untracked(() => {
+        const recent = this.accountLocalState.getRecentEmojis(pubkey);
+        this.recentEmojis.set(recent);
+        this.loadEmojiSetsGrouped(pubkey);
+      });
+    });
+  }
+
+  private async loadEmojiSetsGrouped(pubkey: string): Promise<void> {
+    try {
+      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
+
+      if (!emojiListRecord) {
+        this.emojiSets.set([]);
+        return;
+      }
+
+      const emojiListEvent = emojiListRecord.event;
+      const sets: EmojiSetGroup[] = [];
+
+      // Inline emojis as "My Emojis"
+      const inlineEmojis: { shortcode: string; url: string }[] = [];
+      for (const tag of emojiListEvent.tags) {
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          inlineEmojis.push({ shortcode: tag[1], url: tag[2] });
+        }
+      }
+      if (inlineEmojis.length > 0) {
+        sets.push({ id: 'inline', title: 'My Emojis', emojis: inlineEmojis });
+      }
+
+      // Emoji set references (kind 30030)
+      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+      for (const ref of emojiSetRefs) {
+        const [kind, refPubkey, identifier] = ref[1].split(':');
+        if (kind === '30030' && refPubkey && identifier) {
+          const emojiSet = await this.emojiSetService.getEmojiSet(refPubkey, identifier);
+          if (emojiSet) {
+            const emojis = Array.from(emojiSet.emojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+            sets.push({ id: emojiSet.id, title: emojiSet.title, emojis });
+          }
+        }
+      }
+
+      this.emojiSets.set(sets);
+    } catch (error) {
+      this.logger.error('Failed to load emoji sets:', error);
+      this.emojiSets.set([]);
     }
   }
 
@@ -410,6 +514,21 @@ export class EmojiPickerComponent {
     return results.slice(0, 50);
   });
 
+  filteredCustomEmojis = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    if (!query) return [];
+
+    const results: { shortcode: string; url: string }[] = [];
+    for (const set of this.emojiSets()) {
+      for (const emoji of set.emojis) {
+        if (emoji.shortcode.toLowerCase().includes(query)) {
+          results.push(emoji);
+        }
+      }
+    }
+    return results.slice(0, 30);
+  });
+
   selectEmoji(emoji: string): void {
     this.emojiSelected.emit(emoji);
 
@@ -417,6 +536,18 @@ export class EmojiPickerComponent {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.addRecentEmoji(pubkey, emoji);
+      this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
+    }
+  }
+
+  selectCustomEmoji(shortcode: string, url: string): void {
+    const emoji = `:${shortcode}:`;
+    this.emojiSelected.emit(emoji);
+
+    // Track as recent with URL
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.addRecentEmoji(pubkey, emoji, url);
       this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
     }
   }
