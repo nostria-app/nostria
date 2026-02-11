@@ -163,11 +163,15 @@
         <mat-spinner diameter="18"></mat-spinner>
         <span i18n="@@settings.trust.providers.publishing">Publishing...</span>
         } @else if (publishStatus() === 'success') {
-        <mat-icon>check</mat-icon>
-        <span i18n="@@settings.trust.providers.published">Published!</span>
+        <ng-container>
+          <mat-icon>check</mat-icon>
+          <span i18n="@@settings.trust.providers.published">Published!</span>
+        </ng-container>
         } @else {
-        <mat-icon>publish</mat-icon>
-        <span i18n="@@settings.trust.providers.publish">Publish Provider Configuration</span>
+        <ng-container>
+          <mat-icon>publish</mat-icon>
+          <span i18n="@@settings.trust.providers.publish">Publish Provider Configuration</span>
+        </ng-container>
         }
       </button>
       @if (publishStatus() === 'error') {
@@ -200,6 +204,42 @@
       </mat-select>
       <mat-hint i18n="@@settings.trust.relay.current">Current: {{ localSettings.trustRelay() }}</mat-hint>
     </mat-form-field>
+  </section>
+
+  <!-- Refresh Trust Ranks -->
+  <section class="section">
+    <h2 i18n="@@settings.trust.refresh.title">Refresh Trust Ranks</h2>
+    <p class="setting-description" i18n="@@settings.trust.refresh.description">
+      Download or refresh trust metrics for all accounts you follow.
+      This fetches the latest NIP-85 data from your configured providers.
+    </p>
+    <div class="refresh-section">
+      <button mat-stroked-button (click)="refreshTrustRanks()" [disabled]="refreshStatus() === 'refreshing'"
+        class="refresh-button">
+        @if (refreshStatus() === 'refreshing') {
+        <mat-spinner diameter="18"></mat-spinner>
+        <span i18n="@@settings.trust.refresh.refreshing">Refreshing...</span>
+        } @else if (refreshStatus() === 'done') {
+        <ng-container>
+          <mat-icon>check</mat-icon>
+          <span i18n="@@settings.trust.refresh.done">Done!</span>
+        </ng-container>
+        } @else {
+        <ng-container>
+          <mat-icon>refresh</mat-icon>
+          <span i18n="@@settings.trust.refresh.button">Refresh Trust Ranks</span>
+        </ng-container>
+        }
+      </button>
+      @if (refreshStatus() === 'refreshing') {
+      <div class="refresh-progress">
+        <mat-progress-bar mode="determinate" [value]="refreshProgress()"></mat-progress-bar>
+        <span class="refresh-progress-label">
+          {{ refreshCompleted() }} / {{ refreshTotal() }} accounts
+        </span>
+      </div>
+      }
+    </div>
   </section>
 
   <!-- About NIP-85 -->

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit, OnDestroy, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -6,6 +6,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -14,6 +15,7 @@ import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { TrustProviderService, KNOWN_PROVIDERS, KnownProvider } from '../../../services/trust-provider.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { TrustService } from '../../../services/trust.service';
 
 interface TrustRelay {
   url: string;
@@ -30,6 +32,7 @@ interface TrustRelay {
     MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
+    MatProgressBarModule,
     MatProgressSpinnerModule,
     MatSelectModule,
     MatSlideToggleModule,
@@ -46,6 +49,8 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   accountState = inject(AccountStateService);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
+  private trustService = inject(TrustService);
+  private destroyRef = inject(DestroyRef);
 
   /** Available presets for known trust providers */
   knownProviders = KNOWN_PROVIDERS;
@@ -53,6 +58,17 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   /** Publishing state */
   publishStatus = signal<'idle' | 'publishing' | 'success' | 'error'>('idle');
   publishError = signal<string>('');
+
+  /** Trust rank refresh state */
+  refreshStatus = signal<'idle' | 'refreshing' | 'done'>('idle');
+  refreshTotal = signal(0);
+  refreshCompleted = signal(0);
+  refreshProgress = computed(() => {
+    const total = this.refreshTotal();
+    if (total === 0) return 0;
+    return Math.round((this.refreshCompleted() / total) * 100);
+  });
+  private refreshAborted = false;
 
   /** Whether user is authenticated (can publish kind 10040) */
   readonly isAuthenticated = computed(() => {
@@ -187,5 +203,42 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   /** Open Brainstorm activation page */
   openBrainstorm(): void {
     window.open('https://straycat.brainstorm.social/', '_blank', 'noopener,noreferrer');
+  }
+
+  /** Refresh trust ranks for all followed accounts with progress tracking */
+  async refreshTrustRanks(): Promise<void> {
+    const pubkeys = this.accountState.followingList();
+    if (pubkeys.length === 0) return;
+
+    this.refreshAborted = false;
+    this.refreshStatus.set('refreshing');
+    this.refreshTotal.set(pubkeys.length);
+    this.refreshCompleted.set(0);
+
+    // Abort on destroy
+    this.destroyRef.onDestroy(() => {
+      this.refreshAborted = true;
+    });
+
+    // Process in small concurrent batches for efficiency
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
+      if (this.refreshAborted) break;
+      const batch = pubkeys.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (pubkey) => {
+          try {
+            await this.trustService.fetchMetrics(pubkey);
+          } catch {
+            // Continue on individual failures
+          } finally {
+            this.refreshCompleted.update(n => n + 1);
+          }
+        })
+      );
+    }
+
+    this.refreshStatus.set('done');
+    setTimeout(() => this.refreshStatus.set('idle'), 3000);
   }
 }

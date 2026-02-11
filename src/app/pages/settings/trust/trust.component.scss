@@ -244,6 +244,38 @@
   font-size: 0.813rem;
 }
 
+// Refresh trust ranks section
+.refresh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.refresh-button {
+  align-self: flex-start;
+
+  mat-icon,
+  mat-spinner,
+  span {
+    vertical-align: middle;
+  }
+}
+
+.refresh-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  mat-progress-bar {
+    border-radius: var(--mat-sys-corner-full);
+  }
+}
+
+.refresh-progress-label {
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 // Info card
 .info-card {
   display: flex;
