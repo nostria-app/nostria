@@ -1053,6 +1053,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Mark chat as read when selected
     await this.markChatAsRead(chat.id);
 
+    // Preload DM relays (kind 10050) for this contact so sending is instant.
+    // Loads from database first, refreshes from network in the background.
+    this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
+      this.logger.warn('Failed to preload DM relays for chat:', err);
+    });
+
     // Navigate to the chat, clearing any query params
     this.logger.debug('Navigating to /messages/' + chat.id);
     this.router.navigate(['/messages', chat.id], {

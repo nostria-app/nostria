@@ -21,12 +21,16 @@ export class UserRelaysService {
   private readonly cacheTimestamps = new Map<string, number>();
 
   // DM relay cache (kind 10050) - separate from regular relay cache
+  // DM relays rarely change, so use a long TTL
   private readonly cachedDmRelays = new Map<string, string[]>();
   private readonly dmRelayCacheTimestamps = new Map<string, number>();
   private readonly inflightDmRelayRequests = new Map<string, Promise<string[]>>();
 
-  // Cache TTL: 5 minutes (in milliseconds)
+  // Cache TTL: 5 minutes for general relays (in milliseconds)
   private readonly CACHE_TTL = 5 * 60 * 1000;
+
+  // DM relay cache TTL: 1 hour (kind 10050 rarely changes)
+  private readonly DM_RELAY_CACHE_TTL = 60 * 60 * 1000;
 
   // In-flight requests to prevent duplicate discovery calls
   private readonly inflightRequests = new Map<string, Promise<string[]>>();
@@ -319,33 +323,66 @@ export class UserRelaysService {
   }
 
   /**
+   * Ensure DM relays are discovered and cached for a pubkey.
+   * Call this when a chat is opened — it loads from database instantly,
+   * then refreshes from the network in the background.
+   * This avoids network lookups during message sending.
+   */
+  async ensureDmRelaysForPubkey(pubkey: string): Promise<void> {
+    // If we already have a valid cache, just trigger a background refresh
+    const cachedTimestamp = this.dmRelayCacheTimestamps.get(pubkey);
+    const hasValidCache = cachedTimestamp && Date.now() - cachedTimestamp < this.DM_RELAY_CACHE_TTL;
+    const cached = this.cachedDmRelays.get(pubkey);
+
+    if (hasValidCache && cached && cached.length > 0) {
+      this.logger.debug(`[UserRelaysService] DM relays already cached for pubkey: ${pubkey.slice(0, 16)}...`);
+      return;
+    }
+
+    // Load from database first for instant availability
+    await this.loadDmRelaysFromDatabase(pubkey);
+
+    // Then refresh from network in the background (fire-and-forget)
+    this.refreshDmRelaysFromNetwork(pubkey).catch(err => {
+      this.logger.warn(`[UserRelaysService] Background DM relay refresh failed for ${pubkey.slice(0, 16)}:`, err);
+    });
+  }
+
+  /**
    * Get DM-specific relay URLs for a user (kind 10050 - NIP-17)
-   * Used for publishing gift-wrapped messages to a recipient.
-   * Results are cached for CACHE_TTL to avoid repeated network lookups.
+   * Used during message publishing. Returns cached/database relays immediately.
+   * Only fetches from network if nothing is cached (first contact with no prior data).
+   * For best performance, call ensureDmRelaysForPubkey() when a chat is opened.
    * @param pubkey - The recipient's public key
    * @returns Promise<string[]> - Array of DM relay URLs
    */
   async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
     this.logger.debug(`[UserRelaysService] getUserDmRelaysForPublishing called for pubkey: ${pubkey.slice(0, 16)}...`);
 
-    // Check DM relay cache first
-    const cachedTimestamp = this.dmRelayCacheTimestamps.get(pubkey);
-    if (cachedTimestamp && Date.now() - cachedTimestamp < this.CACHE_TTL) {
-      const cached = this.cachedDmRelays.get(pubkey);
-      if (cached && cached.length > 0) {
-        this.logger.debug(`[UserRelaysService] Returning ${cached.length} cached DM relays for pubkey: ${pubkey.slice(0, 16)}...`);
-        return cached;
-      }
+    // 1. Check in-memory cache first (fastest path)
+    const cached = this.cachedDmRelays.get(pubkey);
+    if (cached && cached.length > 0) {
+      this.logger.debug(`[UserRelaysService] Returning ${cached.length} cached DM relays for pubkey: ${pubkey.slice(0, 16)}...`);
+      return cached;
     }
+
+    // 2. Try loading from local database (no network)
+    const dbRelays = await this.loadDmRelaysFromDatabase(pubkey);
+    if (dbRelays.length > 0) {
+      this.logger.debug(`[UserRelaysService] Returning ${dbRelays.length} DB DM relays for pubkey: ${pubkey.slice(0, 16)}...`);
+      return dbRelays;
+    }
+
+    // 3. Nothing in cache or database — must fetch from network (first contact)
+    this.logger.debug(`[UserRelaysService] No cached DM relays, fetching from network for pubkey: ${pubkey.slice(0, 16)}...`);
 
     // Deduplicate in-flight requests
     const existingRequest = this.inflightDmRelayRequests.get(pubkey);
     if (existingRequest) {
-      this.logger.debug(`[UserRelaysService] Dedup: waiting for existing DM relay request for pubkey: ${pubkey.slice(0, 16)}...`);
       return existingRequest;
     }
 
-    const requestPromise = this.fetchAndCacheDmRelays(pubkey);
+    const requestPromise = this.fetchDmRelaysFromNetwork(pubkey);
     this.inflightDmRelayRequests.set(pubkey, requestPromise);
 
     try {
@@ -356,9 +393,43 @@ export class UserRelaysService {
   }
 
   /**
-   * Internal method to fetch DM relays from network and cache the result
+   * Load DM relays from local database (kind 10050 event) and cache them.
+   * Returns the relay URLs found, or empty array if none stored.
    */
-  private async fetchAndCacheDmRelays(pubkey: string): Promise<string[]> {
+  private async loadDmRelaysFromDatabase(pubkey: string): Promise<string[]> {
+    try {
+      const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+      if (dmRelayEvent) {
+        const relayUrls = dmRelayEvent.tags
+          .filter((tag: string[]) => tag[0] === 'relay')
+          .map((tag: string[]) => tag[1])
+          .filter((url: string | undefined) => url && url.startsWith('wss://'));
+
+        if (relayUrls.length > 0) {
+          // Also get fallback relays to combine
+          const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+          const allRelays = [...relayUrls, ...fallbackRelays];
+          const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
+
+          // Cache immediately
+          this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
+          this.dmRelayCacheTimestamps.set(pubkey, Date.now());
+
+          this.logger.debug(`[UserRelaysService] Loaded ${uniqueNormalizedRelays.length} DM relays from database for pubkey: ${pubkey.slice(0, 16)}...`);
+          return uniqueNormalizedRelays;
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`[UserRelaysService] Error loading DM relays from database:`, error);
+    }
+    return [];
+  }
+
+  /**
+   * Fetch DM relays from the network (discovery relays) and cache the result.
+   * Also saves the kind 10050 event to the database for future offline use.
+   */
+  private async fetchDmRelaysFromNetwork(pubkey: string): Promise<string[]> {
     try {
       // Get DM relays from discovery service (kind 10050, falls back to kind 10002)
       const dmRelays = await this.discoveryRelayService.getUserDmRelayUrls(pubkey);
@@ -366,13 +437,12 @@ export class UserRelaysService {
 
       // Also get fallback relays in case DM relays are not set
       const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
-      this.logger.debug(`[UserRelaysService] relaysService.getFallbackRelaysForPubkey returned:`, fallbackRelays);
 
       // Combine and deduplicate
       const allRelays = [...dmRelays, ...fallbackRelays];
       const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
 
-      this.logger.debug(`[UserRelaysService] Final relays for DM publishing to ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
+      this.logger.debug(`[UserRelaysService] Final DM relays for ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
 
       // Cache the result
       this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
@@ -380,9 +450,29 @@ export class UserRelaysService {
 
       return uniqueNormalizedRelays;
     } catch (error) {
-      this.logger.error('[UserRelaysService] Error fetching user DM relays for publishing:', error);
+      this.logger.error('[UserRelaysService] Error fetching DM relays from network:', error);
       // Fall back to regular relay list
       return this.getUserRelaysForPublishing(pubkey);
+    }
+  }
+
+  /**
+   * Background refresh of DM relays from the network.
+   * Updates cache/database if newer data is found, but doesn't block callers.
+   */
+  private async refreshDmRelaysFromNetwork(pubkey: string): Promise<void> {
+    // Deduplicate with in-flight requests
+    if (this.inflightDmRelayRequests.has(pubkey)) {
+      return;
+    }
+
+    const refreshPromise = this.fetchDmRelaysFromNetwork(pubkey);
+    this.inflightDmRelayRequests.set(pubkey, refreshPromise);
+
+    try {
+      await refreshPromise;
+    } finally {
+      this.inflightDmRelayRequests.delete(pubkey);
     }
   }
 
