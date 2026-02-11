@@ -79,6 +79,7 @@ import { PublicAccount } from '../../api/models';
 import { firstValueFrom } from 'rxjs';
 import { ProfileHomeComponent } from './profile-home/profile-home.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
+import { stripImageProxy } from '../../utils/strip-image-proxy';
 
 @Component({
   selector: 'app-profile',
@@ -1415,9 +1416,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   openProfilePicture(): void {
     const metadata = this.userMetadata();
     if (metadata?.data.picture) {
+      // Strip third-party image proxy wrappers to load the original image directly
+      const cleanUrl = stripImageProxy(metadata.data.picture);
       const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          mediaUrl: metadata.data.picture,
+          mediaUrl: cleanUrl,
           mediaType: 'image',
           mediaTitle: this.getFormattedName() + ' Profile Picture',
         },
@@ -1470,7 +1473,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     // Clean up the ProfileState instance to prevent memory leaks
     this.profileState.destroy();
-    
+
     // Clear the panel header when component is destroyed
     if (this.isInRightPanel()) {
       this.rightPanelHeader.clear();
