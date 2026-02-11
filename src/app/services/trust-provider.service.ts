@@ -60,24 +60,6 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     ],
     activationUrl: 'https://straycat.brainstorm.social/',
   },
-  {
-    name: 'Nostr Band',
-    description: 'Global trust metrics and user statistics',
-    pubkey: '4fd5e210530e4f6b2cb083795834bfe5108324f1ed9f00ab73b9e8fcfe5f12fe',
-    relayUrl: 'wss://nip85.nostr.band',
-    supportedMetrics: [
-      '30382:rank',
-      '30382:followers',
-      '30382:post_cnt',
-      '30382:zap_amt_recd',
-      '30382:zap_amt_sent',
-      '30382:first_created_at',
-      '30382:reply_cnt',
-      '30382:reactions_cnt',
-      '30382:zap_cnt_recd',
-      '30382:zap_cnt_sent',
-    ],
-  },
 ];
 
 /**

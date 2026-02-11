@@ -69,3 +69,4 @@
 - [✓] 2026-02-11 01:47 - Feed plays videos in the background
 - [✓] 2026-02-11 01:57 - Favorites appears, disappears and appears on reload/login
 - [✓] 2026-02-11 02:03 - Add the emoji picker to the note-editor dialog
+- [✓] 2026-02-11 02:28 - Remove nostr.band as option for Trust
