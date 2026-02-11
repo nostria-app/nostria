@@ -1622,9 +1622,28 @@ export class LayoutService implements OnDestroy {
     await this.router.navigate(['/collections/media'], { queryParams: { upload: 'true' } });
   }
 
-  /** Navigate to messages page to compose a new message */
-  openMessages(): void {
-    this.router.navigateByUrl('/messages');
+  /** Open the start chat dialog to compose a new message */
+  async openMessages(): Promise<void> {
+    const { StartChatDialogComponent } = await import('../components/start-chat-dialog/start-chat-dialog.component');
+    type StartChatDialogResult = import('../components/start-chat-dialog/start-chat-dialog.component').StartChatDialogResult;
+
+    const dialogRef = this.customDialog.open<typeof StartChatDialogComponent.prototype, StartChatDialogResult | undefined>(
+      StartChatDialogComponent,
+      {
+        title: $localize`:@@create.message.dialog.title:Start New Chat`,
+        width: '500px',
+        maxWidth: '90vw',
+      },
+    );
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        const chatResult = result as StartChatDialogResult;
+        this.rightPanel.clearHistory();
+        this.panelNavigation.clearRightStack();
+        this.router.navigateByUrl(`/messages?pubkey=${encodeURIComponent(chatResult.pubkey)}`);
+      }
+    });
   }
 
   /** Open the create follow set dialog to create a new people list */
