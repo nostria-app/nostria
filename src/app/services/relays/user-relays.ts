@@ -20,6 +20,11 @@ export class UserRelaysService {
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
   private readonly cacheTimestamps = new Map<string, number>();
 
+  // DM relay cache (kind 10050) - separate from regular relay cache
+  private readonly cachedDmRelays = new Map<string, string[]>();
+  private readonly dmRelayCacheTimestamps = new Map<string, number>();
+  private readonly inflightDmRelayRequests = new Map<string, Promise<string[]>>();
+
   // Cache TTL: 5 minutes (in milliseconds)
   private readonly CACHE_TTL = 5 * 60 * 1000;
 
@@ -262,6 +267,8 @@ export class UserRelaysService {
       return newCache;
     });
     this.cacheTimestamps.delete(pubkey);
+    this.cachedDmRelays.delete(pubkey);
+    this.dmRelayCacheTimestamps.delete(pubkey);
   }
 
   /**
@@ -270,6 +277,8 @@ export class UserRelaysService {
   clearAllCache(): void {
     this.cachedRelays.set(new Map());
     this.cacheTimestamps.clear();
+    this.cachedDmRelays.clear();
+    this.dmRelayCacheTimestamps.clear();
   }
 
   /**
@@ -312,12 +321,44 @@ export class UserRelaysService {
   /**
    * Get DM-specific relay URLs for a user (kind 10050 - NIP-17)
    * Used for publishing gift-wrapped messages to a recipient.
+   * Results are cached for CACHE_TTL to avoid repeated network lookups.
    * @param pubkey - The recipient's public key
    * @returns Promise<string[]> - Array of DM relay URLs
    */
   async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
     this.logger.debug(`[UserRelaysService] getUserDmRelaysForPublishing called for pubkey: ${pubkey.slice(0, 16)}...`);
 
+    // Check DM relay cache first
+    const cachedTimestamp = this.dmRelayCacheTimestamps.get(pubkey);
+    if (cachedTimestamp && Date.now() - cachedTimestamp < this.CACHE_TTL) {
+      const cached = this.cachedDmRelays.get(pubkey);
+      if (cached && cached.length > 0) {
+        this.logger.debug(`[UserRelaysService] Returning ${cached.length} cached DM relays for pubkey: ${pubkey.slice(0, 16)}...`);
+        return cached;
+      }
+    }
+
+    // Deduplicate in-flight requests
+    const existingRequest = this.inflightDmRelayRequests.get(pubkey);
+    if (existingRequest) {
+      this.logger.debug(`[UserRelaysService] Dedup: waiting for existing DM relay request for pubkey: ${pubkey.slice(0, 16)}...`);
+      return existingRequest;
+    }
+
+    const requestPromise = this.fetchAndCacheDmRelays(pubkey);
+    this.inflightDmRelayRequests.set(pubkey, requestPromise);
+
+    try {
+      return await requestPromise;
+    } finally {
+      this.inflightDmRelayRequests.delete(pubkey);
+    }
+  }
+
+  /**
+   * Internal method to fetch DM relays from network and cache the result
+   */
+  private async fetchAndCacheDmRelays(pubkey: string): Promise<string[]> {
     try {
       // Get DM relays from discovery service (kind 10050, falls back to kind 10002)
       const dmRelays = await this.discoveryRelayService.getUserDmRelayUrls(pubkey);
@@ -332,6 +373,10 @@ export class UserRelaysService {
       const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
 
       this.logger.debug(`[UserRelaysService] Final relays for DM publishing to ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
+
+      // Cache the result
+      this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
+      this.dmRelayCacheTimestamps.set(pubkey, Date.now());
 
       return uniqueNormalizedRelays;
     } catch (error) {
