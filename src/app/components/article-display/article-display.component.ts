@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
+import { trigger, style, animate, transition } from '@angular/animations';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -20,6 +21,9 @@ import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { ZapChipsComponent } from '../zap-chips/zap-chips.component';
+import { ReactionSummaryComponent, type ZapInfo } from '../event/reaction-summary/reaction-summary.component';
+import { type ReactionEvents } from '../../services/event';
+import { type NostrRecord } from '../../interfaces';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -73,10 +77,23 @@ interface TopZapper {
     EventMenuComponent,
     MentionHoverDirective,
     CommentsListComponent,
-    ZapChipsComponent
+    ZapChipsComponent,
+    ReactionSummaryComponent
   ],
   templateUrl: './article-display.component.html',
   styleUrl: './article-display.component.scss',
+  animations: [
+    trigger('expandCollapse', [
+      transition(':enter', [
+        style({ height: '0', opacity: 0, overflow: 'hidden' }),
+        animate('200ms ease-out', style({ height: '*', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        style({ height: '*', opacity: 1, overflow: 'hidden' }),
+        animate('200ms ease-in', style({ height: '0', opacity: 0 }))
+      ])
+    ])
+  ],
 })
 export class ArticleDisplayComponent {
   private router = inject(Router);
@@ -110,6 +127,19 @@ export class ArticleDisplayComponent {
   playbackRateChange = output<number>();
   share = output<void>();
   translate = output<string>();
+
+  // Reaction footer inputs
+  reactions = input<ReactionEvents>({ events: [], data: new Map() });
+  repostsInput = input<NostrRecord[]>([]);
+  quotesInput = input<NostrRecord[]>([]);
+  zapsInput = input<ZapInfo[]>([]);
+  replyCountInput = input<number>(0);
+
+  // Reaction footer outputs
+  reactionChanged = output<void>();
+  zapSent = output<number>();
+  replyClick = output<MouseEvent>();
+  bookmarkClick = output<MouseEvent>();
 
   // Playback speed options
   playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -197,6 +227,53 @@ export class ArticleDisplayComponent {
   zapTotal = signal<number>(0);
   topZappers = signal<TopZapper[]>([]);
   engagementLoading = signal<boolean>(false);
+
+  // Reaction footer computed properties
+  likes = computed<NostrRecord[]>(() => this.reactions().events);
+
+  topEmojis = computed<{ emoji: string; url?: string; count: number }[]>(() => {
+    const reactions = this.likes();
+    if (!reactions || reactions.length === 0) return [];
+
+    const emojiCounts = new Map<string, { count: number; url?: string }>();
+    for (const reaction of reactions) {
+      let content = reaction.event.content || '+';
+      if (content === '+') {
+        content = '\u2764\uFE0F';
+      }
+      const existing = emojiCounts.get(content);
+      if (existing) {
+        existing.count++;
+      } else {
+        let url: string | undefined;
+        if (content.startsWith(':') && content.endsWith(':')) {
+          const shortcode = content.slice(1, -1);
+          const emojiTag = reaction.event.tags.find(
+            (tag: string[]) => tag[0] === 'emoji' && tag[1] === shortcode
+          );
+          if (emojiTag && emojiTag[2]) {
+            url = emojiTag[2];
+          }
+        }
+        emojiCounts.set(content, { count: 1, url });
+      }
+    }
+
+    return Array.from(emojiCounts.entries())
+      .map(([emoji, data]) => ({ emoji, url: data.url, count: data.count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  });
+
+  totalZapAmount = computed<number>(() => this.zapsInput().reduce((total, zap) => total + (zap.amount || 0), 0));
+  zapCount = computed<number>(() => this.zapsInput().length);
+  repostCount = computed<number>(() => this.repostsInput().length);
+  quoteCount = computed<number>(() => this.quotesInput().length);
+  shareCount = computed<number>(() => this.repostCount() + this.quoteCount());
+
+  // Reactions summary panel state
+  showReactionsSummary = signal<boolean>(false);
+  reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
 
   // Computed properties for convenience
   event = computed(() => this.article().event);
@@ -534,5 +611,37 @@ export class ArticleDisplayComponent {
     this.router.navigate(['/f'], {
       queryParams: { t: hashtag },
     });
+  }
+
+  /**
+   * Toggle the reactions summary panel visibility
+   */
+  toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
+    const isCurrentlyVisible = this.showReactionsSummary();
+    const resolvedTab = this.resolveTabWithData(tab);
+    const currentTab = this.reactionsSummaryTab();
+
+    if (isCurrentlyVisible && currentTab === resolvedTab) {
+      this.showReactionsSummary.set(false);
+    } else {
+      this.reactionsSummaryTab.set(resolvedTab);
+      this.showReactionsSummary.set(true);
+    }
+  }
+
+  private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
+    const tabHasData: Record<string, () => boolean> = {
+      reactions: () => this.likes().length > 0,
+      reposts: () => this.repostCount() > 0,
+      quotes: () => this.quoteCount() > 0,
+      zaps: () => this.zapCount() > 0,
+    };
+
+    if (tabHasData[preferredTab]()) {
+      return preferredTab;
+    }
+
+    const tabs: ('reactions' | 'reposts' | 'quotes' | 'zaps')[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+    return tabs.find(t => tabHasData[t]()) ?? preferredTab;
   }
 }

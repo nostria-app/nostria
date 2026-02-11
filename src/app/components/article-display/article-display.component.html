@@ -230,42 +230,86 @@
   }
 
   <!-- Footer Actions (only in full mode) -->
-  @if (mode() === 'full') {
-  <footer class="article-footer">
-    <div class="article-actions">
-      @if (accountState.isCurrentUser(authorPubkey())) {
-      <button mat-icon-button (click)="layout.createArticle(link())" title="Edit Article">
-        <mat-icon>edit</mat-icon>
-      </button>
-      }
-
-      <button mat-icon-button (click)="openBookmarkSelector()"
-        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
-        <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="share.emit()" title="Share Article">
-        <mat-icon>share</mat-icon>
-      </button>
-
-      @if (event()) {
-      <div class="action-group">
-        <app-reaction-button [event]="event()!" [view]="'icon'"></app-reaction-button>
-        <button mat-button class="count-button" (click)="openReactionsDialog('likes')">
-          <span>{{ reactionCount() }}</span>
-        </button>
+  @if (mode() === 'full' && event()) {
+  <div class="article-footer">
+    <div class="actions-row">
+      <!-- Like with count -->
+      <div class="action-button like-action like-hover-container"
+        (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+        <app-reaction-button class="action-icon" #reactionBtn [event]="event()!" [reactionsFromParent]="reactions()"
+          (reactionChanged)="reactionChanged.emit()" view="icon"></app-reaction-button>
+        @if (likes().length > 0) {
+        <span class="action-count">{{ likes().length }}</span>
+        }
+        <span class="action-text">Like</span>
       </div>
-      <div class="action-group">
-        <app-zap-button [event]="event()!"></app-zap-button>
-        <button mat-button class="count-button" (click)="openReactionsDialog('zaps')">
-          <span>{{ formatZapAmount(zapTotal()) }}</span>
-        </button>
+
+      <!-- Reply -->
+      <div class="action-button comment-action" role="button" tabindex="0" (click)="replyClick.emit($event)">
+        <mat-icon class="action-icon">mode_comment</mat-icon>
+        @if (replyCountInput() > 0) {
+        <span class="action-count">{{ replyCountInput() }}</span>
+        }
+        <span class="action-text">Reply</span>
       </div>
-      <app-repost-button [event]="event()!" [view]="'icon'"></app-repost-button>
-      <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
+
+      <!-- Share with count (reposts + quotes) -->
+      <div class="action-button share-action" role="button" tabindex="0"
+        (click)="share.emit(); $event.stopPropagation()">
+        <mat-icon class="action-icon">share</mat-icon>
+        @if (shareCount() > 0) {
+        <span class="action-count">{{ shareCount() }}</span>
+        }
+        <span class="action-text">Share</span>
+      </div>
+
+      <!-- Zap with sats -->
+      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
+        <app-zap-button class="action-icon" #zapBtn [event]="event()!" [recipientPubkey]="event()!.pubkey"
+          (zapSent)="zapSent.emit($event)">
+        </app-zap-button>
+        @if (totalZapAmount() > 0) {
+        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+        }
+        <span class="action-text">Zap</span>
+      </div>
+
+      <!-- Bookmark -->
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="bookmarkClick.emit($event)">
+        <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
+        <span class="action-text">Bookmark</span>
+      </div>
+
+      <!-- Top emojis indicator (right-aligned) -->
+      @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+        @if (topEmojis().length > 0) {
+        <span class="aggregated-emojis">
+          @for (emoji of topEmojis(); track emoji.emoji) {
+          @if (emoji.url) {
+          <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
+          } @else {
+          <span class="emoji-item">{{ emoji.emoji }}</span>
+          }
+          }
+        </span>
+        }
+        <span class="emoji-more">...</span>
+      </div>
       }
     </div>
-  </footer>
+
+    <!-- Expandable reactions summary panel -->
+    @if (showReactionsSummary()) {
+    <div class="reactions-summary-container" [@expandCollapse]>
+      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
+        [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="zapsInput()"
+        [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+        [hideTabs]="false">
+      </app-reaction-summary>
+    </div>
+    }
+  </div>
   }
 
   <!-- Comments Section (only in full mode) -->
