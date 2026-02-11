@@ -63,6 +63,7 @@ import { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -124,6 +125,7 @@ interface NoteAutoDraft {
     MatMenuModule,
     DragDropModule,
     UserProfileComponent,
+    EmojiPickerComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -165,7 +167,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
-  private layout = inject(LayoutService);
+  layout = inject(LayoutService);
   private powService = inject(PowService);
   private mentionInputService = inject(MentionInputService);
   private dataService = inject(DataService);
@@ -1797,6 +1799,47 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Save draft immediately after mention removal
     this.saveAutoDraft();
+  }
+
+  /**
+   * Insert an emoji at the current cursor position in the textarea
+   */
+  insertEmoji(emoji: string): void {
+    const textarea = this.contentTextarea?.nativeElement;
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentContent = this.content();
+      const newContent = currentContent.substring(0, start) + emoji + currentContent.substring(end);
+      this.content.set(newContent);
+      textarea.value = newContent;
+
+      // Restore cursor position after emoji
+      setTimeout(() => {
+        const newPos = start + emoji.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+      });
+    } else {
+      this.content.update(text => text + emoji);
+    }
+  }
+
+  /**
+   * Open emoji picker in a fullscreen dialog on small screens
+   */
+  async openEmojiPickerDialog(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
+      title: 'Emoji',
+      width: '400px',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertEmoji(result.result);
+      }
+    });
   }
 
   // Mention input handling methods

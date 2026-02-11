@@ -66,3 +66,6 @@
 - [✓] 2026-02-10 18:24 - Replace `@HostListener` in `src/app/components/user-profile/hover-card/profile-hover-card.component.ts` (line 486) -- `click`
 - [✓] 2026-02-10 18:27 - Replace `@HostListener` in `src/app/components/media-preview-dialog/media-preview.component.ts` (line 166) -- `window:keydown`
 - [✓] 2026-02-10 18:30 - Remove `standalone: true` from `src/app/components/login-dialog/login-dialog.component.ts` (line 45)
+- [✓] 2026-02-11 01:47 - Feed plays videos in the background
+- [✓] 2026-02-11 01:57 - Favorites appears, disappears and appears on reload/login
+- [✓] 2026-02-11 02:03 - Add the emoji picker to the note-editor dialog

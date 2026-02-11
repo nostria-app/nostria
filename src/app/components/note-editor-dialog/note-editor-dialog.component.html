@@ -438,6 +438,26 @@
         </button>
       </mat-menu>
 
+      <!-- Emoji picker button (shown in both dialog and inline modes) -->
+      @if (layout.isHandset()) {
+      <button mat-icon-button type="button"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()"
+        matTooltip="Emoji" (click)="openEmojiPickerDialog()">
+        <mat-icon>sentiment_satisfied</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()"
+        matTooltip="Emoji">
+        <mat-icon>sentiment_satisfied</mat-icon>
+      </button>
+      <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
+        <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
+      </mat-menu>
+      }
+
       @if (!inlineMode()) {
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
         [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
