@@ -584,41 +584,302 @@
   }
 }
 
-// Footer section
+// Footer section with reaction actions
 .article-footer {
-  border-top: 1px solid var(--mat-sys-outline-variant);
-  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 0;
   margin-top: 32px;
+}
 
-  .article-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
+.actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding-top: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+  user-select: none;
 
-    button {
-      min-width: 120px;
-      height: 40px;
-      border-radius: 20px;
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.action-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  min-width: 0;
+  flex: 1;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  // Direct mat-icon children (Share, Reply, Bookmark)
+  > mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    flex-shrink: 0;
+  }
+
+  .action-count {
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 22px;
+    white-space: nowrap;
+  }
+
+  .action-text {
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 22px;
+    white-space: nowrap;
+  }
+
+  // Normalize child component button styling
+  ::ng-deep {
+    app-reaction-button,
+    app-zap-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    button[mat-icon-button],
+    .mat-mdc-icon-button {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+      min-width: 0;
+      min-height: 0;
+
+      .mat-mdc-button-touch-target {
+        display: none;
+      }
+
+      .mat-mdc-button-ripple,
+      .mat-mdc-button-persistent-ripple,
+      .mat-mdc-focus-indicator {
+        display: none;
+      }
 
       mat-icon {
-        margin-right: 8px;
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
       }
     }
 
-    @media (max-width: 600px) {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
+    .zap-button-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
 
-      button {
-        min-width: auto;
-        width: 100%;
+      .quick-zap-badge {
+        display: none;
       }
+
+      .hover-menu {
+        display: none;
+      }
+
+      .zap-button {
+        background: none !important;
+        transform: none !important;
+      }
+    }
+
+    .reaction-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      width: 22px;
+      height: 22px;
+    }
+  }
+}
+
+.like-action {
+  &:hover {
+    color: #e91e63;
+
+    .action-count,
+    .action-text {
+      color: #e91e63;
+    }
+
+    ::ng-deep mat-icon,
+    ::ng-deep .emoji-icon {
+      color: #e91e63;
+    }
+  }
+
+  ::ng-deep {
+    .reacted mat-icon,
+    button.reacted {
+      color: #e91e63;
+    }
+  }
+
+  &:has(::ng-deep .reacted) {
+    color: #e91e63;
+
+    .action-count,
+    .action-text {
+      color: #e91e63;
+    }
+  }
+}
+
+.comment-action {
+  &:hover {
+    color: var(--mat-sys-primary);
+
+    > mat-icon,
+    .action-count,
+    .action-text {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.share-action {
+  &:hover {
+    color: var(--mat-sys-primary);
+
+    > mat-icon,
+    .action-count,
+    .action-text {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.zap-action {
+  color: var(--nostria-bitcoin);
+
+  .action-count,
+  .action-text {
+    color: var(--nostria-bitcoin);
+  }
+
+  ::ng-deep mat-icon {
+    color: var(--nostria-bitcoin);
+  }
+
+  &:hover {
+    color: #ff8c42;
+
+    .action-count,
+    .action-text {
+      color: #ff8c42;
+    }
+
+    ::ng-deep mat-icon {
+      color: #ff8c42;
+    }
+  }
+}
+
+.bookmark-action {
+  &:hover {
+    color: var(--mat-sys-primary);
+
+    > mat-icon,
+    .action-count,
+    .action-text {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// Top emojis indicator (right-aligned in actions row)
+.emoji-indicators {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  .aggregated-emojis {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    .emoji-item {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .custom-emoji {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+    }
+  }
+
+  .emoji-more {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+}
+
+// Container for animated reactions summary
+.reactions-summary-container {
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .action-button {
+    .action-text {
+      display: none;
     }
   }
 }
