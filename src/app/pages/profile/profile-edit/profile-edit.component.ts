@@ -88,6 +88,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   newIdentityValue = signal<string>('');
   newIdentityProof = signal<string>('');
   editingIdentityIndex = signal<number>(-1);
+  refreshing = signal<boolean>(false);
 
   constructor() {
     effect(() => {
@@ -101,33 +102,15 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    const metadata = this.accountState.profile();
-
-    // Keep a reference to the pubkey for the profile being edited, used for navigation and updates
+    // Keep a reference to the pubkey for the profile being edited
     this.pubkey = this.accountState.pubkey();
 
-    if (metadata?.data) {
-      this.pubkey = metadata?.event.pubkey;
-
-      // User has existing profile data
-      const profileClone = structuredClone(metadata.data);
-      // Add URL fields for the toggles
-      profileClone.pictureUrl = profileClone.picture || '';
-      profileClone.bannerUrl = profileClone.banner || '';
-      this.profile.set(profileClone);
-
-      // Set preview images from existing URLs
-      if (profileClone.picture) {
-        this.previewProfileImage.set(profileClone.picture);
-      }
-      if (profileClone.banner) {
-        this.previewBanner.set(profileClone.banner);
-      }
-
-      // Load external identities from existing metadata tags
-      this.loadExternalIdentities(metadata.event.tags);
+    // Load cached profile immediately so the form isn't empty
+    const cachedMetadata = this.accountState.profile();
+    if (cachedMetadata?.data) {
+      this.pubkey = cachedMetadata.event.pubkey;
+      this.applyProfileData(cachedMetadata);
     } else {
-      // User has no profile, create a basic empty profile
       this.profile.set({
         display_name: '',
         name: '',
@@ -140,6 +123,52 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
         lud16: '',
         nip05: '',
       });
+    }
+
+    // Force-fetch the latest profile from relays to avoid editing stale data
+    this.refreshProfileFromRelays();
+  }
+
+  private applyProfileData(metadata: { event: { pubkey: string; tags: string[][] }; data: ProfileData }) {
+    const profileClone = structuredClone(metadata.data);
+    profileClone['pictureUrl'] = profileClone.picture || '';
+    profileClone['bannerUrl'] = profileClone.banner || '';
+    this.profile.set(profileClone);
+
+    if (profileClone.picture) {
+      this.previewProfileImage.set(profileClone.picture);
+    } else {
+      this.previewProfileImage.set(null);
+    }
+    if (profileClone.banner) {
+      this.previewBanner.set(profileClone.banner);
+    } else {
+      this.previewBanner.set(null);
+    }
+
+    this.loadExternalIdentities(metadata.event.tags);
+  }
+
+  private async refreshProfileFromRelays() {
+    if (!this.pubkey) return;
+
+    this.refreshing.set(true);
+    try {
+      const freshProfile = await this.data.getProfile(this.pubkey, { forceRefresh: true });
+      if (freshProfile?.data) {
+        const cachedMetadata = this.accountState.profile();
+        // Use the fresh profile if it's newer or if there's no cached version
+        if (!cachedMetadata?.event || freshProfile.event.created_at >= cachedMetadata.event.created_at) {
+          this.applyProfileData(freshProfile as { event: { pubkey: string; tags: string[][] }; data: ProfileData });
+          // Also update accountState so the rest of the app has the latest profile
+          this.accountState.profile.set(freshProfile);
+          this.logger.info(`[ProfileEdit] Loaded fresh profile (created_at: ${freshProfile.event.created_at})`);
+        }
+      }
+    } catch (error) {
+      this.logger.warn('[ProfileEdit] Failed to refresh profile from relays:', error);
+    } finally {
+      this.refreshing.set(false);
     }
   }
 
