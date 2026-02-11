@@ -7,6 +7,7 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
 import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
 import { SettingTextSizeComponent } from '../sections/text-size.component';
 import { SettingFontSelectorComponent } from '../sections/font-selector.component';
+import { SettingHomeDestinationComponent } from '../sections/home-destination.component';
 import { RightPanelService } from '../../../services/right-panel.service';
 
 const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏', '🤙', '⚡'];
@@ -21,6 +22,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
     SettingMenuEditorComponent,
     SettingTextSizeComponent,
     SettingFontSelectorComponent,
+    SettingHomeDestinationComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './layout.component.scss',
@@ -93,6 +95,8 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
         </div>
         <p class="setting-description" i18n="@@settings.navigation.open-threads-expanded.description">When viewing a thread,
           show all replies expanded by default. Disable for a cleaner initial view with collapsed replies.</p>
+
+        <app-setting-home-destination />
       </div>
 
       <div>
