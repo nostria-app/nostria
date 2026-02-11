@@ -21,13 +21,13 @@
       <div class="list-item">
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
+          <span class="item-time">{{ reaction.event.created_at | ago }}</span>
           @if (getCustomEmojiUrl(reaction.event)) {
           <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content" class="reaction-emoji-img"
             [title]="reaction.event.content">
           } @else {
           <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
           }
-          <span class="item-time">{{ reaction.event.created_at | ago }}</span>
         </div>
       </div>
       }
