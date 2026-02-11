@@ -144,23 +144,80 @@
     background: var(--mat-sys-surface);
     border-radius: 4px;
 
-    mat-list-item {
+    .identity-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
+      gap: 8px;
 
       &:last-child {
         border-bottom: none;
+      }
+
+      &.cdk-drag-preview {
+        box-shadow: var(--mat-sys-level3);
+        background: var(--mat-sys-surface-container-highest);
+        border-radius: 4px;
+      }
+
+      &.cdk-drag-placeholder {
+        opacity: 0.4;
+      }
+
+      &.cdk-drag-animating {
+        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      }
+    }
+
+    .drag-handle {
+      display: flex;
+      align-items: center;
+      cursor: grab;
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .identity-icon {
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    .identity-info {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+
+      .identity-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .proof-text {
         font-size: 12px;
         color: var(--mat-sys-on-surface-variant);
         font-family: monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
+    }
 
-      .identity-actions {
-        display: flex;
-        gap: 4px;
-      }
+    .identity-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    &.cdk-drop-list-dragging .identity-item:not(.cdk-drag-placeholder) {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
     }
   }
 

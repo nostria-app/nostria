@@ -13,9 +13,9 @@ import { NostrService } from '../../../services/nostr.service';
 import { Router } from '@angular/router';
 import { DatabaseService } from '../../../services/database.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { CdkDragDrop, CdkDrag, CdkDropList, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
@@ -42,9 +42,11 @@ interface ExternalIdentity {
     AgoPipe,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
-    MatListModule,
     MatMenuModule,
     MatTooltipModule,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
   ],
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss',
@@ -514,6 +516,12 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.newIdentityPlatform.set('');
     this.newIdentityValue.set('');
     this.newIdentityProof.set('');
+  }
+
+  dropIdentity(event: CdkDragDrop<ExternalIdentity[]>): void {
+    const items = [...this.externalIdentities()];
+    moveItemInArray(items, event.previousIndex, event.currentIndex);
+    this.externalIdentities.set(items);
   }
 
   removeExternalIdentity(index: number): void {
