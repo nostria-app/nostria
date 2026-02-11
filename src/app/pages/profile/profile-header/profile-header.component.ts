@@ -45,6 +45,7 @@ import { BadgeHoverCardService } from '../../../services/badge-hover-card.servic
 import { DataService } from '../../../services/data.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { SettingsService } from '../../../services/settings.service';
+import { stripImageProxy } from '../../../utils/strip-image-proxy';
 
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -654,9 +655,17 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   getOptimizedImageUrl(url: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
-      return url;
+      return stripImageProxy(url);
     }
     return this.imageCacheService.getOptimizedImageUrl(url);
+  }
+
+  /**
+   * Strip third-party image proxy wrappers from a URL.
+   * Used for images loaded directly (not through our image proxy).
+   */
+  cleanImageUrl(url: string): string {
+    return stripImageProxy(url);
   }
 
   onMutualAvatarError(event: Event): void {

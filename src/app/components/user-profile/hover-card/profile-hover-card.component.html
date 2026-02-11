@@ -8,7 +8,7 @@
     <!-- Banner or placeholder -->
     <div class="banner">
       @if (profile()?.data?.banner) {
-      <img [src]="profile()!.data!.banner" alt="Banner" class="banner-image" />
+      <img [src]="cleanImageUrl(profile()!.data!.banner!)" alt="Banner" class="banner-image" />
       } @else {
       <div class="banner-placeholder"></div>
       }

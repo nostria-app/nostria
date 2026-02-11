@@ -1,6 +1,6 @@
 <div class="profile-header-container">
   <div class="profile-banner" [class.clickable]="profile()?.data.banner" [style.background-image]="
-        profile()?.data.banner ? 'url(' + profile()!.data.banner + ')' : getDefaultBanner()
+        profile()?.data.banner ? 'url(' + cleanImageUrl(profile()!.data.banner) + ')' : getDefaultBanner()
       " (click)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
     (keydown.enter)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
     (keydown.space)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
@@ -20,7 +20,7 @@
         [tabindex]="profile()?.data.picture ? 0 : -1" [attr.role]="profile()?.data.picture ? 'button' : null"
         [attr.aria-label]="profile()?.data.picture ? 'View full size profile picture' : null">
         @if (profile()?.data.picture) {
-        <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image" />
+        <img [src]="cleanImageUrl(profile()!.data.picture)" alt="Profile picture" class="avatar-image" />
         } @else {
         <mat-icon class="default-avatar">account_circle</mat-icon>
         }

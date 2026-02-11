@@ -38,6 +38,7 @@ import { ReportTarget } from './reporting.service';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
+import { stripImageProxy } from '../utils/strip-image-proxy';
 import { RightPanelService } from './right-panel.service';
 import { PanelNavigationService } from './panel-navigation.service';
 import { ThreadedEvent } from './event';
@@ -2403,9 +2404,11 @@ export class LayoutService implements OnDestroy {
    */
   openProfilePicture(profile: NostrRecord): void {
     if (profile?.data.picture) {
+      // Strip third-party image proxy wrappers to load the original image directly
+      const cleanUrl = stripImageProxy(profile.data.picture);
       this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          mediaUrl: profile.data.picture,
+          mediaUrl: cleanUrl,
           mediaType: 'image',
           mediaTitle: profile.data.display_name || profile.data.name || 'Profile Picture',
         },
@@ -2472,9 +2475,11 @@ export class LayoutService implements OnDestroy {
 
   openProfileBanner(profile: NostrRecord): void {
     if (profile?.data.banner) {
+      // Strip third-party image proxy wrappers to load the original image directly
+      const cleanUrl = stripImageProxy(profile.data.banner);
       this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          mediaUrl: profile.data.banner,
+          mediaUrl: cleanUrl,
           mediaType: 'image',
           mediaTitle: `${profile.data.display_name || profile.data.name || 'Profile'} Banner`,
         },

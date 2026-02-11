@@ -4,6 +4,7 @@ import { SettingsService } from './settings.service';
 import { SwUpdate } from '@angular/service-worker';
 import { ImagePreloaderService } from './image-preloader.service';
 import { DiscoveryRelayService } from './discovery-relay.service';
+import { stripImageProxy } from '../utils/strip-image-proxy';
 
 @Injectable({
   providedIn: 'root',
@@ -44,7 +45,7 @@ export class ImageCacheService {
    */
   getOptimizedImageUrl(originalUrl: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
-      return originalUrl;
+      return stripImageProxy(originalUrl);
     }
 
     // Only proxy full URLs - relative paths, data URLs, etc. cannot be proxied
@@ -52,7 +53,9 @@ export class ImageCacheService {
       return originalUrl;
     }
 
-    const encodedUrl = encodeURIComponent(originalUrl);
+    // Strip any third-party image proxy wrappers to get the actual image URL
+    const cleanUrl = stripImageProxy(originalUrl);
+    const encodedUrl = encodeURIComponent(cleanUrl);
     return `${this.proxyBaseUrl()}?w=96&h=96&url=${encodedUrl}`;
   }
 
@@ -66,7 +69,7 @@ export class ImageCacheService {
    */
   getOptimizedImageUrlWithSize(originalUrl: string, width: number, height: number): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
-      return originalUrl;
+      return stripImageProxy(originalUrl);
     }
 
     // Only proxy full URLs - relative paths, data URLs, etc. cannot be proxied
@@ -74,7 +77,9 @@ export class ImageCacheService {
       return originalUrl;
     }
 
-    const encodedUrl = encodeURIComponent(originalUrl);
+    // Strip any third-party image proxy wrappers to get the actual image URL
+    const cleanUrl = stripImageProxy(originalUrl);
+    const encodedUrl = encodeURIComponent(cleanUrl);
     return `${this.proxyBaseUrl()}?w=${width}&h=${height}&url=${encodedUrl}`;
   }
 

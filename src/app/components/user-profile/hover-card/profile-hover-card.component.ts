@@ -35,6 +35,7 @@ import { FollowSetsService } from '../../../services/follow-sets.service';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
 import { firstValueFrom } from 'rxjs';
+import { stripImageProxy } from '../../../utils/strip-image-proxy';
 
 interface ProfileData {
   data?: {
@@ -426,10 +427,18 @@ export class ProfileHoverCardComponent {
 
   getOptimizedImageUrl(url: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
-      return url;
+      return stripImageProxy(url);
     }
 
     return this.imageCacheService.getOptimizedImageUrl(url);
+  }
+
+  /**
+   * Strip third-party image proxy wrappers from a URL.
+   * Used for images loaded directly (not through our image proxy).
+   */
+  cleanImageUrl(url: string): string {
+    return stripImageProxy(url);
   }
 
   onImageLoadError(): void {
