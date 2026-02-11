@@ -24,12 +24,12 @@
   </div>
 
   <div class="info-container">
-    @if (info()) {
+    @if (info(); as infoData) {
     <div class="info-section">
       <h3>Profile Discovery Information</h3>
 
       <div class="info-grid">
-        @if (info()['hasRelayList']) {
+        @if (infoData.hasRelayList) {
         <div class="info-item positive">
           <mat-icon>thumb_up</mat-icon>
           <span class="info-label">Has Relay List (NIP-65)</span>
@@ -41,89 +41,89 @@
         </div>
         }
 
-        @if (info()['hasFollowingList']) {
+        @if (infoData.hasFollowingList) {
         <div class="info-item positive">
           <mat-icon>thumb_up</mat-icon>
           <span class="info-label">Has Following List</span>
         </div>
         }
 
-        @if (info()['hasFollowingListRelays']) {
+        @if (infoData.hasFollowingListRelays) {
         <div class="info-item neutral">
           <mat-icon>info</mat-icon>
           <span class="info-label">Has Following List Relays</span>
         </div>
         }
 
-        @if (info()['foundOnDiscoveryRelays']) {
+        @if (infoData.foundOnDiscoveryRelays) {
         <div class="info-item positive">
           <mat-icon>thumb_up</mat-icon>
           <span class="info-label">Found on Discovery Relays</span>
         </div>
-        } @else if (info()['foundOnAccountRelays']) {
+        } @else if (infoData.foundOnAccountRelays) {
         <div class="info-item negative">
           <mat-icon>thumb_down</mat-icon>
           <span class="info-label">Found on Account Relays (Fallback)</span>
         </div>
         }
 
-        @if (info()['foundMetadataOnUserRelays']) {
+        @if (infoData.foundMetadataOnUserRelays) {
         <div class="info-item positive">
           <mat-icon>thumb_up</mat-icon>
           <span class="info-label">Found Profile on User Relays</span>
         </div>
-        } @else if (info()['foundMetadataOnAccountRelays']) {
+        } @else if (infoData.foundMetadataOnAccountRelays) {
         <div class="info-item negative">
           <mat-icon>thumb_down</mat-icon>
           <span class="info-label">Found Profile on Account Relays</span>
         </div>
         }
 
-        @if (info()['foundZeroRelaysOnAccountRelays']) {
+        @if (infoData.foundZeroRelaysOnAccountRelays) {
         <div class="info-item negative">
           <mat-icon>thumb_down</mat-icon>
           <span class="info-label">Unable to Find User Relays</span>
         </div>
         }
 
-        @if (info()['hasEmptyFollowingList']) {
+        @if (infoData.hasEmptyFollowingList) {
         <div class="info-item negative">
           <mat-icon>thumb_down</mat-icon>
           <span class="info-label">Empty Following List - Cannot Discover Profile</span>
         </div>
         }
 
-        @if (info()['relayCount'] !== undefined) {
+        @if (infoData.relayCount !== undefined) {
         <div class="info-item neutral">
           <mat-icon>dns</mat-icon>
-          <span class="info-label">Relay Count: {{ info()['relayCount'] }}</span>
+          <span class="info-label">Relay Count: {{ infoData.relayCount }}</span>
         </div>
         }
 
-        @if (info()['followingCount'] !== undefined) {
+        @if (infoData.followingCount !== undefined) {
         <div class="info-item neutral">
           <mat-icon>people</mat-icon>
-          <span class="info-label">Following Count: {{ info()['followingCount'] }}</span>
+          <span class="info-label">Following Count: {{ infoData.followingCount }}</span>
         </div>
         }
 
-        @if (info()['updated']) {
+        @if (infoData.updated) {
         <div class="info-item neutral">
           <mat-icon>schedule</mat-icon>
-          <span class="info-label">Last Updated: {{ formatTimestamp(info()['updated']) }}</span>
+          <span class="info-label">Last Updated: {{ formatTimestamp(infoData.updated) }}</span>
         </div>
         }
       </div>
 
       <div class="info-actions">
-        @if (info()['foundMetadataOnAccountRelays']) {
+        @if (infoData.foundMetadataOnAccountRelays) {
         <button mat-flat-button color="primary" (click)="broadcastProfile()">
           <mat-icon>broadcast_on_personal</mat-icon>
           Broadcast Profile to User's Relays
         </button>
         }
 
-        @if (info()['hasRelayList'] && !info()['foundOnDiscoveryRelays']) {
+        @if (infoData.hasRelayList && !infoData.foundOnDiscoveryRelays) {
         <button mat-flat-button color="primary" (click)="broadcastRelayList()">
           <mat-icon>cloud_upload</mat-icon>
           Broadcast Relay List to Discovery Relays
@@ -219,6 +219,26 @@
           <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
         </div>
       </div>
+    </div>
+    }
+
+    @if (trustDisplayItems().length > 0) {
+    <div class="metrics-section">
+      <h3>Web of Trust</h3>
+      <div class="metrics-grid">
+        @for (item of trustDisplayItems(); track item.key) {
+        <div class="metric-item" [class.highlight]="item.highlight">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span class="metric-label">{{ item.label }}:</span>
+          <span class="metric-value">{{ item.value }}</span>
+        </div>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon>verified_user</mat-icon>
+      <p>No Web of Trust metrics available for this profile</p>
     </div>
     }
 
