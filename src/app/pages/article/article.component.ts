@@ -1,6 +1,7 @@
 
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -9,6 +10,7 @@ import {
   OnDestroy,
   signal,
 } from '@angular/core';
+import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -44,6 +46,10 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
 import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { EventService, ReactionEvents } from '../../services/event';
+import { ZapService } from '../../services/zap.service';
+import { ReactionButtonComponent } from '../../components/event/reaction-button/reaction-button.component';
+import { ReactionSummaryComponent, type ZapInfo } from '../../components/event/reaction-summary/reaction-summary.component';
 
 @Component({
   selector: 'app-article',
@@ -56,10 +62,25 @@ import { UserRelaysService } from '../../services/relays/user-relays';
     ArticleDisplayComponent,
     MatMenuModule,
     ZapButtonComponent,
-    EventMenuComponent
+    EventMenuComponent,
+    ReactionButtonComponent,
+    ReactionSummaryComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  animations: [
+    trigger('expandCollapse', [
+      transition(':enter', [
+        style({ height: '0', opacity: 0, overflow: 'hidden' }),
+        animate('200ms ease-out', style({ height: '*', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        style({ height: '*', opacity: 1, overflow: 'hidden' }),
+        animate('200ms ease-in', style({ height: '0', opacity: 0 }))
+      ])
+    ])
+  ],
 })
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
@@ -82,6 +103,8 @@ export class ArticleComponent implements OnDestroy {
   private rightPanel = inject(RightPanelService);
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
+  private eventService = inject(EventService);
+  private zapService = inject(ZapService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -93,6 +116,81 @@ export class ArticleComponent implements OnDestroy {
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
   error = signal<string | null>(null);
+
+  // Reactions/interactions state
+  reactions = signal<ReactionEvents>({ events: [], data: new Map() });
+  reposts = signal<NostrRecord[]>([]);
+  quotes = signal<NostrRecord[]>([]);
+  zaps = signal<ZapInfo[]>([]);
+  replyCount = signal<number>(0);
+  showReactionsSummary = signal<boolean>(false);
+  reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
+
+  likes = computed<NostrRecord[]>(() => {
+    return this.reactions().events;
+  });
+
+  topEmojis = computed<{ emoji: string; url?: string; count: number }[]>(() => {
+    const reactions = this.likes();
+    if (!reactions || reactions.length === 0) return [];
+
+    const emojiCounts = new Map<string, { count: number; url?: string }>();
+    for (const reaction of reactions) {
+      let content = reaction.event.content || '+';
+      if (content === '+') {
+        content = '\u2764\uFE0F';
+      }
+      const existing = emojiCounts.get(content);
+      if (existing) {
+        existing.count++;
+      } else {
+        let url: string | undefined;
+        if (content.startsWith(':') && content.endsWith(':')) {
+          const shortcode = content.slice(1, -1);
+          const emojiTag = reaction.event.tags.find(
+            (tag: string[]) => tag[0] === 'emoji' && tag[1] === shortcode
+          );
+          if (emojiTag && emojiTag[2]) {
+            url = emojiTag[2];
+          }
+        }
+        emojiCounts.set(content, { count: 1, url });
+      }
+    }
+
+    return Array.from(emojiCounts.entries())
+      .map(([emoji, data]) => ({ emoji, url: data.url, count: data.count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  });
+
+  totalZapAmount = computed<number>(() => {
+    return this.zaps().reduce((total, zap) => total + (zap.amount || 0), 0);
+  });
+
+  zapCount = computed<number>(() => {
+    return this.zaps().length;
+  });
+
+  repostCount = computed<number>(() => {
+    return this.reposts().length;
+  });
+
+  quoteCount = computed<number>(() => {
+    return this.quotes().length;
+  });
+
+  shareCount = computed<number>(() => {
+    return this.repostCount() + this.quoteCount();
+  });
+
+  hasAnyInteractions = computed<boolean>(() => {
+    return this.likes().length > 0
+      || this.replyCount() > 0
+      || this.repostCount() > 0
+      || this.quoteCount() > 0
+      || this.totalZapAmount() > 0;
+  });
 
   // Text-to-Speech state
   isSynthesizing = signal<boolean>(false);
@@ -157,6 +255,24 @@ export class ArticleComponent implements OnDestroy {
     afterNextRender(() => {
       this.setupImageClickListeners();
       this.setupLinkClickListeners();
+    });
+
+    // Load interactions when the event changes
+    effect(() => {
+      const ev = this.event();
+      if (ev) {
+        // Reset interaction state
+        this.reactions.set({ events: [], data: new Map() });
+        this.reposts.set([]);
+        this.quotes.set([]);
+        this.zaps.set([]);
+        this.replyCount.set(0);
+        this.showReactionsSummary.set(false);
+
+        // Load interactions asynchronously
+        this.loadAllInteractions(ev);
+        this.loadZaps(ev);
+      }
     });
   }
 
@@ -1066,5 +1182,217 @@ export class ArticleComponent implements OnDestroy {
       .replace(/`(.+?)`/g, '$1') // Remove inline code
       .replace(/>\s/g, '') // Remove blockquotes
       .replace(/\n+/g, '. '); // Replace newlines with periods for better pausing
+  }
+
+  /**
+   * Load all event interactions (reactions, reposts, quotes) in a single optimized query
+   */
+  async loadAllInteractions(ev: Event, invalidateCache = false) {
+    const targetEventId = ev.id;
+    const eventAuthorPubkey = ev.pubkey;
+
+    try {
+      const [interactions, quotesResult] = await Promise.all([
+        this.eventService.loadEventInteractions(
+          targetEventId,
+          ev.kind,
+          eventAuthorPubkey,
+          invalidateCache,
+          true // skipReplies - articles handle replies differently
+        ),
+        this.eventService.loadQuotes(
+          targetEventId,
+          eventAuthorPubkey,
+          invalidateCache
+        )
+      ]);
+
+      // Verify we're still showing the same event before updating state
+      const currentEvent = this.event();
+      if (currentEvent?.id !== targetEventId) {
+        return;
+      }
+
+      // Filter out interactions from muted accounts
+      const mutedAccounts = this.accountState.mutedAccounts();
+
+      const filteredReactionEvents = interactions.reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+      const filteredReactionData = new Map<string, number>();
+      for (const event of filteredReactionEvents) {
+        const emoji = event.event.content || '+';
+        filteredReactionData.set(emoji, (filteredReactionData.get(emoji) || 0) + 1);
+      }
+
+      const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
+      const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+      this.reactions.set({
+        events: filteredReactionEvents,
+        data: filteredReactionData
+      });
+      this.reposts.set(filteredReposts);
+      this.quotes.set(filteredQuotes);
+      this.replyCount.set(interactions.replyCount);
+    } catch (error) {
+      this.logger.error('Error loading article interactions:', error);
+    }
+  }
+
+  /**
+   * Load reactions for the article (used after user reacts to refresh)
+   */
+  async loadReactions(invalidateCache = false) {
+    const ev = this.event();
+    if (!ev) return;
+
+    try {
+      const reactions = await this.eventService.loadReactions(
+        ev.id,
+        ev.pubkey,
+        invalidateCache
+      );
+
+      const mutedAccounts = this.accountState.mutedAccounts();
+      const filteredEvents = reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+      const filteredData = new Map<string, number>();
+      for (const event of filteredEvents) {
+        const emoji = event.event.content || '+';
+        filteredData.set(emoji, (filteredData.get(emoji) || 0) + 1);
+      }
+
+      this.reactions.set({
+        events: filteredEvents,
+        data: filteredData
+      });
+    } catch (error) {
+      this.logger.error('Error loading article reactions:', error);
+    }
+  }
+
+  /**
+   * Load zaps for the article
+   */
+  async loadZaps(ev: Event) {
+    const targetEventId = ev.id;
+
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
+
+      // Verify we're still showing the same event before updating state
+      const currentEvent = this.event();
+      if (currentEvent?.id !== targetEventId) {
+        return;
+      }
+
+      const parsedZaps: ZapInfo[] = [];
+
+      for (const receipt of zapReceipts) {
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          parsedZaps.push({
+            receipt,
+            zapRequest: parsed.zapRequest,
+            amount: parsed.amount,
+            comment: parsed.comment,
+            senderName: parsed.zapRequest.pubkey,
+            senderPubkey: parsed.zapRequest.pubkey,
+            timestamp: receipt.created_at,
+          });
+        }
+      }
+
+      this.zaps.set(parsedZaps);
+    } catch (error) {
+      this.logger.error('Error loading article zaps:', error);
+    }
+  }
+
+  /**
+   * Handler for when a zap is successfully sent from the zap button.
+   */
+  async onZapSent(amount: number): Promise<void> {
+    this.logger.debug('[Zap Sent] Received zap sent event for amount:', amount);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const ev = this.event();
+      if (ev) {
+        await this.loadZaps(ev);
+      }
+    } catch (error) {
+      this.logger.error('Error reloading zaps after send:', error);
+    }
+  }
+
+  /**
+   * Toggle the reactions summary panel visibility
+   */
+  toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
+    const isCurrentlyVisible = this.showReactionsSummary();
+    const resolvedTab = this.resolveTabWithData(tab);
+    const currentTab = this.reactionsSummaryTab();
+
+    if (isCurrentlyVisible && currentTab === resolvedTab) {
+      this.showReactionsSummary.set(false);
+    } else {
+      this.reactionsSummaryTab.set(resolvedTab);
+      this.showReactionsSummary.set(true);
+    }
+  }
+
+  private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
+    const tabHasData: Record<string, () => boolean> = {
+      reactions: () => this.likes().length > 0,
+      reposts: () => this.repostCount() > 0,
+      quotes: () => this.quoteCount() > 0,
+      zaps: () => this.zapCount() > 0,
+    };
+
+    if (tabHasData[preferredTab]()) {
+      return preferredTab;
+    }
+
+    const tabs: ('reactions' | 'reposts' | 'quotes' | 'zaps')[] = ['reactions', 'reposts', 'quotes', 'zaps'];
+    return tabs.find(t => tabHasData[t]()) ?? preferredTab;
+  }
+
+  /**
+   * Format zap amount for display
+   */
+  formatZapAmount(amount: number): string {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`;
+    }
+    if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(1)}K`;
+    }
+    return amount.toLocaleString();
+  }
+
+  /**
+   * Open the reply editor for this article (uses comment mode for addressable events)
+   */
+  async openReplyEditor(event: MouseEvent) {
+    event.stopPropagation();
+    const ev = this.event();
+    if (!ev) return;
+
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    this.eventService.createComment(ev);
+  }
+
+  /**
+   * Handle bookmark button click in footer
+   */
+  onBookmarkClick(event: MouseEvent) {
+    event.stopPropagation();
+    this.bookmarkArticle();
   }
 }

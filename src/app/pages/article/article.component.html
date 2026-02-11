@@ -66,6 +66,87 @@
     (resumeSpeech)="resumeSpeech()" (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)"
     (voiceChange)="onVoiceChange($event)" (playbackRateChange)="onPlaybackRateChange($event)" (share)="shareArticle()"
     (translate)="onTranslate($event)"></app-article-display>
+
+  <!-- Article Footer with reactions -->
+  <div class="article-footer">
+    <div class="actions-row">
+      <!-- Like with count -->
+      <div class="action-button like-action like-hover-container"
+        (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+        <app-reaction-button class="action-icon" #reactionBtn [event]="article"
+          [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+        @if (likes().length > 0) {
+        <span class="action-count">{{ likes().length }}</span>
+        }
+        <span class="action-text">Like</span>
+      </div>
+
+      <!-- Reply -->
+      <div class="action-button comment-action" role="button" tabindex="0" (click)="openReplyEditor($event)">
+        <mat-icon class="action-icon">mode_comment</mat-icon>
+        @if (replyCount() > 0) {
+        <span class="action-count">{{ replyCount() }}</span>
+        }
+        <span class="action-text">Reply</span>
+      </div>
+
+      <!-- Share with count (reposts + quotes) -->
+      <div class="action-button share-action" role="button" tabindex="0"
+        (click)="shareArticle(); $event.stopPropagation()">
+        <mat-icon class="action-icon">share</mat-icon>
+        @if (shareCount() > 0) {
+        <span class="action-count">{{ shareCount() }}</span>
+        }
+        <span class="action-text">Share</span>
+      </div>
+
+      <!-- Zap with sats -->
+      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
+        <app-zap-button class="action-icon" #zapBtn [event]="article"
+          [recipientPubkey]="article.pubkey" (zapSent)="onZapSent($event)">
+        </app-zap-button>
+        @if (totalZapAmount() > 0) {
+        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+        }
+        <span class="action-text">Zap</span>
+      </div>
+
+      <!-- Bookmark -->
+      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
+        <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
+        <span class="action-text">Bookmark</span>
+      </div>
+
+      <!-- Top emojis indicator (right-aligned) -->
+      @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+        @if (topEmojis().length > 0) {
+        <span class="aggregated-emojis">
+          @for (emoji of topEmojis(); track emoji.emoji) {
+          @if (emoji.url) {
+          <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
+          } @else {
+          <span class="emoji-item">{{ emoji.emoji }}</span>
+          }
+          }
+        </span>
+        }
+        <span class="emoji-more">...</span>
+      </div>
+      }
+    </div>
+
+    <!-- Expandable reactions summary panel -->
+    @if (showReactionsSummary()) {
+    <div class="reactions-summary-container" [@expandCollapse]>
+      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
+        [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
+        [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+        [hideTabs]="false">
+      </app-reaction-summary>
+    </div>
+    }
+  </div>
 </div>
 } @else {
 <!-- Loading or Empty State -->
