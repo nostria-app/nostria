@@ -19,7 +19,7 @@ describe('CreateOptionsSheetComponent', () => {
     openRecordVideoDialog: jasmine.createSpy('openRecordVideoDialog'),
     openRecordAudioDialog: jasmine.createSpy('openRecordAudioDialog'),
     openMessages: jasmine.createSpy('openMessages'),
-    openLists: jasmine.createSpy('openLists'),
+    createFollowSet: jasmine.createSpy('createFollowSet'),
     openMusicUpload: jasmine.createSpy('openMusicUpload'),
     openLiveStreamDialog: jasmine.createSpy('openLiveStreamDialog'),
   };
@@ -48,22 +48,22 @@ describe('CreateOptionsSheetComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have 3 primary create options', () => {
-    expect(component.createOptions.length).toBe(3);
+  it('should have 4 primary create options', () => {
+    expect(component.createOptions.length).toBe(4);
   });
 
-  it('should have Note, Article, and Media as primary options', () => {
+  it('should have Note, Article, Media, and Message as primary options', () => {
     const labels = component.createOptions.map(o => o.label);
-    expect(labels).toEqual(['Note', 'Article', 'Media']);
+    expect(labels).toEqual(['Note', 'Article', 'Media', 'Message']);
   });
 
-  it('should have 6 more options', () => {
-    expect(component.moreOptions.length).toBe(6);
+  it('should have 5 more options', () => {
+    expect(component.moreOptions.length).toBe(5);
   });
 
-  it('should have Message, List, Video Clip, Audio Clip, Music Track, Live Stream as more options', () => {
+  it('should have List, Video Clip, Audio Clip, Music Track, Live Stream as more options', () => {
     const labels = component.moreOptions.map(o => o.label);
-    expect(labels).toEqual(['Message', 'List', 'Video Clip', 'Audio Clip', 'Music Track', 'Live Stream']);
+    expect(labels).toEqual(['List', 'Video Clip', 'Audio Clip', 'Music Track', 'Live Stream']);
   });
 
   it('should not show more options by default', () => {
@@ -87,7 +87,7 @@ describe('CreateOptionsSheetComponent', () => {
   it('should render primary options in the list', async () => {
     await fixture.whenStable();
     const listItems = (fixture.nativeElement as HTMLElement).querySelectorAll('a[mat-list-item]:not(.more-toggle)');
-    expect(listItems.length).toBe(3);
+    expect(listItems.length).toBe(4);
   });
 
   it('should render More... toggle', async () => {
@@ -104,32 +104,28 @@ describe('CreateOptionsSheetComponent', () => {
     await fixture.whenStable();
 
     const allItems = (fixture.nativeElement as HTMLElement).querySelectorAll('a[mat-list-item]:not(.more-toggle)');
-    // 3 primary + 6 more = 9
+    // 4 primary + 5 more = 9
     expect(allItems.length).toBe(9);
   });
 
   it('should call correct actions for more options', () => {
-    const messageOption = component.moreOptions[0];
-    component.selectOption(messageOption.action);
-    expect(mockLayoutService.openMessages).toHaveBeenCalled();
-
-    const listOption = component.moreOptions[1];
+    const listOption = component.moreOptions[0];
     component.selectOption(listOption.action);
-    expect(mockLayoutService.openLists).toHaveBeenCalled();
+    expect(mockLayoutService.createFollowSet).toHaveBeenCalled();
 
-    const videoOption = component.moreOptions[2];
+    const videoOption = component.moreOptions[1];
     component.selectOption(videoOption.action);
     expect(mockLayoutService.openRecordVideoDialog).toHaveBeenCalled();
 
-    const audioOption = component.moreOptions[3];
+    const audioOption = component.moreOptions[2];
     component.selectOption(audioOption.action);
     expect(mockLayoutService.openRecordAudioDialog).toHaveBeenCalled();
 
-    const musicOption = component.moreOptions[4];
+    const musicOption = component.moreOptions[3];
     component.selectOption(musicOption.action);
     expect(mockLayoutService.openMusicUpload).toHaveBeenCalled();
 
-    const liveStreamOption = component.moreOptions[5];
+    const liveStreamOption = component.moreOptions[4];
     component.selectOption(liveStreamOption.action);
     expect(mockLayoutService.openLiveStreamDialog).toHaveBeenCalled();
   });

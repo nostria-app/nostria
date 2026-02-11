@@ -105,7 +105,11 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
             <div class="emoji-grid">
               @for (recent of recentEmojis(); track recent.emoji) {
               <button class="emoji-btn" (click)="selectEmoji(recent.emoji); $event.stopPropagation()">
+                @if (recent.url) {
+                <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+                } @else {
                 {{ recent.emoji }}
+                }
               </button>
               }
             </div>
@@ -139,10 +143,18 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     </div>
   `,
   styles: [`
-    :host-context(app-emoji-picker-dialog) .emoji-picker {
+    :host-context(.emoji-picker-dialog) {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    :host-context(.emoji-picker-dialog) .emoji-picker {
       width: 100%;
       max-height: none;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
     }
 
     .emoji-picker {
@@ -190,9 +202,10 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       }
     }
 
-    :host-context(app-emoji-picker-dialog) .emoji-grid-container {
+    :host-context(.emoji-picker-dialog) .emoji-grid-container {
       max-height: none;
       flex: 1;
+      overflow-y: auto;
     }
 
     .emoji-grid-container {
@@ -201,14 +214,68 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       padding: 6px;
     }
 
-    :host-context(app-emoji-picker-dialog) .emoji-grid {
-      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    :host-context(.emoji-picker-dialog) .emoji-grid {
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
     }
 
-    :host-context(app-emoji-picker-dialog) .emoji-btn {
+    :host-context(.emoji-picker-dialog) .emoji-btn {
       width: 100%;
-      height: 44px;
-      font-size: 1.5rem;
+      height: 52px;
+      font-size: 1.75rem;
+
+      .custom-emoji-img {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    :host-context(.emoji-picker-dialog) .emoji-tabs {
+      display: flex;
+      flex-direction: column;
+
+      ::ng-deep .mat-mdc-tab-header {
+        min-height: 44px;
+      }
+
+      ::ng-deep .mdc-tab {
+        min-width: 40px !important;
+        padding: 0 6px;
+        height: 44px;
+      }
+
+      ::ng-deep .mat-mdc-tab-body-wrapper {
+        flex: 1;
+      }
+
+      ::ng-deep .mat-mdc-tab-body {
+        height: 100%;
+      }
+
+      ::ng-deep .mat-mdc-tab-body-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    :host-context(.emoji-picker-dialog) .emoji-search {
+      padding: 10px 12px;
+
+      .search-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      input {
+        font-size: 1rem;
+      }
     }
 
     .emoji-grid {
@@ -233,6 +300,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
       &:hover {
         background-color: var(--mat-sys-surface-container-high);
+      }
+
+      .custom-emoji-img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
       }
     }
 

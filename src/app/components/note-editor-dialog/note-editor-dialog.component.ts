@@ -1833,6 +1833,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'Emoji',
       width: '400px',
+      panelClass: 'emoji-picker-dialog',
     });
 
     dialogRef.afterClosed$.subscribe(result => {
@@ -2292,7 +2293,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   togglePreview(): void {
     const wasInPreview = this.showPreview();
     this.showPreview.update(current => !current);
-    
+
     // If coming back from preview, re-trigger textarea auto-resize after it renders
     if (wasInPreview) {
       setTimeout(() => {
@@ -2307,7 +2308,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   toggleAdvancedOptions(): void {
     const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
-    
+
     // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {
       setTimeout(() => {
