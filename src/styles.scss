@@ -263,8 +263,20 @@ html.locale-fa {
   letter-spacing: normal;
   white-space: nowrap;
   direction: ltr;
-  /* This is key for the filled style */
-  font-variation-settings: 'FILL' 1;
+
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 300,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+.mat-icon {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 300,
+    'GRAD' 0,
+    'opsz' 24;
 }
 
 .yellow {
