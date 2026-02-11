@@ -84,7 +84,7 @@
     targetItem.event.kind === 34236) {
     <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="item.event.pubkey"></app-video-event>
+      [trustedByPubkey]="item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
@@ -157,7 +157,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
         +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
@@ -167,7 +168,8 @@
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
       <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="video.aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>
@@ -224,8 +226,8 @@
           <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
           @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22 || rootRecordData.event.kind
           === 34235 || rootRecordData.event.kind === 34236) {
-          <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-            [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+           <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
+             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (rootRecordData.event.kind === 1222 || rootRecordData.event.kind === 1244) {
@@ -291,7 +293,8 @@
         <div class="collapsed-videos" (click)="$event.stopPropagation()">
           <app-inline-video-player [src]="rootCollapsedMedia().videos[0].url"
             [poster]="rootCollapsedMedia().videos[0].poster"
-            [style.aspect-ratio]="rootCollapsedMedia().videos[0].aspectRatio"></app-inline-video-player>
+            [style.aspect-ratio]="rootCollapsedMedia().videos[0].aspectRatio"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           @if (rootCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
           <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
             +{{ rootCollapsedMedia().videos.length - 1 }} more {{ rootCollapsedMedia().videos.length - 1 === 1 ? 'video'
@@ -301,7 +304,8 @@
           @if (collapsedVideosExpanded()) {
           @for (video of rootCollapsedMedia().videos.slice(1); track video.url) {
           <app-inline-video-player [src]="video.url" [poster]="video.poster"
-            [style.aspect-ratio]="video.aspectRatio"></app-inline-video-player>
+            [style.aspect-ratio]="video.aspectRatio"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
         </div>
@@ -351,9 +355,9 @@
           parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22 || parentRecordData.event.kind ===
           34235 || parentRecordData.event.kind === 34236
           ) {
-          <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
-            [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
-            [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+           <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
+             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
+             [mediaEventIndex]="mediaEventIndex()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (parentRecordData.event.kind === 1222 || parentRecordData.event.kind === 1244) {
@@ -419,7 +423,8 @@
         <div class="collapsed-videos" (click)="$event.stopPropagation()">
           <app-inline-video-player [src]="parentCollapsedMedia().videos[0].url"
             [poster]="parentCollapsedMedia().videos[0].poster"
-            [style.aspect-ratio]="parentCollapsedMedia().videos[0].aspectRatio"></app-inline-video-player>
+            [style.aspect-ratio]="parentCollapsedMedia().videos[0].aspectRatio"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           @if (parentCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
           <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
             +{{ parentCollapsedMedia().videos.length - 1 }} more {{ parentCollapsedMedia().videos.length - 1 === 1 ?
@@ -429,7 +434,8 @@
           @if (collapsedVideosExpanded()) {
           @for (video of parentCollapsedMedia().videos.slice(1); track video.url) {
           <app-inline-video-player [src]="video.url" [poster]="video.poster"
-            [style.aspect-ratio]="video.aspectRatio"></app-inline-video-player>
+            [style.aspect-ratio]="video.aspectRatio"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
         </div>
@@ -469,7 +475,7 @@
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="trustedByPubkey()"></app-video-event>
+      [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -543,7 +549,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
         +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
@@ -553,7 +560,8 @@
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
       <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="video.aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>
@@ -593,7 +601,7 @@
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="trustedByPubkey()"></app-video-event>
+      [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -671,7 +679,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
         +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
@@ -681,7 +690,8 @@
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
       <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"></app-inline-video-player>
+        [style.aspect-ratio]="video.aspectRatio"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>
