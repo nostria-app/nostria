@@ -124,20 +124,22 @@ export class TrustService {
   }
 
   /**
-   * Resolve relay URLs for fetching kind 30382 assertions.
+   * Resolve relay URLs and author pubkeys for fetching kind 30382 assertions.
    * Uses kind 10040 provider declarations if available, falls back to local setting.
+   * When providers are configured, returns their pubkeys as authors so queries
+   * only return events from trusted providers.
    */
-  private resolveRelayUrls(): string[] {
+  private resolveProviderConfig(): { relayUrls: string[]; authors: string[] } {
     // Check if user has kind 10040 providers configured for kind 30382
     if (this.trustProviderService.loaded()) {
-      const providerRelays = this.trustProviderService.getRelayUrlsForKind(30382);
-      if (providerRelays.length > 0) {
-        return providerRelays;
+      const config = this.trustProviderService.getProviderConfigForKind(30382);
+      if (config.relayUrls.length > 0) {
+        return config;
       }
     }
 
-    // Fall back to the local trust relay setting
-    return [this.trustRelayUrl()];
+    // Fall back to the local trust relay setting (no author filter)
+    return { relayUrls: [this.trustRelayUrl()], authors: [] };
   }
 
   /**
@@ -146,15 +148,23 @@ export class TrustService {
    */
   private async fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
     try {
-      const relayUrls = this.resolveRelayUrls();
-      this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relayUrls.join(', ')}`);
+      const { relayUrls, authors } = this.resolveProviderConfig();
+      this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relayUrls.join(', ')}`, {
+        authors: authors.length > 0 ? authors : 'any',
+      });
 
       // Create filter for kind 30382 events with d tag matching pubkey
+      // When providers are configured, filter by their pubkeys (authors)
+      // to only get assertions from trusted providers
       const filter: Filter = {
         kinds: [30382],
         '#d': [pubkey],
         limit: 1,
       };
+
+      if (authors.length > 0) {
+        filter.authors = authors;
+      }
 
       // Fetch events from all configured trust relays
       const events = await this.relayPool.query(relayUrls, filter);

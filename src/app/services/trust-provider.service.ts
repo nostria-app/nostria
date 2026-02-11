@@ -294,6 +294,27 @@ export class TrustProviderService {
   }
 
   /**
+   * Get unique relay URLs and author pubkeys for a specific assertion kind.
+   * The author pubkeys are the providers that publish kind 30382 events,
+   * so queries should filter by these authors to only get trusted results.
+   *
+   * @param assertionKind The assertion event kind (e.g., 30382)
+   * @returns Object with unique relay URLs and author pubkeys
+   */
+  getProviderConfigForKind(assertionKind: number): { relayUrls: string[]; authors: string[] } {
+    const prefix = `${assertionKind}:`;
+    const relayUrls = new Set<string>();
+    const authors = new Set<string>();
+    for (const provider of this.allProviders()) {
+      if (provider.kindTag.startsWith(prefix)) {
+        relayUrls.add(provider.relayUrl);
+        authors.add(provider.pubkey);
+      }
+    }
+    return { relayUrls: [...relayUrls], authors: [...authors] };
+  }
+
+  /**
    * Add a provider to the public or private list.
    * Does NOT automatically publish — call publishProviders() after making changes.
    */
