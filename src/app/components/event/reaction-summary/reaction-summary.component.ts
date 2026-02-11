@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, input, computed, signal, effect } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../../interfaces';
@@ -23,7 +22,6 @@ export interface ZapInfo {
 @Component({
   selector: 'app-reaction-summary',
   imports: [
-    MatIconModule,
     MatRippleModule,
     UserProfileComponent,
     AgoPipe,

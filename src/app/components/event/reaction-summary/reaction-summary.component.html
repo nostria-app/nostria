@@ -75,17 +75,14 @@
       @for (zap of sortedZaps(); track zap.receipt.id) {
       <div class="list-item zap-item">
         <app-user-profile [pubkey]="zap.senderPubkey" view="compact"></app-user-profile>
+        @if (zap.comment) {
+        <span class="zap-comment-inline">{{ zap.comment }}</span>
+        }
         <div class="item-meta">
-          <span class="zap-amount">{{ formatAmount(zap.amount) }} sats</span>
           <span class="item-time">{{ zap.timestamp | ago }}</span>
+          <span class="zap-amount">{{ formatAmount(zap.amount) }} sats</span>
         </div>
       </div>
-      @if (zap.comment) {
-      <div class="zap-comment">
-        <mat-icon class="comment-icon">format_quote</mat-icon>
-        <span class="comment-text">{{ zap.comment }}</span>
-      </div>
-      }
       }
     </div>
     }
