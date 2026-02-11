@@ -106,7 +106,7 @@ export class ArticleComponent {
   hashtags = computed(() => {
     const ev = this.event();
     if (!ev) return [];
-    return this.utilities.getTagValues('t', ev.tags);
+    return [...new Set(this.utilities.getTagValues('t', ev.tags))];
   });
 
   publishedAtTimestamp = computed(() => {
