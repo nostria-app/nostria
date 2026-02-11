@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
@@ -114,11 +114,40 @@ export class TrustProviderService {
   /** Whether a publish operation is in progress */
   readonly isPublishing = signal(false);
 
+  /** Whether a kind 10040 event exists for this account (regardless of parsing) */
+  readonly hasEvent = signal(false);
+
+  /** Whether any providers are configured (public or private) */
+  readonly hasProviders = computed(() => this.allProviders().length > 0);
+
+  /** Whether Brainstorm is configured for 30382:rank (by relay URL match) */
+  readonly hasBrainstormRank = computed(() => {
+    const brainstormRelay = 'wss://nip85.brainstorm.world';
+    return this.allProviders().some(
+      p => p.relayUrl === brainstormRelay && p.kindTag === '30382:rank'
+    );
+  });
+
   /** The raw kind 10040 event, if found */
   private currentEvent: NostrEvent | null = null;
 
+  /** Track the current account pubkey to detect account switches */
+  private currentAccountPubkey: string | null = null;
+
   constructor() {
     this.logger.info('TrustProviderService initialized');
+
+    // Clear and reload when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey !== this.currentAccountPubkey) {
+        this.currentAccountPubkey = pubkey;
+        this.clear();
+        if (pubkey) {
+          this.loadProviders(pubkey);
+        }
+      }
+    });
   }
 
   /**
@@ -181,6 +210,7 @@ export class TrustProviderService {
    */
   private async parseProviderEvent(event: NostrEvent): Promise<void> {
     this.currentEvent = event;
+    this.hasEvent.set(true);
 
     // Parse public providers from tags
     const publicProviders = this.parseProviderTags(event.tags);
@@ -312,29 +342,32 @@ export class TrustProviderService {
 
   /**
    * Remove all metrics from a known provider.
+   * Matches by relay URL since provider pubkeys can vary per algorithm.
    * Does NOT automatically publish — call publishProviders() after making changes.
    */
   removeKnownProvider(knownProvider: KnownProvider): void {
     this.publicProviders.update(list =>
-      list.filter(p => p.pubkey !== knownProvider.pubkey)
+      list.filter(p => p.relayUrl !== knownProvider.relayUrl)
     );
     this.privateProviders.update(list =>
-      list.filter(p => p.pubkey !== knownProvider.pubkey)
+      list.filter(p => p.relayUrl !== knownProvider.relayUrl)
     );
   }
 
   /**
    * Check if a known provider is currently configured.
+   * Matches by relay URL since provider pubkeys can vary per algorithm.
    */
   isKnownProviderConfigured(knownProvider: KnownProvider): boolean {
-    return this.allProviders().some(p => p.pubkey === knownProvider.pubkey);
+    return this.allProviders().some(p => p.relayUrl === knownProvider.relayUrl);
   }
 
   /**
    * Check if a known provider is configured as private.
+   * Matches by relay URL since provider pubkeys can vary per algorithm.
    */
   isKnownProviderPrivate(knownProvider: KnownProvider): boolean {
-    return this.privateProviders().some(p => p.pubkey === knownProvider.pubkey);
+    return this.privateProviders().some(p => p.relayUrl === knownProvider.relayUrl);
   }
 
   /**
@@ -394,6 +427,7 @@ export class TrustProviderService {
     this.publicProviders.set([]);
     this.privateProviders.set([]);
     this.loaded.set(false);
+    this.hasEvent.set(false);
     this.currentEvent = null;
   }
 }

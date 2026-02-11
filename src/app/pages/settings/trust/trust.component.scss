@@ -65,6 +65,10 @@
   border-radius: var(--mat-sys-corner-medium);
   padding: 1rem;
   margin-bottom: 1rem;
+
+  &.activated {
+    border-left: 3px solid var(--mat-success-color);
+  }
 }
 
 .activation-content {
@@ -79,6 +83,10 @@
   font-size: 28px;
   width: 28px;
   height: 28px;
+
+  &.activated-icon {
+    color: var(--mat-success-color);
+  }
 }
 
 .brainstorm-button {
@@ -223,9 +231,12 @@
 
 .publish-button {
   align-self: flex-start;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+
+  mat-icon,
+  mat-spinner,
+  span {
+    vertical-align: middle;
+  }
 }
 
 .publish-error {
