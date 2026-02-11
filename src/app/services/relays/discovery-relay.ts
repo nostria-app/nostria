@@ -81,6 +81,13 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     this.logger.debug(`[DiscoveryRelay] DM relay event (kind 10050) found: ${!!dmRelayEvent}`);
 
     if (dmRelayEvent) {
+      // Save the DM relay event to the database for offline/cached access
+      try {
+        await this.database.saveReplaceableEvent(dmRelayEvent);
+      } catch (error) {
+        this.logger.warn(`Failed to save DM relay list event for pubkey ${pubkey}:`, error);
+      }
+
       // Extract relay URLs from the event tags
       // Format: ["relay", "wss://relay.example.com"]
       const relayUrls = dmRelayEvent.tags

@@ -35,6 +35,15 @@ export class UserRelayService {
   }
 
   /**
+   * Ensure DM relays (kind 10050) are loaded and cached for a pubkey.
+   * Call this when opening a chat - loads from database instantly,
+   * then refreshes from network in the background.
+   */
+  async ensureDmRelaysForPubkey(pubkey: string): Promise<void> {
+    await this.userRelaysService.ensureDmRelaysForPubkey(pubkey);
+  }
+
+  /**
    * Get relay URLs for a specific pubkey
    * Uses UserRelaysService cache for high performance
    */
