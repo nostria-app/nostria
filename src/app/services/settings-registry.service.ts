@@ -155,7 +155,7 @@ export class SettingsRegistryService {
       route: '/settings/general',
       priority: 14,
     },
-{
+    {
       id: 'navigation-settings',
       title: $localize`:@@settings.navigation.title:Navigation`,
       description: $localize`:@@settings.navigation.start-last-page.description:When opening the app, restore the last page you were viewing`,
@@ -163,6 +163,17 @@ export class SettingsRegistryService {
       section: 'layout',
       sectionTitle: $localize`:@@settings.sections.layout:Layout`,
       icon: 'navigation',
+      route: '/settings/layout',
+      priority: 1,
+    },
+    {
+      id: 'home-destination',
+      title: $localize`:@@settings.home-destination.title:Home Button Destination`,
+      description: $localize`:@@settings.home-destination.description:Choose where the Nostria logo button should navigate to.`,
+      keywords: ['home', 'button', 'logo', 'destination', 'feeds', 'first', 'menu', 'navigate', 'click'],
+      section: 'layout',
+      sectionTitle: $localize`:@@settings.sections.layout:Layout`,
+      icon: 'home',
       route: '/settings/layout',
       priority: 1,
     },
