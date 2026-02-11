@@ -10,7 +10,6 @@ import {
   OnDestroy,
   signal,
 } from '@angular/core';
-import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -48,7 +47,6 @@ import { EventMenuComponent } from '../../components/event/event-menu/event-menu
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { EventService, ReactionEvents } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
-import { ReactionButtonComponent } from '../../components/event/reaction-button/reaction-button.component';
 import { ReactionSummaryComponent, type ZapInfo } from '../../components/event/reaction-summary/reaction-summary.component';
 
 @Component({
@@ -63,24 +61,11 @@ import { ReactionSummaryComponent, type ZapInfo } from '../../components/event/r
     MatMenuModule,
     ZapButtonComponent,
     EventMenuComponent,
-    ReactionButtonComponent,
     ReactionSummaryComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [
-    trigger('expandCollapse', [
-      transition(':enter', [
-        style({ height: '0', opacity: 0, overflow: 'hidden' }),
-        animate('200ms ease-out', style({ height: '*', opacity: 1 }))
-      ]),
-      transition(':leave', [
-        style({ height: '*', opacity: 1, overflow: 'hidden' }),
-        animate('200ms ease-in', style({ height: '0', opacity: 0 }))
-      ])
-    ])
-  ],
 })
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
