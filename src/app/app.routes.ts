@@ -527,7 +527,7 @@ export const routes: Routes = [
     resolve: { data: DataResolver, user: UsernameResolver },
     children: createProfileChildren(),
   },
-{
+  {
     path: 'premium',
     redirectTo: 'accounts?tab=premium',
     pathMatch: 'full',
@@ -843,6 +843,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/user-relays/user-relays.component').then(m => m.UserRelaysComponent),
     title: 'Relays',
+  },
+  {
+    path: 'user-links/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/user-links/user-links.component').then(m => m.UserLinksComponent),
+    title: 'Links',
   },
 
   { path: '**', redirectTo: '/' },

@@ -1,0 +1,253 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.user-links-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.links-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  margin-bottom: 0;
+}
+
+.back-button {
+  margin-right: 16px;
+}
+
+.verify-all-button {
+  margin-left: auto;
+}
+
+.profile-mini {
+  display: flex;
+  align-items: center;
+  flex: 1;
+
+  &-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--mat-caption-text-color, #757575);
+    }
+  }
+
+  &-name {
+    margin: 0;
+    font-size: 18px;
+  }
+}
+
+.links-content {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.links-list {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.identity-card {
+  width: 100%;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--mat-sys-level2);
+  }
+}
+
+.identity-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+}
+
+.identity-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.identity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--mat-sys-corner-small);
+  background-color: var(--mat-sys-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon {
+    color: var(--mat-sys-on-primary-container);
+  }
+}
+
+.identity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.identity-platform {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.identity-username {
+  font-size: 16px;
+  color: var(--mat-sys-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  a {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.identity-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.verification-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &.status-verified mat-icon {
+    color: var(--mat-success-color);
+  }
+
+  &.status-verifying {
+    // spinner handles its own styling
+  }
+
+  &.status-failed mat-icon {
+    color: var(--mat-sys-error);
+  }
+
+  &.status-pending mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.retry-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.verification-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 16px;
+  width: 100%;
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.error-container,
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 2rem;
+  width: 100%;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 8px 0 0;
+  }
+}

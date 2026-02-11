@@ -1592,6 +1592,10 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`);
   }
 
+  openLinksPage(pubkeyOrNpub: string): void {
+    this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`);
+  }
+
   scrollToOptimalProfilePosition() {
     this.scrollToOptimalPosition(this.optimalProfilePosition);
   }
