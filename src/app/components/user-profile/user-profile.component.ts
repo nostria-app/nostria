@@ -106,8 +106,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   routePrefix = input<string>('/p');
 
-  // Trust rank - computed from trust input
-  trustRank = computed(() => this.trust()?.rank);
+  // Trust rank fetched from TrustService (used when no trust input is provided)
+  private fetchedTrustRank = signal<number | undefined>(undefined);
+
+  // Trust rank - prefer input from parent, fall back to self-fetched
+  trustRank = computed(() => this.trust()?.rank ?? this.fetchedTrustRank());
   trustEnabled = computed(() => this.trustService.isEnabled());
 
   // Flag to track if component is visible
@@ -212,6 +215,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
               this.debouncedLoadProfileData(pubkey);
             }
           }
+
+          // Load trust metrics if not provided via input (same path as hover card)
+          this.loadTrustMetrics(pubkey);
         });
       }
     });
@@ -288,11 +294,36 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Load trust rank for the user
+   * Load trust rank for the user from TrustService.
+   * Uses the same retrieval logic as the hover card and trust settings.
    */
+  private async loadTrustMetrics(pubkey: string): Promise<void> {
+    if (!this.trustService.isEnabled()) {
+      return;
+    }
 
+    // Skip if trust was already provided via input
+    if (this.trust()?.rank !== undefined) {
+      return;
+    }
 
+    try {
+      // First check synchronous cache for instant display
+      const cached = this.trustService.getCachedMetrics(pubkey);
+      if (cached?.rank !== undefined) {
+        this.fetchedTrustRank.set(cached.rank);
+        return;
+      }
 
+      // Fetch from TrustService (DB → relay pipeline, same as hover card)
+      const metrics = await this.trustService.fetchMetrics(pubkey);
+      if (metrics?.rank !== undefined) {
+        this.fetchedTrustRank.set(metrics.rank);
+      }
+    } catch {
+      // Silently fail - trust rank is optional
+    }
+  }
 
   private setupIntersectionObserver(): void {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
