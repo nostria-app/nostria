@@ -46,6 +46,8 @@ export class FollowSetsService {
   private loadingPromise: Promise<void> | null = null;
   private lastLoadedPubkey: string | null = null;
   private lastEffectPubkey: string | null = null;
+  // Track the pubkey we last loaded data for, to avoid clearing on re-initialization
+  private lastDataPubkey: string | null = null;
 
   // Function to sign events - must be set by NostrService to avoid circular dependency
   private signFunction?: (event: UnsignedEvent) => Promise<Event>;
@@ -80,9 +82,14 @@ export class FollowSetsService {
         this.loadingPromise = null;
         this.lastLoadedPubkey = null;
 
-        // Clear follow sets immediately to prevent showing old account's lists
-        // The new account's lists will be loaded below
-        this.followSets.set([]);
+        // Only clear follow sets when switching to a DIFFERENT account
+        // to prevent showing the old account's data.
+        // When re-initializing the same account (e.g., after relays connect),
+        // keep existing data to prevent flickering.
+        if (this.lastDataPubkey !== null && this.lastDataPubkey !== pubkey) {
+          this.followSets.set([]);
+        }
+        this.lastDataPubkey = pubkey;
 
         // FAST PATH: Load from database immediately, don't wait for initialized
         // This makes follow sets available faster for UI rendering
@@ -115,6 +122,7 @@ export class FollowSetsService {
       } else {
         this.followSets.set([]);
         this.hasInitiallyLoaded.set(false);
+        this.lastDataPubkey = null;
       }
     });
   }
@@ -147,12 +155,17 @@ export class FollowSetsService {
         const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
 
         if (deduplicatedDbSets.length > 0) {
-          // Set follow sets immediately with public data
-          this.followSets.set(deduplicatedDbSets);
-          this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from cache in ${Date.now() - startTime}ms`);
+          // Only update if data has actually changed to prevent UI flickering
+          const currentSets = this.followSets();
+          if (!this.followSetsEqual(currentSets, deduplicatedDbSets)) {
+            this.followSets.set(deduplicatedDbSets);
+            this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from cache in ${Date.now() - startTime}ms`);
 
-          // Start background decryption for private lists (don't await)
-          this.decryptPrivateListsInBackground(deduplicatedDbSets);
+            // Start background decryption for private lists (don't await)
+            this.decryptPrivateListsInBackground(deduplicatedDbSets);
+          } else {
+            this.logger.debug(`[FollowSets] Cache data unchanged in ${Date.now() - startTime}ms, skipping update`);
+          }
           return true;
         }
       }
@@ -212,12 +225,17 @@ export class FollowSetsService {
         // Only update from relay if we got results, or if we had no cached data
         // This prevents overwriting good cached data with empty relay response
         if (deduplicatedSets.length > 0 || !hadCachedData) {
-          // Set follow sets with relay data
-          this.followSets.set(deduplicatedSets);
-          this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays in ${Date.now() - startTime}ms`);
+          // Skip update if data hasn't actually changed to prevent UI flickering
+          const currentSets = this.followSets();
+          if (!this.followSetsEqual(currentSets, deduplicatedSets)) {
+            this.followSets.set(deduplicatedSets);
+            this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays in ${Date.now() - startTime}ms`);
 
-          // Start background decryption for private lists (don't await)
-          this.decryptPrivateListsInBackground(deduplicatedSets);
+            // Start background decryption for private lists (don't await)
+            this.decryptPrivateListsInBackground(deduplicatedSets);
+          } else {
+            this.logger.debug(`[FollowSets] Relay data unchanged in ${Date.now() - startTime}ms, skipping update`);
+          }
         } else {
           this.logger.debug(`[FollowSets] Relay returned empty results in ${Date.now() - startTime}ms, keeping cached data`);
         }
@@ -232,6 +250,26 @@ export class FollowSetsService {
     })();
 
     return this.loadingPromise;
+  }
+
+  /**
+   * Compare two FollowSet arrays to see if they have the same content.
+   * Returns true if the sets are equivalent (same dTags with same pubkeys).
+   */
+  private followSetsEqual(a: FollowSet[], b: FollowSet[]): boolean {
+    if (a.length !== b.length) return false;
+
+    for (const setA of a) {
+      const setB = b.find(s => s.dTag === setA.dTag);
+      if (!setB) return false;
+      if (setA.pubkeys.length !== setB.pubkeys.length) return false;
+      if (setA.createdAt !== setB.createdAt) return false;
+      for (let i = 0; i < setA.pubkeys.length; i++) {
+        if (setA.pubkeys[i] !== setB.pubkeys[i]) return false;
+      }
+    }
+
+    return true;
   }
 
   /**
