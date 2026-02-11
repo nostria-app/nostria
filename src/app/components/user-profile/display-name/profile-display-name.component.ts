@@ -43,6 +43,12 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   // Optional prefetched profile passed from parent to avoid duplicate fetches
   prefetchedProfile = input<unknown | null>(null);
   disableLink = input<boolean>(false);
+  /**
+   * If true, render a stable fallback label (truncated npub) while the profile is
+   * still loading/unresolved. This is useful for virtual-scroll / route-reuse cases
+   * where async profile hydration can lag behind the initial render.
+   */
+  showFallbackWhileLoading = input<boolean>(false);
   profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   isLoading = signal(false);
   error = signal<string>('');
@@ -55,32 +61,28 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
 
   /**
-   * Normalized hex pubkey - handles both hex and npub inputs
+   * Normalized identifier - strips optional `nostr:` prefix.
    */
-  private normalizedPubkey = computed<string>(() => {
-    const pubkey = this.pubkey();
-    if (!pubkey) {
+  private normalizedIdentifier = computed<string>(() => {
+    const value = (this.pubkey() ?? '').trim();
+    if (!value) {
       return '';
     }
 
-    // If it's already a valid hex pubkey, return it
-    if (this.utilities.isValidHexPubkey(pubkey)) {
-      return pubkey;
+    // Accept both `nostr:npub1...` and `nostr:nprofile1...` forms.
+    return value.toLowerCase().startsWith('nostr:') ? value.substring('nostr:'.length) : value;
+  });
+
+  /**
+   * Normalized hex pubkey - supports hex, npub, nprofile.
+   */
+  private normalizedPubkey = computed<string>(() => {
+    const identifier = this.normalizedIdentifier();
+    if (!identifier) {
+      return '';
     }
 
-    // If it's an npub, convert to hex
-    if (pubkey.startsWith('npub1')) {
-      try {
-        const hexPubkey = this.utilities.getPubkeyFromNpub(pubkey);
-        if (this.utilities.isValidHexPubkey(hexPubkey)) {
-          return hexPubkey;
-        }
-      } catch {
-        // Fall through to return empty
-      }
-    }
-
-    return '';
+    return this.utilities.safeGetHexPubkey(identifier) ?? '';
   });
 
   /**
@@ -241,13 +243,13 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
    * Truncated npub value (first 8 characters) for display when profile is not found
    */
   truncatedNpubValue = computed<string>(() => {
-    const npub = this.npubValue();
-    if (!npub || npub.length <= 8) {
-      return npub;
+    const identifier = this.normalizedIdentifier();
+    if (!identifier) {
+      return '';
     }
 
-    // Return first 8 characters for concise display
-    return npub.substring(0, 8);
+    // Utilities handles hex/npub/nprofile and provides a stable fallback for invalid identifiers.
+    return this.utilities.getTruncatedNpub(identifier);
   });
 
   /**

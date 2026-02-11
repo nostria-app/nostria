@@ -200,11 +200,11 @@
           [attr.role]="getEventId(notification) ? 'button' : null">
           <div class="notification-header">
             @if (getAuthorPubkey(notification)) {
-            <a class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
+            <span class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
               <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!"
-                [prefetchedProfile]="getPrefetchedProfile(notification)"
-                [disableLink]="true"></app-profile-display-name>
-            </a>
+                [prefetchedProfile]="getPrefetchedProfile(notification)" [disableLink]="true"
+                [showFallbackWhileLoading]="true"></app-profile-display-name>
+            </span>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
             @if (getCustomEmojiUrl(notification)) {
