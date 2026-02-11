@@ -236,7 +236,7 @@ export class FollowingService {
               // Load additional metadata in parallel
               const [infoRecord, trustMetrics, metricData] = await Promise.all([
                 this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
-                this.database.getInfo(pk, 'trust').catch(() => null),
+                this.database.getTrustMetrics(pk).catch(() => null),
                 this.metrics.getUserMetric(pk).catch(() => null),
               ]);
 
@@ -245,7 +245,7 @@ export class FollowingService {
                 event: cachedProfile?.event || null,
                 profile: cachedProfile || null,
                 info: infoRecord || null,
-                trust: trustMetrics as TrustMetrics | null,
+                trust: trustMetrics,
                 metric: metricData,
                 lastUpdated: now,
               });
@@ -389,7 +389,7 @@ export class FollowingService {
 
             const [infoRecord, trustMetrics, metricData] = await Promise.all([
               this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
-              this.database.getInfo(pk, 'trust').catch(() => null),
+              this.database.getTrustMetrics(pk).catch(() => null),
               this.metrics.getUserMetric(pk).catch(() => null),
             ]);
 
@@ -398,7 +398,7 @@ export class FollowingService {
               event: cachedProfile?.event || null,
               profile: cachedProfile || null,
               info: infoRecord || null,
-              trust: trustMetrics as TrustMetrics | null,
+              trust: trustMetrics,
               metric: metricData,
               lastUpdated: now,
             });
@@ -436,7 +436,7 @@ export class FollowingService {
     const [profileData, infoRecord, trustMetrics, metricData] = await Promise.all([
       this.userData.getProfile(pubkey, { skipRelay }).catch(() => null),
       this.database.getInfo(pubkey, 'user').catch(() => null) as Promise<InfoRecord | null>,
-      this.database.getInfo(pubkey, 'trust').catch(() => null),
+      this.database.getTrustMetrics(pubkey).catch(() => null),
       this.metrics.getUserMetric(pubkey).catch(() => null),
     ]);
 
@@ -445,7 +445,7 @@ export class FollowingService {
       event: profileData?.event || null,
       profile: profileData || null,
       info: infoRecord || null,
-      trust: trustMetrics as TrustMetrics | null,
+      trust: trustMetrics,
       metric: metricData,
       lastUpdated: now,
     };
@@ -831,7 +831,7 @@ export class FollowingService {
             // Load additional metadata in parallel
             const [infoRecord, trustMetrics, metricData] = await Promise.all([
               this.database.getInfo(pk, 'user').catch(() => null) as Promise<InfoRecord | null>,
-              this.database.getInfo(pk, 'trust').catch(() => null),
+              this.database.getTrustMetrics(pk).catch(() => null),
               this.metrics.getUserMetric(pk).catch(() => null),
             ]);
 
@@ -840,7 +840,7 @@ export class FollowingService {
               event: cachedProfile?.event || null,
               profile: cachedProfile || null,
               info: infoRecord || null,
-              trust: trustMetrics as TrustMetrics | null,
+              trust: trustMetrics,
               metric: metricData,
               lastUpdated: now,
             } as FollowingProfile;
