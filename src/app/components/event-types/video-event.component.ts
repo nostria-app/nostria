@@ -50,6 +50,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   mediaEventIndex = input<number | undefined>(undefined);
   // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
   trustedByPubkey = input<string | undefined>(undefined);
+  /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
+  inFeedsPanel = input<boolean>(false);
 
   // Video player element - use setter to update signal when ViewChild resolves
   private _videoPlayerRef?: ElementRef<HTMLVideoElement>;
@@ -103,7 +105,11 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   shouldAutoPlay = computed(() => {
     const autoPlayEnabled = this.settings.settings()?.autoPlayShortForm ?? true;
     const inViewport = this.isInViewport();
-    return this.isShortFormVideo() && autoPlayEnabled && inViewport;
+    const isInFeeds = this.inFeedsPanel();
+    // For videos in the Feeds panel, only auto-play when Feeds is visible
+    const feedsAutoPlayAllowed = this.videoPlayback.autoPlayAllowed();
+    const canAutoPlay = isInFeeds ? feedsAutoPlayAllowed : true;
+    return this.isShortFormVideo() && autoPlayEnabled && inViewport && canAutoPlay;
   });
 
   shouldRepeat = computed(() => {
