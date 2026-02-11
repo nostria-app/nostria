@@ -6,6 +6,13 @@ import { DatabaseService, TrustMetrics } from './database.service';
 import { TrustProviderService } from './trust-provider.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
+/** Pending relay fetch request waiting in the queue */
+interface QueuedFetchRequest {
+  pubkey: string;
+  resolve: (value: TrustMetrics | null) => void;
+  reject: (error: unknown) => void;
+}
+
 /**
  * Service for managing NIP-85 Web of Trust data
  * Fetches trusted assertions (kind 30382) from configured relay
@@ -32,6 +39,16 @@ export class TrustService {
 
   // Signal for tracking loaded pubkeys
   private loadedPubkeys = signal<Set<string>>(new Set());
+
+  // --- Aggregated relay fetch queue ---
+  /** Max pubkeys per single relay query */
+  private readonly QUEUE_BATCH_SIZE = 50;
+  /** Time window (ms) to collect requests before flushing */
+  private readonly QUEUE_FLUSH_DELAY = 100;
+  /** Pending requests waiting to be batched */
+  private fetchQueue: QueuedFetchRequest[] = [];
+  /** Timer handle for the debounced flush */
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Check if trust features are enabled
@@ -152,56 +169,130 @@ export class TrustService {
 
   /**
    * Fetch metrics from relay and save to database.
-   * Resolves relay URLs from kind 10040 providers, falling back to local setting.
+   * Enqueues the request into an aggregated batch queue so multiple pubkeys
+   * are fetched in a single relay subscription, avoiding "too many concurrent REQs".
    */
-  private async fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
+  private fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
+    return new Promise<TrustMetrics | null>((resolve, reject) => {
+      this.fetchQueue.push({ pubkey, resolve, reject });
+      this.scheduleFlush();
+    });
+  }
+
+  /**
+   * Schedule a queue flush after a short debounce window.
+   * If the queue reaches QUEUE_BATCH_SIZE it flushes immediately.
+   */
+  private scheduleFlush(): void {
+    // Flush immediately when the batch is full
+    if (this.fetchQueue.length >= this.QUEUE_BATCH_SIZE) {
+      if (this.flushTimer) {
+        clearTimeout(this.flushTimer);
+        this.flushTimer = null;
+      }
+      this.flushQueue();
+      return;
+    }
+
+    // Otherwise wait for more requests to accumulate
+    if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => {
+        this.flushTimer = null;
+        this.flushQueue();
+      }, this.QUEUE_FLUSH_DELAY);
+    }
+  }
+
+  /**
+   * Drain the queue and process pubkeys in batches of QUEUE_BATCH_SIZE.
+   * Each batch becomes a single relay query with multiple '#d' values.
+   */
+  private flushQueue(): void {
+    if (this.fetchQueue.length === 0) return;
+
+    // Take all pending items
+    const items = this.fetchQueue.splice(0);
+
+    // Split into batches
+    for (let i = 0; i < items.length; i += this.QUEUE_BATCH_SIZE) {
+      const batch = items.slice(i, i + this.QUEUE_BATCH_SIZE);
+      this.processBatchFromRelay(batch);
+    }
+  }
+
+  /**
+   * Execute a single aggregated relay query for a batch of pubkeys.
+   * Resolves/rejects each individual request promise with its result.
+   */
+  private async processBatchFromRelay(batch: QueuedFetchRequest[]): Promise<void> {
+    const pubkeys = batch.map(r => r.pubkey);
+
     try {
       const { relayUrls, authors } = this.resolveProviderConfig();
-      this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relayUrls.join(', ')}`, {
-        authors: authors.length > 0 ? authors : 'any',
-      });
+      this.logger.debug(
+        `Fetching trust metrics for ${pubkeys.length} pubkeys from ${relayUrls.join(', ')}`,
+        { authors: authors.length > 0 ? authors : 'any' }
+      );
 
-      // Create filter for kind 30382 events with d tag matching pubkey
-      // When providers are configured, filter by their pubkeys (authors)
-      // to only get assertions from trusted providers
       const filter: Filter = {
         kinds: [30382],
-        '#d': [pubkey],
-        limit: 1,
+        '#d': pubkeys,
       };
 
       if (authors.length > 0) {
         filter.authors = authors;
       }
 
-      // Fetch events from all configured trust relays
-      const events = await this.relayPool.query(relayUrls, filter);
+      const events = await this.relayPool.query(relayUrls, filter, 10_000);
 
-      if (events.length === 0) {
-        // Cache this as 'not found' to avoid repeated queries
-        this.notFoundCache.add(pubkey);
-        return null;
+      // Index events by their 'd' tag (the target pubkey)
+      const eventByPubkey = new Map<string, NostrEvent>();
+      for (const event of events) {
+        const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+        if (dTag) {
+          // Keep the most recent event per pubkey
+          const existing = eventByPubkey.get(dTag);
+          if (!existing || event.created_at > existing.created_at) {
+            eventByPubkey.set(dTag, event);
+          }
+        }
       }
 
-      // Parse the most recent event
-      const event = events[0];
-      const metrics = this.parseMetrics(event);
+      // Resolve each queued request
+      for (const req of batch) {
+        try {
+          const event = eventByPubkey.get(req.pubkey);
+          if (!event) {
+            this.notFoundCache.add(req.pubkey);
+            req.resolve(null);
+            continue;
+          }
 
-      // Save to database
-      await this.database.saveTrustMetrics(pubkey, metrics);
+          const metrics = this.parseMetrics(event);
 
-      // Cache in memory
-      this.metricsCache.set(pubkey, metrics);
-      this.loadedPubkeys.update(set => new Set(set).add(pubkey));
+          // Save to database
+          await this.database.saveTrustMetrics(req.pubkey, metrics);
 
-      // Notify FollowingService to update its cache (lazy inject to avoid circular dependency)
-      this.notifyFollowingService(pubkey, metrics);
+          // Cache in memory
+          this.metricsCache.set(req.pubkey, metrics);
+          this.loadedPubkeys.update(set => new Set(set).add(req.pubkey));
 
-      this.logger.debug(`Trust metrics loaded from relay for ${pubkey}:`, metrics);
-      return metrics;
+          // Notify FollowingService
+          this.notifyFollowingService(req.pubkey, metrics);
+
+          this.logger.debug(`Trust metrics loaded (batch) for ${req.pubkey}:`, metrics);
+          req.resolve(metrics);
+        } catch (err) {
+          this.logger.error(`Failed to process trust metrics for ${req.pubkey}`, err);
+          req.resolve(null);
+        }
+      }
     } catch (error) {
-      this.logger.error(`Failed to fetch trust metrics from relay for ${pubkey}`, error);
-      return null;
+      this.logger.error(`Batch trust metrics relay query failed`, error);
+      // Reject all requests in this batch
+      for (const req of batch) {
+        req.resolve(null);
+      }
     }
   }
 
@@ -219,17 +310,60 @@ export class TrustService {
 
   /**
    * Batch fetch trust metrics for multiple pubkeys
-   * More efficient than calling fetchMetrics multiple times
+   * Uses the aggregated queue so all pubkeys are fetched in minimal relay queries.
    * @param forceRefresh If true, bypasses all caches and fetches directly from the relay
    */
   async fetchMetricsBatch(pubkeys: string[], forceRefresh = false): Promise<Map<string, TrustMetrics | null>> {
     const results = new Map<string, TrustMetrics | null>();
 
-    // Fetch all metrics in parallel
-    await Promise.all(
-      pubkeys.map(async (pubkey) => {
+    if (forceRefresh) {
+      // Clear caches for all requested pubkeys
+      for (const pubkey of pubkeys) {
+        this.metricsCache.delete(pubkey);
+        this.notFoundCache.delete(pubkey);
+      }
+    }
+
+    // Separate cached from uncached
+    const toFetch: string[] = [];
+    for (const pubkey of pubkeys) {
+      if (!forceRefresh && this.metricsCache.has(pubkey)) {
+        results.set(pubkey, this.metricsCache.get(pubkey)!);
+      } else if (!forceRefresh && this.notFoundCache.has(pubkey)) {
+        results.set(pubkey, null);
+      } else {
+        toFetch.push(pubkey);
+      }
+    }
+
+    if (toFetch.length === 0) return results;
+
+    // Check database for uncached pubkeys first
+    const stillNeedRelay: string[] = [];
+    if (!forceRefresh) {
+      for (const pubkey of toFetch) {
         try {
-          const metrics = await this.fetchMetrics(pubkey, forceRefresh);
+          const cached = await this.database.getTrustMetrics(pubkey);
+          if (cached) {
+            this.metricsCache.set(pubkey, cached);
+            this.loadedPubkeys.update(set => new Set(set).add(pubkey));
+            results.set(pubkey, cached);
+            continue;
+          }
+        } catch { /* fall through to relay */ }
+        stillNeedRelay.push(pubkey);
+      }
+    } else {
+      stillNeedRelay.push(...toFetch);
+    }
+
+    if (stillNeedRelay.length === 0) return results;
+
+    // Enqueue all remaining pubkeys — the queue aggregates them into batched relay queries
+    await Promise.all(
+      stillNeedRelay.map(async (pubkey) => {
+        try {
+          const metrics = await this.fetchMetricsFromRelay(pubkey);
           results.set(pubkey, metrics);
         } catch (error) {
           this.logger.error(`Failed to fetch metrics for ${pubkey}`, error);

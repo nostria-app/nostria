@@ -220,22 +220,14 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       this.refreshAborted = true;
     });
 
-    // Process in small concurrent batches for efficiency
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
+    // Process in sequential chunks to show progress without overwhelming the relay.
+    // Each chunk uses fetchMetricsBatch which internally aggregates into batched relay queries.
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < pubkeys.length; i += CHUNK_SIZE) {
       if (this.refreshAborted) break;
-      const batch = pubkeys.slice(i, i + BATCH_SIZE);
-      await Promise.all(
-        batch.map(async (pubkey) => {
-          try {
-            await this.trustService.fetchMetrics(pubkey, true);
-          } catch {
-            // Continue on individual failures
-          } finally {
-            this.refreshCompleted.update(n => n + 1);
-          }
-        })
-      );
+      const chunk = pubkeys.slice(i, i + CHUNK_SIZE);
+      await this.trustService.fetchMetricsBatch(chunk, true);
+      this.refreshCompleted.update(n => n + chunk.length);
     }
 
     this.refreshStatus.set('done');
