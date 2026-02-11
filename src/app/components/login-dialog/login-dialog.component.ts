@@ -19,6 +19,7 @@ import { MnemonicService } from '../../services/mnemonic.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { StandaloneTermsDialogComponent } from '../standalone-terms-dialog/standalone-terms-dialog.component';
 import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { Region, RegionService } from '../../services/region.service';
 import { DiscoveryRelayService, ServerInfo } from '../../services/discovery-relay.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -61,6 +62,7 @@ enum LoginStep {
 export class LoginDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
@@ -433,13 +435,19 @@ export class LoginDialogComponent implements OnDestroy {
    * Show the setup new account dialog and handle the user's response
    */
   private async showSetupNewAccountDialog(user: NostrUser): Promise<void> {
-    const setupDialogRef = this.dialog.open(SetupNewAccountDialogComponent, {
+    const setupDialogRef = this.customDialog.open<SetupNewAccountDialogComponent, { confirmed: boolean; region: string | null }>(SetupNewAccountDialogComponent, {
+      title: 'Setup New Account',
       width: '600px',
       maxWidth: '90vw',
-      disableClose: true, // User must make a choice
+      disableClose: true,
     });
 
-    const result = await setupDialogRef.afterClosed().toPromise();
+    const result = await new Promise<{ confirmed: boolean; region: string | null } | undefined>(resolve => {
+      const sub = setupDialogRef.afterClosed$.subscribe(closeResult => {
+        resolve(closeResult.result ?? undefined);
+        sub.unsubscribe();
+      });
+    });
 
     if (result && result.confirmed) {
       this.logger.info('User confirmed new account setup', {

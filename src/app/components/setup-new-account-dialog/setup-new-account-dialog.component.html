@@ -1,97 +1,85 @@
-<div class="dialog-container">
-  <div class="dialog-header">
-    <mat-icon class="header-icon">info</mat-icon>
-    <h2 mat-dialog-title>Setup New Account</h2>
+<div dialog-content>
+  <p class="primary-message">
+    We couldn't find any relay configuration for this key on the Discovery Relays.
+  </p>
+
+  <p class="explanation">This could mean:</p>
+
+  <ul class="reason-list">
+    <li>This is a brand new key that hasn't been used before</li>
+    <li>The key hasn't published any relay information yet</li>
+  </ul>
+
+  <div class="info-box">
+    <mat-icon class="info-icon">settings</mat-icon>
+    <div class="info-text">
+      <p class="info-title">We can help you get started!</p>
+      <p class="info-description">
+        If you proceed, Nostria will automatically configure:
+      </p>
+      <ul class="setup-list">
+        <li>Account relay</li>
+        <li>Discovery relay</li>
+        <li>Media server</li>
+        <li>Direct messages relay</li>
+      </ul>
+    </div>
   </div>
 
-  <mat-dialog-content>
-    <div class="content-wrapper">
-      <p class="primary-message">
-        We couldn't find any relay configuration for this key on the Discovery Relays.
-      </p>
+  <!-- Region Selection -->
+  <div class="region-section">
+    <h3 class="section-title">Server Region</h3>
 
-      <p class="explanation">
-        This could mean:
-      </p>
-
-      <ul class="reason-list">
-        <li>This is a brand new key that hasn't been used before</li>
-        <li>The key hasn't published any relay information yet</li>
-      </ul>
-
-      <div class="info-box">
-        <mat-icon class="info-icon">settings</mat-icon>
-        <div class="info-text">
-          <p class="info-title">We can help you get started!</p>
-          <p class="info-description">
-            If you proceed, Nostria will automatically configure:
-          </p>
-          <ul class="setup-list">
-            <li>Account relay</li>
-            <li>Discovery relay</li>
-            <li>Media server</li>
-            <li>Direct messages relay</li>
-          </ul>
+    @if (isDetectingRegion()) {
+    <div class="detecting-region">
+      <mat-spinner diameter="24"></mat-spinner>
+      <span>Detecting best region based on latency...</span>
+    </div>
+    } @else {
+    <div class="region-selection">
+      <div class="detected-region" tabindex="0" role="button" (click)="toggleRegionSelector()"
+        (keyup.enter)="toggleRegionSelector()" (keyup.space)="toggleRegionSelector()">
+        <div class="region-info">
+          <mat-icon class="location-icon">location_on</mat-icon>
+          <span class="region-name">{{ detectedRegion() }}</span>
+          <span class="recommended-badge">Recommended</span>
         </div>
+        <mat-icon class="expand-icon">
+          {{ showRegionSelector() ? 'expand_less' : 'expand_more' }}
+        </mat-icon>
       </div>
 
-      <!-- Region Selection -->
-      <div class="region-section">
-        <h3 class="section-title">Server Region</h3>
-
-        @if (isDetectingRegion()) {
-        <div class="detecting-region">
-          <mat-spinner diameter="24"></mat-spinner>
-          <span>Detecting best region based on latency...</span>
-        </div>
-        } @else {
-        <div class="region-selection">
-          <div class="detected-region" tabindex="0" role="button" (click)="toggleRegionSelector()"
-            (keyup.enter)="toggleRegionSelector()" (keyup.space)="toggleRegionSelector()">
-            <div class="region-info">
-              <mat-icon class="location-icon">location_on</mat-icon>
-              <span class="region-name">{{ detectedRegion() }}</span>
-              <span class="recommended-badge">Recommended</span>
-            </div>
-            <mat-icon class="expand-icon">
-              {{ showRegionSelector() ? 'expand_less' : 'expand_more' }}
-            </mat-icon>
+      @if (showRegionSelector()) {
+      <div class="region-list">
+        @for (region of availableRegions(); track region.id) {
+        <div class="region-item" tabindex="0" role="button" [class.selected]="selectedRegionId() === region.id"
+          (click)="selectRegion(region)" (keyup.enter)="selectRegion(region)" (keyup.space)="selectRegion(region)">
+          <div class="region-item-info">
+            <span class="region-item-name">{{ region.name }}</span>
+            <span class="region-item-latency">{{ region.latency }}</span>
           </div>
-
-          @if (showRegionSelector()) {
-          <div class="region-list">
-            @for (region of availableRegions(); track region.id) {
-            <div class="region-item" tabindex="0" role="button" [class.selected]="selectedRegionId() === region.id"
-              (click)="selectRegion(region)" (keyup.enter)="selectRegion(region)" (keyup.space)="selectRegion(region)">
-              <div class="region-item-info">
-                <span class="region-item-name">{{ region.name }}</span>
-                <span class="region-item-latency">{{ region.latency }}</span>
-              </div>
-              @if (selectedRegionId() === region.id) {
-              <mat-icon class="check-icon">check_circle</mat-icon>
-              }
-            </div>
-            }
-          </div>
+          @if (selectedRegionId() === region.id) {
+          <mat-icon class="check-icon">check_circle</mat-icon>
           }
         </div>
         }
       </div>
-
-      <p class="question">
-        Would you like Nostria to set up this account with the selected region?
-      </p>
+      }
     </div>
-  </mat-dialog-content>
+    }
+  </div>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="cancel()">
-      <mat-icon>close</mat-icon>
-      Cancel
-    </button>
-    <button mat-raised-button color="primary" (click)="confirm()" [disabled]="isDetectingRegion()">
-      <mat-icon>check</mat-icon>
-      Yes, Set Up Account
-    </button>
-  </mat-dialog-actions>
+  <p class="question">
+    Would you like Nostria to set up this account with the selected region?
+  </p>
+</div>
+
+<div dialog-actions>
+  <button mat-button (click)="cancel()">
+    Cancel
+  </button>
+  <button mat-flat-button (click)="confirm()" [disabled]="isDetectingRegion()">
+    <mat-icon>check</mat-icon>
+    Set Up Account
+  </button>
 </div>
