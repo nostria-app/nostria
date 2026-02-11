@@ -101,10 +101,18 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   });
 
   /** Resolve a provider pubkey to a known provider name, if applicable */
-  getProviderName(pubkey: string): string {
+  getProviderName(pubkey: string, relayUrl?: string): string {
+    // Match by relay URL first (more reliable since pubkeys vary per algorithm)
+    if (relayUrl) {
+      const knownByRelay = KNOWN_PROVIDERS.find(p => p.relayUrl === relayUrl);
+      if (knownByRelay) return knownByRelay.name;
+    }
     const known = KNOWN_PROVIDERS.find(p => p.pubkey === pubkey);
     return known?.name ?? pubkey.substring(0, 12) + '…';
   }
+
+  /** Whether Brainstorm is already configured with rank scoring */
+  readonly hasBrainstormRank = computed(() => this.trustProviderService.hasBrainstormRank());
 
   // Available fallback trust relays (used when no kind 10040 is configured)
   trustRelays: TrustRelay[] = [
@@ -123,11 +131,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!this.rightPanel.hasContent()) {
       this.panelActions.setPageTitle($localize`:@@settings.trust.title:Trust`);
-    }
-
-    // Load provider list if not already loaded
-    if (!this.trustProviderService.loaded()) {
-      this.trustProviderService.loadProviders();
     }
   }
 

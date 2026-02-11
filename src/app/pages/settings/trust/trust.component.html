@@ -20,7 +20,24 @@
   @if (localSettings.trustEnabled()) {
   <!-- Brainstorm Activation -->
   <section class="section">
-    <h2 i18n="@@settings.trust.brainstorm.title">Activate Personalized Scoring</h2>
+    <h2 i18n="@@settings.trust.brainstorm.title">Brainstorm Personalized Scoring</h2>
+    @if (trustProviderService.hasEvent() || trustProviderService.hasProviders()) {
+    <div class="activation-card activated">
+      <div class="activation-content">
+        <mat-icon class="activation-icon activated-icon">check_circle</mat-icon>
+        <div>
+          <p i18n="@@settings.trust.brainstorm.activated">
+            Your account is configured to use Brainstorm for personalized Web of Trust rankings.
+            GrapeRank scores are being used to reflect your unique position in the network.
+          </p>
+          <button mat-button (click)="openBrainstorm()">
+            <mat-icon>open_in_new</mat-icon>
+            <span i18n="@@settings.trust.brainstorm.manage">Manage on Brainstorm</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    } @else {
     <div class="activation-card">
       <div class="activation-content">
         <mat-icon class="activation-icon">psychology</mat-icon>
@@ -37,6 +54,7 @@
         </div>
       </div>
     </div>
+    }
   </section>
 
   <!-- Trusted Service Providers (NIP-85 Kind 10040) -->
@@ -102,7 +120,7 @@
       <div class="configured-provider-item">
         <mat-icon class="provider-type-icon">public</mat-icon>
         <div class="provider-details">
-          <span class="provider-label">{{ getProviderName(provider.pubkey) }}</span>
+          <span class="provider-label">{{ getProviderName(provider.pubkey, provider.relayUrl) }}</span>
           <span class="provider-relay-url">{{ provider.relayUrl }}</span>
           <div class="provider-metrics">
             @for (metric of provider.metrics; track metric) {
@@ -120,7 +138,7 @@
       <div class="configured-provider-item private">
         <mat-icon class="provider-type-icon">lock</mat-icon>
         <div class="provider-details">
-          <span class="provider-label">{{ getProviderName(provider.pubkey) }}</span>
+          <span class="provider-label">{{ getProviderName(provider.pubkey, provider.relayUrl) }}</span>
           <span class="provider-relay-url">{{ provider.relayUrl }}</span>
           <div class="provider-metrics">
             @for (metric of provider.metrics; track metric) {
