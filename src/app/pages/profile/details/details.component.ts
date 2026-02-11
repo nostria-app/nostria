@@ -22,12 +22,13 @@ import { LoggerService } from '../../../services/logger.service';
 import { ApplicationService } from '../../../services/application.service';
 import { DatabaseService } from '../../../services/database.service';
 import type { TrustMetrics } from '../../../services/database.service';
-import { TrustService } from '../../../services/trust.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { Metrics } from '../../../services/metrics';
 import { UserMetric } from '../../../interfaces/metrics';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { nip19, kinds } from 'nostr-tools';
 
 interface ProfileListItem {
@@ -77,6 +78,8 @@ interface TrustDisplayItem {
     MatProgressSpinnerModule,
     MatTabsModule,
     ScrollingModule,
+    AgoPipe,
+    TimestampPipe,
   ],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
@@ -109,7 +112,6 @@ export class DetailsComponent implements OnInit {
   app = inject(ApplicationService);
   database = inject(DatabaseService);
   private metricsService = inject(Metrics);
-  private trustService = inject(TrustService);
   private utilities = inject(UtilitiesService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
@@ -160,6 +162,7 @@ export class DetailsComponent implements OnInit {
   info = signal<DiscoveryInfo | null>(null);
   metrics = signal<UserMetric | null>(null);
   trustMetrics = signal<TrustMetrics | null>(null);
+  profileUpdatedAt = signal<number | null>(null);
 
   trustDisplayItems = computed((): TrustDisplayItem[] => {
     const metrics = this.trustMetrics();
@@ -207,9 +210,9 @@ export class DetailsComponent implements OnInit {
       return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
     };
 
-    const entries = (Object.entries(metrics) as [keyof TrustMetrics, number | undefined][]).filter(
-      ([, v]) => v !== undefined
-    );
+    const entries = (Object.entries(metrics) as [keyof TrustMetrics, unknown][])
+      .filter(([, v]) => typeof v === 'number')
+      .map(([k, v]) => [k, v as number] as const);
 
     const sortOrder: (keyof TrustMetrics)[] = [
       'rank',
@@ -229,13 +232,38 @@ export class DetailsComponent implements OnInit {
 
     entries.sort(([a], [b]) => (orderIndex.get(a) ?? 999) - (orderIndex.get(b) ?? 999));
 
-    return entries.map(([key, value]) => {
-      const label = labelMap[key] ?? key;
-      const icon = iconMap[key] ?? 'insights';
-      const highlight = key === 'rank';
-      const displayValue = value === undefined ? '' : formatNumber(value);
-      return { key, label, icon, value: displayValue, highlight };
-    });
+    const result: TrustDisplayItem[] = [];
+
+    result.push(
+      ...entries.map(([key, value]) => {
+        const label = labelMap[key] ?? key;
+        const icon = iconMap[key] ?? 'insights';
+        const highlight = key === 'rank';
+        const displayValue = value === undefined ? '' : formatNumber(value);
+        return { key: String(key), label, icon, value: displayValue, highlight };
+      })
+    );
+
+    if (metrics.authorPubkey) {
+      let providerValue = metrics.authorPubkey;
+      try {
+        providerValue = providerValue.startsWith('npub')
+          ? providerValue
+          : this.utilities.getNpubFromPubkey(providerValue);
+      } catch {
+        // Keep raw value if conversion fails
+      }
+
+      result.push({
+        key: 'authorPubkey',
+        label: 'Provider',
+        icon: 'person',
+        value: providerValue,
+        highlight: false,
+      });
+    }
+
+    return result;
   });
 
   infoAsJson = computed(() => {
@@ -271,8 +299,55 @@ export class DetailsComponent implements OnInit {
         return;
       }
 
-      const trust = await this.trustService.fetchMetrics(pubkey);
+      const trust = await this.database.getTrustMetrics(pubkey);
+      if (!trust) {
+        this.trustMetrics.set(null);
+        return;
+      }
+
+      // If older cached records are missing the provider pubkey, try to infer it
+      // from locally stored kind 30382 events (no relay fetch).
+      if (!trust.authorPubkey) {
+        try {
+          const events = await this.database.getEventsByKind(30382);
+          const matching = events
+            .filter(e => e.tags?.some(tag => tag[0] === 'd' && tag[1] === pubkey))
+            .sort((a, b) => b.created_at - a.created_at);
+
+          const providerPubkey = matching[0]?.pubkey;
+          if (providerPubkey) {
+            const enriched: TrustMetrics = { ...trust, authorPubkey: providerPubkey };
+            this.trustMetrics.set(enriched);
+
+            const existingRecord = await this.database.getInfo(pubkey, 'trust');
+            if (existingRecord) {
+              const data = { ...existingRecord };
+              delete data['compositeKey'];
+              delete data['key'];
+              delete data['type'];
+              delete data['updated'];
+              await this.database.saveInfo(pubkey, 'trust', { ...data, authorPubkey: providerPubkey });
+            }
+
+            return;
+          }
+        } catch (e) {
+          this.logger.debug('Unable to infer trust provider pubkey from local events', e);
+        }
+      }
+
       this.trustMetrics.set(trust);
+    });
+
+    effect(async () => {
+      const pubkey = this.pubkeyHex();
+      if (!pubkey) {
+        this.profileUpdatedAt.set(null);
+        return;
+      }
+
+      const metadataEvent = await this.database.getEventByPubkeyAndKind(pubkey, 0);
+      this.profileUpdatedAt.set(metadataEvent?.created_at ?? null);
     });
   }
 

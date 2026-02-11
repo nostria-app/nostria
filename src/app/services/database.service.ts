@@ -235,6 +235,7 @@ export interface CachedFeedEvent {
  * Interface for trust metrics data
  */
 export interface TrustMetrics {
+  authorPubkey?: string;
   rank?: number;
   followers?: number;
   postCount?: number;
@@ -1350,6 +1351,7 @@ export class DatabaseService {
       }
 
       const metrics: TrustMetrics = {
+        authorPubkey: record['authorPubkey'] as string | undefined,
         rank: record['rank'] as number | undefined,
         followers: record['followers'] as number | undefined,
         postCount: record['postCount'] as number | undefined,

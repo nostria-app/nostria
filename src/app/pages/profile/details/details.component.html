@@ -13,17 +13,136 @@
         <mat-icon>account_circle</mat-icon>
         }
       </div>
-      <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
+      <div class="profile-mini-text">
+        <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
+        @if (profileUpdatedAt(); as updatedAt) {
+        <div class="profile-mini-updated">
+          <mat-icon>schedule</mat-icon>
+          <span>
+            Profile updated {{ updatedAt | ago }} · {{ updatedAt | timestamp: 'medium' }}
+          </span>
+        </div>
+        }
+      </div>
       } @else {
       <div class="profile-mini-avatar">
         <mat-icon>account_circle</mat-icon>
       </div>
-      <h1 class="profile-mini-name">User Details</h1>
+      <div class="profile-mini-text">
+        <h1 class="profile-mini-name">Profile Details</h1>
+        @if (profileUpdatedAt(); as updatedAt) {
+        <div class="profile-mini-updated">
+          <mat-icon>schedule</mat-icon>
+          <span>
+            Profile updated {{ updatedAt | ago }} · {{ updatedAt | timestamp: 'medium' }}
+          </span>
+        </div>
+        }
+      </div>
       }
     </div>
   </div>
 
   <div class="info-container">
+    @if (metrics()) {
+    <div class="metrics-section">
+      <h3>Algorithm Metrics</h3>
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <mat-icon>visibility</mat-icon>
+          <span class="metric-label">Views:</span>
+          <span class="metric-value">{{ metrics()!.viewed }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>touch_app</mat-icon>
+          <span class="metric-label">Profile Clicks:</span>
+          <span class="metric-value">{{ metrics()!.profileClicks }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>favorite</mat-icon>
+          <span class="metric-label">Liked:</span>
+          <span class="metric-value">{{ metrics()!.liked }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>article</mat-icon>
+          <span class="metric-label">Read:</span>
+          <span class="metric-value">{{ metrics()!.read }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>reply</mat-icon>
+          <span class="metric-label">Replied:</span>
+          <span class="metric-value">{{ metrics()!.replied }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>repeat</mat-icon>
+          <span class="metric-label">Reposted:</span>
+          <span class="metric-value">{{ metrics()!.reposted }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>format_quote</mat-icon>
+          <span class="metric-label">Quoted:</span>
+          <span class="metric-value">{{ metrics()!.quoted }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>message</mat-icon>
+          <span class="metric-label">Messaged:</span>
+          <span class="metric-value">{{ metrics()!.messaged }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>alternate_email</mat-icon>
+          <span class="metric-label">Mentioned:</span>
+          <span class="metric-value">{{ metrics()!.mentioned }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>schedule</mat-icon>
+          <span class="metric-label">Time Spent:</span>
+          <span class="metric-value">{{ metrics()!.timeSpent }}s</span>
+        </div>
+
+        <div class="metric-item highlight">
+          <mat-icon>insights</mat-icon>
+          <span class="metric-label">Engagement Score:</span>
+          <span class="metric-value">{{ metrics()!.engagementScore }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>access_time</mat-icon>
+          <span class="metric-label">Avg Time Per View:</span>
+          <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (trustDisplayItems().length > 0) {
+    <div class="metrics-section">
+      <h3>Web of Trust</h3>
+      <div class="metrics-grid">
+        @for (item of trustDisplayItems(); track item.key) {
+        <div class="metric-item" [class.highlight]="item.highlight" [class.long-value]="item.key === 'authorPubkey'">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span class="metric-label">{{ item.label }}:</span>
+          <span class="metric-value">{{ item.value }}</span>
+        </div>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon>verified_user</mat-icon>
+      <p>No Web of Trust metrics available for this profile</p>
+    </div>
+    }
+
     @if (info(); as infoData) {
     <div class="info-section">
       <h3>Profile Discovery Information</h3>
@@ -37,7 +156,7 @@
         } @else {
         <div class="info-item negative">
           <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">No Relay List</span>
+          <span class="info-label">Relay list status unknown (cached info may be outdated)</span>
         </div>
         }
 
@@ -130,115 +249,11 @@
         </button>
         }
       </div>
-
-      <details class="raw-info">
-        <summary>Raw Info Data (JSON)</summary>
-        <pre>{{ infoAsJson() }}</pre>
-      </details>
     </div>
     } @else {
     <div class="empty-state">
       <mat-icon>info_outline</mat-icon>
       <p>No discovery information available for this profile</p>
-    </div>
-    }
-
-    @if (metrics()) {
-    <div class="metrics-section">
-      <h3>Algorithm Metrics</h3>
-      <div class="metrics-grid">
-        <div class="metric-item">
-          <mat-icon>visibility</mat-icon>
-          <span class="metric-label">Views:</span>
-          <span class="metric-value">{{ metrics()!.viewed }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>touch_app</mat-icon>
-          <span class="metric-label">Profile Clicks:</span>
-          <span class="metric-value">{{ metrics()!.profileClicks }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>favorite</mat-icon>
-          <span class="metric-label">Liked:</span>
-          <span class="metric-value">{{ metrics()!.liked }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>article</mat-icon>
-          <span class="metric-label">Read:</span>
-          <span class="metric-value">{{ metrics()!.read }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>reply</mat-icon>
-          <span class="metric-label">Replied:</span>
-          <span class="metric-value">{{ metrics()!.replied }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>repeat</mat-icon>
-          <span class="metric-label">Reposted:</span>
-          <span class="metric-value">{{ metrics()!.reposted }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>format_quote</mat-icon>
-          <span class="metric-label">Quoted:</span>
-          <span class="metric-value">{{ metrics()!.quoted }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>message</mat-icon>
-          <span class="metric-label">Messaged:</span>
-          <span class="metric-value">{{ metrics()!.messaged }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>alternate_email</mat-icon>
-          <span class="metric-label">Mentioned:</span>
-          <span class="metric-value">{{ metrics()!.mentioned }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>schedule</mat-icon>
-          <span class="metric-label">Time Spent:</span>
-          <span class="metric-value">{{ metrics()!.timeSpent }}s</span>
-        </div>
-
-        <div class="metric-item highlight">
-          <mat-icon>insights</mat-icon>
-          <span class="metric-label">Engagement Score:</span>
-          <span class="metric-value">{{ metrics()!.engagementScore }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>access_time</mat-icon>
-          <span class="metric-label">Avg Time Per View:</span>
-          <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
-        </div>
-      </div>
-    </div>
-    }
-
-    @if (trustDisplayItems().length > 0) {
-    <div class="metrics-section">
-      <h3>Web of Trust</h3>
-      <div class="metrics-grid">
-        @for (item of trustDisplayItems(); track item.key) {
-        <div class="metric-item" [class.highlight]="item.highlight">
-          <mat-icon>{{ item.icon }}</mat-icon>
-          <span class="metric-label">{{ item.label }}:</span>
-          <span class="metric-value">{{ item.value }}</span>
-        </div>
-        }
-      </div>
-    </div>
-    } @else {
-    <div class="empty-state">
-      <mat-icon>verified_user</mat-icon>
-      <p>No Web of Trust metrics available for this profile</p>
     </div>
     }
 

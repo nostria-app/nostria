@@ -273,7 +273,9 @@ export class TrustService {
    * Parse NIP-85 event tags into metrics object
    */
   private parseMetrics(event: NostrEvent): TrustMetrics {
-    const metrics: TrustMetrics = {};
+    const metrics: TrustMetrics = {
+      authorPubkey: event.pubkey,
+    };
 
     for (const tag of event.tags) {
       const [tagName, value] = tag;
