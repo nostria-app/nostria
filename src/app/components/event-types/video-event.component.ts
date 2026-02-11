@@ -178,8 +178,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         entries => {
           entries.forEach(entry => {
             // Consider video in viewport if at least 50% is visible
-            const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
-            this.isInViewport.set(isVisible);
+            // AND the element is actually visible (not hidden via CSS visibility).
+            // This is needed because IntersectionObserver reports intersection even
+            // when parent has visibility:hidden (e.g., feeds panel hidden behind other pages).
+            const isGeometricallyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
+            const isCssVisible = !this.isHiddenByVisibility(entry.target);
+            this.isInViewport.set(isGeometricallyVisible && isCssVisible);
           });
         },
         {
@@ -801,5 +805,22 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
     // Return the MIME type or default to mp4
     return mimeTypeMap[extension || ''] || 'video/mp4';
+  }
+
+  /**
+   * Check if an element or any of its ancestors has visibility:hidden.
+   * IntersectionObserver reports intersection even for visibility:hidden elements,
+   * so we need this extra check to prevent auto-play in hidden panels (e.g., feeds behind other pages).
+   */
+  private isHiddenByVisibility(element: Element): boolean {
+    let current: Element | null = element;
+    while (current) {
+      const style = getComputedStyle(current);
+      if (style.visibility === 'hidden') {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
   }
 }
