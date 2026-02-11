@@ -79,9 +79,8 @@
               }
             </div>
 
-            <!-- Retry verification button (shown only when failed or pending) -->
-            @if (identity.proof && (identity.verificationStatus === 'failed' || identity.verificationStatus ===
-            'pending')) {
+            <!-- Retry verification button (shown only for verifiable platforms that failed) -->
+            @if (identity.proof && identity.verificationStatus === 'failed') {
             <button mat-icon-button (click)="verifyIdentity(i)" matTooltip="Retry verification" class="retry-button">
               <mat-icon>refresh</mat-icon>
             </button>
