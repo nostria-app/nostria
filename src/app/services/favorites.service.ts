@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, effect, untracked } from '@angular/core';
+import { Injectable, computed, inject, signal, effect } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
@@ -18,8 +18,12 @@ export class FavoritesService {
   private readonly logger = inject(LoggerService);
   readonly STORAGE_KEY = 'nostria-favorites';
 
-  // Internal signal to trigger reactivity when favorites change
+  // Internal signal to trigger reactivity when favorites change via local operations
+  // (add/remove/reorder that haven't synced to Nostr yet)
   private favoritesVersion = signal(0);
+
+  // Track the last emitted favorites array to avoid unnecessary signal updates
+  private lastFavorites: string[] = [];
 
   // Track pending sync operations to prevent multiple simultaneous syncs
   private pendingSyncPromise: Promise<void> | null = null;
@@ -29,51 +33,49 @@ export class FavoritesService {
   private readonly SYNC_DEBOUNCE_MS = 1000; // Wait 1 second before syncing to Nostr
 
   // Computed signal for current account's favorites
-  // Now pulls from follow sets service if available, otherwise uses local state
+  // Directly depends on followSets for reactivity, with equality check to avoid flickering
   readonly favorites = computed(() => {
-    // Depend on version to trigger recomputation
+    // Depend on version to trigger recomputation for local operations
     this.favoritesVersion();
 
     const currentPubkey = this.accountState.pubkey();
-    if (!currentPubkey) return [];
-
-    // Use untracked to get current followSets value without creating reactive dependency
-    // We use favoritesVersion to trigger recomputation when needed
-    const favoritesSet = untracked(() => this.followSetsService.getFavorites());
-    if (favoritesSet && favoritesSet.pubkeys.length > 0) {
-      return favoritesSet.pubkeys;
+    if (!currentPubkey) {
+      this.lastFavorites = [];
+      return this.lastFavorites;
     }
 
-    // Fall back to local state (only during migration)
-    return this.accountLocalState.getFavorites(currentPubkey);
+    // Read followSets reactively so we update when relay data arrives
+    const followSets = this.followSetsService.followSets();
+    const favoritesSet = followSets.find(set => set.dTag === 'nostria-favorites');
+
+    let newFavorites: string[];
+    if (favoritesSet && favoritesSet.pubkeys.length > 0) {
+      newFavorites = favoritesSet.pubkeys;
+    } else {
+      // Fall back to local state (only during migration)
+      newFavorites = this.accountLocalState.getFavorites(currentPubkey);
+    }
+
+    // Return the same array reference if content hasn't changed
+    // This prevents downstream signals/effects from re-triggering unnecessarily
+    if (this.arraysEqual(this.lastFavorites, newFavorites)) {
+      return this.lastFavorites;
+    }
+
+    this.lastFavorites = newFavorites;
+    return newFavorites;
   });
 
   constructor() {
     // Check for legacy favorites and migrate them on first load
     this.migrateLegacyFavorites();
 
-    // Watch for account changes and trigger refresh
+    // Watch for account changes and reset sync tracking
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
-        this.favoritesVersion.update(v => v + 1);
         // Reset sync tracking when account changes
         this.pendingSyncPromise = null;
-      }
-    });
-
-    // Watch for follow sets changes and trigger refresh
-    effect(() => {
-      // Track the followSets signal to detect when new sets are loaded
-      const sets = this.followSetsService.followSets();
-      const isLoading = this.followSetsService.isLoading();
-
-      // Only trigger refresh when loading completes and we have sets
-      if (!isLoading) {
-        // Use untracked to avoid creating additional dependencies
-        untracked(() => {
-          this.favoritesVersion.update(v => v + 1);
-        });
       }
     });
 
@@ -161,15 +163,12 @@ export class FavoritesService {
   }
 
   /**
-   * Compare two arrays for equality (order-independent)
+   * Compare two arrays for equality (order-sensitive)
    */
   private arraysEqual(arr1: string[], arr2: string[]): boolean {
     if (arr1.length !== arr2.length) return false;
-    const set1 = new Set(arr1);
-    const set2 = new Set(arr2);
-    if (set1.size !== set2.size) return false;
-    for (const item of set1) {
-      if (!set2.has(item)) return false;
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false;
     }
     return true;
   }
