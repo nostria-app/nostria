@@ -1,19 +1,20 @@
-import { Component, inject, signal } from '@angular/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DiscoveryRelayService, ServerInfo } from '../../services/discovery-relay.service';
 import { LoggerService } from '../../services/logger.service';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-setup-new-account-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './setup-new-account-dialog.component.html',
   styleUrl: './setup-new-account-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SetupNewAccountDialogComponent {
-  private dialogRef = inject(MatDialogRef<SetupNewAccountDialogComponent>);
+  private dialogRef = inject(CustomDialogRef<SetupNewAccountDialogComponent>);
   private discoveryService = inject(DiscoveryRelayService);
   private logger = inject(LoggerService);
 
@@ -124,5 +125,10 @@ export class SetupNewAccountDialogComponent {
     this.dialogRef.close({
       confirmed: false,
     });
+  }
+
+  // Called by CustomDialogService when close button or backdrop is clicked
+  onClose(): void {
+    this.cancel();
   }
 }
