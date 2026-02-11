@@ -217,6 +217,12 @@ export class UserLinksComponent {
         return `https://linkedin.com/in/${identity}`;
       case 'bluesky':
         return `https://bsky.app/profile/${identity}`;
+      case 'facebook':
+        return `https://facebook.com/${identity}`;
+      case 'instagram':
+        return `https://instagram.com/${identity}`;
+      case 'keybase':
+        return `https://keybase.io/${identity}`;
       default:
         return undefined;
     }

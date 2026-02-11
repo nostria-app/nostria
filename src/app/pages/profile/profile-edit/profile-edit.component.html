@@ -171,15 +171,20 @@
         </h3>
 
         @if (externalIdentities().length > 0) {
-        <mat-list class="identities-list">
+        <div class="identities-list" cdkDropList (cdkDropListDropped)="dropIdentity($event)">
           @for (identity of externalIdentities(); track $index) {
-          <mat-list-item>
-            <mat-icon matListItemIcon>link</mat-icon>
-            <div matListItemTitle>{{ identity.platform }}:{{ identity.identity }}</div>
-            @if (identity.proof) {
-            <div matListItemLine class="proof-text">Proof: {{ identity.proof }}</div>
-            }
-            <div matListItemMeta class="identity-actions">
+          <div class="identity-item" cdkDrag>
+            <div class="drag-handle" cdkDragHandle>
+              <mat-icon>drag_indicator</mat-icon>
+            </div>
+            <mat-icon class="identity-icon">link</mat-icon>
+            <div class="identity-info">
+              <div class="identity-label">{{ identity.platform }}:{{ identity.identity }}</div>
+              @if (identity.proof) {
+              <div class="proof-text">{{ identity.proof }}</div>
+              }
+            </div>
+            <div class="identity-actions">
               <button mat-icon-button (click)="editExternalIdentity($index)" matTooltip="Edit">
                 <mat-icon>edit</mat-icon>
               </button>
@@ -187,9 +192,9 @@
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
-          </mat-list-item>
+          </div>
           }
-        </mat-list>
+        </div>
         }
 
         <div class="add-identity-form">
@@ -227,6 +232,26 @@
               <button mat-menu-item (click)="selectPlatformPreset('instagram')">
                 <mat-icon>photo_camera</mat-icon>
                 <span>Instagram</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('facebook')">
+                <mat-icon>group</mat-icon>
+                <span>Facebook</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('youtube')">
+                <mat-icon>smart_display</mat-icon>
+                <span>YouTube</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('reddit')">
+                <mat-icon>reddit</mat-icon>
+                <span>Reddit</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('bluesky')">
+                <mat-icon>cloud</mat-icon>
+                <span>Bluesky</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('keybase')">
+                <mat-icon>key</mat-icon>
+                <span>Keybase</span>
               </button>
             </mat-menu>
 
