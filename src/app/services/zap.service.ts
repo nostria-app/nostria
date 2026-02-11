@@ -576,7 +576,9 @@ export class ZapService {
         fees_paid,
       };
     } catch (error) {
-      this.logger.error('Failed to pay invoice via Alby SDK:', error);
+      // Extract NIP-47 error code if available for better diagnostics
+      const nip47Code = (error as { code?: string })?.code;
+      this.logger.error(`Failed to pay invoice via Alby SDK (NIP-47 code: ${nip47Code || 'N/A'}):`, error);
       throw error;
     } finally {
       ln.close();
@@ -941,6 +943,12 @@ export class ZapService {
    * Extract error code for metrics
    */
   private extractErrorCode(error: unknown): string {
+    // Check for NIP-47 error code first (from Nip47WalletError)
+    const nip47Code = (error as { code?: string })?.code;
+    if (nip47Code) {
+      return nip47Code;
+    }
+
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
       if (message.includes('network')) return 'NETWORK_ERROR';

@@ -59,9 +59,10 @@ export class ZapErrorHandlerService {
     const message = error.message.toLowerCase();
     const errorName = error.name?.toLowerCase() || '';
 
-    // Check for NIP-47 specific errors first
-    if (errorName.includes('nip47') || message.includes('nip47')) {
-      if (message.includes('timeout') || message.includes('reply timeout')) {
+    // Check for NIP-47 specific errors first (Nip47WalletError has a .code property)
+    const nip47Code = (error as { code?: string }).code;
+    if (errorName.includes('nip47') || message.includes('nip47') || nip47Code) {
+      if (message.includes('timeout') || message.includes('reply timeout') || nip47Code === 'TIMEOUT') {
         return {
           code: 'NIP47_TIMEOUT',
           message: 'Your wallet did not respond in time. This could be due to network issues or your wallet being offline. Please check your wallet connection and try again.',
@@ -69,9 +70,46 @@ export class ZapErrorHandlerService {
           retryDelay: 3000,
         };
       }
+      if (nip47Code === 'INSUFFICIENT_BALANCE' || message.includes('insufficient')) {
+        return {
+          code: 'INSUFFICIENT_FUNDS',
+          message: 'Insufficient funds in your wallet. Please add more sats and try again.',
+          recoverable: false,
+        };
+      }
+      if (nip47Code === 'QUOTA_EXCEEDED') {
+        return {
+          code: 'QUOTA_EXCEEDED',
+          message: 'Your wallet budget has been exceeded. Please increase your NWC spending allowance and try again.',
+          recoverable: false,
+        };
+      }
+      if (nip47Code === 'RATE_LIMITED') {
+        return {
+          code: 'RATE_LIMITED',
+          message: 'Too many payment requests. Please wait a moment and try again.',
+          recoverable: true,
+          retryDelay: 5000,
+        };
+      }
+      if (nip47Code === 'PAYMENT_FAILED' || message.includes('sending payment') || message.includes('payment failed')) {
+        return {
+          code: 'PAYMENT_FAILED',
+          message: 'Payment failed. This is usually caused by insufficient balance, no available route to the recipient, or the invoice has expired. Please check your wallet balance and try again.',
+          recoverable: true,
+          retryDelay: 2000,
+        };
+      }
+      if (nip47Code === 'RESTRICTED' || nip47Code === 'UNAUTHORIZED') {
+        return {
+          code: 'WALLET_UNAUTHORIZED',
+          message: 'Your wallet connection does not have permission for this payment. Please check your NWC permissions and reconnect if needed.',
+          recoverable: false,
+        };
+      }
       return {
-        code: 'NIP47_ERROR',
-        message: 'Wallet connection error. Please check if your NWC wallet is online and properly configured.',
+        code: nip47Code || 'NIP47_ERROR',
+        message: `Wallet error${nip47Code ? ` (${nip47Code})` : ''}: ${error.message || 'Unknown wallet error'}. Please check if your NWC wallet is online and properly configured.`,
         recoverable: true,
         retryDelay: 2000,
       };
@@ -173,6 +211,14 @@ export class ZapErrorHandlerService {
         return 'Wallet did not respond. Check your wallet connection and try again.';
       case 'NIP47_ERROR':
         return 'Wallet connection error. Check if your NWC wallet is online.';
+      case 'PAYMENT_FAILED':
+        return 'Payment failed. Check your wallet balance and try again.';
+      case 'QUOTA_EXCEEDED':
+        return 'Wallet budget exceeded. Increase your NWC spending allowance.';
+      case 'RATE_LIMITED':
+        return 'Too many requests. Please wait and try again.';
+      case 'WALLET_UNAUTHORIZED':
+        return 'Wallet permission denied. Check your NWC connection.';
       case 'WALLET_ERROR':
         return 'Wallet payment failed. Check your wallet connection.';
       case 'INVOICE_ERROR':
