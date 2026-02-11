@@ -36,7 +36,12 @@
           }
         </div>
         <div class="logo-container">
-          <video src="icons/nostria.mp4" class="logo" autoplay loop muted playsinline></video>
+          @if (!videoFailed()) {
+          <video src="icons/nostria.mp4" class="logo" autoplay loop muted playsinline poster="icons/icon-512x512.png"
+            (error)="videoFailed.set(true)"></video>
+          } @else {
+          <img src="icons/icon-512x512.png" alt="Nostria Logo" class="logo">
+          }
         </div>
       </div>
 

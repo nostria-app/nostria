@@ -41,6 +41,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
   version = signal('Loading...');
+  videoFailed = signal(false);
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
   buildDate = signal<string | undefined>(undefined);
