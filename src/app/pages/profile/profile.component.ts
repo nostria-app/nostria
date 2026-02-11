@@ -1079,6 +1079,10 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     this.layoutService.openSendMessage(this.pubkey());
   }
 
+  navigateToEditProfile(): void {
+    this.layoutService.openProfileEdit();
+  }
+
   toggleFavorite(): void {
     const currentPubkey = this.pubkey();
     if (!currentPubkey) return;

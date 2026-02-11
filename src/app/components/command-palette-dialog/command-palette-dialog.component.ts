@@ -267,7 +267,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-profile-edit',
       label: 'Edit Profile',
       icon: 'edit',
-      action: () => this.router.navigate(['/p', this.accountState.pubkey(), 'edit']),
+      action: () => this.layoutService.openProfileEdit(),
       keywords: ['edit profile', 'update profile', 'change profile']
     },
     {

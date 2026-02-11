@@ -50,10 +50,18 @@ export class TrustService {
   /**
    * Fetch trust metrics for a specific pubkey
    * Returns cached data if available, otherwise fetches from relay and saves to database
+   * @param forceRefresh If true, bypasses all caches and fetches directly from the relay
    */
-  async fetchMetrics(pubkey: string): Promise<TrustMetrics | null> {
+  async fetchMetrics(pubkey: string, forceRefresh = false): Promise<TrustMetrics | null> {
     if (!this.isEnabled()) {
       return null;
+    }
+
+    // When force refreshing, clear caches for this pubkey and go directly to relay
+    if (forceRefresh) {
+      this.metricsCache.delete(pubkey);
+      this.notFoundCache.delete(pubkey);
+      return this.fetchMetricsFromRelay(pubkey);
     }
 
     // Check in-memory cache first
@@ -212,15 +220,16 @@ export class TrustService {
   /**
    * Batch fetch trust metrics for multiple pubkeys
    * More efficient than calling fetchMetrics multiple times
+   * @param forceRefresh If true, bypasses all caches and fetches directly from the relay
    */
-  async fetchMetricsBatch(pubkeys: string[]): Promise<Map<string, TrustMetrics | null>> {
+  async fetchMetricsBatch(pubkeys: string[], forceRefresh = false): Promise<Map<string, TrustMetrics | null>> {
     const results = new Map<string, TrustMetrics | null>();
 
     // Fetch all metrics in parallel
     await Promise.all(
       pubkeys.map(async (pubkey) => {
         try {
-          const metrics = await this.fetchMetrics(pubkey);
+          const metrics = await this.fetchMetrics(pubkey, forceRefresh);
           results.set(pubkey, metrics);
         } catch (error) {
           this.logger.error(`Failed to fetch metrics for ${pubkey}`, error);

@@ -1419,6 +1419,13 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   /**
+   * Navigate to profile edit in right panel
+   */
+  navigateToEditProfile(): void {
+    this.layout.openProfileEdit();
+  }
+
+  /**
    * Clears all badge loading timeouts and resets timed out badges
    */
   private clearBadgeTimeouts(): void {
