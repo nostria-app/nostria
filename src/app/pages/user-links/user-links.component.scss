@@ -187,6 +187,11 @@
   &.status-pending mat-icon {
     color: var(--mat-sys-on-surface-variant);
   }
+
+  &.status-unverifiable mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.6;
+  }
 }
 
 .retry-button {

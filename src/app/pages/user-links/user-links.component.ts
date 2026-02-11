@@ -34,7 +34,7 @@ export interface ExternalIdentity {
   /** Material icon name for the platform */
   icon: string;
   /** Verification status */
-  verificationStatus: 'pending' | 'verifying' | 'verified' | 'failed';
+  verificationStatus: 'pending' | 'verifying' | 'verified' | 'failed' | 'unverifiable';
   /** Verification error message */
   verificationError?: string;
 }
@@ -131,6 +131,7 @@ export class UserLinksComponent {
       const platform = platformIdentity.substring(0, colonIndex).toLowerCase();
       const identity = platformIdentity.substring(colonIndex + 1);
 
+      const canVerify = this.canVerifyPlatform(platform);
       results.push({
         platform,
         identity,
@@ -139,8 +140,8 @@ export class UserLinksComponent {
         proofUrl: this.getProofUrl(platform, identity, proof),
         profileUrl: this.getProfileUrl(platform, identity),
         icon: this.getPlatformIcon(platform),
-        verificationStatus: proof ? 'pending' : 'failed',
-        verificationError: proof ? undefined : 'No proof provided',
+        verificationStatus: !proof ? 'unverifiable' : canVerify ? 'pending' : 'unverifiable',
+        verificationError: !proof ? 'No proof provided' : canVerify ? undefined : 'No public API available for verification',
       });
     }
 
@@ -193,6 +194,8 @@ export class UserLinksComponent {
         return `https://${identity}/${proof}`;
       case 'telegram':
         return `https://t.me/${proof}`;
+      case 'facebook':
+        return `https://facebook.com${proof.startsWith('/') ? '' : '/'}${proof}`;
       default:
         return undefined;
     }
@@ -241,7 +244,7 @@ export class UserLinksComponent {
   verifyAll(): void {
     const current = this.identities();
     for (let i = 0; i < current.length; i++) {
-      if (current[i].proof && current[i].verificationStatus !== 'verified') {
+      if (current[i].proof && current[i].verificationStatus === 'pending') {
         this.verifyIdentity(i);
       }
     }
@@ -295,17 +298,10 @@ export class UserLinksComponent {
     switch (platform) {
       case 'github':
         return this.verifyGitHub(id, proof, npub);
-      case 'twitter':
-        // Twitter/X API is not publicly accessible without auth;
-        // We can check if the proof URL is constructed correctly
-        // but cannot verify content directly. Mark as "unverifiable" rather than failed.
-        return this.verifyTwitter();
       case 'mastodon':
         return this.verifyMastodon(id, proof, npub);
-      case 'telegram':
-        // Telegram messages are also not easily fetchable
-        return false;
       default:
+        // Platforms without public APIs cannot be verified
         return false;
     }
   }
@@ -337,12 +333,6 @@ export class UserLinksComponent {
     }
   }
 
-  private verifyTwitter(): boolean {
-    // Twitter/X API requires authentication tokens not available in-browser.
-    // We cannot verify programmatically. Return false to indicate unverifiable.
-    return false;
-  }
-
   private async verifyMastodon(instanceAndUser: string, postId: string, npub: string): Promise<boolean> {
     try {
       // identity format: instance/@username
@@ -367,12 +357,18 @@ export class UserLinksComponent {
     }
   }
 
+  /** Platforms that have public APIs we can verify against */
+  private canVerifyPlatform(platform: string): boolean {
+    return ['github', 'mastodon'].includes(platform);
+  }
+
   getVerificationIcon(status: ExternalIdentity['verificationStatus']): string {
     switch (status) {
       case 'verified': return 'verified';
       case 'verifying': return 'sync';
       case 'failed': return 'error_outline';
       case 'pending': return 'schedule';
+      case 'unverifiable': return 'link';
       default: return 'help_outline';
     }
   }
@@ -383,6 +379,7 @@ export class UserLinksComponent {
       case 'verifying': return 'Verifying...';
       case 'failed': return identity.verificationError || 'Verification failed';
       case 'pending': return 'Verification pending';
+      case 'unverifiable': return 'Cannot be verified automatically';
       default: return '';
     }
   }
@@ -393,6 +390,7 @@ export class UserLinksComponent {
       case 'verifying': return 'status-verifying';
       case 'failed': return 'status-failed';
       case 'pending': return 'status-pending';
+      case 'unverifiable': return 'status-unverifiable';
       default: return '';
     }
   }
