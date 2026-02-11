@@ -10,13 +10,8 @@
       <mat-icon>search</mat-icon>
     </button>
     <!-- Filter button with overlay panel -->
-    <button
-      mat-icon-button
-      cdkOverlayOrigin
-      #filterOrigin="cdkOverlayOrigin"
-      (click)="toggleFilterPanel()"
-      [matTooltip]="'Filter'"
-      [class.active-filters]="hasActiveFilters()">
+    <button mat-icon-button cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" (click)="toggleFilterPanel()"
+      [matTooltip]="'Filter'" [class.active-filters]="hasActiveFilters()">
       <mat-icon>tune</mat-icon>
     </button>
     @if (notifications().length > 0) {
@@ -58,18 +53,12 @@
   </div>
 
   <!-- Filter Panel Overlay -->
-  <ng-template
-    cdkConnectedOverlay
-    [cdkConnectedOverlayOrigin]="filterOrigin"
-    [cdkConnectedOverlayOpen]="filterPanelOpen()"
-    [cdkConnectedOverlayPositions]="filterPanelPositions"
-    [cdkConnectedOverlayHasBackdrop]="true"
-    cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
+    [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayPositions]="filterPanelPositions"
+    [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
     (backdropClick)="closeFilterPanel()">
-    <app-notifications-filter-panel
-      [filters]="notificationFilters()"
-      [showSystemNotifications]="showSystemNotifications()"
-      [showUnreadOnly]="showUnreadOnly()"
+    <app-notifications-filter-panel [filters]="notificationFilters()"
+      [showSystemNotifications]="showSystemNotifications()" [showUnreadOnly]="showUnreadOnly()"
       (filtersChanged)="onFiltersChanged($event)"
       (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
       (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)">
@@ -193,8 +182,8 @@
         <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()"
           style="cursor: pointer">
           @if (getAuthorPubkey(notification)) {
-<app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'"
-            [disableLink]="true" [prefetchedProfile]="getPrefetchedProfile(notification)"></app-user-profile>
+          <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'" [disableLink]="true"
+            [prefetchedProfile]="getPrefetchedProfile(notification)"></app-user-profile>
           } @else {
           <div class="notification-default-avatar">
             <mat-icon>account_circle</mat-icon>
@@ -212,16 +201,15 @@
           <div class="notification-header">
             @if (getAuthorPubkey(notification)) {
             <a class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
-              <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!" [prefetchedProfile]="getPrefetchedProfile(notification)"></app-profile-display-name>
+              <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!"
+                [prefetchedProfile]="getPrefetchedProfile(notification)"
+                [disableLink]="true"></app-profile-display-name>
             </a>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
             @if (getCustomEmojiUrl(notification)) {
-            <img 
-              [src]="getCustomEmojiUrl(notification)!" 
-              [alt]="getCustomEmojiAlt(notification)"
-              [title]="getCustomEmojiAlt(notification)"
-              class="notification-custom-emoji">
+            <img [src]="getCustomEmojiUrl(notification)!" [alt]="getCustomEmojiAlt(notification)"
+              [title]="getCustomEmojiAlt(notification)" class="notification-custom-emoji">
             }
           </div>
 

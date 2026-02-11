@@ -70,3 +70,4 @@
 - [✓] 2026-02-11 01:57 - Favorites appears, disappears and appears on reload/login
 - [✓] 2026-02-11 02:03 - Add the emoji picker to the note-editor dialog
 - [✓] 2026-02-11 02:28 - Remove nostr.band as option for Trust
+- [✓] 2026-02-11 12:57 - Notifications: Show “Mark all as read” as primary header action
