@@ -4,7 +4,17 @@
   </button>
   <h2 class="panel-title title-font">Edit Profile</h2>
   <span class="panel-header-spacer"></span>
+  @if (refreshing()) {
+  <mat-spinner diameter="20"></mat-spinner>
+  }
 </div>
+
+@if (refreshing()) {
+<div class="refresh-banner">
+  <mat-icon>sync</mat-icon>
+  <span>Fetching latest profile from relays&hellip;</span>
+</div>
+}
 
 <div class="page">
   <mat-card>
@@ -300,7 +310,7 @@
 
     <mat-card-footer align="end">
       <button mat-button (click)="cancelEdit()">Cancel</button>&nbsp;
-      <button mat-flat-button [disabled]="loading()" color="primary" (click)="updateMetadata()">
+      <button mat-flat-button [disabled]="loading() || refreshing()" color="primary" (click)="updateMetadata()">
         @if (loading()) {
         <mat-spinner diameter="24"></mat-spinner>
         } @else {
