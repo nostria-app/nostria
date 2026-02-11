@@ -14,7 +14,7 @@ describe('CreateMenuComponent', () => {
     openRecordVideoDialog: jasmine.createSpy('openRecordVideoDialog'),
     openRecordAudioDialog: jasmine.createSpy('openRecordAudioDialog'),
     openMessages: jasmine.createSpy('openMessages'),
-    openLists: jasmine.createSpy('openLists'),
+    createFollowSet: jasmine.createSpy('createFollowSet'),
     openMusicUpload: jasmine.createSpy('openMusicUpload'),
     openLiveStreamDialog: jasmine.createSpy('openLiveStreamDialog'),
   };
@@ -42,22 +42,22 @@ describe('CreateMenuComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have 3 primary create options', () => {
-    expect(component.createOptions.length).toBe(3);
+  it('should have 4 primary create options', () => {
+    expect(component.createOptions.length).toBe(4);
   });
 
-  it('should have Note, Article, and Media as primary options', () => {
+  it('should have Note, Article, Media, and Message as primary options', () => {
     const labels = component.createOptions.map(o => o.label);
-    expect(labels).toEqual(['Note', 'Article', 'Media']);
+    expect(labels).toEqual(['Note', 'Article', 'Media', 'Message']);
   });
 
-  it('should have 6 more options', () => {
-    expect(component.moreOptions.length).toBe(6);
+  it('should have 5 more options', () => {
+    expect(component.moreOptions.length).toBe(5);
   });
 
-  it('should have Message, List, Video Clip, Audio Clip, Music Track, Live Stream as more options', () => {
+  it('should have List, Video Clip, Audio Clip, Music Track, Live Stream as more options', () => {
     const labels = component.moreOptions.map(o => o.label);
-    expect(labels).toEqual(['Message', 'List', 'Video Clip', 'Audio Clip', 'Music Track', 'Live Stream']);
+    expect(labels).toEqual(['List', 'Video Clip', 'Audio Clip', 'Music Track', 'Live Stream']);
   });
 
   it('should not show more options by default', () => {
@@ -82,7 +82,7 @@ describe('CreateMenuComponent', () => {
   it('should render primary options in the menu', async () => {
     await fixture.whenStable();
     const menuItems = (fixture.nativeElement as HTMLElement).querySelectorAll('.menu-item:not(.more-toggle)');
-    expect(menuItems.length).toBe(3);
+    expect(menuItems.length).toBe(4);
   });
 
   it('should render More... button', async () => {
@@ -99,26 +99,23 @@ describe('CreateMenuComponent', () => {
     await fixture.whenStable();
 
     const moreOptions = (fixture.nativeElement as HTMLElement).querySelectorAll('.more-options .menu-item');
-    expect(moreOptions.length).toBe(6);
+    expect(moreOptions.length).toBe(5);
   });
 
   it('should call correct actions for more options', () => {
-    component.onItemClick(component.moreOptions[0]); // Message
-    expect(mockLayoutService.openMessages).toHaveBeenCalled();
+    component.onItemClick(component.moreOptions[0]); // List
+    expect(mockLayoutService.createFollowSet).toHaveBeenCalled();
 
-    component.onItemClick(component.moreOptions[1]); // List
-    expect(mockLayoutService.openLists).toHaveBeenCalled();
-
-    component.onItemClick(component.moreOptions[2]); // Video Clip
+    component.onItemClick(component.moreOptions[1]); // Video Clip
     expect(mockLayoutService.openRecordVideoDialog).toHaveBeenCalled();
 
-    component.onItemClick(component.moreOptions[3]); // Audio Clip
+    component.onItemClick(component.moreOptions[2]); // Audio Clip
     expect(mockLayoutService.openRecordAudioDialog).toHaveBeenCalled();
 
-    component.onItemClick(component.moreOptions[4]); // Music Track
+    component.onItemClick(component.moreOptions[3]); // Music Track
     expect(mockLayoutService.openMusicUpload).toHaveBeenCalled();
 
-    component.onItemClick(component.moreOptions[5]); // Live Stream
+    component.onItemClick(component.moreOptions[4]); // Live Stream
     expect(mockLayoutService.openLiveStreamDialog).toHaveBeenCalled();
   });
 });

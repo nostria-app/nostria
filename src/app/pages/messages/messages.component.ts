@@ -1253,6 +1253,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'Emoji',
       width: '400px',
+      panelClass: 'emoji-picker-dialog',
     });
 
     dialogRef.afterClosed$.subscribe(result => {

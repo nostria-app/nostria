@@ -10,13 +10,20 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
   selector: 'app-emoji-picker-dialog',
   imports: [EmojiPickerComponent],
   template: `
-    <div dialog-content>
+    <div dialog-content class="emoji-dialog-content">
       <app-emoji-picker (emojiSelected)="onEmojiSelected($event)"></app-emoji-picker>
     </div>
   `,
   styles: [`
     :host {
-      display: block;
+      display: contents;
+    }
+
+    .emoji-dialog-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,

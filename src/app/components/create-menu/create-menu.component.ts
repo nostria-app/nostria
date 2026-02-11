@@ -39,18 +39,18 @@ export class CreateMenuComponent {
       icon: 'add_photo_alternate',
       action: () => this.layout.openMediaCreatorDialog(),
     },
-  ];
-
-  moreOptions: CreateOption[] = [
     {
       label: $localize`:@@create.option.message:Message`,
       icon: 'mail',
       action: () => this.layout.openMessages(),
     },
+  ];
+
+  moreOptions: CreateOption[] = [
     {
       label: $localize`:@@create.option.list:List`,
       icon: 'list',
-      action: () => this.layout.openLists(),
+      action: () => this.layout.createFollowSet(),
     },
     {
       label: $localize`:@@create.option.video:Video Clip`,

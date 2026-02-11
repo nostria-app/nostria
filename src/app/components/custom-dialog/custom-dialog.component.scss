@@ -327,6 +327,16 @@
   }
 }
 
+// Emoji Picker Dialog Override
+.dialog-container.emoji-picker-dialog {
+  .dialog-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+}
+
 // Actions
 .dialog-actions {
   display: flex;

@@ -1627,9 +1627,41 @@ export class LayoutService implements OnDestroy {
     this.router.navigateByUrl('/messages');
   }
 
-  /** Navigate to lists page to create a new list */
-  openLists(): void {
-    this.router.navigateByUrl('/lists');
+  /** Open the create follow set dialog to create a new people list */
+  async createFollowSet(): Promise<void> {
+    const { CreateListDialogComponent } = await import('../components/create-list-dialog/create-list-dialog.component');
+    const { FollowSetsService } = await import('./follow-sets.service');
+    const { firstValueFrom } = await import('rxjs');
+
+    const followSetsService = this.injector.get(FollowSetsService);
+
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      data: { initialPrivate: false },
+      width: '450px',
+    });
+
+    const result = await firstValueFrom(dialogRef.afterClosed());
+
+    if (!result || !result.title.trim()) {
+      return;
+    }
+
+    try {
+      const newSet = await followSetsService.createFollowSet(
+        result.title.trim(),
+        [],
+        result.isPrivate,
+      );
+
+      if (newSet) {
+        this.snackBar.open($localize`:@@create.list.success:List "${newSet.title}" created successfully`, '', { duration: 3000 });
+        this.router.navigateByUrl(`/people/list/${newSet.dTag}`);
+      } else {
+        this.snackBar.open($localize`:@@create.list.failed:Failed to create list`, '', { duration: 3000 });
+      }
+    } catch {
+      this.snackBar.open($localize`:@@create.list.failed:Failed to create list`, '', { duration: 3000 });
+    }
   }
 
   /** Navigate to music page to upload a new track */

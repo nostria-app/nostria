@@ -35,19 +35,19 @@ export class CreateOptionsSheetComponent {
       icon: 'add_photo_alternate',
       action: () => this.layout.openMediaCreatorDialog(),
     },
-  ];
-
-  // More options shown when expanded
-  moreOptions = [
     {
       label: $localize`:@@create.option.message:Message`,
       icon: 'mail',
       action: () => this.layout.openMessages(),
     },
+  ];
+
+  // More options shown when expanded
+  moreOptions = [
     {
       label: $localize`:@@create.option.list:List`,
       icon: 'list',
-      action: () => this.layout.openLists(),
+      action: () => this.layout.createFollowSet(),
     },
     {
       label: $localize`:@@create.option.video:Video Clip`,
