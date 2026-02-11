@@ -1,6 +1,6 @@
 import { Directive, ElementRef, inject, NgZone, OnDestroy, ViewContainerRef, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
@@ -202,39 +202,33 @@ export class MentionHoverDirective implements OnDestroy {
     // Create an ElementRef wrapper for proper positioning
     const elementRef = new ElementRef(element);
 
+    // Calculate available space to intelligently order positions
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const cardHeight = 400; // Approximate height of fully loaded hover card
+
+    const preferAbove = spaceBelow < cardHeight && spaceAbove > spaceBelow;
+
+    const positions: ConnectedPosition[] = preferAbove
+      ? [
+        { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -8 },
+        { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -8 },
+        { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 8 },
+        { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+      ]
+      : [
+        { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 8 },
+        { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+        { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -8 },
+        { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -8 },
+      ];
+
     const positionStrategy = this.overlay
       .position()
       .flexibleConnectedTo(elementRef)
-      .withPositions([
-        {
-          originX: 'center',
-          originY: 'bottom',
-          overlayX: 'center',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'center',
-          originY: 'top',
-          overlayX: 'center',
-          overlayY: 'bottom',
-          offsetY: -8,
-        },
-        {
-          originX: 'end',
-          originY: 'center',
-          overlayX: 'start',
-          overlayY: 'center',
-          offsetX: 8,
-        },
-        {
-          originX: 'start',
-          originY: 'center',
-          overlayX: 'end',
-          overlayY: 'center',
-          offsetX: -8,
-        },
-      ])
+      .withPositions(positions)
       .withViewportMargin(16)
       .withPush(true);
 
