@@ -729,6 +729,13 @@ export const routes: Routes = [
   // Angular's setRouterState enters infinite recursion. Profiles in the right panel
   // will only show the default "notes" tab view.
   {
+    path: 'p/:id/details',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
+    title: 'Details',
+  },
+  {
     path: 'p/:id',
     outlet: 'right',
     loadComponent: () =>

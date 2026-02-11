@@ -17,16 +17,56 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ApplicationService } from '../../../services/application.service';
 import { DatabaseService } from '../../../services/database.service';
+import type { TrustMetrics } from '../../../services/database.service';
+import { TrustService } from '../../../services/trust.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { Metrics } from '../../../services/metrics';
 import { UserMetric } from '../../../interfaces/metrics';
-import { kinds } from 'nostr-tools';
+import { nip19, kinds } from 'nostr-tools';
+
+interface ProfileListItem {
+  id: string;
+  npub: string;
+  name: string;
+  picture: string | null;
+}
+
+interface MiniProfile {
+  name: string;
+  picture: string | null;
+}
+
+type InfoValue = boolean | number | string | null | undefined;
+
+interface DiscoveryInfo {
+  [key: string]: InfoValue;
+  hasRelayList?: boolean;
+  hasFollowingList?: boolean;
+  hasFollowingListRelays?: boolean;
+  foundOnDiscoveryRelays?: boolean;
+  foundOnAccountRelays?: boolean;
+  foundMetadataOnUserRelays?: boolean;
+  foundMetadataOnAccountRelays?: boolean;
+  foundZeroRelaysOnAccountRelays?: boolean;
+  hasEmptyFollowingList?: boolean;
+  relayCount?: number;
+  followingCount?: number;
+  updated?: number;
+}
+
+interface TrustDisplayItem {
+  key: string;
+  label: string;
+  icon: string;
+  value: string;
+  highlight: boolean;
+}
 
 @Component({
   selector: 'app-following',
@@ -66,20 +106,49 @@ export class DetailsComponent implements OnInit {
   private location = inject(Location);
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
-  profileState = inject(PROFILE_STATE);
   app = inject(ApplicationService);
   database = inject(DatabaseService);
   private metricsService = inject(Metrics);
+  private trustService = inject(TrustService);
+  private utilities = inject(UtilitiesService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
   isLoading = signal(true);
   error = signal<string | null>(null);
-  followingList = signal<any[]>([]);
-  mutualConnectionsList = signal<any[]>([]);
+  followingList = signal<ProfileListItem[]>([]);
+  mutualConnectionsList = signal<ProfileListItem[]>([]);
   selectedTabIndex = signal(0);
-  npub = computed(() => this.route.snapshot.parent?.paramMap.get('id') || '');
-  userProfile = signal<any>(null);
+  npub = computed(() => {
+    return (
+      this.route.snapshot.paramMap.get('id') ||
+      this.route.snapshot.parent?.paramMap.get('id') ||
+      ''
+    );
+  });
+  pubkeyHex = computed(() => {
+    const id = this.npub();
+    if (!id) return '';
+
+    if (id.startsWith('npub')) {
+      return this.utilities.getPubkeyFromNpub(id);
+    }
+
+    if (id.startsWith('nprofile')) {
+      try {
+        const decoded = nip19.decode(id);
+        if (decoded.type === 'nprofile') {
+          const data = decoded.data as { pubkey: string };
+          return data.pubkey;
+        }
+      } catch (e) {
+        this.logger.warn('Failed to decode nprofile:', e);
+      }
+    }
+
+    return id;
+  });
+  userProfile = signal<MiniProfile | null>(null);
 
   // Item size for virtual scrolling (approx. height of each item in pixels)
   readonly itemSize = 72;
@@ -88,8 +157,86 @@ export class DetailsComponent implements OnInit {
   readonly minBufferPx = 200;
   readonly maxBufferPx = 400;
 
-  info = signal<any>(null);
+  info = signal<DiscoveryInfo | null>(null);
   metrics = signal<UserMetric | null>(null);
+  trustMetrics = signal<TrustMetrics | null>(null);
+
+  trustDisplayItems = computed((): TrustDisplayItem[] => {
+    const metrics = this.trustMetrics();
+    if (!metrics) return [];
+
+    const iconMap: Partial<Record<keyof TrustMetrics, string>> = {
+      rank: 'verified',
+      followers: 'people',
+      hops: 'alt_route',
+      personalizedGrapeRank_influence: 'insights',
+      personalizedGrapeRank_average: 'query_stats',
+      personalizedGrapeRank_confidence: 'shield',
+      personalizedGrapeRank_input: 'input',
+      personalizedPageRank: 'psychology',
+      verifiedFollowerCount: 'group',
+      verifiedMuterCount: 'volume_off',
+      verifiedReporterCount: 'report',
+    };
+
+    const labelMap: Partial<Record<keyof TrustMetrics, string>> = {
+      rank: 'Rank',
+      followers: 'Followers',
+      hops: 'Hops',
+      postCount: 'Posts',
+      replyCount: 'Replies',
+      reactionsCount: 'Reactions',
+      zapAmtRecd: 'Zap amount received',
+      zapAmtSent: 'Zap amount sent',
+      zapCntRecd: 'Zap count received',
+      zapCntSent: 'Zap count sent',
+      firstCreatedAt: 'First seen',
+      lastUpdated: 'Last updated',
+      personalizedGrapeRank_influence: 'GrapeRank influence',
+      personalizedGrapeRank_average: 'GrapeRank average',
+      personalizedGrapeRank_confidence: 'GrapeRank confidence',
+      personalizedGrapeRank_input: 'GrapeRank input',
+      personalizedPageRank: 'Personalized PageRank',
+      verifiedFollowerCount: 'Verified followers',
+      verifiedMuterCount: 'Verified muters',
+      verifiedReporterCount: 'Verified reporters',
+    };
+
+    const formatNumber = (value: number): string => {
+      if (Number.isInteger(value)) return `${value}`;
+      return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+    };
+
+    const entries = (Object.entries(metrics) as [keyof TrustMetrics, number | undefined][]).filter(
+      ([, v]) => v !== undefined
+    );
+
+    const sortOrder: (keyof TrustMetrics)[] = [
+      'rank',
+      'followers',
+      'verifiedFollowerCount',
+      'hops',
+      'personalizedGrapeRank_influence',
+      'personalizedGrapeRank_average',
+      'personalizedGrapeRank_confidence',
+      'personalizedGrapeRank_input',
+      'personalizedPageRank',
+      'verifiedMuterCount',
+      'verifiedReporterCount',
+    ];
+
+    const orderIndex = new Map<keyof TrustMetrics, number>(sortOrder.map((k, i) => [k, i]));
+
+    entries.sort(([a], [b]) => (orderIndex.get(a) ?? 999) - (orderIndex.get(b) ?? 999));
+
+    return entries.map(([key, value]) => {
+      const label = labelMap[key] ?? key;
+      const icon = iconMap[key] ?? 'insights';
+      const highlight = key === 'rank';
+      const displayValue = value === undefined ? '' : formatNumber(value);
+      return { key, label, icon, value: displayValue, highlight };
+    });
+  });
 
   infoAsJson = computed(() => {
     const infoData = this.info();
@@ -108,13 +255,24 @@ export class DetailsComponent implements OnInit {
     effect(async () => {
       if (this.app.authenticated()) {
         // TODO: make sure that the "npub" is hex.
-        const info = await this.database.getInfo(this.npub(), 'user');
-        this.info.set(info);
+        const info = await this.database.getInfo(this.pubkeyHex(), 'user');
+        this.info.set(info as unknown as DiscoveryInfo);
 
         // Load metrics for this user
-        const userMetrics = await this.metricsService.getUserMetric(this.npub());
+        const userMetrics = await this.metricsService.getUserMetric(this.pubkeyHex());
         this.metrics.set(userMetrics);
       }
+    });
+
+    effect(async () => {
+      const pubkey = this.pubkeyHex();
+      if (!pubkey) {
+        this.trustMetrics.set(null);
+        return;
+      }
+
+      const trust = await this.trustService.fetchMetrics(pubkey);
+      this.trustMetrics.set(trust);
     });
   }
 
@@ -124,7 +282,7 @@ export class DetailsComponent implements OnInit {
   }
 
   async broadcastProfile() {
-    const event = await this.database.getEventByPubkeyAndKind(this.npub(), 0);
+    const event = await this.database.getEventByPubkeyAndKind(this.pubkeyHex(), 0);
 
     if (event) {
       this.logger.debug('Broadcasting metadata event:', event);
@@ -135,7 +293,7 @@ export class DetailsComponent implements OnInit {
   }
 
   async broadcastRelayList() {
-    const event = await this.database.getEventByPubkeyAndKind(this.npub(), kinds.RelayList);
+    const event = await this.database.getEventByPubkeyAndKind(this.pubkeyHex(), kinds.RelayList);
 
     if (event) {
       this.logger.debug('Broadcasting Relay List event:', event);
@@ -160,7 +318,7 @@ export class DetailsComponent implements OnInit {
           picture: 'https://example.com/avatar.jpg',
         });
       }, 300);
-    } catch (err) {
+    } catch {
       this.error.set('Failed to load profile');
     }
   }
