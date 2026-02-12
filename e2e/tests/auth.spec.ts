@@ -7,22 +7,33 @@
  * These tests are tagged with @auth so they can be filtered
  * via `playwright test --grep @auth`.
  *
- * Requires TEST_NSEC environment variable to be set in .env
+ * If TEST_NSEC is set in .env, uses that key for authentication.
+ * Otherwise, auto-generates a throwaway keypair and logs a warning
+ * that authenticated tests will use a random identity with no relay history.
  */
 import { test, expect } from '../fixtures';
+import { TestAuthHelper } from '../helpers/auth';
 
-const TEST_NSEC = process.env['TEST_NSEC'];
+const { auth, source } = TestAuthHelper.fromEnvOrGenerate();
 
 test.describe('@auth Authenticated User', () => {
-  test.skip(!TEST_NSEC, 'TEST_NSEC env var is required for authenticated tests');
-
   test.beforeEach(async ({ page }) => {
+    await auth.injectAuth(page);
     await page.goto('/');
   });
 
-  test('@auth should have TEST_NSEC available for authentication', async () => {
-    expect(TEST_NSEC).toBeTruthy();
-    expect(TEST_NSEC).toMatch(/^nsec1/);
+  test('@auth should have a valid nsec for authentication', async () => {
+    expect(auth.nsec).toBeTruthy();
+    expect(auth.nsec).toMatch(/^nsec1/);
+    expect(auth.pubkey).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test('@auth should report key source correctly', async () => {
+    if (process.env['TEST_NSEC']) {
+      expect(source).toBe('env');
+    } else {
+      expect(source).toBe('generated');
+    }
   });
 
   test('@auth should be able to access profile page when logged in', async ({

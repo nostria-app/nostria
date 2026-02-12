@@ -72,6 +72,58 @@ export class TestAuthHelper {
   }
 
   /**
+   * Resolve the test keypair from `TEST_NSEC` env var or auto-generate one.
+   *
+   * If `TEST_NSEC` is set, validates that it is a well-formed nsec1 key
+   * and returns a `TestAuthHelper` built from it with `source: 'env'`.
+   *
+   * If `TEST_NSEC` is not set, generates a random throwaway keypair and
+   * logs a warning that authenticated tests will use a random identity
+   * with no relay history.
+   *
+   * @returns `{ auth, source }` where `source` is `'env'` or `'generated'`
+   *
+   * @example
+   * ```ts
+   * const { auth, source } = TestAuthHelper.fromEnvOrGenerate();
+   * await auth.injectAuth(page);
+   * ```
+   */
+  static fromEnvOrGenerate(): { auth: TestAuthHelper; source: 'env' | 'generated' } {
+    const envNsec = process.env['TEST_NSEC'];
+
+    if (envNsec) {
+      if (!envNsec.startsWith('nsec1')) {
+        throw new Error(
+          `TEST_NSEC must be a valid nsec1-encoded private key, got: "${envNsec.slice(0, 10)}..."`
+        );
+      }
+
+      // Validate the full key by attempting to decode it
+      try {
+        const decoded = nip19.decode(envNsec);
+        if (decoded.type !== 'nsec') {
+          throw new Error(`Expected nsec type, got ${decoded.type}`);
+        }
+      } catch (err) {
+        throw new Error(
+          `TEST_NSEC is not a valid nsec1 key: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      return { auth: new TestAuthHelper(envNsec), source: 'env' };
+    }
+
+    // No TEST_NSEC set — generate a throwaway keypair
+    const keypair = TestAuthHelper.getTestKeypair();
+    console.warn(
+      '⚠ TEST_NSEC not set. Using auto-generated throwaway keypair. ' +
+      'Authenticated tests will run with a random identity that has no relay history.'
+    );
+    return { auth: new TestAuthHelper(keypair.nsec), source: 'generated' };
+  }
+
+  /**
    * Parse a private key from either nsec1 bech32 or hex format.
    * @returns The private key as a 64-character hex string
    */
