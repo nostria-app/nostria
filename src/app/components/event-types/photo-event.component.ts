@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +23,7 @@ import { UtilitiesService } from '../../services/utilities.service';
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './photo-event.component.html',
   styleUrl: './photo-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoEventComponent {
   event = input.required<Event>();

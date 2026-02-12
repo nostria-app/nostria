@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
@@ -14,6 +14,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 ],
   templateUrl: './audio-event.component.html',
   styleUrl: './audio-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AudioEventComponent {
   event = input.required<Event>();

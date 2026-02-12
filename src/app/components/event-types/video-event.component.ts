@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, signal, inject, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, signal, inject, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { VideoControlsComponent } from '../video-controls/video-controls.component';
@@ -40,6 +40,7 @@ interface VideoData {
   imports: [MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent, VideoControlsComponent],
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VideoEventComponent implements AfterViewInit, OnDestroy {
   event = input.required<Event>();

@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,6 +31,7 @@ import { LayoutService } from '../../services/layout.service';
   ],
   templateUrl: './live-event.component.html',
   styleUrl: './live-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LiveEventComponent {
   event = input.required<Event>();

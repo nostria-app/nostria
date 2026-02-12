@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,6 +47,7 @@ interface PlaylistData {
   ],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlaylistEventComponent {
   event = input.required<Event>();

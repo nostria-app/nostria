@@ -1,4 +1,4 @@
-import { Component, computed, input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -42,6 +42,7 @@ interface ProfileMetadata {
   ],
   templateUrl: './profile-update-event.component.html',
   styleUrl: './profile-update-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileUpdateEventComponent {
   private accountState = inject(AccountStateService);

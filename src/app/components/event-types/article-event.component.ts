@@ -1,4 +1,4 @@
-import { Component, computed, input, signal, inject, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import { EthiopianCalendarService } from '../../services/ethiopian-calendar.serv
   imports: [CommonModule, MatButtonModule, MatIconModule, MentionHoverDirective],
   templateUrl: './article-event.component.html',
   styleUrl: './article-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArticleEventComponent {
   private layout = inject(LayoutService);
