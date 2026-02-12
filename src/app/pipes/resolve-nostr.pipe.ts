@@ -87,7 +87,15 @@ export class ResolveNostrPipe implements PipeTransform {
           return uri;
       }
     } catch {
-      // If parsing fails, return the original URI
+      // If parsing fails (e.g., truncated or malformed URI), show a short placeholder
+      // instead of the raw long nostr: URI
+      const identifier = uri.replace('nostr:', '');
+      if (identifier.startsWith('npub1') || identifier.startsWith('nprofile1')) {
+        return `@${identifier.substring(0, 12)}...`;
+      }
+      if (identifier.startsWith('note1') || identifier.startsWith('nevent1')) {
+        return `note:${identifier.substring(0, 12)}...`;
+      }
       return uri;
     }
   }
