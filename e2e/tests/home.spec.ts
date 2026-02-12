@@ -1,5 +1,5 @@
 /**
- * Home Page E2E Tests
+ * Home Page E2E Tests @public @smoke
  *
  * Tests for the main feed/home page functionality.
  * These tests verify core user flows without requiring authentication.
@@ -7,13 +7,13 @@
 import { test, expect } from '../fixtures';
 import { HomePage } from '../pages';
 
-test.describe('Home Page', () => {
+test.describe('Home Page @public @smoke', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to home page before each test
     await page.goto('/');
   });
 
-  test('should load the home page successfully', async ({ page, waitForNostrReady, captureScreenshot }) => {
+  test('should load the home page successfully', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     await waitForNostrReady();
 
     // Verify the page loads (title can be "Home", "Nostria", etc.)
@@ -22,18 +22,20 @@ test.describe('Home Page', () => {
 
     // Take a screenshot for AI analysis
     await captureScreenshot('home-page-loaded');
+    await saveConsoleLogs('home-page-loaded');
   });
 
-  test('should display the main toolbar', async ({ page, waitForNostrReady }) => {
+  test('should display the main toolbar', async ({ page, waitForNostrReady, saveConsoleLogs }) => {
     await waitForNostrReady();
 
     const homePage = new HomePage(page);
 
     // Toolbar should be visible
     await expect(homePage.toolbar).toBeVisible();
+    await saveConsoleLogs('home-toolbar');
   });
 
-  test('should have navigation menu accessible', async ({ page, waitForNostrReady, captureScreenshot }) => {
+  test('should have navigation menu accessible', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     await waitForNostrReady();
 
     const homePage = new HomePage(page);
@@ -49,9 +51,10 @@ test.describe('Home Page', () => {
     const count = await navItems.count();
 
     expect(count).toBeGreaterThan(0);
+    await saveConsoleLogs('home-navigation-menu');
   });
 
-  test('should be responsive on mobile viewport', async ({ page, waitForNostrReady, captureScreenshot }) => {
+  test('should be responsive on mobile viewport', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -63,9 +66,10 @@ test.describe('Home Page', () => {
     // On mobile, the layout should adapt
     const homePage = new HomePage(page);
     await expect(homePage.toolbar).toBeVisible();
+    await saveConsoleLogs('home-mobile-viewport');
   });
 
-  test('should open command palette with keyboard shortcut', async ({ page, waitForNostrReady, captureScreenshot }) => {
+  test('should open command palette with keyboard shortcut', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     await waitForNostrReady();
 
     // Open command palette
@@ -83,11 +87,12 @@ test.describe('Home Page', () => {
       // Close with Escape
       await page.keyboard.press('Escape');
     }
+    await saveConsoleLogs('home-command-palette');
   });
 });
 
-test.describe('Feed Loading', () => {
-  test('should display loading state initially', async ({ page, captureScreenshot }) => {
+test.describe('Feed Loading @public @smoke', () => {
+  test('should display loading state initially', async ({ page, captureScreenshot, saveConsoleLogs }) => {
     await page.goto('/');
 
     // Capture the loading state (if visible)
@@ -97,9 +102,10 @@ test.describe('Feed Loading', () => {
     await homePage.waitForFeedLoaded();
 
     await captureScreenshot('feed-loaded-state');
+    await saveConsoleLogs('feed-loading');
   });
 
-  test('should handle empty feed gracefully', async ({ page, waitForNostrReady, captureScreenshot }) => {
+  test('should handle empty feed gracefully', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     // Navigate to a feed that might be empty (e.g., a new user's following feed)
     await page.goto('/');
     await waitForNostrReady();
@@ -117,11 +123,12 @@ test.describe('Feed Loading', () => {
         console.log(`Error ${i + 1}: ${errorText}`);
       }
     }
+    await saveConsoleLogs('feed-empty-state');
   });
 });
 
-test.describe('Theme Support', () => {
-  test('should support dark mode', async ({ page, waitForNostrReady, captureScreenshot }) => {
+test.describe('Theme Support @public', () => {
+  test('should support dark mode', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     await page.goto('/');
     await waitForNostrReady();
 
@@ -135,5 +142,6 @@ test.describe('Theme Support', () => {
     console.log(`Dark mode active: ${isDark}`);
 
     await captureScreenshot('current-theme');
+    await saveConsoleLogs('theme-support');
   });
 });
