@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './database.service';
 import { DatabaseService } from './database.service';
-import { kinds, nip57, Event } from 'nostr-tools';
+import { kinds, nip19, nip57, Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
@@ -55,6 +55,12 @@ export class ContentNotificationService implements OnDestroy {
   private lastCheckTime = 0;
   private visibilityChangeHandler: (() => void) | null = null;
   private isPollingEnabled = false;
+
+  /**
+   * Regex to match nostr: URI identifiers in content
+   * These can be quite long (100-200+ chars for nprofile with relay hints)
+   */
+  private readonly nostrUriRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -155,6 +161,103 @@ export class ContentNotificationService implements OnDestroy {
     }
 
     return false;
+  }
+
+  /**
+   * Truncate content for notification preview without breaking nostr: URIs.
+   * 
+   * Nostr URIs (nostr:nprofile1..., nostr:npub1..., etc.) can be 100-200+ characters long.
+   * If we naively truncate at a fixed length, we can cut a URI in half, causing the
+   * ResolveNostrPipe to fail to decode it and display raw "nostr:nprofile1..." text.
+   * 
+   * This method ensures that if truncation would cut through a nostr URI, the URI is
+   * either fully included or excluded from the result.
+   * 
+   * @param content The full content string
+   * @param maxLength Maximum length for the preview (default 200)
+   * @returns Truncated content with intact nostr URIs
+   */
+  private truncateContentPreview(content: string, maxLength = 200): string {
+    if (!content || content.length <= maxLength) {
+      return content;
+    }
+
+    // Find all nostr URIs and their positions
+    const matches: { start: number; end: number }[] = [];
+    let match: RegExpExecArray | null;
+    // Reset lastIndex since the regex has the global flag
+    this.nostrUriRegex.lastIndex = 0;
+    while ((match = this.nostrUriRegex.exec(content)) !== null) {
+      matches.push({ start: match.index, end: match.index + match[0].length });
+    }
+
+    // Check if the truncation point falls within a nostr URI
+    for (const m of matches) {
+      if (maxLength > m.start && maxLength < m.end) {
+        // Truncation point is inside this URI - include the full URI
+        const result = content.substring(0, m.end);
+        return result.length > content.length ? content : result;
+      }
+    }
+
+    // No URI is being cut through, safe to truncate normally
+    return content.substring(0, maxLength);
+  }
+
+  /**
+   * Resolve a notification message that may consist primarily of nostr:nevent/nostr:note references.
+   * 
+   * When a note's content is just a reference to another event (e.g., a quote post like
+   * "nostr:nevent1..."), the raw message would show as "note:abcdef01..." in the UI which
+   * is meaningless. This method tries to fetch the referenced event's actual content
+   * from the local database or relays and returns it as the message preview.
+   * 
+   * @param content The raw event content
+   * @returns Resolved content preview, or the original content if no resolution is possible
+   */
+  private async resolveEventReferences(content: string): Promise<string> {
+    if (!content) return content;
+
+    // Check if the content is predominantly a nostr:nevent or nostr:note reference
+    // (the entire content or the content after stripping whitespace)
+    const trimmed = content.trim();
+    const eventRefRegex = /^nostr:(nevent|note)1[a-zA-Z0-9]+$/;
+
+    if (!eventRefRegex.test(trimmed)) {
+      // Content is not purely an event reference, return as-is
+      return content;
+    }
+
+    try {
+      const identifier = trimmed.replace('nostr:', '');
+      const decoded = nip19.decode(identifier);
+
+      let eventId: string | undefined;
+      if (decoded.type === 'note') {
+        eventId = decoded.data as string;
+      } else if (decoded.type === 'nevent') {
+        eventId = (decoded.data as nip19.EventPointer).id;
+      }
+
+      if (!eventId) return content;
+
+      // Try to fetch the referenced event content
+      let referencedEvent = await this.database.getEventById(eventId);
+
+      if (!referencedEvent) {
+        referencedEvent = await this.accountRelay.get({
+          ids: [eventId],
+        });
+      }
+
+      if (referencedEvent?.content) {
+        return this.truncateContentPreview(referencedEvent.content);
+      }
+    } catch (error) {
+      this.logger.debug('Failed to resolve event reference in notification content', error);
+    }
+
+    return content;
   }
 
   /**
@@ -449,10 +552,11 @@ export class ContentNotificationService implements OnDestroy {
         );
 
         if (!hasReplyTag) {
+          const resolvedMessage = await this.resolveEventReferences(event.content);
           await this.createContentNotification({
             type: NotificationType.MENTION,
             title: 'Mentioned you',
-            message: event.content.substring(0, 100), // Preview of content
+            message: this.truncateContentPreview(resolvedMessage),
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
             eventId: event.id,
@@ -544,10 +648,11 @@ export class ContentNotificationService implements OnDestroy {
         );
 
         if (hasReplyTag) {
+          const resolvedMessage = await this.resolveEventReferences(event.content);
           await this.createContentNotification({
             type: NotificationType.REPLY,
             title: 'Replied to your note',
-            message: event.content.substring(0, 100),
+            message: this.truncateContentPreview(resolvedMessage),
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
             eventId: event.id,
@@ -625,7 +730,7 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             if (reactedEvent?.content) {
-              reactedEventContent = reactedEvent.content.substring(0, 100);
+              reactedEventContent = this.truncateContentPreview(reactedEvent.content);
             }
           } catch (error) {
             this.logger.debug('Failed to fetch reacted event content', error);
@@ -1044,10 +1149,11 @@ export class ContentNotificationService implements OnDestroy {
         const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
         if (isReply) continue;
 
+        const resolvedMessage = await this.resolveEventReferences(event.content);
         await this.createContentNotification({
           type: NotificationType.MENTION,
           title: 'Mentioned you',
-          message: event.content.substring(0, 100) + (event.content.length > 100 ? '...' : ''),
+          message: this.truncateContentPreview(resolvedMessage),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: event.id,
@@ -1115,10 +1221,11 @@ export class ContentNotificationService implements OnDestroy {
         if (!isReply) continue;
 
         const replyToTag = event.tags.find(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        const resolvedMessage = await this.resolveEventReferences(event.content);
         await this.createContentNotification({
           type: NotificationType.REPLY,
           title: 'Replied to your note',
-          message: event.content.substring(0, 100) + (event.content.length > 100 ? '...' : ''),
+          message: this.truncateContentPreview(resolvedMessage),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: replyToTag?.[1] || event.id,
@@ -1179,7 +1286,7 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             if (reactedEvent?.content) {
-              reactedEventContent = reactedEvent.content.substring(0, 100);
+              reactedEventContent = this.truncateContentPreview(reactedEvent.content);
             }
           } catch (error) {
             this.logger.debug('Failed to fetch reacted event content', error);
