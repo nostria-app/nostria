@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   input,
   signal,
@@ -65,6 +66,7 @@ interface ProfileData {
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(click)': 'onCardClick($event)',
   },

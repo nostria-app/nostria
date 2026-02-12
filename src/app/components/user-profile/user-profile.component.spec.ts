@@ -98,6 +98,15 @@ describe('UserProfileComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should use OnPush change detection', () => {
+    const ref = fixture.componentRef;
+    expect(ref.changeDetectorRef).toBeTruthy();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const metadata = (UserProfileComponent as any).ɵcmp;
+    // OnPush = 1 in Angular's internal representation
+    expect(metadata.onPush).toBeTrue();
+  });
+
   describe('root div class bindings', () => {
     it('should have user-profile class and default view class on root div', async () => {
       fixture.detectChanges();

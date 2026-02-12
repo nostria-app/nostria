@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -24,6 +25,7 @@ import { IntersectionObserverService } from '../../../services/intersection-obse
   imports: [],
   templateUrl: './profile-display-name.component.html',
   styleUrl: './profile-display-name.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private data = inject(DataService);

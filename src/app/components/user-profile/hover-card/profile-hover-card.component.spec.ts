@@ -123,6 +123,13 @@ describe('ProfileHoverCardComponent', () => {
     expect(hoverCardEl).toBeTruthy();
   });
 
+  it('should use OnPush change detection', () => {
+    createComponent();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const metadata = (ProfileHoverCardComponent as any).ɵcmp;
+    expect(metadata.onPush).toBeTrue();
+  });
+
   it('should close hover card when a link element is clicked', fakeAsync(() => {
     createComponent();
 
