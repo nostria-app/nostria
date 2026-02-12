@@ -1083,7 +1083,27 @@ export class App implements OnInit, OnDestroy {
       });
 
       await Promise.race([databaseInitPromise, databaseTimeoutPromise]);
-      this.logger.info('[App] Database initialized successfully');
+      this.logger.info('[App] Shared database initialized successfully');
+
+      // Open the per-account database if an account is already known from localStorage
+      try {
+        const accountJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+        if (accountJson) {
+          const account = JSON.parse(accountJson);
+          if (account?.pubkey) {
+            this.logger.info('[App] Opening per-account database for stored account');
+            await this.database.initAccount(account.pubkey);
+            this.logger.info('[App] Per-account database initialized');
+          } else {
+            await this.database.initAnonymous();
+          }
+        } else {
+          await this.database.initAnonymous();
+        }
+      } catch (accountDbError) {
+        this.logger.warn('[App] Failed to open per-account database, continuing in anonymous mode', accountDbError);
+        await this.database.initAnonymous();
+      }
 
       // Persist relay statistics that were added during initialization
       try {

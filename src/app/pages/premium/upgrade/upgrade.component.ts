@@ -368,7 +368,7 @@ export class UpgradeComponent implements OnDestroy {
       });
       this.isPaymentCompleted.set(true);
       // touch account state to load account subscription
-      this.accountState.changeAccount(this.accountState.account());
+      await this.accountState.changeAccount(this.accountState.account());
 
       // Show success message
       this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {

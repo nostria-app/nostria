@@ -396,7 +396,7 @@ export class NostrService implements NostriaService {
         this.initialized.set(true);
       } else {
         // TRIGGER ACCOUNT CHANGE NOW - don't wait for network fetches
-        this.accountState.changeAccount(account);
+        await this.accountState.changeAccount(account);
       }
 
       // BACKGROUND: Fetch any missing metadata/relay lists from discovery relays
@@ -594,9 +594,9 @@ export class NostrService implements NostriaService {
     await this.loadFromRelays();
   }
 
-  reset() {
+  async reset() {
     this.accountState.accounts.set([]);
-    this.accountState.changeAccount(null);
+    await this.accountState.changeAccount(null);
   }
 
   clear() {
@@ -2027,7 +2027,7 @@ export class NostrService implements NostriaService {
       this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
 
       // This will trigger a lot of effects.
-      this.accountState.changeAccount(targetUser);
+      await this.accountState.changeAccount(targetUser);
       this.logger.debug('Successfully switched user');
 
       return true;
@@ -2066,7 +2066,7 @@ export class NostrService implements NostriaService {
 
     // Trigger the user signal which indicates user is logged on.
     // This will trigger a lot of effects.
-    this.accountState.changeAccount(user);
+    await this.accountState.changeAccount(user);
   }
 
   async generateNewKey(region?: string) {
@@ -2501,16 +2501,16 @@ export class NostrService implements NostriaService {
     });
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     this.logger.info('Logging out current user');
     this.localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
-    this.accountState.changeAccount(null);
+    await this.accountState.changeAccount(null);
     // Clear cached PIN for security
     this.pinPrompt.clearCache();
     this.logger.debug('User logged out successfully');
   }
 
-  removeAccount(pubkey: string): void {
+  async removeAccount(pubkey: string): Promise<void> {
     this.logger.info(`Removing account with pubkey: ${pubkey}`);
     const allUsers = this.accountState.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
@@ -2523,7 +2523,7 @@ export class NostrService implements NostriaService {
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
-      this.accountState.changeAccount(null);
+      await this.accountState.changeAccount(null);
     }
 
     this.logger.debug('Account removed successfully');
