@@ -7,6 +7,7 @@ import {
   OnDestroy,
   input,
   signal,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,6 +31,7 @@ import { MatSliderModule } from '@angular/material/slider';
 
 @Component({
   selector: 'app-video-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,

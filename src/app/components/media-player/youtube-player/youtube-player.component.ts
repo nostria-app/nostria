@@ -3,6 +3,7 @@ import {
   inject,
   computed,
   input,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +16,7 @@ import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-youtube-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
