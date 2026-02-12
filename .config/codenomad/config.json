@@ -1,0 +1,36 @@
+{
+  "preferences": {
+    "showThinkingBlocks": false,
+    "thinkingBlocksExpansion": "expanded",
+    "showTimelineTools": true,
+    "promptSubmitOnEnter": false,
+    "lastUsedBinary": "opencode",
+    "environmentVariables": {},
+    "modelRecents": [],
+    "modelFavorites": [],
+    "modelThinkingSelections": {},
+    "diffViewMode": "split",
+    "toolOutputExpansion": "expanded",
+    "diagnosticsExpansion": "expanded",
+    "showUsageMetrics": true,
+    "autoCleanupBlankSessions": true,
+    "listeningMode": "local",
+    "osNotificationsEnabled": false,
+    "osNotificationsAllowWhenVisible": false,
+    "notifyOnNeedsInput": true,
+    "notifyOnIdle": true
+  },
+  "recentFolders": [
+    {
+      "path": "F:\\src\\github\\nostria\\nostria",
+      "lastAccessed": 1770932798899
+    }
+  ],
+  "opencodeBinaries": [
+    {
+      "path": "opencode",
+      "lastUsed": 1770932798899
+    }
+  ],
+  "theme": "system"
+}

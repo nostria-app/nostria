@@ -86,3 +86,5 @@
 - [✓] 2026-02-12 07:31 - Add OnPush to all components in `src/app/components/media-player/` (~4 files: media-player, live-stream-player, video-player, youtube-player)
 - [✓] 2026-02-12 07:35 - Add OnPush to all components in `src/app/components/user-profile/` (~3 files: user-profile, display-name, hover-card)
 - [✓] 2026-02-12 07:42 - Add OnPush to dialog components in `src/app/components/` (~15 files: confirm-dialog, custom-dialog, database-error-dialog, image-url-dialog, install-dialog, login-dialog, model-load-dialog, pin-prompt-dialog, publish-dialog, qrcode-scan-dialog, reactions-dialog, report-dialog, reports-dialog, signing-dialog, text-input-dialog)
+- [✓] 2026-02-12 14:41 - Add a `getTestKeypair()` static method that generates a fresh random keypair using `nostr-tools/pure` (`generateSecretKey()`, `getPublicKey()`), returning `{ nsec, pubkey, privkeyHex }` for use when no `.env` key is provided
+- [✓] 2026-02-12 14:46 - Add validation: if `TEST_NSEC` is set in env, use that key; otherwise auto-generate a throwaway keypair and log a warning that authenticated tests will use a random identity with no relay history

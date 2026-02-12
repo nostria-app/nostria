@@ -18,12 +18,23 @@ npm run test:e2e              # Run all E2E tests (Playwright)
 npm run test:e2e:ui           # Playwright UI mode
 npm run test:e2e:headed       # Run with visible browser
 npm run test:e2e:debug        # Debug mode
+npm run test:e2e:auth         # Run only @auth tests
+npm run test:e2e:full         # Run all tests with full artifacts
+npm run test:e2e:metrics      # Run performance/metrics tests
+npm run test:e2e:visual       # Run visual regression tests
+npm run test:e2e:visual:update # Update visual baselines
+npm run test:e2e:report:full  # Generate comprehensive Markdown report
 
 # Run single E2E test file
 npx playwright test e2e/tests/home.spec.ts
 
 # Run single test by name
 npx playwright test -g "should load the home page"
+
+# Run tests by tag
+npx playwright test --grep @public
+npx playwright test --grep @auth
+npx playwright test --grep @security
 ```
 
 ## Code Style
@@ -152,3 +163,90 @@ Add commands for new features: `src/app/components/command-palette-dialog/`
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture details
 - [TESTING.md](./TESTING.md) - E2E testing guide
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) - Full guidelines
+
+## E2E Testing for AI Agents
+
+### Running Tests
+
+When asked to run E2E tests, use these commands:
+
+```bash
+# Quick smoke test (public pages only)
+npx playwright test --grep @smoke
+
+# Full suite
+npm run test:e2e:full
+
+# Specific test category
+npx playwright test --grep @auth      # Authenticated tests
+npx playwright test --grep @metrics   # Performance tests
+npx playwright test --grep @security  # Security tests
+npx playwright test --grep @network   # Network tests
+```
+
+### Interpreting Results
+
+After running tests, check these outputs:
+
+1. **Quick summary**: `test-results/test-summary.json` — total/passed/failed counts
+2. **Detailed results**: `test-results/results.json` — per-test status and errors
+3. **Console logs**: `test-results/logs/*.json` — categorized browser console output
+4. **Performance data**: `test-results/metrics/*.json` — Web Vitals, bundle sizes, memory
+5. **Network data**: `test-results/network/*.json` — HTTP requests, WebSocket connections
+6. **Full report**: Run `npm run test:e2e:report:full` to generate `test-results/reports/test-report.md`
+
+### Test Tags
+
+Tests are tagged for filtering. Use `--grep` to select:
+
+| Tag | Description |
+|-----|-------------|
+| `@public` | No authentication required |
+| `@auth` | Requires logged-in account |
+| `@smoke` | Critical path, fast CI |
+| `@metrics` | Performance/metrics collection |
+| `@network` | Network/WebSocket monitoring |
+| `@security` | Security validation |
+| `@a11y` | Accessibility checks |
+| `@visual` | Visual regression screenshots |
+
+### Writing E2E Tests
+
+When creating new E2E tests, follow these conventions:
+
+1. **Import from `e2e/fixtures`**, not `@playwright/test` directly
+2. **Tag tests** in the `test.describe()` title (e.g., `'Feature @auth @smoke'`)
+3. **Use `saveConsoleLogs()`** at the end of every test
+4. **Use constants** from `e2e/fixtures/test-data.ts` (profiles, routes, timeouts)
+5. **Use `waitForAppReady()`** before making assertions
+6. **Use `authenticatedPage`** fixture for tests needing login
+7. **No `data-testid`** attributes exist — use Angular Material selectors, CSS classes, or text content
+8. **Nostr timestamps** are in SECONDS: `Math.floor(Date.now() / 1000)`
+9. **Handle empty states** — test accounts may have no relay history
+
+### Test Infrastructure Files
+
+| File | Purpose |
+|------|---------|
+| `e2e/fixtures.ts` | Extended Playwright fixtures (authenticatedPage, performanceMetrics, etc.) |
+| `e2e/helpers/auth.ts` | Auth injection/cleanup via TestAuthHelper |
+| `e2e/helpers/console-analyzer.ts` | Log categorization and assertions |
+| `e2e/helpers/metrics-collector.ts` | Performance data aggregation |
+| `e2e/helpers/websocket-monitor.ts` | CDP-based WebSocket inspection |
+| `e2e/helpers/report-generator.ts` | Full report generation (JSON + Markdown) |
+| `e2e/fixtures/test-data.ts` | Centralized constants (profiles, relays, routes, timeouts) |
+| `e2e/fixtures/mock-events.ts` | Nostr event factory functions |
+| `e2e/fixtures/test-isolation.ts` | App state reset helpers |
+
+### Reporting Tools
+
+```bash
+# Generate comprehensive report after test run
+npm run test:e2e:report:full
+# Output: test-results/reports/test-report.md + full-report.json
+
+# View HTML report
+npm run test:e2e:report
+```
+
+The full report includes: test results table, performance metrics with pass/fail indicators, console error summary, network health, memory trends, and actionable improvement recommendations.

@@ -1,12 +1,12 @@
 /**
- * Accessibility E2E Tests
+ * Accessibility E2E Tests @public @a11y
  *
  * Tests to verify accessibility features and keyboard navigation.
  */
 import { test, expect } from '../fixtures';
 
-test.describe('Keyboard Navigation', () => {
-  test('should support Tab navigation', async ({ page, waitForNostrReady, captureScreenshot }) => {
+test.describe('Keyboard Navigation @public @a11y', () => {
+  test('should support Tab navigation', async ({ page, waitForNostrReady, captureScreenshot, saveConsoleLogs }) => {
     await page.goto('/');
     await waitForNostrReady();
 
@@ -29,6 +29,7 @@ test.describe('Keyboard Navigation', () => {
     console.log('Focused element after 5 Tabs:', focusedElement);
 
     await captureScreenshot('tab-navigation');
+    await saveConsoleLogs('a11y-tab-navigation');
   });
 
   test('should support Escape to close dialogs', async ({ page, waitForNostrReady }) => {
@@ -52,7 +53,7 @@ test.describe('Keyboard Navigation', () => {
   });
 });
 
-test.describe('ARIA Attributes', () => {
+test.describe('ARIA Attributes @public @a11y', () => {
   test('should have proper ARIA landmarks', async ({ page, waitForNostrReady }) => {
     await page.goto('/');
     await waitForNostrReady();
@@ -152,7 +153,7 @@ test.describe('ARIA Attributes', () => {
   });
 });
 
-test.describe('Color Contrast', () => {
+test.describe('Color Contrast @public @a11y', () => {
   test('should have readable text', async ({ page, waitForNostrReady, captureScreenshot }) => {
     await page.goto('/');
     await waitForNostrReady();
@@ -208,7 +209,7 @@ test.describe('Color Contrast', () => {
   });
 });
 
-test.describe('Focus Management', () => {
+test.describe('Focus Management @public @a11y', () => {
   test('should trap focus in modals', async ({ page, waitForNostrReady }) => {
     await page.goto('/');
     await waitForNostrReady();
@@ -258,7 +259,7 @@ test.describe('Focus Management', () => {
   });
 });
 
-test.describe('Screen Reader Text', () => {
+test.describe('Screen Reader Text @public @a11y', () => {
   test('should have skip links or skip navigation', async ({ page }) => {
     await page.goto('/');
 

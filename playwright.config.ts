@@ -31,7 +31,21 @@ export default defineConfig({
   // Expect timeout for assertions
   expect: {
     timeout: 10_000,
+
+    // Visual regression testing configuration
+    toHaveScreenshot: {
+      // Allow 1% pixel difference by default
+      maxDiffPixelRatio: 0.01,
+      // Animation-heavy pages may need slightly more tolerance
+      threshold: 0.2,
+    },
+    toMatchSnapshot: {
+      maxDiffPixelRatio: 0.01,
+    },
   },
+
+  // Snapshot path configuration for visual regression baselines
+  snapshotPathTemplate: 'e2e/screenshots/{testFilePath}/{arg}{ext}',
 
   // Run tests in parallel for speed
   fullyParallel: true,

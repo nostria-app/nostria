@@ -1,0 +1,111 @@
+name: E2E Nightly Tests
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  BASE_URL: http://localhost:4200
+  CI: true
+
+jobs:
+  nightly-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # Cache node_modules
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: cache-node-modules
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Cache Playwright browsers
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        id: cache-playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.cache-playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Configure test environment
+      - name: Configure test environment
+        run: |
+          echo "BASE_URL=${{ env.BASE_URL }}" > .env
+          echo "CI=true" >> .env
+          echo "TEST_LOG_LEVEL=debug" >> .env
+
+      - name: Configure authenticated tests
+        if: ${{ secrets.TEST_NSEC != '' }}
+        run: echo "TEST_NSEC=${{ secrets.TEST_NSEC }}" >> .env
+
+      # Run full test suite including performance metrics
+      - name: Run full E2E test suite
+        run: npx playwright test --project=chromium
+
+      # Run performance/metrics tests with AI-debug project for full artifact collection
+      - name: Run performance metrics tests
+        if: always()
+        run: npx playwright test --project=ai-debug --grep @metrics
+        continue-on-error: true
+
+      # Run visual regression tests
+      - name: Run visual regression tests
+        if: always()
+        run: npx playwright test --project=chromium --grep @visual
+        continue-on-error: true
+
+      # Upload all test results
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-e2e-results-${{ github.run_number }}
+          path: |
+            test-results/
+          retention-days: 30
+
+      # Upload performance metrics separately for trend tracking
+      - name: Upload performance metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-performance-${{ github.run_number }}
+          path: |
+            test-results/metrics/
+            test-results/reports/
+          retention-days: 90

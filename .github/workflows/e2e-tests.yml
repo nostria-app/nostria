@@ -1,0 +1,211 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  BASE_URL: http://localhost:4200
+  CI: true
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # Cache node_modules for faster installs
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: cache-node-modules
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Cache Playwright browsers
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        id: cache-playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.cache-playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Set up test environment
+      - name: Configure test environment
+        run: |
+          echo "BASE_URL=${{ env.BASE_URL }}" > .env
+          echo "CI=true" >> .env
+          echo "TEST_LOG_LEVEL=warn" >> .env
+
+      # Use TEST_NSEC secret if available for authenticated tests
+      - name: Configure authenticated tests
+        if: ${{ secrets.TEST_NSEC != '' }}
+        run: echo "TEST_NSEC=${{ secrets.TEST_NSEC }}" >> .env
+
+      # Run E2E tests
+      - name: Run E2E tests
+        run: npm run test:e2e:full
+
+      # Upload test artifacts on failure
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: |
+            test-results/
+            !test-results/artifacts/**/*.webm
+          retention-days: 14
+
+      # Upload video artifacts separately (large files)
+      - name: Upload test videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-videos
+          path: test-results/artifacts/**/*.webm
+          retention-days: 7
+
+      # Post test summary as PR comment
+      - name: Post test results to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let summary = '';
+            let testResults = null;
+
+            // Try to read test results JSON
+            try {
+              const resultsPath = path.join(process.cwd(), 'test-results', 'results.json');
+              if (fs.existsSync(resultsPath)) {
+                const raw = fs.readFileSync(resultsPath, 'utf8');
+                testResults = JSON.parse(raw);
+              }
+            } catch (e) {
+              console.log('Could not read test results:', e.message);
+            }
+
+            if (testResults) {
+              const suites = testResults.suites || [];
+              let totalTests = 0;
+              let passed = 0;
+              let failed = 0;
+              let skipped = 0;
+              const failedTests = [];
+
+              function countTests(suite) {
+                for (const spec of (suite.specs || [])) {
+                  for (const test of (spec.tests || [])) {
+                    totalTests++;
+                    const status = test.status || test.expectedStatus;
+                    if (status === 'passed' || status === 'expected') passed++;
+                    else if (status === 'failed' || status === 'unexpected') {
+                      failed++;
+                      failedTests.push(spec.title);
+                    }
+                    else if (status === 'skipped') skipped++;
+                  }
+                }
+                for (const child of (suite.suites || [])) {
+                  countTests(child);
+                }
+              }
+
+              for (const suite of suites) {
+                countTests(suite);
+              }
+
+              const statusEmoji = failed > 0 ? '❌' : '✅';
+              const duration = testResults.stats?.duration
+                ? `${Math.round(testResults.stats.duration / 1000)}s`
+                : 'N/A';
+
+              summary = `## ${statusEmoji} E2E Test Results\n\n`;
+              summary += `| Metric | Value |\n`;
+              summary += `|--------|-------|\n`;
+              summary += `| Total Tests | ${totalTests} |\n`;
+              summary += `| Passed | ${passed} |\n`;
+              summary += `| Failed | ${failed} |\n`;
+              summary += `| Skipped | ${skipped} |\n`;
+              summary += `| Duration | ${duration} |\n\n`;
+
+              if (failed > 0) {
+                summary += `### Failed Tests\n\n`;
+                for (const t of failedTests.slice(0, 20)) {
+                  summary += `- \`${t}\`\n`;
+                }
+                if (failedTests.length > 20) {
+                  summary += `\n_...and ${failedTests.length - 20} more_\n`;
+                }
+                summary += `\n`;
+              }
+
+              summary += `> Full report available in the [test artifacts](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})\n`;
+            } else {
+              summary = `## ⚠️ E2E Test Results\n\nCould not parse test results. Check the [workflow run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for details.\n`;
+            }
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('E2E Test Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: summary,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary,
+              });
+            }

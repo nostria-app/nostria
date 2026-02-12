@@ -1,12 +1,12 @@
 /**
- * Navigation E2E Tests
+ * Navigation E2E Tests @public @navigation
  *
  * Tests for routing and navigation throughout the app.
  * Verifies that all main routes are accessible and render correctly.
  */
 import { test, expect } from '../fixtures';
 
-test.describe('Navigation Routes', () => {
+test.describe('Navigation Routes @public @navigation', () => {
   // List of public routes that should be accessible without authentication
   const publicRoutes = [
     { path: '/', name: 'Home' },
@@ -53,7 +53,7 @@ test.describe('Navigation Routes', () => {
   }
 });
 
-test.describe('Deep Linking', () => {
+test.describe('Deep Linking @public @navigation', () => {
   test('should handle profile deep links', async ({ page, waitForNostrReady, captureScreenshot }) => {
     // Test with a well-known npub (use a test account or known public profile)
     // This uses a placeholder - in real tests, use an actual npub
@@ -87,7 +87,7 @@ test.describe('Deep Linking', () => {
   });
 });
 
-test.describe('Navigation Menu', () => {
+test.describe('Navigation Menu @public @navigation', () => {
   test('should open and close navigation drawer', async ({ page, waitForNostrReady, captureScreenshot }) => {
     await page.goto('/');
     await waitForNostrReady();
@@ -148,7 +148,7 @@ test.describe('Navigation Menu', () => {
   });
 });
 
-test.describe('Back Navigation', () => {
+test.describe('Back Navigation @public @navigation', () => {
   test('should support browser back button', async ({ page, waitForNostrReady, captureScreenshot }) => {
     // Navigate through multiple pages
     await page.goto('/');
@@ -175,7 +175,7 @@ test.describe('Back Navigation', () => {
   });
 });
 
-test.describe('Error Handling', () => {
+test.describe('Error Handling @public @navigation', () => {
   test('should handle 404 routes gracefully', async ({ page, captureScreenshot, saveConsoleLogs }) => {
     // Navigate to a non-existent route
     await page.goto('/this-route-does-not-exist-12345');
