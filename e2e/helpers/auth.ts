@@ -4,7 +4,7 @@
  * Provides utilities for creating authenticated NostrUser objects
  * from nsec1 strings or hex private keys for E2E testing.
  */
-import { getPublicKey } from 'nostr-tools/pure';
+import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { nip19 } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import type { Page } from '@playwright/test';
@@ -46,6 +46,29 @@ export class TestAuthHelper {
   constructor(key: string) {
     this.privkeyHex = TestAuthHelper.parsePrivateKey(key);
     this.pubkeyHex = getPublicKey(hexToBytes(this.privkeyHex));
+  }
+
+  /**
+   * Generate a fresh random keypair for testing.
+   *
+   * Uses `generateSecretKey()` and `getPublicKey()` from `nostr-tools/pure`
+   * to create a cryptographically random keypair. Useful as a fallback when
+   * no `.env` key (TEST_NSEC) is provided.
+   *
+   * @returns An object with `nsec` (bech32), `pubkey` (hex), and `privkeyHex` (hex)
+   *
+   * @example
+   * ```ts
+   * const keypair = TestAuthHelper.getTestKeypair();
+   * const auth = new TestAuthHelper(keypair.nsec);
+   * ```
+   */
+  static getTestKeypair(): { nsec: string; pubkey: string; privkeyHex: string } {
+    const privkeyBytes = generateSecretKey();
+    const privkeyHex = bytesToHex(privkeyBytes);
+    const pubkey = getPublicKey(privkeyBytes);
+    const nsec = nip19.nsecEncode(privkeyBytes);
+    return { nsec, pubkey, privkeyHex };
   }
 
   /**
