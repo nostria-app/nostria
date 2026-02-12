@@ -174,10 +174,10 @@ export class ContentNotificationService implements OnDestroy {
    * either fully included or excluded from the result.
    * 
    * @param content The full content string
-   * @param maxLength Maximum length for the preview (default 200)
+   * @param maxLength Maximum length for the preview (default 500)
    * @returns Truncated content with intact nostr URIs
    */
-  private truncateContentPreview(content: string, maxLength = 200): string {
+  private truncateContentPreview(content: string, maxLength = 500): string {
     if (!content || content.length <= maxLength) {
       return content;
     }
@@ -730,7 +730,8 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             if (reactedEvent?.content) {
-              reactedEventContent = this.truncateContentPreview(reactedEvent.content);
+              reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
+              reactedEventContent = this.truncateContentPreview(reactedEventContent);
             }
           } catch (error) {
             this.logger.debug('Failed to fetch reacted event content', error);
@@ -1286,7 +1287,8 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             if (reactedEvent?.content) {
-              reactedEventContent = this.truncateContentPreview(reactedEvent.content);
+              reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
+              reactedEventContent = this.truncateContentPreview(reactedEventContent);
             }
           } catch (error) {
             this.logger.debug('Failed to fetch reacted event content', error);
