@@ -62,7 +62,14 @@ export class ResolveNostrPipe implements PipeTransform {
           });
           
           // Return truncated npub as fallback
-          return `@${this.utilities.getTruncatedNpub(identifier)}`;
+          // Convert pubkey to npub format for truncation
+          try {
+            const npub = nip19.npubEncode(pubkey);
+            return `@${this.utilities.getTruncatedNpub(npub)}`;
+          } catch {
+            // If encoding fails, use generic fallback
+            return `@${pubkey.substring(0, 8)}...`;
+          }
         }
 
         case 'note':

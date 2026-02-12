@@ -39,7 +39,8 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:npub to display name when profile is cached', () => {
-    const npub = 'npub1test123';
+    // Use a valid npub identifier
+    const npub = 'npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8';
     const text = `Check out nostr:${npub}`;
     const mockProfile = {
       data: {
@@ -56,18 +57,19 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:npub to truncated npub when profile not cached', () => {
-    const npub = 'npub1test123';
+    const npub = 'npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8';
     const text = `Check out nostr:${npub}`;
 
     dataService.getCachedProfile.and.returnValue(null);
-    utilitiesService.getTruncatedNpub.and.returnValue('npub1tes...');
+    utilitiesService.getTruncatedNpub.and.returnValue('npub10jvs...');
 
     const result = pipe.transform(text);
-    expect(result).toContain('@npub1tes...');
+    expect(result).toContain('@npub10jvs...');
   });
 
   it('should resolve nostr:nprofile to display name when profile is cached', () => {
-    const nprofile = 'nprofile1qy88wumn8ghj';
+    // Use a valid nprofile identifier  
+    const nprofile = 'nprofile1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpcag4mn';
     const text = `Mentioned by nostr:${nprofile}`;
     const mockProfile = {
       data: {
@@ -82,7 +84,8 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:note to shortened event ID', () => {
-    const noteId = 'note1abcdefghijklmnop';
+    // Use a valid note identifier
+    const noteId = 'note1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3yv97v';
     const text = `Reacted to nostr:${noteId}`;
 
     const result = pipe.transform(text);
@@ -91,7 +94,8 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should resolve nostr:nevent to shortened event ID', () => {
-    const nevent = 'nevent1qvzqqqqqqypzp';
+    // Use a valid nevent identifier
+    const nevent = 'nevent1qvzqqqqqqypzqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqy9ev3d';
     const text = `Replied to nostr:${nevent}`;
 
     const result = pipe.transform(text);
@@ -100,13 +104,13 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should handle multiple nostr identifiers in the same text', () => {
-    const text = 'nostr:npub1test mentioned you in nostr:note1abc123';
+    const text = 'nostr:npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8 mentioned you in nostr:note1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3yv97v';
 
     dataService.getCachedProfile.and.returnValue(null);
-    utilitiesService.getTruncatedNpub.and.returnValue('npub1tes...');
+    utilitiesService.getTruncatedNpub.and.returnValue('npub10jvs...');
 
     const result = pipe.transform(text);
-    expect(result).toContain('@npub1tes...');
+    expect(result).toContain('@npub10jvs...');
     expect(result).toMatch(/note:[a-fA-F0-9]{8}\.\.\./);
   });
 
@@ -119,7 +123,7 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should prefer display_name over name when both are available', () => {
-    const npub = 'npub1test123';
+    const npub = 'npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8';
     const text = `nostr:${npub}`;
     const mockProfile = {
       data: {
@@ -136,7 +140,7 @@ describe('ResolveNostrPipe', () => {
   });
 
   it('should use name as fallback when display_name is not available', () => {
-    const npub = 'npub1test123';
+    const npub = 'npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8';
     const text = `nostr:${npub}`;
     const mockProfile = {
       data: {
