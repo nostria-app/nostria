@@ -1,4 +1,4 @@
-import { Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { BunkerPointer } from 'nostr-tools/nip46';
@@ -58,6 +58,7 @@ enum LoginStep {
   ],
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });

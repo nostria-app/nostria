@@ -81,3 +81,8 @@
 - [✓] 2026-02-12 01:17 - Add a `clearAuth(page: Page)` method to `TestAuthHelper` that removes auth keys from localStorage and reloads the page
 - [✓] 2026-02-12 06:00 - Feed plays videos in the background
 - [✓] 2026-02-12 06:15 - Metrics Logging
+- [✓] 2026-02-12 07:22 - Add OnPush to all components in `src/app/components/event-types/` (~12 files: article-event, audio-event, emoji-set-event, live-event, music-event, people-set-event, photo-event, playlist-event, poll-event, profile-update-event, starter-pack-event, video-event)
+- [✓] 2026-02-12 07:28 - Add OnPush to all components in `src/app/components/event/` (~4 files: header, reply-button, repost-button, translate-dialog)
+- [✓] 2026-02-12 07:31 - Add OnPush to all components in `src/app/components/media-player/` (~4 files: media-player, live-stream-player, video-player, youtube-player)
+- [✓] 2026-02-12 07:35 - Add OnPush to all components in `src/app/components/user-profile/` (~3 files: user-profile, display-name, hover-card)
+- [✓] 2026-02-12 07:42 - Add OnPush to dialog components in `src/app/components/` (~15 files: confirm-dialog, custom-dialog, database-error-dialog, image-url-dialog, install-dialog, login-dialog, model-load-dialog, pin-prompt-dialog, publish-dialog, qrcode-scan-dialog, reactions-dialog, report-dialog, reports-dialog, signing-dialog, text-input-dialog)

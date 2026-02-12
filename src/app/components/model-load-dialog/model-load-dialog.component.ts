@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -50,7 +50,8 @@ export interface ModelLoadDialogData {
     mat-progress-bar {
       margin-top: 8px;
     }
-  `]
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModelLoadDialogComponent {
   readonly dialogRef = inject(MatDialogRef<ModelLoadDialogComponent>);
