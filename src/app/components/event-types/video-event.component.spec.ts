@@ -180,4 +180,48 @@ describe('VideoEventComponent', () => {
       wrapper.remove();
     });
   });
+
+  describe('feeds panel auto-play prevention', () => {
+    it('should pause expanded video when feeds panel becomes hidden', async () => {
+      fixture.componentRef.setInput('inFeedsPanel', true);
+
+      // Expand the video to render the player
+      component.isExpanded.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // Create a mock video element that reports as playing
+      const mockVideo = document.createElement('video');
+      let pauseCalled = false;
+      mockVideo.pause = () => { pauseCalled = true; };
+      Object.defineProperty(mockVideo, 'paused', { get: () => !pauseCalled ? false : true });
+
+      // Set the videoPlayerRef to point to our mock
+      component['_videoPlayerRef'] = { nativeElement: mockVideo } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Set viewport to true (simulates stale IntersectionObserver state)
+      component.isInViewport.set(true);
+      await fixture.whenStable();
+
+      // Now simulate feeds panel hiding by changing autoPlayAllowed
+      (mockVideoPlayback.autoPlayAllowed as any).set(true); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await fixture.whenStable();
+      pauseCalled = false; // Reset
+
+      (mockVideoPlayback.autoPlayAllowed as any).set(false); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await fixture.whenStable();
+
+      expect(pauseCalled).toBe(true);
+    });
+
+    it('should not auto-expand short-form video when feeds panel is hidden', async () => {
+      fixture.componentRef.setInput('inFeedsPanel', true);
+      await fixture.whenStable();
+
+      // autoPlayAllowed is false (from test setup), so shouldAutoPlay should be false
+      expect(component.shouldAutoPlay()).toBe(false);
+      // Video should NOT be expanded
+      expect(component.isExpanded()).toBe(false);
+    });
+  });
 });

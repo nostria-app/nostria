@@ -83,6 +83,52 @@ describe('InlineVideoPlayerComponent', () => {
     });
   });
 
+  describe('feeds panel auto-play prevention', () => {
+    it('should pause video when feeds panel becomes hidden', async () => {
+      // Set up the component as if it's in the feeds panel with autoplay
+      fixture.componentRef.setInput('inFeedsPanel', true);
+      fixture.componentRef.setInput('autoplay', true);
+      await fixture.whenStable();
+
+      // Simulate a video element that is playing
+      const mockVideo = document.createElement('video');
+      let pauseCalled = false;
+      mockVideo.pause = () => { pauseCalled = true; };
+      Object.defineProperty(mockVideo, 'paused', { get: () => !pauseCalled ? false : true });
+
+      // Replace the video element reference
+      component['videoElement'] = { nativeElement: mockVideo } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Simulate feeds panel becoming hidden by setting autoPlayAllowed to false
+      (mockVideoPlayback.autoPlayAllowed as any).set(false); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await fixture.whenStable();
+
+      expect(pauseCalled).toBe(true);
+    });
+
+    it('should not pause video outside feeds panel when autoPlayAllowed changes', async () => {
+      // Set up the component as NOT in the feeds panel
+      fixture.componentRef.setInput('inFeedsPanel', false);
+      fixture.componentRef.setInput('autoplay', true);
+      await fixture.whenStable();
+
+      // Simulate a video element that is playing
+      const mockVideo = document.createElement('video');
+      let pauseCalled = false;
+      mockVideo.pause = () => { pauseCalled = true; };
+      Object.defineProperty(mockVideo, 'paused', { get: () => false });
+
+      // Replace the video element reference
+      component['videoElement'] = { nativeElement: mockVideo } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Change autoPlayAllowed - should not affect non-feeds videos
+      (mockVideoPlayback.autoPlayAllowed as any).set(false); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await fixture.whenStable();
+
+      expect(pauseCalled).toBe(false);
+    });
+  });
+
   describe('toggle controls', () => {
     it('should toggle play/pause', () => {
       // Initially paused

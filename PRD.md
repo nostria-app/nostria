@@ -18,20 +18,20 @@ PBKDF2+AES-256-GCM and stored in localStorage under `nostria-account` /
 
 ## Phase 1 — Environment & Configuration
 
-- [ ] Create `.env.example` with documented test variables: `TEST_NSEC` (nsec1... private key for test account), `TEST_PUBKEY` (hex pubkey, auto-derived if omitted), `BASE_URL` (default `http://localhost:4200`), `TEST_LOG_LEVEL` (debug/info/warn/error), `CI` (boolean)
-- [ ] Create `.env` loading in Playwright config: install `dotenv` as devDependency, add `import 'dotenv/config'` to `playwright.config.ts`, and read `TEST_NSEC` / `TEST_PUBKEY` / `BASE_URL` from `process.env`
-- [ ] Validate `.env` is already listed in `.gitignore` (confirmed: line 7). Add `test-results/` to `.gitignore` if not already present
-- [ ] Add a `test:e2e:auth` npm script to `package.json` that runs only authenticated test files: `playwright test --grep @auth`
-- [ ] Add a `test:e2e:full` npm script that runs all tests (public + authenticated) with full artifact collection: `playwright test --project=chromium`
-- [ ] Add a `test:e2e:metrics` npm script that runs tests and generates the performance/metrics report: `playwright test --project=ai-debug --grep @metrics`
+- [x] Create `.env.example` with documented test variables: `TEST_NSEC` (nsec1... private key for test account), `TEST_PUBKEY` (hex pubkey, auto-derived if omitted), `BASE_URL` (default `http://localhost:4200`), `TEST_LOG_LEVEL` (debug/info/warn/error), `CI` (boolean)
+- [x] Create `.env` loading in Playwright config: install `dotenv` as devDependency, add `import 'dotenv/config'` to `playwright.config.ts`, and read `TEST_NSEC` / `TEST_PUBKEY` / `BASE_URL` from `process.env`
+- [x] Validate `.env` is already listed in `.gitignore` (confirmed: line 7). Add `test-results/` to `.gitignore` if not already present
+- [x] Add a `test:e2e:auth` npm script to `package.json` that runs only authenticated test files: `playwright test --grep @auth`
+- [x] Add a `test:e2e:full` npm script that runs all tests (public + authenticated) with full artifact collection: `playwright test --project=chromium`
+- [x] Add a `test:e2e:metrics` npm script that runs tests and generates the performance/metrics report: `playwright test --project=ai-debug --grep @metrics`
 
 ---
 
 ## Phase 2 — Authentication Helper
 
-- [ ] Create `e2e/helpers/auth.ts` with a `TestAuthHelper` class that: imports `getPublicKey` and `nip19` from `nostr-tools`, accepts an nsec1 string or hex private key, derives the public key, and builds a valid `NostrUser` object with `source: 'nsec'`, `hasActivated: true`, `lastUsed: Date.now()`, `isEncrypted: false`, and plaintext hex privkey
-- [ ] Add a `injectAuth(page: Page)` method to `TestAuthHelper` that uses `page.addInitScript()` to set `localStorage['nostria-account']` and `localStorage['nostria-accounts']` with the constructed `NostrUser` before the app loads
-- [ ] Add a `clearAuth(page: Page)` method to `TestAuthHelper` that removes auth keys from localStorage and reloads the page
+- [x] Create `e2e/helpers/auth.ts` with a `TestAuthHelper` class that: imports `getPublicKey` and `nip19` from `nostr-tools`, accepts an nsec1 string or hex private key, derives the public key, and builds a valid `NostrUser` object with `source: 'nsec'`, `hasActivated: true`, `lastUsed: Date.now()`, `isEncrypted: false`, and plaintext hex privkey
+- [x] Add a `injectAuth(page: Page)` method to `TestAuthHelper` that uses `page.addInitScript()` to set `localStorage['nostria-account']` and `localStorage['nostria-accounts']` with the constructed `NostrUser` before the app loads
+- [x] Add a `clearAuth(page: Page)` method to `TestAuthHelper` that removes auth keys from localStorage and reloads the page
 - [ ] Add a `getTestKeypair()` static method that generates a fresh random keypair using `nostr-tools/pure` (`generateSecretKey()`, `getPublicKey()`), returning `{ nsec, pubkey, privkeyHex }` for use when no `.env` key is provided
 - [ ] Add validation: if `TEST_NSEC` is set in env, use that key; otherwise auto-generate a throwaway keypair and log a warning that authenticated tests will use a random identity with no relay history
 - [ ] Replace the placeholder `NostrTestUtils.generateTestKeypair()` in `e2e/fixtures.ts` with a real implementation using nostr-tools that calls `TestAuthHelper.getTestKeypair()`

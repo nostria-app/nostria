@@ -14,6 +14,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
 import { SpeechService } from '../../services/speech.service';
 import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
+import { MetricsDialogComponent } from '../metrics-dialog/metrics-dialog.component';
 
 export interface Command {
   id: string;
@@ -388,6 +389,15 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       description: 'View relay connections, subscriptions, and queries'
     },
 
+    {
+      id: 'debug-metrics',
+      label: 'Debug: Metrics',
+      icon: 'speed',
+      action: () => this.openMetricsPanel(),
+      keywords: ['debug', 'metrics', 'performance', 'timing', 'profiling', 'speed', 'benchmark', 'wasm', 'webassembly'],
+      description: 'View application performance metrics and timing data'
+    },
+
     // Actions - Content Creation
     {
       id: 'act-create-note',
@@ -473,6 +483,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     this.customDialog.open(DebugPanelComponent, {
       title: 'Debug: Relay Diagnostics',
       width: '1400px',
+      maxWidth: '95vw',
+    });
+  }
+
+  openMetricsPanel() {
+    this.customDialog.open(MetricsDialogComponent, {
+      title: 'Debug: Metrics',
+      width: '900px',
       maxWidth: '95vw',
     });
   }

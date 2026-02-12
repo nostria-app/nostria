@@ -11,6 +11,7 @@ import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
+import { PerformanceMetricsService } from './performance-metrics.service';
 import type { AccountStateService } from './account-state.service';
 
 export interface DataOptions {
@@ -42,6 +43,7 @@ export class DataService implements OnDestroy {
   private readonly relaysService = inject(RelaysService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly injector = inject(Injector);
+  private readonly perfMetrics = inject(PerformanceMetricsService);
 
   // Lazy-loaded to avoid circular dependency
   private get accountState(): AccountStateService {
@@ -123,27 +125,9 @@ export class DataService implements OnDestroy {
       record = this.cache.get<NostrRecord>(`${id}`);
 
       if (record) {
+         return record;
+        }
         return record;
-      }
-    }
-
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (options?.save) {
-      event = await this.database.getEventById(id);
-    }
-
-    // For non-replaceable events found in storage, return them directly without fetching from relays
-    // For replaceable events (kind 0, 3, 10000-19999) and parameterized replaceable events (kind 30000-39999),
-    // always fetch from relays to ensure we have the latest version
-    if (event && !this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
-      this.logger.debug(`Using cached event from storage for non-replaceable event: ${id} (kind: ${event.kind})`);
-      record = this.toRecord(event);
-
-      if (options?.cache) {
-        this.cache.set(`${id}`, record, options);
-      }
-
-      return record;
     }
 
     // Fetch from relays if:
@@ -415,6 +399,9 @@ export class DataService implements OnDestroy {
   }
 
   async getProfile(pubkey: string, options?: boolean | { refresh?: boolean; forceRefresh?: boolean; deepResolve?: boolean }): Promise<NostrRecord | undefined> {
+    this.perfMetrics.incrementCounter('data.getProfile.calls');
+    this.perfMetrics.startTimer(`data.getProfile`);
+
     // Parse options - support both boolean (for backwards compatibility) and object format
     let refresh = false;
     let forceRefresh = false;
@@ -432,7 +419,9 @@ export class DataService implements OnDestroy {
     // For forceRefresh, skip cache entirely and fetch fresh data from relays
     if (forceRefresh) {
       this.logger.debug(`[Profile] Force refreshing profile for: ${pubkey.substring(0, 8)}...`);
-      return this.loadProfile(pubkey, cacheKey, true, deepResolve);
+      const result = await this.loadProfile(pubkey, cacheKey, true, deepResolve);
+      this.perfMetrics.endTimer('data.getProfile');
+      return result;
     }
 
     // OPTIMIZATION: For returning users, wait briefly for profile cache to load from storage
@@ -454,6 +443,8 @@ export class DataService implements OnDestroy {
           // Cache loaded during our wait - profile might be there now
           const cached = this.cache.get<NostrRecord>(cacheKey);
           if (cached) {
+            this.perfMetrics.incrementCounter('data.getProfile.cache_hit');
+            this.perfMetrics.endTimer('data.getProfile');
             return cached;
           }
         }
@@ -465,6 +456,8 @@ export class DataService implements OnDestroy {
     // the promise is set in the map
     if (this.pendingProfileRequests.has(pubkey)) {
       this.logger.debug(`[Dedup] Returning existing pending request for profile: ${pubkey.substring(0, 8)}...`);
+      this.perfMetrics.incrementCounter('data.getProfile.deduped');
+      this.perfMetrics.endTimer('data.getProfile');
       return this.pendingProfileRequests.get(pubkey);
     }
 
@@ -480,6 +473,8 @@ export class DataService implements OnDestroy {
             this.refreshProfileInBackground(pubkey, cacheKey);
           }
         }
+        this.perfMetrics.incrementCounter('data.getProfile.cache_hit');
+        this.perfMetrics.endTimer('data.getProfile');
         return record;
       }
     }
@@ -511,6 +506,7 @@ export class DataService implements OnDestroy {
       rejectPromise!(error);
       throw error;
     } finally {
+      this.perfMetrics.endTimer('data.getProfile');
       // Clean up the pending request after a longer delay to catch late duplicates (5 seconds)
       setTimeout(() => {
         this.pendingProfileRequests.delete(pubkey);

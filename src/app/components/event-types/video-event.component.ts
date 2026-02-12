@@ -131,6 +131,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       const inOverlayMode = this.showOverlay();
       const isShortForm = this.isShortFormVideo();
       const inViewport = this.isInViewport();
+      const isInFeeds = this.inFeedsPanel();
+      const feedsAutoPlayAllowed = this.videoPlayback.autoPlayAllowed();
 
       // Skip if blurred or in overlay mode
       if (isBlurred || inOverlayMode) {
@@ -154,6 +156,13 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       // Pause video when leaving viewport (for ALL video types, not just short form)
       // But don't pause if we're in fullscreen mode
       if (!inViewport && isCurrentlyExpanded && !videoElement.paused && !isFullscreen) {
+        videoElement.pause();
+      }
+
+      // Feeds panel became hidden while video was playing in viewport.
+      // IntersectionObserver doesn't re-fire on visibility changes,
+      // so isInViewport may be stale. Actively pause the video.
+      if (isInFeeds && !feedsAutoPlayAllowed && isCurrentlyExpanded && !videoElement.paused && !isFullscreen) {
         videoElement.pause();
       }
 
