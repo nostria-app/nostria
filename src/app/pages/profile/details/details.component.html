@@ -143,6 +143,46 @@
     </div>
     }
 
+    @if (relayListInfo(); as relayList) {
+    <div class="info-section">
+      <h3>Relay Configuration</h3>
+
+      <div class="info-grid">
+        @if (relayList.hasRelayList) {
+        <div class="info-item positive">
+          <mat-icon>thumb_up</mat-icon>
+          <span class="info-label">Has Relay List (kind 10002, NIP-65) with {{ relayList.relayCount }} relay{{ relayList.relayCount !== 1 ? 's' : '' }}</span>
+        </div>
+        @if (relayList.updatedAt) {
+        <div class="info-item neutral">
+          <mat-icon>schedule</mat-icon>
+          <span class="info-label">Relay List Updated: {{ formatTimestamp(relayList.updatedAt) }}</span>
+        </div>
+        }
+        } @else {
+        <div class="info-item negative">
+          <mat-icon>thumb_down</mat-icon>
+          <span class="info-label">No Relay List (kind 10002, NIP-65)</span>
+        </div>
+        }
+
+        @if (contactListRelayInfo(); as contactRelays) {
+          @if (contactRelays.hasRelaysInContacts) {
+          <div class="info-item neutral">
+            <mat-icon>info</mat-icon>
+            <span class="info-label">Has relays in Contact List (kind 3) with {{ contactRelays.relayCount }} relay{{ contactRelays.relayCount !== 1 ? 's' : '' }}</span>
+          </div>
+          } @else {
+          <div class="info-item neutral">
+            <mat-icon>info</mat-icon>
+            <span class="info-label">No relays in Contact List (kind 3)</span>
+          </div>
+          }
+        }
+      </div>
+    </div>
+    }
+
     @if (info(); as infoData) {
     <div class="info-section">
       <h3>Profile Discovery Information</h3>
