@@ -88,7 +88,7 @@ export class ResolveNostrPipe implements PipeTransform {
         default:
           return uri;
       }
-    } catch (error) {
+    } catch {
       // If parsing fails, return the original URI
       return uri;
     }
