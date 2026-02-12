@@ -16,6 +16,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:auth": "playwright test --grep @auth",
+    "test:e2e:full": "playwright test --project=chromium",
     "test:e2e:ai": "playwright test --project=ai-debug",
     "test:e2e:report": "playwright show-report test-results/html-report",
     "test:e2e:codegen": "playwright codegen http://localhost:4200",
