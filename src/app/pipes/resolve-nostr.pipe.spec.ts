@@ -87,7 +87,7 @@ describe('ResolveNostrPipe', () => {
 
     const result = pipe.transform(text);
     // Should contain "note:" followed by truncated ID
-    expect(result).toMatch(/note:[a-f0-9]{8}\.\.\./);
+    expect(result).toMatch(/note:[a-fA-F0-9]{8}\.\.\./);
   });
 
   it('should resolve nostr:nevent to shortened event ID', () => {
@@ -96,7 +96,7 @@ describe('ResolveNostrPipe', () => {
 
     const result = pipe.transform(text);
     // Should contain "note:" followed by truncated ID
-    expect(result).toMatch(/note:[a-f0-9]{8}\.\.\./);
+    expect(result).toMatch(/note:[a-fA-F0-9]{8}\.\.\./);
   });
 
   it('should handle multiple nostr identifiers in the same text', () => {
@@ -107,7 +107,7 @@ describe('ResolveNostrPipe', () => {
 
     const result = pipe.transform(text);
     expect(result).toContain('@npub1tes...');
-    expect(result).toMatch(/note:[a-f0-9]{8}\.\.\./);
+    expect(result).toMatch(/note:[a-fA-F0-9]{8}\.\.\./);
   });
 
   it('should handle invalid nostr identifiers gracefully', () => {

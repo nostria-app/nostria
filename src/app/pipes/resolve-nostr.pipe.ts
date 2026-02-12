@@ -24,19 +24,10 @@ export class ResolveNostrPipe implements PipeTransform {
     // Regex to match nostr: identifiers
     const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent)1[a-zA-Z0-9]+)/g;
     
-    let result = text;
-    let match: RegExpExecArray | null;
-    
-    // Reset regex state
-    nostrRegex.lastIndex = 0;
-    
-    while ((match = nostrRegex.exec(text)) !== null) {
-      const nostrUri = match[0];
-      const replacement = this.resolveNostrUri(nostrUri);
-      result = result.replace(nostrUri, replacement);
-    }
-    
-    return result;
+    // Use replace with a function to handle all occurrences
+    return text.replace(nostrRegex, (match) => {
+      return this.resolveNostrUri(match);
+    });
   }
 
   private resolveNostrUri(uri: string): string {
@@ -63,12 +54,12 @@ export class ResolveNostrPipe implements PipeTransform {
           }
           
           // If not cached, trigger async load for next render
-          // Use setTimeout to avoid triggering during change detection
-          setTimeout(() => {
+          // Use queueMicrotask to avoid triggering during change detection
+          queueMicrotask(() => {
             this.dataService.getProfile(pubkey).catch(() => {
               // Ignore errors - profile will just show as truncated npub
             });
-          }, 0);
+          });
           
           // Return truncated npub as fallback
           return `@${this.utilities.getTruncatedNpub(identifier)}`;
