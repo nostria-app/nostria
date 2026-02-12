@@ -1,4 +1,4 @@
-import { Component, computed, input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +15,7 @@ import { LayoutService } from '../../services/layout.service';
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, RouterModule, UserProfileComponent],
   templateUrl: './starter-pack-event.component.html',
   styleUrl: './starter-pack-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StarterPackEventComponent {
   private accountState = inject(AccountStateService);

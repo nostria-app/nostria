@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -20,6 +20,7 @@ interface EmojiItem {
   imports: [MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './emoji-set-event.component.html',
   styleUrl: './emoji-set-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmojiSetEventComponent {
   private emojiSetService = inject(EmojiSetService);

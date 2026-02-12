@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,6 +28,7 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
   ],
   templateUrl: './poll-event.component.html',
   styleUrl: './poll-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PollEventComponent {
   private pollService = inject(PollService);

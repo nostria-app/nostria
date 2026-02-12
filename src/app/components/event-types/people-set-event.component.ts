@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +24,7 @@ import { LayoutService } from '../../services/layout.service';
   ],
   templateUrl: './people-set-event.component.html',
   styleUrl: './people-set-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PeopleSetEventComponent {
   private accountState = inject(AccountStateService);

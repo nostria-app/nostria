@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -559,6 +559,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       font-size: 0.875rem;
     }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MusicEventComponent {
   private router = inject(Router);
