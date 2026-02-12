@@ -1,0 +1,250 @@
+<div class="metrics-dialog" dialog-content>
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab" [class.active]="activeTab() === 'overview'" (click)="setTab('overview')">
+      <mat-icon>dashboard</mat-icon>
+      Overview
+    </button>
+    <button class="tab" [class.active]="activeTab() === 'timings'" (click)="setTab('timings')">
+      <mat-icon>timer</mat-icon>
+      Timings
+    </button>
+    <button class="tab" [class.active]="activeTab() === 'counters'" (click)="setTab('counters')">
+      <mat-icon>tag</mat-icon>
+      Counters
+    </button>
+  </div>
+
+  <!-- Overview Tab -->
+  @if (activeTab() === 'overview') {
+    <div class="overview-tab">
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="card">
+          <div class="card-icon"><mat-icon>timer</mat-icon></div>
+          <div class="card-content">
+            <span class="card-value">{{ snapshot().timings.length }}</span>
+            <span class="card-label">Tracked Operations</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><mat-icon>speed</mat-icon></div>
+          <div class="card-content">
+            <span class="card-value">{{ totalTimingOps() }}</span>
+            <span class="card-label">Total Measurements</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><mat-icon>tag</mat-icon></div>
+          <div class="card-content">
+            <span class="card-value">{{ totalCounterEvents() }}</span>
+            <span class="card-label">Counter Events</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon"><mat-icon>schedule</mat-icon></div>
+          <div class="card-content">
+            <span class="card-value">{{ uptimeFormatted() }}</span>
+            <span class="card-label">Uptime</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory Usage -->
+      @if (memoryFormatted(); as mem) {
+        <div class="section">
+          <div class="section-header">
+            <mat-icon>memory</mat-icon>
+            <span>Memory Usage</span>
+          </div>
+          <div class="memory-bar-container">
+            <div class="memory-info">
+              <span>{{ mem.used }} / {{ mem.total }}</span>
+              <span class="memory-percent">{{ mem.percent }}%</span>
+            </div>
+            <mat-progress-bar
+              [mode]="'determinate'"
+              [value]="mem.percent"
+              [color]="mem.percent > 80 ? 'warn' : 'primary'">
+            </mat-progress-bar>
+            <span class="memory-limit">Limit: {{ mem.limit }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Top Timings -->
+      @if (topTimings().length > 0) {
+        <div class="section">
+          <div class="section-header">
+            <mat-icon>trending_up</mat-icon>
+            <span>Slowest Operations (by avg)</span>
+          </div>
+          <div class="top-list">
+            @for (timing of topTimings(); track trackByName($index, timing)) {
+              <div class="top-item">
+                <span class="top-name">{{ timing.name }}</span>
+                <div class="top-stats">
+                  <span class="stat-badge avg" matTooltip="Average duration">{{ formatMs(timing.avgTime) }}</span>
+                  <span class="stat-badge count" matTooltip="Total calls">{{ timing.count }}x</span>
+                  <span class="stat-badge rate" matTooltip="Operations per second (last 10s)">{{ formatRate(timing.opsPerSecond) }}/s</span>
+                </div>
+                <div class="bar-bg">
+                  <div class="bar-fill"
+                       [style.width.%]="getBarWidth(timing.avgTime, topTimings()[0]?.avgTime || 1)">
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Top Counters -->
+      @if (topCounters().length > 0) {
+        <div class="section">
+          <div class="section-header">
+            <mat-icon>analytics</mat-icon>
+            <span>Top Counters</span>
+          </div>
+          <div class="top-list">
+            @for (counter of topCounters(); track trackByName($index, counter)) {
+              <div class="top-item">
+                <span class="top-name">{{ counter.name }}</span>
+                <div class="top-stats">
+                  <span class="stat-badge count">{{ counter.count }}</span>
+                  <span class="stat-badge rate" matTooltip="Rate per second (last 10s)">{{ formatRate(counter.ratePerSecond) }}/s</span>
+                </div>
+                <div class="bar-bg">
+                  <div class="bar-fill counter-fill"
+                       [style.width.%]="getBarWidth(counter.count, topCounters()[0]?.count || 1)">
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Empty State -->
+      @if (snapshot().timings.length === 0 && snapshot().counters.length === 0) {
+        <div class="empty-state">
+          <mat-icon>hourglass_empty</mat-icon>
+          <span>No metrics collected yet. Metrics are recorded as you use the app.</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Timings Tab -->
+  @if (activeTab() === 'timings') {
+    <div class="timings-tab">
+      <div class="sort-bar">
+        <span class="sort-label">Sort by:</span>
+        <button class="sort-btn" [class.active]="timingSortMode() === 'total'" (click)="setTimingSort('total')">Total Time</button>
+        <button class="sort-btn" [class.active]="timingSortMode() === 'avg'" (click)="setTimingSort('avg')">Avg Time</button>
+        <button class="sort-btn" [class.active]="timingSortMode() === 'count'" (click)="setTimingSort('count')">Call Count</button>
+      </div>
+      <div class="timings-list">
+        @for (timing of sortedTimings(); track trackByName($index, timing)) {
+          <div class="timing-row" tabindex="0" role="button" (click)="toggleTimingExpanded(timing.name)" (keydown.enter)="toggleTimingExpanded(timing.name)" (keydown.space)="toggleTimingExpanded(timing.name)"  >
+            <div class="timing-main">
+              <mat-icon class="expand-icon" [class.expanded]="isTimingExpanded(timing.name)">chevron_right</mat-icon>
+              <span class="timing-name">{{ timing.name }}</span>
+              <span class="timing-avg" matTooltip="Average">{{ formatMs(timing.avgTime) }}</span>
+              <span class="timing-count" matTooltip="Call count">{{ timing.count }}x</span>
+              <span class="timing-total" matTooltip="Total time">{{ formatMs(timing.totalTime) }}</span>
+            </div>
+            @if (isTimingExpanded(timing.name)) {
+              <div class="timing-detail">
+                <div class="detail-grid">
+                  <div class="detail-item">
+                    <span class="detail-label">Min</span>
+                    <span class="detail-value">{{ formatMs(timing.minTime) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Max</span>
+                    <span class="detail-value">{{ formatMs(timing.maxTime) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Median</span>
+                    <span class="detail-value">{{ formatMs(timing.medianTime) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">P95</span>
+                    <span class="detail-value">{{ formatMs(timing.p95Time) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Ops/sec</span>
+                    <span class="detail-value">{{ formatRate(timing.opsPerSecond) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Last</span>
+                    <span class="detail-value">{{ formatMs(timing.lastTime) }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon>hourglass_empty</mat-icon>
+            <span>No timing data collected yet.</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Counters Tab -->
+  @if (activeTab() === 'counters') {
+    <div class="counters-tab">
+      <div class="counters-list">
+        @for (counter of snapshot().counters; track trackByName($index, counter)) {
+          <div class="counter-row">
+            <span class="counter-name">{{ counter.name }}</span>
+            <span class="counter-value">{{ counter.count }}</span>
+            <span class="counter-rate" matTooltip="Rate per second (last 10s)">{{ formatRate(counter.ratePerSecond) }}/s</span>
+            <div class="bar-bg small-bar">
+              <div class="bar-fill counter-fill"
+                   [style.width.%]="getBarWidth(counter.count, snapshot().counters[0]?.count || 1)">
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon>hourglass_empty</mat-icon>
+            <span>No counter data collected yet.</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Actions Bar -->
+  <div class="actions-bar" dialog-actions>
+    <div class="left-actions">
+      <button mat-button (click)="toggleAutoRefresh()" [class.active]="autoRefresh()">
+        <mat-icon>{{ autoRefresh() ? 'pause' : 'play_arrow' }}</mat-icon>
+        {{ autoRefresh() ? 'Pause' : 'Resume' }}
+      </button>
+      <button mat-button (click)="refresh()" [disabled]="autoRefresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+    <div class="right-actions">
+      <button mat-button (click)="copyReport()" matTooltip="Copy report to clipboard">
+        <mat-icon>content_copy</mat-icon>
+        Copy Report
+      </button>
+      <button mat-button (click)="logReport()" matTooltip="Log report to console">
+        <mat-icon>terminal</mat-icon>
+        Log
+      </button>
+      <button mat-button color="warn" (click)="resetMetrics()" matTooltip="Reset all collected metrics">
+        <mat-icon>delete_sweep</mat-icon>
+        Reset
+      </button>
+    </div>
+  </div>
+</div>

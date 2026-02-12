@@ -71,3 +71,13 @@
 - [✓] 2026-02-11 02:03 - Add the emoji picker to the note-editor dialog
 - [✓] 2026-02-11 02:28 - Remove nostr.band as option for Trust
 - [✓] 2026-02-11 12:57 - Notifications: Show “Mark all as read” as primary header action
+- [✓] 2026-02-12 00:23 - Create `.env.example` with documented test variables: `TEST_NSEC` (nsec1... private key for test account), `TEST_PUBKEY` (hex pubkey, auto-derived if omitted), `BASE_URL` (default `http://localhost:4200`), `TEST_LOG_LEVEL` (debug/info/warn/error), `CI` (boolean)
+- [✓] 2026-02-12 00:26 - Create `.env` loading in Playwright config: install `dotenv` as devDependency, add `import 'dotenv/config'` to `playwright.config.ts`, and read `TEST_NSEC` / `TEST_PUBKEY` / `BASE_URL` from `process.env`
+- [✓] 2026-02-12 00:26 - Validate `.env` is already listed in `.gitignore` (confirmed: line 7). Add `test-results/` to `.gitignore` if not already present
+- [✓] 2026-02-12 00:28 - Add a `test:e2e:auth` npm script to `package.json` that runs only authenticated test files: `playwright test --grep @auth`
+- [✓] 2026-02-12 00:30 - Add a `test:e2e:full` npm script that runs all tests (public + authenticated) with full artifact collection: `playwright test --project=chromium`
+- [✓] 2026-02-12 00:37 - Add a `test:e2e:metrics` npm script that runs tests and generates the performance/metrics report: `playwright test --project=ai-debug --grep @metrics`
+- [✓] 2026-02-12 01:10 - Add a `injectAuth(page: Page)` method to `TestAuthHelper` that uses `page.addInitScript()` to set `localStorage['nostria-account']` and `localStorage['nostria-accounts']` with the constructed `NostrUser` before the app loads
+- [✓] 2026-02-12 01:17 - Add a `clearAuth(page: Page)` method to `TestAuthHelper` that removes auth keys from localStorage and reloads the page
+- [✓] 2026-02-12 06:00 - Feed plays videos in the background
+- [✓] 2026-02-12 06:15 - Metrics Logging

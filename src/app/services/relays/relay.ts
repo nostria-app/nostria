@@ -5,6 +5,7 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
+import { PerformanceMetricsService } from '../performance-metrics.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -25,6 +26,7 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
+  protected perfMetrics = inject(PerformanceMetricsService);
   // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
   private _eventProcessor?: any;
   protected get eventProcessor(): any {
@@ -641,9 +643,15 @@ export abstract class RelayServiceBase {
       // this.logger.debug(`[${this.constructor.name}] Executing query - Request ID: ${requestId}`, {...});
 
       // Execute the query
+      const queryStart = performance.now();
       const event = (await this.#pool.get(urls, filter, {
         maxWait: timeout,
       })) as T;
+      const queryDuration = performance.now() - queryStart;
+
+      // Record relay query metrics
+      this.perfMetrics.recordTiming('relay.get', queryDuration);
+      this.perfMetrics.incrementCounter('relay.get.calls');
 
       // Process event through central event processor
       // This handles: expiration (NIP-40), deletion (NIP-09), muting (NIP-51)
@@ -651,6 +659,7 @@ export abstract class RelayServiceBase {
         this.logger.debug(
           `[${this.constructor.name}] Event filtered out: ${event.id} (kind: ${event.kind})`
         );
+        this.perfMetrics.incrementCounter('relay.get.filtered');
         return null;
       }
 
@@ -661,6 +670,7 @@ export abstract class RelayServiceBase {
 
       // Update lastUsed for all relays used in this query
       if (event) {
+        this.perfMetrics.incrementCounter('relay.get.events_received');
         urls.forEach((url) => {
           this.updateRelayLastUsed(url);
           // Track relay statistics: mark as connected and increment event count
@@ -679,6 +689,7 @@ export abstract class RelayServiceBase {
       return event;
     } catch (error) {
       this.logger.error(`[${this.constructor.name}] Error fetching events`, error);
+      this.perfMetrics.incrementCounter('relay.get.errors');
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
@@ -824,6 +835,8 @@ export abstract class RelayServiceBase {
       // Publish the event with auth support
       const publishResults = this.#pool.publish(urls, event, { onauth: authCallback });
       this.logger.debug('Publish results:', publishResults);
+      this.perfMetrics.incrementCounter('relay.publish.calls');
+      this.perfMetrics.incrementCounter('relay.publish.relays', urls.length);
 
       // Lazy-load NotificationService to avoid circular dependency
       // This only creates the notification if NotificationService is available
@@ -1044,13 +1057,19 @@ export abstract class RelayServiceBase {
       const sub = this.#pool.subscribeMany(availableRelays, filter, {
         onauth: authCallback,
         onevent: (evt) => {
+          this.perfMetrics.incrementCounter('relay.subscribe.events_received');
+
           // Process event through central event processor
           // This handles: expiration (NIP-40), deletion (NIP-09), muting (NIP-51)
+          const eventProcessStart = performance.now();
           const result = this.eventProcessor.processEvent(evt);
+          this.perfMetrics.recordTiming('event.processing', performance.now() - eventProcessStart);
+
           if (!result.accepted) {
             this.logger.debug(
               `[${this.constructor.name}] Event filtered out: ${evt.id} (kind: ${evt.kind}), reason: ${result.reason}`
             );
+            this.perfMetrics.incrementCounter('relay.subscribe.events_filtered');
             return;
           }
 

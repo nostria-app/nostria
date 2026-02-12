@@ -169,6 +169,11 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
             // Autoplay failed - likely due to browser restrictions
             // User will need to click to play
           });
+        } else if (isInFeeds && !canAutoPlay && !video.paused) {
+          // Feeds panel became hidden while video was playing in viewport.
+          // IntersectionObserver doesn't re-fire on visibility changes,
+          // so isInViewport may be stale. Actively pause the video.
+          video.pause();
         }
       } else {
         // Video left viewport - pause if currently playing

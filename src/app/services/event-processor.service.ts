@@ -4,6 +4,7 @@ import { LoggerService } from './logger.service';
 import { ReportingService } from './reporting.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
+import { PerformanceMetricsService } from './performance-metrics.service';
 
 /**
  * Result of event processing
@@ -52,6 +53,7 @@ export class EventProcessorService {
   private readonly reportingService = inject(ReportingService);
   private readonly utilities = inject(UtilitiesService);
   private readonly dataService = inject(DataService);
+  private readonly perfMetrics = inject(PerformanceMetricsService);
 
   // Statistics tracking
   private readonly _stats = signal<EventProcessingStats>({
@@ -90,12 +92,17 @@ export class EventProcessorService {
     /** Skip expiration check */
     skipExpirationCheck?: boolean;
   } = {}): EventProcessingResult {
+    const start = performance.now();
+
     // Track total
     this.incrementStat('total');
+    this.perfMetrics.incrementCounter('event.processed.total');
 
     // 1. Check expiration (NIP-40)
     if (!options.skipExpirationCheck && this.utilities.isEventExpired(event)) {
       this.incrementStat('expired');
+      this.perfMetrics.incrementCounter('event.rejected.expired');
+      this.perfMetrics.recordTiming('event.processEvent', performance.now() - start);
       return {
         accepted: false,
         reason: 'expired',
@@ -105,9 +112,14 @@ export class EventProcessorService {
 
     // 2. Check mute list (NIP-51)
     if (!options.skipMuteCheck) {
+      const muteCheckStart = performance.now();
       const muteResult = this.checkMuteFilters(event);
+      this.perfMetrics.recordTiming('event.muteCheck', performance.now() - muteCheckStart);
+
       if (muteResult) {
         this.incrementStat(muteResult);
+        this.perfMetrics.incrementCounter(`event.rejected.${muteResult}`);
+        this.perfMetrics.recordTiming('event.processEvent', performance.now() - start);
         return {
           accepted: false,
           reason: muteResult,
@@ -118,6 +130,8 @@ export class EventProcessorService {
 
     // Event accepted
     this.incrementStat('accepted');
+    this.perfMetrics.incrementCounter('event.accepted');
+    this.perfMetrics.recordTiming('event.processEvent', performance.now() - start);
     return {
       accepted: true,
       event,
