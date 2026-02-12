@@ -1,7 +1,13 @@
+import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright Configuration for Nostria
+ *
+ * Environment variables (loaded from .env via dotenv):
+ * - TEST_NSEC: Nostr private key (nsec1...) for authenticated tests
+ * - TEST_PUBKEY: Nostr public key (hex) - auto-derived from TEST_NSEC if omitted
+ * - BASE_URL: App URL to test against (default: http://localhost:4200)
  *
  * This configuration is optimized for AI/LLM-driven test automation:
  * - Automatic screenshots on failure
