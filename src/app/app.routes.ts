@@ -859,6 +859,13 @@ export const routes: Routes = [
     title: 'Links',
   },
   {
+    path: 'user-details/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
+    title: 'Details',
+  },
+  {
     path: 'profile-edit',
     outlet: 'right',
     loadComponent: () =>
