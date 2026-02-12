@@ -1,4 +1,4 @@
-import { Component, inject, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewEncapsulation } from '@angular/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -78,6 +78,7 @@ import { MatButtonModule } from '@angular/material/button';
       margin: 0 auto;
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SigningDialogComponent {
   private dialogRef = inject(MatDialogRef<SigningDialogComponent>);

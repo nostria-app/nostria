@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -79,6 +79,7 @@ export interface TextInputDialogData {
       color: var(--mat-sys-on-surface-variant);
     }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TextInputDialogComponent {
   private dialogRef = inject(MatDialogRef<TextInputDialogComponent>);

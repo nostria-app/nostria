@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -442,6 +442,7 @@ export interface ReactionsDialogData {
       }
     `,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);

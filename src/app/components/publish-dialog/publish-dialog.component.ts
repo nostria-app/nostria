@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -50,6 +50,7 @@ interface RelayPublishResult {
   ],
   templateUrl: './publish-dialog.component.html',
   styleUrl: './publish-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PublishDialogComponent {
   private dialogRef = inject(MatDialogRef<PublishDialogComponent>);

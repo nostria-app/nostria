@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, untracked } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -27,6 +27,7 @@ export interface ReportsDialogData {
   ],
   templateUrl: './reports-dialog.component.html',
   styleUrl: './reports-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReportsDialogComponent>);

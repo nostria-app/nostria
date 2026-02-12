@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   inject,
   signal,
@@ -28,6 +29,7 @@ interface QRCamera {
   templateUrl: './qrcode-scan-dialog.component.html',
   styleUrls: ['./qrcode-scan-dialog.component.scss'],
   imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class
   QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {

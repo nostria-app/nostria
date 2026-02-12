@@ -1,4 +1,4 @@
-import { Component, input, output, effect, ElementRef, inject, viewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, effect, ElementRef, inject, viewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -102,7 +102,8 @@ import { MatButtonModule } from '@angular/material/button';
       </div>
     </div>
   `,
-  styleUrl: './custom-dialog.component.scss'
+  styleUrl: './custom-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   // Modern signal-based inputs

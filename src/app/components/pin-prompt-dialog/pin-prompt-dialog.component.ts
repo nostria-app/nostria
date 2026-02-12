@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -179,6 +179,7 @@ export interface PinPromptDialogData {
       min-width: 300px;
     }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PinPromptDialogComponent {
   private dialogRef = inject(MatDialogRef<PinPromptDialogComponent>);
