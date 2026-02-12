@@ -272,8 +272,22 @@ export interface InfoRecord {
 /**
  * Database configuration
  */
-const DB_NAME = 'nostria-db';
+const SHARED_DB_NAME = 'nostria-shared';
+const ACCOUNT_DB_PREFIX = 'nostria-account-';
 const DB_VERSION = 1;
+
+/** Legacy database names to delete during migration */
+const LEGACY_DB_NAMES = ['nostria-db', 'nostria'];
+
+/** localStorage key to track that migration to multi-DB has occurred */
+const MULTI_DB_VERSION_KEY = 'nostria-multi-db-version';
+const MULTI_DB_CURRENT_VERSION = 2;
+
+/**
+ * Event kinds that belong in the shared database.
+ * Kind 0 = profiles, kind 3 = contacts, kind 10002 = relay lists
+ */
+const SHARED_EVENT_KINDS = new Set([0, 3, 10002]);
 
 /**
  * Object store names
@@ -289,6 +303,24 @@ const STORES = {
   EVENTS_CACHE: 'eventsCache',
   MESSAGES: 'messages',
 } as const;
+
+/** Stores that live in the shared database */
+const SHARED_STORES = new Set([
+  STORES.EVENTS,
+  STORES.RELAYS,
+  STORES.OBSERVED_RELAYS,
+  STORES.PUBKEY_RELAY_MAPPINGS,
+  STORES.BADGE_DEFINITIONS,
+]);
+
+/** Stores that live in the per-account database */
+const ACCOUNT_STORES = new Set([
+  STORES.EVENTS,
+  STORES.INFO,
+  STORES.NOTIFICATIONS,
+  STORES.EVENTS_CACHE,
+  STORES.MESSAGES,
+]);
 
 /**
  * Index names for the events store
@@ -313,7 +345,14 @@ const EVENT_INDEXES = {
 export class DatabaseService {
   private readonly logger = inject(LoggerService);
 
-  private db: IDBDatabase | null = null;
+  /** Shared database connection (profiles, contacts, relay lists, badges, relays) */
+  private sharedDb: IDBDatabase | null = null;
+
+  /** Per-account database connection (feed events, trust, notifications, messages, cache) */
+  private accountDb: IDBDatabase | null = null;
+
+  /** The pubkey of the currently opened account database */
+  private currentAccountPubkey: string | null = null;
 
   /**
    * Extract the d-tag value from a parameterized replaceable event
@@ -396,12 +435,9 @@ export class DatabaseService {
   // Signal to track errors
   readonly lastError = signal<string | null>(null);
 
-  // Old database name that was used before refactoring to DatabaseService
-  private readonly OLD_DB_NAME = 'nostria';
-
   /**
-   * Initialize the database connection
-   * Returns a promise that resolves when the database is ready
+   * Initialize the shared database connection.
+   * Call initAccount(pubkey) afterwards to open the per-account DB.
    */
   async init(): Promise<void> {
     // Return existing promise if already initializing
@@ -409,8 +445,8 @@ export class DatabaseService {
       return this.initPromise;
     }
 
-    // Already initialized
-    if (this.db && this.initialized()) {
+    // Already initialized shared DB
+    if (this.sharedDb) {
       return Promise.resolve();
     }
 
@@ -424,83 +460,193 @@ export class DatabaseService {
   }
 
   /**
-   * Perform initialization - open the database
+   * Perform initialization — open the shared database and run migration if needed
    */
   private async performInit(): Promise<void> {
-    await this.openDatabase();
+    // Run migration: delete legacy databases on first launch with multi-DB
+    await this.migrateIfNeeded();
+
+    await this.openSharedDatabase();
   }
 
   /**
-   * Open or create the IndexedDB database
+   * Initialize the per-account database for the given pubkey.
+   * Must be called after init(). Sets initialized to true once both DBs are open.
    */
-  private openDatabase(): Promise<void> {
+  async initAccount(pubkey: string): Promise<void> {
+    if (!this.sharedDb) {
+      throw new Error('Shared database not initialized. Call init() first.');
+    }
+
+    // Same account already open
+    if (this.currentAccountPubkey === pubkey && this.accountDb) {
+      return;
+    }
+
+    // Close previous account DB if switching
+    this.closeAccountDb();
+
+    await this.openAccountDatabase(pubkey);
+    this.currentAccountPubkey = pubkey;
+    this.initialized.set(true);
+    this.logger.info(`Account database opened for ${pubkey.slice(0, 8)}...`);
+  }
+
+  /**
+   * Initialize in anonymous/preview mode (no per-account DB).
+   * Per-account operations will return empty results / no-op.
+   */
+  initAnonymous(): void {
+    this.currentAccountPubkey = null;
+    this.accountDb = null;
+    this.initialized.set(true);
+    this.logger.info('Initialized in anonymous mode (no account database)');
+  }
+
+  /**
+   * Switch account database — closes old account DB, opens new one.
+   */
+  async switchAccount(pubkey: string): Promise<void> {
+    this.logger.info(`Switching account database to ${pubkey.slice(0, 8)}...`);
+    this.closeAccountDb();
+    await this.initAccount(pubkey);
+  }
+
+  /**
+   * Delete the entire per-account database for a specific pubkey.
+   * Useful when deleting an account.
+   */
+  async deleteAccountData(pubkey: string): Promise<void> {
+    // Close if it's the current account
+    if (this.currentAccountPubkey === pubkey) {
+      this.closeAccountDb();
+    }
+    const dbName = ACCOUNT_DB_PREFIX + pubkey;
+    await this.deleteDatabaseByName(dbName);
+    this.logger.info(`Deleted account database for ${pubkey.slice(0, 8)}...`);
+  }
+
+  /**
+   * Open the shared database
+   */
+  private openSharedDatabase(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger.info(`Opening database: ${DB_NAME} v${DB_VERSION}`);
+      this.logger.info(`Opening shared database: ${SHARED_DB_NAME} v${DB_VERSION}`);
 
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = indexedDB.open(SHARED_DB_NAME, DB_VERSION);
 
-      // Set a timeout to prevent hanging
       const timeout = setTimeout(() => {
-        this.logger.error('Database open timeout after 10 seconds');
+        this.logger.error('Shared database open timeout after 10 seconds');
         this.lastError.set('Database open timeout');
-        reject(new Error('Database open timeout after 10 seconds'));
+        reject(new Error('Shared database open timeout after 10 seconds'));
       }, 10000);
 
       request.onerror = (event) => {
         clearTimeout(timeout);
         const error = (event.target as IDBOpenDBRequest).error;
-        this.logger.error('Failed to open database', error);
+        this.logger.error('Failed to open shared database', error);
         this.lastError.set(error?.message || 'Unknown database error');
         reject(error);
       };
 
       request.onsuccess = (event) => {
         clearTimeout(timeout);
-        this.db = (event.target as IDBOpenDBRequest).result;
+        this.sharedDb = (event.target as IDBOpenDBRequest).result;
 
-        // Handle connection errors
-        this.db.onerror = (event) => {
-          this.logger.error('Database error', (event.target as IDBDatabase)?.name);
+        this.sharedDb.onerror = (event) => {
+          this.logger.error('Shared database error', (event.target as IDBDatabase)?.name);
         };
 
-        // Handle version change (another tab upgraded the database)
-        this.db.onversionchange = () => {
-          this.logger.warn('Database version changed in another tab, closing connection');
-          this.db?.close();
-          this.db = null;
+        this.sharedDb.onversionchange = () => {
+          this.logger.warn('Shared database version changed in another tab, closing connection');
+          this.sharedDb?.close();
+          this.sharedDb = null;
           this.initialized.set(false);
         };
 
-        this.initialized.set(true);
-        this.logger.info('Database opened successfully');
+        this.logger.info('Shared database opened successfully');
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         clearTimeout(timeout);
         const db = (event.target as IDBOpenDBRequest).result;
-        const oldVersion = event.oldVersion;
-
-        this.logger.info(`Upgrading database from version ${oldVersion} to ${DB_VERSION}`);
-        this.createSchema(db);
+        this.createSharedSchema(db);
       };
 
       request.onblocked = () => {
         clearTimeout(timeout);
-        this.logger.warn('Database upgrade blocked - close other tabs');
+        this.logger.warn('Shared database upgrade blocked - close other tabs');
         this.lastError.set('Database blocked - close other tabs');
-        // Reject immediately when blocked - user needs to close other tabs
         reject(new Error('Database blocked by another tab. Please close all other Nostria tabs and try again.'));
       };
     });
   }
 
   /**
-   * Create or upgrade the database schema
-   * @param db The IDBDatabase instance
+   * Open a per-account database
    */
-  private createSchema(db: IDBDatabase): void {
-    // Create events store
+  private openAccountDatabase(pubkey: string): Promise<void> {
+    const dbName = ACCOUNT_DB_PREFIX + pubkey;
+
+    return new Promise((resolve, reject) => {
+      this.logger.info(`Opening account database: ${dbName} v${DB_VERSION}`);
+
+      const request = indexedDB.open(dbName, DB_VERSION);
+
+      const timeout = setTimeout(() => {
+        this.logger.error('Account database open timeout after 10 seconds');
+        this.lastError.set('Account database open timeout');
+        reject(new Error('Account database open timeout after 10 seconds'));
+      }, 10000);
+
+      request.onerror = (event) => {
+        clearTimeout(timeout);
+        const error = (event.target as IDBOpenDBRequest).error;
+        this.logger.error('Failed to open account database', error);
+        this.lastError.set(error?.message || 'Unknown database error');
+        reject(error);
+      };
+
+      request.onsuccess = (event) => {
+        clearTimeout(timeout);
+        this.accountDb = (event.target as IDBOpenDBRequest).result;
+
+        this.accountDb.onerror = (event) => {
+          this.logger.error('Account database error', (event.target as IDBDatabase)?.name);
+        };
+
+        this.accountDb.onversionchange = () => {
+          this.logger.warn('Account database version changed in another tab, closing connection');
+          this.accountDb?.close();
+          this.accountDb = null;
+        };
+
+        this.logger.info('Account database opened successfully');
+        resolve();
+      };
+
+      request.onupgradeneeded = (event) => {
+        clearTimeout(timeout);
+        const db = (event.target as IDBOpenDBRequest).result;
+        this.createAccountSchema(db);
+      };
+
+      request.onblocked = () => {
+        clearTimeout(timeout);
+        this.logger.warn('Account database upgrade blocked - close other tabs');
+        this.lastError.set('Account database blocked - close other tabs');
+        reject(new Error('Account database blocked by another tab. Please close all other Nostria tabs and try again.'));
+      };
+    });
+  }
+
+  /**
+   * Create schema for the shared database.
+   * Stores: events (shared kinds), relays, observedRelays, pubkeyRelayMappings, badgeDefinitions
+   */
+  private createSharedSchema(db: IDBDatabase): void {
+    // Create events store (for shared event kinds: 0, 3, 10002)
     if (!db.objectStoreNames.contains(STORES.EVENTS)) {
       const eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
       eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
@@ -508,16 +654,7 @@ export class DatabaseService {
       eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
-      this.logger.debug('Created events store');
-    }
-
-    // Create info store
-    if (!db.objectStoreNames.contains(STORES.INFO)) {
-      const infoStore = db.createObjectStore(STORES.INFO, { keyPath: 'compositeKey' });
-      infoStore.createIndex('by-type', 'type', { unique: false });
-      infoStore.createIndex('by-key', 'key', { unique: false });
-      infoStore.createIndex('by-updated', 'updated', { unique: false });
-      this.logger.debug('Created info store');
+      this.logger.debug('Created shared events store');
     }
 
     // Create relays store
@@ -525,14 +662,6 @@ export class DatabaseService {
       const relaysStore = db.createObjectStore(STORES.RELAYS, { keyPath: 'url' });
       relaysStore.createIndex('by-status', 'status', { unique: false });
       this.logger.debug('Created relays store');
-    }
-
-    // Create notifications store
-    if (!db.objectStoreNames.contains(STORES.NOTIFICATIONS)) {
-      const notificationsStore = db.createObjectStore(STORES.NOTIFICATIONS, { keyPath: 'id' });
-      notificationsStore.createIndex('by-timestamp', 'timestamp', { unique: false });
-      notificationsStore.createIndex('by-recipient', 'recipientPubkey', { unique: false });
-      this.logger.debug('Created notifications store');
     }
 
     // Create observed relays store
@@ -562,6 +691,40 @@ export class DatabaseService {
       badgeStore.createIndex('by-updated', 'created_at', { unique: false });
       this.logger.debug('Created badgeDefinitions store');
     }
+  }
+
+  /**
+   * Create schema for a per-account database.
+   * Stores: events (non-shared kinds), info, notifications, eventsCache, messages
+   */
+  private createAccountSchema(db: IDBDatabase): void {
+    // Create events store (for per-account event kinds)
+    if (!db.objectStoreNames.contains(STORES.EVENTS)) {
+      const eventsStore = db.createObjectStore(STORES.EVENTS, { keyPath: 'id' });
+      eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY, 'pubkey', { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
+      this.logger.debug('Created account events store');
+    }
+
+    // Create info store
+    if (!db.objectStoreNames.contains(STORES.INFO)) {
+      const infoStore = db.createObjectStore(STORES.INFO, { keyPath: 'compositeKey' });
+      infoStore.createIndex('by-type', 'type', { unique: false });
+      infoStore.createIndex('by-key', 'key', { unique: false });
+      infoStore.createIndex('by-updated', 'updated', { unique: false });
+      this.logger.debug('Created info store');
+    }
+
+    // Create notifications store
+    if (!db.objectStoreNames.contains(STORES.NOTIFICATIONS)) {
+      const notificationsStore = db.createObjectStore(STORES.NOTIFICATIONS, { keyPath: 'id' });
+      notificationsStore.createIndex('by-timestamp', 'timestamp', { unique: false });
+      notificationsStore.createIndex('by-recipient', 'recipientPubkey', { unique: false });
+      this.logger.debug('Created notifications store');
+    }
 
     // Create events cache store
     if (!db.objectStoreNames.contains(STORES.EVENTS_CACHE)) {
@@ -584,25 +747,122 @@ export class DatabaseService {
   }
 
   /**
-   * Ensure database is initialized before operations
+   * Get the correct database for the events store based on event kind.
+   * Shared kinds (0, 3, 10002) → sharedDb, everything else → accountDb.
    */
-  private ensureInitialized(): IDBDatabase {
-    if (!this.db) {
-      throw new Error('Database not initialized. Call init() first.');
-    }
-    return this.db;
+  private getDbForEventKind(kind: number): IDBDatabase | null {
+    return SHARED_EVENT_KINDS.has(kind) ? this.sharedDb : this.accountDb;
   }
 
   /**
-   * Close the database connection
+   * Get the correct database for a named store.
+   * Events store is special — it exists in both databases, so callers must use
+   * getDbForEventKind() for event operations.
+   */
+  private getDbForStore(storeName: string): IDBDatabase {
+    if (storeName === STORES.EVENTS) {
+      throw new Error('Use getDbForEventKind() for the events store');
+    }
+
+    if ((SHARED_STORES as Set<string>).has(storeName)) {
+      if (!this.sharedDb) {
+        throw new Error('Shared database not initialized. Call init() first.');
+      }
+      return this.sharedDb;
+    }
+
+    if ((ACCOUNT_STORES as Set<string>).has(storeName)) {
+      if (!this.accountDb) {
+        throw new Error('Account database not initialized. Call initAccount() first.');
+      }
+      return this.accountDb;
+    }
+
+    throw new Error(`Unknown store: ${storeName}`);
+  }
+
+  /**
+   * Ensure the shared database is initialized
+   */
+  private ensureSharedDb(): IDBDatabase {
+    if (!this.sharedDb) {
+      throw new Error('Shared database not initialized. Call init() first.');
+    }
+    return this.sharedDb;
+  }
+
+  /**
+   * Ensure the account database is initialized.
+   * Returns null if in anonymous mode (no account DB).
+   */
+  private getAccountDb(): IDBDatabase | null {
+    return this.accountDb;
+  }
+
+  /**
+   * Ensure the account database is initialized (throws if not).
+   */
+  private ensureAccountDb(): IDBDatabase {
+    if (!this.accountDb) {
+      throw new Error('Account database not initialized. Call initAccount() first.');
+    }
+    return this.accountDb;
+  }
+
+  /**
+   * Run migration from legacy single database to multi-database setup.
+   * Deletes old databases and lets data re-fetch from relays naturally.
+   */
+  private async migrateIfNeeded(): Promise<void> {
+    const currentVersion = parseInt(localStorage.getItem(MULTI_DB_VERSION_KEY) || '0', 10);
+
+    if (currentVersion >= MULTI_DB_CURRENT_VERSION) {
+      return; // Already migrated
+    }
+
+    this.logger.info('Migrating to multi-database storage (start fresh)');
+
+    // Delete all legacy databases
+    for (const legacyName of LEGACY_DB_NAMES) {
+      try {
+        await this.deleteDatabaseByName(legacyName);
+        this.logger.info(`Deleted legacy database: ${legacyName}`);
+      } catch (error) {
+        this.logger.warn(`Failed to delete legacy database ${legacyName}:`, error);
+      }
+    }
+
+    localStorage.setItem(MULTI_DB_VERSION_KEY, String(MULTI_DB_CURRENT_VERSION));
+    this.logger.info('Migration to multi-database storage complete');
+  }
+
+  /**
+   * Close the account database connection
+   */
+  private closeAccountDb(): void {
+    if (this.accountDb) {
+      this.accountDb.close();
+      this.accountDb = null;
+      this.currentAccountPubkey = null;
+      this.logger.info('Account database connection closed');
+    }
+  }
+
+  /**
+   * Close all database connections
    */
   close(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-      this.initialized.set(false);
-      this.logger.info('Database connection closed');
+    if (this.accountDb) {
+      this.accountDb.close();
+      this.accountDb = null;
+      this.currentAccountPubkey = null;
     }
+    if (this.sharedDb) {
+      this.sharedDb.close();
+      this.sharedDb = null;
+    }
+    this.initialized.set(false);
+    this.logger.info('All database connections closed');
   }
 
   // ============================================================================
@@ -610,7 +870,8 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Save a single event to the database
+   * Save a single event to the database.
+   * Routes to shared DB for shared kinds (0, 3, 10002) or account DB for others.
    * Skips saving if the event has already expired (NIP-40)
    */
   async saveEvent(event: Event & { dTag?: string }): Promise<void> {
@@ -639,7 +900,12 @@ export class DatabaseService {
       }
     }
 
-    const db = this.ensureInitialized();
+    const db = this.getDbForEventKind(event.kind);
+    if (!db) {
+      // Account DB not open (anonymous mode) and this is a per-account event — skip
+      this.logger.debug(`Skipping save for event kind ${event.kind} — no account database`);
+      return;
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readwrite');
@@ -715,24 +981,20 @@ export class DatabaseService {
   }
 
   /**
-   * Save multiple events in a single transaction
-   * Filters out expired events (NIP-40) before saving
+   * Save multiple events in a single transaction per database.
+   * Groups events by shared vs per-account and saves them respectively.
+   * Filters out expired events (NIP-40) before saving.
    */
   async saveEvents(events: (Event & { dTag?: string })[]): Promise<void> {
     // Filter out malformed and expired events
     const validEvents = events.filter(event => {
-      // Check if event is valid
       if (!event || !event.id || typeof event.kind !== 'number') {
         this.logger.warn('Skipping malformed event in batch save:', event);
         return false;
       }
-
-      // Ensure tags array exists
       if (!event.tags) {
         event.tags = [];
       }
-
-      // Check if event is expired
       return !this.isEventExpired(event);
     });
 
@@ -742,37 +1004,77 @@ export class DatabaseService {
       this.logger.debug(`Filtered out ${events.length - validEvents.length} invalid/expired events before saving`);
     }
 
-    const db = this.ensureInitialized();
+    // Group by destination database
+    const sharedEvents: (Event & { dTag?: string })[] = [];
+    const accountEvents: (Event & { dTag?: string })[] = [];
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
-      const store = transaction.objectStore(STORES.EVENTS);
-
-      for (const event of validEvents) {
-        store.put(event);
+    for (const event of validEvents) {
+      if (SHARED_EVENT_KINDS.has(event.kind)) {
+        sharedEvents.push(event);
+      } else {
+        accountEvents.push(event);
       }
+    }
 
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    const promises: Promise<void>[] = [];
+
+    // Save shared events
+    if (sharedEvents.length > 0 && this.sharedDb) {
+      promises.push(new Promise((resolve, reject) => {
+        const transaction = this.sharedDb!.transaction(STORES.EVENTS, 'readwrite');
+        const store = transaction.objectStore(STORES.EVENTS);
+        for (const event of sharedEvents) {
+          store.put(event);
+        }
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      }));
+    }
+
+    // Save account events
+    if (accountEvents.length > 0 && this.accountDb) {
+      promises.push(new Promise((resolve, reject) => {
+        const transaction = this.accountDb!.transaction(STORES.EVENTS, 'readwrite');
+        const store = transaction.objectStore(STORES.EVENTS);
+        for (const event of accountEvents) {
+          store.put(event);
+        }
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      }));
+    }
+
+    await Promise.all(promises);
   }
 
   /**
-   * Get an event by ID
-   * Checks for expiration (NIP-40) and deletes if expired
+   * Get an event by ID.
+   * Checks account DB first (more likely for feed content), falls back to shared DB.
+   * Checks for expiration (NIP-40) and deletes if expired.
    */
   async getEvent(id: string): Promise<Event | undefined> {
-    const db = this.ensureInitialized();
+    // Helper to get from a single DB
+    const getFromDb = (db: IDBDatabase): Promise<Event | undefined> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    };
 
-    const event = await new Promise<Event | undefined>((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
-      const store = transaction.objectStore(STORES.EVENTS);
+    let event: Event | undefined;
 
-      const request = store.get(id);
+    // Check account DB first (most events are per-account)
+    if (this.accountDb) {
+      event = await getFromDb(this.accountDb);
+    }
 
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    // Fall back to shared DB
+    if (!event && this.sharedDb) {
+      event = await getFromDb(this.sharedDb);
+    }
 
     if (event && this.isEventExpired(event)) {
       this.logger.info(`Event ${id} has expired, deleting from database`);
@@ -827,49 +1129,59 @@ export class DatabaseService {
   }
 
   /**
-   * Delete an event by ID
+   * Delete an event by ID.
+   * Tries to delete from both databases since we don't know which one holds it.
    */
   async deleteEvent(id: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const deleteFromDb = (db: IDBDatabase): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readwrite');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    };
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
-      const store = transaction.objectStore(STORES.EVENTS);
-
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const promises: Promise<void>[] = [];
+    if (this.sharedDb) promises.push(deleteFromDb(this.sharedDb));
+    if (this.accountDb) promises.push(deleteFromDb(this.accountDb));
+    await Promise.all(promises);
   }
 
   /**
-   * Delete multiple events by ID in a single transaction
+   * Delete multiple events by ID.
+   * Tries to delete from both databases.
    */
   async deleteEvents(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
 
-    const db = this.ensureInitialized();
+    const deleteFromDb = (db: IDBDatabase): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readwrite');
+        const store = transaction.objectStore(STORES.EVENTS);
+        for (const id of ids) {
+          store.delete(id);
+        }
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+    };
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
-      const store = transaction.objectStore(STORES.EVENTS);
-
-      for (const id of ids) {
-        store.delete(id);
-      }
-
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
+    const promises: Promise<void>[] = [];
+    if (this.sharedDb) promises.push(deleteFromDb(this.sharedDb));
+    if (this.accountDb) promises.push(deleteFromDb(this.accountDb));
+    await Promise.all(promises);
   }
 
   /**
-   * Get events by kind
-   * Filters out expired events (NIP-40) and deletes them from the database
+   * Get events by kind.
+   * Routes to the correct database based on the kind.
+   * Filters out expired events (NIP-40) and deletes them from the database.
    */
   async getEventsByKind(kind: number): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
 
     const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
@@ -886,12 +1198,13 @@ export class DatabaseService {
   }
 
   /**
-   * Get events by kind that have a specific e-tag
-   * Uses a cursor to filter efficiently without loading all events into memory
-   * Filters out expired events (NIP-40)
+   * Get events by kind that have a specific e-tag.
+   * Routes to the correct database based on the kind.
+   * Filters out expired events (NIP-40).
    */
   async getEventsByKindAndEventTag(kind: number, eventTag: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
 
     const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
@@ -905,7 +1218,6 @@ export class DatabaseService {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor) {
           const eventData = cursor.value as Event;
-          // Check if event has the target e-tag
           if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
             results.push(eventData);
           }
@@ -922,75 +1234,102 @@ export class DatabaseService {
   }
 
   /**
-   * Get events by multiple kinds that have a specific e-tag
-   * Uses cursors to filter efficiently without loading all events into memory
-   * Filters out expired events (NIP-40)
+   * Get events by multiple kinds that have a specific e-tag.
+   * May need to query both databases if kinds span shared and per-account.
+   * Filters out expired events (NIP-40).
    */
   async getEventsByKindsAndEventTag(kinds: number[], eventTag: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const queryDb = (db: IDBDatabase, kindsToQuery: number[]): Promise<Event[]> => {
+      const kindPromises = kindsToQuery.map(kind => {
+        return new Promise<Event[]>((resolve, reject) => {
+          const transaction = db.transaction(STORES.EVENTS, 'readonly');
+          const store = transaction.objectStore(STORES.EVENTS);
+          const index = store.index(EVENT_INDEXES.BY_KIND);
 
-    // Query each kind in parallel using cursors
-    const kindPromises = kinds.map(kind => {
-      return new Promise<Event[]>((resolve, reject) => {
-        const transaction = db.transaction(STORES.EVENTS, 'readonly');
-        const store = transaction.objectStore(STORES.EVENTS);
-        const index = store.index(EVENT_INDEXES.BY_KIND);
+          const results: Event[] = [];
+          const request = index.openCursor(IDBKeyRange.only(kind));
 
-        const results: Event[] = [];
-        const request = index.openCursor(IDBKeyRange.only(kind));
-
-        request.onsuccess = (event) => {
-          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-          if (cursor) {
-            const eventData = cursor.value as Event;
-            // Check if event has the target e-tag
-            if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
-              results.push(eventData);
+          request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+            if (cursor) {
+              const eventData = cursor.value as Event;
+              if (eventData.tags?.some(tag => tag[0] === 'e' && tag[1] === eventTag)) {
+                results.push(eventData);
+              }
+              cursor.continue();
+            } else {
+              resolve(results);
             }
-            cursor.continue();
-          } else {
-            resolve(results);
-          }
-        };
+          };
 
-        request.onerror = () => reject(request.error);
+          request.onerror = () => reject(request.error);
+        });
       });
-    });
+      return Promise.all(kindPromises).then(results => results.flat());
+    };
 
-    const allResults = await Promise.all(kindPromises);
+    // Split kinds by database
+    const sharedKinds = kinds.filter(k => SHARED_EVENT_KINDS.has(k));
+    const accountKinds = kinds.filter(k => !SHARED_EVENT_KINDS.has(k));
+
+    const promises: Promise<Event[]>[] = [];
+    if (sharedKinds.length > 0 && this.sharedDb) {
+      promises.push(queryDb(this.sharedDb, sharedKinds));
+    }
+    if (accountKinds.length > 0 && this.accountDb) {
+      promises.push(queryDb(this.accountDb, accountKinds));
+    }
+
+    const allResults = await Promise.all(promises);
     const events = allResults.flat();
 
     return this.filterAndDeleteExpiredEvents(events);
   }
 
   /**
-   * Get events by pubkey
-   * Filters out expired events (NIP-40) and deletes them from the database
+   * Get events by pubkey.
+   * Queries both databases and merges results since events may be in either.
+   * Filters out expired events (NIP-40) and deletes them from the database.
    */
   async getEventsByPubkey(pubkey: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const queryDb = (db: IDBDatabase): Promise<Event[]> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index(EVENT_INDEXES.BY_PUBKEY);
+        const request = index.getAll(pubkey);
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    };
 
-    const events = await new Promise<Event[]>((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
-      const store = transaction.objectStore(STORES.EVENTS);
-      const index = store.index(EVENT_INDEXES.BY_PUBKEY);
+    const promises: Promise<Event[]>[] = [];
+    if (this.sharedDb) promises.push(queryDb(this.sharedDb));
+    if (this.accountDb) promises.push(queryDb(this.accountDb));
 
-      const request = index.getAll(pubkey);
+    const results = await Promise.all(promises);
+    const events = results.flat();
 
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
+    // Deduplicate by event ID
+    const seen = new Set<string>();
+    const unique = events.filter(e => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
     });
 
-    return this.filterAndDeleteExpiredEvents(events);
+    return this.filterAndDeleteExpiredEvents(unique);
   }
 
   /**
-   * Get events by pubkey and kind - optimized for single transaction
-   * Handles both single pubkey and array of pubkeys efficiently
-   * Filters out expired events (NIP-40) and deletes them from the database
+   * Get events by pubkey and kind — routes to the correct database.
+   * Handles both single pubkey and array of pubkeys efficiently.
+   * Filters out expired events (NIP-40) and deletes them from the database.
    */
   async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
+
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     // Filter out invalid pubkeys
@@ -1016,7 +1355,6 @@ export class DatabaseService {
           }
           completed++;
 
-          // All requests completed
           if (completed === validPubkeys.length) {
             resolve(results);
           }
@@ -1027,7 +1365,6 @@ export class DatabaseService {
         };
       }
 
-      // Handle empty pubkeys array
       if (validPubkeys.length === 0) {
         resolve([]);
       }
@@ -1055,15 +1392,18 @@ export class DatabaseService {
   }
 
   /**
-   * Get events by pubkey, kind, and d-tag (for parameterized replaceable events)
-   * Filters out expired events (NIP-40) and deletes them from the database
+   * Get events by pubkey, kind, and d-tag (for parameterized replaceable events).
+   * Routes to the correct database based on the kind.
+   * Filters out expired events (NIP-40) and deletes them from the database.
    */
   async getEventsByPubkeyKindAndDTag(
     pubkey: string | string[],
     kind: number,
     dTag: string
   ): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
+
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     const validPubkeys = pubkeys.filter(pk => pk && pk !== 'undefined' && pk.trim());
@@ -1107,94 +1447,129 @@ export class DatabaseService {
   }
 
   /**
-   * Get all events (use with caution - can be slow for large datasets)
+   * Get all events from both databases (use with caution - can be slow for large datasets)
    */
   async getAllEvents(): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const queryDb = (db: IDBDatabase): Promise<Event[]> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    };
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
-      const store = transaction.objectStore(STORES.EVENTS);
+    const promises: Promise<Event[]>[] = [];
+    if (this.sharedDb) promises.push(queryDb(this.sharedDb));
+    if (this.accountDb) promises.push(queryDb(this.accountDb));
 
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
+    const results = await Promise.all(promises);
+    return results.flat();
   }
 
   /**
-   * Count events in the database
+   * Count events in both databases
    */
   async countEvents(): Promise<number> {
-    const db = this.ensureInitialized();
+    const countInDb = (db: IDBDatabase): Promise<number> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const request = store.count();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    };
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
-      const store = transaction.objectStore(STORES.EVENTS);
+    const promises: Promise<number>[] = [];
+    if (this.sharedDb) promises.push(countInDb(this.sharedDb));
+    if (this.accountDb) promises.push(countInDb(this.accountDb));
 
-      const request = store.count();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    const counts = await Promise.all(promises);
+    return counts.reduce((sum, c) => sum + c, 0);
   }
 
   /**
-   * Clear all cached data from all database stores
-   * This clears: events, eventsCache, badgeDefinitions, info, relays, 
-   * notifications, observedRelays, pubkeyRelayMappings, and messages
+   * Clear all cached data from all database stores (both shared and account)
    */
   async clearAllData(): Promise<void> {
-    const db = this.ensureInitialized();
-
-    const storesToClear = [
-      STORES.EVENTS,
-      STORES.EVENTS_CACHE,
-      STORES.BADGE_DEFINITIONS,
-      STORES.INFO,
-      STORES.RELAYS,
-      STORES.NOTIFICATIONS,
-      STORES.OBSERVED_RELAYS,
-      STORES.PUBKEY_RELAY_MAPPINGS,
-      STORES.MESSAGES,
-    ];
-
-    for (const storeName of storesToClear) {
-      await new Promise<void>((resolve, reject) => {
+    const clearStore = (db: IDBDatabase, storeName: string): Promise<void> => {
+      return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
-
         const request = store.clear();
-
         request.onsuccess = () => {
           this.logger.debug(`Cleared store: ${storeName}`);
           resolve();
         };
         request.onerror = () => reject(request.error);
       });
+    };
+
+    const promises: Promise<void>[] = [];
+
+    // Clear shared stores
+    if (this.sharedDb) {
+      for (const storeName of SHARED_STORES) {
+        promises.push(clearStore(this.sharedDb, storeName));
+      }
     }
 
-    this.logger.info('Cleared all data from database');
+    // Clear account stores
+    if (this.accountDb) {
+      for (const storeName of ACCOUNT_STORES) {
+        promises.push(clearStore(this.accountDb, storeName));
+      }
+    }
+
+    await Promise.all(promises);
+    this.logger.info('Cleared all data from databases');
   }
 
   /**
-   * Clear events store only
+   * Clear events stores in both databases, plus events cache in account DB
    */
   async clearEvents(): Promise<void> {
-    await this.clear(STORES.EVENTS);
-    await this.clear(STORES.EVENTS_CACHE);
-    this.logger.info('Cleared events from database');
+    const promises: Promise<void>[] = [];
+
+    if (this.sharedDb) {
+      promises.push(this.clearStoreInDb(this.sharedDb, STORES.EVENTS));
+    }
+    if (this.accountDb) {
+      promises.push(this.clearStoreInDb(this.accountDb, STORES.EVENTS));
+      promises.push(this.clearStoreInDb(this.accountDb, STORES.EVENTS_CACHE));
+    }
+
+    await Promise.all(promises);
+    this.logger.info('Cleared events from databases');
   }
 
   /**
-   * Clear relays-related stores
+   * Clear relays-related stores (in shared DB)
    */
   async clearRelaysData(): Promise<void> {
-    await this.clear(STORES.RELAYS);
-    await this.clear(STORES.OBSERVED_RELAYS);
-    await this.clear(STORES.PUBKEY_RELAY_MAPPINGS);
+    if (!this.sharedDb) return;
+
+    await Promise.all([
+      this.clearStoreInDb(this.sharedDb, STORES.RELAYS),
+      this.clearStoreInDb(this.sharedDb, STORES.OBSERVED_RELAYS),
+      this.clearStoreInDb(this.sharedDb, STORES.PUBKEY_RELAY_MAPPINGS),
+    ]);
     this.logger.info('Cleared relays data from database');
+  }
+
+  /**
+   * Helper to clear a specific store in a specific database
+   */
+  private clearStoreInDb(db: IDBDatabase, storeName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
 
   // ============================================================================
@@ -1202,69 +1577,65 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Save an info record
+   * Save an info record (account DB)
    */
   async saveInfoRecord(record: { compositeKey: string; key: string; type: string; updated: number;[key: string]: unknown }): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.INFO, 'readwrite');
       const store = transaction.objectStore(STORES.INFO);
-
       const request = store.put(record);
-
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Get an info record by composite key
+   * Get an info record by composite key (account DB)
    */
   async getInfoRecord(compositeKey: string): Promise<Record<string, unknown> | undefined> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return undefined;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.INFO, 'readonly');
       const store = transaction.objectStore(STORES.INFO);
-
       const request = store.get(compositeKey);
-
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Get info records by type
+   * Get info records by type (account DB)
    */
   async getInfoRecordsByType(type: string): Promise<Record<string, unknown>[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.INFO, 'readonly');
       const store = transaction.objectStore(STORES.INFO);
       const index = store.index('by-type');
-
       const request = index.getAll(type);
-
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Delete an info record
+   * Delete an info record (account DB)
    */
   async deleteInfoRecord(compositeKey: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.INFO, 'readwrite');
       const store = transaction.objectStore(STORES.INFO);
-
       const request = store.delete(compositeKey);
-
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -1428,115 +1799,211 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Get a value from any store by key
+   * Get a value from any store by key.
+   * Routes to the correct database based on store name.
+   * NOTE: For the events store, this checks account DB first, then shared DB.
    */
   async get<T>(storeName: string, key: IDBValidKey): Promise<T | undefined> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      // Events store exists in both DBs — check account first, then shared
+      const getFromDb = (db: IDBDatabase): Promise<T | undefined> => {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.get(key);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      if (this.accountDb) {
+        const result = await getFromDb(this.accountDb);
+        if (result !== undefined) return result;
+      }
+      if (this.sharedDb) {
+        return getFromDb(this.sharedDb);
+      }
+      return undefined;
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
       const store = transaction.objectStore(storeName);
-
       const request = store.get(key);
-
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Put a value into any store
+   * Put a value into any store.
+   * Routes to the correct database based on store name.
+   * NOTE: Cannot be used for the events store — use saveEvent() instead.
    */
   async put<T>(storeName: string, value: T): Promise<void> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      throw new Error('Use saveEvent() for the events store');
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);
-
       const request = store.put(value);
-
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Delete a value from any store
+   * Delete a value from any store.
+   * Routes to the correct database based on store name.
+   * NOTE: For the events store, tries both DBs.
    */
   async delete(storeName: string, key: IDBValidKey): Promise<void> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      // Try both DBs
+      const deleteFromDb = (db: IDBDatabase): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, 'readwrite');
+          const store = transaction.objectStore(storeName);
+          const request = store.delete(key);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      const promises: Promise<void>[] = [];
+      if (this.sharedDb) promises.push(deleteFromDb(this.sharedDb));
+      if (this.accountDb) promises.push(deleteFromDb(this.accountDb));
+      await Promise.all(promises);
+      return;
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);
-
       const request = store.delete(key);
-
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Get all values from a store
+   * Get all values from a store.
+   * Routes to the correct database based on store name.
+   * NOTE: For the events store, merges results from both DBs.
    */
   async getAll<T>(storeName: string): Promise<T[]> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      const queryDb = (db: IDBDatabase): Promise<T[]> => {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      const promises: Promise<T[]>[] = [];
+      if (this.sharedDb) promises.push(queryDb(this.sharedDb));
+      if (this.accountDb) promises.push(queryDb(this.accountDb));
+      const results = await Promise.all(promises);
+      return results.flat();
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
       const store = transaction.objectStore(storeName);
-
       const request = store.getAll();
-
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Get all values from a store using an index
+   * Get all values from a store using an index.
+   * Routes to the correct database based on store name.
    */
   async getAllFromIndex<T>(storeName: string, indexName: string, key: IDBValidKey): Promise<T[]> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      // Query both DBs and merge
+      const queryDb = (db: IDBDatabase): Promise<T[]> => {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const index = store.index(indexName);
+          const request = index.getAll(key);
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      const promises: Promise<T[]>[] = [];
+      if (this.sharedDb) promises.push(queryDb(this.sharedDb));
+      if (this.accountDb) promises.push(queryDb(this.accountDb));
+      const results = await Promise.all(promises);
+      return results.flat();
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
       const store = transaction.objectStore(storeName);
       const index = store.index(indexName);
-
       const request = index.getAll(key);
-
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Wipe the entire database (both old and new)
+   * Wipe all databases (shared, all account DBs, and legacy DBs)
    */
   async wipe(): Promise<void> {
-    this.logger.info('Wiping IndexedDB databases');
+    this.logger.info('Wiping all IndexedDB databases');
 
-    // Close the current database connection if it exists
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+    // Close all current connections
+    this.close();
 
-    // Delete both the new and old databases
     const deletePromises: Promise<void>[] = [];
 
-    // Delete new database
-    deletePromises.push(this.deleteDatabaseByName(DB_NAME));
+    // Delete shared database
+    deletePromises.push(this.deleteDatabaseByName(SHARED_DB_NAME));
 
-    // Delete old database (from before refactor)
-    deletePromises.push(this.deleteDatabaseByName(this.OLD_DB_NAME));
+    // Delete legacy databases
+    for (const legacyName of LEGACY_DB_NAMES) {
+      deletePromises.push(this.deleteDatabaseByName(legacyName));
+    }
+
+    // Delete all account databases using indexedDB.databases() if available
+    if ('databases' in indexedDB) {
+      try {
+        const allDbs = await (indexedDB as any).databases();
+        for (const dbInfo of allDbs) {
+          if (dbInfo.name && dbInfo.name.startsWith(ACCOUNT_DB_PREFIX)) {
+            deletePromises.push(this.deleteDatabaseByName(dbInfo.name));
+          }
+        }
+      } catch (error) {
+        this.logger.warn('indexedDB.databases() not available, using localStorage fallback');
+      }
+    }
 
     try {
       await Promise.all(deletePromises);
       this.initialized.set(false);
+      // Reset migration version so it runs again on next init
+      localStorage.removeItem(MULTI_DB_VERSION_KEY);
       this.logger.info('All databases wiped successfully');
     } catch (error) {
       this.logger.error('Error wiping databases', error);
@@ -1576,34 +2043,51 @@ export class DatabaseService {
   }
 
   /**
-   * Clear all data from a store
+   * Clear all data from a store.
+   * For the events store, clears both databases.
    */
   async clear(storeName: string): Promise<void> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      const promises: Promise<void>[] = [];
+      if (this.sharedDb) promises.push(this.clearStoreInDb(this.sharedDb, storeName));
+      if (this.accountDb) promises.push(this.clearStoreInDb(this.accountDb, storeName));
+      await Promise.all(promises);
+      return;
+    }
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(storeName, 'readwrite');
-      const store = transaction.objectStore(storeName);
-
-      const request = store.clear();
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const db = this.getDbForStore(storeName);
+    return this.clearStoreInDb(db, storeName);
   }
 
   /**
-   * Count items in a store
+   * Count items in a store.
+   * For the events store, sums counts from both databases.
    */
   async count(storeName: string): Promise<number> {
-    const db = this.ensureInitialized();
+    if (storeName === STORES.EVENTS) {
+      const countInDb = (db: IDBDatabase): Promise<number> => {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(storeName, 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.count();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      const promises: Promise<number>[] = [];
+      if (this.sharedDb) promises.push(countInDb(this.sharedDb));
+      if (this.accountDb) promises.push(countInDb(this.accountDb));
+      const counts = await Promise.all(promises);
+      return counts.reduce((sum, c) => sum + c, 0);
+    }
+
+    const db = this.getDbForStore(storeName);
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
       const store = transaction.objectStore(storeName);
-
       const request = store.count();
-
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -1614,22 +2098,21 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Delete the entire database
+   * Delete the shared database
    */
   async deleteDatabase(): Promise<void> {
-    // Close existing connection first
     this.close();
 
     return new Promise((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(DB_NAME);
+      const request = indexedDB.deleteDatabase(SHARED_DB_NAME);
 
       request.onsuccess = () => {
-        this.logger.info('Database deleted successfully');
+        this.logger.info('Shared database deleted successfully');
         resolve();
       };
 
       request.onerror = () => {
-        this.logger.error('Failed to delete database', request.error);
+        this.logger.error('Failed to delete shared database', request.error);
         reject(request.error);
       };
 
@@ -1658,10 +2141,11 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Save a direct message to the database
+   * Save a direct message to the database (account DB)
    */
   async saveDirectMessage(message: StoredDirectMessage): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
@@ -1678,12 +2162,13 @@ export class DatabaseService {
   }
 
   /**
-   * Save multiple direct messages in a single transaction
+   * Save multiple direct messages in a single transaction (account DB)
    */
   async saveDirectMessages(messages: StoredDirectMessage[]): Promise<void> {
     if (messages.length === 0) return;
 
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
@@ -1702,10 +2187,11 @@ export class DatabaseService {
   }
 
   /**
-   * Get all messages for a specific chat
+   * Get all messages for a specific chat (account DB)
    */
   async getMessagesForChat(accountPubkey: string, chatId: string): Promise<StoredDirectMessage[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readonly');
@@ -1716,7 +2202,6 @@ export class DatabaseService {
 
       request.onsuccess = () => {
         const messages = request.result || [];
-        // Sort by creation time ascending
         messages.sort((a, b) => a.created_at - b.created_at);
         resolve(messages);
       };
@@ -1725,7 +2210,7 @@ export class DatabaseService {
   }
 
   /**
-   * Get all chats for an account (returns unique chat IDs with message counts)
+   * Get all chats for an account (account DB)
    */
   async getChatsForAccount(accountPubkey: string): Promise<{
     chatId: string;
@@ -1733,7 +2218,8 @@ export class DatabaseService {
     lastMessageTime: number;
     unreadCount: number;
   }[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readonly');
@@ -1779,36 +2265,34 @@ export class DatabaseService {
   }
 
   /**
-   * Check if a message already exists in the database
+   * Check if a message already exists in the database (account DB)
    */
   async messageExists(accountPubkey: string, chatId: string, messageId: string): Promise<boolean> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return false;
+
     const id = `${accountPubkey}::${chatId}::${messageId}`;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readonly');
       const store = transaction.objectStore(STORES.MESSAGES);
-
       const request = store.get(id);
-
       request.onsuccess = () => resolve(!!request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Check if a gift wrap event has already been processed (message already decrypted and stored)
-   * This is used to skip re-decryption of NIP-44 messages that were already processed.
+   * Check if a gift wrap event has already been processed (account DB)
    */
   async giftWrapExists(accountPubkey: string, giftWrapId: string): Promise<boolean> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return false;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readonly');
       const store = transaction.objectStore(STORES.MESSAGES);
       const index = store.index('by-account');
-
-      // Get all messages for this account and check if any have this giftWrapId
       const request = index.getAll(accountPubkey);
 
       request.onsuccess = () => {
@@ -1821,16 +2305,17 @@ export class DatabaseService {
   }
 
   /**
-   * Mark a message as read
+   * Mark a message as read (account DB)
    */
   async markMessageAsRead(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
+
     const id = `${accountPubkey}::${chatId}::${messageId}`;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
       const store = transaction.objectStore(STORES.MESSAGES);
-
       const getRequest = store.get(id);
 
       getRequest.onsuccess = () => {
@@ -1838,10 +2323,7 @@ export class DatabaseService {
         if (message) {
           message.read = true;
           const putRequest = store.put(message);
-          putRequest.onsuccess = () => {
-            this.logger.debug(`Marked message ${messageId} as read`);
-            resolve();
-          };
+          putRequest.onsuccess = () => resolve();
           putRequest.onerror = () => reject(putRequest.error);
         } else {
           resolve();
@@ -1852,17 +2334,16 @@ export class DatabaseService {
   }
 
   /**
-   * Mark all messages in a chat as read
+   * Mark all messages in a chat as read (account DB)
    */
   async markChatAsRead(accountPubkey: string, chatId: string): Promise<void> {
     const messages = await this.getMessagesForChat(accountPubkey, chatId);
     const unreadMessages = messages.filter(msg => !msg.read && !msg.isOutgoing);
 
-    if (unreadMessages.length === 0) {
-      return;
-    }
+    if (unreadMessages.length === 0) return;
 
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
@@ -1873,46 +2354,38 @@ export class DatabaseService {
         store.put(msg);
       }
 
-      transaction.oncomplete = () => {
-        this.logger.debug(`Marked ${unreadMessages.length} messages as read in chat ${chatId}`);
-        resolve();
-      };
+      transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
   }
 
   /**
-   * Delete a specific message
+   * Delete a specific message (account DB)
    */
   async deleteDirectMessage(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
+
     const id = `${accountPubkey}::${chatId}::${messageId}`;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
       const store = transaction.objectStore(STORES.MESSAGES);
-
       const request = store.delete(id);
-
-      request.onsuccess = () => {
-        this.logger.debug(`Deleted message ${messageId}`);
-        resolve();
-      };
+      request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
-   * Delete all messages for a specific chat
+   * Delete all messages for a specific chat (account DB)
    */
   async deleteChat(accountPubkey: string, chatId: string): Promise<void> {
     const messages = await this.getMessagesForChat(accountPubkey, chatId);
+    if (messages.length === 0) return;
 
-    if (messages.length === 0) {
-      return;
-    }
-
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
@@ -1922,19 +2395,17 @@ export class DatabaseService {
         store.delete(msg.id);
       }
 
-      transaction.oncomplete = () => {
-        this.logger.debug(`Deleted ${messages.length} messages from chat ${chatId}`);
-        resolve();
-      };
+      transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
   }
 
   /**
-   * Delete all messages for an account
+   * Delete all messages for an account (account DB)
    */
   async deleteAllMessagesForAccount(accountPubkey: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
@@ -1950,19 +2421,17 @@ export class DatabaseService {
         }
       };
 
-      transaction.oncomplete = () => {
-        this.logger.debug(`Deleted messages for account ${accountPubkey}`);
-        resolve();
-      };
+      transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
   }
 
   /**
-   * Get the most recent message timestamp for an account (used for pagination)
+   * Get the most recent message timestamp for an account (account DB)
    */
   async getMostRecentMessageTimestamp(accountPubkey: string): Promise<number> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return 0;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readonly');
@@ -1984,15 +2453,15 @@ export class DatabaseService {
   }
 
   /**
-   * Clear all messages from the database (reset local messages cache)
+   * Clear all messages from the database (account DB)
    */
   async clearAllMessages(): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
       const store = transaction.objectStore(STORES.MESSAGES);
-
       const request = store.clear();
 
       request.onsuccess = () => {
@@ -2012,15 +2481,15 @@ export class DatabaseService {
   private readonly CACHE_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
 
   /**
-   * Save cached events for a feed column
-   * Keeps events from the last 90 days to support infinite scrolling
+   * Save cached events for a feed column (account DB)
    */
   async saveCachedEvents(
     accountPubkey: string,
     columnId: string,
     events: Event[]
   ): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     const cachedAt = Date.now();
     const now = Math.floor(Date.now() / 1000);
@@ -2059,10 +2528,11 @@ export class DatabaseService {
   }
 
   /**
-   * Load cached events for a feed column
+   * Load cached events for a feed column (account DB)
    */
   async loadCachedEvents(accountPubkey: string, columnId: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
@@ -2090,13 +2560,14 @@ export class DatabaseService {
   }
 
   /**
-   * Delete cached events for a specific column
+   * Delete cached events for a specific column (account DB)
    */
   async deleteCachedEventsForColumn(
     accountPubkey: string,
     columnId: string
   ): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
@@ -2121,10 +2592,11 @@ export class DatabaseService {
   }
 
   /**
-   * Delete all cached events for an account
+   * Delete all cached events for an account (account DB)
    */
   async deleteCachedEventsForAccount(accountPubkey: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
@@ -2149,12 +2621,12 @@ export class DatabaseService {
   }
 
   /**
-   * Clean up old cached events across all accounts
-   * This method is called periodically to prevent unbounded growth
-   * Removes events older than 1 week
+   * Clean up old cached events (account DB)
    */
   async cleanupCachedEvents(): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
+
     const now = Math.floor(Date.now() / 1000);
     const cutoffTimestamp = now - this.CACHE_MAX_AGE_SECONDS;
 
@@ -2189,10 +2661,11 @@ export class DatabaseService {
   }
 
   /**
-   * Get the total count of cached events
+   * Get the total count of cached events (account DB)
    */
   async getCachedEventsCount(): Promise<number> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return 0;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
@@ -2205,14 +2678,15 @@ export class DatabaseService {
   }
 
   /**
-   * Get cached events statistics for debugging
+   * Get cached events statistics (account DB)
    */
   async getCachedEventsStats(): Promise<{
     totalEvents: number;
     eventsByAccount: Map<string, number>;
     eventsByColumn: Map<string, number>;
   }> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return { totalEvents: 0, eventsByAccount: new Map(), eventsByColumn: new Map() };
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
@@ -2250,10 +2724,11 @@ export class DatabaseService {
   }
 
   /**
-   * Clear all cached events from the database
+   * Clear all cached events from the database (account DB)
    */
   async clearAllCachedEvents(): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
@@ -2279,7 +2754,8 @@ export class DatabaseService {
     kind: number,
     sinceTimestamp: number
   ): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
@@ -2358,7 +2834,8 @@ export class DatabaseService {
    * Save a notification to the notifications store
    */
   async saveNotification(notification: Record<string, unknown>): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
@@ -2378,7 +2855,8 @@ export class DatabaseService {
    * Get a notification by ID
    */
   async getNotification(id: string): Promise<Record<string, unknown> | undefined> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return undefined;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
@@ -2395,7 +2873,8 @@ export class DatabaseService {
    * Get all notifications sorted by timestamp (newest first)
    */
   async getAllNotifications(): Promise<Record<string, unknown>[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
@@ -2413,7 +2892,8 @@ export class DatabaseService {
    * Get all notifications for a specific pubkey
    */
   async getAllNotificationsForPubkey(pubkey: string): Promise<Record<string, unknown>[]> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return [];
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
@@ -2461,7 +2941,8 @@ export class DatabaseService {
    * Delete a notification by ID
    */
   async deleteNotification(id: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
@@ -2481,7 +2962,8 @@ export class DatabaseService {
    * Clear all notifications
    */
   async clearAllNotifications(): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.getAccountDb();
+    if (!db) return;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
@@ -2506,7 +2988,7 @@ export class DatabaseService {
    * Uses composite key: pubkey::slug
    */
   async saveBadgeDefinition(badgeEvent: Event): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       // Extract the d-tag (slug)
@@ -2556,7 +3038,7 @@ export class DatabaseService {
    * Get a badge definition by pubkey and slug
    */
   async getBadgeDefinition(pubkey: string, slug: string): Promise<Event | null> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readonly');
@@ -2584,7 +3066,7 @@ export class DatabaseService {
    * Get all badge definitions by pubkey
    */
   async getBadgeDefinitionsByPubkey(pubkey: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readonly');
@@ -2612,7 +3094,7 @@ export class DatabaseService {
    * Delete a badge definition
    */
   async deleteBadgeDefinition(pubkey: string, slug: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readwrite');
@@ -2637,7 +3119,7 @@ export class DatabaseService {
    * Save or update observed relay statistics
    */
   async saveObservedRelay(stats: Record<string, unknown>): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readwrite');
@@ -2654,7 +3136,7 @@ export class DatabaseService {
    * Get observed relay statistics by URL
    */
   async getObservedRelay(url: string): Promise<Record<string, unknown> | undefined> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
@@ -2671,7 +3153,7 @@ export class DatabaseService {
    * Get all observed relay statistics
    */
   async getAllObservedRelays(): Promise<Record<string, unknown>[]> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
@@ -2688,7 +3170,7 @@ export class DatabaseService {
    * Count observed relays
    */
   async countObservedRelays(): Promise<number> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
@@ -2707,7 +3189,7 @@ export class DatabaseService {
   async getObservedRelaysSorted(
     sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
   ): Promise<Record<string, unknown>[]> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
@@ -2732,7 +3214,7 @@ export class DatabaseService {
    * Delete observed relay statistics by URL
    */
   async deleteObservedRelay(url: string): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readwrite');
@@ -2756,7 +3238,7 @@ export class DatabaseService {
    * Save or update a pubkey-relay mapping
    */
   async savePubkeyRelayMapping(mapping: Record<string, unknown>): Promise<void> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readwrite');
@@ -2776,7 +3258,7 @@ export class DatabaseService {
     pubkey: string,
     relayUrl: string
   ): Promise<Record<string, unknown> | undefined> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readonly');
@@ -2794,7 +3276,7 @@ export class DatabaseService {
    * Get all relay URLs for a pubkey (excluding kind 10002 relay lists)
    */
   async getRelayUrlsForPubkey(pubkey: string): Promise<string[]> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readonly');
@@ -2847,7 +3329,7 @@ export class DatabaseService {
    * Clean up old pubkey-relay mappings (older than specified days)
    */
   async cleanupOldPubkeyRelayMappings(olderThanDays = 30): Promise<number> {
-    const db = this.ensureInitialized();
+    const db = this.ensureSharedDb();
     const cutoffTime = Math.floor(Date.now() / 1000) - olderThanDays * 24 * 60 * 60;
 
     return new Promise((resolve, reject) => {
@@ -2880,20 +3362,43 @@ export class DatabaseService {
   // ============================================================================
 
   /**
-   * Get all events by pubkey
+   * Get all events by pubkey (queries both shared and account DBs, merges results)
    */
   async getUserEvents(pubkey: string): Promise<Event[]> {
-    const db = this.ensureInitialized();
+    const results: Event[] = [];
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+    // Query shared DB
+    const sharedDb = this.ensureSharedDb();
+    const sharedEvents = await new Promise<Event[]>((resolve, reject) => {
+      const transaction = sharedDb.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
       const index = store.index('by-pubkey');
-
       const request = index.getAll(pubkey);
-
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
+    });
+    results.push(...sharedEvents);
+
+    // Query account DB if available
+    const accountDb = this.getAccountDb();
+    if (accountDb) {
+      const accountEvents = await new Promise<Event[]>((resolve, reject) => {
+        const transaction = accountDb.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index('by-pubkey');
+        const request = index.getAll(pubkey);
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+      results.push(...accountEvents);
+    }
+
+    // Deduplicate by event ID
+    const seen = new Set<string>();
+    return results.filter(e => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
     });
   }
 

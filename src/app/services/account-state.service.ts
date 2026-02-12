@@ -511,7 +511,7 @@ export class AccountStateService implements OnDestroy {
     }
   }
 
-  changeAccount(account: NostrUser | null): void {
+  async changeAccount(account: NostrUser | null): Promise<void> {
     // Reset profile cache loaded flag when account changes
     // This ensures FollowingService waits for the new account's profiles to load
     this.profileCacheLoaded.set(false);
@@ -519,6 +519,13 @@ export class AccountStateService implements OnDestroy {
     // Reset following list loaded flag when account changes
     // This ensures UI doesn't show "not following anyone" while loading
     this.followingListLoaded.set(false);
+
+    // Switch database to the new account (or anonymous mode)
+    if (account) {
+      await this.database.switchAccount(account.pubkey);
+    } else {
+      await this.database.initAnonymous();
+    }
 
     // Immediately set profile from cache if available
     // This provides instant UI update while async load happens in background
