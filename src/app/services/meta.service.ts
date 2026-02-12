@@ -291,19 +291,68 @@ export class MetaService {
     return this.extractTagValue(tags, 'image');
   }
 
+  /**
+   * Extract an image URL from imeta tags (NIP-92).
+   *
+   * Strategy:
+   * 1. Return the `url` of the first imeta tag whose mime type (`m`) starts with `image/`.
+   * 2. If no image-type imeta is found, return the first `image` field from any imeta tag
+   *    (this is the video thumbnail/screenshot per NIP-71).
+   * 3. Falls back to null so other extraction methods can try.
+   */
   private extractImageUrlFromImeta(tags: any[]): string | null {
     if (!tags || !Array.isArray(tags)) return null;
 
+    let firstVideoThumbnail: string | null = null;
+
     for (const tag of tags) {
-      if (Array.isArray(tag) && tag[0] === 'imeta') {
-        // Extract URL from imeta tag content which is typically in format "url https://..."
-        const imetaContent = tag[1];
-        if (imetaContent && imetaContent.startsWith('url ')) {
-          return imetaContent.substring(4).trim(); // Remove 'url ' prefix
+      if (!Array.isArray(tag) || tag[0] !== 'imeta') continue;
+
+      const parsed = this.parseImetaTag(tag);
+
+      // If this imeta entry is an image, return its URL directly
+      if (parsed['m']?.startsWith('image/') && parsed['url']) {
+        return parsed['url'];
+      }
+
+      // If this imeta entry has a video thumbnail (`image` field), remember it
+      if (!firstVideoThumbnail && parsed['image']) {
+        firstVideoThumbnail = parsed['image'];
+      }
+
+      // Fallback: if no mime type but the URL looks like an image, use it
+      if (!parsed['m'] && parsed['url']) {
+        const url = parsed['url'];
+        if (/\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(url)) {
+          return url;
         }
       }
     }
-    return null;
+
+    // No direct image found — use a video thumbnail if available
+    return firstVideoThumbnail;
+  }
+
+  /**
+   * Parse an imeta tag into a key-value object.
+   * Format: ["imeta", "url https://...", "m image/jpeg", "image https://thumb.jpg", ...]
+   */
+  private parseImetaTag(tag: string[]): Record<string, string> {
+    const parsed: Record<string, string> = {};
+    for (let i = 1; i < tag.length; i++) {
+      const part = tag[i];
+      if (!part) continue;
+      const spaceIndex = part.indexOf(' ');
+      if (spaceIndex > 0) {
+        const key = part.substring(0, spaceIndex);
+        const value = part.substring(spaceIndex + 1);
+        // Keep first occurrence of each key
+        if (!parsed[key]) {
+          parsed[key] = value;
+        }
+      }
+    }
+    return parsed;
   }
 
   private extractImageUrlFromContent(content: string): string | null {
