@@ -195,3 +195,92 @@ test.describe('TestAuthHelper.injectAuth', () => {
     expect(parsed.privkey).toBe(testPrivkeyHex);
   });
 });
+
+test.describe('TestAuthHelper.clearAuth', () => {
+  test('should remove nostria-account from localStorage', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    const user = helper.buildNostrUser();
+
+    await page.goto('/');
+
+    // Set auth directly in localStorage (not via addInitScript)
+    await page.evaluate((userJson) => {
+      localStorage.setItem('nostria-account', userJson);
+      localStorage.setItem('nostria-accounts', JSON.stringify([JSON.parse(userJson)]));
+    }, JSON.stringify(user));
+
+    // Verify auth is present before clearing
+    const before = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+    expect(before).not.toBeNull();
+
+    await helper.clearAuth(page);
+
+    const after = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+    expect(after).toBeNull();
+  });
+
+  test('should remove nostria-accounts from localStorage', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    const user = helper.buildNostrUser();
+
+    await page.goto('/');
+
+    // Set auth directly in localStorage (not via addInitScript)
+    await page.evaluate((userJson) => {
+      localStorage.setItem('nostria-account', userJson);
+      localStorage.setItem('nostria-accounts', JSON.stringify([JSON.parse(userJson)]));
+    }, JSON.stringify(user));
+
+    // Verify auth is present before clearing
+    const before = await page.evaluate(() =>
+      localStorage.getItem('nostria-accounts')
+    );
+    expect(before).not.toBeNull();
+
+    await helper.clearAuth(page);
+
+    const after = await page.evaluate(() =>
+      localStorage.getItem('nostria-accounts')
+    );
+    expect(after).toBeNull();
+  });
+
+  test('should reload the page after clearing auth', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+
+    await page.goto('/');
+
+    // Set a marker that will be lost on reload
+    await page.evaluate(() => {
+      (window as unknown as { __clearAuthMarker: boolean }).__clearAuthMarker = true;
+    });
+
+    await helper.clearAuth(page);
+
+    const marker = await page.evaluate(() =>
+      (window as unknown as { __clearAuthMarker?: boolean }).__clearAuthMarker
+    );
+    expect(marker).toBeUndefined();
+  });
+
+  test('should work when no auth was previously set', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    await page.goto('/');
+
+    // Should not throw when clearing without prior auth
+    await helper.clearAuth(page);
+
+    const account = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+    const accounts = await page.evaluate(() =>
+      localStorage.getItem('nostria-accounts')
+    );
+    expect(account).toBeNull();
+    expect(accounts).toBeNull();
+  });
+});
