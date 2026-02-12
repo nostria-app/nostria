@@ -268,6 +268,118 @@ test.describe('TestAuthHelper.getTestKeypair', () => {
   });
 });
 
+test.describe('TestAuthHelper.fromEnvOrGenerate', () => {
+  test('should return source "generated" when TEST_NSEC is not set', () => {
+    const originalNsec = process.env['TEST_NSEC'];
+    delete process.env['TEST_NSEC'];
+
+    try {
+      const result = TestAuthHelper.fromEnvOrGenerate();
+
+      expect(result.source).toBe('generated');
+      expect(result.auth).toBeInstanceOf(TestAuthHelper);
+      expect(result.auth.nsec).toMatch(/^nsec1/);
+      expect(result.auth.pubkey).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      // Restore original value
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      }
+    }
+  });
+
+  test('should return source "env" when TEST_NSEC is a valid nsec1 key', () => {
+    const originalNsec = process.env['TEST_NSEC'];
+    process.env['TEST_NSEC'] = testNsec;
+
+    try {
+      const result = TestAuthHelper.fromEnvOrGenerate();
+
+      expect(result.source).toBe('env');
+      expect(result.auth).toBeInstanceOf(TestAuthHelper);
+      expect(result.auth.nsec).toBe(testNsec);
+      expect(result.auth.pubkey).toBe(testPubkeyHex);
+    } finally {
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      } else {
+        delete process.env['TEST_NSEC'];
+      }
+    }
+  });
+
+  test('should throw when TEST_NSEC does not start with nsec1', () => {
+    const originalNsec = process.env['TEST_NSEC'];
+    process.env['TEST_NSEC'] = 'not-an-nsec-key';
+
+    try {
+      expect(() => TestAuthHelper.fromEnvOrGenerate()).toThrow('TEST_NSEC must be a valid nsec1');
+    } finally {
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      } else {
+        delete process.env['TEST_NSEC'];
+      }
+    }
+  });
+
+  test('should throw when TEST_NSEC starts with nsec1 but is malformed', () => {
+    const originalNsec = process.env['TEST_NSEC'];
+    process.env['TEST_NSEC'] = 'nsec1invalidchecksum';
+
+    try {
+      expect(() => TestAuthHelper.fromEnvOrGenerate()).toThrow('TEST_NSEC is not a valid nsec1 key');
+    } finally {
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      } else {
+        delete process.env['TEST_NSEC'];
+      }
+    }
+  });
+
+  test('should generate a unique keypair each time when TEST_NSEC is not set', () => {
+    const originalNsec = process.env['TEST_NSEC'];
+    delete process.env['TEST_NSEC'];
+
+    try {
+      const result1 = TestAuthHelper.fromEnvOrGenerate();
+      const result2 = TestAuthHelper.fromEnvOrGenerate();
+
+      expect(result1.auth.nsec).not.toBe(result2.auth.nsec);
+      expect(result1.auth.pubkey).not.toBe(result2.auth.pubkey);
+    } finally {
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      }
+    }
+  });
+
+  test('should produce a TestAuthHelper usable for auth injection', async ({ page }) => {
+    const originalNsec = process.env['TEST_NSEC'];
+    delete process.env['TEST_NSEC'];
+
+    try {
+      const { auth } = TestAuthHelper.fromEnvOrGenerate();
+      await auth.injectAuth(page);
+      await page.goto('/');
+
+      const storedAccount = await page.evaluate(() =>
+        localStorage.getItem('nostria-account')
+      );
+      expect(storedAccount).not.toBeNull();
+
+      const parsed = JSON.parse(storedAccount!);
+      expect(parsed.pubkey).toBe(auth.pubkey);
+      expect(parsed.source).toBe('nsec');
+    } finally {
+      if (originalNsec !== undefined) {
+        process.env['TEST_NSEC'] = originalNsec;
+      }
+    }
+  });
+});
+
 test.describe('TestAuthHelper.clearAuth', () => {
   test('should remove nostria-account from localStorage', async ({ page }) => {
     const helper = new TestAuthHelper(testNsec);
