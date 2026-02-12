@@ -738,11 +738,22 @@ export class NostrService implements NostriaService {
         }
 
         case kinds.Mutelist: {
-          this.accountState.muteList.set(event);
-          this.logger.info('Updated mute list from subscription', {
-            pubkey,
-            mutedCount: event.tags.filter(t => t[0] === 'p').length,
-          });
+          // Only update if this is a newer mute list event to avoid duplicate signal updates
+          const currentMuteList = this.accountState.muteList();
+          if (!currentMuteList || event.created_at >= currentMuteList.created_at) {
+            if (!currentMuteList || event.id !== currentMuteList.id) {
+              this.accountState.muteList.set(event);
+              this.logger.info('Updated mute list from subscription', {
+                pubkey,
+                mutedCount: event.tags.filter(t => t[0] === 'p').length,
+              });
+            }
+          } else {
+            this.logger.debug('Skipped older mute list from subscription', {
+              receivedTimestamp: event.created_at,
+              currentTimestamp: currentMuteList.created_at,
+            });
+          }
           break;
         }
 
@@ -867,7 +878,11 @@ export class NostrService implements NostriaService {
     }
 
     if (newestEvent) {
-      this.accountState.muteList.set(newestEvent);
+      // Only update if different from current to avoid redundant signal updates
+      const currentMuteList = this.accountState.muteList();
+      if (!currentMuteList || currentMuteList.id !== newestEvent.id) {
+        this.accountState.muteList.set(newestEvent);
+      }
     }
   }
 
@@ -2474,7 +2489,7 @@ export class NostrService implements NostriaService {
 
     const newUser: NostrUser = {
       pubkey: previewPubkey,
-      name: customPubkey ? 'Custom Preview' : 'Preview User',
+      name: customPubkey ? '...' : 'Preview User',
       source: 'preview',
       lastUsed: Date.now(),
       hasActivated: true, // Assume activation is done for preview accounts

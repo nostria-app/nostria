@@ -309,19 +309,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Check pubkey-based muting
     const mutedAccounts = this.accountState.mutedAccounts();
     if (mutedAccounts.includes(currentEvent.pubkey)) {
-      this.logger.debug('[EventComponent] Event author is muted (pubkey):', currentEvent.pubkey.substring(0, 8));
       return true;
     }
 
     // Check if profile fields match any muted words
     if (this.reportingService.isProfileBlockedByMutedWord(currentEvent.pubkey)) {
-      this.logger.debug('[EventComponent] Event author is muted (profile word match):', currentEvent.pubkey.substring(0, 8));
       return true;
     }
 
     // Check if event content contains muted words, hashtags, or is a muted event
     if (this.reportingService.isContentBlocked(currentEvent)) {
-      this.logger.debug('[EventComponent] Event content is muted (content filter):', currentEvent.id.substring(0, 8));
       return true;
     }
 
