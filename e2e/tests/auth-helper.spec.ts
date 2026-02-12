@@ -196,6 +196,78 @@ test.describe('TestAuthHelper.injectAuth', () => {
   });
 });
 
+test.describe('TestAuthHelper.getTestKeypair', () => {
+  test('should return an object with nsec, pubkey, and privkeyHex', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    expect(keypair).toHaveProperty('nsec');
+    expect(keypair).toHaveProperty('pubkey');
+    expect(keypair).toHaveProperty('privkeyHex');
+  });
+
+  test('should return a valid nsec1-encoded private key', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    expect(keypair.nsec).toMatch(/^nsec1/);
+    // Verify it decodes correctly
+    const decoded = nip19.decode(keypair.nsec);
+    expect(decoded.type).toBe('nsec');
+  });
+
+  test('should return a 64-character hex pubkey', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    expect(keypair.pubkey).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test('should return a 64-character hex privkeyHex', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    expect(keypair.privkeyHex).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test('should return a pubkey derived from the private key', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    // Derive pubkey independently and verify
+    const privkeyBytes = nip19.decode(keypair.nsec).data as Uint8Array;
+    const derivedPubkey = getPublicKey(privkeyBytes);
+    expect(keypair.pubkey).toBe(derivedPubkey);
+  });
+
+  test('should return consistent nsec and privkeyHex', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    // Decode the nsec to hex and compare with privkeyHex
+    const decoded = nip19.decode(keypair.nsec);
+    const hexFromNsec = bytesToHex(decoded.data as Uint8Array);
+    expect(hexFromNsec).toBe(keypair.privkeyHex);
+  });
+
+  test('should generate a unique keypair on each call', () => {
+    const keypair1 = TestAuthHelper.getTestKeypair();
+    const keypair2 = TestAuthHelper.getTestKeypair();
+
+    expect(keypair1.privkeyHex).not.toBe(keypair2.privkeyHex);
+    expect(keypair1.pubkey).not.toBe(keypair2.pubkey);
+    expect(keypair1.nsec).not.toBe(keypair2.nsec);
+  });
+
+  test('should produce a keypair usable with TestAuthHelper constructor', () => {
+    const keypair = TestAuthHelper.getTestKeypair();
+
+    // Should not throw when used as constructor input
+    const helper = new TestAuthHelper(keypair.nsec);
+    expect(helper.pubkey).toBe(keypair.pubkey);
+    expect(helper.privkey).toBe(keypair.privkeyHex);
+
+    // Also works with hex input
+    const helperFromHex = new TestAuthHelper(keypair.privkeyHex);
+    expect(helperFromHex.pubkey).toBe(keypair.pubkey);
+    expect(helperFromHex.privkey).toBe(keypair.privkeyHex);
+  });
+});
+
 test.describe('TestAuthHelper.clearAuth', () => {
   test('should remove nostria-account from localStorage', async ({ page }) => {
     const helper = new TestAuthHelper(testNsec);
