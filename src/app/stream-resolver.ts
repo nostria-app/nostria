@@ -4,13 +4,9 @@ import { LayoutService } from './services/layout.service';
 import { MetaService } from './services/meta.service';
 import { UtilitiesService } from './services/utilities.service';
 import { Event, nip19 } from 'nostr-tools';
+import { SSR_RELAY_FETCH_TIMEOUT_MS, SSR_TOTAL_RESOLVER_TIMEOUT_MS, buildRelayList } from './ssr-relays';
 
 export const STREAM_STATE_KEY = makeStateKey<StreamData>('stream-data');
-
-// Timeout for relay fetches - keep short since we have API fallback
-const RELAY_FETCH_TIMEOUT_MS = 3000;
-// Total resolver timeout - must complete within this time for social bots
-const TOTAL_RESOLVER_TIMEOUT_MS = 6000;
 
 export interface StreamData {
   title: string;
@@ -30,20 +26,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
   const { SimplePool } = await import('nostr-tools/pool');
   const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
-  // Expand relay list - combine hints with popular relays for better discovery
-  const popularRelays = [
-    'wss://relay.damus.io',
-    // 'wss://relay.nostr.band',
-    'wss://nos.lol',
-    'wss://relay.snort.social',
-    'wss://relay.primal.net',
-    'wss://nostr.wine',
-    'wss://purplepag.es',
-  ];
-
-  const relays = relayHints && relayHints.length > 0
-    ? [...new Set([...relayHints, ...popularRelays])] // Combine and dedupe
-    : popularRelays;
+  const relays = buildRelayList(relayHints);
 
   console.log('[SSR] StreamResolver: Fetching from', relays.length, 'relays...');
 
@@ -51,7 +34,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
     // Try to get the event with shorter timeout since we have API fallback
     const event = await Promise.race([
       pool.get(relays, { ids: [eventId] }),
-      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), RELAY_FETCH_TIMEOUT_MS))
+      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), SSR_RELAY_FETCH_TIMEOUT_MS))
     ]);
 
     pool.close(relays);
@@ -76,19 +59,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
   const { SimplePool } = await import('nostr-tools/pool');
   const pool = new SimplePool({ enablePing: true, enableReconnect: true });
 
-  const popularRelays = [
-    'wss://relay.damus.io',
-    // 'wss://relay.nostr.band',
-    'wss://nos.lol',
-    'wss://relay.snort.social',
-    'wss://relay.primal.net',
-    'wss://nostr.wine',
-    'wss://purplepag.es',
-  ];
-
-  const relays = relayHints && relayHints.length > 0
-    ? [...new Set([...relayHints, ...popularRelays])]
-    : popularRelays;
+  const relays = buildRelayList(relayHints);
 
   console.log('[SSR] StreamResolver: Fetching by address from', relays.length, 'relays...');
 
@@ -99,7 +70,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
         authors: [pubkey],
         '#d': [identifier],
       }),
-      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), RELAY_FETCH_TIMEOUT_MS))
+      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), SSR_RELAY_FETCH_TIMEOUT_MS))
     ]);
 
     pool.close(relays);
@@ -282,7 +253,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
     resolveStream(),
     new Promise<StreamData>((resolve) => {
       setTimeout(() => {
-        console.warn(`[SSR] StreamResolver: Total timeout (${TOTAL_RESOLVER_TIMEOUT_MS}ms) reached, returning default data`);
+        console.warn(`[SSR] StreamResolver: Total timeout (${SSR_TOTAL_RESOLVER_TIMEOUT_MS}ms) reached, returning default data`);
         // Set default meta tags on timeout
         metaService.updateSocialMetadata({
           title: 'Live Stream - Nostria',
@@ -291,7 +262,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
           url: getCanonicalStreamUrl(encodedEvent),
         });
         resolve(defaultData);
-      }, TOTAL_RESOLVER_TIMEOUT_MS);
+      }, SSR_TOTAL_RESOLVER_TIMEOUT_MS);
     })
   ]);
 
