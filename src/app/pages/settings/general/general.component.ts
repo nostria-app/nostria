@@ -7,22 +7,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+
 import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.service';
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { CalendarType, LocalSettingsService, TimeFormat } from '../../../services/local-settings.service';
 import { PlaceholderAlgorithm, SettingsService } from '../../../services/settings.service';
-import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
-import { EmojiSetService } from '../../../services/emoji-set.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -44,7 +40,6 @@ interface Language {
     MatSliderModule,
     MatInputModule,
     MatTooltipModule,
-    StorageStatsComponent,
   ],
   templateUrl: './general.component.html',
   styleUrl: './general.component.scss',
@@ -55,15 +50,12 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   themeService = inject(ThemeService);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
-  dialog = inject(MatDialog);
   localSettings = inject(LocalSettingsService);
   settings = inject(SettingsService);
   accountState = inject(AccountStateService);
   imagePlaceholder = inject(ImagePlaceholderService);
   externalLinkHandler = inject(ExternalLinkHandlerService);
   accountLocalState = inject(AccountLocalStateService);
-  emojiSetService = inject(EmojiSetService);
-  snackBar = inject(MatSnackBar);
   private rightPanel = inject(RightPanelService);
 
   ngOnInit(): void {
@@ -172,23 +164,6 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.imagePlaceholder.clearCache();
   }
 
-  wipeData(): void {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Confirm Data Deletion',
-        message: 'Are you sure you want to delete all app data? This action cannot be undone.',
-        confirmButtonText: 'Delete All Data',
-      },
-    });
-
-    dialogRef.afterClosed().subscribe(async confirmed => {
-      if (confirmed) {
-        await this.app.wipe();
-      }
-    });
-  }
-
   // External link domain management methods
   addNewDomain(): void {
     if (!this.newDomain.trim()) {
@@ -239,10 +214,5 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
     this.globalEventExpiration.set(hours);
     this.accountLocalState.setGlobalEventExpiration(pubkey, hours);
-  }
-
-  clearEmojiCache(): void {
-    this.emojiSetService.clearAllCaches();
-    this.snackBar.open('Emoji cache cleared', 'Close', { duration: 3000 });
   }
 }

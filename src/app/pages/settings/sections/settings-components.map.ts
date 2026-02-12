@@ -9,9 +9,6 @@ import { SettingRelayAuthComponent } from './relay-auth.component';
 import { SettingClientTagsComponent } from './client-tags.component';
 import { SettingMaxRelaysComponent } from './max-relays.component';
 import { SettingExternalLinksComponent } from './external-links.component';
-import { SettingCacheComponent } from './cache.component';
-import { SettingDangerZoneComponent } from './danger-zone.component';
-import { SettingStorageComponent } from './storage.component';
 import { SettingMenuEditorComponent } from './menu-editor.component';
 import { SettingHomeDestinationComponent } from './home-destination.component';
 import { SettingNotificationSpamFilterComponent } from './notification-spam-filter.component';
@@ -53,13 +50,6 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
 
   // External links
   'external-links': SettingExternalLinksComponent,
-
-  // Storage and Cache
-  'storage-stats': SettingStorageComponent,
-  'cache-management': SettingCacheComponent,
-
-  // Danger zone
-  'wipe-data': SettingDangerZoneComponent,
 
   // Notification spam filter
   'notification-spam-filter': SettingNotificationSpamFilterComponent,
