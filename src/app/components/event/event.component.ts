@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -197,6 +198,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -226,6 +230,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   onLikeHoverEnter(): void {
+    // Don't show quick reaction popup on touch-only devices;
+    // long-press opens the full emoji picker instead.
+    if (!this.canHover) return;
     if (this.quickReactionTimeout) {
       clearTimeout(this.quickReactionTimeout);
       this.quickReactionTimeout = null;

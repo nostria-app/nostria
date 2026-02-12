@@ -949,15 +949,12 @@
   }
 }
 
-// On small containers, hide the aggregated emoji icons but keep the "···" dots
+// On small containers, hide the aggregated emoji icons and bookmark button, keep the "···" dots
 @container note-card (max-width: 380px) {
   .emoji-indicators .aggregated-emojis {
     display: none;
   }
-}
 
-// On very small containers, also hide the bookmark button
-@container note-card (max-width: 320px) {
   .bookmark-action {
     display: none;
   }
