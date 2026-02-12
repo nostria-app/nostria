@@ -1,0 +1,282 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Database</h2>
+  <span class="panel-header-spacer"></span>
+  <button mat-icon-button (click)="refreshStats()" [disabled]="isLoading()" matTooltip="Refresh statistics">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
+
+<div class="content-medium">
+
+  @if (isLoading() || isClearing()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
+  <!-- Overall Storage -->
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">storage</mat-icon>
+      Overall Storage
+    </h2>
+    <p class="section-description">
+      Total storage used by the application across all databases, Cache API, and other browser storage.
+    </p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ totalSize() }}</div>
+        <div class="stat-label">Total Used</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ storageQuota() }}</div>
+        <div class="stat-label">Quota</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ storagePercent() }}%</div>
+        <div class="stat-label">Usage</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ allDatabases().length }}</div>
+        <div class="stat-label">Databases</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shared Database -->
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">public</mat-icon>
+      Shared Database
+    </h2>
+    <p class="section-description">
+      Stores data that is shared across all accounts: user profiles, contact lists, relay configurations,
+      and relay discovery information.
+    </p>
+    <div class="db-name">{{ sharedDbName() }}</div>
+
+    <div class="store-list">
+      @for (store of sharedDbStats(); track store.storeName) {
+        <div class="store-item">
+          <div class="store-info">
+            <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
+            <span class="store-description">{{ formatStoreDescription(store.storeName, 'shared') }}</span>
+          </div>
+          <span class="store-count">{{ store.count }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="section-summary">
+      <span>Total records: {{ sharedDbTotalRecords() }}</span>
+    </div>
+
+    <div class="section-actions">
+      <button mat-stroked-button [disabled]="isClearing()" (click)="clearSharedData()">
+        <mat-icon>delete_outline</mat-icon>
+        Clear Shared Data
+      </button>
+    </div>
+  </section>
+
+  <!-- Account Database -->
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">person</mat-icon>
+      Account Database
+    </h2>
+
+    @if (hasAccountDb()) {
+      <p class="section-description">
+        Stores data specific to the currently logged-in account: feed events, notifications, direct messages,
+        feed cache, and trust metrics.
+      </p>
+      <div class="db-name">
+        {{ accountDbName() }}
+        <span class="pubkey-badge">{{ accountDbPubkeyShort() }}</span>
+      </div>
+
+      <div class="store-list">
+        @for (store of accountDbStats(); track store.storeName) {
+          <div class="store-item">
+            <div class="store-info">
+              <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
+              <span class="store-description">{{ formatStoreDescription(store.storeName, 'account') }}</span>
+            </div>
+            <span class="store-count">{{ store.count }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="section-summary">
+        <span>Total records: {{ accountDbTotalRecords() }}</span>
+      </div>
+
+      <div class="section-actions">
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearAccountDataAction()">
+          <mat-icon>delete_outline</mat-icon>
+          Clear Account Data
+        </button>
+      </div>
+    } @else {
+      <p class="section-description">
+        No account database is currently active. Sign in to view per-account database statistics.
+      </p>
+    }
+  </section>
+
+  <!-- All Databases -->
+  @if (allDatabases().length > 0) {
+    <section class="db-section">
+      <h2>
+        <mat-icon class="section-icon">dns</mat-icon>
+        All Databases
+      </h2>
+      <p class="section-description">
+        Complete list of IndexedDB databases managed by the application. Each account gets its own
+        isolated database for privacy and data separation.
+      </p>
+
+      <div class="store-list">
+        @for (db of allDatabases(); track db.name) {
+          <div class="store-item">
+            <div class="store-info">
+              <span class="store-name">{{ db.name }}</span>
+              <span class="store-description">
+                @switch (db.type) {
+                  @case ('shared') { Global shared data }
+                  @case ('account') { Per-account data }
+                  @case ('legacy') { Legacy (can be removed) }
+                }
+              </span>
+            </div>
+            <span class="db-type-badge" [class]="'badge-' + db.type">{{ db.type }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Clear Specific Cache -->
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">cleaning_services</mat-icon>
+      Clear Specific Cache
+    </h2>
+    <p class="section-description">
+      Selectively clear specific types of cached data. Your account credentials will be preserved.
+    </p>
+
+    <div class="cache-actions">
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>event</mat-icon>
+          <div>
+            <span class="cache-action-title">Events</span>
+            <span class="cache-action-desc">Clear cached events from both shared and account databases</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('events')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>notifications</mat-icon>
+          <div>
+            <span class="cache-action-title">Notifications</span>
+            <span class="cache-action-desc">Clear cached notifications and re-fetch from relays</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('notifications')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>message</mat-icon>
+          <div>
+            <span class="cache-action-title">Messages</span>
+            <span class="cache-action-desc">Clear cached direct messages</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('messages')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>dns</mat-icon>
+          <div>
+            <span class="cache-action-title">Relays</span>
+            <span class="cache-action-desc">Clear relay configurations, stats, and pubkey mappings</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('relays')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>image</mat-icon>
+          <div>
+            <span class="cache-action-title">Images</span>
+            <span class="cache-action-desc">Clear cached images from the Cache API</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('images')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>mood</mat-icon>
+          <div>
+            <span class="cache-action-title">Emoji Cache</span>
+            <span class="cache-action-desc">Clear cached emoji sets, forcing reload on next use</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('emoji')">Clear</button>
+      </div>
+
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>psychology</mat-icon>
+          <div>
+            <span class="cache-action-title">AI Models</span>
+            <span class="cache-action-desc">Delete downloaded AI models from local storage</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('ai-models')">Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Danger Zone -->
+  <section class="db-section danger-zone">
+    <h2>
+      <mat-icon class="section-icon">warning</mat-icon>
+      Danger Zone
+    </h2>
+
+    <div class="danger-action">
+      <div>
+        <h3>Clear All Cache</h3>
+        <p>Clear all cached data from all databases, image cache, and AI models. The app will reload.</p>
+      </div>
+      <button mat-flat-button [disabled]="isClearing()" (click)="clearAllCache()">
+        <mat-icon>delete_sweep</mat-icon>
+        Clear All
+      </button>
+    </div>
+
+    <div class="danger-action">
+      <div>
+        <h3>Wipe All Data</h3>
+        <p>Delete all local app data including all databases and reload the application. This cannot be undone.</p>
+      </div>
+      <button mat-flat-button class="wipe-button" (click)="wipeData()">
+        <mat-icon>delete_forever</mat-icon>
+        Wipe Data
+      </button>
+    </div>
+  </section>
+
+</div>

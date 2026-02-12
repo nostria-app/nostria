@@ -3461,4 +3461,154 @@ export class DatabaseService {
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  // ============================================================================
+  // PER-DATABASE STATISTICS
+  // ============================================================================
+
+  /**
+   * Get the name of the currently open shared database
+   */
+  getSharedDbName(): string {
+    return SHARED_DB_NAME;
+  }
+
+  /**
+   * Get the name of the currently open account database
+   */
+  getAccountDbName(): string | null {
+    return this.currentAccountPubkey ? ACCOUNT_DB_PREFIX + this.currentAccountPubkey : null;
+  }
+
+  /**
+   * Get the pubkey associated with the current account database
+   */
+  getAccountDbPubkey(): string | null {
+    return this.currentAccountPubkey;
+  }
+
+  /**
+   * Check if an account database is currently open
+   */
+  hasAccountDb(): boolean {
+    return this.accountDb !== null;
+  }
+
+  /**
+   * Count items in a specific store within a specific database (shared or account).
+   */
+  private countInSpecificDb(db: IDBDatabase, storeName: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.count();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      } catch {
+        // Store may not exist in this database
+        resolve(0);
+      }
+    });
+  }
+
+  /**
+   * Get detailed store-level statistics for the shared database
+   */
+  async getSharedDbStats(): Promise<{ storeName: string; count: number }[]> {
+    if (!this.sharedDb) return [];
+
+    const storeNames = [
+      STORES.EVENTS,
+      STORES.RELAYS,
+      STORES.OBSERVED_RELAYS,
+      STORES.PUBKEY_RELAY_MAPPINGS,
+      STORES.BADGE_DEFINITIONS,
+    ];
+
+    const results: { storeName: string; count: number }[] = [];
+    for (const storeName of storeNames) {
+      const count = await this.countInSpecificDb(this.sharedDb, storeName);
+      results.push({ storeName, count });
+    }
+
+    return results;
+  }
+
+  /**
+   * Get detailed store-level statistics for the account database
+   */
+  async getAccountDbStats(): Promise<{ storeName: string; count: number }[]> {
+    if (!this.accountDb) return [];
+
+    const storeNames = [
+      STORES.EVENTS,
+      STORES.INFO,
+      STORES.NOTIFICATIONS,
+      STORES.EVENTS_CACHE,
+      STORES.MESSAGES,
+    ];
+
+    const results: { storeName: string; count: number }[] = [];
+    for (const storeName of storeNames) {
+      const count = await this.countInSpecificDb(this.accountDb, storeName);
+      results.push({ storeName, count });
+    }
+
+    return results;
+  }
+
+  /**
+   * List all known database names (shared + all account databases)
+   */
+  async listAllDatabases(): Promise<{ name: string; type: 'shared' | 'account' | 'legacy' }[]> {
+    const databases: { name: string; type: 'shared' | 'account' | 'legacy' }[] = [];
+
+    if ('databases' in indexedDB) {
+      try {
+        const allDbs = await (indexedDB as unknown as { databases(): Promise<{ name: string; version: number }[]> }).databases();
+        for (const dbInfo of allDbs) {
+          if (dbInfo.name === SHARED_DB_NAME) {
+            databases.push({ name: dbInfo.name, type: 'shared' });
+          } else if (dbInfo.name.startsWith(ACCOUNT_DB_PREFIX)) {
+            databases.push({ name: dbInfo.name, type: 'account' });
+          } else if (LEGACY_DB_NAMES.includes(dbInfo.name)) {
+            databases.push({ name: dbInfo.name, type: 'legacy' });
+          }
+        }
+      } catch (error) {
+        this.logger.warn('indexedDB.databases() not available', error);
+      }
+    }
+
+    return databases;
+  }
+
+  /**
+   * Clear only the shared database stores
+   */
+  async clearSharedData(): Promise<void> {
+    if (!this.sharedDb) return;
+
+    const promises: Promise<void>[] = [];
+    for (const storeName of SHARED_STORES) {
+      promises.push(this.clearStoreInDb(this.sharedDb, storeName));
+    }
+    await Promise.all(promises);
+    this.logger.info('Cleared all shared database stores');
+  }
+
+  /**
+   * Clear only the account database stores
+   */
+  async clearAccountData(): Promise<void> {
+    if (!this.accountDb) return;
+
+    const promises: Promise<void>[] = [];
+    for (const storeName of ACCOUNT_STORES) {
+      promises.push(this.clearStoreInDb(this.accountDb, storeName));
+    }
+    await Promise.all(promises);
+    this.logger.info('Cleared all account database stores');
+  }
 }
