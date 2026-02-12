@@ -106,7 +106,7 @@
           </div>
 
           @if (notification.message) {
-          <div class="notification-message">{{ notification.message }}</div>
+          <div class="notification-message">{{ notification.message | resolveNostr }}</div>
           }
 
           <div class="notification-meta">
@@ -214,16 +214,16 @@
           </div>
 
           @if (notification.message && notification.type !== 'zap') {
-          <div class="notification-message">{{ notification.message }}</div>
+          <div class="notification-message">{{ notification.message | resolveNostr }}</div>
           }
 
           @if (notification.message && notification.type === 'zap') {
           <div class="notification-message">
-            {{ notification.message }}@if (getZapContent(notification)) {<span> · {{ getZapContent(notification)
+            {{ notification.message }}@if (getZapContent(notification)) {<span> · {{ getZapContent(notification)! | resolveNostr
               }}</span>}
           </div>
           } @else if (getZapContent(notification)) {
-          <div class="notification-message">{{ getZapContent(notification) }}</div>
+          <div class="notification-message">{{ getZapContent(notification)! | resolveNostr }}</div>
           }
 
           <div class="notification-meta">

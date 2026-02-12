@@ -38,6 +38,7 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
+import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 
 /**
  * Local storage key for notification filter preferences
@@ -65,7 +66,8 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatSnackBarModule,
     MatProgressSpinnerModule,
     OverlayModule,
-    NotificationsFilterPanelComponent
+    NotificationsFilterPanelComponent,
+    ResolveNostrPipe
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
