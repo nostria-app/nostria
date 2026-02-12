@@ -1209,9 +1209,7 @@ export class AccountStateService implements OnDestroy {
   mutedAccounts = computed(() => {
     const list = this.muteList();
     if (!list || !list.tags) return [];
-    const pubkeys = list.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-    console.log('[AccountState] mutedAccounts computed updated, count:', pubkeys.length);
-    return pubkeys;
+    return list.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
   });
 
   mutedTags = computed(() => {

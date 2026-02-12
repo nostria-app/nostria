@@ -246,6 +246,8 @@
   }
 }
 
+
+
 .action-button {
   display: flex;
   flex-direction: row;
@@ -944,6 +946,20 @@
     color: var(--mat-sys-on-surface-variant);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+}
+
+// On small containers, hide the aggregated emoji icons but keep the "···" dots
+@container note-card (max-width: 380px) {
+  .emoji-indicators .aggregated-emojis {
+    display: none;
+  }
+}
+
+// On very small containers, also hide the bookmark button
+@container note-card (max-width: 320px) {
+  .bookmark-action {
+    display: none;
   }
 }
 
