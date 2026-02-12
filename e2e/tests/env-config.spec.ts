@@ -69,6 +69,22 @@ test.describe('Environment Configuration', () => {
   });
 });
 
+test.describe('npm scripts Configuration', () => {
+  let packageJson: Record<string, unknown>;
+
+  test.beforeAll(() => {
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    packageJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+  });
+
+  test('should have test:e2e:full script targeting chromium project', () => {
+    const scripts = packageJson['scripts'] as Record<string, string>;
+    expect(scripts['test:e2e:full']).toBeDefined();
+    expect(scripts['test:e2e:full']).toContain('playwright test');
+    expect(scripts['test:e2e:full']).toContain('--project=chromium');
+  });
+});
+
 test.describe('dotenv Integration', () => {
   test('should have dotenv imported in playwright config', () => {
     const configPath = path.join(process.cwd(), 'playwright.config.ts');
