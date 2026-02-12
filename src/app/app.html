@@ -121,13 +121,13 @@
             matTooltip="My Profile" i18n-matTooltip="@@app.profile.my-profile">
             <mat-icon>person</mat-icon>
           </button>
-          <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage Account"
-            i18n-matTooltip="@@app.profile.manage-accounts">
-            <mat-icon>manage_accounts</mat-icon>
-          </button>
           <button mat-icon-button routerLink="/wallet" (click)="closeSidenavOnMobile()" matTooltip="Wallet"
             i18n-matTooltip="@@app.profile.wallet">
             <mat-icon>wallet</mat-icon>
+          </button>
+          <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage Account"
+            i18n-matTooltip="@@app.profile.manage-accounts">
+            <mat-icon>manage_accounts</mat-icon>
           </button>
           } @else {
           <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()" matTooltip="Login"
@@ -590,13 +590,13 @@
     <mat-icon>person</mat-icon>
     <span i18n="@@app.profile.my-profile">My Profile</span>
   </button>
-  <button mat-menu-item routerLink="/accounts" (click)="closeSidenavOnMobile()">
-    <mat-icon>manage_accounts</mat-icon>
-    <span i18n="@@app.profile.manage-accounts">Manage Account</span>
-  </button>
   <button mat-menu-item routerLink="/wallet" (click)="closeSidenavOnMobile()">
     <mat-icon>wallet</mat-icon>
     <span i18n="@@app.profile.wallet">Wallet</span>
+  </button>
+  <button mat-menu-item routerLink="/accounts" (click)="closeSidenavOnMobile()">
+    <mat-icon>manage_accounts</mat-icon>
+    <span i18n="@@app.profile.manage-accounts">Manage Account</span>
   </button>
   } @else {
   <button mat-menu-item (click)="addAccount(); closeSidenavOnMobile()">
