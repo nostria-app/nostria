@@ -10,6 +10,7 @@ import {
   input,
   effect,
   DestroyRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationStart } from '@angular/router';
@@ -47,6 +48,7 @@ declare global {
 
 @Component({
   selector: 'app-live-stream-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,

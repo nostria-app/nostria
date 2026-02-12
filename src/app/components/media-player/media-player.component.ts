@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   computed,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { LiveStreamPlayerComponent } from './live-stream-player/live-stream-player.component';
 import { AudioPlayerComponent } from './audio-player/audio-player.component';
@@ -12,6 +13,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 
 @Component({
   selector: 'app-media-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     LiveStreamPlayerComponent,
     AudioPlayerComponent,
