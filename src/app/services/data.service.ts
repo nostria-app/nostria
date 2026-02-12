@@ -125,33 +125,22 @@ export class DataService implements OnDestroy {
       record = this.cache.get<NostrRecord>(`${id}`);
 
       if (record) {
-         return record;
-        }
         return record;
+      }
     }
 
-    // Fetch from relays if:
-    // 1. Event not found in storage, OR
-    // 2. Event is replaceable/parameterized replaceable (need latest version)
-    if (!event || this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
-      let relayEvent: Event | null = null;
+    // Fetch event from relays
+    // If the caller explicitly supplies user relay, don't attempt to use account relay.
+    if (userRelays) {
+      // If userRelays is true, we will try to get the event from user relays.
+      event = await this.userRelayEx.getEventByIdGlobal(id);
+    } else {
+      // Try to get the event from the account relay.
+      event = await this.accountRelayEx.getEventById(id);
+    }
 
-      // If the caller explicitly supplies user relay, don't attempt to use account relay.
-      if (userRelays) {
-        // If userRelays is true, we will try to get the event from user relays.
-        relayEvent = await this.userRelayEx.getEventByIdGlobal(id);
-      } else {
-        // Try to get the event from the account relay.
-        relayEvent = await this.accountRelayEx.getEventById(id);
-      }
-
-      if (relayEvent) {
-        event = relayEvent;
-        eventFromRelays = true;
-      } else if (event) {
-        // If relay fetch failed but we have a cached replaceable event, use it
-        this.logger.debug(`Relay fetch failed for replaceable event ${id}, using cached version`);
-      }
+    if (event) {
+      eventFromRelays = true;
     }
 
     if (!event) {
@@ -212,7 +201,7 @@ export class DataService implements OnDestroy {
 
     // Use batch loading for efficient fetching
     const profilesMap = await this.batchLoadProfiles(pubkeys);
-    
+
     // Convert map to array, preserving order of input pubkeys
     const metadataList: NostrRecord[] = [];
     for (const pubkey of pubkeys) {

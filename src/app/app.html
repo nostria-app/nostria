@@ -32,10 +32,9 @@
   <!-- Sidenav container spans full height -->
   <mat-sidenav-container class="sidenav-container" [autosize]="true" (backdropClick)="onBackdropClick()">
     <!-- Side navigation -->
-    <mat-sidenav #sidenav class="sidenav no-print"
-      [class.sidenav-labels]="displayLabels()" [class.sidenav-small]="!displayLabels()" [opened]="opened()"
-      [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
-      (opened)="onSidenavOpened()">
+    <mat-sidenav #sidenav class="sidenav no-print" [class.sidenav-labels]="displayLabels()"
+      [class.sidenav-small]="!displayLabels()" [opened]="opened()" [mode]="layout.isHandset() ? 'over' : 'side'"
+      [fixedInViewport]="false" (closed)="onSidenavClosed()" (opened)="onSidenavOpened()">
 
       <!-- User Profile Section at Top -->
       @if (displayLabels()) {
@@ -125,6 +124,10 @@
           <button mat-icon-button routerLink="/accounts" (click)="closeSidenavOnMobile()" matTooltip="Manage Account"
             i18n-matTooltip="@@app.profile.manage-accounts">
             <mat-icon>manage_accounts</mat-icon>
+          </button>
+          <button mat-icon-button routerLink="/wallet" (click)="closeSidenavOnMobile()" matTooltip="Wallet"
+            i18n-matTooltip="@@app.profile.wallet">
+            <mat-icon>wallet</mat-icon>
           </button>
           } @else {
           <button mat-icon-button (click)="addAccount(); closeSidenavOnMobile()" matTooltip="Login"
@@ -590,6 +593,10 @@
   <button mat-menu-item routerLink="/accounts" (click)="closeSidenavOnMobile()">
     <mat-icon>manage_accounts</mat-icon>
     <span i18n="@@app.profile.manage-accounts">Manage Account</span>
+  </button>
+  <button mat-menu-item routerLink="/wallet" (click)="closeSidenavOnMobile()">
+    <mat-icon>wallet</mat-icon>
+    <span i18n="@@app.profile.wallet">Wallet</span>
   </button>
   } @else {
   <button mat-menu-item (click)="addAccount(); closeSidenavOnMobile()">
