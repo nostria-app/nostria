@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { LayoutService } from '../../../services/layout.service';
   imports: [MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './reply-button.component.html',
   styleUrls: ['./reply-button.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReplyButtonComponent {
   private readonly eventService = inject(EventService);
