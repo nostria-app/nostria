@@ -133,4 +133,31 @@ export class TestAuthHelper {
       localStorage.setItem('nostria-accounts', accounts);
     }, { account: userJson, accounts: accountsJson });
   }
+
+  /**
+   * Clear authentication from a Playwright page by removing auth keys
+   * from localStorage and reloading the page.
+   *
+   * Removes `nostria-account` and `nostria-accounts` from localStorage,
+   * then reloads so the app re-initializes in an unauthenticated state.
+   *
+   * @param page - The Playwright Page to clear auth from
+   *
+   * @example
+   * ```ts
+   * const auth = new TestAuthHelper(process.env.TEST_NSEC!);
+   * await auth.injectAuth(page);
+   * await page.goto('/');
+   * // ... run authenticated tests ...
+   * await auth.clearAuth(page);
+   * // Page is now unauthenticated
+   * ```
+   */
+  async clearAuth(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      localStorage.removeItem('nostria-account');
+      localStorage.removeItem('nostria-accounts');
+    });
+    await page.reload();
+  }
 }
