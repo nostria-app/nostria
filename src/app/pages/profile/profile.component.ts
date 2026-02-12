@@ -432,6 +432,9 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
             // When in right panel, we want to preserve the main route (e.g., /people) for bookmarking
             const shouldUpdateUrl = this.route.outlet !== 'right';
 
+            // Preserve the original nprofile identifier for URL retention
+            const originalNprofile = id.startsWith('nprofile') ? id : null;
+
             if (id.startsWith('nprofile')) {
               try {
                 const decoded = nip19.decode(id);
@@ -446,15 +449,15 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
                 return;
               }
 
-              // Update URL to use npub or username
+              // Keep the original nprofile in the URL, or resolve to username
               if (shouldUpdateUrl) {
                 const identifier: string = id;
                 this.username.getUsername(id).then(username => {
                   if (username) {
                     this.url.updatePathSilently(['/u', username]);
                   } else {
-                    const encoded = nip19.npubEncode(identifier);
-                    this.url.updatePathSilently(['/p', encoded]);
+                    // Keep the original nprofile URL instead of converting to npub
+                    this.url.updatePathSilently(['/p', originalNprofile!]);
                   }
                 });
               }

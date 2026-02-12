@@ -31,6 +31,18 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { nip19, kinds } from 'nostr-tools';
 
+interface RelayListInfo {
+  hasRelayList: boolean;
+  relayCount: number;
+  updatedAt: number | null;
+}
+
+interface ContactListRelayInfo {
+  hasRelaysInContacts: boolean;
+  relayCount: number;
+  updatedAt: number | null;
+}
+
 interface ProfileListItem {
   id: string;
   npub: string;
@@ -163,6 +175,8 @@ export class DetailsComponent implements OnInit {
   metrics = signal<UserMetric | null>(null);
   trustMetrics = signal<TrustMetrics | null>(null);
   profileUpdatedAt = signal<number | null>(null);
+  relayListInfo = signal<RelayListInfo | null>(null);
+  contactListRelayInfo = signal<ContactListRelayInfo | null>(null);
 
   trustDisplayItems = computed((): TrustDisplayItem[] => {
     const metrics = this.trustMetrics();
@@ -348,6 +362,50 @@ export class DetailsComponent implements OnInit {
 
       const metadataEvent = await this.database.getEventByPubkeyAndKind(pubkey, 0);
       this.profileUpdatedAt.set(metadataEvent?.created_at ?? null);
+    });
+
+    // Load relay list (kind 10002) and contact list relay (kind 3) info
+    effect(async () => {
+      const pubkey = this.pubkeyHex();
+      if (!pubkey) {
+        this.relayListInfo.set(null);
+        this.contactListRelayInfo.set(null);
+        return;
+      }
+
+      // Check for relay list (kind 10002)
+      const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      if (relayListEvent) {
+        const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+        this.relayListInfo.set({
+          hasRelayList: true,
+          relayCount: relayUrls.length,
+          updatedAt: relayListEvent.created_at,
+        });
+      } else {
+        this.relayListInfo.set({
+          hasRelayList: false,
+          relayCount: 0,
+          updatedAt: null,
+        });
+      }
+
+      // Check for relays in contact list (kind 3)
+      const contactsEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      if (contactsEvent) {
+        const relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
+        this.contactListRelayInfo.set({
+          hasRelaysInContacts: relayUrls.length > 0,
+          relayCount: relayUrls.length,
+          updatedAt: contactsEvent.created_at,
+        });
+      } else {
+        this.contactListRelayInfo.set({
+          hasRelaysInContacts: false,
+          relayCount: 0,
+          updatedAt: null,
+        });
+      }
     });
   }
 
