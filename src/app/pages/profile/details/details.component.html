@@ -1,376 +1,280 @@
-<div class="following-container" @slideInOut #followingContainer>
-  <div class="following-header" @profileShrink>
-    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
 
-    <div class="profile-mini">
-      @if (userProfile(); as profile) {
-      <div class="profile-mini-avatar">
-        @if (profile.picture) {
-        <img [src]="profile.picture" alt="Profile picture" />
-        } @else {
-        <mat-icon>account_circle</mat-icon>
-        }
+  @if (viewingProfile(); as profile) {
+  @if (profile.data?.picture) {
+  <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" />
+  }
+  <h2 class="panel-title title-font">{{ getProfileDisplayName() }}'s Details</h2>
+  } @else {
+  <h2 class="panel-title title-font">Profile Details</h2>
+  }
+
+  <span class="panel-header-spacer"></span>
+</div>
+
+<div class="info-container">
+  @if (profileUpdatedAt(); as updatedAt) {
+  <div class="profile-updated-info">
+    <mat-icon>schedule</mat-icon>
+    <span>
+      Profile updated {{ updatedAt | ago }} &middot; {{ updatedAt | timestamp: 'medium' }}
+    </span>
+  </div>
+  }
+
+  @if (metrics()) {
+  <div class="metrics-section">
+    <h3>Algorithm Metrics</h3>
+    <div class="metrics-grid">
+      <div class="metric-item">
+        <mat-icon>visibility</mat-icon>
+        <span class="metric-label">Views:</span>
+        <span class="metric-value">{{ metrics()!.viewed }}</span>
       </div>
-      <div class="profile-mini-text">
-        <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
-        @if (profileUpdatedAt(); as updatedAt) {
-        <div class="profile-mini-updated">
-          <mat-icon>schedule</mat-icon>
-          <span>
-            Profile updated {{ updatedAt | ago }} · {{ updatedAt | timestamp: 'medium' }}
-          </span>
-        </div>
-        }
+
+      <div class="metric-item">
+        <mat-icon>touch_app</mat-icon>
+        <span class="metric-label">Profile Clicks:</span>
+        <span class="metric-value">{{ metrics()!.profileClicks }}</span>
       </div>
-      } @else {
-      <div class="profile-mini-avatar">
-        <mat-icon>account_circle</mat-icon>
+
+      <div class="metric-item">
+        <mat-icon>favorite</mat-icon>
+        <span class="metric-label">Liked:</span>
+        <span class="metric-value">{{ metrics()!.liked }}</span>
       </div>
-      <div class="profile-mini-text">
-        <h1 class="profile-mini-name">Profile Details</h1>
-        @if (profileUpdatedAt(); as updatedAt) {
-        <div class="profile-mini-updated">
-          <mat-icon>schedule</mat-icon>
-          <span>
-            Profile updated {{ updatedAt | ago }} · {{ updatedAt | timestamp: 'medium' }}
-          </span>
-        </div>
-        }
+
+      <div class="metric-item">
+        <mat-icon>article</mat-icon>
+        <span class="metric-label">Read:</span>
+        <span class="metric-value">{{ metrics()!.read }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>reply</mat-icon>
+        <span class="metric-label">Replied:</span>
+        <span class="metric-value">{{ metrics()!.replied }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>repeat</mat-icon>
+        <span class="metric-label">Reposted:</span>
+        <span class="metric-value">{{ metrics()!.reposted }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>format_quote</mat-icon>
+        <span class="metric-label">Quoted:</span>
+        <span class="metric-value">{{ metrics()!.quoted }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>message</mat-icon>
+        <span class="metric-label">Messaged:</span>
+        <span class="metric-value">{{ metrics()!.messaged }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>alternate_email</mat-icon>
+        <span class="metric-label">Mentioned:</span>
+        <span class="metric-value">{{ metrics()!.mentioned }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>schedule</mat-icon>
+        <span class="metric-label">Time Spent:</span>
+        <span class="metric-value">{{ metrics()!.timeSpent }}s</span>
+      </div>
+
+      <div class="metric-item highlight">
+        <mat-icon>insights</mat-icon>
+        <span class="metric-label">Engagement Score:</span>
+        <span class="metric-value">{{ metrics()!.engagementScore }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>access_time</mat-icon>
+        <span class="metric-label">Avg Time Per View:</span>
+        <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
+      </div>
+    </div>
+  </div>
+  }
+
+  @if (trustDisplayItems().length > 0) {
+  <div class="metrics-section">
+    <h3>Web of Trust</h3>
+    <div class="metrics-grid">
+      @for (item of trustDisplayItems(); track item.key) {
+      <div class="metric-item" [class.highlight]="item.highlight" [class.long-value]="item.key === 'authorPubkey'">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span class="metric-label">{{ item.label }}:</span>
+        <span class="metric-value">{{ item.value }}</span>
       </div>
       }
     </div>
   </div>
+  } @else {
+  <div class="empty-state">
+    <mat-icon>verified_user</mat-icon>
+    <p>No Web of Trust metrics available for this profile</p>
+  </div>
+  }
 
-  <div class="info-container">
-    @if (metrics()) {
-    <div class="metrics-section">
-      <h3>Algorithm Metrics</h3>
-      <div class="metrics-grid">
-        <div class="metric-item">
-          <mat-icon>visibility</mat-icon>
-          <span class="metric-label">Views:</span>
-          <span class="metric-value">{{ metrics()!.viewed }}</span>
-        </div>
+  @if (relayListInfo(); as relayList) {
+  <div class="info-section">
+    <h3>Relay Configuration</h3>
 
-        <div class="metric-item">
-          <mat-icon>touch_app</mat-icon>
-          <span class="metric-label">Profile Clicks:</span>
-          <span class="metric-value">{{ metrics()!.profileClicks }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>favorite</mat-icon>
-          <span class="metric-label">Liked:</span>
-          <span class="metric-value">{{ metrics()!.liked }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>article</mat-icon>
-          <span class="metric-label">Read:</span>
-          <span class="metric-value">{{ metrics()!.read }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>reply</mat-icon>
-          <span class="metric-label">Replied:</span>
-          <span class="metric-value">{{ metrics()!.replied }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>repeat</mat-icon>
-          <span class="metric-label">Reposted:</span>
-          <span class="metric-value">{{ metrics()!.reposted }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>format_quote</mat-icon>
-          <span class="metric-label">Quoted:</span>
-          <span class="metric-value">{{ metrics()!.quoted }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>message</mat-icon>
-          <span class="metric-label">Messaged:</span>
-          <span class="metric-value">{{ metrics()!.messaged }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>alternate_email</mat-icon>
-          <span class="metric-label">Mentioned:</span>
-          <span class="metric-value">{{ metrics()!.mentioned }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>schedule</mat-icon>
-          <span class="metric-label">Time Spent:</span>
-          <span class="metric-value">{{ metrics()!.timeSpent }}s</span>
-        </div>
-
-        <div class="metric-item highlight">
-          <mat-icon>insights</mat-icon>
-          <span class="metric-label">Engagement Score:</span>
-          <span class="metric-value">{{ metrics()!.engagementScore }}</span>
-        </div>
-
-        <div class="metric-item">
-          <mat-icon>access_time</mat-icon>
-          <span class="metric-label">Avg Time Per View:</span>
-          <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
-        </div>
+    <div class="info-grid">
+      @if (relayList.hasRelayList) {
+      <div class="info-item positive">
+        <mat-icon>thumb_up</mat-icon>
+        <span class="info-label">Has Relay List (kind 10002, NIP-65) with {{ relayList.relayCount }} relay{{ relayList.relayCount !== 1 ? 's' : '' }}</span>
       </div>
-    </div>
-    }
-
-    @if (trustDisplayItems().length > 0) {
-    <div class="metrics-section">
-      <h3>Web of Trust</h3>
-      <div class="metrics-grid">
-        @for (item of trustDisplayItems(); track item.key) {
-        <div class="metric-item" [class.highlight]="item.highlight" [class.long-value]="item.key === 'authorPubkey'">
-          <mat-icon>{{ item.icon }}</mat-icon>
-          <span class="metric-label">{{ item.label }}:</span>
-          <span class="metric-value">{{ item.value }}</span>
-        </div>
-        }
+      @if (relayList.updatedAt) {
+      <div class="info-item neutral">
+        <mat-icon>schedule</mat-icon>
+        <span class="info-label">Relay List Updated: {{ formatTimestamp(relayList.updatedAt) }}</span>
       </div>
-    </div>
-    } @else {
-    <div class="empty-state">
-      <mat-icon>verified_user</mat-icon>
-      <p>No Web of Trust metrics available for this profile</p>
-    </div>
-    }
-
-    @if (relayListInfo(); as relayList) {
-    <div class="info-section">
-      <h3>Relay Configuration</h3>
-
-      <div class="info-grid">
-        @if (relayList.hasRelayList) {
-        <div class="info-item positive">
-          <mat-icon>thumb_up</mat-icon>
-          <span class="info-label">Has Relay List (kind 10002, NIP-65) with {{ relayList.relayCount }} relay{{ relayList.relayCount !== 1 ? 's' : '' }}</span>
-        </div>
-        @if (relayList.updatedAt) {
-        <div class="info-item neutral">
-          <mat-icon>schedule</mat-icon>
-          <span class="info-label">Relay List Updated: {{ formatTimestamp(relayList.updatedAt) }}</span>
-        </div>
-        }
-        } @else {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">No Relay List (kind 10002, NIP-65)</span>
-        </div>
-        }
-
-        @if (contactListRelayInfo(); as contactRelays) {
-          @if (contactRelays.hasRelaysInContacts) {
-          <div class="info-item neutral">
-            <mat-icon>info</mat-icon>
-            <span class="info-label">Has relays in Contact List (kind 3) with {{ contactRelays.relayCount }} relay{{ contactRelays.relayCount !== 1 ? 's' : '' }}</span>
-          </div>
-          } @else {
-          <div class="info-item neutral">
-            <mat-icon>info</mat-icon>
-            <span class="info-label">No relays in Contact List (kind 3)</span>
-          </div>
-          }
-        }
+      }
+      } @else {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">No Relay List (kind 10002, NIP-65)</span>
       </div>
-    </div>
-    }
+      }
 
-    @if (info(); as infoData) {
-    <div class="info-section">
-      <h3>Profile Discovery Information</h3>
-
-      <div class="info-grid">
-        @if (infoData.hasRelayList) {
-        <div class="info-item positive">
-          <mat-icon>thumb_up</mat-icon>
-          <span class="info-label">Has Relay List (NIP-65)</span>
-        </div>
-        } @else {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">Relay list status unknown (cached info may be outdated)</span>
-        </div>
-        }
-
-        @if (infoData.hasFollowingList) {
-        <div class="info-item positive">
-          <mat-icon>thumb_up</mat-icon>
-          <span class="info-label">Has Following List</span>
-        </div>
-        }
-
-        @if (infoData.hasFollowingListRelays) {
+      @if (contactListRelayInfo(); as contactRelays) {
+        @if (contactRelays.hasRelaysInContacts) {
         <div class="info-item neutral">
           <mat-icon>info</mat-icon>
-          <span class="info-label">Has Following List Relays</span>
+          <span class="info-label">Has relays in Contact List (kind 3) with {{ contactRelays.relayCount }} relay{{ contactRelays.relayCount !== 1 ? 's' : '' }}</span>
         </div>
-        }
-
-        @if (infoData.foundOnDiscoveryRelays) {
-        <div class="info-item positive">
-          <mat-icon>thumb_up</mat-icon>
-          <span class="info-label">Found on Discovery Relays</span>
-        </div>
-        } @else if (infoData.foundOnAccountRelays) {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">Found on Account Relays (Fallback)</span>
-        </div>
-        }
-
-        @if (infoData.foundMetadataOnUserRelays) {
-        <div class="info-item positive">
-          <mat-icon>thumb_up</mat-icon>
-          <span class="info-label">Found Profile on User Relays</span>
-        </div>
-        } @else if (infoData.foundMetadataOnAccountRelays) {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">Found Profile on Account Relays</span>
-        </div>
-        }
-
-        @if (infoData.foundZeroRelaysOnAccountRelays) {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">Unable to Find User Relays</span>
-        </div>
-        }
-
-        @if (infoData.hasEmptyFollowingList) {
-        <div class="info-item negative">
-          <mat-icon>thumb_down</mat-icon>
-          <span class="info-label">Empty Following List - Cannot Discover Profile</span>
-        </div>
-        }
-
-        @if (infoData.relayCount !== undefined) {
+        } @else {
         <div class="info-item neutral">
-          <mat-icon>dns</mat-icon>
-          <span class="info-label">Relay Count: {{ infoData.relayCount }}</span>
+          <mat-icon>info</mat-icon>
+          <span class="info-label">No relays in Contact List (kind 3)</span>
         </div>
         }
-
-        @if (infoData.followingCount !== undefined) {
-        <div class="info-item neutral">
-          <mat-icon>people</mat-icon>
-          <span class="info-label">Following Count: {{ infoData.followingCount }}</span>
-        </div>
-        }
-
-        @if (infoData.updated) {
-        <div class="info-item neutral">
-          <mat-icon>schedule</mat-icon>
-          <span class="info-label">Last Updated: {{ formatTimestamp(infoData.updated) }}</span>
-        </div>
-        }
-      </div>
-
-      <div class="info-actions">
-        @if (infoData.foundMetadataOnAccountRelays) {
-        <button mat-flat-button color="primary" (click)="broadcastProfile()">
-          <mat-icon>broadcast_on_personal</mat-icon>
-          Broadcast Profile to User's Relays
-        </button>
-        }
-
-        @if (infoData.hasRelayList && !infoData.foundOnDiscoveryRelays) {
-        <button mat-flat-button color="primary" (click)="broadcastRelayList()">
-          <mat-icon>cloud_upload</mat-icon>
-          Broadcast Relay List to Discovery Relays
-        </button>
-        }
-      </div>
+      }
     </div>
-    } @else {
-    <div class="empty-state">
-      <mat-icon>info_outline</mat-icon>
-      <p>No discovery information available for this profile</p>
-    </div>
-    }
-
-    <!-- <br><br><br><br>
-
-    {{ info() | json }} -->
   </div>
+  }
 
-  <!--
-  <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
-    <mat-tab class="following-tab" label="Connections">
-      <div class="following-content">
-        @if (isLoading()) {
-          <div class="loading-container">
-            <mat-spinner diameter="40"></mat-spinner>
-            <p>Loading following list...</p>
-          </div>
-        } @else if (error()) {
-          <div class="error-container">
-            <mat-icon>error</mat-icon>
-            <p>{{ error() }}</p>
-            <button mat-button color="primary">
-              <mat-icon>refresh</mat-icon> Try Again
-            </button>
-          </div>
-        } @else if (followingList().length === 0) {
-          <div class="empty-list">
-            <mat-icon>people_outline</mat-icon>
-            <p>This user is not following anyone.</p>
-          </div>
-        } @else {
-          <cdk-virtual-scroll-viewport
-            class="virtual-scroll-viewport"
-            [itemSize]="itemSize"
-            [minBufferPx]="minBufferPx"
-            [maxBufferPx]="maxBufferPx">
-            <mat-list class="full-width-list">
-              @for (user of followingList(); track user.id) {
-                <app-user-profile [pubkey]="user.npub"></app-user-profile>
-              }
-            </mat-list>
-          </cdk-virtual-scroll-viewport>
-        }
-      </div>
-    </mat-tab>
+  @if (info(); as infoData) {
+  <div class="info-section">
+    <h3>Profile Discovery Information</h3>
 
-    <mat-tab class="following-tab" label="Mutual Connections">
-      <div class="following-content">
-        @if (mutualConnectionsList().length === 0) {
-          <div class="empty-list">
-            <mat-icon>people_alt</mat-icon>
-            <p>No mutual connections found.</p>
-          </div>
-        } @else {
-          <cdk-virtual-scroll-viewport
-            class="virtual-scroll-viewport"
-            [itemSize]="itemSize"
-            [minBufferPx]="minBufferPx"
-            [maxBufferPx]="maxBufferPx">
-            <mat-list>
-              @for (user of mutualConnectionsList(); track user.id) {
-                <mat-list-item class="following-item" (click)="layout.navigateToProfile(user.npub)">
-                  <div class="following-item-avatar" matListItemAvatar>
-                    @if (user.picture) {
-                      <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
-                    } @else {
-                      <mat-icon class="default-user-avatar">account_circle</mat-icon>
-                    }
-                  </div>
-                  <div matListItemTitle>{{ user.name }}</div>
-                  <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
-                </mat-list-item>
-              }
-            </mat-list>
-          </cdk-virtual-scroll-viewport>
-        }
+    <div class="info-grid">
+      @if (infoData.hasRelayList) {
+      <div class="info-item positive">
+        <mat-icon>thumb_up</mat-icon>
+        <span class="info-label">Has Relay List (NIP-65)</span>
       </div>
-    </mat-tab>
-  </mat-tab-group>-->
+      } @else {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">Relay list status unknown (cached info may be outdated)</span>
+      </div>
+      }
+
+      @if (infoData.hasFollowingList) {
+      <div class="info-item positive">
+        <mat-icon>thumb_up</mat-icon>
+        <span class="info-label">Has Following List</span>
+      </div>
+      }
+
+      @if (infoData.hasFollowingListRelays) {
+      <div class="info-item neutral">
+        <mat-icon>info</mat-icon>
+        <span class="info-label">Has Following List Relays</span>
+      </div>
+      }
+
+      @if (infoData.foundOnDiscoveryRelays) {
+      <div class="info-item positive">
+        <mat-icon>thumb_up</mat-icon>
+        <span class="info-label">Found on Discovery Relays</span>
+      </div>
+      } @else if (infoData.foundOnAccountRelays) {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">Found on Account Relays (Fallback)</span>
+      </div>
+      }
+
+      @if (infoData.foundMetadataOnUserRelays) {
+      <div class="info-item positive">
+        <mat-icon>thumb_up</mat-icon>
+        <span class="info-label">Found Profile on User Relays</span>
+      </div>
+      } @else if (infoData.foundMetadataOnAccountRelays) {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">Found Profile on Account Relays</span>
+      </div>
+      }
+
+      @if (infoData.foundZeroRelaysOnAccountRelays) {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">Unable to Find User Relays</span>
+      </div>
+      }
+
+      @if (infoData.hasEmptyFollowingList) {
+      <div class="info-item negative">
+        <mat-icon>thumb_down</mat-icon>
+        <span class="info-label">Empty Following List - Cannot Discover Profile</span>
+      </div>
+      }
+
+      @if (infoData.relayCount !== undefined) {
+      <div class="info-item neutral">
+        <mat-icon>dns</mat-icon>
+        <span class="info-label">Relay Count: {{ infoData.relayCount }}</span>
+      </div>
+      }
+
+      @if (infoData.followingCount !== undefined) {
+      <div class="info-item neutral">
+        <mat-icon>people</mat-icon>
+        <span class="info-label">Following Count: {{ infoData.followingCount }}</span>
+      </div>
+      }
+
+      @if (infoData.updated) {
+      <div class="info-item neutral">
+        <mat-icon>schedule</mat-icon>
+        <span class="info-label">Last Updated: {{ formatTimestamp(infoData.updated) }}</span>
+      </div>
+      }
+    </div>
+
+    <div class="info-actions">
+      @if (infoData.foundMetadataOnAccountRelays) {
+      <button mat-flat-button (click)="broadcastProfile()">
+        <mat-icon>broadcast_on_personal</mat-icon>
+        Broadcast Profile to User's Relays
+      </button>
+      }
+
+      @if (infoData.hasRelayList && !infoData.foundOnDiscoveryRelays) {
+      <button mat-flat-button (click)="broadcastRelayList()">
+        <mat-icon>cloud_upload</mat-icon>
+        Broadcast Relay List to Discovery Relays
+      </button>
+      }
+    </div>
+  </div>
+  } @else {
+  <div class="empty-state">
+    <mat-icon>info_outline</mat-icon>
+    <p>No discovery information available for this profile</p>
+  </div>
+  }
 </div>

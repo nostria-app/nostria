@@ -1596,6 +1596,10 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`);
   }
 
+  openDetailsPage(pubkeyOrNpub: string): void {
+    this.navigateToRightPanel(`user-details/${pubkeyOrNpub}`);
+  }
+
   openProfileEdit(): void {
     this.navigateToRightPanel('profile-edit');
   }

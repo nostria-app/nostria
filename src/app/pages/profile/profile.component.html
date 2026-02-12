@@ -121,7 +121,7 @@
         <span>Publish Event</span>
       </button>
 
-      <button mat-menu-item routerLink="details" [queryParamsHandling]="'preserve'">
+      <button mat-menu-item (click)="navigateToDetails()">
         <mat-icon>info</mat-icon>
         <span>Details</span>
       </button>

@@ -1,14 +1,67 @@
 :host {
   display: block;
   height: 100%;
+  overflow: hidden;
+}
+
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  background-color: rgba(250, 250, 250, 0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+:host-context(.dark) .panel-header {
+  background-color: rgba(18, 18, 18, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.panel-header-spacer {
+  flex: 1;
 }
 
 .info-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
   padding: 1rem;
-  overflow-y: visible;
+  overflow-y: auto;
+  height: calc(100% - 56px);
+}
+
+.profile-updated-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 1rem;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .info-section {
@@ -19,7 +72,6 @@
   h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.25rem;
-    font-weight: 500;
     color: var(--mat-sys-on-surface);
   }
 }
@@ -92,38 +144,6 @@
   }
 }
 
-.raw-info {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: 8px;
-
-  summary {
-    cursor: pointer;
-    font-weight: 500;
-    color: var(--mat-sys-on-surface);
-    -webkit-user-select: none;
-    user-select: none;
-    padding: 0.5rem;
-
-    &:hover {
-      color: var(--mat-sys-primary);
-    }
-  }
-
-  pre {
-    margin: 1rem 0 0 0;
-    padding: 1rem;
-    background-color: var(--mat-sys-surface-dim);
-    border-radius: 4px;
-    overflow-x: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    color: var(--mat-sys-on-surface);
-  }
-}
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -146,213 +166,6 @@
   }
 }
 
-.following-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.following-header {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
-  margin-bottom: 0;
-  /* Ensure no margin at bottom */
-}
-
-.back-button {
-  margin-right: 16px;
-}
-
-.profile-mini {
-  display: flex;
-  align-items: center;
-  flex: 1;
-
-  &-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  &-updated {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8125rem;
-    color: var(--mat-sys-on-surface-variant);
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: var(--mat-sys-on-surface-variant);
-    }
-  }
-
-  &-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: var(--mat-caption-text-color, #757575);
-    }
-  }
-
-  &-name {
-    margin: 0;
-    font-size: 18px;
-  }
-}
-
-// Tab styles - Fix for sticky tabs
-.following-tabs {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  margin-top: 0;
-  /* Ensure no margin at top */
-
-  ::ng-deep .mat-mdc-tab-header {
-    position: sticky;
-    top: 72px;
-    /* Adjust to exactly match the header height */
-    z-index: 2;
-    background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
-    border-top: none;
-    /* Remove any potential border */
-  }
-
-  ::ng-deep .mat-mdc-tab-body-wrapper {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin: 0;
-    padding: 0;
-  }
-}
-
-.following-content {
-  flex: 1;
-  padding: 0;
-  display: flex;
-  overflow: hidden;
-  height: 100%;
-}
-
-.virtual-scroll-viewport {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto; // Allow vertical scrolling within the viewport
-  min-height: 200px;
-}
-
-.following-list {
-  padding: 0;
-}
-
-.following-item {
-  cursor: pointer;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
-  }
-
-  &-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .default-user-avatar {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: var(--mat-caption-text-color, #757575);
-    }
-  }
-
-  &-npub {
-    color: var(--mat-sys-on-surface-variant);
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-  }
-}
-
-.loading-container,
-.error-container,
-.empty-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  padding: 2rem;
-
-  mat-icon {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
-  }
-
-  p {
-    margin: 8px 0 0;
-  }
-}
-
-// Make the components fill the entire virtual scroll item space
-::ng-deep .cdk-virtual-scroll-content-wrapper {
-  width: 100%;
-}
-
-// Make sure the mat-list items fill the width
-::ng-deep .mat-mdc-list {
-  width: 100%;
-}
-
-::ng-deep .mat-mdc-list-item {
-  width: 100%;
-}
-
 .metrics-section {
   padding: 1rem;
   margin: 1rem 0;
@@ -360,7 +173,6 @@
   h3 {
     margin: 0 0 1rem 0;
     font-size: 1rem;
-    font-weight: 500;
     color: var(--mat-sys-on-surface);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -400,7 +212,6 @@
   &.highlight {
     background-color: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
-    font-weight: 500;
 
     mat-icon {
       color: var(--mat-sys-on-primary);
@@ -424,7 +235,6 @@
   }
 
   .metric-value {
-    font-weight: 600;
     color: var(--mat-sys-on-surface);
   }
 }
