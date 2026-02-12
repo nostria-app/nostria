@@ -100,3 +100,98 @@ test.describe('TestAuthHelper', () => {
     expect(helper.pubkey).toMatch(/^[0-9a-f]{64}$/);
   });
 });
+
+test.describe('TestAuthHelper.injectAuth', () => {
+  test('should set nostria-account in localStorage via addInitScript', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    await helper.injectAuth(page);
+
+    await page.goto('/');
+    const storedAccount = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+
+    expect(storedAccount).not.toBeNull();
+    const parsed = JSON.parse(storedAccount!);
+    expect(parsed.pubkey).toBe(testPubkeyHex);
+    expect(parsed.privkey).toBe(testPrivkeyHex);
+    expect(parsed.source).toBe('nsec');
+    expect(parsed.hasActivated).toBe(true);
+    expect(parsed.isEncrypted).toBe(false);
+  });
+
+  test('should set nostria-accounts in localStorage via addInitScript', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    await helper.injectAuth(page);
+
+    await page.goto('/');
+    const storedAccounts = await page.evaluate(() =>
+      localStorage.getItem('nostria-accounts')
+    );
+
+    expect(storedAccounts).not.toBeNull();
+    const parsed = JSON.parse(storedAccounts!);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].pubkey).toBe(testPubkeyHex);
+    expect(parsed[0].source).toBe('nsec');
+    // Note: privkey may be encrypted by the app after load, so we only
+    // verify it is present (either as raw hex or as encrypted JSON).
+    expect(parsed[0].privkey).toBeTruthy();
+  });
+
+  test('should set localStorage before app JavaScript runs', async ({ page }) => {
+    const helper = new TestAuthHelper(testNsec);
+    await helper.injectAuth(page);
+
+    // Capture localStorage state as early as possible via a competing init script
+    await page.addInitScript(() => {
+      (window as unknown as { __earlyAuth: { account: string | null; accounts: string | null } }).__earlyAuth = {
+        account: localStorage.getItem('nostria-account'),
+        accounts: localStorage.getItem('nostria-accounts'),
+      };
+    });
+
+    await page.goto('/');
+
+    const captured = await page.evaluate(() =>
+      (window as unknown as { __earlyAuth: { account: string | null; accounts: string | null } }).__earlyAuth
+    );
+
+    expect(captured.account).not.toBeNull();
+    expect(captured.accounts).not.toBeNull();
+    const parsedAccount = JSON.parse(captured.account!);
+    expect(parsedAccount.pubkey).toBe(testPubkeyHex);
+  });
+
+  test('should contain valid lastUsed timestamp', async ({ page }) => {
+    const before = Date.now();
+    const helper = new TestAuthHelper(testNsec);
+    await helper.injectAuth(page);
+
+    await page.goto('/');
+    const storedAccount = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+
+    const after = Date.now();
+    const parsed = JSON.parse(storedAccount!);
+    expect(parsed.lastUsed).toBeGreaterThanOrEqual(before);
+    expect(parsed.lastUsed).toBeLessThanOrEqual(after);
+  });
+
+  test('should work with hex key input', async ({ page }) => {
+    const helper = new TestAuthHelper(testPrivkeyHex);
+    await helper.injectAuth(page);
+
+    await page.goto('/');
+    const storedAccount = await page.evaluate(() =>
+      localStorage.getItem('nostria-account')
+    );
+
+    expect(storedAccount).not.toBeNull();
+    const parsed = JSON.parse(storedAccount!);
+    expect(parsed.pubkey).toBe(testPubkeyHex);
+    expect(parsed.privkey).toBe(testPrivkeyHex);
+  });
+});

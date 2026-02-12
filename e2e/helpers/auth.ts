@@ -7,6 +7,7 @@
 import { getPublicKey } from 'nostr-tools/pure';
 import { nip19 } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
+import type { Page } from '@playwright/test';
 
 /**
  * Minimal NostrUser shape matching the app's NostrUser interface.
@@ -104,5 +105,32 @@ export class TestAuthHelper {
       lastUsed: Date.now(),
       isEncrypted: false,
     };
+  }
+
+  /**
+   * Inject authentication into a Playwright page via `addInitScript`.
+   *
+   * Sets `localStorage['nostria-account']` and `localStorage['nostria-accounts']`
+   * with the constructed NostrUser before the app loads. Must be called
+   * before navigating to the app.
+   *
+   * @param page - The Playwright Page to inject auth into
+   *
+   * @example
+   * ```ts
+   * const auth = new TestAuthHelper(process.env.TEST_NSEC!);
+   * await auth.injectAuth(page);
+   * await page.goto('/');
+   * ```
+   */
+  async injectAuth(page: Page): Promise<void> {
+    const user = this.buildNostrUser();
+    const userJson = JSON.stringify(user);
+    const accountsJson = JSON.stringify([user]);
+
+    await page.addInitScript(({ account, accounts }: { account: string; accounts: string }) => {
+      localStorage.setItem('nostria-account', account);
+      localStorage.setItem('nostria-accounts', accounts);
+    }, { account: userJson, accounts: accountsJson });
   }
 }
