@@ -139,7 +139,10 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     this.initialized = true;
   }
 
-  clear() { }
+  clear() {
+    // No specific cleanup needed for discovery relays
+    // The relay pool is managed by the base class
+  }
 
   save(relayUrls: string[]) {
     // Save to local storage
