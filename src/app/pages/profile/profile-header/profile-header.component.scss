@@ -384,6 +384,11 @@
     .compact-text {
       display: inline;
     }
+
+    .compact-count {
+      display: none;
+      margin-left: 2px;
+    }
   }
 
   @container (max-width: 460px) {
@@ -396,6 +401,10 @@
 
       .compact-icon {
         display: inline-block;
+      }
+
+      .compact-count {
+        display: inline;
       }
     }
   }
