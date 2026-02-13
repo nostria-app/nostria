@@ -8,18 +8,6 @@
   }
 }
 
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
 .setting-description {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.875rem;
@@ -79,16 +67,6 @@
   font-size: 0.875rem;
   color: var(--mat-sys-on-surface-variant);
   margin: 0.25rem 0 0;
-}
-
-.service-actions {
-  flex-shrink: 0;
-}
-
-.error-text {
-  color: var(--mat-sys-error);
-  font-size: 0.813rem;
-  margin-top: 0.5rem;
 }
 
 // Callout card (personalized scoring)
