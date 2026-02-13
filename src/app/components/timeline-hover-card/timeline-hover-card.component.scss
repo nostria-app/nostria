@@ -219,6 +219,42 @@
       margin-bottom: 8px;
       white-space: pre-wrap;
       word-break: break-word;
+
+      a {
+        text-decoration: none;
+      }
+
+      .nostr-mention {
+        color: var(--mat-sys-primary);
+      }
+
+      .hashtag-link {
+        color: var(--mat-sys-tertiary);
+      }
+
+      .url-link {
+        color: var(--mat-sys-secondary);
+      }
+
+      .image-link {
+        display: block;
+        margin: 0.35rem 0;
+      }
+
+      .note-image {
+        display: block;
+        width: 100%;
+        max-height: 220px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: var(--mat-sys-surface-container-high);
+      }
+
+      .nostr-mention:hover,
+      .hashtag-link:hover,
+      .url-link:hover {
+        text-decoration: underline;
+      }
     }
 
     .note-time {
