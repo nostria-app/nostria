@@ -223,7 +223,7 @@
       "type": "image/png",
       "purpose": "maskable"
     },
-       {
+    {
       "src": "icons/icon-180x180-maskable.png",
       "sizes": "180x180",
       "type": "image/png",
@@ -277,7 +277,7 @@
       "type": "image/png",
       "purpose": "any"
     },
-        {
+    {
       "src": "icons/icon-180x180.png",
       "sizes": "180x180",
       "type": "image/png",
@@ -304,42 +304,42 @@
   ],
   "screenshots": [
     {
-      "src": "screenshots/desktop-01.webp",
+      "src": "/screenshots/2025-02-13-home-dark.webp",
       "sizes": "1920x1080",
       "type": "image/webp",
       "form_factor": "wide",
       "label": "Welcome screen for new users"
     },
     {
-      "src": "screenshots/desktop-02.webp",
+      "src": "/screenshots/2025-02-13-profile-dark.webp",
       "sizes": "1920x1080",
       "type": "image/webp",
       "platform": "wide",
       "label": "Follow interesting users"
     },
     {
-      "src": "screenshots/desktop-03.webp",
+      "src": "/screenshots/2025-02-13-thread-dark.webp",
       "sizes": "1920x1080",
       "type": "image/webp",
       "platform": "wide",
       "label": "Feeds and columns"
     },
     {
-      "src": "screenshots/mobile-01.webp",
+      "src": "/screenshots/2025-02-13-home-mobile-dark.webp",
       "sizes": "750x1080",
       "type": "image/webp",
       "form_factor": "narrow",
       "label": "Welcome screen for new users"
     },
     {
-      "src": "screenshots/mobile-02.webp",
+      "src": "/screenshots/2025-02-13-profile-mobile-dark.webp",
       "sizes": "750x1080",
       "type": "image/webp",
       "platform": "narrow",
       "label": "User profile"
     },
     {
-      "src": "screenshots/mobile-03.webp",
+      "src": "/screenshots/2025-02-13-thread-mobile-dark.webp",
       "sizes": "750x1080",
       "type": "image/webp",
       "platform": "narrow",
