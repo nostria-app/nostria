@@ -758,6 +758,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private _replyCountInternal = signal<number>(0);
   private _replyEventsInternal = signal<Event[]>([]);
 
+  // Overflow flags - true when the query limit was reached (more exist on relays)
+  hasMoreReactions = signal<boolean>(false);
+  hasMoreReposts = signal<boolean>(false);
+  hasMoreQuotes = signal<boolean>(false);
+  hasMoreReplies = signal<boolean>(false);
+  hasMoreZaps = signal<boolean>(false);
+
   // Build threaded replies from internally loaded reply events for passing to thread view
   private threadedRepliesFromInteractions = computed<ThreadedEvent[]>(() => {
     const events = this._replyEventsInternal();
@@ -788,6 +795,32 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Combined reposts + quotes count for the Share button
   shareCount = computed<number>(() => {
     return this.repostCount() + this.quoteCount();
+  });
+
+  // Display-friendly counter strings that show "10+" when the query limit was hit
+  likesDisplay = computed<string>(() => {
+    const count = this.likes().length;
+    if (count === 0) return '';
+    if (this.hasMoreReactions()) return `${count - 1}+`;
+    return `${count}`;
+  });
+
+  replyCountDisplay = computed<string>(() => {
+    const count = this.replyCount();
+    if (count === 0) return '';
+    if (this.hasMoreReplies()) return `${count - 1}+`;
+    return `${count}`;
+  });
+
+  shareCountDisplay = computed<string>(() => {
+    const total = this.shareCount();
+    if (total === 0) return '';
+    const overflowCount = (this.hasMoreReposts() ? 1 : 0) + (this.hasMoreQuotes() ? 1 : 0);
+    if (overflowCount > 0) {
+      const displayCount = Math.max(total - overflowCount, 1);
+      return `${displayCount}+`;
+    }
+    return `${total}`;
   });
 
   // Reactions summary panel state
@@ -1523,9 +1556,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Load all event interactions (reactions, reposts, reports) in a single optimized query
-   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately
-   * For reposts, loads interactions for the reposted event, not the repost itself
+   * Load all event interactions with per-kind limits for feed optimization.
+   * In timeline mode, each kind is limited to INTERACTION_QUERY_LIMIT (11) events -
+   * if 11 are returned, the UI shows "10+" to indicate there are more.
+   * In thread mode (detail view), no limits are applied so full counts are shown.
+   *
+   * For reposts, loads interactions for the reposted event, not the repost itself.
    */
   async loadAllInteractions(invalidateCache = false) {
     // Use targetRecord to get the actual event for interactions
@@ -1537,7 +1573,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetEventId = targetRecordData.event.id;
     // IMPORTANT: Use the EVENT AUTHOR's pubkey, not the current user's pubkey!
     // This ensures we query the author's relays where replies/reactions are likely to be found.
-    // This matches what loadReplies does in loadThreadProgressively.
     const eventAuthorPubkey = targetRecordData.event.pubkey;
 
     // If reply count is provided from parent (e.g., event page that already loaded all replies),
@@ -1546,27 +1581,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.logger.debug('[Loading Interactions] Starting load for event:', targetEventId.substring(0, 8), 'skipReplies:', skipReplies);
 
+    // Only apply limits in timeline (feed) mode; thread (detail) mode loads all interactions
+    const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
+
     this.isLoadingReactions.set(true);
     try {
-      // Load main interactions and quotes in parallel
+      // Load interactions with per-kind limits and quotes in parallel
       const [interactions, quotesResult] = await Promise.all([
         this.eventService.loadEventInteractions(
           targetEventId,
           targetRecordData.event.kind,
-          eventAuthorPubkey,  // Use event author's pubkey for consistent relay queries
+          eventAuthorPubkey,
           invalidateCache,
-          skipReplies  // Skip loading replies when count is already known from parent
+          skipReplies,
+          queryLimit,  // Per-kind limit for feed optimization
         ),
         this.eventService.loadQuotes(
           targetEventId,
-          eventAuthorPubkey,  // Use event author's pubkey for consistent relay queries
-          invalidateCache
+          eventAuthorPubkey,
+          invalidateCache,
+          queryLimit,  // Limit quotes too
         )
       ]);
 
       // CRITICAL: Verify we're still showing the same event before updating state
-      // This prevents interactions from one event being applied to another
-      // For reposts, we compare against targetRecord which is the reposted event
       const currentTargetRecord = this.targetRecord();
       if (currentTargetRecord?.event.id !== targetEventId) {
         this.logger.warn('[Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
@@ -1610,6 +1648,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         events: filteredReportEvents,
         data: filteredReportData
       });
+
+      // Update overflow flags (only relevant when limits are applied)
+      this.hasMoreReactions.set(interactions.hasMoreReactions ?? false);
+      this.hasMoreReposts.set(interactions.hasMoreReposts ?? false);
+      this.hasMoreReplies.set(interactions.hasMoreReplies ?? false);
+      this.hasMoreQuotes.set(queryLimit != null && quotesResult.length >= queryLimit);
+
       // Only update internal reply count if we actually loaded it (not skipped)
       if (!skipReplies) {
         this._replyCountInternal.set(interactions.replyCount);
@@ -1736,7 +1781,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.logger.debug('[Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
 
     try {
-      const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
+      // Only apply limits in timeline (feed) mode; thread (detail) mode loads all zaps
+      const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
+      const zapReceipts = await this.zapService.getZapsForEvent(targetEventId, queryLimit);
 
       // CRITICAL: Verify we're still showing the same event before updating state
       // For reposts, we compare against targetRecord which is the reposted event
@@ -1765,6 +1812,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
 
       this.zaps.set(parsedZaps);
+      // Track if zap query hit its limit (only relevant when limits are applied)
+      this.hasMoreZaps.set(queryLimit != null && zapReceipts.length >= queryLimit);
     } catch (error) {
       this.logger.error('Error loading zaps:', error);
     }

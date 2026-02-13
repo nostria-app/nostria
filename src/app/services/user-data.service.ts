@@ -839,7 +839,7 @@ export class UserDataService {
     pubkey: string,
     kinds: number[],
     eventTag: string,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions & { limit?: number },
   ): Promise<NostrRecord[]> {
     const cacheKey = `${kinds.join(',')}-${eventTag}-all`;
     let events: Event[] = [];
@@ -876,7 +876,8 @@ export class UserDataService {
       pubkey,
       kinds,
       eventTag,
-      options?.includeAccountRelays
+      options?.includeAccountRelays,
+      options?.limit
     );
 
     // Merge database and relay events, deduplicated by event ID
@@ -928,7 +929,7 @@ export class UserDataService {
     pubkey: string,
     kinds: number[],
     quoteEventId: string,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions & { limit?: number },
   ): Promise<NostrRecord[]> {
     const cacheKey = `quotes-${kinds.join(',')}-${quoteEventId}`;
     let events: Event[] = [];
@@ -946,7 +947,8 @@ export class UserDataService {
       pubkey,
       kinds,
       quoteEventId,
-      options?.includeAccountRelays
+      options?.includeAccountRelays,
+      options?.limit
     );
 
     if (relayEvents && relayEvents.length > 0) {
