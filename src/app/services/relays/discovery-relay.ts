@@ -115,6 +115,21 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return fallbackRelays;
   }
 
+  /**
+   * Load discovery relays from storage or from the user's kind 10086 event.
+   * 
+   * @param pubkey Optional user's public key to check for kind 10086 event
+   * @returns Promise<boolean> - True if user has a kind 10086 event, false otherwise
+   * 
+   * When pubkey is provided:
+   * - Checks database for kind 10086 event
+   * - If found, initializes with those relays and returns true
+   * - If not found, initializes with bootstrap relays from storage and returns false
+   * 
+   * When pubkey is not provided:
+   * - Initializes with bootstrap relays from storage
+   * - Returns false (no event check performed)
+   */
   async load(pubkey?: string): Promise<boolean> {
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
