@@ -1,10 +1,12 @@
-import { Component, input, output, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
+import { Router } from '@angular/router';
 import { PeopleFilters } from '../../../services/account-local-state.service';
+import { TrustProviderService } from '../../../services/trust-provider.service';
 
 // Sort option type
 type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc' | 'name-asc' | 'name-desc';
@@ -87,18 +89,27 @@ const SORT_OPTIONS: SortOptionDef[] = [
       <!-- Display Options -->
       <div class="section-label">Display</div>
       <div class="filter-options">
-        <mat-checkbox
-          [checked]="filters()?.showRank ?? true"
-          (change)="onFilterChange('showRank', $event.checked)">
-          Show Trust Rank
-        </mat-checkbox>
+        @if (hasProviders()) {
+          <mat-checkbox
+            [checked]="filters()?.showRank ?? true"
+            (change)="onFilterChange('showRank', $event.checked)">
+            Show Trust Rank
+          </mat-checkbox>
+        }
       </div>
 
       <!-- Actions Row -->
       <div class="actions-row">
-        <button mat-stroked-button class="action-btn" (click)="onRefreshTrustRanks()">
-          Refresh Trust Ranks
-        </button>
+        @if (hasProviders()) {
+          <button mat-stroked-button class="action-btn" (click)="onRefreshTrustRanks()">
+            Refresh Trust Ranks
+          </button>
+        } @else {
+          <button mat-stroked-button class="action-btn configure-trust-btn" (click)="goToTrustSettings()">
+            <mat-icon>settings</mat-icon>
+            Configure Trust
+          </button>
+        }
       </div>
       <div class="actions-row">
         <button mat-stroked-button class="action-btn" (click)="reset()">
@@ -190,9 +201,25 @@ const SORT_OPTIONS: SortOptionDef[] = [
       flex: 1;
       font-size: 0.8125rem;
     }
+
+    .configure-trust-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--mat-sys-primary);
+    }
+
+    .configure-trust-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   `]
 })
 export class PeopleFilterPanelComponent {
+  private router = inject(Router);
+  private trustProviderService = inject(TrustProviderService);
+
   filters = input<PeopleFilters | null>(null);
   sortOption = input<SortOption>('default');
 
@@ -205,6 +232,9 @@ export class PeopleFilterPanelComponent {
   sortOptions = SORT_OPTIONS;
 
   currentSortOption = computed(() => this.sortOption());
+
+  /** Whether the user has any trust providers configured (kind 10040 event) */
+  hasProviders = computed(() => this.trustProviderService.hasProviders());
 
   /**
    * Select a sort option
@@ -239,5 +269,12 @@ export class PeopleFilterPanelComponent {
    */
   onRefreshTrustRanks(): void {
     this.refreshTrustRanks.emit();
+  }
+
+  /**
+   * Navigate to Trust settings page so the user can configure trust providers
+   */
+  goToTrustSettings(): void {
+    this.router.navigate(['/settings/trust']);
   }
 }
