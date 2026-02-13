@@ -78,7 +78,7 @@ export function createMockProfileEvent(overrides?: Partial<NostrEvent>): NostrEv
  * Kind 1 — Short text note
  */
 export function createMockNoteEvent(
-  content: string = 'Hello from Nostria E2E tests!',
+  content = 'Hello from Nostria E2E tests!',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   return {
@@ -99,7 +99,7 @@ export function createMockNoteEvent(
 export function createMockReplyEvent(
   replyToId: string,
   replyToPubkey: string,
-  content: string = 'This is a reply',
+  content = 'This is a reply',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   return {
@@ -149,7 +149,7 @@ export function createMockContactListEvent(
  */
 export function createMockDMEvent(
   recipientPubkey: string,
-  content: string = 'Hello, this is a test DM',
+  content = 'Hello, this is a test DM',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   return {
@@ -170,7 +170,7 @@ export function createMockDMEvent(
 export function createMockReactionEvent(
   reactToId: string,
   reactToPubkey: string,
-  reaction: string = '+',
+  reaction = '+',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   return {
@@ -214,8 +214,8 @@ export function createMockRepostEvent(
  * Kind 30023 — Long-form article (NIP-23)
  */
 export function createMockArticleEvent(
-  title: string = 'Test Article',
-  content: string = '# Test Article\n\nThis is a test article for E2E testing.\n\n## Section 1\n\nSome content here.',
+  title = 'Test Article',
+  content = '# Test Article\n\nThis is a test article for E2E testing.\n\n## Section 1\n\nSome content here.',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   const dTag = title.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -242,7 +242,7 @@ export function createMockArticleEvent(
  * Kind 1063 — File metadata (NIP-94)
  */
 export function createMockFileMetadataEvent(
-  url: string = 'https://example.com/test-image.jpg',
+  url = 'https://example.com/test-image.jpg',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   return {
@@ -268,7 +268,7 @@ export function createMockFileMetadataEvent(
  * Kind 30311 — Live stream (NIP-53)
  */
 export function createMockLiveStreamEvent(
-  title: string = 'Test Live Stream',
+  title = 'Test Live Stream',
   overrides?: Partial<NostrEvent>
 ): NostrEvent {
   const dTag = `stream-${nowSeconds()}`;
@@ -319,7 +319,7 @@ export function createMockUserData(pubkey: string) {
 /**
  * A thread of notes (original + replies) for thread rendering tests.
  */
-export function createMockThread(depth: number = 3) {
+export function createMockThread(depth = 3) {
   const events: NostrEvent[] = [];
   const rootPubkey = placeholderHex(64);
 

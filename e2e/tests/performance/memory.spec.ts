@@ -24,7 +24,7 @@ test.describe('Memory Usage @metrics @auth', () => {
       { path: '/', name: 'Home (return)' },
     ];
 
-    const timeline: Array<{ page: string; memoryMB: number | null; timestamp: number }> = [];
+    const timeline: { page: string; memoryMB: number | null; timestamp: number }[] = [];
 
     for (const pg of pages) {
       await authenticatedPage.goto(pg.path);

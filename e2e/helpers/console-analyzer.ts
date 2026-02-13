@@ -51,7 +51,7 @@ export interface ClassifiedError {
 export interface ConsoleAnalysisReport {
   totalLogCount: number;
   countByType: Record<string, number>;
-  top10MostFrequent: Array<{ message: string; count: number }>;
+  top10MostFrequent: { message: string; count: number }[];
   uniqueErrors: string[];
   relayConnectionStats: {
     successCount: number;
@@ -89,7 +89,7 @@ const NOSTR_LOG_PREFIXES = [
 /**
  * Patterns for Nostr relay protocol messages
  */
-const RELAY_MESSAGE_PATTERNS: Array<{ pattern: RegExp; type: NostrLogData['messageType'] }> = [
+const RELAY_MESSAGE_PATTERNS: { pattern: RegExp; type: NostrLogData['messageType'] }[] = [
   { pattern: /\bREQ\b/, type: 'REQ' },
   { pattern: /\bEVENT\b/, type: 'EVENT' },
   { pattern: /\bEOSE\b/, type: 'EOSE' },
@@ -102,7 +102,7 @@ const RELAY_MESSAGE_PATTERNS: Array<{ pattern: RegExp; type: NostrLogData['messa
 /**
  * Patterns for expected errors (not bugs)
  */
-const EXPECTED_ERROR_PATTERNS: Array<{ pattern: RegExp; category: ClassifiedError['category']; reason: string }> = [
+const EXPECTED_ERROR_PATTERNS: { pattern: RegExp; category: ClassifiedError['category']; reason: string }[] = [
   { pattern: /relay.*connection.*refused/i, category: 'relay', reason: 'Relay connection refused (relay may be offline)' },
   { pattern: /wss?:\/\/.*refused/i, category: 'relay', reason: 'WebSocket connection refused' },
   { pattern: /wss?:\/\/.*timeout/i, category: 'relay', reason: 'WebSocket connection timeout' },
@@ -119,7 +119,7 @@ const EXPECTED_ERROR_PATTERNS: Array<{ pattern: RegExp; category: ClassifiedErro
 /**
  * Patterns for unexpected errors (potential bugs)
  */
-const UNEXPECTED_ERROR_PATTERNS: Array<{ pattern: RegExp; category: ClassifiedError['category']; reason: string }> = [
+const UNEXPECTED_ERROR_PATTERNS: { pattern: RegExp; category: ClassifiedError['category']; reason: string }[] = [
   { pattern: /TypeError/i, category: 'runtime', reason: 'TypeError — potential code bug' },
   { pattern: /ReferenceError/i, category: 'runtime', reason: 'ReferenceError — undefined variable' },
   { pattern: /SyntaxError/i, category: 'runtime', reason: 'SyntaxError — malformed code' },
