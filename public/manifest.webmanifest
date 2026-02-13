@@ -305,42 +305,42 @@
   "screenshots": [
     {
       "src": "/screenshots/2025-02-13-home-dark.webp",
-      "sizes": "1920x1080",
+      "sizes": "1280x720",
       "type": "image/webp",
       "form_factor": "wide",
       "label": "Welcome screen for new users"
     },
     {
       "src": "/screenshots/2025-02-13-profile-dark.webp",
-      "sizes": "1920x1080",
+      "sizes": "1280x720",
       "type": "image/webp",
       "platform": "wide",
       "label": "Follow interesting users"
     },
     {
       "src": "/screenshots/2025-02-13-thread-dark.webp",
-      "sizes": "1920x1080",
+      "sizes": "1280x720",
       "type": "image/webp",
       "platform": "wide",
       "label": "Feeds and columns"
     },
     {
       "src": "/screenshots/2025-02-13-home-mobile-dark.webp",
-      "sizes": "750x1080",
+      "sizes": "1290x2796",
       "type": "image/webp",
       "form_factor": "narrow",
       "label": "Welcome screen for new users"
     },
     {
       "src": "/screenshots/2025-02-13-profile-mobile-dark.webp",
-      "sizes": "750x1080",
+      "sizes": "1290x2796",
       "type": "image/webp",
       "platform": "narrow",
       "label": "User profile"
     },
     {
       "src": "/screenshots/2025-02-13-thread-mobile-dark.webp",
-      "sizes": "750x1080",
+      "sizes": "1290x2796",
       "type": "image/webp",
       "platform": "narrow",
       "label": "Feeds and columns"
