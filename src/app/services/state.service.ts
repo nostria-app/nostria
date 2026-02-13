@@ -92,7 +92,8 @@ export class StateService implements NostriaService {
 
     // This is never called for anonymous accounts.
     // Load discovery relays, passing the pubkey to check for kind 10086 event
-    await this.discoveryRelay.load(pubkey);
+    // Returns true if user has a kind 10086 event, false otherwise
+    const hasDiscoveryRelays = await this.discoveryRelay.load(pubkey);
     
     // Destroy old connections before setting up new ones
     const relayStartTime = Date.now();
@@ -149,7 +150,7 @@ export class StateService implements NostriaService {
     // Ensure default discovery relays are published in parallel (non-blocking)
     const discoveryRelayPromise = (async () => {
       const discoveryStartTime = Date.now();
-      await this.ensureDefaultDiscoveryRelays(pubkey);
+      await this.ensureDefaultDiscoveryRelays(pubkey, hasDiscoveryRelays);
       this.logger.info(`[StateService] Discovery relay check completed in ${Date.now() - discoveryStartTime}ms`);
     })();
 
@@ -185,13 +186,12 @@ export class StateService implements NostriaService {
   /**
    * Ensure the user has default discovery relays set and published if they don't have a kind 10086 event.
    * This is critical for profile lookup functionality.
+   * @param pubkey The user's public key
+   * @param hasDiscoveryRelays Whether the user already has a kind 10086 event (from load() result)
    */
-  private async ensureDefaultDiscoveryRelays(pubkey: string): Promise<void> {
+  private async ensureDefaultDiscoveryRelays(pubkey: string, hasDiscoveryRelays: boolean): Promise<void> {
     try {
-      // Check if user already has a kind 10086 event
-      const existingRelays = await this.discoveryRelay.loadFromEvent(pubkey);
-      
-      if (existingRelays === null) {
+      if (!hasDiscoveryRelays) {
         // User has no kind 10086 event, create and publish defaults
         this.logger.info('[StateService] User has no discovery relays (kind 10086), setting defaults');
         

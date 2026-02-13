@@ -115,7 +115,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return fallbackRelays;
   }
 
-  async load(pubkey?: string) {
+  async load(pubkey?: string): Promise<boolean> {
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
     
@@ -129,7 +129,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
         this.init(relaysFromEvent);
         this.initialized = true;
-        return;
+        return true; // Event found
       }
       // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
       this.logger.debug('No kind 10086 event found for user, using bootstrap relays');
@@ -137,6 +137,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     
     this.init(bootstrapRelays);
     this.initialized = true;
+    return false; // No event found (or no pubkey provided)
   }
 
   clear() {
@@ -282,8 +283,8 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
    * Get default discovery relays based on user's region
    * Falls back to EU region if user has no region set
    */
-  getDefaultDiscoveryRelays(userRegion?: string): string[] {
-    const region = userRegion || this.accountState.account()?.region || 'eu';
+  getDefaultDiscoveryRelays(): string[] {
+    const region = this.accountState.account()?.region || 'eu';
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
     
     // Always include both regional relay and indexer.coracle.social for best profile discovery
