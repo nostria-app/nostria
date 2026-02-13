@@ -34,6 +34,7 @@ interface MediaPreviewData {
 export class MediaPreviewDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPreviewDialogComponent>);
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
+  private popstateHandler: ((event: PopStateEvent) => void) | null = null;
 
   @ViewChild('imageElement') imageElement?: ElementRef<HTMLImageElement>;
   @ViewChild('containerElement') containerElement?: ElementRef<HTMLDivElement>;
@@ -50,7 +51,7 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   private readonly DOUBLE_TAP_DELAY = 300; // milliseconds
   private readonly DOUBLE_TAP_DISTANCE = 50; // pixels
 
-// Auto-hide controls after inactivity
+  // Auto-hide controls after inactivity
   private hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly HIDE_CONTROLS_DELAY = 2000; // 2 seconds
   controlsVisible = signal(true);
@@ -113,12 +114,48 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     if (this.data.initialIndex !== undefined) {
       this.currentIndex.set(this.data.initialIndex);
     }
+
+    this.setupHistoryHandling();
+
     // Start the auto-hide timer
     this.resetHideControlsTimer();
   }
 
   ngOnDestroy(): void {
+    this.cleanupHistoryHandling();
     this.clearHideControlsTimer();
+  }
+
+  private setupHistoryHandling(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.history.pushState(
+      {
+        ...(window.history.state as Record<string, unknown> | null),
+        mediaPreviewOpen: true,
+      },
+      ''
+    );
+
+    this.popstateHandler = (event: PopStateEvent) => {
+      event.stopImmediatePropagation();
+      this.close();
+    };
+
+    window.addEventListener('popstate', this.popstateHandler, true);
+  }
+
+  private cleanupHistoryHandling(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.popstateHandler) {
+      window.removeEventListener('popstate', this.popstateHandler, true);
+      this.popstateHandler = null;
+    }
   }
 
   // Auto-hide controls management

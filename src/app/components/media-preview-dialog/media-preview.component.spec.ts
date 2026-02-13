@@ -34,6 +34,23 @@ describe('MediaPreviewDialogComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should push a history state when opened', () => {
+    const pushStateSpy = spyOn(window.history, 'pushState');
+
+    createComponent({ mediaUrl: 'https://example.com/image.jpg', mediaType: 'image' });
+
+    expect(pushStateSpy).toHaveBeenCalled();
+  });
+
+  it('should close on popstate (mobile back gesture)', () => {
+    createComponent({ mediaUrl: 'https://example.com/image.jpg', mediaType: 'image' });
+    mockDialogRef.close.calls.reset();
+
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    expect(mockDialogRef.close).toHaveBeenCalled();
+  });
+
   describe('keyboard navigation via host binding', () => {
     const multiMediaData = {
       mediaItems: [
