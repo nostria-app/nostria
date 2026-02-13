@@ -353,8 +353,14 @@
 .profile-extra-info {
   display: flex;
   align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  container-type: inline-size;
 
   .following-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: var(--mat-sys-on-surface);
     text-decoration: none;
@@ -365,6 +371,32 @@
     &:hover {
       background-color: var(--mat-sys-surface-container-high);
       color: var(--mat-sys-primary);
+    }
+
+    .compact-icon {
+      display: none;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+
+    .compact-text {
+      display: inline;
+    }
+  }
+
+  @container (max-width: 460px) {
+    .following-count.compactable {
+      padding: 4px;
+
+      .compact-text {
+        display: none;
+      }
+
+      .compact-icon {
+        display: inline-block;
+      }
     }
   }
 }
