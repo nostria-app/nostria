@@ -133,6 +133,18 @@ export class ContentNotificationService implements OnDestroy {
 
       // Start periodic polling after initialization
       this.startPolling();
+
+      // If timestamp is 0 (first-time user or after cache clear),
+      // immediately check for notifications to populate the list
+      if (timestamp === 0) {
+        this.logger.info('[Initialize] Last check timestamp is 0, immediately fetching notifications');
+        // Use a short delay to ensure the app UI is ready
+        setTimeout(() => {
+          this.checkForNewNotifications(7).catch(error => {
+            this.logger.error('[Initialize] Failed to fetch initial notifications', error);
+          });
+        }, 1000);
+      }
     } catch (error) {
       this.logger.error('Failed to initialize ContentNotificationService', error);
     }
