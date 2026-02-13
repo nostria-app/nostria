@@ -1002,9 +1002,9 @@ export class EventService {
       ),
       !skipReplies
         ? this.userDataService.getEventsByKindsAndEventTag(
-            pubkey, [kinds.ShortTextNote], eventId,
-            { ...queryOptions, limit },
-          )
+          pubkey, [kinds.ShortTextNote], eventId,
+          { ...queryOptions, limit },
+        )
         : null,
     ];
 

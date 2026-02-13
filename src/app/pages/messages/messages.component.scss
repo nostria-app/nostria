@@ -70,6 +70,13 @@
     min-width: 420px;
   }
 
+  // On medium screens (e.g. 1024px), shrink one more step
+  @media (min-width: 700px) and (max-width: 1024px) {
+    flex: 0 0 200px;
+    width: 200px;
+    min-width: 200px;
+  }
+
   // On smaller screens, take full width and enable single-pane view
   @media (max-width: 699px) {
     flex: 1;
@@ -529,8 +536,9 @@
   min-height: 36px;
   height: auto;
   resize: none;
+  field-sizing: content;
   overflow: hidden;
-  line-height: 1.5;
+  line-height: 24px;
   max-height: 150px;
   font-family: inherit;
   box-sizing: border-box;
@@ -731,6 +739,10 @@
   // Prevent iOS Safari from auto-zooming text
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  @media (min-width: 700px) and (max-width: 1024px) {
+    display: none;
+  }
 }
 
 // Date header for message grouping
@@ -1158,6 +1170,12 @@
   position: relative;
   width: 24px; // Reserve space for the badge
   height: 16px;
+}
+
+@media (min-width: 700px) and (max-width: 1024px) {
+  .unread-badge {
+    display: none !important;
+  }
 }
 
 @media (max-width: 699px) {
