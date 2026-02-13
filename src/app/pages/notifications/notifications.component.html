@@ -201,9 +201,7 @@
           <div class="notification-header">
             @if (getAuthorPubkey(notification)) {
             <span class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
-              <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!"
-                [prefetchedProfile]="getPrefetchedProfile(notification)" [disableLink]="true"
-                [showFallbackWhileLoading]="true"></app-profile-display-name>
+              {{ getNotificationAuthorDisplayName(notification) }}
             </span>
             }
             <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
@@ -219,7 +217,8 @@
 
           @if (notification.message && notification.type === 'zap') {
           <div class="notification-message">
-            {{ notification.message }}@if (getZapContent(notification)) {<span> · {{ getZapContent(notification)! | resolveNostr
+            {{ notification.message }}@if (getZapContent(notification)) {<span> · {{ getZapContent(notification)! |
+              resolveNostr
               }}</span>}
           </div>
           } @else if (getZapContent(notification)) {
