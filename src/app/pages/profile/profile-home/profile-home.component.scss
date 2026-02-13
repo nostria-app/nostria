@@ -3,6 +3,20 @@
   min-height: 300px;
 }
 
+.profile-tabs {
+  container-type: inline-size;
+}
+
+.nav-link-text {
+  white-space: nowrap;
+}
+
+@container (max-width: 570px) {
+  .profile-tabs .nav-link-text.compactable-label {
+    display: none;
+  }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

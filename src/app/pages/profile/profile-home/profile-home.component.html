@@ -1,39 +1,39 @@
 @if (isInRightPanel()) {
 <!-- When in right panel (auxiliary outlet), render components directly with manual tab switching -->
 <!-- This avoids Angular router state tree issues with nested children in auxiliary outlets -->
-<nav mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="true" mat-align-tabs="start">
+<nav class="profile-tabs" mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="true" mat-align-tabs="start">
   @for (link of navLinks; track link.path) {
   <a mat-tab-link (click)="setActiveTab(link.path)" [active]="activeTab() === link.path">
     <mat-icon>{{ link.icon }}</mat-icon>
-    <span class="nav-link-text hide-tiny">{{ getLabel(link) }}</span>
+    <span class="nav-link-text" [class.compactable-label]="link.path !== 'notes'">{{ getLabel(link) }}</span>
   </a>
   }
 </nav>
 
 <mat-tab-nav-panel #tabPanel>
   @switch (activeTab()) {
-    @case ('notes') {
-      <app-profile-notes></app-profile-notes>
-    }
-    @case ('articles') {
-      <app-profile-reads></app-profile-reads>
-    }
-    @case ('media') {
-      <app-profile-media></app-profile-media>
-    }
-    @case ('connection') {
-      <app-profile-connection></app-profile-connection>
-    }
+  @case ('notes') {
+  <app-profile-notes></app-profile-notes>
+  }
+  @case ('articles') {
+  <app-profile-reads></app-profile-reads>
+  }
+  @case ('media') {
+  <app-profile-media></app-profile-media>
+  }
+  @case ('connection') {
+  <app-profile-connection></app-profile-connection>
+  }
   }
 </mat-tab-nav-panel>
 } @else {
 <!-- Normal routing with all tabs when in primary outlet -->
-<nav mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="true" mat-align-tabs="start">
+<nav class="profile-tabs" mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="true" mat-align-tabs="start">
   @for (link of navLinks; track link.path) {
   <a mat-tab-link [routerLink]="link.path" routerLinkActive #rla="routerLinkActive"
     [active]="isLinkActive(link.path, rla.isActive)" [queryParamsHandling]="'preserve'">
     <mat-icon>{{ link.icon }}</mat-icon>
-    <span class="nav-link-text hide-tiny">{{ getLabel(link) }}</span>
+    <span class="nav-link-text" [class.compactable-label]="link.path !== 'notes'">{{ getLabel(link) }}</span>
   </a>
   }
 </nav>
