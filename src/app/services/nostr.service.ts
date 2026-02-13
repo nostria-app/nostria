@@ -26,7 +26,7 @@ import { UtilitiesService } from './utilities.service';
 import { PublishQueueService } from './publish-queue';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
-import { DiscoveryRelayService } from './relays/discovery-relay';
+import { DiscoveryRelayService, DiscoveryRelayListKind } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -683,6 +683,7 @@ export class NostrService implements NostriaService {
         TRUST_PROVIDER_LIST_KIND, // 10040 - NIP-85 Trusted Service Providers
         kinds.DirectMessageRelaysList, // 10050 - DM relays
         10063,               // Media server list (BUD-03)
+        DiscoveryRelayListKind, // 10086 - Discovery relay list
       ],
       authors: [pubkey],
     };
@@ -804,6 +805,23 @@ export class NostrService implements NostriaService {
           this.logger.info('Updated media server list from subscription', {
             pubkey,
             serverCount: event.tags.filter(t => t[0] === 'server').length,
+          });
+          break;
+        }
+
+        case DiscoveryRelayListKind: {
+          // Load discovery relays from the event and update local storage
+          const discoveryRelayUrls = event.tags
+            .filter(t => t[0] === 'relay' && t[1])
+            .map(t => t[1]);
+
+          if (discoveryRelayUrls.length > 0) {
+            this.discoveryRelay.setDiscoveryRelays(discoveryRelayUrls);
+          }
+
+          this.logger.info('Updated discovery relay list from subscription', {
+            pubkey,
+            discoveryRelayCount: discoveryRelayUrls.length,
           });
           break;
         }
@@ -2229,6 +2247,18 @@ export class NostrService implements NostriaService {
 
     await this.database.saveEvent(signedDMEvent);
     await this.accountRelay.publish(signedDMEvent);
+
+    // Create and publish Discovery Relay List event (kind 10086)
+    const discoveryRelayListEvent = this.discoveryRelay.createDiscoveryRelayListEvent(
+      user.pubkey,
+      discoveryRelays,
+    );
+
+    const signedDiscoveryRelayEvent = await sign(discoveryRelayListEvent);
+
+    await this.discoveryRelay.saveEvent(signedDiscoveryRelayEvent);
+    await this.accountRelay.publish(signedDiscoveryRelayEvent);
+    await this.discoveryRelay.publish(signedDiscoveryRelayEvent);
 
     // Update the user to mark as activated
     user.hasActivated = true;

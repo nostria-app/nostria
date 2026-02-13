@@ -4,7 +4,10 @@ import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
-import { kinds, SimplePool } from 'nostr-tools';
+import { kinds, SimplePool, UnsignedEvent, Event } from 'nostr-tools';
+
+// Kind 10086 is the Relay Discovery List (indexer/discovery relays)
+export const DiscoveryRelayListKind = 10086;
 
 @Injectable({
   providedIn: 'root',
@@ -123,6 +126,56 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
       JSON.stringify(relayUrls)
     );
+  }
+
+  /**
+   * Load discovery relays from kind 10086 event for a user.
+   * Returns null if no event exists (to distinguish from empty list).
+   */
+  async loadFromEvent(pubkey: string): Promise<string[] | null> {
+    try {
+      // Try to get from database first
+      const event = await this.database.getEventByPubkeyAndKind(pubkey, DiscoveryRelayListKind);
+
+      if (event) {
+        const relayUrls = event.tags
+          .filter(tag => tag[0] === 'relay' && tag[1])
+          .map(tag => tag[1]);
+
+        this.logger.debug(`Loaded ${relayUrls.length} discovery relays from kind 10086 event`);
+        return relayUrls;
+      }
+    } catch (error) {
+      this.logger.error('Error loading discovery relays from event', error);
+    }
+
+    // No event found
+    return null;
+  }
+
+  /**
+   * Creates an unsigned kind 10086 event for publishing discovery relay list
+   */
+  createDiscoveryRelayListEvent(pubkey: string, relayUrls: string[]): UnsignedEvent {
+    return {
+      pubkey,
+      kind: DiscoveryRelayListKind,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: relayUrls.map(url => ['relay', url]),
+      content: '',
+    };
+  }
+
+  /**
+   * Save discovery relay list event to database
+   */
+  async saveEvent(event: Event): Promise<void> {
+    try {
+      await this.database.saveEvent(event);
+      this.logger.debug('Saved discovery relay list event to database');
+    } catch (error) {
+      this.logger.error('Error saving discovery relay list event', error);
+    }
   }
 
   /**
