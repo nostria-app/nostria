@@ -94,9 +94,6 @@ export class StateService implements NostriaService {
     // Load discovery relays, passing the pubkey to check for kind 10086 event
     await this.discoveryRelay.load(pubkey);
     
-    // Ensure user has default discovery relays set and published if they don't have a kind 10086 event
-    await this.ensureDefaultDiscoveryRelays(pubkey);
-    
     // Destroy old connections before setting up new ones
     const relayStartTime = Date.now();
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
@@ -149,11 +146,19 @@ export class StateService implements NostriaService {
       }
     })();
 
+    // Ensure default discovery relays are published in parallel (non-blocking)
+    const discoveryRelayPromise = (async () => {
+      const discoveryStartTime = Date.now();
+      await this.ensureDefaultDiscoveryRelays(pubkey);
+      this.logger.info(`[StateService] Discovery relay check completed in ${Date.now() - discoveryStartTime}ms`);
+    })();
+
     // Wait for all parallel operations to complete
     await Promise.all([
       settingsPromise,
       accountStatePromise,
       notificationPromise,
+      discoveryRelayPromise,
     ]);
     this.logger.info(`[StateService] Parallel operations completed in ${Date.now() - parallelStartTime}ms`);
 
