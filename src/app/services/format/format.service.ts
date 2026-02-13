@@ -7,7 +7,7 @@ import { LoggerService } from '../logger.service';
 import { ParsingService } from '../parsing.service';
 import { UtilitiesService } from '../utilities.service';
 import markdownRenderer from './markdownRenderer';
-import { imageUrlsToMarkdown } from './utils';
+import { imageUrlsToMarkdown, urlsToMarkdownLinks } from './utils';
 import { DataService } from '../data.service';
 import { RelayPoolService } from '../relays/relay-pool';
 import { UserRelaysService } from '../relays/user-relays';
@@ -553,6 +553,7 @@ export class FormatService {
       // First, process Nostr tokens
       let content = await this.processNostrTokens(rawMarkdown);
       content = await imageUrlsToMarkdown(content);
+      content = urlsToMarkdownLinks(content);
 
       // Configure marked with custom renderer and options for modern marked.js
       marked.use({
@@ -602,6 +603,7 @@ export class FormatService {
 
         // Convert to markdown and sanitize
         imageUrlsToMarkdown(updatedContent).then(content => {
+          content = urlsToMarkdownLinks(content);
           marked.use({
             renderer: markdownRenderer,
             gfm: true,
@@ -627,6 +629,7 @@ export class FormatService {
 
       // Convert images to markdown and render immediately
       imageUrlsToMarkdown(initialContent).then(content => {
+        content = urlsToMarkdownLinks(content);
         marked.use({
           renderer: markdownRenderer,
           gfm: true,
@@ -651,7 +654,7 @@ export class FormatService {
         pedantic: false,
       });
 
-      const htmlContent = marked.parse(initialContent) as string;
+      const htmlContent = marked.parse(urlsToMarkdownLinks(initialContent)) as string;
       const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
 
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
