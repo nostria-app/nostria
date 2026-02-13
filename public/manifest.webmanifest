@@ -190,6 +190,22 @@
           "sizes": "96x96"
         }
       ]
+    },
+    {
+      "name": "Music",
+      "short_name": "Music",
+      "description": "Open the music",
+      "url": "/music",
+      "icons": [
+        {
+          "src": "icons/icon-128x128.png",
+          "sizes": "128x128"
+        },
+        {
+          "src": "icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "icons": [

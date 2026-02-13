@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
-import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-profile-open',
@@ -8,16 +8,15 @@ import { LayoutService } from '../../services/layout.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileOpenComponent {
-  private layout = inject(LayoutService);
+  private router = inject(Router);
   private accountState = inject(AccountStateService);
 
   constructor() {
     effect(() => {
-      const npub = this.accountState.npub();
+      const profilePath = this.accountState.profilePath();
 
-      if (npub) {
-        // Navigate to profile in right panel
-        this.layout.openProfile(npub);
+      if (profilePath) {
+        this.router.navigateByUrl(profilePath, { replaceUrl: true });
       }
     });
   }
