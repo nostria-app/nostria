@@ -78,3 +78,28 @@ export const imageUrlsToMarkdown = async (content: string) => {
     return match;
   });
 };
+
+export const urlsToMarkdownLinks = (content: string): string => {
+  const standaloneUrlPattern =
+    /(^|[\s(>])((?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>\[\]]*)?)/gim;
+
+  return content.replace(standaloneUrlPattern, (match, prefix: string, rawUrl: string, offset: number) => {
+    const urlStart = offset + prefix.length;
+    const charBeforeUrl = content[urlStart - 1] || '';
+    const markdownLinkPrefix = content.slice(Math.max(0, urlStart - 2), urlStart);
+
+    if (charBeforeUrl === '@') {
+      return match;
+    }
+
+    if (markdownLinkPrefix === '](') {
+      return match;
+    }
+
+    const href = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+      ? rawUrl
+      : `https://${rawUrl}`;
+
+    return `${prefix}[${rawUrl}](${href})`;
+  });
+};

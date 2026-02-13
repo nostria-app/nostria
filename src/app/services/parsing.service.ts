@@ -342,6 +342,11 @@ export class ParsingService implements OnDestroy {
     // Trailing punctuation (including unbalanced parens) is handled by post-processing cleanup
     // Stops at whitespace, LINEBREAK markers, quotes, or common trailing punctuation
     const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/g;
+    // Bare-domain URL regex (no protocol), e.g. app.social, mywebsite.com/path
+    // Captures a leading boundary in group 1 and the domain/path in group 2
+    // to avoid matching inside words and to preserve correct token start index.
+    const bareDomainUrlRegex =
+      /(^|[\s(>])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s##"<>]*)?)(?=\s|##LINEBREAK##|$|[),;!?])/gim;
     // YouTube regex: matches standard, shortened, Shorts, and Live YouTube URLs with optional query parameters
     // Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/live/ID
     // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
@@ -954,6 +959,61 @@ export class ParsingService implements OnDestroy {
           start,
           end: start + rawUrl.length,
           content: rawUrl,
+          type: 'url',
+        });
+      }
+    }
+
+    // Find bare-domain URLs (without protocol), e.g. app.social or mywebsite.com/path
+    bareDomainUrlRegex.lastIndex = 0;
+    while ((match = bareDomainUrlRegex.exec(processedContent)) !== null) {
+      const boundary = match[1] || '';
+      let rawUrl = match[2] || '';
+      const start = match.index + boundary.length;
+
+      if (!rawUrl) continue;
+
+      // Skip email addresses (e.g. hello@mywebsite.com)
+      const charBefore = start > 0 ? processedContent[start - 1] : '';
+      if (charBefore === '@') {
+        continue;
+      }
+
+      // Trim trailing punctuation that is unlikely part of the URL
+      const trailingPattern = /[)\],;!?.]+$/;
+      while (trailingPattern.test(rawUrl)) {
+        const lastChar = rawUrl.slice(-1);
+        if (lastChar === '/' || lastChar === '#') break; // keep structural chars
+        if (lastChar === ')') {
+          const openCount = (rawUrl.match(/\(/g) || []).length;
+          const closeCount = (rawUrl.match(/\)/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        if (lastChar === ']') {
+          const openCount = (rawUrl.match(/\[/g) || []).length;
+          const closeCount = (rawUrl.match(/\]/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        rawUrl = rawUrl.slice(0, -1);
+      }
+
+      if (!rawUrl) continue;
+
+      // Normalize bare domains to clickable hrefs
+      const normalizedUrl = `https://${rawUrl}`;
+
+      // Check overlap against existing matches
+      const overlapsWithExisting = matches.some(m =>
+        (start >= m.start && start < m.end) ||
+        (start + rawUrl.length > m.start && start + rawUrl.length <= m.end) ||
+        (start <= m.start && start + rawUrl.length >= m.end)
+      );
+
+      if (!overlapsWithExisting) {
+        matches.push({
+          start,
+          end: start + rawUrl.length,
+          content: normalizedUrl,
           type: 'url',
         });
       }
