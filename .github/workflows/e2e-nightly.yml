@@ -18,6 +18,10 @@ jobs:
     permissions:
       contents: read
 
+    env:
+      HAS_TEST_NSEC: ${{ secrets.TEST_NSEC != '' }}
+      TEST_NSEC: ${{ secrets.TEST_NSEC }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -70,8 +74,8 @@ jobs:
           echo "TEST_LOG_LEVEL=debug" >> .env
 
       - name: Configure authenticated tests
-        if: secrets.TEST_NSEC != ''
-        run: echo "TEST_NSEC=${{ secrets.TEST_NSEC }}" >> .env
+        if: env.HAS_TEST_NSEC == 'true'
+        run: echo "TEST_NSEC=${{ env.TEST_NSEC }}" >> .env
 
       # Run full test suite including performance metrics
       - name: Run full E2E test suite

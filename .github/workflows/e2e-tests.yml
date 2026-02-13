@@ -20,6 +20,10 @@ jobs:
       contents: read
       pull-requests: write
 
+    env:
+      HAS_TEST_NSEC: ${{ secrets.TEST_NSEC != '' }}
+      TEST_NSEC: ${{ secrets.TEST_NSEC }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -73,8 +77,8 @@ jobs:
 
       # Use TEST_NSEC secret if available for authenticated tests
       - name: Configure authenticated tests
-        if: secrets.TEST_NSEC != ''
-        run: echo "TEST_NSEC=${{ secrets.TEST_NSEC }}" >> .env
+        if: env.HAS_TEST_NSEC == 'true'
+        run: echo "TEST_NSEC=${{ env.TEST_NSEC }}" >> .env
 
       # Run E2E tests
       - name: Run E2E tests
