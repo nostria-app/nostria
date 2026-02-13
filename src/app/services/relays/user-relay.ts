@@ -263,12 +263,14 @@ export class UserRelayService {
    * @param kinds The event kinds to search for
    * @param eventTag The event tag(s) to filter by
    * @param includeAccountRelays If true, also include the current logged-in account's relays for better event discovery
+   * @param limit Optional limit on the number of events to fetch from each relay
    */
   async getEventsByKindsAndEventTag(
     pubkey: string | string[],
     kinds: number[],
     eventTag: string | string[],
-    includeAccountRelays = false
+    includeAccountRelays = false,
+    limit?: number
   ): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
@@ -306,7 +308,11 @@ export class UserRelayService {
 
     this.logger.debug(`[UserRelayService] Searching for kinds ${kinds.join(', ')} events across ${relayUrls.length} relays`);
 
-    return this.getEventsWithSubscription(relayUrls, { '#e': events, kinds });
+    const filter: { '#e': string[]; kinds: number[]; limit?: number } = { '#e': events, kinds };
+    if (limit !== undefined) {
+      filter.limit = limit;
+    }
+    return this.getEventsWithSubscription(relayUrls, filter);
   }
 
   /**
@@ -321,7 +327,8 @@ export class UserRelayService {
     pubkey: string | string[],
     kinds: number[],
     quoteEventId: string | string[],
-    includeAccountRelays = false
+    includeAccountRelays = false,
+    limit?: number
   ): Promise<Event[]> {
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
     const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
@@ -356,7 +363,11 @@ export class UserRelayService {
 
     this.logger.debug(`[UserRelayService] Searching for quotes (kinds ${kinds.join(', ')}) with #q tag across ${relayUrls.length} relays`);
 
-    return this.getEventsWithSubscription(relayUrls, { '#q': quoteIds, kinds });
+    const filter: { '#q': string[]; kinds: number[]; limit?: number } = { '#q': quoteIds, kinds };
+    if (limit !== undefined) {
+      filter.limit = limit;
+    }
+    return this.getEventsWithSubscription(relayUrls, filter);
   }
 
   /**

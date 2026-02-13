@@ -1102,14 +1102,16 @@ export class ZapService {
 
   /**
    * Get zap receipts for an event
+   * @param eventId The event to get zaps for
+   * @param limit Optional limit on number of zap receipts to fetch (default: 100)
    */
-  async getZapsForEvent(eventId: string): Promise<Event[]> {
+  async getZapsForEvent(eventId: string, limit = 100): Promise<Event[]> {
     try {
       // Query for zap receipts (kind 9735) that reference this event
       const zapReceipts = await this.accountRelay.getMany({
         kinds: [9735],
         '#e': [eventId],
-        limit: 100,
+        limit,
       });
 
       return zapReceipts;

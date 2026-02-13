@@ -49,6 +49,12 @@ export interface EventInteractions {
   replyCount: number;
   replyEvents: Event[];
   quotes: NostrRecord[];
+  /** True when the number of reactions hit the query limit (more exist on relays) */
+  hasMoreReactions?: boolean;
+  /** True when the number of reposts hit the query limit */
+  hasMoreReposts?: boolean;
+  /** True when the number of replies hit the query limit */
+  hasMoreReplies?: boolean;
 }
 
 export interface ThreadedEvent {
@@ -892,8 +898,16 @@ export class EventService {
   }
 
   /**
-   * Load event interactions (reactions, reposts, reports) in a single optimized query
-   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately.
+   * Default limit for interaction counter queries in feed view.
+   * We fetch limit+1 to detect overflow (e.g., fetch 11 to know if there are "10+").
+   */
+  static readonly INTERACTION_QUERY_LIMIT = 11;
+
+  /**
+   * Load event interactions (reactions, reposts, reports, replies) with optional limits.
+   * When limits are provided, each interaction type is queried separately to respect per-kind limits.
+   * When no limits are provided, falls back to a single combined query for backward compatibility.
+   *
    * Uses both the profile's relays and the current account's relays to ensure
    * we discover all interactions, even if the profile has private relays.
    */
@@ -903,8 +917,10 @@ export class EventService {
     pubkey: string,
     invalidateCache = false,
     skipReplies = false,
+    /** Per-kind limit for feed optimization. When set, each kind is queried separately with this limit. */
+    limit?: number,
   ): Promise<EventInteractions> {
-    this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey, 'skipReplies:', skipReplies);
+    this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey, 'skipReplies:', skipReplies, 'limit:', limit);
 
     // Handle cache invalidation if requested
     if (invalidateCache) {
@@ -912,8 +928,8 @@ export class EventService {
     }
 
     // Use subscription cache to prevent duplicate subscriptions
-    // Include skipReplies in cache key since different queries return different data
-    const cacheKey = `interactions-${eventId}-${pubkey}-${skipReplies ? 'no-replies' : 'with-replies'}`;
+    // Include skipReplies and limit in cache key since different queries return different data
+    const cacheKey = `interactions-${eventId}-${pubkey}-${skipReplies ? 'no-replies' : 'with-replies'}-${limit ?? 'all'}`;
     const cachedResult = await this.subscriptionCache.getOrCreateSubscription<EventInteractions>(
       cacheKey,
       [eventId], // eventIds array
@@ -923,127 +939,14 @@ export class EventService {
           // Determine the repost kind based on the event kind
           const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
-          // Build the list of kinds to query
-          // Skip ShortTextNote (replies) if the caller already has reply count from parent
-          const kindsToQuery = skipReplies
-            ? [kinds.Reaction, repostKind, kinds.Report]
-            : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote];
-
-          // Fetch all interaction types in a single query
-          // Include account relays to discover interactions that may not be on the profile's relays
-          // Use save: true to persist to database for faster subsequent loads
-          const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
-            pubkey,
-            kindsToQuery,
-            eventId,
-            {
-              cache: true,
-              ttl: minutes.five,
-              invalidateCache,
-              includeAccountRelays: true,
-              save: true, // Persist to database for faster loading next time
-            },
-          );
-
-          // Separate events by kind
-          const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
-          const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
-          const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
-
-          // Count replies only if we didn't skip them
-          // When skipReplies is true, the caller already has the reply count from parent
-          let replyCount = 0;
-          let replyEventsResult: Event[] = [];
-          if (!skipReplies) {
-            // Count replies (kind 1 events that are actual thread replies to this event)
-            // IMPORTANT: An event having an e-tag referencing this event doesn't mean it's a reply!
-            // It could be a mention, quote, or reply to a different event in the thread.
-            // We must use getEventTags to determine if this event actually REPLIES to this specific event.
-            const replyRecords = allRecords.filter((r) => {
-              if (r.event.kind !== kinds.ShortTextNote) return false;
-
-              // Filter out events with empty content (same as loadReplies)
-              if (!r.event.content || !r.event.content.trim()) return false;
-
-              // Use getEventTags to properly parse the thread relationship
-              const eventTags = this.getEventTags(r.event);
-              const { rootId, replyId } = eventTags;
-
-              // An event is a direct reply to this event if:
-              // 1. replyId matches this event (explicit reply marker), OR
-              // 2. rootId matches this event AND no replyId (direct reply to root with no explicit reply marker)
-              // Note: If replyId is set to a DIFFERENT event, this is NOT a direct reply to us,
-              // it's a reply to that other event (even if rootId matches us as the thread root)
-              return replyId === eventId || (rootId === eventId && !replyId);
-            });
-            replyCount = replyRecords.length;
-            replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
+          if (limit) {
+            // OPTIMIZED PATH: Separate queries per kind with limits
+            // This dramatically reduces data loaded for popular posts in feeds
+            return this.loadEventInteractionsWithLimits(eventId, pubkey, repostKind, skipReplies, limit, invalidateCache);
           }
 
-          // Process reactions
-          const reactionCounts = new Map<string, number>();
-          reactionRecords.forEach((record: NostrRecord) => {
-            const event = record.event;
-            if (event.content && event.content.trim()) {
-              const emoji = event.content.trim();
-              reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-            }
-          });
-
-          // Process reports - only accept valid NIP-56 report types
-          const reportCounts = new Map<string, number>();
-          const validReportRecords: NostrRecord[] = [];
-
-          reportRecords.forEach((record: NostrRecord) => {
-            const event = record.event;
-            const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
-
-            let hasValidReportType = false;
-            eTags.forEach((tag: string[]) => {
-              const reportType = tag[2]?.trim().toLowerCase();
-              if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
-                reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
-                hasValidReportType = true;
-              }
-            });
-
-            // Only include records with valid report types
-            if (hasValidReportType) {
-              validReportRecords.push(record);
-            }
-          });
-
-          this.logger.info(
-            'Successfully loaded event interactions:',
-            eventId,
-            'reactions:',
-            reactionRecords.length,
-            'reposts:',
-            repostRecords.length,
-            'reports:',
-            validReportRecords.length,
-            '(filtered',
-            reportRecords.length - validReportRecords.length,
-            'invalid)',
-            'replies:',
-            skipReplies ? 'skipped' : replyCount,
-          );
-
-          // Note: Quotes are loaded separately via loadQuotes() since they use 'q' tag, not 'e' tag
-          return {
-            reactions: {
-              events: reactionRecords,
-              data: reactionCounts,
-            },
-            reposts: repostRecords,
-            reports: {
-              events: validReportRecords,
-              data: reportCounts,
-            },
-            replyCount, // 0 if skipReplies was true (caller should use replyCountFromParent)
-            replyEvents: replyEventsResult, // empty if skipReplies was true
-            quotes: [], // Quotes are loaded separately
-          };
+          // LEGACY PATH: Single combined query without limits (used when viewing full event details)
+          return this.loadEventInteractionsCombined(eventId, pubkey, repostKind, skipReplies, invalidateCache);
         } catch (error) {
           this.logger.error('Error loading event interactions:', error);
           return {
@@ -1059,6 +962,239 @@ export class EventService {
     );
 
     return cachedResult;
+  }
+
+  /**
+   * Load interactions with per-kind limits for feed optimization.
+   * Each kind is queried separately so limits apply independently.
+   */
+  private async loadEventInteractionsWithLimits(
+    eventId: string,
+    pubkey: string,
+    repostKind: number,
+    skipReplies: boolean,
+    limit: number,
+    invalidateCache: boolean,
+  ): Promise<EventInteractions> {
+    const queryOptions = {
+      cache: true,
+      ttl: minutes.five,
+      invalidateCache,
+      includeAccountRelays: true,
+      save: true,
+    };
+
+    // Query reactions, reposts, and reports in parallel (all with limits)
+    // Reports are always small so no limit needed for them
+    const queries: [Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]> | null] = [
+      this.userDataService.getEventsByKindsAndEventTag(
+        pubkey, [kinds.Reaction], eventId,
+        { ...queryOptions, limit },
+      ),
+      this.userDataService.getEventsByKindsAndEventTag(
+        pubkey, [repostKind], eventId,
+        { ...queryOptions, limit },
+      ),
+      this.userDataService.getEventsByKindsAndEventTag(
+        pubkey, [kinds.Report], eventId,
+        queryOptions,
+      ),
+      !skipReplies
+        ? this.userDataService.getEventsByKindsAndEventTag(
+            pubkey, [kinds.ShortTextNote], eventId,
+            { ...queryOptions, limit },
+          )
+        : null,
+    ];
+
+    const [reactionRecords, repostRecords, reportRecords, replyRecordsRaw] = await Promise.all([
+      queries[0],
+      queries[1],
+      queries[2],
+      queries[3] ?? Promise.resolve([]),
+    ]);
+
+    // Track whether we hit the limit (meaning there are more on relays)
+    const hasMoreReactions = reactionRecords.length >= limit;
+    const hasMoreReposts = repostRecords.length >= limit;
+
+    // Process replies
+    let replyCount = 0;
+    let replyEventsResult: Event[] = [];
+    let hasMoreReplies = false;
+    if (!skipReplies) {
+      const replyRecords = replyRecordsRaw.filter((r) => {
+        if (r.event.kind !== kinds.ShortTextNote) return false;
+        if (!r.event.content || !r.event.content.trim()) return false;
+        const eventTags = this.getEventTags(r.event);
+        const { rootId, replyId } = eventTags;
+        return replyId === eventId || (rootId === eventId && !replyId);
+      });
+      replyCount = replyRecords.length;
+      replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
+      hasMoreReplies = replyRecordsRaw.length >= limit;
+    }
+
+    // Process reactions
+    const reactionCounts = new Map<string, number>();
+    reactionRecords.forEach((record: NostrRecord) => {
+      const event = record.event;
+      if (event.content && event.content.trim()) {
+        const emoji = event.content.trim();
+        reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+      }
+    });
+
+    // Process reports
+    const reportCounts = new Map<string, number>();
+    const validReportRecords: NostrRecord[] = [];
+    reportRecords.forEach((record: NostrRecord) => {
+      const event = record.event;
+      const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+      let hasValidReportType = false;
+      eTags.forEach((tag: string[]) => {
+        const reportType = tag[2]?.trim().toLowerCase();
+        if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
+          reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+          hasValidReportType = true;
+        }
+      });
+      if (hasValidReportType) {
+        validReportRecords.push(record);
+      }
+    });
+
+    this.logger.info(
+      'Successfully loaded event interactions (limited):',
+      eventId,
+      'reactions:', reactionRecords.length, hasMoreReactions ? '(has more)' : '',
+      'reposts:', repostRecords.length, hasMoreReposts ? '(has more)' : '',
+      'reports:', validReportRecords.length,
+      'replies:', skipReplies ? 'skipped' : replyCount, hasMoreReplies ? '(has more)' : '',
+    );
+
+    return {
+      reactions: {
+        events: reactionRecords,
+        data: reactionCounts,
+      },
+      reposts: repostRecords,
+      reports: {
+        events: validReportRecords,
+        data: reportCounts,
+      },
+      replyCount,
+      replyEvents: replyEventsResult,
+      quotes: [], // Quotes are loaded separately
+      hasMoreReactions,
+      hasMoreReposts,
+      hasMoreReplies,
+    };
+  }
+
+  /**
+   * Load interactions with a single combined query (no limits).
+   * Used when viewing full event details where we want all interactions.
+   */
+  private async loadEventInteractionsCombined(
+    eventId: string,
+    pubkey: string,
+    repostKind: number,
+    skipReplies: boolean,
+    invalidateCache: boolean,
+  ): Promise<EventInteractions> {
+    // Build the list of kinds to query
+    const kindsToQuery = skipReplies
+      ? [kinds.Reaction, repostKind, kinds.Report]
+      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote];
+
+    // Fetch all interaction types in a single query
+    const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
+      pubkey,
+      kindsToQuery,
+      eventId,
+      {
+        cache: true,
+        ttl: minutes.five,
+        invalidateCache,
+        includeAccountRelays: true,
+        save: true,
+      },
+    );
+
+    // Separate events by kind
+    const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
+    const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
+    const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
+
+    // Count replies only if we didn't skip them
+    let replyCount = 0;
+    let replyEventsResult: Event[] = [];
+    if (!skipReplies) {
+      const replyRecords = allRecords.filter((r) => {
+        if (r.event.kind !== kinds.ShortTextNote) return false;
+        if (!r.event.content || !r.event.content.trim()) return false;
+        const eventTags = this.getEventTags(r.event);
+        const { rootId, replyId } = eventTags;
+        return replyId === eventId || (rootId === eventId && !replyId);
+      });
+      replyCount = replyRecords.length;
+      replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
+    }
+
+    // Process reactions
+    const reactionCounts = new Map<string, number>();
+    reactionRecords.forEach((record: NostrRecord) => {
+      const event = record.event;
+      if (event.content && event.content.trim()) {
+        const emoji = event.content.trim();
+        reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+      }
+    });
+
+    // Process reports
+    const reportCounts = new Map<string, number>();
+    const validReportRecords: NostrRecord[] = [];
+    reportRecords.forEach((record: NostrRecord) => {
+      const event = record.event;
+      const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+      let hasValidReportType = false;
+      eTags.forEach((tag: string[]) => {
+        const reportType = tag[2]?.trim().toLowerCase();
+        if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
+          reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+          hasValidReportType = true;
+        }
+      });
+      if (hasValidReportType) {
+        validReportRecords.push(record);
+      }
+    });
+
+    this.logger.info(
+      'Successfully loaded event interactions:',
+      eventId,
+      'reactions:', reactionRecords.length,
+      'reposts:', repostRecords.length,
+      'reports:', validReportRecords.length,
+      '(filtered', reportRecords.length - validReportRecords.length, 'invalid)',
+      'replies:', skipReplies ? 'skipped' : replyCount,
+    );
+
+    return {
+      reactions: {
+        events: reactionRecords,
+        data: reactionCounts,
+      },
+      reposts: repostRecords,
+      reports: {
+        events: validReportRecords,
+        data: reportCounts,
+      },
+      replyCount,
+      replyEvents: replyEventsResult,
+      quotes: [],
+    };
   }
 
   /**
@@ -1832,8 +1968,9 @@ export class EventService {
     eventId: string,
     userPubkey: string,
     invalidateCache = false,
+    limit?: number,
   ): Promise<NostrRecord[]> {
-    this.logger.info('loadQuotes called with eventId:', eventId, 'userPubkey:', userPubkey);
+    this.logger.info('loadQuotes called with eventId:', eventId, 'userPubkey:', userPubkey, 'limit:', limit);
 
     // Handle cache invalidation if requested
     if (invalidateCache) {
@@ -1841,7 +1978,7 @@ export class EventService {
     }
 
     // Use subscription cache to prevent duplicate subscriptions
-    const cacheKey = `quotes-${eventId}-${userPubkey}`;
+    const cacheKey = `quotes-${eventId}-${userPubkey}-${limit ?? 'all'}`;
     const cachedResult = await this.subscriptionCache.getOrCreateSubscription<NostrRecord[]>(
       cacheKey,
       [eventId], // eventIds array
@@ -1854,6 +1991,7 @@ export class EventService {
             cache: true,
             invalidateCache,
             includeAccountRelays: true,
+            limit,
           });
 
           this.logger.info(

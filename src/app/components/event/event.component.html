@@ -731,7 +731,7 @@
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         @if (likes().length > 0) {
-        <span class="action-count">{{ likes().length }}</span>
+        <span class="action-count">{{ likesDisplay() }}</span>
         }
         <span class="action-text">Like</span>
 
@@ -760,7 +760,7 @@
       <div class="action-button comment-action" role="button" tabindex="0" (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
-        <span class="action-count">{{ replyCount() }}</span>
+        <span class="action-count">{{ replyCountDisplay() }}</span>
         }
         <span class="action-text">Reply</span>
       </div>
@@ -770,7 +770,7 @@
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
         @if (shareCount() > 0) {
-        <span class="action-count">{{ shareCount() }}</span>
+        <span class="action-count">{{ shareCountDisplay() }}</span>
         }
         <span class="action-text">Share</span>
       </div>
@@ -781,7 +781,7 @@
           [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
         </app-zap-button>
         @if (totalZapAmount() > 0) {
-        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}{{ hasMoreZaps() ? '+' : '' }}</span>
         }
         <span class="action-text">Zap</span>
       </div>

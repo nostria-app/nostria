@@ -73,7 +73,7 @@ jobs:
 
       # Use TEST_NSEC secret if available for authenticated tests
       - name: Configure authenticated tests
-        if: ${{ secrets.TEST_NSEC != '' }}
+        if: secrets.TEST_NSEC != ''
         run: echo "TEST_NSEC=${{ secrets.TEST_NSEC }}" >> .env
 
       # Run E2E tests
