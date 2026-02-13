@@ -29,7 +29,7 @@ interface BundleSizeResult {
   totalSizeKB: number;
   jsSizeKB: number;
   cssSizeKB: number;
-  largeResources: Array<{ name: string; sizeKB: number }>;
+  largeResources: { name: string; sizeKB: number }[];
 }
 
 interface MemoryResult {
@@ -142,7 +142,7 @@ export class MetricsCollector {
 
     const data = files[0] as Record<string, unknown>;
     const summary = data.summary as Record<string, number> | undefined;
-    const largeResources = (data.largeResources || []) as Array<{ name: string; sizeKB: number }>;
+    const largeResources = (data.largeResources || []) as { name: string; sizeKB: number }[];
 
     if (!summary) return null;
 
@@ -251,7 +251,7 @@ export class MetricsCollector {
     }
 
     // Compare Web Vitals
-    const vitalsComparison: Array<{ name: string; key: keyof WebVitalsResult; threshold: number }> = [
+    const vitalsComparison: { name: string; key: keyof WebVitalsResult; threshold: number }[] = [
       { name: 'LCP', key: 'lcp', threshold: 0.2 },
       { name: 'CLS', key: 'cls', threshold: 0.5 },
       { name: 'FCP', key: 'fcp', threshold: 0.2 },

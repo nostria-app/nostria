@@ -217,6 +217,33 @@ describe('ContentNotificationService', () => {
       resolveGetMany!();
       await firstCheck;
     });
+
+    it('should immediately fetch notifications when timestamp is 0 (first-time or after cache clear)', async () => {
+      // Simulate first-time user or after cache clear
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(0);
+
+      await service.initialize();
+
+      // Wait for the 1-second delay in the setTimeout
+      await new Promise(resolve => setTimeout(resolve, 1100));
+
+      // Verify that getMany was called to fetch notifications
+      expect(mockAccountRelay.getMany).toHaveBeenCalled();
+    });
+
+    it('should not immediately fetch notifications when timestamp is not 0', async () => {
+      // Simulate returning user with existing timestamp
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+
+      await service.initialize();
+
+      // Wait for a short time
+      await new Promise(resolve => setTimeout(resolve, 1100));
+
+      // Verify that getMany was not called automatically on initialize
+      // (it would only be called by periodic polling or manual refresh)
+      expect(mockAccountRelay.getMany).not.toHaveBeenCalled();
+    });
   });
 
   describe('visibility change handling', () => {
