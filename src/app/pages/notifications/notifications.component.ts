@@ -32,13 +32,13 @@ import { ContentNotificationService } from '../../services/content-notification.
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
 import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
+import { UtilitiesService } from '../../services/utilities.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -62,7 +62,6 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     RouterModule,
     AgoPipe,
     UserProfileComponent,
-    ProfileDisplayNameComponent,
     MatSnackBarModule,
     MatProgressSpinnerModule,
     OverlayModule,
@@ -83,6 +82,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
   private dataService = inject(DataService);
+  private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
@@ -153,7 +153,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     [NotificationType.WARNING]: true,
   });
 
-// Cache for prefetched profiles - updated when batch loading completes
+  // Cache for prefetched profiles - updated when batch loading completes
   private prefetchedProfiles = signal<Map<string, NostrRecord>>(new Map());
 
   constructor() {
@@ -169,7 +169,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // instead of individual requests per notification
     effect(() => {
       const notifications = this.contentNotifications();
-      
+
       // Use untracked to avoid circular dependency with prefetchedProfiles
       untracked(() => {
         this.batchPreloadProfiles(notifications as ContentNotification[]);
@@ -199,7 +199,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Batch load profiles - this checks cache first, then storage, then relays
     const profiles = await this.dataService.batchLoadProfiles(pubkeys);
-    
+
     // Update the prefetched profiles signal to trigger UI updates
     this.prefetchedProfiles.set(profiles);
   }
@@ -222,6 +222,42 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Fall back to DataService cache (might have been loaded elsewhere)
     return this.dataService.getCachedProfile(contentNotif.authorPubkey) ?? null;
+  }
+
+  /**
+   * Get display name for notification author with a stable fallback.
+   * Uses prefetched/cached profile data first, then truncated npub.
+   */
+  getNotificationAuthorDisplayName(notification: Notification): string {
+    const pubkey = this.getAuthorPubkey(notification);
+    if (!pubkey) {
+      return '';
+    }
+
+    const profile = this.getPrefetchedProfile(notification) ?? this.dataService.getCachedProfile(pubkey) ?? null;
+    const profileData = profile?.data as Record<string, unknown> | undefined;
+
+    const displayName = this.getProfileFieldAsString(profileData?.['display_name']);
+    if (displayName) {
+      return displayName;
+    }
+
+    const name = this.getProfileFieldAsString(profileData?.['name']);
+    if (name) {
+      return name;
+    }
+
+    return this.utilities.getTruncatedNpub(pubkey);
+  }
+
+  private getProfileFieldAsString(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+      return value[0];
+    }
+    return '';
   }
 
   // Helper to check if notification is a system notification (technical)
@@ -529,9 +565,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
-/**
-   * Navigate to the event details page
-   */
+  /**
+     * Navigate to the event details page
+     */
   viewEvent(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
 
