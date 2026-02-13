@@ -3,9 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { LocalSettingsService } from '../../../services/local-settings.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { TrustProviderService, KNOWN_PROVIDERS, KnownProvider } from '../../../services/trust-provider.service';
@@ -19,7 +17,6 @@ import { TrustService } from '../../../services/trust.service';
     MatIconModule,
     MatProgressBarModule,
     MatProgressSpinnerModule,
-    MatSlideToggleModule,
     MatTooltipModule,
   ],
   templateUrl: './trust.component.html',
@@ -28,9 +25,8 @@ import { TrustService } from '../../../services/trust.service';
   host: { class: 'panel-with-sticky-header' },
 })
 export class TrustSettingsComponent implements OnInit, OnDestroy {
-  localSettings = inject(LocalSettingsService);
   trustProviderService = inject(TrustProviderService);
-  accountState = inject(AccountStateService);
+  private accountState = inject(AccountStateService);
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
   private trustService = inject(TrustService);
@@ -38,10 +34,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
 
   /** Available scoring services */
   knownProviders = KNOWN_PROVIDERS;
-
-  /** Publishing state */
-  publishStatus = signal<'idle' | 'publishing' | 'success' | 'error'>('idle');
-  publishError = signal<string>('');
 
   /** Trust rank refresh state */
   refreshStatus = signal<'idle' | 'refreshing' | 'done'>('idle');
@@ -53,12 +45,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     return Math.round((this.refreshCompleted() / total) * 100);
   });
   private refreshAborted = false;
-
-  /** Whether user is authenticated */
-  readonly isAuthenticated = computed(() => {
-    const account = this.accountState.account();
-    return !!account && account.source !== 'preview';
-  });
 
   /** Check if a known provider is enabled */
   isProviderConfigured(provider: KnownProvider): boolean {
@@ -79,42 +65,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.rightPanel.goBack();
-  }
-
-  toggleTrustEnabled(): void {
-    this.localSettings.setTrustEnabled(!this.localSettings.trustEnabled());
-  }
-
-  /** Enable a scoring service and publish the configuration */
-  async enableProvider(provider: KnownProvider): Promise<void> {
-    this.trustProviderService.addKnownProvider(provider, false);
-    if (this.isAuthenticated()) {
-      await this.publishProviders();
-    }
-  }
-
-  /** Disable a scoring service and publish the updated configuration */
-  async disableProvider(provider: KnownProvider): Promise<void> {
-    this.trustProviderService.removeKnownProvider(provider);
-    if (this.isAuthenticated()) {
-      await this.publishProviders();
-    }
-  }
-
-  /** Publish the provider configuration */
-  private async publishProviders(): Promise<void> {
-    this.publishStatus.set('publishing');
-    this.publishError.set('');
-
-    const result = await this.trustProviderService.publishProviders();
-
-    if (result.success) {
-      this.publishStatus.set('success');
-      setTimeout(() => this.publishStatus.set('idle'), 3000);
-    } else {
-      this.publishStatus.set('error');
-      this.publishError.set(result.error ?? 'Unknown error');
-    }
   }
 
   /** Open Brainstorm activation page */

@@ -7,16 +7,9 @@
 </div>
 
 <div class="content-medium">
-  <div class="setting-item">
-    <span i18n="@@settings.trust.enable">Web of Trust</span>
-    <mat-slide-toggle [checked]="localSettings.trustEnabled()" (change)="toggleTrustEnabled()">
-    </mat-slide-toggle>
-  </div>
   <p class="setting-description" i18n="@@settings.trust.description">
     Help filter out spam and bots by using reputation scores from trusted services.
   </p>
-
-  @if (localSettings.trustEnabled()) {
 
   <!-- Scoring Services -->
   <section class="section">
@@ -37,26 +30,7 @@
           </div>
           <p class="service-description">{{ provider.description }}</p>
         </div>
-        <div class="service-actions">
-          @if (!isProviderConfigured(provider)) {
-          <button mat-flat-button (click)="enableProvider(provider)" [disabled]="publishStatus() === 'publishing'">
-            @if (publishStatus() === 'publishing') {
-            <mat-spinner diameter="18"></mat-spinner>
-            } @else {
-            <span i18n="@@settings.trust.services.enable">Enable</span>
-            }
-          </button>
-          } @else {
-          <button mat-button (click)="disableProvider(provider)" [disabled]="publishStatus() === 'publishing'">
-            <span i18n="@@settings.trust.services.disable">Disable</span>
-          </button>
-          }
-        </div>
       </div>
-      }
-
-      @if (publishStatus() === 'error') {
-      <p class="error-text">{{ publishError() }}</p>
       }
     </div>
   </section>
@@ -109,6 +83,4 @@
       }
     </div>
   </section>
-
-  }
 </div>
