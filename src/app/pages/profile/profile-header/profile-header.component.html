@@ -196,28 +196,35 @@
       }
 
       <div class="profile-extra-info">
-        <a class="following-count" (click)="navigateToFollowing($event)">
+        <a class="following-count" (click)="navigateToFollowing($event)"
+          [attr.aria-label]="'Following ' + profileState.followingList().length">
           Following {{ profileState.followingList().length }}
         </a>
 
         <!-- @if (profileState.relay?.userRelaysFound()) { -->
         @if (getUserRelays() && getUserRelays().length > 0) {
-        <a class="following-count" (click)="navigateToRelays($event)">
-          Relays {{ getUserRelays().length }}
+        <a class="following-count compactable" (click)="navigateToRelays($event)"
+          [matTooltip]="'Relays ' + getUserRelays().length" [attr.aria-label]="'Relays ' + getUserRelays().length">
+          <span class="compact-text">Relays {{ getUserRelays().length }}</span>
+          <mat-icon class="compact-icon" aria-hidden="true">settings_input_antenna</mat-icon>
         </a>
         } @else if (!isLoadingRelays()) {
         <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
         }
 
         @if (badgeCount() > 0) {
-        <a class="following-count" (click)="navigateToBadges($event)">
-          Badges {{ badgeCount() }}
+        <a class="following-count compactable" (click)="navigateToBadges($event)"
+          [matTooltip]="'Badges ' + badgeCount()" [attr.aria-label]="'Badges ' + badgeCount()">
+          <span class="compact-text">Badges {{ badgeCount() }}</span>
+          <mat-icon class="compact-icon" aria-hidden="true">military_tech</mat-icon>
         </a>
         }
 
         @if (identityCount() > 0) {
-        <a class="following-count" (click)="navigateToLinks($event)">
-          Links {{ identityCount() }}
+        <a class="following-count compactable" (click)="navigateToLinks($event)"
+          [matTooltip]="'Links ' + identityCount()" [attr.aria-label]="'Links ' + identityCount()">
+          <span class="compact-text">Links {{ identityCount() }}</span>
+          <mat-icon class="compact-icon" aria-hidden="true">link</mat-icon>
         </a>
         }
       </div>
