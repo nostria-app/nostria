@@ -91,7 +91,12 @@ export class StateService implements NostriaService {
     // in the constructor effect before waiting for extension - see loadCachedData() call above
 
     // This is never called for anonymous accounts.
-    await this.discoveryRelay.load();
+    // Load discovery relays, passing the pubkey to check for kind 10086 event
+    await this.discoveryRelay.load(pubkey);
+    
+    // Ensure user has default discovery relays set and published if they don't have a kind 10086 event
+    await this.ensureDefaultDiscoveryRelays(pubkey);
+    
     // Destroy old connections before setting up new ones
     const relayStartTime = Date.now();
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
@@ -170,6 +175,55 @@ export class StateService implements NostriaService {
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page
     // This saves bandwidth and improves privacy
+  }
+
+  /**
+   * Ensure the user has default discovery relays set and published if they don't have a kind 10086 event.
+   * This is critical for profile lookup functionality.
+   */
+  private async ensureDefaultDiscoveryRelays(pubkey: string): Promise<void> {
+    try {
+      // Check if user already has a kind 10086 event
+      const existingRelays = await this.discoveryRelay.loadFromEvent(pubkey);
+      
+      if (existingRelays === null) {
+        // User has no kind 10086 event, create and publish defaults
+        this.logger.info('[StateService] User has no discovery relays (kind 10086), setting defaults');
+        
+        // Get default discovery relays based on user's region
+        const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays();
+        
+        // Save to local storage so they're used immediately
+        this.discoveryRelay.setDiscoveryRelays(defaultRelays);
+        
+        // Create kind 10086 event
+        const event = this.discoveryRelay.createDiscoveryRelayListEvent(pubkey, defaultRelays);
+        
+        // Sign the event
+        const signedEvent = await this.nostr.signEvent(event);
+        
+        if (signedEvent) {
+          // Save to database
+          await this.discoveryRelay.saveEvent(signedEvent);
+          
+          // Publish to account relays and discovery relays
+          // Using Promise.allSettled to not fail if publishing fails
+          await Promise.allSettled([
+            this.accountRelay.publish(signedEvent),
+            this.discoveryRelay.publish(signedEvent),
+          ]);
+          
+          this.logger.info('[StateService] Successfully published default discovery relays (kind 10086)');
+        } else {
+          this.logger.warn('[StateService] Failed to sign discovery relay event');
+        }
+      } else {
+        this.logger.debug('[StateService] User already has discovery relays configured');
+      }
+    } catch (error) {
+      // Don't fail the entire load process if discovery relay setup fails
+      this.logger.error('[StateService] Error ensuring default discovery relays:', error);
+    }
   }
 
   clear() {
