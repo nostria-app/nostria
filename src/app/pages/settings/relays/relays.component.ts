@@ -187,6 +187,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
         await this.checkFollowingListForRelays(pubkey);
         await this.checkDirectMessageRelayList(pubkey);
         await this.checkForMalformedRelayList(pubkey);
+        await this.loadDiscoveryRelayListFromEvent(pubkey);
       } else {
         this.showFollowingRelayCleanup.set(false);
         this.showUpdateDMRelays.set(false);
@@ -291,6 +292,26 @@ export class RelaysComponent implements OnInit, OnDestroy {
     } catch (err) {
       this.logger.error('Failed to check for malformed relay list', err);
       this.hasMalformedRelayList.set(false);
+    }
+  }
+
+  /**
+   * Load discovery relays from kind 10086 event.
+   * If a published event exists, use it to populate the discovery relays
+   * (syncing from the Nostr network to local storage).
+   */
+  private async loadDiscoveryRelayListFromEvent(pubkey: string) {
+    try {
+      const relayUrls = await this.discoveryRelay.loadFromEvent(pubkey);
+
+      if (relayUrls && relayUrls.length > 0) {
+        this.logger.info('Loaded discovery relays from kind 10086 event', {
+          relayCount: relayUrls.length,
+        });
+        this.discoveryRelay.setDiscoveryRelays(relayUrls);
+      }
+    } catch (err) {
+      this.logger.error('Failed to load discovery relay list from event', err);
     }
   }
 
@@ -635,6 +656,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     // This will also save.
     this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+    this.publishDiscoveryRelayList();
   }
 
   removeDiscoveryRelay(url: string): void {
@@ -642,6 +664,36 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.discoveryRelay.removeRelay(url);
     this.showMessage('Discovery Relay removed');
     this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+    this.publishDiscoveryRelayList();
+  }
+
+  /**
+   * Publish the current discovery relay list as a kind 10086 event.
+   * This should be called whenever discovery relays are added or removed.
+   */
+  async publishDiscoveryRelayList(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('Cannot publish discovery relay list: no active account');
+      return;
+    }
+
+    try {
+      const relayUrls = this.discoveryRelay.getRelayUrls();
+      const event = this.discoveryRelay.createDiscoveryRelayListEvent(pubkey, relayUrls);
+      const signedEvent = await this.nostr.signEvent(event);
+
+      // Publish to both account relays and discovery relays
+      await this.accountRelay.publish(signedEvent);
+      await this.discoveryRelay.publish(signedEvent);
+      await this.discoveryRelay.saveEvent(signedEvent);
+
+      this.logger.info('Published discovery relay list (kind 10086)', {
+        relayCount: relayUrls.length,
+      });
+    } catch (error) {
+      this.logger.error('Failed to publish discovery relay list', error);
+    }
   }
 
   formatRelayUrl(url: string): string {
@@ -755,6 +807,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
             }
 
             this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+            this.publishDiscoveryRelayList();
 
             if (includePurplepages) {
               this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} and purplepag.es to discovery relays`);
@@ -1080,6 +1133,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
               });
               this.discoveryRelay.addRelay(discoveryRelayUrl);
               this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+              await this.publishDiscoveryRelayList();
             } else if (existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
               this.logger.debug('Discovery relay already exists (normalized), skipping', {
                 discoveryRelayUrl,

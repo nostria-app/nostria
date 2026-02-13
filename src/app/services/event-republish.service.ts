@@ -5,6 +5,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { SearchRelayListKind } from './relays/search-relay';
+import { DiscoveryRelayListKind } from './relays/discovery-relay';
 import { TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
 
 /**
@@ -21,6 +22,7 @@ export const IMPORTANT_EVENT_KINDS = [
   TRUST_PROVIDER_LIST_KIND,  // 10040 - NIP-85 Trusted Service Providers
   kinds.DirectMessageRelaysList, // 10050 - DM Relays list
   10063,                     // Media server list (BUD-03)
+  DiscoveryRelayListKind,    // 10086 - Discovery relay list
 ];
 
 /**
@@ -147,6 +149,8 @@ export class EventRepublishService {
         return 'DM Relays';
       case 10063:
         return 'Media Servers';
+      case DiscoveryRelayListKind:
+        return 'Discovery Relays';
       default:
         return `Kind ${kind}`;
     }
