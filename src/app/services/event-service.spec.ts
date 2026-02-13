@@ -220,5 +220,30 @@ describe('EventService getEventTags', () => {
       expect(result.replyId).toBe('parent-event-id');
       expect(result.pTags).toEqual(['parent-author-pubkey']);
     });
+
+    it('should preserve nested reply linkage when reply marker exists without root marker but additional e-tags are present', () => {
+      // Some clients send inherited thread tags as unmarked e-tags,
+      // then only mark the direct parent as reply.
+      // We must keep replyId so the event nests one level deeper.
+      const mockEvent: Event = {
+        id: 'child-reply-id',
+        pubkey: 'child-author-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'Nested reply',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'root-event-id', '', ''],
+          ['e', 'parent-reply-id', '', 'reply', 'parent-author-pubkey'],
+          ['p', 'parent-author-pubkey'],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      expect(result.rootId).toBe('root-event-id');
+      expect(result.replyId).toBe('parent-reply-id');
+      expect(result.replyAuthor).toBe('parent-author-pubkey');
+    });
   });
 });

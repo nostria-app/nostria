@@ -178,28 +178,29 @@ export class EventService {
     // Find reply tag (NIP-10 marked format)
     const replyTag = threadTags.find((tag) => tag[3] === 'reply');
     if (replyTag) {
-      // NIP-10 special case: if there's only a "reply" marker without a "root" marker,
-      // treat the reply target as the root (some clients don't set root marker
-      // when replying directly to the root event). In this case, don't set replyId
-      // so that the parent loading logic correctly loads just the root event.
-      if (!rootTag) {
+      // Set reply target from reply marker
+      replyId = replyTag[1];
+      // Extract author pubkey from reply tag if present (5th element)
+      replyAuthor = replyTag[4] || null;
+      // Extract relay URL from reply tag if present (3rd element)
+      if (replyTag[2] && replyTag[2].trim() !== '') {
+        replyRelays.push(replyTag[2]);
+      }
+
+      // NIP-10 special case: if there's only a single "reply" marker and no root marker,
+      // treat it as a direct reply to root (some clients omit the root marker).
+      // But if other e-tags exist, preserve replyId so nesting stays one level deeper.
+      if (!rootTag && threadTags.length === 1) {
         rootId = replyTag[1];
+        replyId = null;
+
         // Extract author pubkey from reply tag if present (5th element),
         // otherwise use the first p tag as the author of the root event
         author = replyTag[4] || (pTags.length > 0 ? pTags[0] : null);
+
         // Use the relay for root
         if (replyTag[2] && replyTag[2].trim() !== '') {
           rootRelays.push(replyTag[2]);
-        }
-        // replyId stays null - this is a direct reply to root
-      } else {
-        // Normal case: we have both root and reply markers
-        replyId = replyTag[1];
-        // Extract author pubkey from reply tag if present (5th element)
-        replyAuthor = replyTag[4] || null;
-        // Extract relay URL from reply tag if present (3rd element)
-        if (replyTag[2] && replyTag[2].trim() !== '') {
-          replyRelays.push(replyTag[2]);
         }
       }
     } else if (threadTags.length > 0 && !rootTag) {
