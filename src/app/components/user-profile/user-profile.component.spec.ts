@@ -266,4 +266,103 @@ describe('UserProfileComponent', () => {
       expect(icon!.classList.contains('error-avatar')).toBeFalse();
     });
   });
+
+  describe('hover card behavior', () => {
+    let mockHoverCardService: jasmine.SpyObj<ProfileHoverCardService>;
+
+    beforeEach(() => {
+      mockHoverCardService = TestBed.inject(ProfileHoverCardService) as jasmine.SpyObj<ProfileHoverCardService>;
+    });
+
+    it('should call showHoverCard on mouse enter when disableHoverCard is false', () => {
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', false);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new MouseEvent('mouseenter');
+      component.onMouseEnter(mockEvent, mockElement);
+
+      expect(mockHoverCardService.showHoverCard).toHaveBeenCalledWith(mockElement, 'testpubkey123');
+    });
+
+    it('should not call showHoverCard on mouse enter when disableHoverCard is true', () => {
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', true);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new MouseEvent('mouseenter');
+      component.onMouseEnter(mockEvent, mockElement);
+
+      expect(mockHoverCardService.showHoverCard).not.toHaveBeenCalled();
+    });
+
+    it('should call onTouchStart on touch when disableHoverCard is false', () => {
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', false);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new TouchEvent('touchstart', {
+        touches: [{ clientX: 0, clientY: 0 } as Touch],
+      });
+      component.onTouchStart(mockEvent, mockElement);
+
+      expect(mockHoverCardService.onTouchStart).toHaveBeenCalledWith(mockEvent, mockElement, 'testpubkey123');
+    });
+
+    it('should not call onTouchStart on touch when disableHoverCard is true', () => {
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', true);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new TouchEvent('touchstart', {
+        touches: [{ clientX: 0, clientY: 0 } as Touch],
+      });
+      component.onTouchStart(mockEvent, mockElement);
+
+      expect(mockHoverCardService.onTouchStart).not.toHaveBeenCalled();
+    });
+
+    it('should not show hover card for tiny view regardless of disableHoverCard', () => {
+      fixture.componentRef.setInput('view', 'tiny' as ViewMode);
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', false);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new MouseEvent('mouseenter');
+      component.onMouseEnter(mockEvent, mockElement);
+
+      expect(mockHoverCardService.showHoverCard).not.toHaveBeenCalled();
+    });
+
+    it('should not show hover card for name view regardless of disableHoverCard', () => {
+      fixture.componentRef.setInput('view', 'name' as ViewMode);
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', false);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new MouseEvent('mouseenter');
+      component.onMouseEnter(mockEvent, mockElement);
+
+      expect(mockHoverCardService.showHoverCard).not.toHaveBeenCalled();
+    });
+
+    it('should not show hover card for chip view regardless of disableHoverCard', () => {
+      fixture.componentRef.setInput('view', 'chip' as ViewMode);
+      fixture.componentRef.setInput('pubkey', 'testpubkey123');
+      fixture.componentRef.setInput('disableHoverCard', false);
+      fixture.detectChanges();
+
+      const mockElement = document.createElement('div');
+      const mockEvent = new MouseEvent('mouseenter');
+      component.onMouseEnter(mockEvent, mockElement);
+
+      expect(mockHoverCardService.showHoverCard).not.toHaveBeenCalled();
+    });
+  });
 });

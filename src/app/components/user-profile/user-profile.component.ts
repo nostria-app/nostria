@@ -102,6 +102,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   disableLink = input<boolean>(false);
 
   /**
+   * If true, hover cards will be completely disabled (no hover or long-press).
+   * Useful when the profile avatar is part of a larger interactive element (e.g., selectable card).
+   */
+  disableHoverCard = input<boolean>(false);
+
+  /**
    * Custom route prefix to use instead of '/p'. For example, '/people' for contact cards.
    */
   routePrefix = input<string>('/p');
@@ -595,8 +601,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Shows the profile hover card (for desktop mouse hover)
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
-    // Don't show hover card for tiny/name-only views
-    if (this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
+    // Don't show hover card if disabled or for tiny/name-only views
+    if (this.disableHoverCard() || this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
       return;
     }
 
@@ -614,7 +620,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Handles touch start for long-press hover card (mobile)
    */
   onTouchStart(event: TouchEvent, triggerElement: HTMLElement): void {
-    if (this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
+    if (this.disableHoverCard() || this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
       return;
     }
 
