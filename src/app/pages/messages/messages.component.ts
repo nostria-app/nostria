@@ -646,8 +646,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
           const textarea = this.messageInput?.nativeElement;
           if (textarea) {
-            // Scroll to bottom to ensure cursor is visible
-            textarea.scrollTop = textarea.scrollHeight;
+            // Only scroll if we're not already at the bottom
+            // This avoids unnecessary DOM operations on every keystroke
+            const isAtBottom = textarea.scrollHeight - textarea.scrollTop <= textarea.clientHeight + 5;
+            if (!isAtBottom) {
+              textarea.scrollTop = textarea.scrollHeight;
+            }
           }
         }, 0);
       });
