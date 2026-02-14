@@ -140,6 +140,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
             self.setProgress(0.0, false)
             
             self.overrideUIStyle()
+            SceneDelegate.flushPendingSharedPayloadIfAny()
         }
     }
     

@@ -5,10 +5,14 @@ struct Cookie {
     var value: String
 }
 
-let gcmMessageIDKey = "00000000000" // update this with actual ID if using Firebase 
+let gcmMessageIDKey = "gcm.message_id"
 
 // URL for first launch
 let rootUrl = URL(string: "https://nostria.app")!
+let sharedAppGroupId = "group.app.nostria"
+
+// Optional: Set this if you migrate to OneSignal native SDK later.
+let oneSignalAppId = ""
 
 // allowed origin is for what we are sticking to pwa domain
 // This should also appear in Info.plist
