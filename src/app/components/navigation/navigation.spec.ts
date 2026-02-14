@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { NavigationComponent } from './navigation';
 import { RouteDataService } from '../../services/route-data.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { signal } from '@angular/core';
 
 describe('NavigationComponent', () => {
@@ -11,6 +12,7 @@ describe('NavigationComponent', () => {
   let mockRouter: jasmine.SpyObj<Router>;
   let mockRouteDataService: jasmine.SpyObj<RouteDataService>;
   let mockLocalSettings: jasmine.SpyObj<LocalSettingsService>;
+  let mockPanelNav: jasmine.SpyObj<PanelNavigationService>;
 
   beforeEach(async () => {
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
@@ -19,6 +21,7 @@ describe('NavigationComponent', () => {
       homeDestination: signal('first-menu-item'),
       firstMenuItemPath: signal('summary'),
     });
+    mockPanelNav = jasmine.createSpyObj('PanelNavigationService', ['closeRight', 'clearLeftStack']);
 
     await TestBed.configureTestingModule({
       imports: [NavigationComponent],
@@ -26,6 +29,7 @@ describe('NavigationComponent', () => {
         { provide: Router, useValue: mockRouter },
         { provide: RouteDataService, useValue: mockRouteDataService },
         { provide: LocalSettingsService, useValue: mockLocalSettings },
+        { provide: PanelNavigationService, useValue: mockPanelNav },
       ],
     }).compileComponents();
 
@@ -50,6 +54,20 @@ describe('NavigationComponent', () => {
       // Verify: Router should be called with absolute path '/summary'
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/summary']);
       expect(mockRouteDataService.clearHistory).toHaveBeenCalled();
+      expect(mockPanelNav.closeRight).toHaveBeenCalled();
+      expect(mockPanelNav.clearLeftStack).toHaveBeenCalled();
+    });
+
+    it('should close right panel and clear left stack before navigating', () => {
+      // Setup
+      (mockLocalSettings as any).homeDestination = signal('feeds');
+
+      // Execute
+      component.navigateToHome();
+
+      // Verify: Panels should be cleared to return to clean state
+      expect(mockPanelNav.closeRight).toHaveBeenCalled();
+      expect(mockPanelNav.clearLeftStack).toHaveBeenCalled();
     });
 
     it('should navigate to absolute path when firstMenuItemPath returns path with slash', () => {
