@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 
 
 @Component({
@@ -22,6 +23,7 @@ export class NavigationComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private localSettings = inject(LocalSettingsService);
+  private panelNav = inject(PanelNavigationService);
 
   // Convert route data to signal
   routeData = toSignal(this.route.data.pipe(map(data => data)), {
@@ -50,12 +52,21 @@ export class NavigationComponent {
 
   /**
    * Navigate to the configured home destination and clear navigation history.
+   * Also clears the right panel content to return to a clean state.
    * Options:
    * - 'feeds': Navigate to /f (Feeds page)
    * - 'home': Navigate to / (Home page)
    * - 'first-menu-item': Navigate to the first visible menu item
    */
   navigateToHome(): void {
+    // Close the right panel - this triggers the callback that properly clears
+    // both the RightPanelService and the layout state
+    this.panelNav.closeRight();
+
+    // Clear left panel navigation stack
+    this.panelNav.clearLeftStack();
+
+    // Clear navigation history
     this.routeDataService.clearHistory();
 
     const destination = this.localSettings.homeDestination();
@@ -72,6 +83,11 @@ export class NavigationComponent {
       default:
         path = '/f';
         break;
+    }
+
+    // Ensure path is absolute for proper navigation
+    if (!path.startsWith('/')) {
+      path = '/' + path;
     }
 
     this.router.navigate([path]);
