@@ -5,7 +5,6 @@ import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
 import { RegionService } from '../region.service';
-import { AccountStateService } from '../account-state.service';
 import { kinds, SimplePool, UnsignedEvent, Event } from 'nostr-tools';
 
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
@@ -19,7 +18,6 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
   private region = inject(RegionService);
-  private accountState = inject(AccountStateService);
   private initialized = false;
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
@@ -133,7 +131,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   async load(pubkey?: string): Promise<boolean> {
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
-    
+
     // If pubkey is provided, check if user has a kind 10086 event
     // If they don't have one, the defaults from storage or DEFAULT_BOOTSTRAP_RELAYS will be used
     // The actual publishing of defaults happens in ensureDefaultDiscoveryRelays()
@@ -149,7 +147,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
       this.logger.debug('No kind 10086 event found for user, using bootstrap relays');
     }
-    
+
     this.init(bootstrapRelays);
     this.initialized = true;
     return false; // No event found (or no pubkey provided)
@@ -296,15 +294,14 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
   /**
    * Get default discovery relays based on user's region
-   * Falls back to EU region if user has no region set
+   * Falls back to EU region if no region is provided
    */
-  getDefaultDiscoveryRelays(): string[] {
-    const region = this.accountState.account()?.region || 'eu';
+  getDefaultDiscoveryRelays(region = 'eu'): string[] {
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
-    
+
     // Always include both regional relay and indexer.coracle.social for best profile discovery
     const defaultRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
-    
+
     this.logger.debug(`Generated default discovery relays for region ${region}:`, defaultRelays);
     return defaultRelays;
   }

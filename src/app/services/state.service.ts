@@ -94,7 +94,7 @@ export class StateService implements NostriaService {
     // Load discovery relays, passing the pubkey to check for kind 10086 event
     // Returns true if user has a kind 10086 event, false otherwise
     const hasDiscoveryRelays = await this.discoveryRelay.load(pubkey);
-    
+
     // Destroy old connections before setting up new ones
     const relayStartTime = Date.now();
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
@@ -194,30 +194,31 @@ export class StateService implements NostriaService {
       if (!hasDiscoveryRelays) {
         // User has no kind 10086 event, create and publish defaults
         this.logger.info('[StateService] User has no discovery relays (kind 10086), setting defaults');
-        
+
         // Get default discovery relays based on user's region
-        const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays();
-        
+        const region = this.accountState.account()?.region || 'eu';
+        const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays(region);
+
         // Save to local storage so they're used immediately
         this.discoveryRelay.setDiscoveryRelays(defaultRelays);
-        
+
         // Create kind 10086 event
         const event = this.discoveryRelay.createDiscoveryRelayListEvent(pubkey, defaultRelays);
-        
+
         // Sign the event
         const signedEvent = await this.nostr.signEvent(event);
-        
+
         if (signedEvent) {
           // Save to database
           await this.discoveryRelay.saveEvent(signedEvent);
-          
+
           // Publish to account relays and discovery relays
           // Using Promise.allSettled to not fail if publishing fails
           await Promise.allSettled([
             this.accountRelay.publish(signedEvent),
             this.discoveryRelay.publish(signedEvent),
           ]);
-          
+
           this.logger.info('[StateService] Successfully published default discovery relays (kind 10086)');
         } else {
           this.logger.warn('[StateService] Failed to sign discovery relay event');
