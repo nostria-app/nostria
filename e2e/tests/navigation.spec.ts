@@ -175,6 +175,35 @@ test.describe('Back Navigation @public @navigation', () => {
   });
 });
 
+test.describe('Logo Button Navigation @public @navigation', () => {
+  test('should navigate to Summary root when logo is clicked', async ({ page, waitForNostrReady, captureScreenshot }) => {
+    // First, navigate to the Summary page
+    await page.goto('/summary');
+    await waitForNostrReady();
+    await captureScreenshot('summary-root');
+
+    // Simulate navigating to a thread/event from Summary
+    // For testing, we'll use a direct navigation to an event page
+    await page.goto('/e/test-event-id');
+    await page.waitForLoadState('networkidle');
+    await captureScreenshot('event-page');
+
+    // Now click the logo button to navigate back to Summary
+    const logoButton = page.locator('button img[src*="icon"]').first();
+    
+    if (await logoButton.isVisible()) {
+      await logoButton.click();
+      await page.waitForLoadState('networkidle');
+      await captureScreenshot('after-logo-click');
+
+      // Verify we're back on the Summary root page
+      // The URL should be /summary, not /e/...
+      expect(page.url()).toContain('/summary');
+      expect(page.url()).not.toContain('/e/');
+    }
+  });
+});
+
 test.describe('Error Handling @public @navigation', () => {
   test('should handle 404 routes gracefully', async ({ page, captureScreenshot, saveConsoleLogs }) => {
     // Navigate to a non-existent route
