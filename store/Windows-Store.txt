@@ -1,0 +1,8 @@
+brainbox.no.Nostria
+CN=652D8DFB-CCD7-46FD-AEE8-430B48B16780
+brainbox.no
+
+Latest version:
+3.0.1
+3.0.0
+
