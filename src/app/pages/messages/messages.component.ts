@@ -635,6 +635,23 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       }
     });
+
+    // Watch for text changes and ensure textarea scrolls to show cursor
+    effect(() => {
+      // Read the signal to track changes
+      this.newMessageText();
+      
+      // Use untracked to avoid infinite loops and schedule after DOM updates
+      untracked(() => {
+        setTimeout(() => {
+          const textarea = this.messageInput?.nativeElement;
+          if (textarea) {
+            // Scroll to bottom to ensure cursor is visible
+            textarea.scrollTop = textarea.scrollHeight;
+          }
+        }, 0);
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -777,12 +794,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (Number.isFinite(maxHeight) && maxHeight > 0 && targetHeight > maxHeight) {
       textarea.style.height = `${maxHeight}px`;
-      textarea.style.overflowY = 'auto';
+      // Scroll to bottom to ensure cursor is visible when max height is reached
+      textarea.scrollTop = textarea.scrollHeight;
       return;
     }
 
     textarea.style.height = `${targetHeight}px`;
-    textarea.style.overflowY = 'hidden';
+    // Scroll to bottom to ensure cursor is visible when text wraps
+    textarea.scrollTop = textarea.scrollHeight;
   }
 
   /**
