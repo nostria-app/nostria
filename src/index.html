@@ -9,16 +9,21 @@
     content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <!-- Android display cutout support -->
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <meta name="description" content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control, and share and explore a decentralized space that resists censorship while being quick to join and friendly to use." />
+  <meta name="description"
+    content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control, and share and explore a decentralized space that resists censorship while being quick to join and friendly to use." />
   <meta property="og:site_name" content="Nostria" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Nostria - Your Social Network" />
-  <meta property="og:description" content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control." />
+  <meta property="og:description"
+    content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control." />
   <meta property="og:image" content="/assets/nostria-social.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Nostria - Your Social Network" />
-  <meta name="twitter:description" content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control." />
+  <meta name="twitter:description"
+    content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control." />
   <meta name="twitter:image" content="/assets/nostria-social.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,22 +32,30 @@
     rel="stylesheet" />
 
   <!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" /> -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180-maskable.png">
   <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192-maskable.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512-maskable.png">
-  <meta name="theme-color" content="#fafafa" />
+  <meta name="theme-color" content="#efefef" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#0a0a0a" id="theme-color-meta" />
 </head>
 
 <body class="mat-typography">
-<script>
+  <script>
     // Apply saved theme and text scale immediately to prevent flash
     (function () {
       var theme = localStorage.getItem('nostria-theme');
       var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.body.style.backgroundColor = isDark ? '#121212' : '#fafafa';
+      document.body.style.backgroundColor = isDark ? '#0a0a0a' : '#efefef';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+      var themeColorMeta = document.getElementById('theme-color-meta');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', isDark ? '#0a0a0a' : '#efefef');
+      }
 
       // Apply saved text scale immediately (accessibility)
       var textScale = localStorage.getItem('nostria-text-scale');
