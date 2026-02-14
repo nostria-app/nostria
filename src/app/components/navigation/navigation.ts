@@ -74,6 +74,11 @@ export class NavigationComponent {
         break;
     }
 
+    // Ensure path is absolute for proper navigation
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+
     this.router.navigate([path]);
   }
 
