@@ -4,6 +4,7 @@ import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
+import { RegionService } from '../region.service';
 import { kinds, SimplePool, UnsignedEvent, Event } from 'nostr-tools';
 
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
@@ -16,6 +17,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
+  private region = inject(RegionService);
   private initialized = false;
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
@@ -111,14 +113,50 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return fallbackRelays;
   }
 
-  async load() {
+  /**
+   * Load discovery relays from storage or from the user's kind 10086 event.
+   * 
+   * @param pubkey Optional user's public key to check for kind 10086 event
+   * @returns Promise<boolean> - True if user has a kind 10086 event, false otherwise
+   * 
+   * When pubkey is provided:
+   * - Checks database for kind 10086 event
+   * - If found, initializes with those relays and returns true
+   * - If not found, initializes with bootstrap relays from storage and returns false
+   * 
+   * When pubkey is not provided:
+   * - Initializes with bootstrap relays from storage
+   * - Returns false (no event check performed)
+   */
+  async load(pubkey?: string): Promise<boolean> {
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
+
+    // If pubkey is provided, check if user has a kind 10086 event
+    // If they don't have one, the defaults from storage or DEFAULT_BOOTSTRAP_RELAYS will be used
+    // The actual publishing of defaults happens in ensureDefaultDiscoveryRelays()
+    if (pubkey) {
+      const relaysFromEvent = await this.loadFromEvent(pubkey);
+      if (relaysFromEvent !== null && relaysFromEvent.length > 0) {
+        // User has a kind 10086 event, use those relays
+        this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
+        this.init(relaysFromEvent);
+        this.initialized = true;
+        return true; // Event found
+      }
+      // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
+      this.logger.debug('No kind 10086 event found for user, using bootstrap relays');
+    }
+
     this.init(bootstrapRelays);
     this.initialized = true;
+    return false; // No event found (or no pubkey provided)
   }
 
-  clear() { }
+  clear() {
+    // No specific cleanup needed for discovery relays
+    // The relay pool is managed by the base class
+  }
 
   save(relayUrls: string[]) {
     // Save to local storage
@@ -252,5 +290,19 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     }
 
     return relays;
+  }
+
+  /**
+   * Get default discovery relays based on user's region
+   * Falls back to EU region if no region is provided
+   */
+  getDefaultDiscoveryRelays(region = 'eu'): string[] {
+    const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
+
+    // Always include both regional relay and indexer.coracle.social for best profile discovery
+    const defaultRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
+
+    this.logger.debug(`Generated default discovery relays for region ${region}:`, defaultRelays);
+    return defaultRelays;
   }
 }
