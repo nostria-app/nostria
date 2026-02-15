@@ -2,16 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Capture Audio by user request</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Track current location by user request</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Capture Video by user request</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Nostria</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Image</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.image</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -40,37 +53,30 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-	</dict>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>nostr</string>
 		<string>nostr+walletconnect</string>
 	</array>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>Image</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSHandlerRank</key>
-			<string>Owner</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>public.image</string>
-			</array>
-		</dict>
-	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Capture Video by user request</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Track current location by user request</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Capture Audio by user request</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select photos to share in Nostria</string>
 	<key>UIApplicationSceneManifest</key>
@@ -92,10 +98,38 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Profile</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>https://nostria.app/p</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Notifications</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>https://nostria.app/notifications</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Settings</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>https://nostria.app/settings</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Music</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>https://nostria.app/music</string>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>processing</string>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -127,37 +161,5 @@
 	<array>
 		<string>nostria.app</string>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	</array>
-	<key>UIApplicationShortcutItems</key>
-<array>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>https://nostria.app/p</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Profile</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>https://nostria.app/notifications</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Notifications</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>https://nostria.app/settings</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Settings</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>https://nostria.app/music</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Music</string>
-		</dict></array>
 </dict>
 </plist>

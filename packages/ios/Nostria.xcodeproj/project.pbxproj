@@ -23,21 +23,21 @@
 
 /* Begin PBXFileReference section */
 		4C1C2162A8048FDF52B2A9D0 /* Pods-Nostria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Nostria.release.xcconfig"; path = "Target Support Files/Pods-Nostria/Pods-Nostria.release.xcconfig"; sourceTree = "<group>"; };
-		59333BAA25CFF706003392A4 /* Nostria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Nostria.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		595F239A25CEFBFD0053416C /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Settings.swift; path = "Nostria/Settings.swift"; sourceTree = "<group>"; };
-		595F239B25CEFBFD0053416C /* Entitlements */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Entitlements; path = "Nostria/Entitlements"; sourceTree = "<group>"; };
-		595F239C25CEFBFD0053416C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = "Nostria/Assets.xcassets"; sourceTree = "<group>"; };
-		595F239D25CEFBFD0053416C /* SceneDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = "Nostria/SceneDelegate.swift"; sourceTree = "<group>"; };
-		595F239F25CEFBFE0053416C /* PushNotifications.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PushNotifications.swift; path = "Nostria/PushNotifications.swift"; sourceTree = "<group>"; };
-		595F23A025CEFBFE0053416C /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "Nostria/Info.plist"; sourceTree = "<group>"; };
-		595F23A125CEFBFE0053416C /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ViewController.swift; path = "Nostria/ViewController.swift"; sourceTree = "<group>"; };
-		595F23A225CEFBFE0053416C /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = "Nostria/AppDelegate.swift"; sourceTree = "<group>"; };
-		595F23A325CEFBFE0053416C /* Printer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Printer.swift; path = "Nostria/Printer.swift"; sourceTree = "<group>"; };
-		595F23A425CEFBFE0053416C /* WebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WebView.swift; path = "Nostria/WebView.swift"; sourceTree = "<group>"; };
-		BE9D7FFB2FBE6EEBCA807B6A /* Pods_Nostria.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "Pods_Nostria.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		59333BAA25CFF706003392A4 /* Nostria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nostria.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		595F239A25CEFBFD0053416C /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Settings.swift; path = Nostria/Settings.swift; sourceTree = "<group>"; };
+		595F239B25CEFBFD0053416C /* Entitlements */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Entitlements; path = Nostria/Entitlements; sourceTree = "<group>"; };
+		595F239C25CEFBFD0053416C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Nostria/Assets.xcassets; sourceTree = "<group>"; };
+		595F239D25CEFBFD0053416C /* SceneDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = Nostria/SceneDelegate.swift; sourceTree = "<group>"; };
+		595F239F25CEFBFE0053416C /* PushNotifications.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PushNotifications.swift; path = Nostria/PushNotifications.swift; sourceTree = "<group>"; };
+		595F23A025CEFBFE0053416C /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Nostria/Info.plist; sourceTree = "<group>"; };
+		595F23A125CEFBFE0053416C /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ViewController.swift; path = Nostria/ViewController.swift; sourceTree = "<group>"; };
+		595F23A225CEFBFE0053416C /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Nostria/AppDelegate.swift; sourceTree = "<group>"; };
+		595F23A325CEFBFE0053416C /* Printer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Printer.swift; path = Nostria/Printer.swift; sourceTree = "<group>"; };
+		595F23A425CEFBFE0053416C /* WebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WebView.swift; path = Nostria/WebView.swift; sourceTree = "<group>"; };
+		BE9D7FFB2FBE6EEBCA807B6A /* Pods_Nostria.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Nostria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEE8E5C625AE96C07F8AADED /* Pods-Nostria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Nostria.debug.xcconfig"; path = "Target Support Files/Pods-Nostria/Pods-Nostria.debug.xcconfig"; sourceTree = "<group>"; };
-		CDC0FE262388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Nostria/Base.lproj/Main.storyboard"; sourceTree = "<group>"; };
-		CDC0FE282388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Nostria/Base.lproj/LaunchScreen.storyboard"; sourceTree = "<group>"; };
+		CDC0FE262388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Nostria/Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		CDC0FE282388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Nostria/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,14 +101,13 @@
 				CD89F885237E9D9200C436A1 /* Sources */,
 				CD89F886237E9D9200C436A1 /* Frameworks */,
 				CD89F887237E9D9200C436A1 /* Resources */,
-				592CB04773CB45D6CE5DF117 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = "Nostria";
-			productName = "Nostria";
+			name = Nostria;
+			productName = Nostria;
 			productReference = 59333BAA25CFF706003392A4 /* Nostria.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -161,23 +160,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		592CB04773CB45D6CE5DF117 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Nostria/Pods-Nostria-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Nostria/Pods-Nostria-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Nostria/Pods-Nostria-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		E07DC62CDB59F65280F7057D /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -365,21 +347,20 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_ENTITLEMENTS = "Nostria/Entitlements/Entitlements.plist";
+				CODE_SIGN_ENTITLEMENTS = Nostria/Entitlements/Entitlements.plist;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "Nostria/Info.plist";
+				INFOPLIST_FILE = Nostria/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1;
-				CURRENT_PROJECT_VERSION = 1;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.nostria";
-				PRODUCT_NAME = "Nostria";
+				MARKETING_VERSION = 3;
+				PRODUCT_BUNDLE_IDENTIFIER = app.nostria;
+				PRODUCT_NAME = Nostria;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -394,20 +375,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_ENTITLEMENTS = "Nostria/Entitlements/Entitlements.plist";
+				CODE_SIGN_ENTITLEMENTS = Nostria/Entitlements/Entitlements.plist;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "Nostria/Info.plist";
+				INFOPLIST_FILE = Nostria/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1;
-				CURRENT_PROJECT_VERSION = 1;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.nostria";
-				PRODUCT_NAME = "Nostria";
+				MARKETING_VERSION = 3;
+				PRODUCT_BUNDLE_IDENTIFIER = app.nostria;
+				PRODUCT_NAME = Nostria;
 				SUPPORTS_MACCATALYST = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Osize";
 				SWIFT_VERSION = 5.0;
