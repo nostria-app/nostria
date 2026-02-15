@@ -1097,26 +1097,28 @@ export class DataService implements OnDestroy {
 
     // Extract relay hints from e-tags
     const eTags = event.tags.filter(tag => tag[0] === 'e');
-    const relayHints: string[] = [];
+    const relayHintsForEventCreator: string[] = [];
 
     for (const eTag of eTags) {
       // Check if there's a relay hint in the e-tag (3rd element)
-      if (eTag.length >= 3 && eTag[2] && eTag[2].trim() !== '') {
-        relayHints.push(eTag[2]);
+      const relayHint = eTag.length >= 3 && eTag[2] ? eTag[2].trim() : '';
+      if (relayHint === '') {
+        continue;
       }
+
+      relayHintsForEventCreator.push(relayHint);
 
       // Check for author pubkey in e-tag (5th element)
       if (eTag.length >= 5 && eTag[4] && eTag[4].trim() !== '') {
-        // Add relay hints for the mentioned author
-        if (relayHints.length > 0) {
-          await this.relaysService.addRelayHintsFromEvent(eTag[4], relayHints);
-        }
+        // Add only the current relay hint for the mentioned author
+        await this.relaysService.addRelayHintsFromEvent(eTag[4], [relayHint]);
       }
     }
 
     // Store hints for the event creator
-    if (relayHints.length > 0) {
-      await this.relaysService.addRelayHintsFromEvent(event.pubkey, relayHints);
+    const uniqueRelayHints = Array.from(new Set(relayHintsForEventCreator));
+    if (uniqueRelayHints.length > 0) {
+      await this.relaysService.addRelayHintsFromEvent(event.pubkey, uniqueRelayHints);
     }
   }
 }
