@@ -19,6 +19,7 @@ import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { NostrService } from '../../../services/nostr.service';
 import { EventService } from '../../../services/event';
+import { LoggerService } from '../../../services/logger.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import {
   ConfirmDialogComponent,
@@ -55,6 +56,7 @@ export class EventHeaderComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
+  private logger = inject(LoggerService);
   private userRelaysService = inject(UserRelaysService);
   event = input.required<Event>();
   compact = input<boolean>(false);
@@ -86,7 +88,18 @@ export class EventHeaderComponent {
       kind: event.kind,
       relays: relays.length > 0 ? relays : undefined,
     };
-    return nip19.neventEncode(eventPointer);
+    try {
+      return nip19.neventEncode(eventPointer);
+    } catch (error) {
+      debugger;
+      this.logger.error('[EventHeader] Failed to encode nevent', {
+        error,
+        event,
+        eventPointer,
+        relayCount: relays.length,
+      });
+      throw error;
+    }
   });
 
   eventUrl = computed<string>(() => {

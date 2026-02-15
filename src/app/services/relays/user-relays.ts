@@ -38,6 +38,9 @@ export class UserRelaysService {
   // Signal to track which pubkeys are currently loading relays
   private readonly loadingPubkeys = signal<Set<string>>(new Set());
 
+  // Safety limit for relay hints used in read/navigation flows
+  private readonly MAX_CACHED_RELAYS = 10;
+
   /**
    * Check if the cache is still valid for a given pubkey
    */
@@ -106,14 +109,7 @@ export class UserRelaysService {
       if (dbRelayListEvent) {
         dbRelays = this.utilitiesService.getOptimalRelayUrlsForFetching(dbRelayListEvent);
         if (dbRelays.length > 0) {
-          // Cache the database result immediately for instant UI display
-          this.cachedRelays.update(cache => {
-            const newCache = new Map(cache);
-            newCache.set(pubkey, dbRelays);
-            return newCache;
-          });
-          this.cacheTimestamps.set(pubkey, Date.now());
-          relays = dbRelays;
+          relays = this.setCachedRelays(pubkey, dbRelays, 'database');
         }
       }
 
@@ -122,25 +118,14 @@ export class UserRelaysService {
 
       // If discovery found relays, use them (they may be more up-to-date)
       if (discoveryRelays.length > 0) {
-        relays = discoveryRelays;
-        this.cachedRelays.update(cache => {
-          const newCache = new Map(cache);
-          newCache.set(pubkey, relays);
-          return newCache;
-        });
-        this.cacheTimestamps.set(pubkey, Date.now());
+        relays = this.setCachedRelays(pubkey, discoveryRelays, 'discovery');
       }
 
       // If no relays found through either method, try fallback relays
       if (relays.length === 0) {
-        relays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
-        if (relays.length > 0) {
-          this.cachedRelays.update(cache => {
-            const newCache = new Map(cache);
-            newCache.set(pubkey, relays);
-            return newCache;
-          });
-          this.cacheTimestamps.set(pubkey, Date.now());
+        const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+        if (fallbackRelays.length > 0) {
+          relays = this.setCachedRelays(pubkey, fallbackRelays, 'fallback');
         }
       }
 
@@ -154,15 +139,10 @@ export class UserRelaysService {
 
       // Fallback to relay hints if discovery fails
       try {
-        relays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+        const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
 
-        if (relays.length > 0) {
-          this.cachedRelays.update(cache => {
-            const newCache = new Map(cache);
-            newCache.set(pubkey, relays);
-            return newCache;
-          });
-          this.cacheTimestamps.set(pubkey, Date.now());
+        if (fallbackRelays.length > 0) {
+          relays = this.setCachedRelays(pubkey, fallbackRelays, 'error-fallback');
         }
       } catch (hintsError) {
         this.logger.error('Error fetching relay hints:', hintsError);
@@ -180,9 +160,28 @@ export class UserRelaysService {
   getRelaysForPubkey(pubkey: string): string[] {
     const cached = this.cachedRelays().get(pubkey);
     if (cached && this.isCacheValid(pubkey)) {
-      return cached;
+      return this.optimizeRelays(cached);
     }
     return [];
+  }
+
+  private setCachedRelays(pubkey: string, relays: string[], source: string): string[] {
+    const optimizedRelays = this.optimizeRelays(relays);
+
+    if (relays.length > optimizedRelays.length) {
+      this.logger.debug(
+        `[UserRelaysService] Trimmed relays from ${relays.length} to ${optimizedRelays.length} for ${pubkey.slice(0, 16)}... (source: ${source})`
+      );
+    }
+
+    this.cachedRelays.update(cache => {
+      const newCache = new Map(cache);
+      newCache.set(pubkey, optimizedRelays);
+      return newCache;
+    });
+    this.cacheTimestamps.set(pubkey, Date.now());
+
+    return optimizedRelays;
   }
 
   /**
@@ -318,8 +317,7 @@ export class UserRelaysService {
       .filter(relay => !relay.startsWith('ws://'));
 
     // TODO: Add logic to sort by reliability/performance metrics
-    // For now, return first 10 relays to avoid overwhelming connections
-    return uniqueRelays.slice(0, 10);
+    return uniqueRelays.slice(0, this.MAX_CACHED_RELAYS);
   }
 
   /**
