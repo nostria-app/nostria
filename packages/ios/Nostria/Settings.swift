@@ -4,8 +4,7 @@ struct Cookie {
     var name: String
     var value: String
 }
-
-let gcmMessageIDKey = "gcm.message_id"
+var apnsDeviceToken: String?
 
 // URL for first launch
 let rootUrl = URL(string: "https://nostria.app")!

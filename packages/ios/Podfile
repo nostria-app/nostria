@@ -4,10 +4,6 @@ platform :ios, '15.0'
 target 'Nostria' do
   # Comment the next line if you don't want to use dynamic frameworks
   use_frameworks!
-
-  # Add the pod for Firebase Cloud Messaging
-  pod 'Firebase/Messaging'
-
 end
 
 post_install do |installer|
