@@ -11,6 +11,7 @@ export interface PeopleFilters {
   hasFollowingList: boolean;
   hasNip05: boolean;
   favoritesOnly: boolean;
+  hideFollowing: boolean;
   showRank: boolean;
 }
 

@@ -165,6 +165,7 @@ export class PeopleComponent implements OnDestroy {
     hasFollowingList: false,
     hasNip05: false,
     favoritesOnly: false,
+    hideFollowing: false,
     showRank: true,
   });
 
@@ -241,6 +242,11 @@ export class PeopleComponent implements OnDestroy {
             nip05.includes(searchLower);
         })
         : followSetProfiles;
+
+      if (selectedSet.dTag === CACHED_PROFILES_D_TAG && filters.hideFollowing) {
+        const following = new Set(this.accountState.followingList());
+        profiles = profiles.filter(p => !following.has(p.pubkey));
+      }
 
       // Apply sorting
       profiles = this.followingService.getSortedProfiles(profiles, sortOption);
@@ -326,7 +332,8 @@ export class PeopleComponent implements OnDestroy {
       activeFilters.hasRelayList ||
       activeFilters.hasFollowingList ||
       activeFilters.hasNip05 ||
-      activeFilters.favoritesOnly
+      activeFilters.favoritesOnly ||
+      activeFilters.hideFollowing
     );
   });
 
@@ -381,7 +388,14 @@ export class PeopleComponent implements OnDestroy {
       if (pubkey) {
         const savedFilters = this.accountLocalState.getPeopleFilters(pubkey);
         if (savedFilters) {
-          this.filters.set(savedFilters);
+          this.filters.set({
+            hasRelayList: savedFilters.hasRelayList ?? false,
+            hasFollowingList: savedFilters.hasFollowingList ?? false,
+            hasNip05: savedFilters.hasNip05 ?? false,
+            favoritesOnly: savedFilters.favoritesOnly ?? false,
+            hideFollowing: savedFilters.hideFollowing ?? false,
+            showRank: savedFilters.showRank ?? true,
+          });
         }
       }
     });
@@ -684,6 +698,7 @@ export class PeopleComponent implements OnDestroy {
       hasFollowingList: false,
       hasNip05: false,
       favoritesOnly: false,
+      hideFollowing: false,
       showRank: true,
     });
     // Reset display limit when filters are reset
@@ -815,6 +830,7 @@ export class PeopleComponent implements OnDestroy {
     // Clear search when selecting a follow set
     if (followSet) {
       this.updateSearch('');
+      this.clearCachedOnlyFilters();
 
       // Set the selected follow set dTag immediately to prevent the route effect
       // from re-triggering selectFollowSet when the URL changes
@@ -831,6 +847,7 @@ export class PeopleComponent implements OnDestroy {
       this.loadFollowSetProfilesInBackground(followSet.pubkeys);
     } else {
       // When clearing selection, update immediately
+      this.clearCachedOnlyFilters();
       this.selectedFollowSetDTag.set(null);
       this.followSetProfiles.set([]);
       this.cachedProfilePubkeys.set([]);
@@ -871,6 +888,7 @@ export class PeopleComponent implements OnDestroy {
   private async selectFollowSetFromRoute(followSet: FollowSet) {
     this.displayLimit.set(this.PAGE_SIZE);
     this.updateSearch('');
+    this.clearCachedOnlyFilters();
     this.selectedFollowSetDTag.set(followSet.dTag);
 
     // Immediately set minimal profiles from pubkeys so the UI renders instantly
@@ -886,9 +904,21 @@ export class PeopleComponent implements OnDestroy {
    */
   private clearFollowSetSelection() {
     this.displayLimit.set(this.PAGE_SIZE);
+    this.clearCachedOnlyFilters();
     this.selectedFollowSetDTag.set(null);
     this.followSetProfiles.set([]);
     this.cachedProfilePubkeys.set([]);
+  }
+
+  private clearCachedOnlyFilters(): void {
+    if (!this.filters().hideFollowing) {
+      return;
+    }
+
+    this.filters.update(current => ({
+      ...current,
+      hideFollowing: false,
+    }));
   }
 
   private async getCachedProfilePubkeys(): Promise<string[]> {

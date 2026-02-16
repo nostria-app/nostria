@@ -82,6 +82,13 @@ const SORT_OPTIONS: SortOptionDef[] = [
           (change)="onFilterChange('favoritesOnly', $event.checked)">
           Favorites Only
         </mat-checkbox>
+        @if (isCachedListSelected()) {
+        <mat-checkbox
+          [checked]="filters()?.hideFollowing ?? false"
+          (change)="onFilterChange('hideFollowing', $event.checked)">
+          Hide Following
+        </mat-checkbox>
+        }
       </div>
 
       <mat-divider></mat-divider>
@@ -222,6 +229,7 @@ export class PeopleFilterPanelComponent {
 
   filters = input<PeopleFilters | null>(null);
   sortOption = input<SortOption>('default');
+  isCachedListSelected = input<boolean>(false);
 
   // Output events for changes
   filtersChanged = output<Partial<PeopleFilters>>();
@@ -259,6 +267,7 @@ export class PeopleFilterPanelComponent {
       hasFollowingList: false,
       hasNip05: false,
       favoritesOnly: false,
+      hideFollowing: false,
       showRank: true,
     });
     this.sortOptionChanged.emit('default');
