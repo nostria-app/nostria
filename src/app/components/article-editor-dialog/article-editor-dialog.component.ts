@@ -13,7 +13,8 @@ import {
 
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Location } from '@angular/common';
+import { isPlatformBrowser, Location } from '@angular/common';
+import { PLATFORM_ID } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -110,6 +111,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
   private router = inject(Router);
   private location = inject(Location);
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
   private accountRelay = inject(AccountRelayService);
@@ -237,6 +240,17 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
   showArticleImage = signal(false);
   showPreview = signal(false);
+  showSplitView = signal(false);
+  isLargeScreen = signal(false);
+  canUseSplitView = computed(() => this.isLargeScreen());
+
+  private splitViewMediaQuery?: MediaQueryList;
+  private readonly splitViewMediaQueryHandler = (event: MediaQueryListEvent): void => {
+    this.isLargeScreen.set(event.matches);
+    if (!event.matches) {
+      this.showSplitView.set(false);
+    }
+  };
 
   // Track editor mode to restore after preview
   editorIsRichTextMode = signal(true);
@@ -246,6 +260,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private featuredImageDragCounter = 0;
 
   constructor() {
+    this.initializeSplitViewSupport();
+
     // Check if we're editing an existing article
     effect(() => {
       const articleId = this.data.articleId;
@@ -297,10 +313,24 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy() {
+    if (this.splitViewMediaQuery) {
+      this.splitViewMediaQuery.removeEventListener('change', this.splitViewMediaQueryHandler);
+    }
+
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
     }
+  }
+
+  private initializeSplitViewSupport(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.splitViewMediaQuery = window.matchMedia('(min-width: 1280px)');
+    this.isLargeScreen.set(this.splitViewMediaQuery.matches);
+    this.splitViewMediaQuery.addEventListener('change', this.splitViewMediaQueryHandler);
   }
 
   private generateUniqueId(): string {
@@ -1084,7 +1114,23 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   togglePreview(): void {
+    if (this.showSplitView()) {
+      this.showSplitView.set(false);
+    }
+
     this.showPreview.update(show => !show);
+  }
+
+  toggleSplitView(): void {
+    if (!this.canUseSplitView()) {
+      this.snackBar.open('Split view is available on larger screens only', 'Close', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    this.showPreview.set(false);
+    this.showSplitView.update(show => !show);
   }
 
   onEditorModeChange(isRichTextMode: boolean): void {

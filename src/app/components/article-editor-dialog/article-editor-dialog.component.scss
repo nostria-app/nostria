@@ -29,6 +29,10 @@
     width: 100%;
     box-sizing: border-box;
 
+    &.split-view-active {
+      max-width: 1400px;
+    }
+
     @media (max-width: 600px) {
       padding: 12px 4px;
     }
@@ -37,6 +41,27 @@
   .medium-editor {
     width: 100%;
     padding-bottom: 2rem;
+
+    .editor-layout {
+      display: block;
+
+      &.split-view {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+    }
+
+    .editor-pane,
+    .preview-pane {
+      min-width: 0;
+    }
+
+    .preview-pane {
+      border-left: 1px solid var(--mat-sys-outline-variant);
+      padding-left: 24px;
+    }
 
     .top-action-buttons {
       display: flex;
@@ -152,6 +177,17 @@
 
     .write-tab {
       min-height: 300px;
+    }
+
+    @media (max-width: 1279px) {
+      .editor-layout.split-view {
+        display: block;
+      }
+
+      .preview-pane {
+        border-left: none;
+        padding-left: 0;
+      }
     }
   }
 

@@ -6,7 +6,7 @@
     <p>Loading article...</p>
   </div>
   } @else {
-  <div class="editor-content-wrapper">
+  <div class="editor-content-wrapper" [class.split-view-active]="showSplitView()">
     <!-- Medium-style Editor -->
     <div class="medium-editor">
       <!-- Top Action Buttons -->
@@ -54,7 +54,8 @@
             </button>
           </mat-menu>
           <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
-            [disabled]="isPublishing() || showPreview() || isTranscribing()" matTooltip="Dictate content">
+            [disabled]="isPublishing() || (showPreview() && !showSplitView()) || isTranscribing()"
+            matTooltip="Dictate content">
             @if (isTranscribing()) {
             <mat-icon class="spinning">sync</mat-icon>
             } @else {
@@ -65,45 +66,60 @@
             [class.active]="showPreview()">
             <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
+          <button mat-icon-button (click)="toggleSplitView()" matTooltip="Split view" [class.active]="showSplitView()"
+            [disabled]="!canUseSplitView()">
+            <mat-icon>split_scene</mat-icon>
+          </button>
         </div>
       </div>
 
-      <!-- Featured Image Preview -->
-      @if (article().image && !showPreview()) {
-      <div class="featured-image-preview">
-        <img [src]="article().image" [alt]="article().title || 'Featured image'"
-          [title]="article().title || 'Featured image'" loading="lazy" />
-        <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
-          <mat-icon>close</mat-icon>
-        </button>
+      <div class="editor-layout" [class.split-view]="showSplitView()">
+        <div class="editor-pane">
+
+          <!-- Featured Image Preview -->
+          @if (article().image && (!showPreview() || showSplitView())) {
+          <div class="featured-image-preview">
+            <img [src]="article().image" [alt]="article().title || 'Featured image'"
+              title="{{ article().title || 'Featured image' }}" loading="lazy" />
+            <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+
+          <!-- Title Input -->
+          @if (!showPreview() || showSplitView()) {
+          <input #titleInput type="text" class="title-input" placeholder="Title" [value]="article().title"
+            (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
+
+          <!-- Summary Input -->
+          <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
+            (input)="updateSummary($any($event.target).value)"></textarea>
+          }
+
+          <!-- Content Editor or Preview -->
+          @if (!showPreview() || showSplitView()) {
+          <!-- Write Mode -->
+          <div class="write-tab">
+            <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
+              [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)">
+            </app-rich-text-editor>
+          </div>
+          } @else {
+          <!-- Preview Mode -->
+          <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+          }
+        </div>
+
+        @if (showSplitView()) {
+        <div class="preview-pane">
+          <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+        </div>
+        }
       </div>
-      }
-
-      <!-- Title Input -->
-      @if (!showPreview()) {
-      <input #titleInput type="text" class="title-input" placeholder="Title" [value]="article().title"
-        (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
-
-      <!-- Summary Input -->
-      <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
-        (input)="updateSummary($any($event.target).value)"></textarea>
-      }
-
-      <!-- Content Editor or Preview -->
-      @if (!showPreview()) {
-      <!-- Write Mode -->
-      <div class="write-tab">
-        <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
-          [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)">
-        </app-rich-text-editor>
-      </div>
-      } @else {
-      <!-- Preview Mode -->
-      <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
-      }
     </div>
 
-    @if (!showPreview()) {
+    @if (!showPreview() || showSplitView()) {
     <!-- Article Metadata -->
     <div class="metadata-section">
       <div class="dTag-field-container">
