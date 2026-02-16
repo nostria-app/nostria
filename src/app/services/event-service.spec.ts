@@ -245,5 +245,29 @@ describe('EventService getEventTags', () => {
       expect(result.replyId).toBe('parent-reply-id');
       expect(result.replyAuthor).toBe('parent-author-pubkey');
     });
+
+    it('should infer replyId from last non-root e-tag when root marker exists without reply marker', () => {
+      // Some clients include root marker and inherited unmarked thread tags,
+      // but omit the explicit reply marker for the direct parent.
+      const mockEvent: Event = {
+        id: 'child-reply-id',
+        pubkey: 'child-author-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'Nested reply without explicit reply marker',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'root-event-id', '', 'root', 'root-author-pubkey'],
+          ['e', 'intermediate-reply-id', '', '', 'intermediate-author-pubkey'],
+          ['p', 'intermediate-author-pubkey'],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      expect(result.rootId).toBe('root-event-id');
+      expect(result.replyId).toBe('intermediate-reply-id');
+      expect(result.replyAuthor).toBe('intermediate-author-pubkey');
+    });
   });
 });

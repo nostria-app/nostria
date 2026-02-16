@@ -553,8 +553,7 @@
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
-            (keydown)="onMessageKeydown($event)" rows="1" cdkTextareaAutosize cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="6"></textarea>
+            (keydown)="onMessageKeydown($event)" rows="1"></textarea>
           @if (isVoiceListening()) {
           <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
             [disabled]="isSending()" matTooltip="Stop recording">

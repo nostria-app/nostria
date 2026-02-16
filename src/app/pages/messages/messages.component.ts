@@ -13,8 +13,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { fromEvent } from 'rxjs';
-import { auditTime } from 'rxjs/operators';
+
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,7 +30,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
-import { TextFieldModule } from '@angular/cdk/text-field';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -133,7 +131,6 @@ interface MessageGroup {
     MatTabsModule,
     MatSidenavModule,
     MatProgressBarModule,
-    TextFieldModule,
     RouterModule,
     LoadingOverlayComponent,
     UserProfileComponent,
@@ -770,42 +767,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.setupChatListScrollListener();
     }, 500);
 
-    // Recalculate textarea height on initial render and when viewport size changes.
-    // This prevents occasional autosize mis-measurements at intermediate widths.
-    setTimeout(() => {
-      this.resizeMessageInputToContent();
-    }, 0);
-
-    fromEvent(window, 'resize').pipe(
-      auditTime(120),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => {
-      this.resizeMessageInputToContent();
-    });
-  }
-
-  private resizeMessageInputToContent(): void {
-    const textarea = this.messageInput?.nativeElement;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.height = 'auto';
-
-    const computedStyle = window.getComputedStyle(textarea);
-    const maxHeight = Number.parseFloat(computedStyle.maxHeight);
-    const targetHeight = textarea.scrollHeight;
-
-    if (Number.isFinite(maxHeight) && maxHeight > 0 && targetHeight > maxHeight) {
-      textarea.style.height = `${maxHeight}px`;
-      // Scroll to bottom to ensure cursor is visible when max height is reached
-      textarea.scrollTop = textarea.scrollHeight;
-      return;
-    }
-
-    textarea.style.height = `${targetHeight}px`;
-    // Scroll to bottom to ensure cursor is visible when text wraps
-    textarea.scrollTop = textarea.scrollHeight;
   }
 
   /**
