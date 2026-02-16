@@ -779,6 +779,79 @@
   }
 }
 
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  :host {
+    color: #000;
+    background: #fff;
+  }
+
+  .article-container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .article-top-actions,
+  .article-tts-controls,
+  .engagement-row,
+  .top-zappers,
+  .article-footer,
+  .reactions-summary-container,
+  .article-tagged-users-warning {
+    display: none !important;
+  }
+
+  .article-header {
+    margin-bottom: 10mm !important;
+    page-break-after: avoid;
+  }
+
+  .article-hero-image,
+  .article-hero-image img,
+  .article-author,
+  .article-tags {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .article-summary {
+    background: #fff !important;
+    border: 1px solid #d0d0d0 !important;
+    box-shadow: none !important;
+    border-left: 3px solid #555 !important;
+  }
+
+  .article-content,
+  .markdown-content {
+    color: #000 !important;
+  }
+
+  .markdown-content ::ng-deep a {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+
+  .markdown-content ::ng-deep img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  .markdown-content ::ng-deep pre,
+  .markdown-content ::ng-deep blockquote,
+  .json-content,
+  .json-property {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
 // JSON content styles
 .json-content {
   font-family: 'Courier New', Courier, monospace;

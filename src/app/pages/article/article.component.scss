@@ -251,7 +251,7 @@
 .article-content {
   margin-bottom: 32px;
 
-.markdown-content {
+  .markdown-content {
     font-size: var(--text-base);
     line-height: 1.7;
     color: var(--mat-sys-on-surface);
@@ -635,7 +635,7 @@
   }
 
   // Direct mat-icon children (Share, Reply, Bookmark)
-  > mat-icon {
+  >mat-icon {
     font-size: 22px;
     width: 22px;
     height: 22px;
@@ -661,6 +661,7 @@
 
   // Normalize child component button styling
   ::ng-deep {
+
     app-reaction-button,
     app-zap-button {
       display: inline-flex;
@@ -750,6 +751,7 @@
   }
 
   ::ng-deep {
+
     .reacted mat-icon,
     button.reacted {
       color: #e91e63;
@@ -770,7 +772,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -782,7 +784,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -820,7 +822,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -898,6 +900,24 @@
 
 // Print-specific styles for articles
 @media print {
+  :host {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .panel-header,
+  .article-loading,
+  .article-error,
+  .article-empty-state {
+    display: none !important;
+  }
+
+  .article-container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .article-container {
     max-width: none !important;
     padding: 0 !important;

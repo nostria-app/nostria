@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { ApplicationRef, Component, EnvironmentInjector, PLATFORM_ID, ViewRef, computed, createComponent, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +25,7 @@ import { FavoritesService } from '../../services/favorites.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import type { NostrRecord } from '../../interfaces';
+import { EventImageService } from '../../services/event-image.service';
 
 export interface ShareArticleDialogData {
   title: string;
@@ -211,6 +213,24 @@ export interface ShareArticleDialogData {
           <span class="action-icon-circle"><mat-icon>data_object</mat-icon></span>
           <span class="action-label">Copy Embed</span>
         </button>
+        @if (data.event) {
+        <button class="share-action-item" (click)="downloadScreenshot()">
+          <span class="action-icon-circle"><mat-icon>image</mat-icon></span>
+          <span class="action-label">Screenshot</span>
+        </button>
+        }
+        @if (isArticleShare()) {
+        <button class="share-action-item" (click)="printArticle()">
+          <span class="action-icon-circle"><mat-icon>print</mat-icon></span>
+          <span class="action-label">Print</span>
+        </button>
+        }
+        @if (isArticleShare()) {
+        <button class="share-action-item" (click)="saveArticleAsHtml()">
+          <span class="action-icon-circle"><mat-icon>description</mat-icon></span>
+          <span class="action-label">Save Article</span>
+        </button>
+        }
       </div>
     </div>
     <div dialog-actions class="dialog-actions">
@@ -582,6 +602,10 @@ export class ShareArticleDialogComponent {
   private messagingService = inject(MessagingService);
   private favoritesService = inject(FavoritesService);
   private accountLocalState = inject(AccountLocalStateService);
+  private eventImageService = inject(EventImageService);
+  private appRef = inject(ApplicationRef);
+  private environmentInjector = inject(EnvironmentInjector);
+  private platformId = inject(PLATFORM_ID);
 
   // Contact search
   searchInput = signal<string>('');
@@ -704,6 +728,19 @@ export class ShareArticleDialogComponent {
 
   canSend = computed(() => this.selectedRecipients().length > 0 && !this.isSending());
   canRepostOrQuote = computed(() => !!this.data.event && !this.repostService.isProtectedEvent(this.data.event));
+  isArticleShare = computed(() => {
+    const shareUrl = (this.data.url || '').toLowerCase();
+    const encodedId = (this.data.encodedId || '').toLowerCase();
+
+    return (
+      this.data.kind === kinds.LongFormArticle ||
+      !!this.data.identifier ||
+      !!this.data.naddr ||
+      encodedId.startsWith('naddr1') ||
+      shareUrl.includes('/a/') ||
+      shareUrl.includes('/article/')
+    );
+  });
 
   // Track repost state
   hasReposted = signal<boolean>(false);
@@ -1021,6 +1058,226 @@ export class ShareArticleDialogComponent {
       this.snackBar.open('Embed code copied!', 'Close', { duration: 2000 });
       this.dialogRef?.close();
     });
+  }
+
+  async downloadScreenshot(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const ev = this.data.event;
+    if (!ev) {
+      this.snackBar.open('Screenshot is only available for events', 'Close', { duration: 2500 });
+      return;
+    }
+
+    interface EventImageComponentRef {
+      hostView: ViewRef;
+      setInput: (name: string, value: unknown) => void;
+      changeDetectorRef: { detectChanges: () => void };
+      destroy: () => void;
+      instance: {
+        ready: {
+          subscribe: (fn: () => void) => { unsubscribe: () => void };
+        };
+      };
+    }
+
+    let container: HTMLDivElement | null = null;
+    let componentRef: EventImageComponentRef | null = null;
+
+    try {
+      this.snackBar.open('Generating screenshot...', undefined, { duration: 2000 });
+
+      container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-499px';
+      container.style.top = '0';
+      container.style.width = '500px';
+      container.style.background = 'var(--mat-sys-surface)';
+      container.className = document.body.className;
+      document.body.appendChild(container);
+
+      const { EventImageComponent } = await import('../event-image/event-image.component');
+
+      componentRef = createComponent(EventImageComponent, {
+        environmentInjector: this.environmentInjector,
+        hostElement: container,
+      }) as EventImageComponentRef;
+
+      componentRef.setInput('event', ev);
+      componentRef.setInput('width', 500);
+
+      this.appRef.attachView(componentRef.hostView);
+      componentRef.changeDetectorRef.detectChanges();
+
+      const createdComponentRef = componentRef;
+
+      await new Promise<void>(resolve => {
+        const subscription = createdComponentRef.instance.ready.subscribe(() => {
+          subscription.unsubscribe();
+          resolve();
+        });
+
+        setTimeout(() => {
+          subscription.unsubscribe();
+          resolve();
+        }, 2000);
+      });
+
+      componentRef.changeDetectorRef.detectChanges();
+      await this.waitForImages(container);
+
+      const element = container.querySelector('.event-image-container') as HTMLElement;
+      if (!element) {
+        throw new Error('Could not find event image container');
+      }
+
+      const computedStyle = getComputedStyle(element);
+      const backgroundColor = computedStyle.backgroundColor || '#ffffff';
+
+      const blob = await this.eventImageService.captureElementAsImage(element, {
+        backgroundColor,
+        pixelRatio: 2,
+      });
+
+      if (!blob) {
+        this.snackBar.open('Failed to generate screenshot', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const safeTitle = (this.data.title || 'nostria').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const filename = `${safeTitle || 'nostria'}-screenshot-${Date.now()}.png`;
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      this.snackBar.open('Screenshot downloaded', 'Close', { duration: 2500 });
+      this.dialogRef?.close();
+    } catch (error) {
+      console.error('Failed to download screenshot:', error);
+      this.snackBar.open('Failed to generate screenshot', 'Close', { duration: 3000 });
+    } finally {
+      if (componentRef) {
+        this.appRef.detachView(componentRef.hostView);
+        componentRef.destroy();
+      }
+      if (container && document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    }
+  }
+
+  saveArticleAsHtml(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const title = this.escapeHtml(this.data.title || 'Article');
+    const summary = this.escapeHtml(this.data.summary || '');
+    const url = this.escapeHtml(this.getShareUrl());
+    const author = this.escapeHtml(this.getAuthorDisplay());
+    const content = this.escapeHtml(this.data.event?.content || this.data.summary || '');
+    const savedAt = new Date().toISOString();
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 24px; line-height: 1.5; }
+    main { max-width: 860px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; }
+    .meta { margin-bottom: 20px; color: #555; font-size: 14px; }
+    .summary { margin: 16px 0; }
+    .content { white-space: pre-wrap; word-break: break-word; }
+    a { word-break: break-all; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${title}</h1>
+    <div class="meta">By ${author} · Saved ${savedAt}</div>
+    <div class="meta">Source: <a href="${url}">${url}</a></div>
+    ${summary ? `<p class="summary">${summary}</p>` : ''}
+    ${content ? `<article class="content">${content}</article>` : ''}
+  </main>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const safeTitle = (this.data.title || 'article').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const filename = `${safeTitle || 'article'}-${Date.now()}.html`;
+
+    const fileUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(fileUrl);
+
+    this.snackBar.open('Article HTML saved', 'Close', { duration: 2500 });
+    this.dialogRef?.close();
+  }
+
+  printArticle(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const url = this.getShareUrl();
+    const printWindow = window.open(url, '_blank');
+
+    if (!printWindow) {
+      this.snackBar.open('Popup blocked. Allow popups to print.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const triggerPrint = () => {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 500);
+    };
+
+    printWindow.addEventListener('load', triggerPrint, { once: true });
+    this.dialogRef?.close();
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  private waitForImages(container: HTMLElement): Promise<void> {
+    const images = container.querySelectorAll('img');
+    const promises: Promise<void>[] = [];
+
+    images.forEach(img => {
+      if (!img.complete) {
+        promises.push(new Promise(resolve => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          setTimeout(resolve, 3000);
+        }));
+      }
+    });
+
+    return Promise.all(promises).then(() => undefined);
   }
 
   private getEncodedId(): string {
