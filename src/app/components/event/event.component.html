@@ -83,8 +83,8 @@
     @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22 || targetItem.event.kind === 34235 ||
     targetItem.event.kind === 34236) {
     <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()" [trustedByPubkey]="item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
@@ -167,8 +167,7 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"
+      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
@@ -226,8 +225,9 @@
           <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
           @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22 || rootRecordData.event.kind
           === 34235 || rootRecordData.event.kind === 34236) {
-           <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
+          <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
+            [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+            [inFeedsPanel]="inFeedsPanel()"></app-video-event>
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (rootRecordData.event.kind === 1222 || rootRecordData.event.kind === 1244) {
@@ -303,8 +303,7 @@
           }
           @if (collapsedVideosExpanded()) {
           @for (video of rootCollapsedMedia().videos.slice(1); track video.url) {
-          <app-inline-video-player [src]="video.url" [poster]="video.poster"
-            [style.aspect-ratio]="video.aspectRatio"
+          <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
             [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
@@ -355,9 +354,9 @@
           parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22 || parentRecordData.event.kind ===
           34235 || parentRecordData.event.kind === 34236
           ) {
-           <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
-             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
-             [mediaEventIndex]="mediaEventIndex()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
+          <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
+            [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+            [inFeedsPanel]="inFeedsPanel()"></app-video-event>
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (parentRecordData.event.kind === 1222 || parentRecordData.event.kind === 1244) {
@@ -433,8 +432,7 @@
           }
           @if (collapsedVideosExpanded()) {
           @for (video of parentCollapsedMedia().videos.slice(1); track video.url) {
-          <app-inline-video-player [src]="video.url" [poster]="video.poster"
-            [style.aspect-ratio]="video.aspectRatio"
+          <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
             [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
@@ -474,8 +472,8 @@
     @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()" [trustedByPubkey]="trustedByPubkey()"
+      [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -559,8 +557,7 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"
+      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
@@ -600,8 +597,8 @@
     @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
-      [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()" [trustedByPubkey]="trustedByPubkey()"
+      [inFeedsPanel]="inFeedsPanel()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -689,8 +686,7 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="video.aspectRatio"
+      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
@@ -719,8 +715,24 @@
   <mat-card-actions class="note-footer">
     @if (supportsReactions()) {
 
+    @if (showTaggedUsersSpamWarning()) {
+    <div class="event-tagged-users-warning" role="alert">
+      <div class="warning-message">
+        <mat-icon>warning</mat-icon>
+        <span i18n="@@event.tagged-users-warning">This event tags {{ taggedUsersCount() }} users and is likely spam.
+          React with caution.</span>
+      </div>
+      @if (requiresSpamConfirmation()) {
+      <button mat-button class="spam-confirm-button" (click)="confirmSpamActions($event)"
+        i18n="@@event.confirm-spam-actions">
+        Enable actions
+      </button>
+      }
+    </div>
+    }
+
     <!-- Unified action toolbar -->
-    <div class="actions-row" [class.compact]="compact()"
+    <div class="actions-row" [class.compact]="compact()" [class.actions-locked]="requiresSpamConfirmation()"
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
       [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
       [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
@@ -757,7 +769,8 @@
       </div>
 
       <!-- Reply (opens note editor) -->
-      <div class="action-button comment-action" role="button" tabindex="0" (click)="openReplyEditor($event)">
+      <div class="action-button comment-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+        (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
         <span class="action-count">{{ replyCountDisplay() }}</span>
@@ -766,7 +779,7 @@
       </div>
 
       <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button" tabindex="0"
+      <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
         (click)="openShareDialog(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
         @if (shareCount() > 0) {
@@ -787,7 +800,8 @@
       </div>
 
       <!-- Bookmark (inline) -->
-      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="onBookmarkClick($event)">
+      <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+        (click)="onBookmarkClick($event)">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
         <span class="action-text">Bookmark</span>
       </div>

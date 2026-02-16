@@ -291,6 +291,49 @@ export class ArticleDisplayComponent {
   contentLoading = computed(() => this.article().contentLoading);
   isJsonContent = computed(() => this.article().isJsonContent);
   jsonData = computed(() => this.article().jsonData);
+  readonly taggedUsersSpamThreshold = 50;
+
+  taggedUsersCount = computed<number>(() => {
+    const currentEvent = this.event();
+    if (!currentEvent?.tags?.length) {
+      return 0;
+    }
+
+    const taggedUsers = new Set(
+      currentEvent.tags
+        .filter(tag => tag[0] === 'p' && typeof tag[1] === 'string' && tag[1].length > 0)
+        .map(tag => tag[1])
+    );
+
+    return taggedUsers.size;
+  });
+
+  showTaggedUsersSpamWarning = computed<boolean>(() => {
+    return this.taggedUsersCount() > this.taggedUsersSpamThreshold;
+  });
+
+  confirmedSpamEventId = signal<string | null>(null);
+
+  isSpamConfirmedForCurrentEvent = computed<boolean>(() => {
+    const currentEvent = this.event();
+    if (!currentEvent) {
+      return false;
+    }
+    return this.confirmedSpamEventId() === currentEvent.id;
+  });
+
+  requiresSpamConfirmation = computed<boolean>(() => {
+    return this.showTaggedUsersSpamWarning() && !this.isSpamConfirmedForCurrentEvent();
+  });
+
+  confirmSpamActions(event?: MouseEvent): void {
+    event?.stopPropagation();
+    const currentEvent = this.event();
+    if (!currentEvent) {
+      return;
+    }
+    this.confirmedSpamEventId.set(currentEvent.id);
+  }
 
   // Computed read time based on word count (~200 words per minute)
   readTime = computed(() => {

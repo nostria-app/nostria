@@ -2,11 +2,8 @@
   @if (view() === 'icon') {
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-    [disabled]="isLoadingReactions()"
-    (pointerdown)="onPointerDown()"
-    (pointerup)="onPointerUp($event)"
-    (pointerleave)="onPointerLeave()"
-    (click)="$event.stopPropagation(); $event.preventDefault()">
+    [disabled]="isLoadingReactions()" (pointerdown)="onPointerDown()" (pointerup)="onPointerUp($event)"
+    (pointerleave)="onPointerLeave()" (click)="$event.stopPropagation(); $event.preventDefault()">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content" class="emoji-icon-img">
@@ -25,15 +22,12 @@
   <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
     <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()">
-      
+
       <!-- Search bar -->
       <div class="emoji-search">
         <mat-icon class="search-icon">search</mat-icon>
-        <input type="text" 
-          placeholder="Search emojis..." 
-          [ngModel]="emojiSearchQuery()"
-          (ngModelChange)="emojiSearchQuery.set($event)"
-          (click)="$event.stopPropagation()">
+        <input type="text" placeholder="Search emojis..." [ngModel]="emojiSearchQuery()"
+          (ngModelChange)="emojiSearchQuery.set($event)" (click)="$event.stopPropagation()">
         @if (emojiSearchQuery()) {
         <button mat-icon-button class="clear-search" (click)="emojiSearchQuery.set(''); $event.stopPropagation()">
           <mat-icon>close</mat-icon>
@@ -46,10 +40,8 @@
       <div class="search-results">
         <div class="emoji-grid">
           @for (emoji of searchResults()?.unicode || []; track emoji) {
-          <button mat-icon-button class="emoji-button" 
-            [class.selected]="userReaction()?.event?.content === emoji"
-            (click)="addReaction(emoji); $event.stopPropagation()" 
-            [disabled]="isLoadingReactions()">
+          <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+            (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
             {{ emoji }}
           </button>
           }
@@ -70,7 +62,7 @@
       <!-- Category tabs with icons -->
       <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
         class="emoji-category-tabs">
-        
+
         <!-- Recent/Frequently used tab -->
         <mat-tab>
           <ng-template mat-tab-label>
@@ -82,8 +74,7 @@
               @for (recent of recentEmojis(); track recent.emoji) {
               <button mat-icon-button class="emoji-button"
                 [class.selected]="userReaction()?.event?.content === recent.emoji"
-                (click)="addReaction(recent.emoji); $event.stopPropagation()" 
-                [disabled]="isLoadingReactions()"
+                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
                 [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
                 @if (recent.url) {
                 <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
@@ -107,8 +98,7 @@
               <div class="section-label">Popular</div>
               <div class="emoji-grid">
                 @for (emoji of quickReactions; track emoji) {
-                <button mat-icon-button class="emoji-button"
-                  (click)="addReaction(emoji); $event.stopPropagation()" 
+                <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
                   [disabled]="isLoadingReactions()">
                   {{ emoji }}
                 </button>
@@ -135,10 +125,8 @@
           <div class="emoji-tab-content">
             <div class="emoji-grid">
               @for (emoji of category.emojis; track emoji) {
-              <button mat-icon-button class="emoji-button" 
-                [class.selected]="userReaction()?.event?.content === emoji"
-                (click)="addReaction(emoji); $event.stopPropagation()" 
-                [disabled]="isLoadingReactions()">
+              <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+                (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
                 {{ emoji }}
               </button>
               }
@@ -203,15 +191,12 @@
     <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
       <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
         (keydown)="$event.stopPropagation()">
-        
+
         <!-- Search bar -->
         <div class="emoji-search">
           <mat-icon class="search-icon">search</mat-icon>
-          <input type="text" 
-            placeholder="Search emojis..." 
-            [ngModel]="emojiSearchQuery()"
-            (ngModelChange)="emojiSearchQuery.set($event)"
-            (click)="$event.stopPropagation()">
+          <input type="text" placeholder="Search emojis..." [ngModel]="emojiSearchQuery()"
+            (ngModelChange)="emojiSearchQuery.set($event)" (click)="$event.stopPropagation()">
           @if (emojiSearchQuery()) {
           <button mat-icon-button class="clear-search" (click)="emojiSearchQuery.set(''); $event.stopPropagation()">
             <mat-icon>close</mat-icon>
@@ -224,10 +209,8 @@
         <div class="search-results">
           <div class="emoji-grid">
             @for (emoji of searchResults()?.unicode || []; track emoji) {
-            <button mat-icon-button class="emoji-button" 
-              [class.selected]="userReaction()?.event?.content === emoji"
-              (click)="addReaction(emoji); $event.stopPropagation()" 
-              [disabled]="isLoadingReactions()">
+            <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
               {{ emoji }}
             </button>
             }
@@ -248,7 +231,7 @@
         <!-- Category tabs with icons -->
         <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
           class="emoji-category-tabs">
-          
+
           <!-- Recent/Frequently used tab -->
           <mat-tab>
             <ng-template mat-tab-label>
@@ -260,13 +243,13 @@
                 @for (recent of recentEmojis(); track recent.emoji) {
                 <button mat-icon-button class="emoji-button"
                   [class.selected]="userReaction()?.event?.content === recent.emoji"
-                  (click)="addReaction(recent.emoji); $event.stopPropagation()" 
-                  [disabled]="isLoadingReactions()"
+                  (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
                   [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
                   @if (recent.url) {
                   <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
                   } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-                  <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+                  <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji"
+                    class="custom-emoji-img">
                   } @else {
                   {{ recent.emoji }}
                   }
@@ -285,8 +268,7 @@
                 <div class="section-label">Popular</div>
                 <div class="emoji-grid">
                   @for (emoji of quickReactions; track emoji) {
-                  <button mat-icon-button class="emoji-button"
-                    (click)="addReaction(emoji); $event.stopPropagation()" 
+                  <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
                     [disabled]="isLoadingReactions()">
                     {{ emoji }}
                   </button>
@@ -313,10 +295,8 @@
             <div class="emoji-tab-content">
               <div class="emoji-grid">
                 @for (emoji of category.emojis; track emoji) {
-                <button mat-icon-button class="emoji-button" 
-                  [class.selected]="userReaction()?.event?.content === emoji"
-                  (click)="addReaction(emoji); $event.stopPropagation()" 
-                  [disabled]="isLoadingReactions()">
+                <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+                  (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
                   {{ emoji }}
                 </button>
                 }
@@ -364,13 +344,13 @@
       [matTooltip]="group.count + ' reaction' + (group.count > 1 ? 's' : '')"
       (click)="addReaction(group.content); $event.stopPropagation()">
       @if (group.content.startsWith(':') && group.content.endsWith(':')) {
-        @if (getCustomEmojiUrlForGroup(group.content); as emojiUrl) {
-          <img [src]="emojiUrl" [alt]="group.content" class="reaction-emoji-img">
-        } @else {
-          <span class="reaction-emoji">{{ group.content }}</span>
-        }
+      @if (getCustomEmojiUrlForGroup(group.content); as emojiUrl) {
+      <img [src]="emojiUrl" [alt]="group.content" class="reaction-emoji-img">
       } @else {
-        <span class="reaction-emoji">{{ getReactionDisplay(group.content) }}</span>
+      <span class="reaction-emoji">{{ group.content }}</span>
+      }
+      } @else {
+      <span class="reaction-emoji">{{ getReactionDisplay(group.content) }}</span>
       }
       <span class="reaction-chip-count">{{ group.count }}</span>
     </button>
@@ -381,10 +361,7 @@
 </div>
 
 @if (showSigningErrorDialog()) {
-<app-custom-dialog
-  [title]="'Signing Error'"
-  [width]="'480px'"
-  (closed)="closeSigningErrorDialog()">
+<app-custom-dialog [title]="'Signing Error'" [width]="'480px'" (closed)="closeSigningErrorDialog()">
 
   <div dialog-content>
     <div class="signing-error-content">
