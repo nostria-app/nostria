@@ -5,7 +5,8 @@
   <button class="list-selector-button" mat-button [matMenuTriggerFor]="followSetsMenu"
     [class.has-selection]="selectedFollowSet()">
     <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' :
-      (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : 'group')) : 'people' }}</mat-icon>
+      (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : (selectedFollowSet()!.dTag ===
+      'nostria-cached-profiles' ? 'storage' : 'group'))) : 'people' }}</mat-icon>
     <span class="selector-label">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</span>
     @if (selectedFollowSet()) {
     <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
@@ -29,6 +30,11 @@
       <mat-icon>star</mat-icon>
       <span class="menu-item-label">Favorites</span>
       <span class="menu-item-count">{{ favorites.pubkeys.length }}</span>
+    </button>
+    <button mat-menu-item (click)="selectCachedProfiles()" [class.active]="isCachedListSelected()">
+      <mat-icon>storage</mat-icon>
+      <span class="menu-item-label">Cached</span>
+      <span class="menu-item-count">{{ cachedProfilesSet().pubkeys.length }}</span>
     </button>
     }
     @if (otherFollowSets().length > 0) {
@@ -65,7 +71,7 @@
   </mat-menu>
 
   <!-- Edit List button (only when a list is selected) - hidden on small screens -->
-  @if (selectedFollowSet()) {
+  @if (canUseListActions()) {
   <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" class="hide-small">
     <mat-icon>edit</mat-icon>
   </button>
@@ -118,7 +124,7 @@
 
   <mat-menu #moreOptionsMenu="matMenu">
     <!-- Edit List (only when a list is selected) -->
-    @if (selectedFollowSet()) {
+    @if (canUseListActions()) {
     <button mat-menu-item (click)="openEditListDialog()">
       <mat-icon>edit</mat-icon>
       <span>Edit List</span>
@@ -239,12 +245,9 @@
       </div>
       } @else {
       <!-- Apply different container classes based on viewMode() -->
-      <div class="people-container"
-        [class.comfortable-list]="viewMode() === 'comfortable'"
-        [class.medium-grid]="viewMode() === 'medium'"
-        [class.small-grid]="viewMode() === 'small'"
-        [class.details-list]="viewMode() === 'details'"
-        >
+      <div class="people-container" [class.comfortable-list]="viewMode() === 'comfortable'"
+        [class.medium-grid]="viewMode() === 'medium'" [class.small-grid]="viewMode() === 'small'"
+        [class.details-list]="viewMode() === 'details'">
         @for (pubkey of visiblePeople(); track pubkey) {
         <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
           (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"

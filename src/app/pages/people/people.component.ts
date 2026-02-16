@@ -39,6 +39,7 @@ import { ProfileHoverCardService } from '../../services/profile-hover-card.servi
 import { UtilitiesService } from '../../services/utilities.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { TrustService } from '../../services/trust.service';
+import { DatabaseService } from '../../services/database.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -49,6 +50,8 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
 // View modes in cycling order
 const VIEW_MODES = ['comfortable', 'medium', 'small', 'details'] as const;
 type ViewModeType = typeof VIEW_MODES[number];
+
+const CACHED_PROFILES_D_TAG = 'nostria-cached-profiles';
 
 @Component({
   selector: 'app-people',
@@ -91,6 +94,7 @@ export class PeopleComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private trustService = inject(TrustService);
+  private database = inject(DatabaseService);
   private destroyRef = inject(DestroyRef);
 
   // Search functionality
@@ -170,6 +174,7 @@ export class PeopleComponent implements OnDestroy {
   // Follow set selection
   selectedFollowSetDTag = signal<string | null>(null);
   followSetProfiles = signal<FollowingProfile[]>([]);
+  cachedProfilePubkeys = signal<string[]>([]);
 
   // All follow sets (no limit for dropdown in People component)
   allFollowSets = computed(() => {
@@ -187,11 +192,27 @@ export class PeopleComponent implements OnDestroy {
     return this.allFollowSets().filter(set => set.dTag !== 'nostria-favorites');
   });
 
+  // Computed: Virtual "Cached" list backed by locally cached profile metadata (kind 0)
+  cachedProfilesSet = computed<FollowSet>(() => ({
+    id: CACHED_PROFILES_D_TAG,
+    dTag: CACHED_PROFILES_D_TAG,
+    title: 'Cached',
+    pubkeys: this.cachedProfilePubkeys(),
+    createdAt: 0,
+    isPrivate: false,
+  }));
+
+  isCachedListSelected = computed(() => this.selectedFollowSetDTag() === CACHED_PROFILES_D_TAG);
+  canUseListActions = computed(() => this.selectedFollowSet() !== null && !this.isCachedListSelected());
+
   // Computed: Get the selected follow set reactively from the service
   // This ensures we always have the latest version with updated pubkeys
   selectedFollowSet = computed(() => {
     const dTag = this.selectedFollowSetDTag();
     if (!dTag) return null;
+    if (dTag === CACHED_PROFILES_D_TAG) {
+      return this.cachedProfilesSet();
+    }
     return this.followSetsService.getFollowSetByDTag(dTag) ?? null;
   });
 
@@ -411,6 +432,14 @@ export class PeopleComponent implements OnDestroy {
         return;
       }
 
+      if (setDTag === CACHED_PROFILES_D_TAG) {
+        const currentDTag = untracked(() => this.selectedFollowSet()?.dTag);
+        if (currentDTag !== CACHED_PROFILES_D_TAG) {
+          this.selectCachedProfilesFromRoute();
+        }
+        return;
+      }
+
       // If there's a setId in the URL, try to select that list
       if (setDTag && followSets.length > 0) {
         const matchingSet = followSets.find(s => s.dTag === setDTag);
@@ -465,6 +494,14 @@ export class PeopleComponent implements OnDestroy {
         // Use setTimeout to ensure DOM is ready
         setTimeout(() => this.setupInfiniteScroll(), 100);
       }
+    });
+
+    effect(() => {
+      if (!this.app.initialized()) {
+        return;
+      }
+
+      this.refreshCachedProfilesList();
     });
   }
 
@@ -793,10 +830,35 @@ export class PeopleComponent implements OnDestroy {
       // When clearing selection, update immediately
       this.selectedFollowSetDTag.set(null);
       this.followSetProfiles.set([]);
+      this.cachedProfilePubkeys.set([]);
 
       // Navigate back to the main people page
       this.router.navigate(['/people']);
     }
+  }
+
+  async selectCachedProfiles(): Promise<void> {
+    this.displayLimit.set(this.PAGE_SIZE);
+    this.updateSearch('');
+    this.selectedFollowSetDTag.set(CACHED_PROFILES_D_TAG);
+
+    const pubkeys = await this.getCachedProfilePubkeys();
+    this.cachedProfilePubkeys.set(pubkeys);
+    this.setMinimalFollowSetProfiles(pubkeys);
+    this.loadCachedProfilesInBackground(pubkeys);
+
+    this.router.navigate(['/people/list', CACHED_PROFILES_D_TAG]);
+  }
+
+  private async selectCachedProfilesFromRoute(): Promise<void> {
+    this.displayLimit.set(this.PAGE_SIZE);
+    this.updateSearch('');
+    this.selectedFollowSetDTag.set(CACHED_PROFILES_D_TAG);
+
+    const pubkeys = await this.getCachedProfilePubkeys();
+    this.cachedProfilePubkeys.set(pubkeys);
+    this.setMinimalFollowSetProfiles(pubkeys);
+    this.loadCachedProfilesInBackground(pubkeys);
   }
 
   /**
@@ -823,6 +885,40 @@ export class PeopleComponent implements OnDestroy {
     this.displayLimit.set(this.PAGE_SIZE);
     this.selectedFollowSetDTag.set(null);
     this.followSetProfiles.set([]);
+    this.cachedProfilePubkeys.set([]);
+  }
+
+  private async getCachedProfilePubkeys(): Promise<string[]> {
+    const profileEvents = await this.database.getEventsByKind(0);
+    const latestByPubkey = new Map<string, number>();
+
+    for (const event of profileEvents) {
+      if (!event.pubkey) {
+        continue;
+      }
+
+      const existingCreatedAt = latestByPubkey.get(event.pubkey);
+      if (existingCreatedAt === undefined || event.created_at > existingCreatedAt) {
+        latestByPubkey.set(event.pubkey, event.created_at);
+      }
+    }
+
+    return Array.from(latestByPubkey.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([pubkey]) => pubkey);
+  }
+
+  private refreshCachedProfilesList(): void {
+    this.getCachedProfilePubkeys().then(pubkeys => {
+      this.cachedProfilePubkeys.set(pubkeys);
+
+      if (this.isCachedListSelected()) {
+        this.setMinimalFollowSetProfiles(pubkeys);
+        this.loadCachedProfilesInBackground(pubkeys);
+      }
+    }).catch(error => {
+      this.logger.error('[People] Failed to refresh cached profiles list:', error);
+    });
   }
 
   /**
@@ -859,6 +955,21 @@ export class PeopleComponent implements OnDestroy {
       }
     }).catch(error => {
       this.logger.error('Failed to load follow set profiles in background:', error);
+    });
+  }
+
+  private loadCachedProfilesInBackground(pubkeys: string[]): void {
+    if (pubkeys.length === 0) {
+      this.followSetProfiles.set([]);
+      return;
+    }
+
+    this.followingService.loadProfilesForPubkeys(pubkeys).then(profiles => {
+      if (this.isCachedListSelected()) {
+        this.followSetProfiles.set(profiles);
+      }
+    }).catch(error => {
+      this.logger.error('[People] Failed to load cached profiles in background:', error);
     });
   }
 
