@@ -346,7 +346,7 @@ describe('ContentNotificationService', () => {
   });
 
   describe('reaction fallback message', () => {
-    it('should not say "your note" when reacting to a note that only mentions the current account', async () => {
+    it('should create "mentioning you" reaction notification when reacted note mentions the current account', async () => {
       mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
 
       const now = Math.floor(Date.now() / 1000);
@@ -362,11 +362,11 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake((filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
         if (filter.kinds?.includes(kinds.Reaction)) {
-          return Promise.resolve([reactionEvent]);
+          return [reactionEvent] as unknown as T[];
         }
-        return Promise.resolve([]);
+        return [] as T[];
       });
 
       mockDatabase.getEventById.and.callFake((eventId: string) => {
@@ -375,7 +375,7 @@ describe('ContentNotificationService', () => {
             id: 'target-note-1',
             pubkey: 'cccc'.repeat(16),
             content: '',
-            tags: [],
+            tags: [['p', TEST_PUBKEY_A]],
             kind: kinds.ShortTextNote,
             created_at: now - 100,
             sig: '',
@@ -390,6 +390,50 @@ describe('ContentNotificationService', () => {
       expect(mockNotificationService.addNotification).toHaveBeenCalled();
       const notification = mockNotificationService.addNotification.calls.mostRecent().args[0] as { message?: string };
       expect(notification.message).toBe('Reacted to a note mentioning you');
+    });
+
+    it('should ignore reaction when reacted note is neither authored by nor mentioning the current account', async () => {
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+
+      const now = Math.floor(Date.now() / 1000);
+      const reactionEvent = {
+        id: 'reaction-3',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Reaction,
+        created_at: now,
+        content: '+',
+        tags: [
+          ['e', 'target-note-3'],
+          ['p', TEST_PUBKEY_A],
+        ],
+      };
+
+      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+        if (filter.kinds?.includes(kinds.Reaction)) {
+          return [reactionEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      mockDatabase.getEventById.and.callFake((eventId: string) => {
+        if (eventId === 'target-note-3') {
+          return Promise.resolve({
+            id: 'target-note-3',
+            pubkey: 'dddd'.repeat(16),
+            content: 'Parent note content',
+            tags: [],
+            kind: kinds.ShortTextNote,
+            created_at: now - 100,
+            sig: '',
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
     });
 
     it('should keep "your note" when reacting to a note authored by the current account', async () => {
@@ -408,11 +452,11 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake((filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
         if (filter.kinds?.includes(kinds.Reaction)) {
-          return Promise.resolve([reactionEvent]);
+          return [reactionEvent] as unknown as T[];
         }
-        return Promise.resolve([]);
+        return [] as T[];
       });
 
       mockDatabase.getEventById.and.callFake((eventId: string) => {

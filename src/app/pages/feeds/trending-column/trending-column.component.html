@@ -2,6 +2,26 @@
   <!-- Filter Options -->
   <div class="filter-options">
     <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>Source</mat-label>
+      <mat-select [value]="selectedSource()" (selectionChange)="onSourceChange($event.value)">
+        @for (option of sourceOptions; track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (selectedSource() === 'cached') {
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>List</mat-label>
+      <mat-select [value]="selectedList()" (selectionChange)="onListChange($event.value)">
+        @for (option of listOptions(); track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="filter-select">
       <mat-label>Time</mat-label>
       <mat-select [value]="selectedHours()" (selectionChange)="onHoursChange($event.value)">
         @for (option of hoursOptions; track option.value) {

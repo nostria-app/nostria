@@ -5,6 +5,7 @@
   .filter-options {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
     flex-shrink: 0;

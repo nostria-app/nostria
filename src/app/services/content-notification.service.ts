@@ -770,6 +770,7 @@ export class ContentNotificationService implements OnDestroy {
         // Try to fetch the original event content to show in the notification
         let reactedEventContent = '';
         let reactedEventAuthorPubkey: string | undefined;
+        let reactedEventMentionsRecipient = false;
         if (reactedEventId) {
           try {
             // First try to get from local database
@@ -783,6 +784,9 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             reactedEventAuthorPubkey = reactedEvent?.pubkey;
+            reactedEventMentionsRecipient = reactedEvent?.tags.some(
+              tag => tag[0] === 'p' && tag[1] === pubkey
+            ) ?? false;
 
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
@@ -794,6 +798,13 @@ export class ContentNotificationService implements OnDestroy {
         }
 
         const reactedToOwnNote = reactedEventAuthorPubkey === pubkey;
+        const reactedToMentionedNote = !reactedToOwnNote && reactedEventMentionsRecipient;
+
+        // Avoid false positives when the reaction event contains '#p' for the user,
+        // but the actual reacted note is neither authored by nor mentioning the user.
+        if (!reactedToOwnNote && !reactedToMentionedNote) {
+          continue;
+        }
 
         await this.createContentNotification({
           type: NotificationType.REACTION,
@@ -1348,6 +1359,7 @@ export class ContentNotificationService implements OnDestroy {
         // Try to fetch the original event content to show in the notification
         let reactedEventContent = '';
         let reactedEventAuthorPubkey: string | undefined;
+        let reactedEventMentionsRecipient = false;
         if (reactedEventId) {
           try {
             // First try to get from local database
@@ -1361,6 +1373,9 @@ export class ContentNotificationService implements OnDestroy {
             }
 
             reactedEventAuthorPubkey = reactedEvent?.pubkey;
+            reactedEventMentionsRecipient = reactedEvent?.tags.some(
+              tag => tag[0] === 'p' && tag[1] === pubkey
+            ) ?? false;
 
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
@@ -1372,6 +1387,13 @@ export class ContentNotificationService implements OnDestroy {
         }
 
         const reactedToOwnNote = reactedEventAuthorPubkey === pubkey;
+        const reactedToMentionedNote = !reactedToOwnNote && reactedEventMentionsRecipient;
+
+        // Avoid false positives when the reaction event contains '#p' for the user,
+        // but the actual reacted note is neither authored by nor mentioning the user.
+        if (!reactedToOwnNote && !reactedToMentionedNote) {
+          continue;
+        }
 
         await this.createContentNotification({
           type: NotificationType.REACTION,

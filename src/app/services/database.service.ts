@@ -2838,6 +2838,69 @@ export class DatabaseService {
     return allEvents;
   }
 
+  /**
+   * Get cached feed events by account, filtered by kind and timestamp.
+   */
+  async getCachedEventsByKindSince(
+    accountPubkey: string,
+    kind: number,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    const db = this.getAccountDb();
+    if (!db || !accountPubkey) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const allCachedEvents: CachedFeedEvent[] = request.result || [];
+
+        const events = allCachedEvents
+          .map(cached => cached.event)
+          .filter(event => event.kind === kind && event.created_at >= sinceTimestamp)
+          .filter((event, index, self) =>
+            self.findIndex(e => e.id === event.id) === index
+          );
+
+        resolve(events);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all events (events store + feed cache) by kind and timestamp.
+   */
+  async getAllEventsByKindSince(
+    accountPubkey: string,
+    kind: number,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    const [eventsStoreEvents, cachedEvents] = await Promise.all([
+      this.getEventsByKind(kind).then(events => events.filter(event => event.created_at >= sinceTimestamp)),
+      this.getCachedEventsByKindSince(accountPubkey, kind, sinceTimestamp),
+    ]);
+
+    const eventMap = new Map<string, Event>();
+
+    for (const event of eventsStoreEvents) {
+      eventMap.set(event.id, event);
+    }
+
+    for (const event of cachedEvents) {
+      if (!eventMap.has(event.id)) {
+        eventMap.set(event.id, event);
+      }
+    }
+
+    return Array.from(eventMap.values());
+  }
+
   // ============================================================================
   // NOTIFICATION METHODS
   // ============================================================================
