@@ -26,7 +26,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
-import { nip19, kinds } from 'nostr-tools';
+import { nip19, kinds, type Event as NostrEvent } from 'nostr-tools';
 
 interface RelayListInfo {
   hasRelayList: boolean;
@@ -66,6 +66,22 @@ interface TrustDisplayItem {
   highlight: boolean;
 }
 
+interface ReportTypeStat {
+  type: string;
+  count: number;
+}
+
+interface ModerationOverview {
+  totalReports: number;
+  uniqueReporters: number;
+  uniqueMuters: number;
+  unknownTypeReports: number;
+  downloadedReportEvents: number;
+  downloadedMuteListEvents: number;
+  latestReportAt: number | null;
+  reportTypes: ReportTypeStat[];
+}
+
 @Component({
   selector: 'app-details',
   imports: [
@@ -101,6 +117,18 @@ export class DetailsComponent {
   profileUpdatedAt = signal<number | null>(null);
   relayListInfo = signal<RelayListInfo | null>(null);
   contactListRelayInfo = signal<ContactListRelayInfo | null>(null);
+  moderationOverview = signal<ModerationOverview | null>(null);
+  isLoadingModerationSignals = signal(false);
+
+  private readonly VALID_REPORT_TYPES = new Set([
+    'nudity',
+    'malware',
+    'profanity',
+    'illegal',
+    'spam',
+    'impersonation',
+    'other',
+  ]);
 
   /**
    * Resolves the pubkey identifier from route params.
@@ -247,6 +275,8 @@ export class DetailsComponent {
     return JSON.stringify(infoData, null, 2);
   });
 
+  reportTypeBreakdown = computed(() => this.moderationOverview()?.reportTypes ?? []);
+
   constructor() {
     // Load profile data from DataService
     effect(() => {
@@ -368,6 +398,146 @@ export class DetailsComponent {
         });
       }
     });
+
+    effect(async () => {
+      const pubkey = this.pubkeyHex();
+      if (!pubkey) {
+        this.moderationOverview.set(null);
+        return;
+      }
+
+      await this.loadModerationOverview(pubkey);
+    });
+  }
+
+  private async loadModerationOverview(pubkey: string): Promise<void> {
+    this.isLoadingModerationSignals.set(true);
+
+    try {
+      const [accountReports, discoveryReports, accountMuteLists, discoveryMuteLists] = await Promise.all([
+        this.accountRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Report),
+        this.discoveryRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Report),
+        this.accountRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Mutelist),
+        this.discoveryRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Mutelist),
+      ]);
+
+      const reports = this.deduplicateEventsById([...accountReports, ...discoveryReports]);
+      const muteLists = this.deduplicateReplaceableByAuthor([
+        ...accountMuteLists,
+        ...discoveryMuteLists,
+      ]);
+
+      await Promise.all([
+        ...reports.map(event => this.database.saveEvent(event)),
+        ...muteLists.map(event => this.database.saveReplaceableEvent(event)),
+      ]);
+
+      const reportTypeCounts = new Map<string, number>();
+      const reporterPubkeys = new Set<string>();
+      let unknownTypeReports = 0;
+
+      for (const reportEvent of reports) {
+        reporterPubkeys.add(reportEvent.pubkey);
+
+        const matchedTypes = this.extractReportTypesForTarget(reportEvent, pubkey);
+
+        if (matchedTypes.length === 0) {
+          unknownTypeReports += 1;
+          continue;
+        }
+
+        matchedTypes.forEach(type => {
+          reportTypeCounts.set(type, (reportTypeCounts.get(type) ?? 0) + 1);
+        });
+      }
+
+      const muterPubkeys = new Set<string>();
+      for (const muteEvent of muteLists) {
+        const hasMutedTarget = muteEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+        if (hasMutedTarget) {
+          muterPubkeys.add(muteEvent.pubkey);
+        }
+      }
+
+      const reportTypes = Array.from(reportTypeCounts.entries())
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+
+      const latestReportAt = reports.reduce<number | null>((latest, event) => {
+        if (!latest || event.created_at > latest) {
+          return event.created_at;
+        }
+        return latest;
+      }, null);
+
+      this.moderationOverview.set({
+        totalReports: reports.length,
+        uniqueReporters: reporterPubkeys.size,
+        uniqueMuters: muterPubkeys.size,
+        unknownTypeReports,
+        downloadedReportEvents: reports.length,
+        downloadedMuteListEvents: muteLists.length,
+        latestReportAt,
+        reportTypes,
+      });
+    } catch (error) {
+      this.logger.warn('Failed to load moderation overview', error);
+      this.moderationOverview.set(null);
+    } finally {
+      this.isLoadingModerationSignals.set(false);
+    }
+  }
+
+  private deduplicateEventsById(events: NostrEvent[]): NostrEvent[] {
+    const unique = new Map<string, NostrEvent>();
+
+    for (const event of events) {
+      if (!event.id) continue;
+      unique.set(event.id, event);
+    }
+
+    return Array.from(unique.values());
+  }
+
+  private deduplicateReplaceableByAuthor(events: NostrEvent[]): NostrEvent[] {
+    const latestByAuthor = new Map<string, NostrEvent>();
+
+    for (const event of events) {
+      const existing = latestByAuthor.get(event.pubkey);
+      if (!existing || event.created_at > existing.created_at) {
+        latestByAuthor.set(event.pubkey, event);
+      }
+    }
+
+    return Array.from(latestByAuthor.values());
+  }
+
+  private extractReportTypesForTarget(reportEvent: NostrEvent, targetPubkey: string): string[] {
+    const reportTypes = new Set<string>();
+
+    reportEvent.tags
+      .filter(tag => tag[0] === 'p' && tag[1] === targetPubkey)
+      .forEach(tag => {
+        const reportType = tag[2]?.trim().toLowerCase();
+        if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
+          reportTypes.add(reportType);
+        }
+      });
+
+    if (reportTypes.size > 0) {
+      return Array.from(reportTypes);
+    }
+
+    reportEvent.tags
+      .filter(tag => tag[0] === 'e')
+      .forEach(tag => {
+        const reportType = tag[2]?.trim().toLowerCase();
+        if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
+          reportTypes.add(reportType);
+        }
+      });
+
+    return Array.from(reportTypes);
   }
 
   private async loadProfile(pubkey: string): Promise<void> {
