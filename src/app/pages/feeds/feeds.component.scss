@@ -95,8 +95,9 @@ app-user-profile {
     z-index: 100;
 
     @media (max-width: 1023px) {
-      // Add spacing to avoid overlap with mobile nav (56px height + 8px bottom + 8px gap)
-      bottom: calc(72px + 8px + env(safe-area-inset-bottom, 0px));
+      // Add spacing to avoid overlap with mobile nav:
+      // Mobile nav height (56px) + mobile nav bottom margin (8px) + visual gap (8px) = 72px + 8px buffer
+      bottom: calc(80px + env(safe-area-inset-bottom, 0px));
       right: 16px;
     }
   }
