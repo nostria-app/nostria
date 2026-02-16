@@ -31,12 +31,12 @@ interface FilterOption {
  * All available filter options for content notifications
  */
 const FILTER_OPTIONS: FilterOption[] = [
-  { type: NotificationType.NEW_FOLLOWER, label: 'Following events', icon: 'person_add' },
+  { type: NotificationType.NEW_FOLLOWER, label: 'Followers', icon: 'person_add' },
   { type: NotificationType.MENTION, label: 'Mentions', icon: 'alternate_email' },
   { type: NotificationType.REPOST, label: 'Reposts', icon: 'repeat' },
   { type: NotificationType.REPLY, label: 'Replies', icon: 'reply' },
   { type: NotificationType.REACTION, label: 'Reactions', icon: 'favorite' },
-  { type: NotificationType.ZAP, label: 'Zap events', icon: 'bolt' },
+  { type: NotificationType.ZAP, label: 'Zaps', icon: 'bolt' },
 ];
 
 @Component({
