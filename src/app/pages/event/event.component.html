@@ -56,20 +56,20 @@
 
   <!-- Main event - indented when there are parents -->
   @if (event()) {
-  <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="parentEvents().length * 16">
+  <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="(parentEvents().length + 1) * 16">
     <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
       [trustedByPubkey]="trustedByPubkey()" [replyCountFromParent]="totalReplyCount()"></app-event>
   </div>
 
   <!-- Inline Reply Editor -->
-  <div [style.margin-left.px]="parentEvents().length * 16">
+  <div [style.margin-left.px]="(parentEvents().length + 1) * 16">
     <app-inline-reply-editor [replyToEvent]="event()!"></app-inline-reply-editor>
   </div>
   }
 
   <!-- Unified loading indicator for thread context (parents/replies) -->
   @if (isLoadingParents() || isLoadingReplies()) {
-  <div class="loading-status" [style.margin-left.px]="parentEvents().length * 16">
+  <div class="loading-status" [style.margin-left.px]="(parentEvents().length + 1) * 16">
     <mat-spinner diameter="14"></mat-spinner>
     <span>Loading thread...</span>
   </div>
@@ -168,8 +168,7 @@
       [attr.aria-label]="threadedEvent.replies.length > 0 ? 'Toggle replies visibility' : null">
     </div>
     <div class="thread-content">
-      <app-event [event]="threadedEvent.event" mode="thread"
-        [replyCountFromParent]="countReplies(threadedEvent)"
+      <app-event [event]="threadedEvent.event" mode="thread" [replyCountFromParent]="countReplies(threadedEvent)"
         [repliesFromParent]="threadedEvent.replies"></app-event>
 
       @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
@@ -192,14 +191,31 @@
 <ng-template #parentTemplate let-threadedEvent="threadedEvent">
   <div class="threaded-reply threaded-parent" [class.has-replies]="threadedEvent.replies.length > 0"
     [class.lines-hidden]="!localSettings.showThreadLines()">
-    <div class="thread-line-clickable" [class.no-replies]="threadedEvent.replies.length === 0">
+    <div class="thread-line-clickable" [class.no-replies]="threadedEvent.replies.length === 0"
+      [class.collapsed]="isThreadCollapsed(threadedEvent.event.id)"
+      [class.interactive]="threadedEvent.replies.length > 0"
+      (click)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      (keydown.enter)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      (keydown.space)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      [attr.role]="threadedEvent.replies.length > 0 ? 'button' : null"
+      [attr.tabindex]="threadedEvent.replies.length > 0 ? 0 : null"
+      [attr.title]="threadedEvent.replies.length > 0 ? 'Click to collapse or expand parent thread' : null"
+      [attr.aria-label]="threadedEvent.replies.length > 0 ? 'Toggle parent thread visibility' : null">
     </div>
     <div class="thread-content">
       <app-event [event]="threadedEvent.event" appearance="plain" mode="thread"></app-event>
 
+      @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
+      <button class="expand-collapsed-btn" mat-button (click)="toggleThreadCollapse(threadedEvent.event.id)">
+        <mat-icon>unfold_more</mat-icon>
+        <span>Show {{ countReplies(threadedEvent) }} {{ countReplies(threadedEvent) === 1 ? 'reply' : 'replies'
+          }}</span>
+      </button>
+      } @else {
       @for (childParent of threadedEvent.replies; track childParent.event.id) {
       <ng-container [ngTemplateOutlet]="parentTemplate"
         [ngTemplateOutletContext]="{ threadedEvent: childParent }"></ng-container>
+      }
       }
     </div>
   </div>
