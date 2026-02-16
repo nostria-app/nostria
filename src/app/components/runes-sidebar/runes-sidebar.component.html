@@ -1,0 +1,147 @@
+<div class="runes-sidebar" (mouseenter)="onSidebarEnter()" (mouseleave)="onSidebarLeave()">
+  @for (rune of visibleRunes(); track rune.id) {
+  <button mat-icon-button class="rune-button" [class.rune-active]="isRuneActive(rune.id)"
+    (mouseenter)="onRuneEnter(rune.id)" (mouseleave)="onRuneLeave(rune.id)" (click)="toggleRuneOpen(rune.id)"
+    [matTooltip]="rune.tooltip" [attr.aria-label]="rune.title">
+    <mat-icon>{{ rune.icon }}</mat-icon>
+  </button>
+  }
+
+  <button mat-icon-button class="rune-button rune-settings" [class.rune-active]="settingsOpen()"
+    (click)="toggleSettings()" matTooltip="Runes settings" aria-label="Runes settings">
+    <mat-icon>tune</mat-icon>
+  </button>
+</div>
+
+@if (activeRunes().length > 0) {
+<div class="rune-flyout-stack">
+  @for (activeRuneIdValue of activeRunes(); track activeRuneIdValue) {
+  <div class="rune-flyout" [class.pinned]="openRunes().includes(activeRuneIdValue)"
+    (mouseenter)="onFlyoutEnter(activeRuneIdValue)" (mouseleave)="onFlyoutLeave(activeRuneIdValue)">
+    <div class="flyout-header">
+      <h3>{{ runeById(activeRuneIdValue)?.title }}</h3>
+      @if (openRunes().includes(activeRuneIdValue)) {
+      <button mat-icon-button (click)="closeRune(activeRuneIdValue)" aria-label="Close rune">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+    </div>
+
+    @switch (activeRuneIdValue) {
+    @case ('bitcoin-price') {
+    <div class="rune-content">
+      <div class="btc-row">
+        <span class="btc-label">USD</span>
+        <span class="btc-value">
+          @if (bitcoinPrice().usd !== null) {
+          ${{ bitcoinPrice().usd!.toLocaleString() }}
+          } @else {
+          —
+          }
+        </span>
+      </div>
+      <div class="btc-row">
+        <span class="btc-label">EUR</span>
+        <span class="btc-value">
+          @if (bitcoinPrice().eur !== null) {
+          €{{ bitcoinPrice().eur!.toLocaleString() }}
+          } @else {
+          —
+          }
+        </span>
+      </div>
+      <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
+      @if (bitcoinPrice().error) {
+      <div class="rune-error">{{ bitcoinPrice().error }}</div>
+      }
+    </div>
+    }
+
+    @case ('nostr-swiss-knife') {
+    <div class="rune-content">
+      <label class="swiss-label" for="rune-swiss-input">Paste npub/nevent/note/naddr/nprofile/hex</label>
+      <textarea id="rune-swiss-input" class="swiss-input" [value]="swissKnifeInput()"
+        (input)="updateSwissKnifeInput($any($event.target).value)"></textarea>
+
+      @if (swissKnifeResults().length > 0) {
+      <div class="swiss-results">
+        @for (result of swissKnifeResults(); track result.type + result.primaryValue) {
+        <div class="swiss-row">
+          <span class="swiss-type">{{ result.type }}</span>
+          <span class="swiss-value">{{ result.primaryValue }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+
+    @case ('music-favorites') {
+    <div class="rune-content music-actions">
+      <div class="music-item-row">
+        <button mat-stroked-button (click)="openMusicLiked()">
+          <mat-icon>favorite</mat-icon>
+          Liked Songs
+        </button>
+        <button mat-icon-button class="music-quick-play" [disabled]="isPlayingLikedSongs()"
+          (click)="quickPlayLikedSongs()" matTooltip="Quick play liked songs" aria-label="Quick play liked songs">
+          @if (isPlayingLikedSongs()) {
+          <mat-icon>hourglass_top</mat-icon>
+          } @else {
+          <mat-icon>play_arrow</mat-icon>
+          }
+        </button>
+      </div>
+
+      <div class="music-item-row">
+        <button mat-stroked-button (click)="openMusicLikedPlaylists()">
+          <mat-icon>playlist_play</mat-icon>
+          Liked Playlists
+        </button>
+        <button mat-icon-button class="music-quick-play" [disabled]="isPlayingLikedPlaylists()"
+          (click)="quickPlayLikedPlaylists()" matTooltip="Quick play first liked playlist"
+          aria-label="Quick play first liked playlist">
+          @if (isPlayingLikedPlaylists()) {
+          <mat-icon>hourglass_top</mat-icon>
+          } @else {
+          <mat-icon>play_arrow</mat-icon>
+          }
+        </button>
+      </div>
+
+      <button mat-stroked-button (click)="openMusicHome()">
+        <mat-icon>library_music</mat-icon>
+        Open Music
+      </button>
+    </div>
+    }
+    }
+  </div>
+  }
+</div>
+}
+
+@if (settingsOpen()) {
+<div class="rune-flyout settings-flyout pinned">
+  <div class="flyout-header">
+    <h3>Runes</h3>
+    <button mat-icon-button (click)="toggleSettings()" aria-label="Close runes settings">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="rune-content settings-list">
+    @for (rune of orderedRunes(); track rune.id) {
+    <button class="settings-item" type="button" draggable="true" [class.dragging]="draggedRuneId() === rune.id"
+      [class.drop-target]="dropTargetRuneId() === rune.id" (dragstart)="onSettingsDragStart($event, rune.id)"
+      (dragover)="onSettingsDragOver($event, rune.id)" (drop)="onSettingsDrop($event, rune.id)"
+      (dragend)="onSettingsDragEnd()" (keydown)="onSettingsItemKeyDown($event, rune.id)"
+      (click)="setRuneEnabled(rune.id, !isRuneEnabled(rune.id))">
+      <mat-icon class="drag-handle">drag_indicator</mat-icon>
+      <mat-icon>{{ isRuneEnabled(rune.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+      <span>{{ rune.title }}</span>
+    </button>
+    }
+  </div>
+</div>
+}

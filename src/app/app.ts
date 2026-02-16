@@ -73,8 +73,7 @@ import { FollowSetsService } from './services/follow-sets.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './pages/people/edit-people-list-dialog.component';
 import { FeedConfig } from './services/feed.service';
-import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
-import { ShoutoutOverlayComponent } from './components/shoutout-overlay/shoutout-overlay.component';
+import { RunesSidebarComponent } from './components/runes-sidebar/runes-sidebar.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
@@ -161,8 +160,7 @@ interface NavItem {
     NavigationComponent,
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
-    FavoritesOverlayComponent,
-    ShoutoutOverlayComponent,
+    RunesSidebarComponent,
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
     NewFeedDialogComponent,
@@ -262,7 +260,6 @@ export class App implements OnInit, OnDestroy {
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
-  @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
   // Create menu overlay

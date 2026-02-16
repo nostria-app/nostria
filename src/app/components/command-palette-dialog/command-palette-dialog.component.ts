@@ -15,6 +15,7 @@ import { SettingsService } from '../../services/settings.service';
 import { SpeechService } from '../../services/speech.service';
 import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
 import { MetricsDialogComponent } from '../metrics-dialog/metrics-dialog.component';
+import { RunesSettingsService } from '../../services/runes-settings.service';
 
 export interface Command {
   id: string;
@@ -47,6 +48,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private accountState = inject(AccountStateService);
   private customDialog = inject(CustomDialogService);
+  private runesSettings = inject(RunesSettingsService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -377,6 +379,78 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'psychology_alt',
       action: () => this.router.navigate(['/ai/settings']),
       keywords: ['ai settings', 'ai config', 'models', 'transformers']
+    },
+
+    // Runes
+    {
+      id: 'runes-toggle-bitcoin-price',
+      label: 'Toggle Rune: Bitcoin Price',
+      icon: 'currency_bitcoin',
+      action: () => this.runesSettings.toggleRuneEnabled('bitcoin-price'),
+      keywords: ['runes', 'bitcoin', 'price', 'widget', 'mini app']
+    },
+    {
+      id: 'runes-toggle-swiss-knife',
+      label: 'Toggle Rune: Nostr Swizz Knife',
+      icon: 'construction',
+      action: () => this.runesSettings.toggleRuneEnabled('nostr-swiss-knife'),
+      keywords: ['runes', 'nostr', 'swiss knife', 'swizz knife', 'convert', 'npub', 'nevent']
+    },
+    {
+      id: 'runes-toggle-music-favorites',
+      label: 'Toggle Rune: Music Favorites',
+      icon: 'library_music',
+      action: () => this.runesSettings.toggleRuneEnabled('music-favorites'),
+      keywords: ['runes', 'music', 'favorites', 'liked songs', 'liked playlists']
+    },
+    {
+      id: 'runes-close-pinned',
+      label: 'Close Pinned Rune',
+      icon: 'close',
+      action: () => this.runesSettings.clearOpenRunes(),
+      keywords: ['runes', 'close', 'pin', 'unpin', 'sidebar']
+    },
+    {
+      id: 'runes-move-bitcoin-up',
+      label: 'Runes: Move Bitcoin Price Up',
+      icon: 'arrow_upward',
+      action: () => this.runesSettings.moveRuneUp('bitcoin-price'),
+      keywords: ['runes', 'bitcoin', 'move up', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-bitcoin-down',
+      label: 'Runes: Move Bitcoin Price Down',
+      icon: 'arrow_downward',
+      action: () => this.runesSettings.moveRuneDown('bitcoin-price'),
+      keywords: ['runes', 'bitcoin', 'move down', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-swiss-up',
+      label: 'Runes: Move Nostr Swizz Knife Up',
+      icon: 'arrow_upward',
+      action: () => this.runesSettings.moveRuneUp('nostr-swiss-knife'),
+      keywords: ['runes', 'swizz knife', 'swiss knife', 'move up', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-swiss-down',
+      label: 'Runes: Move Nostr Swizz Knife Down',
+      icon: 'arrow_downward',
+      action: () => this.runesSettings.moveRuneDown('nostr-swiss-knife'),
+      keywords: ['runes', 'swizz knife', 'swiss knife', 'move down', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-music-up',
+      label: 'Runes: Move Music Favorites Up',
+      icon: 'arrow_upward',
+      action: () => this.runesSettings.moveRuneUp('music-favorites'),
+      keywords: ['runes', 'music favorites', 'move up', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-music-down',
+      label: 'Runes: Move Music Favorites Down',
+      icon: 'arrow_downward',
+      action: () => this.runesSettings.moveRuneDown('music-favorites'),
+      keywords: ['runes', 'music favorites', 'move down', 'reorder', 'order']
     },
 
     // Developer & Debug Tools

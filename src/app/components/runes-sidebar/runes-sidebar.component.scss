@@ -1,0 +1,210 @@
+.runes-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.rune-button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &.rune-active {
+    background: var(--mat-sys-surface-container-highest);
+    color: var(--mat-sys-primary);
+  }
+}
+
+.rune-flyout {
+  position: relative;
+  width: 340px;
+  max-width: calc(100vw - 92px);
+  max-height: calc(100dvh - 150px);
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  box-shadow: var(--mat-sys-level3);
+  z-index: 1000;
+}
+
+.rune-flyout.pinned {
+  border-color: var(--mat-sys-primary);
+}
+
+.rune-flyout-stack {
+  position: fixed;
+  top: 74px;
+  right: 74px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  z-index: 1000;
+  max-height: calc(100dvh - 92px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.flyout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.75rem 0.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.rune-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0 0.75rem 0.9rem;
+}
+
+.btc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+}
+
+.btc-meta {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.rune-error {
+  color: var(--mat-sys-error);
+  font-size: 0.85rem;
+}
+
+.swiss-label {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.swiss-input {
+  width: 100%;
+  min-height: 84px;
+  field-sizing: content;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  padding: 0.5rem;
+}
+
+.swiss-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.swiss-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  padding: 0.45rem 0.55rem;
+}
+
+.swiss-type {
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.swiss-value {
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+
+.music-actions {
+  gap: 0.45rem;
+
+  button {
+    justify-content: flex-start;
+  }
+}
+
+.music-item-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.music-quick-play {
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.settings-flyout {
+  position: fixed;
+  top: 74px;
+  right: 74px;
+}
+
+.settings-list {
+  gap: 0.4rem;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  .drag-handle {
+    cursor: grab;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.dragging {
+    opacity: 0.6;
+    border-color: var(--mat-sys-primary);
+  }
+
+  &.drop-target {
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-surface-container-high);
+  }
+}
+
+@media (max-width: 1000px) {
+  .rune-flyout {
+    width: 300px;
+  }
+
+  .rune-flyout-stack,
+  .settings-flyout {
+    right: 68px;
+  }
+}
