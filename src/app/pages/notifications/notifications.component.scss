@@ -525,6 +525,7 @@
     flex-shrink: 0;
     width: 56px;
     height: 56px;
+    cursor: pointer;
 
     // Style the user-profile component to show larger avatar
     ::ng-deep app-user-profile {
@@ -675,6 +676,14 @@
         overflow: hidden; // Hide overflow
         text-overflow: ellipsis; // Show ellipsis for overflow
         opacity: 0.8;
+
+        .notification-custom-emoji {
+          width: 18px;
+          height: 18px;
+          object-fit: contain;
+          vertical-align: text-bottom;
+          margin-inline: 2px;
+        }
       }
 
       // Custom emoji image for NIP-30 reactions

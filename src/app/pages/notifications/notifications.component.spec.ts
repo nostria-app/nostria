@@ -13,7 +13,7 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { NotificationType, Notification } from '../../services/database.service';
+import { NotificationType, Notification, ContentNotification } from '../../services/database.service';
 
 describe('NotificationsComponent', () => {
   let component: NotificationsComponent;
@@ -193,6 +193,48 @@ describe('NotificationsComponent', () => {
       component.markAllAsRead();
 
       expect(mockNotificationService.markAsRead).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getFormattedNotificationTitle', () => {
+    it('should preserve reaction context text for custom emoji reactions', () => {
+      const reactionNotification = createMockNotification({
+        type: NotificationType.REACTION,
+        title: 'Reacted :fist: to your note',
+      }) as ContentNotification;
+
+      reactionNotification.metadata = {
+        reactionContent: ':fist:',
+        customEmojiUrl: 'https://example.com/fist.png',
+      };
+
+      expect(component.getFormattedNotificationTitle(reactionNotification)).toBe('reacted to your note');
+    });
+
+    it('should still replace plus reactions with heart emoji', () => {
+      const plusReaction = createMockNotification({
+        type: NotificationType.REACTION,
+        title: 'Reacted + to your note',
+      });
+
+      expect(component.getFormattedNotificationTitle(plusReaction)).toBe('reacted ❤️ to your note');
+    });
+
+    it('should split custom emoji reaction title for inline emoji rendering', () => {
+      const reactionNotification = createMockNotification({
+        type: NotificationType.REACTION,
+        title: 'Reacted :fist: to your note',
+      }) as ContentNotification;
+
+      reactionNotification.metadata = {
+        reactionContent: ':fist:',
+        customEmojiUrl: 'https://example.com/fist.png',
+      };
+
+      expect(component.getCustomEmojiTitleSegments(reactionNotification)).toEqual({
+        prefix: 'reacted',
+        suffix: ' to your note',
+      });
     });
   });
 });

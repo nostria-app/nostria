@@ -179,8 +179,7 @@
       <div *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
         class="notification-item" [class.read]="notification.read" [class.clickable]="getEventId(notification)"
         [attr.data-notification-type]="notification.type">
-        <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()"
-          style="cursor: pointer">
+        <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
           @if (getAuthorPubkey(notification)) {
           <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'" [disableLink]="true"
             [prefetchedProfile]="getPrefetchedProfile(notification)"></app-user-profile>
@@ -204,11 +203,18 @@
               {{ getNotificationAuthorDisplayName(notification) }}
             </span>
             }
-            <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
-            @if (getCustomEmojiUrl(notification)) {
-            <img [src]="getCustomEmojiUrl(notification)!" [alt]="getCustomEmojiAlt(notification)"
-              [title]="getCustomEmojiAlt(notification)" class="notification-custom-emoji">
-            }
+            <span class="notification-title">
+              @if (getCustomEmojiTitleSegments(notification); as customEmojiTitle) {
+              <span>{{ customEmojiTitle.prefix }}</span>
+              <img [src]="getCustomEmojiUrl(notification)!" alt="custom emoji" title="custom emoji"
+                [attr.title]="getCustomEmojiAlt(notification)" class="notification-custom-emoji">
+              @if (customEmojiTitle.suffix) {
+              <span>{{ customEmojiTitle.suffix }}</span>
+              }
+              } @else {
+              {{ getFormattedNotificationTitle(notification) }}
+              }
+            </span>
           </div>
 
           @if (notification.message && notification.type !== 'zap') {

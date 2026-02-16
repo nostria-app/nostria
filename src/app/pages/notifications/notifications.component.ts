@@ -825,27 +825,66 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Format notification title for display after username
    * - Lowercase first character since it follows the username in a sentence
    * - Replace '+' reaction with heart emoji
-   * - For custom emojis, return text without the emoji (it will be rendered separately as an image)
+   * - For custom emojis, remove only the shortcode while preserving context text
    */
   getFormattedNotificationTitle(notification: Notification): string {
     if (!notification.title) return '';
 
-    // Check if this is a reaction with a custom emoji
+    let title = notification.title;
+
+    // For custom reaction emojis, remove only the emoji token from title text.
+    // The emoji image itself is rendered separately in the template.
     if (this.isContentNotificationWithData(notification)) {
       const contentNotif = notification as ContentNotification;
       if (contentNotif.type === NotificationType.REACTION && contentNotif.metadata?.customEmojiUrl) {
-        // For custom emojis, return "reacted" without the emoji shortcode (image will be shown separately)
-        return 'reacted';
+        const reactionContent = contentNotif.metadata.reactionContent;
+
+        if (reactionContent) {
+          title = title.replace(new RegExp(`\\s*${this.escapeRegExp(reactionContent)}\\s*`), ' ');
+        } else {
+          title = title.replace(/\s*:[^:\s]+:\s*/, ' ');
+        }
+
+        title = title.replace(/\s{2,}/g, ' ').trim();
       }
     }
 
-    // Replace 'Reacted +' with 'reacted ❤️' and lowercase first character
-    let title = notification.title.replace(/Reacted \+/g, 'reacted ❤️');
+    // Replace 'Reacted +' with heart emoji
+    title = title.replace(/Reacted \+/g, 'Reacted ❤️');
+
     // Lowercase the first character since it comes after the username
     if (title.length > 0) {
       title = title.charAt(0).toLowerCase() + title.slice(1);
     }
     return title;
+  }
+
+  /**
+   * Split formatted title into prefix/suffix for inline custom emoji rendering.
+   * For reaction titles this keeps emoji positioned naturally in the sentence,
+   * e.g. "reacted [emoji] to your note".
+   */
+  getCustomEmojiTitleSegments(notification: Notification): { prefix: string; suffix: string } | null {
+    if (!this.getCustomEmojiUrl(notification)) {
+      return null;
+    }
+
+    const title = this.getFormattedNotificationTitle(notification);
+    const toToken = ' to ';
+    const splitIndex = title.indexOf(toToken);
+
+    if (splitIndex === -1) {
+      return { prefix: title, suffix: '' };
+    }
+
+    return {
+      prefix: title.slice(0, splitIndex),
+      suffix: title.slice(splitIndex),
+    };
+  }
+
+  private escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**
