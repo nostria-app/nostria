@@ -927,6 +927,50 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.record();
   });
 
+  readonly taggedUsersSpamThreshold = 50;
+
+  taggedUsersCount = computed<number>(() => {
+    const targetItem = this.targetRecord();
+    if (!targetItem?.event?.tags?.length) {
+      return 0;
+    }
+
+    const taggedUsers = new Set(
+      targetItem.event.tags
+        .filter(tag => tag[0] === 'p' && typeof tag[1] === 'string' && tag[1].length > 0)
+        .map(tag => tag[1])
+    );
+
+    return taggedUsers.size;
+  });
+
+  showTaggedUsersSpamWarning = computed<boolean>(() => {
+    return this.taggedUsersCount() > this.taggedUsersSpamThreshold;
+  });
+
+  confirmedSpamEventId = signal<string | null>(null);
+
+  isSpamConfirmedForCurrentEvent = computed<boolean>(() => {
+    const targetItem = this.targetRecord();
+    if (!targetItem) {
+      return false;
+    }
+    return this.confirmedSpamEventId() === targetItem.event.id;
+  });
+
+  requiresSpamConfirmation = computed<boolean>(() => {
+    return this.showTaggedUsersSpamWarning() && !this.isSpamConfirmedForCurrentEvent();
+  });
+
+  confirmSpamActions(event?: MouseEvent): void {
+    event?.stopPropagation();
+    const targetItem = this.targetRecord();
+    if (!targetItem) {
+      return;
+    }
+    this.confirmedSpamEventId.set(targetItem.event.id);
+  }
+
   /**
    * Get the displayed record with NIP-41 edit support
    * Returns a record with the edited content if an edit exists, otherwise the original record

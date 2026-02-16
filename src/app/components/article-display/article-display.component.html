@@ -232,7 +232,23 @@
   <!-- Footer Actions (only in full mode) -->
   @if (mode() === 'full' && event()) {
   <div class="article-footer">
-    <div class="actions-row">
+    @if (showTaggedUsersSpamWarning()) {
+    <div class="article-tagged-users-warning" role="alert">
+      <div class="warning-message">
+        <mat-icon>warning</mat-icon>
+        <span i18n="@@article-display.tagged-users-warning">This event tags {{ taggedUsersCount() }} users and is likely
+          spam. React with caution.</span>
+      </div>
+      @if (requiresSpamConfirmation()) {
+      <button mat-button class="spam-confirm-button" (click)="confirmSpamActions($event)"
+        i18n="@@article-display.confirm-spam-actions">
+        Confirm to enable actions
+      </button>
+      }
+    </div>
+    }
+
+    <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()">
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
@@ -245,7 +261,8 @@
       </div>
 
       <!-- Reply -->
-      <div class="action-button comment-action" role="button" tabindex="0" (click)="replyClick.emit($event)">
+      <div class="action-button comment-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+        (click)="replyClick.emit($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCountInput() > 0) {
         <span class="action-count">{{ replyCountInput() }}</span>
@@ -254,7 +271,7 @@
       </div>
 
       <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button" tabindex="0"
+      <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
         (click)="share.emit(); $event.stopPropagation()">
         <mat-icon class="action-icon">share</mat-icon>
         @if (shareCount() > 0) {
@@ -275,7 +292,8 @@
       </div>
 
       <!-- Bookmark -->
-      <div class="action-button bookmark-action" role="button" tabindex="0" (click)="bookmarkClick.emit($event)">
+      <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+        (click)="bookmarkClick.emit($event)">
         <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
         <span class="action-text">Bookmark</span>
       </div>
