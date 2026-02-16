@@ -1774,8 +1774,8 @@ mat-sidenav-content {
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  // Position near bottom - use fixed value, safe-area-inset causes issues on various platforms
-  bottom: 8px;
+  // Respect iOS safe area while keeping a minimum gap on all devices
+  bottom: max(8px, calc(8px + env(safe-area-inset-bottom, 0px)));
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -2554,7 +2554,7 @@ mat-sidenav-content {
     }
   }
 
-  > span {
+  >span {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;

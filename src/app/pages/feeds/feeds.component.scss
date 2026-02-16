@@ -98,6 +98,10 @@ app-user-profile {
       bottom: calc(24px + env(safe-area-inset-bottom, 0px));
       right: 16px;
     }
+
+    @media (max-width: 599px) {
+      bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   .section-tabs {
@@ -186,9 +190,11 @@ app-user-profile {
       0% {
         transform: translateX(-100%);
       }
+
       50% {
         transform: translateX(200%);
       }
+
       100% {
         transform: translateX(-100%);
       }
@@ -373,6 +379,10 @@ app-user-profile {
         .selector-arrow {
           transform: rotate(180deg);
         }
+      }
+
+      @media (max-width: 599px) {
+        padding-left: 14px;
       }
     }
 
