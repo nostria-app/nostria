@@ -273,6 +273,29 @@ export class ContentNotificationService implements OnDestroy {
   }
 
   /**
+   * Resolve the author pubkey of a target event by ID.
+   * Tries local database first, then relay fallback.
+   */
+  private async getEventAuthorPubkey(eventId?: string): Promise<string | undefined> {
+    if (!eventId) {
+      return undefined;
+    }
+
+    try {
+      let targetEvent = await this.database.getEventById(eventId);
+
+      if (!targetEvent) {
+        targetEvent = await this.accountRelay.get({ ids: [eventId] });
+      }
+
+      return targetEvent?.pubkey;
+    } catch (error) {
+      this.logger.debug('Failed to fetch target event author', error);
+      return undefined;
+    }
+  }
+
+  /**
    * Start periodic polling for new notifications
    * This sets up:
    * 1. An interval that checks every 5 minutes
@@ -442,7 +465,7 @@ export class ContentNotificationService implements OnDestroy {
       // This applies when: since is 0 (first time), since is very old, or cache was cleared
       const defaultMaxDays = 7;
       const defaultLimitTimestamp = Math.floor((Date.now() - defaultMaxDays * 24 * 60 * 60 * 1000) / 1000);
-      
+
       // Always ensure we don't go further back than the default limit
       since = Math.max(since, defaultLimitTimestamp);
 
@@ -612,9 +635,13 @@ export class ContentNotificationService implements OnDestroy {
           continue;
         }
 
+        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
+        const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
+
         await this.createContentNotification({
           type: NotificationType.REPOST,
-          title: 'Reposted your note',
+          title: repostedOwnNote ? 'Reposted your note' : 'Reposted a note mentioning you',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: event.id,
@@ -660,10 +687,16 @@ export class ContentNotificationService implements OnDestroy {
         );
 
         if (hasReplyTag) {
+          const replyToTag = event.tags.find(
+            tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
+          );
+          const repliedToEventAuthorPubkey = await this.getEventAuthorPubkey(replyToTag?.[1]);
+          const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
+
           const resolvedMessage = await this.resolveEventReferences(event.content);
           await this.createContentNotification({
             type: NotificationType.REPLY,
-            title: 'Replied to your note',
+            title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
             message: this.truncateContentPreview(resolvedMessage),
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
@@ -729,6 +762,7 @@ export class ContentNotificationService implements OnDestroy {
 
         // Try to fetch the original event content to show in the notification
         let reactedEventContent = '';
+        let reactedEventAuthorPubkey: string | undefined;
         if (reactedEventId) {
           try {
             // First try to get from local database
@@ -741,6 +775,8 @@ export class ContentNotificationService implements OnDestroy {
               });
             }
 
+            reactedEventAuthorPubkey = reactedEvent?.pubkey;
+
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
               reactedEventContent = this.truncateContentPreview(reactedEventContent);
@@ -750,10 +786,16 @@ export class ContentNotificationService implements OnDestroy {
           }
         }
 
+        const reactedToOwnNote = reactedEventAuthorPubkey === pubkey;
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
-          title: `Reacted ${reactionContent}`,
-          message: reactedEventContent || 'Reacted to your note',
+          title: reactedToOwnNote
+            ? `Reacted ${reactionContent} to your note`
+            : `Reacted ${reactionContent} to a note mentioning you`,
+          message: reactedEventContent || (reactedToOwnNote
+            ? 'Reacted to your note'
+            : 'Reacted to a note mentioning you'),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId, // Use the event being reacted to, not the reaction event
@@ -1197,9 +1239,12 @@ export class ContentNotificationService implements OnDestroy {
         if (this.shouldFilterMassTaggedEvent(event)) continue;
 
         const eTag = event.tags.find(tag => tag[0] === 'e');
+        const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
+        const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
+
         await this.createContentNotification({
           type: NotificationType.REPOST,
-          title: 'Reposted your note',
+          title: repostedOwnNote ? 'Reposted your note' : 'Reposted a note mentioning you',
           message: '',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
@@ -1234,10 +1279,13 @@ export class ContentNotificationService implements OnDestroy {
         if (!isReply) continue;
 
         const replyToTag = event.tags.find(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        const repliedToEventAuthorPubkey = await this.getEventAuthorPubkey(replyToTag?.[1]);
+        const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
+
         const resolvedMessage = await this.resolveEventReferences(event.content);
         await this.createContentNotification({
           type: NotificationType.REPLY,
-          title: 'Replied to your note',
+          title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
           message: this.truncateContentPreview(resolvedMessage),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
@@ -1286,6 +1334,7 @@ export class ContentNotificationService implements OnDestroy {
 
         // Try to fetch the original event content to show in the notification
         let reactedEventContent = '';
+        let reactedEventAuthorPubkey: string | undefined;
         if (reactedEventId) {
           try {
             // First try to get from local database
@@ -1298,6 +1347,8 @@ export class ContentNotificationService implements OnDestroy {
               });
             }
 
+            reactedEventAuthorPubkey = reactedEvent?.pubkey;
+
             if (reactedEvent?.content) {
               reactedEventContent = await this.resolveEventReferences(reactedEvent.content);
               reactedEventContent = this.truncateContentPreview(reactedEventContent);
@@ -1307,10 +1358,16 @@ export class ContentNotificationService implements OnDestroy {
           }
         }
 
+        const reactedToOwnNote = reactedEventAuthorPubkey === pubkey;
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
-          title: `Reacted ${reactionContent}`,
-          message: reactedEventContent || 'Reacted to your note',
+          title: reactedToOwnNote
+            ? `Reacted ${reactionContent} to your note`
+            : `Reacted ${reactionContent} to a note mentioning you`,
+          message: reactedEventContent || (reactedToOwnNote
+            ? 'Reacted to your note'
+            : 'Reacted to a note mentioning you'),
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId || event.id,
