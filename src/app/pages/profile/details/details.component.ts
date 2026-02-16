@@ -64,6 +64,7 @@ interface TrustDisplayItem {
   icon: string;
   value: string;
   highlight: boolean;
+  targetPubkey?: string;
 }
 
 interface ReportTypeStat {
@@ -119,6 +120,7 @@ export class DetailsComponent {
   contactListRelayInfo = signal<ContactListRelayInfo | null>(null);
   moderationOverview = signal<ModerationOverview | null>(null);
   isLoadingModerationSignals = signal(false);
+  providerProfileName = signal<string | null>(null);
 
   private readonly VALID_REPORT_TYPES = new Set([
     'nudity',
@@ -285,14 +287,17 @@ export class DetailsComponent {
     );
 
     if (metrics.authorPubkey) {
-      let providerValue = metrics.authorPubkey;
+      let providerNpubValue = metrics.authorPubkey;
       try {
-        providerValue = providerValue.startsWith('npub')
-          ? providerValue
-          : this.utilities.getNpubFromPubkey(providerValue);
+        providerNpubValue = providerNpubValue.startsWith('npub')
+          ? providerNpubValue
+          : this.utilities.getNpubFromPubkey(providerNpubValue);
       } catch {
         // Keep raw value if conversion fails
       }
+
+      const providerName = this.providerProfileName();
+      const providerValue = providerName || providerNpubValue;
 
       result.push({
         key: 'authorPubkey',
@@ -300,6 +305,7 @@ export class DetailsComponent {
         icon: 'person',
         value: providerValue,
         highlight: false,
+        targetPubkey: metrics.authorPubkey,
       });
     }
 
@@ -483,6 +489,7 @@ export class DetailsComponent {
       const pubkey = this.pubkeyHex();
       if (!pubkey) {
         this.trustMetrics.set(null);
+        this.providerProfileName.set(null);
         return;
       }
 
@@ -513,6 +520,25 @@ export class DetailsComponent {
       }
 
       this.trustMetrics.set(mergedTrust);
+    });
+
+    effect(async () => {
+      const providerPubkey = this.trustMetrics()?.authorPubkey;
+      if (!providerPubkey) {
+        this.providerProfileName.set(null);
+        return;
+      }
+
+      try {
+        const providerProfile = await this.dataService.getProfile(providerPubkey);
+        if (this.trustMetrics()?.authorPubkey !== providerPubkey) {
+          return;
+        }
+
+        this.providerProfileName.set(this.getDisplayNameForProfile(providerProfile));
+      } catch {
+        this.providerProfileName.set(null);
+      }
     });
 
     effect(async () => {
@@ -728,6 +754,23 @@ export class DetailsComponent {
     if (profile.data?.name) return profile.data.name;
     if (profile.data?.nip05) return this.utilities.parseNip05(profile.data.nip05) || 'User';
     return 'User';
+  }
+
+  private getDisplayNameForProfile(profile: NostrRecord | undefined): string | null {
+    if (!profile?.data) return null;
+    if (profile.data.display_name) return profile.data.display_name;
+    if (profile.data.name) return profile.data.name;
+    if (profile.data.nip05) {
+      return this.utilities.parseNip05(profile.data.nip05) || null;
+    }
+    return null;
+  }
+
+  openProfile(pubkey: string): void {
+    if (!pubkey) {
+      return;
+    }
+    this.layout.openProfile(pubkey);
   }
 
   async broadcastProfile() {

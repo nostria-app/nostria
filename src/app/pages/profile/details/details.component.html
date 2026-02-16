@@ -183,7 +183,10 @@
     <h3>Web of Trust</h3>
     <div class="metrics-grid">
       @for (item of trustDisplayItems(); track item.key) {
-      <div class="metric-item" [class.highlight]="item.highlight" [class.long-value]="item.key === 'authorPubkey'">
+      <div class="metric-item" [class.highlight]="item.highlight" [class.long-value]="item.key === 'authorPubkey'"
+        [class.clickable]="!!item.targetPubkey" [attr.role]="item.targetPubkey ? 'button' : null"
+        [attr.tabindex]="item.targetPubkey ? '0' : null" (click)="item.targetPubkey && openProfile(item.targetPubkey)"
+        (keydown.enter)="item.targetPubkey && openProfile(item.targetPubkey)">
         <mat-icon>{{ item.icon }}</mat-icon>
         <span class="metric-label">{{ item.label }}:</span>
         <span class="metric-value">{{ item.value }}</span>
