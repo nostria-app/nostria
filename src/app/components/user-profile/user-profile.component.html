@@ -87,7 +87,18 @@
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
       <a [attr.href]="disableLink() ? null : profileUrl()" class="user-profile-npub-link"
         (click)="onProfileClick($event)">
-        <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
+        <div class="user-profile-npub">
+          @if (nip05Cached(); as nip05) {
+            @if (nip05.valid) {
+            <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
+            } @else {
+            <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
+            }
+            <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ aliasOrNpub() }}</span>
+          } @else {
+            {{ aliasOrNpub() }}
+          }
+        </div>
       </a>
       }
 
@@ -98,7 +109,19 @@
 
       @if (view() === 'details' && profile() && profile().data) {
       @if (profile().data.nip05) {
-      <div class="user-profile-details">NIP-05: {{ profile().data.nip05 }}</div>
+      <div class="user-profile-details">
+        NIP-05:
+        @if (nip05Cached(); as nip05) {
+          @if (nip05.valid) {
+          <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
+          } @else {
+          <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
+          }
+          <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ profile().data.nip05 }}</span>
+        } @else {
+          {{ profile().data.nip05 }}
+        }
+      </div>
       }
       @if (profile().data.lud16) {
       <div class="user-profile-details">LUD16: {{ profile().data.lud16 }}</div>

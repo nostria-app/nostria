@@ -37,6 +37,7 @@ import { ProfileHoverCardService } from '../../../services/profile-hover-card.se
 import { CreateListDialogComponent, CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
+import { Nip05VerificationService, Nip05VerificationResult } from '../../../services/nip05-verification.service';
 
 interface ProfileData {
   data?: {
@@ -89,6 +90,7 @@ export class ProfileHoverCardComponent {
   private snackBar = inject(MatSnackBar);
   private followSetsService = inject(FollowSetsService);
   private hoverCardService = inject(ProfileHoverCardService);
+  private nip05Service = inject(Nip05VerificationService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -100,6 +102,7 @@ export class ProfileHoverCardComponent {
   mutualFollowingProfiles = signal<ProfileData[]>([]);
   isMenuOpen = signal(false);
   trustRank = signal<number | undefined>(undefined);
+  nip05Verification = signal<Nip05VerificationResult | null>(null);
   hasTrustRank = computed(() => this.trustRank() !== undefined && this.trustRank() !== null);
 
   isFavorite = computed(() => {
@@ -169,6 +172,14 @@ export class ProfileHoverCardComponent {
     try {
       const profile = await this.dataService.getProfile(pubkey);
       this.profile.set((profile as ProfileData) || { isEmpty: true });
+
+      // Trigger NIP-05 verification when hover card profile loads
+      const nip05 = (profile as ProfileData)?.data?.nip05;
+      if (nip05) {
+        this.nip05Service.verify(pubkey, nip05).then(result => {
+          this.nip05Verification.set(result);
+        });
+      }
     } catch (error) {
       console.error('Failed to load profile for hover card:', error);
       this.profile.set({ isEmpty: true });
