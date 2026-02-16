@@ -25,6 +25,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { DatabaseService } from '../../../services/database.service';
 import { ZapService } from '../../../services/zap.service';
+import { LocalStorageService } from '../../../services/local-storage.service';
 
 export type TrendingOrder = 'replies' | 'reposts' | 'reactions' | 'zap_count' | 'zap_amount';
 export type TrendingHours = 1 | 4 | 12 | 24 | 48;
@@ -80,6 +81,12 @@ export class TrendingColumnComponent implements OnDestroy {
   private followSets = inject(FollowSetsService);
   private database = inject(DatabaseService);
   private zapService = inject(ZapService);
+  private localStorage = inject(LocalStorageService);
+
+  private readonly trendingSourceStorageKey = 'trending.source';
+  private readonly trendingHoursStorageKey = 'trending.hours';
+  private readonly trendingOrderStorageKey = 'trending.order';
+  private readonly trendingListStorageKey = 'trending.list';
 
   private loadMoreTriggerElement?: HTMLDivElement;
 
@@ -92,10 +99,10 @@ export class TrendingColumnComponent implements OnDestroy {
   }
 
   // Configuration options
-  selectedSource = signal<TrendingSource>('network');
-  selectedHours = signal<TrendingHours>(4);
-  selectedOrder = signal<TrendingOrder>('replies');
-  selectedList = signal<string>('following');
+  selectedSource = signal<TrendingSource>(this.getInitialTrendingSource());
+  selectedHours = signal<TrendingHours>(this.getInitialTrendingHours());
+  selectedOrder = signal<TrendingOrder>(this.getInitialTrendingOrder());
+  selectedList = signal<string>(this.getInitialTrendingList());
 
   // State
   isLoading = signal(false);
@@ -170,7 +177,9 @@ export class TrendingColumnComponent implements OnDestroy {
       const selectedList = this.selectedList();
 
       if (!options.includes(selectedList)) {
-        this.selectedList.set(options.includes('following') ? 'following' : 'all');
+        const fallbackList = options.includes('following') ? 'following' : 'all';
+        this.selectedList.set(fallbackList);
+        this.localStorage.setItem(this.trendingListStorageKey, fallbackList);
       }
     });
 
@@ -423,17 +432,49 @@ export class TrendingColumnComponent implements OnDestroy {
 
   onSourceChange(source: TrendingSource): void {
     this.selectedSource.set(source);
+    this.localStorage.setItem(this.trendingSourceStorageKey, source);
   }
 
   onListChange(list: string): void {
     this.selectedList.set(list);
+    this.localStorage.setItem(this.trendingListStorageKey, list);
   }
 
   onHoursChange(hours: TrendingHours): void {
     this.selectedHours.set(hours);
+    this.localStorage.setItem(this.trendingHoursStorageKey, hours.toString());
   }
 
   onOrderChange(order: TrendingOrder): void {
     this.selectedOrder.set(order);
+    this.localStorage.setItem(this.trendingOrderStorageKey, order);
+  }
+
+  private getInitialTrendingSource(): TrendingSource {
+    const storedSource = this.localStorage.getItem(this.trendingSourceStorageKey);
+    return storedSource === 'cached' || storedSource === 'network' ? storedSource : 'network';
+  }
+
+  private getInitialTrendingHours(): TrendingHours {
+    const storedHours = this.localStorage.getItem(this.trendingHoursStorageKey);
+    const parsedHours = Number(storedHours);
+    return parsedHours === 1 || parsedHours === 4 || parsedHours === 12 || parsedHours === 24 || parsedHours === 48
+      ? parsedHours
+      : 4;
+  }
+
+  private getInitialTrendingOrder(): TrendingOrder {
+    const storedOrder = this.localStorage.getItem(this.trendingOrderStorageKey);
+    return storedOrder === 'replies'
+      || storedOrder === 'reposts'
+      || storedOrder === 'reactions'
+      || storedOrder === 'zap_count'
+      || storedOrder === 'zap_amount'
+      ? storedOrder
+      : 'replies';
+  }
+
+  private getInitialTrendingList(): string {
+    return this.localStorage.getItem(this.trendingListStorageKey) || 'following';
   }
 }
