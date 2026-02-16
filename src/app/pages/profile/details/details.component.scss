@@ -206,6 +206,10 @@
   font-size: 0.875rem;
   white-space: nowrap;
 
+  &.clickable {
+    cursor: pointer;
+  }
+
   &.long-value {
     max-width: 100%;
     white-space: normal;
