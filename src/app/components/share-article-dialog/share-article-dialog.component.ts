@@ -91,9 +91,16 @@ export interface ShareArticleDialogData {
         </div>
         <div class="recipient-chips">
           @for (recipient of selectedRecipients(); track recipient.event.pubkey) {
-          <div class="recipient-chip">
+          <div
+            class="recipient-chip"
+            role="button"
+            tabindex="0"
+            (click)="removeRecipient(recipient.event.pubkey)"
+            (keydown.enter)="removeRecipient(recipient.event.pubkey)"
+            (keydown.space)="removeRecipient(recipient.event.pubkey)"
+          >
             <app-user-profile [pubkey]="recipient.event.pubkey" view="chip" [disableLink]="true"></app-user-profile>
-            <button class="remove-recipient" (click)="removeRecipient(recipient.event.pubkey)" [disabled]="isSending()">
+            <button class="remove-recipient" (click)="$event.stopPropagation(); removeRecipient(recipient.event.pubkey)" [disabled]="isSending()">
               <mat-icon>close</mat-icon>
             </button>
           </div>
@@ -325,6 +332,11 @@ export interface ShareArticleDialogData {
       position: relative;
       min-width: 64px;
       max-width: 92px;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-highest);
+      }
 
       .remove-recipient {
         position: absolute;
@@ -416,13 +428,13 @@ export interface ShareArticleDialogData {
     .quick-contacts-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
       margin-bottom: 8px;
     }
 
     .quick-contact-chip {
       border: none;
-      padding: 8px 6px;
+      padding: 10px 4px;
       background: transparent;
       border-radius: 14px;
       color: var(--mat-sys-on-surface);
@@ -436,8 +448,40 @@ export interface ShareArticleDialogData {
         align-items: center;
       }
 
-      ::ng-deep .chip-label {
-        max-width: 90px;
+      ::ng-deep .user-profile.chip .user-profile-content.chip-view {
+        min-width: 72px;
+        gap: 6px;
+      }
+
+      ::ng-deep .user-profile.chip .user-profile-avatar.chip-avatar {
+        width: 72px;
+        height: 72px;
+        min-width: 72px;
+        min-height: 72px;
+        max-width: 72px;
+        max-height: 72px;
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+
+      ::ng-deep .user-profile.chip .user-profile-avatar.chip-avatar .user-avatar,
+      ::ng-deep .user-profile.chip .user-profile-avatar.chip-avatar .default-user-avatar {
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 100% !important;
+        min-height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        font-size: 72px;
+        object-fit: cover !important;
+        display: block;
+      }
+
+      ::ng-deep .user-profile.chip .user-profile-name.chip-label,
+      ::ng-deep .user-profile.chip .user-profile-name.chip-label app-profile-display-name {
+        font-size: 13px;
+        max-width: 108px;
         text-align: center;
       }
     }
