@@ -701,12 +701,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    */
   getNotificationTypeLabel(type: NotificationType): string {
     const labels: Record<NotificationType, string> = {
-      [NotificationType.NEW_FOLLOWER]: 'Following events',
+      [NotificationType.NEW_FOLLOWER]: 'New followers',
       [NotificationType.MENTION]: 'Mentions',
       [NotificationType.REPOST]: 'Reposts',
       [NotificationType.REPLY]: 'Replies',
       [NotificationType.REACTION]: 'Reactions',
-      [NotificationType.ZAP]: 'Zap events',
+      [NotificationType.ZAP]: 'Zaps',
       [NotificationType.RELAY_PUBLISHING]: 'Relay Publishing',
       [NotificationType.GENERAL]: 'General',
       [NotificationType.ERROR]: 'Errors',
