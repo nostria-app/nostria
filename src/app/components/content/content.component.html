@@ -1,6 +1,6 @@
 <div class="content-container" #contentContainer>
   @if (shouldShowContent()) {
-  <app-note-content [contentTokens]="contentTokens()" [authorPubkey]="event()?.pubkey"
+  <app-note-content [contentTokens]="displayContentTokens()" [authorPubkey]="event()?.pubkey"
     [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"></app-note-content>
 
   @if (!hideSocialPreviews()) {

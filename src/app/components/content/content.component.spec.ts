@@ -97,6 +97,56 @@ describe('ContentComponent', () => {
     expect(component.hideSocialPreviews()).toBeFalse();
   });
 
+  it('should default hideInlineMediaAndLinks to false', () => {
+    expect(component.hideInlineMediaAndLinks()).toBeFalse();
+  });
+
+  it('should hide inline media and links from displayContentTokens when enabled', () => {
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'hello ' },
+      { id: 2, type: 'url', content: 'https://example.com' },
+      { id: 3, type: 'image', content: 'https://example.com/a.jpg' },
+      { id: 4, type: 'video', content: 'https://example.com/a.mp4' },
+    ]);
+
+    fixture.componentRef.setInput('hideInlineMediaAndLinks', true);
+    fixture.detectChanges();
+
+    const displayed = component.displayContentTokens();
+    expect(displayed.length).toBe(1);
+    expect(displayed[0].type).toBe('text');
+  });
+
+  it('should collapse extra linebreaks left by hidden media tokens', () => {
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'Top text' },
+      { id: 2, type: 'linebreak', content: '\n' },
+      { id: 3, type: 'video', content: 'https://example.com/a.mp4' },
+      { id: 4, type: 'linebreak', content: '\n' },
+      { id: 5, type: 'text', content: 'Bottom text' },
+    ]);
+
+    fixture.componentRef.setInput('hideInlineMediaAndLinks', true);
+    fixture.detectChanges();
+
+    const displayed = component.displayContentTokens();
+    expect(displayed.map(token => token.type)).toEqual(['text', 'linebreak', 'text']);
+  });
+
   it('should compute proxyWebUrl as null when no event', () => {
     expect(component.proxyWebUrl()).toBeNull();
   });

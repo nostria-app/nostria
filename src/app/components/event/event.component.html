@@ -129,7 +129,8 @@
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
+        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     <!-- Images and URLs for collapsed content -->
@@ -267,7 +268,8 @@
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentCollapsed()"></app-content>
+            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentCollapsed()"
+            [hideInlineMediaAndLinks]="isRootContentCollapsed()"></app-content>
           }
         </mat-card-content>
         @if (isRootContentLong()) {
@@ -396,7 +398,8 @@
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentCollapsed()"></app-content>
+            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentCollapsed()"
+            [hideInlineMediaAndLinks]="isParentContentCollapsed()"></app-content>
           }
         </mat-card-content>
         @if (isParentContentLong()) {
@@ -520,7 +523,8 @@
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
+        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -648,7 +652,8 @@
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"
         [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"></app-content>
+        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
+        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
     </div>
     @if (isMainContentLong()) {
     <!-- Images and URLs for collapsed content (normal event) -->
