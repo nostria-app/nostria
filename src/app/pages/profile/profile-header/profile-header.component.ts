@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { NostrRecord } from '../../../interfaces';
-import { isNip05, queryProfile } from 'nostr-tools/nip05';
+import { Nip05VerificationService } from '../../../services/nip05-verification.service';
 import { nip19, kinds } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -101,6 +101,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   private badgeHoverCardService = inject(BadgeHoverCardService);
   private router = inject(Router);
   private trustService = inject(TrustService);
+  private nip05Service = inject(Nip05VerificationService);
   private followSetsService = inject(FollowSetsService);
   private dataService = inject(DataService);
   private imageCacheService = inject(ImageCacheService);
@@ -482,7 +483,10 @@ export class ProfileHeaderComponent implements OnDestroy {
     effect(async () => {
       const currentProfile = this.profile();
       if (currentProfile?.data.nip05) {
-        const result = await this.getVerifiedIdentifier();
+        const result = await this.nip05Service.verifyFresh(
+          currentProfile.event.pubkey,
+          currentProfile.data.nip05,
+        );
         untracked(() => {
           this.verifiedIdentifier.set(result);
         });
@@ -979,54 +983,6 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     // If no protocol prefix, add https:// as default
     return `https://${website}`;
-  }
-
-  /**
-   * Verify the NIP-05 identifier for the profile
-   */
-  private async getVerifiedIdentifier(): Promise<{
-    value: string;
-    valid: boolean;
-    status: string;
-  }> {
-    const metadata = this.profile();
-    if (!metadata || !metadata.data.nip05) {
-      return { value: '', valid: false, status: '' };
-    }
-
-    const nip05 = metadata.data.nip05;
-    if (!nip05 || typeof nip05 !== 'string') {
-      return { value: '', valid: false, status: '' };
-    }
-
-    const value = this.utilities.parseNip05(nip05);
-    if (!value) return { value: '', valid: false, status: '' };
-
-    if (isNip05(nip05)) {
-      try {
-        const profile = await queryProfile(nip05);
-
-        if (profile) {
-          if (profile.pubkey === metadata.event.pubkey) {
-            return { value, valid: true, status: 'Verified valid' };
-          } else {
-            this.logger.warn(
-              'NIP-05 profile pubkey mismatch:',
-              profile.pubkey,
-              metadata.event.pubkey
-            );
-            return { value, valid: false, status: 'Pubkey mismatch' };
-          }
-        } else {
-          return { value, valid: false, status: 'Profile not found' };
-        }
-      } catch (error) {
-        this.logger.warn('Error verifying NIP-05:', nip05, error);
-        return { value, valid: false, status: 'Verification failed' };
-      }
-    } else {
-      return { value, valid: false, status: 'Invalid NIP-05 format' };
-    }
   }
 
   // Add methods for QR code visibility

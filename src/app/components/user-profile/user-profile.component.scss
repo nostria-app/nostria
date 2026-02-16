@@ -348,9 +348,26 @@
       text-overflow: ellipsis;
     }
 
-    .user-profile-nip05 {
-      display: none;
+  .user-profile-nip05 {
+    display: none;
+  }
+
+  // NIP-05 verification icons
+  .nip05-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-right: 2px;
+
+    &.nip05-valid {
+      color: var(--mat-sys-primary);
     }
+
+    &.nip05-invalid {
+      color: var(--mat-sys-error);
+    }
+  }
 
     .user-about {
       display: none;

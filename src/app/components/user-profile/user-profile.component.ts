@@ -34,6 +34,7 @@ import { ProfileHoverCardService } from '../../services/profile-hover-card.servi
 import { TrustService } from '../../services/trust.service';
 import { MatBadgeModule } from '@angular/material/badge';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
+import { Nip05VerificationService, Nip05VerificationResult } from '../../services/nip05-verification.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -68,6 +69,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private hoverCardService = inject(ProfileHoverCardService);
   private trustService = inject(TrustService);
   private readonly intersectionObserverService = inject(IntersectionObserverService);
+  private readonly nip05Service = inject(Nip05VerificationService);
   layout = inject(LayoutService);
 
   publicKey = '';
@@ -550,6 +552,22 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     // Fallback to npub if neither NIP-05 nor LUD16 is available
     return this.npub();
+  });
+
+  /**
+   * Cached NIP-05 verification result. Only reads from the in-memory cache,
+   * never triggers a network request. Returns null if no cached result exists.
+   *
+   * Verification is triggered elsewhere (profile page, hover card).
+   * Once verified there, the result is available here via cache.
+   */
+  nip05Cached = computed<Nip05VerificationResult | null>(() => {
+    const pubkey = this.normalizedPubkey();
+    const profile = this.profile();
+
+    if (!pubkey || !profile?.data?.nip05) return null;
+
+    return this.nip05Service.getCached(pubkey);
   });
 
   /**

@@ -80,7 +80,18 @@
         </div>
       </a>
       <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="alias-link">
-        <div class="alias">{{ aliasOrNpub() }}</div>
+        <div class="alias">
+          @if (nip05Verification(); as nip05) {
+            @if (nip05.valid) {
+            <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
+            } @else {
+            <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
+            }
+            <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ aliasOrNpub() }}</span>
+          } @else {
+            {{ aliasOrNpub() }}
+          }
+        </div>
       </a>
     </div>
 
