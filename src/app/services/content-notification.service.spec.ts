@@ -8,6 +8,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
 import { LocalSettingsService } from './local-settings.service';
+import { kinds } from 'nostr-tools';
 
 describe('ContentNotificationService', () => {
   let service: ContentNotificationService;
@@ -341,6 +342,100 @@ describe('ContentNotificationService', () => {
       expect(service.lastCheckTimestamp()).toBeGreaterThanOrEqual(beforeCheck);
       expect(service.lastCheckTimestamp()).toBeLessThanOrEqual(afterCheck);
       expect(mockAccountLocalState.setNotificationLastCheck).toHaveBeenCalled();
+    });
+  });
+
+  describe('reaction fallback message', () => {
+    it('should not say "your note" when reacting to a note that only mentions the current account', async () => {
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+
+      const now = Math.floor(Date.now() / 1000);
+      const reactionEvent = {
+        id: 'reaction-1',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Reaction,
+        created_at: now,
+        content: '+',
+        tags: [
+          ['e', 'target-note-1'],
+          ['p', TEST_PUBKEY_A],
+        ],
+      };
+
+      mockAccountRelay.getMany.and.callFake((filter: { kinds?: number[] }) => {
+        if (filter.kinds?.includes(kinds.Reaction)) {
+          return Promise.resolve([reactionEvent]);
+        }
+        return Promise.resolve([]);
+      });
+
+      mockDatabase.getEventById.and.callFake((eventId: string) => {
+        if (eventId === 'target-note-1') {
+          return Promise.resolve({
+            id: 'target-note-1',
+            pubkey: 'cccc'.repeat(16),
+            content: '',
+            tags: [],
+            kind: kinds.ShortTextNote,
+            created_at: now - 100,
+            sig: '',
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalled();
+      const notification = mockNotificationService.addNotification.calls.mostRecent().args[0] as { message?: string };
+      expect(notification.message).toBe('Reacted to a note mentioning you');
+    });
+
+    it('should keep "your note" when reacting to a note authored by the current account', async () => {
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+
+      const now = Math.floor(Date.now() / 1000);
+      const reactionEvent = {
+        id: 'reaction-2',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Reaction,
+        created_at: now,
+        content: '+',
+        tags: [
+          ['e', 'target-note-2'],
+          ['p', TEST_PUBKEY_A],
+        ],
+      };
+
+      mockAccountRelay.getMany.and.callFake((filter: { kinds?: number[] }) => {
+        if (filter.kinds?.includes(kinds.Reaction)) {
+          return Promise.resolve([reactionEvent]);
+        }
+        return Promise.resolve([]);
+      });
+
+      mockDatabase.getEventById.and.callFake((eventId: string) => {
+        if (eventId === 'target-note-2') {
+          return Promise.resolve({
+            id: 'target-note-2',
+            pubkey: TEST_PUBKEY_A,
+            content: '',
+            tags: [],
+            kind: kinds.ShortTextNote,
+            created_at: now - 100,
+            sig: '',
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalled();
+      const notification = mockNotificationService.addNotification.calls.mostRecent().args[0] as { message?: string };
+      expect(notification.message).toBe('Reacted to your note');
     });
   });
 });
