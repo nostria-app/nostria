@@ -666,15 +666,29 @@ export class FollowingService {
 
       case 'trust-asc':
         return sorted.sort((a, b) => {
-          const aRank = a.trust?.rank || Number.MAX_SAFE_INTEGER;
-          const bRank = b.trust?.rank || Number.MAX_SAFE_INTEGER;
+          const aRank = a.trust?.rank;
+          const bRank = b.trust?.rank;
+          const aMissing = aRank === undefined || aRank === null;
+          const bMissing = bRank === undefined || bRank === null;
+
+          if (aMissing && bMissing) return 0;
+          if (aMissing) return 1;
+          if (bMissing) return -1;
+
           return aRank - bRank;
         });
 
       case 'trust-desc':
         return sorted.sort((a, b) => {
-          const aRank = a.trust?.rank || Number.MAX_SAFE_INTEGER;
-          const bRank = b.trust?.rank || Number.MAX_SAFE_INTEGER;
+          const aRank = a.trust?.rank;
+          const bRank = b.trust?.rank;
+          const aMissing = aRank === undefined || aRank === null;
+          const bMissing = bRank === undefined || bRank === null;
+
+          if (aMissing && bMissing) return 0;
+          if (aMissing) return 1;
+          if (bMissing) return -1;
+
           return bRank - aRank;
         });
 

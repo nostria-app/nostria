@@ -635,11 +635,14 @@ export class PeopleComponent implements OnDestroy {
   }
 
   /**
-   * Download trust ranks for all people in the current filtered list
+   * Download trust ranks for all people in the currently selected list
    * @param forceRefresh If true, bypasses all caches and fetches fresh data from relay
    */
   private async downloadTrustRanksForCurrentList(forceRefresh = false): Promise<void> {
-    const pubkeys = this.sortedPeople();
+    const selectedSet = this.selectedFollowSet();
+    const sourcePubkeys = selectedSet ? selectedSet.pubkeys : this.accountState.followingList();
+    const pubkeys = [...new Set(sourcePubkeys.filter(Boolean))];
+
     if (pubkeys.length === 0) {
       return;
     }

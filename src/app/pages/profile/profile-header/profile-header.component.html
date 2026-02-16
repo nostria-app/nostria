@@ -98,7 +98,7 @@
         @if (isFavorite()) {
         <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
         }
-        @if (trustEnabled() && trustRank()) {
+        @if (trustEnabled() && trustRank() !== undefined && trustRank() !== null) {
         <span class="trust-rank" [matTooltip]="'Trust Rank: ' + trustRank() + '/100'">
           <mat-icon>verified_user</mat-icon>
           {{ trustRank() }}
