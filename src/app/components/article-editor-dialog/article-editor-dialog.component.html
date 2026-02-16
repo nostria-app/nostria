@@ -28,6 +28,10 @@
               <mat-icon>upload</mat-icon>
               <span>Upload Image</span>
             </button>
+            <button mat-menu-item (click)="openFeaturedImageChooser()">
+              <mat-icon>photo_library</mat-icon>
+              <span>Choose from library</span>
+            </button>
             <button mat-menu-item (click)="openFeaturedImageUrl()">
               <mat-icon>link</mat-icon>
               <span>Image from URL</span>
@@ -63,15 +67,15 @@
             }
           </button>
           @if (!showSplitView()) {
-          <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
-            [class.active]="showPreview()">
+          <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'">
             <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
           }
-          <button mat-icon-button (click)="toggleSplitView()" matTooltip="Split view" [class.active]="showSplitView()"
-            [disabled]="!canUseSplitView()">
-            <mat-icon>split_scene</mat-icon>
+          @if (canUseSplitView()) {
+          <button mat-icon-button (click)="toggleSplitView()" matTooltip="Split view">
+            <mat-icon>{{ showSplitView() ? 'right_panel_open' : 'right_panel_close' }}</mat-icon>
           </button>
+          }
         </div>
       </div>
 
@@ -104,18 +108,23 @@
           <!-- Write Mode -->
           <div class="write-tab">
             <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
-              [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)">
+              [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)"
+              [showToolbar]="showEditorToolbar()" (showToolbarChange)="setEditorToolbarVisible($event)">
             </app-rich-text-editor>
           </div>
           } @else {
           <!-- Preview Mode -->
-          <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+          <div class="editor-container article-preview-wrapper">
+            <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+          </div>
           }
         </div>
 
         @if (showSplitView()) {
         <div class="preview-pane">
-          <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+          <div class="editor-container article-preview-wrapper">
+            <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+          </div>
         </div>
         }
       </div>

@@ -17,11 +17,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { marked } from 'marked';
 import { MediaService } from '../../services/media.service';
 import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
@@ -31,6 +31,8 @@ import {
 } from '../floating-toolbar/floating-toolbar.component';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -41,12 +43,11 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
     MatDividerModule,
     MatMenuModule,
     FormsModule,
-    MatButtonToggleModule,
     MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
     FloatingToolbarComponent
-],
+  ],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +58,8 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   readonly richTextMode = input(true);
   readonly richTextModeChange = output<boolean>();
+  readonly showToolbar = input(true);
+  readonly showToolbarChange = output<boolean>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -76,6 +79,8 @@ export class RichTextEditorComponent implements AfterViewInit {
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
+  private customDialog = inject(CustomDialogService);
   private localSettingsService = inject(LocalSettingsService);
 
   constructor() {
@@ -119,6 +124,16 @@ export class RichTextEditorComponent implements AfterViewInit {
   toggleEditorMode() {
     const currentMode = this.isRichTextMode();
 
+    // Always dismiss floating selection toolbar when changing modes.
+    // Without this, toolbar can remain visible after switching to markdown.
+    this.showFloatingToolbar.set(false);
+
+    // Clear browser text selection to avoid stale selection state.
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+    }
+
     if (currentMode) {
       // Switching to markdown mode, convert rich text to markdown
       const markdown = this.convertRichTextToMarkdown();
@@ -158,6 +173,11 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.markdownContent.set(markdown);
     this.contentChange.emit(markdown);
   }
+
+  toggleToolbarVisibility() {
+    this.showToolbarChange.emit(!this.showToolbar());
+  }
+
   private renderMarkdownToEditor(markdown: string) {
     if (!markdown) {
       if (this.editorContent) {
@@ -368,6 +388,65 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.fileInput.nativeElement.click();
   }
 
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
+  }
+
+  private showMediaServerWarning(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'No Media Server Configured',
+        message: 'You need to configure a media server before selecting media. Would you like to set one up now?',
+        confirmText: 'Setup Media Server',
+        cancelText: 'Cancel',
+        confirmColor: 'primary',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      }
+    });
+  }
+
+  async openMediaChooser(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(
+      MediaChooserDialogComponent,
+      {
+        title: 'Choose from Library',
+        width: '700px',
+        maxWidth: '95vw',
+        data: {
+          multiple: true,
+          mediaType: 'all',
+        },
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (!result?.items?.length) {
+        return;
+      }
+
+      const currentContent = this.content();
+      for (const item of result.items) {
+        if (currentContent.includes(item.url)) {
+          continue;
+        }
+        this.insertFileLink(item.url, this.getFileNameFromUrl(item.url), item.type || '');
+      }
+    });
+  }
+
   openAnyFileDialog(): void {
     this.fileInput.nativeElement.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar';
     this.fileInput.nativeElement.click();
@@ -560,6 +639,15 @@ export class RichTextEditorComponent implements AfterViewInit {
     } else {
       // Insert into markdown editor
       this.insertMarkdownIntoTextarea(markdownLink);
+    }
+  }
+
+  private getFileNameFromUrl(url: string): string {
+    try {
+      const pathname = new URL(url).pathname;
+      return pathname.split('/').pop() || url;
+    } catch {
+      return url;
     }
   }
 

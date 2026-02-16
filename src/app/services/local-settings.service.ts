@@ -78,6 +78,8 @@ export interface LocalSettings {
   maxTaggedAccountsFilter: MaxTaggedAccountsFilter;
   /** Default reaction emoji sent on single-tap. Empty string means open picker instead. */
   defaultReactionEmoji: string;
+  /** Show the article editor formatting toolbar above the body editor. */
+  articleEditorShowToolbar: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -102,6 +104,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   contentFilter: { ...DEFAULT_CONTENT_FILTER },
   maxTaggedAccountsFilter: 100, // Filter mass-tagging by default
   defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
+  articleEditorShowToolbar: true,
 };
 
 /**
@@ -159,6 +162,7 @@ export class LocalSettingsService {
   readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
   readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 100);
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
+  readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [
@@ -551,6 +555,13 @@ export class LocalSettingsService {
    */
   setDefaultReactionEmoji(defaultReactionEmoji: string): void {
     this.updateSettings({ defaultReactionEmoji });
+  }
+
+  /**
+   * Set article editor toolbar visibility preference.
+   */
+  setArticleEditorShowToolbar(articleEditorShowToolbar: boolean): void {
+    this.updateSettings({ articleEditorShowToolbar });
   }
 
   /**

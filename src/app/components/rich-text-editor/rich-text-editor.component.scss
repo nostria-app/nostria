@@ -1,4 +1,5 @@
 .rich-editor-container {
+  --editor-input-inline-padding: var(--editor-inline-padding, 16px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -22,17 +23,91 @@
 
   .editor-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 8px var(--editor-input-inline-padding);
+    min-height: 40px;
+    border-bottom: none;
     gap: 8px;
+    overflow: hidden;
+    transition: padding 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &:not(.collapsed) {
+      min-height: 76px;
+    }
+
+    .toolbar-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 8px;
+      transform-origin: right center;
+      overflow: hidden;
+      transition:
+        transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.28s ease,
+        max-width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+        max-height 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+      max-width: 100%;
+      max-height: 200px;
+      opacity: 1;
+    }
+
+    .toolbar-collapse-button {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: flex-start;
+      transition: transform 0.24s ease, background-color 0.24s ease;
+
+      mat-icon {
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .toolbar-collapse-icon {
+        position: relative;
+        top: 0;
+
+        &.is-collapsed {
+          top: 1px;
+        }
+      }
+    }
+
+    &.collapsed {
+      min-height: 40px;
+      padding-top: 0;
+      padding-bottom: 0;
+
+      .toolbar-content {
+        transform: translateX(24px) scale(0.18);
+        opacity: 0;
+        max-width: 0;
+        max-height: 0;
+        pointer-events: none;
+        overflow: hidden;
+        visibility: hidden;
+      }
+    }
 
     .editor-actions {
       display: flex;
       align-items: center;
+      align-content: flex-start;
       flex-wrap: wrap;
+      overflow-x: visible;
+      max-width: 100%;
       gap: 4px;
 
       button {
@@ -47,25 +122,6 @@
       }
     }
 
-    .editor-mode-toggle {
-      .toggle-label {
-        margin-left: 8px;
-        display: inline-block;
-      }
-
-      mat-button-toggle-group {
-        border: 1px solid var(--mat-sys-outline);
-
-        .mat-button-toggle {
-          color: var(--mat-sys-on-surface);
-
-          &.active {
-            background-color: var(--mat-sys-primary-container);
-            color: var(--mat-sys-on-primary-container);
-          }
-        }
-      }
-    }
   }
 
   .editor-content-area {
@@ -75,7 +131,7 @@
 
     .rich-text-content {
       min-height: 400px;
-      padding: 16px;
+      padding: 16px var(--editor-input-inline-padding);
       outline: none;
       font-family: var(--nostria-font-family);
       line-height: 1.6;
@@ -152,7 +208,7 @@
     .markdown-content {
       width: 100%;
       min-height: 400px;
-      padding: 16px;
+      padding: 16px var(--editor-input-inline-padding);
       border: none;
       resize: none;
       outline: none;
@@ -235,6 +291,15 @@
 @media (max-width: 768px) {
   .rich-editor-container {
     .editor-toolbar {
+      align-items: flex-start;
+      min-height: 0;
+
+      .toolbar-content {
+        flex-direction: column;
+        align-items: stretch;
+        max-height: 180px;
+      }
+
       .formatting-controls {
         overflow-x: auto;
         width: 100%;

@@ -4,101 +4,104 @@
   <input #fileInput type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
     (change)="onFileSelected($event)" class="hidden-file-input" aria-label="Upload files" title="Upload files" />
 
-  <div class="editor-toolbar">
-    <div class="editor-actions">
-      <button mat-icon-button (click)="applyBold()" [disabled]="!isRichTextMode()" matTooltip="Bold">
-        <mat-icon>format_bold</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="applyItalic()" [disabled]="!isRichTextMode()" matTooltip="Italic">
-        <mat-icon>format_italic</mat-icon>
-      </button>
-
-      <mat-divider [vertical]="true"></mat-divider>
-
-      <button mat-icon-button (click)="applyHeading(1)" [disabled]="!isRichTextMode()" matTooltip="Heading 1">
-        <mat-icon>looks_one</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="applyHeading(2)" [disabled]="!isRichTextMode()" matTooltip="Heading 2">
-        <mat-icon>looks_two</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="applyHeading(3)" [disabled]="!isRichTextMode()" matTooltip="Heading 3">
-        <mat-icon>looks_3</mat-icon>
-      </button>
-
-      <mat-divider [vertical]="true"></mat-divider>
-
-      <button mat-icon-button (click)="applyQuote()" [disabled]="!isRichTextMode()" matTooltip="Quote">
-        <mat-icon>format_quote</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="applyUnorderedList()" [disabled]="!isRichTextMode()" matTooltip="Bullet List">
-        <mat-icon>format_list_bulleted</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="applyOrderedList()" [disabled]="!isRichTextMode()" matTooltip="Numbered List">
-        <mat-icon>format_list_numbered</mat-icon>
-      </button>
-
-      <mat-divider [vertical]="true"></mat-divider>
-
-      <button mat-icon-button (click)="applyLink()" [disabled]="!isRichTextMode()" matTooltip="Insert Link">
-        <mat-icon>link</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="insertCode()" [disabled]="!isRichTextMode()" matTooltip="Format as Code">
-        <mat-icon>code</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="!isRichTextMode()" matTooltip="Divider">
-        <mat-icon>horizontal_rule</mat-icon>
-      </button>
-
-      <mat-divider [vertical]="true"></mat-divider>
-
-      <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading()" matTooltip="Insert Image">
-        @if (isUploading()) {
-        <mat-icon>hourglass_empty</mat-icon>
-        } @else {
-        <mat-icon>image</mat-icon>
-        }
-      </button>
-
-      <mat-menu #imageMenu="matMenu">
-        <button mat-menu-item (click)="openImageDialog()">
-          <mat-icon>upload</mat-icon>
-          <span>Upload Image</span>
+  <div class="editor-toolbar" [class.collapsed]="!showToolbar()">
+    <div class="toolbar-content" [attr.inert]="!showToolbar() ? '' : null" [attr.aria-hidden]="!showToolbar()">
+      <div class="editor-actions">
+        <button mat-icon-button (click)="applyBold()" [disabled]="!isRichTextMode()" matTooltip="Bold">
+          <mat-icon>format_bold</mat-icon>
         </button>
-        <button mat-menu-item (click)="insertImageFromUrl()">
+
+        <button mat-icon-button (click)="applyItalic()" [disabled]="!isRichTextMode()" matTooltip="Italic">
+          <mat-icon>format_italic</mat-icon>
+        </button>
+
+        <mat-divider [vertical]="true"></mat-divider>
+
+        <button mat-icon-button (click)="applyHeading(1)" [disabled]="!isRichTextMode()" matTooltip="Heading 1">
+          <mat-icon>looks_one</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="applyHeading(2)" [disabled]="!isRichTextMode()" matTooltip="Heading 2">
+          <mat-icon>looks_two</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="applyHeading(3)" [disabled]="!isRichTextMode()" matTooltip="Heading 3">
+          <mat-icon>looks_3</mat-icon>
+        </button>
+
+        <mat-divider [vertical]="true"></mat-divider>
+
+        <button mat-icon-button (click)="applyQuote()" [disabled]="!isRichTextMode()" matTooltip="Quote">
+          <mat-icon>format_quote</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="applyUnorderedList()" [disabled]="!isRichTextMode()" matTooltip="Bullet List">
+          <mat-icon>format_list_bulleted</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="applyOrderedList()" [disabled]="!isRichTextMode()" matTooltip="Numbered List">
+          <mat-icon>format_list_numbered</mat-icon>
+        </button>
+
+        <mat-divider [vertical]="true"></mat-divider>
+
+        <button mat-icon-button (click)="applyLink()" [disabled]="!isRichTextMode()" matTooltip="Insert Link">
           <mat-icon>link</mat-icon>
-          <span>Image from URL</span>
         </button>
-      </mat-menu>
 
-      <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading()" matTooltip="Upload File">
-        <mat-icon>attach_file</mat-icon>
-      </button>
-
-      <button mat-icon-button (click)="insertLoremIpsum()" matTooltip="Insert Lorem Ipsum paragraph">
-        <mat-icon>text_snippet</mat-icon>
-      </button>
-    </div>
-    <div class="editor-mode-toggle">
-      <mat-button-toggle-group [value]="isRichTextMode() ? 'rich' : 'markdown'">
-        <mat-button-toggle value="rich" [class.active]="isRichTextMode()"
-          (click)="isRichTextMode() ? null : toggleEditorMode()" matTooltip="Rich Text Editor">
-          <mat-icon>wysiwyg</mat-icon>
-          <span class="toggle-label">Rich Text</span>
-        </mat-button-toggle>
-        <mat-button-toggle value="markdown" [class.active]="!isRichTextMode()"
-          (click)="!isRichTextMode() ? null : toggleEditorMode()" matTooltip="Markdown Editor">
+        <button mat-icon-button (click)="insertCode()" [disabled]="!isRichTextMode()" matTooltip="Format as Code">
           <mat-icon>code</mat-icon>
-          <span class="toggle-label">Markdown</span>
-        </mat-button-toggle>
-      </mat-button-toggle-group>
+        </button>
+
+        <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="!isRichTextMode()" matTooltip="Divider">
+          <mat-icon>horizontal_rule</mat-icon>
+        </button>
+
+        <mat-divider [vertical]="true"></mat-divider>
+
+        <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading()" matTooltip="Insert Media">
+          @if (isUploading()) {
+          <mat-icon>hourglass_empty</mat-icon>
+          } @else {
+          <mat-icon>image</mat-icon>
+          }
+        </button>
+
+        <mat-menu #imageMenu="matMenu">
+          <button mat-menu-item (click)="openAnyFileDialog()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload media</span>
+          </button>
+          <button mat-menu-item (click)="openMediaChooser()">
+            <mat-icon>photo_library</mat-icon>
+            <span>Choose from library</span>
+          </button>
+          <button mat-menu-item (click)="insertImageFromUrl()">
+            <mat-icon>link</mat-icon>
+            <span>Media from URL</span>
+          </button>
+        </mat-menu>
+
+        <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading()" matTooltip="Upload File">
+          <mat-icon>attach_file</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="insertLoremIpsum()" matTooltip="Insert Lorem Ipsum paragraph">
+          <mat-icon>text_snippet</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="toggleEditorMode()"
+          [matTooltip]="isRichTextMode() ? 'Switch to Markdown editor' : 'Switch to Rich Text editor'">
+          <mat-icon>{{ isRichTextMode() ? 'code' : 'wysiwyg' }}</mat-icon>
+        </button>
+      </div>
     </div>
+    <button mat-icon-button class="toolbar-collapse-button" (click)="toggleToolbarVisibility()"
+      [matTooltip]="showToolbar() ? 'Zen mode (collapse toolbar)' : 'Show formatting toolbar'">
+      <mat-icon class="toolbar-collapse-icon" [class.is-collapsed]="!showToolbar()">
+        {{ showToolbar() ? 'chevron_right' : 'chevron_left' }}
+      </mat-icon>
+    </button>
   </div>
 
   <div class="editor-content-area">

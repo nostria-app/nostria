@@ -27,7 +27,33 @@
 // Override margin for preview mode (used in article editor)
 :host-context(.editor-container) .article-container {
   margin: 0 auto;
+  padding: 0 16px;
+
+  @media (max-width: 600px) {
+    padding: 0 12px;
+  }
+}
+
+:host-context(.editor-container) .article-header {
+  margin-bottom: 12px;
+}
+
+:host-context(.editor-container) .article-header .article-header-content .article-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+:host-context(.editor-container) .article-header .article-header-content .article-summary {
   padding: 0;
+  margin-bottom: 12px;
+  background: transparent;
+  border-radius: 0;
+  border-left: none;
+  box-shadow: none;
+}
+
+:host-context(.editor-container) .article-header .article-header-content .article-summary::before {
+  display: none;
 }
 
 // Voice and speed menu styles

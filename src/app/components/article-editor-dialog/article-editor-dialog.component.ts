@@ -47,9 +47,11 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
 import type { ArticleData } from '../article-display/article-display.component';
 import { ArticleDisplayComponent } from '../article-display/article-display.component';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -123,6 +125,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
+  private localSettings = inject(LocalSettingsService);
+  private customDialog = inject(CustomDialogService);
   private cache = inject(Cache);
   private readonly DEFAULT_DIALOG_WIDTH = '920px';
   private readonly SPLIT_DIALOG_WIDTH = '1840px';
@@ -243,6 +247,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   showArticleImage = signal(false);
   showPreview = signal(false);
   showSplitView = signal(false);
+  showEditorToolbar = computed(() => this.localSettings.articleEditorShowToolbar());
   isLargeScreen = signal(false);
   canUseSplitView = computed(() => this.isLargeScreen());
 
@@ -977,6 +982,28 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 
+  private hasConfiguredMediaServers(): boolean {
+    return this.media.mediaServers().length > 0;
+  }
+
+  private showMediaServerWarning(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'No Media Server Configured',
+        message: 'You need to configure a media server before selecting media. Would you like to set one up now?',
+        confirmText: 'Setup Media Server',
+        cancelText: 'Cancel',
+        confirmColor: 'primary',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      }
+    });
+  }
+
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
 
@@ -1021,6 +1048,44 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         this.article.update(art => ({ ...art, image: url }));
         this.showArticleImage.set(true);
       }
+    });
+  }
+
+  async openFeaturedImageChooser(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(
+      MediaChooserDialogComponent,
+      {
+        title: 'Choose from Library',
+        width: '700px',
+        maxWidth: '95vw',
+        data: {
+          multiple: false,
+          mediaType: 'images',
+        },
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const selected = result?.items?.[0];
+      if (!selected) {
+        return;
+      }
+
+      this.article.update(art => ({
+        ...art,
+        image: selected.url,
+        selectedImageFile: undefined,
+      }));
+      this.previewImage.set(selected.url);
+      this.showArticleImage.set(true);
     });
   }
 
@@ -1144,6 +1209,10 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
     this.showPreview.set(false);
     this.showSplitView.update(show => !show);
+  }
+
+  setEditorToolbarVisible(visible: boolean): void {
+    this.localSettings.setArticleEditorShowToolbar(visible);
   }
 
   onEditorModeChange(isRichTextMode: boolean): void {

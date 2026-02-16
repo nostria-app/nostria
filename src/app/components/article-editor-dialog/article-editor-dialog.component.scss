@@ -39,8 +39,13 @@
   }
 
   .medium-editor {
+    --editor-inline-padding: 16px;
     width: 100%;
     padding-bottom: 2rem;
+
+    @media (max-width: 600px) {
+      --editor-inline-padding: 12px;
+    }
 
     .editor-layout {
       display: block;
@@ -141,6 +146,7 @@
 
     .title-input {
       width: 100%;
+      padding-inline: var(--editor-inline-padding);
       border: none;
       background: transparent;
       font-size: 2.5rem;
@@ -159,15 +165,19 @@
 
     .summary-input {
       width: 100%;
+      padding-inline: var(--editor-inline-padding);
       border: none;
       background: transparent;
       font-size: 1.25rem;
+      line-height: 1.6;
       color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 32px;
+      margin-bottom: 12px;
       outline: none;
       font-family: inherit;
       resize: none;
       min-height: 60px;
+      field-sizing: content;
+      overflow: hidden;
 
       &::placeholder {
         color: var(--mat-sys-on-surface-variant);
@@ -192,8 +202,9 @@
   }
 
   .metadata-section {
-    margin-top: 32px;
-    padding-top: 32px;
+    margin-top: 24px;
+    padding-top: 24px;
+    padding-inline: var(--editor-inline-padding);
     border-top: 1px solid var(--mat-sys-outline-variant);
 
     .dTag-field-container {
