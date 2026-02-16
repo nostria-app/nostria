@@ -77,6 +77,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-58: Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
 - [x] [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md)
 - [x] [NIP-68: Picture-first feeds](https://github.com/nostr-protocol/nips/blob/master/68.md)
+- [x] [NIP-70: Protected Events](https://github.com/nostria-app/nips/blob/master/70.md)
 - [x] [NIP-71: Video Events](https://github.com/nostr-protocol/nips/blob/master/71.md)
 - [x] [NIP-75: Zap Goals](https://github.com/nostr-protocol/nips/blob/master/75.md)
 - [x] [NIP-85: Trusted Assertions (Web of Trust)](https://nostrhub.io/naddr1qvzqqqrcvypzq3svyhng9ld8sv44950j957j9vchdktj7cxumsep9mvvjthc2pjuqy88wumn8ghj7mn0wvhxcmmv9uqpyarjw4ehgety94shxum9wf6xjmmwwv9rup67)
