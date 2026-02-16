@@ -20,6 +20,7 @@ export interface PeopleFilters {
  */
 interface AccountLocalState {
   notificationLastCheck?: number;
+  followerNotificationsProcessedAt?: Record<string, number>;
   messagesLastCheck?: number;
   activeFeed?: string;
   favorites?: string[];
@@ -230,6 +231,44 @@ export class AccountLocalStateService {
    */
   setNotificationLastCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { notificationLastCheck: timestamp });
+  }
+
+  /**
+   * Get processed follower notification map for an account.
+   * Key is follower pubkey, value is the processed follow timestamp (seconds).
+   */
+  getFollowerNotificationsProcessedAt(pubkey: string): Record<string, number> {
+    const state = this.getAccountState(pubkey);
+    return state.followerNotificationsProcessedAt || {};
+  }
+
+  /**
+   * Check if a follower notification has already been processed for this account.
+   */
+  hasProcessedFollowerNotification(pubkey: string, followerPubkey: string): boolean {
+    const processed = this.getFollowerNotificationsProcessedAt(pubkey);
+    return processed[followerPubkey] !== undefined;
+  }
+
+  /**
+   * Mark a follower notification as processed for this account.
+   */
+  markFollowerNotificationProcessed(pubkey: string, followerPubkey: string, timestamp: number): void {
+    const state = this.getAccountState(pubkey);
+    const existingProcessed = state.followerNotificationsProcessedAt || {};
+    this.updateAccountState(pubkey, {
+      followerNotificationsProcessedAt: {
+        ...existingProcessed,
+        [followerPubkey]: timestamp,
+      },
+    });
+  }
+
+  /**
+   * Clear all processed follower notifications for an account.
+   */
+  clearFollowerNotificationsProcessed(pubkey: string): void {
+    this.updateAccountState(pubkey, { followerNotificationsProcessedAt: undefined });
   }
 
   /**

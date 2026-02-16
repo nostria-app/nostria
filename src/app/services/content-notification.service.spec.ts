@@ -40,8 +40,12 @@ describe('ContentNotificationService', () => {
     mockAccountLocalState = jasmine.createSpyObj('AccountLocalStateService', [
       'getNotificationLastCheck',
       'setNotificationLastCheck',
+      'hasProcessedFollowerNotification',
+      'markFollowerNotificationProcessed',
+      'clearFollowerNotificationsProcessed',
     ]);
     mockAccountLocalState.getNotificationLastCheck.and.returnValue(0);
+    mockAccountLocalState.hasProcessedFollowerNotification.and.returnValue(false);
 
     mockNotificationService = {
       notifications: signal<unknown[]>([]),
@@ -326,6 +330,70 @@ describe('ContentNotificationService', () => {
 
       expect(service.lastCheckTimestamp()).toBe(0);
       expect(mockAccountLocalState.setNotificationLastCheck).toHaveBeenCalledWith(TEST_PUBKEY_A, 0);
+      expect(mockAccountLocalState.clearFollowerNotificationsProcessed).toHaveBeenCalledWith(TEST_PUBKEY_A);
+    });
+  });
+
+  describe('follower processing', () => {
+    it('should create follower notification when user is tagged but not last p-tag', async () => {
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+
+      const now = Math.floor(Date.now() / 1000);
+      const followerEvent = {
+        id: 'follow-1',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Contacts,
+        created_at: now,
+        content: '',
+        tags: [
+          ['p', TEST_PUBKEY_A],
+          ['p', 'cccc'.repeat(16)],
+        ],
+      };
+
+      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+        if (filter.kinds?.includes(kinds.Contacts)) {
+          return [followerEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).toHaveBeenCalled();
+      expect(mockAccountLocalState.markFollowerNotificationProcessed)
+        .toHaveBeenCalledWith(TEST_PUBKEY_A, TEST_PUBKEY_B, now);
+    });
+
+    it('should skip follower notification when already processed for this follower', async () => {
+      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.hasProcessedFollowerNotification.and.callFake((recipient: string, follower: string) => {
+        return recipient === TEST_PUBKEY_A && follower === TEST_PUBKEY_B;
+      });
+
+      const now = Math.floor(Date.now() / 1000);
+      const followerEvent = {
+        id: 'follow-2',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Contacts,
+        created_at: now,
+        content: '',
+        tags: [['p', TEST_PUBKEY_A]],
+      };
+
+      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+        if (filter.kinds?.includes(kinds.Contacts)) {
+          return [followerEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
+      expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
     });
   });
 

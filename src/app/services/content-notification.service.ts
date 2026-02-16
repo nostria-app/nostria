@@ -77,6 +77,7 @@ export class ContentNotificationService implements OnDestroy {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setNotificationLastCheck(pubkey, 0);
+      this.accountLocalState.clearFollowerNotificationsProcessed(pubkey);
     }
     this.logger.info('ContentNotificationService last check timestamp reset for account');
   }
@@ -520,37 +521,45 @@ export class ContentNotificationService implements OnDestroy {
       this.logger.debug(`Found ${events.length} potential follow events`);
 
       for (const event of events) {
-        // Skip if the follower is the current user (don't notify yourself)
-        if (event.pubkey === pubkey) {
-          continue;
-        }
-
-        // Get all 'p' tags (follows) from the contact list
-        const pTags = event.tags.filter(tag => tag[0] === 'p');
-
-        // Only create notification if this user's pubkey is the LAST 'p' tag
-        // This indicates it's the most recent follow, not an old one
-        if (pTags.length > 0) {
-          const lastPTag = pTags[pTags.length - 1];
-          const isLastFollow = lastPTag[1] === pubkey;
-
-          if (isLastFollow) {
-            await this.createContentNotification({
-              type: NotificationType.NEW_FOLLOWER,
-              title: 'New follower',
-              message: 'Someone started following you',
-              authorPubkey: event.pubkey,
-              recipientPubkey: pubkey, // The account that received this notification
-              eventId: event.id,
-              kind: 3,
-              timestamp: event.created_at * 1000, // Convert to milliseconds
-            });
-          }
-        }
+        await this.processFollowerEvent(pubkey, event);
       }
     } catch (error) {
       this.logger.error('Failed to check for new followers', error);
     }
+  }
+
+  /**
+   * Process a kind 3 contact list event as a potential follow notification.
+   * Uses persisted account-local state to ensure each follower is only processed once.
+   */
+  private async processFollowerEvent(pubkey: string, event: Event): Promise<void> {
+    if (event.pubkey === pubkey) {
+      return;
+    }
+
+    const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+    if (!followsCurrentUser) {
+      return;
+    }
+
+    if (this.accountLocalState.hasProcessedFollowerNotification(pubkey, event.pubkey)) {
+      return;
+    }
+
+    await this.createContentNotification({
+      type: NotificationType.NEW_FOLLOWER,
+      title: 'New follower',
+      message: 'Someone started following you',
+      authorPubkey: event.pubkey,
+      recipientPubkey: pubkey,
+      eventId: event.id,
+      kind: 3,
+      timestamp: event.created_at * 1000,
+    });
+
+    // Persist follower as processed so future contact list updates from this user
+    // do not depend on p-tag ordering and won't duplicate follow notifications.
+    this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
   }
 
   /**
@@ -1178,24 +1187,7 @@ export class ContentNotificationService implements OnDestroy {
       });
 
       for (const event of events) {
-        if (event.pubkey === pubkey) continue;
-
-        const pTags = event.tags.filter(tag => tag[0] === 'p');
-        if (pTags.length > 0) {
-          const lastPTag = pTags[pTags.length - 1];
-          if (lastPTag[1] === pubkey) {
-            await this.createContentNotification({
-              type: NotificationType.NEW_FOLLOWER,
-              title: 'New follower',
-              message: 'Someone started following you',
-              authorPubkey: event.pubkey,
-              recipientPubkey: pubkey,
-              eventId: event.id,
-              kind: 3,
-              timestamp: event.created_at * 1000,
-            });
-          }
-        }
+        await this.processFollowerEvent(pubkey, event);
       }
     } catch (error) {
       this.logger.error('Failed to check for new followers in range', error);
