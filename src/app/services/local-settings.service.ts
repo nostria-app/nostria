@@ -73,7 +73,7 @@ export interface LocalSettings {
   /**
    * Maximum number of tagged accounts allowed in an event for notifications.
    * Events with more tags than this threshold will not generate notifications.
-   * 'none' means no filtering (default).
+    * 'none' means no filtering.
    */
   maxTaggedAccountsFilter: MaxTaggedAccountsFilter;
   /** Default reaction emoji sent on single-tap. Empty string means open picker instead. */
@@ -100,7 +100,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   homeDestination: 'feeds',
   menuItems: [], // Empty means use default order
   contentFilter: { ...DEFAULT_CONTENT_FILTER },
-  maxTaggedAccountsFilter: 'none', // No filtering by default
+  maxTaggedAccountsFilter: 100, // Filter mass-tagging by default
   defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
 };
 
@@ -157,7 +157,7 @@ export class LocalSettingsService {
   readonly homeDestination = computed(() => this.settings().homeDestination);
   readonly menuItems = computed(() => this.settings().menuItems);
   readonly contentFilter = computed(() => this.settings().contentFilter ?? DEFAULT_CONTENT_FILTER);
-  readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 'none');
+  readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 100);
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
 
   /** Default menu item IDs in order (used when no custom config is set) */
