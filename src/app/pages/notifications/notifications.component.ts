@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -39,6 +39,7 @@ import { TwoColumnLayoutService } from '../../services/two-column-layout.service
 import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
 import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
+import { Subscription } from 'rxjs';
 
 /**
  * Local storage key for notification filter preferences
@@ -88,6 +89,21 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private twoColumnLayout = inject(TwoColumnLayoutService);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
+  @ViewChild(CdkVirtualScrollViewport)
+  set notificationViewport(viewport: CdkVirtualScrollViewport | undefined) {
+    this.viewportScrollSubscription?.unsubscribe();
+    this._notificationViewport = viewport;
+
+    if (!viewport) {
+      return;
+    }
+
+    this.viewportScrollSubscription = viewport.elementScrolled().subscribe(() => {
+      this.onViewportScrolled();
+    });
+  }
+  private _notificationViewport?: CdkVirtualScrollViewport;
+  private viewportScrollSubscription?: Subscription;
 
   notifications = this.notificationService.notifications;
 
@@ -159,12 +175,33 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Cache for prefetched profiles - updated when batch loading completes
   private prefetchedProfiles = signal<Map<string, NostrRecord>>(new Map());
 
+  private readonly defaultNotificationFilters: Record<NotificationType, boolean> = {
+    [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.MENTION]: true,
+    [NotificationType.REPOST]: true,
+    [NotificationType.REPLY]: true,
+    [NotificationType.REACTION]: true,
+    [NotificationType.ZAP]: true,
+    [NotificationType.RELAY_PUBLISHING]: true,
+    [NotificationType.GENERAL]: true,
+    [NotificationType.ERROR]: true,
+    [NotificationType.SUCCESS]: true,
+    [NotificationType.WARNING]: true,
+  };
+
   constructor() {
     this.twoColumnLayout.setSplitView();
     // Save notification filters to localStorage whenever they change
     effect(() => {
       const filters = this.notificationFilters();
-      this.localStorage.setItem(NOTIFICATION_FILTERS_KEY, JSON.stringify(filters));
+      this.localStorage.setItem(
+        NOTIFICATION_FILTERS_KEY,
+        JSON.stringify({
+          filters,
+          showSystemNotifications: this.showSystemNotifications(),
+          showUnreadOnly: this.showUnreadOnly(),
+        })
+      );
     });
 
     // Batch preload profiles when notifications change
@@ -343,7 +380,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Component cleanup
+    this.viewportScrollSubscription?.unsubscribe();
   }
 
   /**
@@ -353,12 +390,43 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     try {
       const savedFilters = this.localStorage.getItem(NOTIFICATION_FILTERS_KEY);
       if (savedFilters) {
-        const filters = JSON.parse(savedFilters) as Record<NotificationType, boolean>;
-        this.notificationFilters.set(filters);
+        const parsed = JSON.parse(savedFilters) as unknown;
+
+        if (this.isPersistedFilterState(parsed)) {
+          this.notificationFilters.set({
+            ...this.defaultNotificationFilters,
+            ...parsed.filters,
+          });
+          this.showSystemNotifications.set(parsed.showSystemNotifications ?? false);
+          this.showUnreadOnly.set(parsed.showUnreadOnly ?? false);
+          return;
+        }
+
+        // Backward compatibility: older schema stored only filter map
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          this.notificationFilters.set({
+            ...this.defaultNotificationFilters,
+            ...(parsed as Record<NotificationType, boolean>),
+          });
+        }
       }
     } catch (error) {
       this.logger.error('Failed to load notification filters from localStorage', error);
     }
+  }
+
+  private isPersistedFilterState(
+    value: unknown
+  ): value is {
+    filters: Record<NotificationType, boolean>;
+    showSystemNotifications?: boolean;
+    showUnreadOnly?: boolean;
+  } {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return false;
+    }
+
+    return 'filters' in value && typeof (value as { filters?: unknown }).filters === 'object';
   }
 
   /**
@@ -846,9 +914,28 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Handle virtual scroll viewport reaching end - load more notifications
    */
   onScrolledIndexChange(index: number): void {
+    this.onViewportScrolled();
+
     const notifications = this.contentNotifications();
     // Load more when user scrolls near the end (within last 5 items)
     if (notifications.length > 0 && index >= notifications.length - 5) {
+      this.loadMoreNotifications();
+    }
+  }
+
+  /**
+   * Handle viewport scroll events for reliable infinite loading.
+   * Uses pixel distance from bottom as a fallback when index change doesn't fire.
+   */
+  onViewportScrolled(): void {
+    if (!this._notificationViewport) {
+      return;
+    }
+
+    const distanceToBottom = this._notificationViewport.measureScrollOffset('bottom');
+    const nearBottomThresholdPx = 500;
+
+    if (distanceToBottom <= nearBottomThresholdPx) {
       this.loadMoreNotifications();
     }
   }
