@@ -25,6 +25,80 @@
   </div>
   }
 
+  @if (isLoadingModerationSignals()) {
+  <div class="profile-updated-info">
+    <mat-icon>downloading</mat-icon>
+    <span>Downloading report and mute-list signals...</span>
+  </div>
+  }
+
+  @if (moderationOverview(); as moderation) {
+  <div class="metrics-section">
+    <h3>Safety Signals</h3>
+
+    <div class="metrics-grid">
+      <div class="metric-item highlight">
+        <mat-icon>gavel</mat-icon>
+        <span class="metric-label">Reports Against User:</span>
+        <span class="metric-value">{{ moderation.totalReports }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>campaign</mat-icon>
+        <span class="metric-label">Unique Reporters:</span>
+        <span class="metric-value">{{ moderation.uniqueReporters }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>volume_off</mat-icon>
+        <span class="metric-label">People Muting This User:</span>
+        <span class="metric-value">{{ moderation.uniqueMuters }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>download_done</mat-icon>
+        <span class="metric-label">Downloaded Report Events:</span>
+        <span class="metric-value">{{ moderation.downloadedReportEvents }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>download_done</mat-icon>
+        <span class="metric-label">Downloaded Mute Lists:</span>
+        <span class="metric-value">{{ moderation.downloadedMuteListEvents }}</span>
+      </div>
+
+      <div class="metric-item">
+        <mat-icon>help_outline</mat-icon>
+        <span class="metric-label">Unknown Report Type:</span>
+        <span class="metric-value">{{ moderation.unknownTypeReports }}</span>
+      </div>
+
+      @if (moderation.latestReportAt) {
+      <div class="metric-item">
+        <mat-icon>schedule</mat-icon>
+        <span class="metric-label">Latest Report:</span>
+        <span class="metric-value">{{ formatTimestamp(moderation.latestReportAt) }}</span>
+      </div>
+      }
+    </div>
+
+    @if (reportTypeBreakdown().length > 0) {
+    <div class="report-type-list">
+      <h4>Report Type Breakdown</h4>
+      <div class="metrics-grid">
+        @for (reportType of reportTypeBreakdown(); track reportType.type) {
+        <div class="metric-item">
+          <mat-icon>label</mat-icon>
+          <span class="metric-label">{{ reportType.type }}:</span>
+          <span class="metric-value">{{ reportType.count }}</span>
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+
   @if (metrics()) {
   <div class="metrics-section">
     <h3>Algorithm Metrics</h3>
@@ -132,7 +206,8 @@
       @if (relayList.hasRelayList) {
       <div class="info-item positive">
         <mat-icon>thumb_up</mat-icon>
-        <span class="info-label">Has Relay List (kind 10002, NIP-65) with {{ relayList.relayCount }} relay{{ relayList.relayCount !== 1 ? 's' : '' }}</span>
+        <span class="info-label">Has Relay List (kind 10002, NIP-65) with {{ relayList.relayCount }} relay{{
+          relayList.relayCount !== 1 ? 's' : '' }}</span>
       </div>
       @if (relayList.updatedAt) {
       <div class="info-item neutral">
@@ -148,17 +223,18 @@
       }
 
       @if (contactListRelayInfo(); as contactRelays) {
-        @if (contactRelays.hasRelaysInContacts) {
-        <div class="info-item neutral">
-          <mat-icon>info</mat-icon>
-          <span class="info-label">Has relays in Contact List (kind 3) with {{ contactRelays.relayCount }} relay{{ contactRelays.relayCount !== 1 ? 's' : '' }}</span>
-        </div>
-        } @else {
-        <div class="info-item neutral">
-          <mat-icon>info</mat-icon>
-          <span class="info-label">No relays in Contact List (kind 3)</span>
-        </div>
-        }
+      @if (contactRelays.hasRelaysInContacts) {
+      <div class="info-item neutral">
+        <mat-icon>info</mat-icon>
+        <span class="info-label">Has relays in Contact List (kind 3) with {{ contactRelays.relayCount }} relay{{
+          contactRelays.relayCount !== 1 ? 's' : '' }}</span>
+      </div>
+      } @else {
+      <div class="info-item neutral">
+        <mat-icon>info</mat-icon>
+        <span class="info-label">No relays in Contact List (kind 3)</span>
+      </div>
+      }
       }
     </div>
   </div>
