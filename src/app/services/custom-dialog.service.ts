@@ -116,6 +116,24 @@ export class CustomDialogRef<T = unknown, R = unknown> {
   }
 
   /**
+   * Update the dialog width dynamically
+   */
+  updateWidth(width: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('width', width);
+    }
+  }
+
+  /**
+   * Update the dialog max width dynamically
+   */
+  updateMaxWidth(maxWidth: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('maxWidth', maxWidth);
+    }
+  }
+
+  /**
    * Close the dialog with an optional result
    */
   close(result?: R): void {

@@ -62,10 +62,12 @@
             <mat-icon>mic</mat-icon>
             }
           </button>
+          @if (!showSplitView()) {
           <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
             [class.active]="showPreview()">
             <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
+          }
           <button mat-icon-button (click)="toggleSplitView()" matTooltip="Split view" [class.active]="showSplitView()"
             [disabled]="!canUseSplitView()">
             <mat-icon>split_scene</mat-icon>

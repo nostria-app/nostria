@@ -124,6 +124,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private cache = inject(Cache);
+  private readonly DEFAULT_DIALOG_WIDTH = '920px';
+  private readonly SPLIT_DIALOG_WIDTH = '1840px';
 
   // Signals
   autoDTagEnabled = signal(true);
@@ -262,6 +264,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   constructor() {
     this.initializeSplitViewSupport();
 
+    effect(() => {
+      const isSplitEnabled = this.showSplitView();
+      this.updateDialogWidth(isSplitEnabled);
+    });
+
     // Check if we're editing an existing article
     effect(() => {
       const articleId = this.data.articleId;
@@ -331,6 +338,12 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     this.splitViewMediaQuery = window.matchMedia('(min-width: 1280px)');
     this.isLargeScreen.set(this.splitViewMediaQuery.matches);
     this.splitViewMediaQuery.addEventListener('change', this.splitViewMediaQueryHandler);
+  }
+
+  private updateDialogWidth(isSplitEnabled: boolean): void {
+    const width = isSplitEnabled ? this.SPLIT_DIALOG_WIDTH : this.DEFAULT_DIALOG_WIDTH;
+    this.dialogRef?.updateWidth(width);
+    this.dialogRef?.updateMaxWidth('100vw');
   }
 
   private generateUniqueId(): string {
