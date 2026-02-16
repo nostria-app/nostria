@@ -741,6 +741,7 @@ export class ArticleComponent implements OnDestroy {
       identifier: identifier,
       kind: event.kind,
       encodedId,
+      event,
       naddr: this.naddr() || this.link || nip19.naddrEncode({
         identifier: identifier,
         pubkey: event.pubkey,

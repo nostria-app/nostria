@@ -333,6 +333,7 @@ export class MusicTrackMenuComponent {
         identifier: id,
         kind: MUSIC_KIND,
         encodedId: naddr,
+        event: ev,
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {

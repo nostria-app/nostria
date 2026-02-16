@@ -1,29 +1,23 @@
-<button
-  mat-icon-button
-  [class.active]="!!repostByCurrentAccount()"
-  [matMenuTriggerFor]="menu"
-  [disabled]="isLoadingReposts()"
-  (click)="$event.stopPropagation()"
-  matTooltip="Repost"
-  matTooltipPosition="below"
->
+<button mat-icon-button [class.active]="!!repostByCurrentAccount()" [matMenuTriggerFor]="menu"
+  [disabled]="isLoadingReposts() || !canRepostOrQuote()" (click)="$event.stopPropagation()"
+  [matTooltip]="canRepostOrQuote() ? 'Repost' : 'Protected events cannot be reposted'" matTooltipPosition="below">
   <mat-icon>repeat</mat-icon>
 </button>
 
 <mat-menu #menu="matMenu">
-  @if (!!repostByCurrentAccount()) {
-    <button mat-menu-item (click)="deleteRepost()">
-      <mat-icon>repeat</mat-icon>
-      <span>Undo Repost</span>
-    </button>
-  } @else {
-    <button mat-menu-item (click)="createRepost()">
-      <mat-icon>repeat</mat-icon>
-      <span>Repost</span>
-    </button>
-  }
+  @if (canRepostOrQuote() && !!repostByCurrentAccount()) {
+  <button mat-menu-item (click)="deleteRepost()">
+    <mat-icon>repeat</mat-icon>
+    <span>Undo Repost</span>
+  </button>
+  } @else if (canRepostOrQuote()) {
+  <button mat-menu-item (click)="createRepost()">
+    <mat-icon>repeat</mat-icon>
+    <span>Repost</span>
+  </button>
   <button mat-menu-item (click)="createQuote()">
     <mat-icon>format_quote</mat-icon>
     <span>Quote</span>
   </button>
+  }
 </mat-menu>

@@ -63,7 +63,7 @@ export interface ShareArticleDialogData {
       }
 
       <!-- Prominent Nostr Actions: Repost & Quote -->
-      @if (data.event) {
+      @if (canRepostOrQuote()) {
       <div class="prominent-actions">
         <button class="prominent-action-button repost-button" (click)="createRepost()">
           <mat-icon>repeat</mat-icon>
@@ -638,6 +638,7 @@ export class ShareArticleDialogComponent {
   });
 
   canSend = computed(() => this.selectedRecipients().length > 0 && !this.isSending());
+  canRepostOrQuote = computed(() => !!this.data.event && !this.repostService.isProtectedEvent(this.data.event));
 
   // Track repost state
   hasReposted = signal<boolean>(false);
@@ -648,7 +649,7 @@ export class ShareArticleDialogComponent {
   }
 
   private async checkRepostState() {
-    if (!this.data.event) return;
+    if (!this.data.event || !this.canRepostOrQuote()) return;
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
@@ -771,6 +772,11 @@ export class ShareArticleDialogComponent {
     const ev = this.data.event;
     if (!ev) return;
 
+    if (!this.canRepostOrQuote()) {
+      this.snackBar.open('Protected events cannot be reposted', 'Close', { duration: 3000 });
+      return;
+    }
+
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
     if (!userPubkey || currentAccount?.source === 'preview') {
@@ -812,6 +818,11 @@ export class ShareArticleDialogComponent {
   async createQuote() {
     const ev = this.data.event;
     if (!ev) return;
+
+    if (!this.canRepostOrQuote()) {
+      this.snackBar.open('Protected events cannot be quoted', 'Close', { duration: 3000 });
+      return;
+    }
 
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();

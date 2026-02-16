@@ -21,6 +21,13 @@ export class RepostService {
   private utilities = inject(UtilitiesService);
 
   async repostNote(event: Event): Promise<boolean> {
+    if (this.isProtectedEvent(event)) {
+      this.snackBar.open('Protected events cannot be reposted', 'Dismiss', {
+        duration: 3000,
+      });
+      return false;
+    }
+
     const repostEvent = this.createRepostEvent(event);
 
     const result = await this.nostrService.signAndPublish(repostEvent);
@@ -37,6 +44,10 @@ export class RepostService {
    */
   isRepostEvent(event: Event): boolean {
     return event.kind === kinds.Repost || event.kind === kinds.GenericRepost;
+  }
+
+  isProtectedEvent(event: Event): boolean {
+    return event.tags.some(tag => tag[0] === '-');
   }
 
   /**
@@ -113,9 +124,33 @@ export class RepostService {
       return this.nostrService.createEvent(kinds.Repost, JSON.stringify(event), tags);
     }
 
-    return this.nostrService.createEvent(kinds.GenericRepost, JSON.stringify(event), [
+    const genericTags: string[][] = [
       ...tags,
       ['k', String(event.kind)],
-    ]);
+    ];
+
+    const coordinateTag = this.getReplaceableCoordinateTag(event);
+    if (coordinateTag) {
+      genericTags.push(['a', coordinateTag]);
+    }
+
+    return this.nostrService.createEvent(kinds.GenericRepost, JSON.stringify(event), genericTags);
+  }
+
+  private getReplaceableCoordinateTag(event: Event): string | null {
+    const isReplaceable = event.kind === kinds.Metadata || event.kind === kinds.Contacts ||
+      (event.kind >= 10000 && event.kind < 20000);
+    const isAddressable = event.kind >= 30000 && event.kind < 40000;
+
+    if (isAddressable) {
+      const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return `${event.kind}:${event.pubkey}:${identifier}`;
+    }
+
+    if (isReplaceable) {
+      return `${event.kind}:${event.pubkey}:`;
+    }
+
+    return null;
   }
 }

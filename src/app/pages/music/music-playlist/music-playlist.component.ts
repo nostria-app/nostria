@@ -600,6 +600,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         identifier: dTag,
         kind: ev.kind,
         encodedId: naddr,
+        event: ev,
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {

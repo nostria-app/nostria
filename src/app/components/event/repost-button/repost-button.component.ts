@@ -40,6 +40,10 @@ export class RepostButtonComponent {
   // Accept reposts from parent to avoid duplicate queries
   // If not provided, component will load independently
   repostsFromParent = input<NostrRecord[] | null>(null);
+  canRepostOrQuote = computed(() => {
+    const event = this.event();
+    return !!event && !this.repostService.isProtectedEvent(event);
+  });
 
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
@@ -87,6 +91,11 @@ export class RepostButtonComponent {
 
     const event = this.event();
     if (!event) return;
+
+    if (!this.canRepostOrQuote()) {
+      return;
+    }
+
     await this.repostService.repostNote(event);
     await this.loadReposts(true);
   }
@@ -119,6 +128,8 @@ export class RepostButtonComponent {
 
     const event = this.event();
     if (!event) return;
+    if (!this.canRepostOrQuote()) return;
+
     this.eventService.createNote({
       quote: {
         id: event.id,
