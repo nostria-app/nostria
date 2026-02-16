@@ -128,12 +128,15 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   isLoadingMore = signal(false);
   oldestTimestamp = signal<number | null>(null);
   hasMoreNotifications = signal(true);
+  consecutiveEmptyLoads = signal(0);
   // State for refreshing notifications
   isRefreshing = signal(false);
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
-  private readonly LOAD_MORE_DAYS = 2;
+  private readonly LOAD_MORE_DAYS = 7;
+  // Require multiple empty windows before declaring true end of history
+  private readonly MAX_CONSECUTIVE_EMPTY_WINDOWS = 8;
   // How many days to look back when refreshing
   private readonly REFRESH_LOOKBACK_DAYS = 7;
 
@@ -861,30 +864,39 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.isLoadingMore.set(true);
 
     try {
-      // Get the oldest notification timestamp
+      // Get the paging window end (cursor). If unset, start from current oldest notification.
       const notifications = this.contentNotifications();
       const currentOldest = notifications.length > 0
         ? Math.min(...notifications.map(n => n.timestamp))
         : Date.now();
 
-      // Calculate the new lookback period (go back LOAD_MORE_DAYS from the oldest notification)
-      const oldestSeconds = Math.floor(currentOldest / 1000);
-      const newSince = oldestSeconds - (this.LOAD_MORE_DAYS * 24 * 60 * 60);
+      const windowEnd = this.oldestTimestamp() !== null
+        ? Math.floor(this.oldestTimestamp()! / 1000)
+        : Math.floor(currentOldest / 1000);
+      const windowStart = windowEnd - (this.LOAD_MORE_DAYS * 24 * 60 * 60);
 
       // Track how many notifications we had before
       const countBefore = notifications.length;
 
-      // Fetch notifications for the extended period
-      await this.contentNotificationService.checkForOlderNotifications(newSince, oldestSeconds);
+      // Fetch notifications for the next older week window
+      await this.contentNotificationService.checkForOlderNotifications(windowStart, windowEnd);
 
       // Check if we got any new notifications
       const countAfter = this.contentNotifications().length;
       if (countAfter === countBefore) {
-        // No new notifications found, we've reached the end
-        this.hasMoreNotifications.set(false);
+        // No new notifications in this window; continue paging until several consecutive empty windows
+        const emptyWindows = this.consecutiveEmptyLoads() + 1;
+        this.consecutiveEmptyLoads.set(emptyWindows);
+
+        if (emptyWindows >= this.MAX_CONSECUTIVE_EMPTY_WINDOWS) {
+          this.hasMoreNotifications.set(false);
+        }
+      } else {
+        this.consecutiveEmptyLoads.set(0);
       }
 
-      this.oldestTimestamp.set(newSince * 1000);
+      // Move cursor to older time regardless of whether this window contained notifications
+      this.oldestTimestamp.set(windowStart * 1000);
     } catch (error) {
       this.logger.error('Failed to load more notifications:', error);
     } finally {
