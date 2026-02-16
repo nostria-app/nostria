@@ -638,10 +638,14 @@ export class ContentNotificationService implements OnDestroy {
         const eTag = event.tags.find(tag => tag[0] === 'e');
         const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
         const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
+        const repostMessage = repostedOwnNote
+          ? 'Reposted your note'
+          : 'Reposted a note mentioning you';
 
         await this.createContentNotification({
           type: NotificationType.REPOST,
-          title: repostedOwnNote ? 'Reposted your note' : 'Reposted a note mentioning you',
+          title: repostMessage,
+          message: repostMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: event.id,
@@ -692,12 +696,15 @@ export class ContentNotificationService implements OnDestroy {
           );
           const repliedToEventAuthorPubkey = await this.getEventAuthorPubkey(replyToTag?.[1]);
           const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
-
           const resolvedMessage = await this.resolveEventReferences(event.content);
+          const replyMessage = this.truncateContentPreview(resolvedMessage) || (repliedToOwnNote
+            ? 'Replied to your note'
+            : 'Replied to a note mentioning you');
+
           await this.createContentNotification({
             type: NotificationType.REPLY,
             title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
-            message: this.truncateContentPreview(resolvedMessage),
+            message: replyMessage,
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
             eventId: event.id,
@@ -1241,11 +1248,14 @@ export class ContentNotificationService implements OnDestroy {
         const eTag = event.tags.find(tag => tag[0] === 'e');
         const repostedEventAuthorPubkey = await this.getEventAuthorPubkey(eTag?.[1]);
         const repostedOwnNote = repostedEventAuthorPubkey === pubkey;
+        const repostMessage = repostedOwnNote
+          ? 'Reposted your note'
+          : 'Reposted a note mentioning you';
 
         await this.createContentNotification({
           type: NotificationType.REPOST,
-          title: repostedOwnNote ? 'Reposted your note' : 'Reposted a note mentioning you',
-          message: '',
+          title: repostMessage,
+          message: repostMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: eTag?.[1] || event.id,
@@ -1283,10 +1293,13 @@ export class ContentNotificationService implements OnDestroy {
         const repliedToOwnNote = repliedToEventAuthorPubkey === pubkey;
 
         const resolvedMessage = await this.resolveEventReferences(event.content);
+        const replyMessage = this.truncateContentPreview(resolvedMessage) || (repliedToOwnNote
+          ? 'Replied to your note'
+          : 'Replied to a note mentioning you');
         await this.createContentNotification({
           type: NotificationType.REPLY,
           title: repliedToOwnNote ? 'Replied to your note' : 'Replied to a note mentioning you',
-          message: this.truncateContentPreview(resolvedMessage),
+          message: replyMessage,
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: replyToTag?.[1] || event.id,
