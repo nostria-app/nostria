@@ -241,6 +241,34 @@ export class EventService {
       }
     }
 
+    // If we have a root marker but no explicit reply marker, infer direct parent from
+    // the last non-root thread tag. This preserves nesting for clients that include
+    // root + inherited unmarked e-tags but omit the reply marker.
+    if (rootId && !replyId) {
+      const candidateReplyTags = threadTags.filter((tag) => tag[1] !== rootId);
+
+      if (candidateReplyTags.length > 0) {
+        const inferredReplyTag = candidateReplyTags[candidateReplyTags.length - 1];
+        replyId = inferredReplyTag[1];
+        replyAuthor = inferredReplyTag[4] || replyAuthor;
+
+        if (inferredReplyTag[2] && inferredReplyTag[2].trim() !== '') {
+          replyRelays.push(inferredReplyTag[2]);
+        }
+      } else {
+        // Keep backwards compatibility for direct replies where only root is present.
+        replyId = rootId;
+
+        if (rootRelays.length > 0) {
+          rootRelays.forEach((relayUrl) => {
+            if (!replyRelays.includes(relayUrl)) {
+              replyRelays.push(relayUrl);
+            }
+          });
+        }
+      }
+    }
+
     // Collect intermediate events: e-tags with empty marker (not root, reply, or mention)
     // These are events in the thread chain between root and the direct reply
     // They appear when users copy the full thread history when replying

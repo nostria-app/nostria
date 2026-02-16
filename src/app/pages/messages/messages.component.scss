@@ -509,7 +509,7 @@
 .message-input-row {
   display: flex;
   gap: 0.4rem;
-  align-items: center;
+  align-items: flex-end;
   width: 100%;
   min-height: 40px;
 }
