@@ -1774,8 +1774,8 @@ mat-sidenav-content {
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  // Position near bottom - use fixed value, safe-area-inset causes issues on various platforms
-  bottom: 8px;
+  // Respect iOS safe area for bottom spacing to avoid Home Indicator
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   right: auto;

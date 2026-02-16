@@ -95,7 +95,8 @@ app-user-profile {
     z-index: 100;
 
     @media (max-width: 1023px) {
-      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      // Add spacing to avoid overlap with mobile nav (56px height + 8px bottom + 8px gap)
+      bottom: calc(72px + 8px + env(safe-area-inset-bottom, 0px));
       right: 16px;
     }
   }
@@ -250,7 +251,7 @@ app-user-profile {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 10px;
+      padding: 6px 12px 6px 14px; // Increased left padding for better icon spacing
       border-radius: 10px;
       background-color: var(--mat-sys-primary-container);
       border: 1.5px solid var(--mat-sys-primary);
