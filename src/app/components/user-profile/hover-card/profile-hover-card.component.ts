@@ -100,6 +100,7 @@ export class ProfileHoverCardComponent {
   mutualFollowingProfiles = signal<ProfileData[]>([]);
   isMenuOpen = signal(false);
   trustRank = signal<number | undefined>(undefined);
+  hasTrustRank = computed(() => this.trustRank() !== undefined && this.trustRank() !== null);
 
   isFavorite = computed(() => {
     return this.favoritesService.isFavorite(this.pubkey());

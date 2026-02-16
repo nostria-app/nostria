@@ -85,7 +85,7 @@
     </div>
 
     <!-- Trust Rank -->
-    @if (trustEnabled() && trustRank()) {
+    @if (trustEnabled() && hasTrustRank()) {
     <div class="trust-rank">
       <mat-icon class="trust-icon">verified_user</mat-icon>
       <span class="trust-value">Trust Rank: {{ trustRank() }}/100</span>

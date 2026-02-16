@@ -45,7 +45,8 @@
       </a>
 
       <!-- Trust rank badge -->
-      @if (showRank() && trustEnabled() && trustRank() !== undefined && (view() === 'large' || view() === 'medium' ||
+      @if (showRank() && trustEnabled() && trustRank() !== undefined && trustRank() !== null && (view() === 'large' ||
+      view() === 'medium' ||
       view() === 'small' || view() === 'comfortable' || view() === 'details')) {
       <div class="trust-rank-badge" [class]="'trust-rank-' + view()" [matTooltip]="'Trust Rank: ' + trustRank()">
         {{ trustRank() }}
