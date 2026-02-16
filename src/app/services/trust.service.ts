@@ -409,6 +409,7 @@ export class TrustService {
   private parseMetrics(event: NostrEvent): TrustMetrics {
     const metrics: TrustMetrics = {
       authorPubkey: event.pubkey,
+      extraMetrics: {},
     };
 
     for (const tag of event.tags) {
@@ -479,7 +480,16 @@ export class TrustService {
         case 'verifiedReporterCount':
           metrics.verifiedReporterCount = parseInt(value, 10);
           break;
+        default:
+          if (Number.isFinite(numValue)) {
+            metrics.extraMetrics![tagName] = numValue;
+          }
+          break;
       }
+    }
+
+    if (metrics.extraMetrics && Object.keys(metrics.extraMetrics).length === 0) {
+      delete metrics.extraMetrics;
     }
 
     return metrics;

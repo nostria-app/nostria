@@ -256,6 +256,7 @@ export interface TrustMetrics {
   verifiedFollowerCount?: number;
   verifiedMuterCount?: number;
   verifiedReporterCount?: number;
+  extraMetrics?: Record<string, number>;
 }
 
 /**
@@ -1721,6 +1722,16 @@ export class DatabaseService {
         return null;
       }
 
+      const rawExtra = record['extraMetrics'];
+      const extraMetrics =
+        rawExtra && typeof rawExtra === 'object' && !Array.isArray(rawExtra)
+          ? (Object.fromEntries(
+            Object.entries(rawExtra as Record<string, unknown>).filter(([, value]) =>
+              typeof value === 'number' && Number.isFinite(value)
+            )
+          ) as Record<string, number>)
+          : undefined;
+
       const metrics: TrustMetrics = {
         authorPubkey: record['authorPubkey'] as string | undefined,
         rank: record['rank'] as number | undefined,
@@ -1743,6 +1754,7 @@ export class DatabaseService {
         verifiedFollowerCount: record['verifiedFollowerCount'] as number | undefined,
         verifiedMuterCount: record['verifiedMuterCount'] as number | undefined,
         verifiedReporterCount: record['verifiedReporterCount'] as number | undefined,
+        extraMetrics,
       };
 
       return metrics;

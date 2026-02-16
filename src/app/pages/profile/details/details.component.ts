@@ -171,9 +171,18 @@ export class DetailsComponent {
     const metrics = this.trustMetrics();
     if (!metrics) return [];
 
-    const iconMap: Partial<Record<keyof TrustMetrics, string>> = {
+    const iconMap: Record<string, string> = {
       rank: 'verified',
       followers: 'people',
+      postCount: 'article',
+      replyCount: 'reply',
+      reactionsCount: 'favorite',
+      zapAmtRecd: 'bolt',
+      zapAmtSent: 'bolt',
+      zapCntRecd: 'bolt',
+      zapCntSent: 'bolt',
+      firstCreatedAt: 'schedule',
+      lastUpdated: 'schedule',
       hops: 'alt_route',
       personalizedGrapeRank_influence: 'insights',
       personalizedGrapeRank_average: 'query_stats',
@@ -185,7 +194,7 @@ export class DetailsComponent {
       verifiedReporterCount: 'report',
     };
 
-    const labelMap: Partial<Record<keyof TrustMetrics, string>> = {
+    const labelMap: Record<string, string> = {
       rank: 'Rank',
       followers: 'Followers',
       hops: 'Hops',
@@ -206,6 +215,20 @@ export class DetailsComponent {
       verifiedFollowerCount: 'Verified followers',
       verifiedMuterCount: 'Verified muters',
       verifiedReporterCount: 'Verified reporters',
+      post_cnt: 'Post count',
+      reply_cnt: 'Reply count',
+      reactions_cnt: 'Reaction count',
+      zap_amt_recd: 'Zap amount received',
+      zap_amt_sent: 'Zap amount sent',
+      zap_cnt_recd: 'Zap count received',
+      zap_cnt_sent: 'Zap count sent',
+      first_created_at: 'First seen',
+      active_hours_start: 'Active hours start',
+      active_hours_end: 'Active hours end',
+      reports_cnt_recd: 'Reports received',
+      reports_cnt_sent: 'Reports sent',
+      zap_avg_amt_day_recd: 'Avg daily zap received',
+      zap_avg_amt_day_sent: 'Avg daily zap sent',
     };
 
     const formatNumber = (value: number): string => {
@@ -216,6 +239,10 @@ export class DetailsComponent {
     const entries = (Object.entries(metrics) as [keyof TrustMetrics, unknown][])
       .filter(([, v]) => typeof v === 'number')
       .map(([k, v]) => [k, v as number] as const);
+
+    const dynamicEntries = Object.entries(metrics.extraMetrics ?? {})
+      .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+      .map(([key, value]) => [key, value] as const);
 
     const sortOrder: (keyof TrustMetrics)[] = [
       'rank',
@@ -234,16 +261,26 @@ export class DetailsComponent {
     const orderIndex = new Map<keyof TrustMetrics, number>(sortOrder.map((k, i) => [k, i]));
 
     entries.sort(([a], [b]) => (orderIndex.get(a) ?? 999) - (orderIndex.get(b) ?? 999));
+    dynamicEntries.sort(([a], [b]) => a.localeCompare(b));
 
     const result: TrustDisplayItem[] = [];
 
     result.push(
       ...entries.map(([key, value]) => {
-        const label = labelMap[key] ?? key;
+        const label = labelMap[String(key)] ?? this.humanizeTrustKey(String(key));
         const icon = iconMap[key] ?? 'insights';
         const highlight = key === 'rank';
         const displayValue = value === undefined ? '' : formatNumber(value);
         return { key: String(key), label, icon, value: displayValue, highlight };
+      })
+    );
+
+    result.push(
+      ...dynamicEntries.map(([key, value]) => {
+        const label = labelMap[key] ?? this.humanizeTrustKey(key);
+        const icon = iconMap[key] ?? 'insights';
+        const displayValue = formatNumber(value);
+        return { key, label, icon, value: displayValue, highlight: false };
       })
     );
 
@@ -268,6 +305,151 @@ export class DetailsComponent {
 
     return result;
   });
+
+  private humanizeTrustKey(key: string): string {
+    const normalized = key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .trim();
+
+    if (!normalized) return key;
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  private enrichTrustMetricsFromEvent(trust: TrustMetrics, event: NostrEvent): {
+    metrics: TrustMetrics;
+    changed: boolean;
+  } {
+    const metrics: TrustMetrics = {
+      ...trust,
+      extraMetrics: { ...(trust.extraMetrics ?? {}) },
+    };
+    let changed = false;
+
+    if (!metrics.authorPubkey && event.pubkey) {
+      metrics.authorPubkey = event.pubkey;
+      changed = true;
+    }
+
+    type NumericTrustKey =
+      | 'rank'
+      | 'followers'
+      | 'postCount'
+      | 'zapAmtRecd'
+      | 'zapAmtSent'
+      | 'firstCreatedAt'
+      | 'replyCount'
+      | 'reactionsCount'
+      | 'zapCntRecd'
+      | 'zapCntSent'
+      | 'lastUpdated'
+      | 'hops'
+      | 'personalizedGrapeRank_influence'
+      | 'personalizedGrapeRank_average'
+      | 'personalizedGrapeRank_confidence'
+      | 'personalizedGrapeRank_input'
+      | 'personalizedPageRank'
+      | 'verifiedFollowerCount'
+      | 'verifiedMuterCount'
+      | 'verifiedReporterCount';
+
+    const setNumericMetric = (key: NumericTrustKey, value: number): void => {
+      if (metrics[key] !== value) {
+        metrics[key] = value;
+        changed = true;
+      }
+    };
+
+    for (const tag of event.tags) {
+      const [tagName, rawValue] = tag;
+      if (!tagName || !rawValue || tagName === 'd' || tagName === 'p') {
+        continue;
+      }
+
+      const numericValue = Number(rawValue);
+      if (!Number.isFinite(numericValue)) {
+        continue;
+      }
+
+      const integerValue = Math.trunc(numericValue);
+
+      switch (tagName) {
+        case 'rank':
+          setNumericMetric('rank', integerValue);
+          break;
+        case 'followers':
+          setNumericMetric('followers', integerValue);
+          break;
+        case 'post_cnt':
+          setNumericMetric('postCount', integerValue);
+          break;
+        case 'reply_cnt':
+          setNumericMetric('replyCount', integerValue);
+          break;
+        case 'reactions_cnt':
+          setNumericMetric('reactionsCount', integerValue);
+          break;
+        case 'zap_amt_recd':
+          setNumericMetric('zapAmtRecd', integerValue);
+          break;
+        case 'zap_amt_sent':
+          setNumericMetric('zapAmtSent', integerValue);
+          break;
+        case 'zap_cnt_recd':
+          setNumericMetric('zapCntRecd', integerValue);
+          break;
+        case 'zap_cnt_sent':
+          setNumericMetric('zapCntSent', integerValue);
+          break;
+        case 'first_created_at':
+          setNumericMetric('firstCreatedAt', integerValue);
+          break;
+        case 'hops':
+          setNumericMetric('hops', integerValue);
+          break;
+        case 'personalizedGrapeRank_influence':
+          setNumericMetric('personalizedGrapeRank_influence', numericValue);
+          break;
+        case 'personalizedGrapeRank_average':
+          setNumericMetric('personalizedGrapeRank_average', numericValue);
+          break;
+        case 'personalizedGrapeRank_confidence':
+          setNumericMetric('personalizedGrapeRank_confidence', numericValue);
+          break;
+        case 'personalizedGrapeRank_input':
+          setNumericMetric('personalizedGrapeRank_input', numericValue);
+          break;
+        case 'personalizedPageRank':
+          setNumericMetric('personalizedPageRank', numericValue);
+          break;
+        case 'verifiedFollowerCount':
+          setNumericMetric('verifiedFollowerCount', integerValue);
+          break;
+        case 'verifiedMuterCount':
+          setNumericMetric('verifiedMuterCount', integerValue);
+          break;
+        case 'verifiedReporterCount':
+          setNumericMetric('verifiedReporterCount', integerValue);
+          break;
+      }
+
+      if (!metrics.extraMetrics) {
+        metrics.extraMetrics = {};
+      }
+
+      if (metrics.extraMetrics[tagName] !== numericValue) {
+        metrics.extraMetrics[tagName] = numericValue;
+        changed = true;
+      }
+    }
+
+    if (metrics.extraMetrics && Object.keys(metrics.extraMetrics).length === 0) {
+      delete metrics.extraMetrics;
+    }
+
+    return { metrics, changed };
+  }
 
   infoAsJson = computed(() => {
     const infoData = this.info();
@@ -310,38 +492,27 @@ export class DetailsComponent {
         return;
       }
 
-      // If older cached records are missing the provider pubkey, try to infer it
-      // from locally stored kind 30382 events (no relay fetch).
-      if (!trust.authorPubkey) {
-        try {
-          const events = await this.database.getEventsByKind(30382);
-          const matching = events
-            .filter(e => e.tags?.some(tag => tag[0] === 'd' && tag[1] === pubkey))
-            .sort((a, b) => b.created_at - a.created_at);
+      let mergedTrust = trust;
 
-          const providerPubkey = matching[0]?.pubkey;
-          if (providerPubkey) {
-            const enriched: TrustMetrics = { ...trust, authorPubkey: providerPubkey };
-            this.trustMetrics.set(enriched);
+      try {
+        const events = await this.database.getEventsByKind(30382);
+        const latestMatching = events
+          .filter(e => e.tags?.some(tag => tag[0] === 'd' && tag[1] === pubkey))
+          .sort((a, b) => b.created_at - a.created_at)[0];
 
-            const existingRecord = await this.database.getInfo(pubkey, 'trust');
-            if (existingRecord) {
-              const data = { ...existingRecord };
-              delete data['compositeKey'];
-              delete data['key'];
-              delete data['type'];
-              delete data['updated'];
-              await this.database.saveInfo(pubkey, 'trust', { ...data, authorPubkey: providerPubkey });
-            }
+        if (latestMatching) {
+          const enriched = this.enrichTrustMetricsFromEvent(trust, latestMatching);
+          mergedTrust = enriched.metrics;
 
-            return;
+          if (enriched.changed) {
+            await this.database.saveTrustMetrics(pubkey, mergedTrust);
           }
-        } catch (e) {
-          this.logger.debug('Unable to infer trust provider pubkey from local events', e);
         }
+      } catch (e) {
+        this.logger.debug('Unable to enrich trust metrics from local kind 30382 events', e);
       }
 
-      this.trustMetrics.set(trust);
+      this.trustMetrics.set(mergedTrust);
     });
 
     effect(async () => {
