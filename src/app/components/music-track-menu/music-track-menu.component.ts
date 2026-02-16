@@ -337,7 +337,9 @@ export class MusicTrackMenuComponent {
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {
-        title: 'Share',
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
         data: dialogData,
         width: '450px',
         maxWidth: '95vw',

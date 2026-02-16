@@ -62,6 +62,8 @@ export interface ShareArticleDialogData {
       </div>
       }
 
+      <div class="sheet-handle" aria-hidden="true"></div>
+
       <!-- Prominent Nostr Actions: Repost & Quote -->
       @if (canRepostOrQuote()) {
       <div class="prominent-actions">
@@ -102,33 +104,32 @@ export interface ShareArticleDialogData {
 
       <!-- Contact Search Section -->
       <div class="contact-search-section">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Send to contact</mat-label>
-          <input matInput [(ngModel)]="searchInput" placeholder="Search contacts or paste npub1..." autocomplete="off"
-            (keydown.enter)="onSearchEnter()" />
-          @if (isNpubInput()) {
-          <mat-icon matSuffix>key</mat-icon>
-          } @else {
-          <mat-icon matSuffix>search</mat-icon>
-          }
-          @if (npubError()) {
-          <mat-error>{{ npubError() }}</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Valid npub indicator -->
-        @if (isNpubInput() && hasValidNpub()) {
-        <div class="npub-valid-indicator" (click)="addNpubAsRecipient()">
-          <mat-icon>check_circle</mat-icon>
-          <span>Valid npub detected - Click to add</span>
-          <mat-icon>add</mat-icon>
+        <div class="search-row">
+          <div class="search-field">
+            <mat-icon>search</mat-icon>
+            <input
+              [(ngModel)]="searchInput"
+              placeholder="Search"
+              autocomplete="off"
+              (keydown.enter)="onSearchEnter()"
+            />
+          </div>
+          <button class="search-side-action" type="button" (click)="onSearchEnter()" matTooltip="Paste npub and press Enter">
+            <mat-icon>group_add</mat-icon>
+          </button>
         </div>
+
+        @if (isNpubInput() && hasValidNpub()) {
+        <button class="npub-valid-indicator" type="button" (click)="addNpubAsRecipient()">
+          <mat-icon>check_circle</mat-icon>
+          <span>Valid npub detected - click to add</span>
+          <mat-icon>add</mat-icon>
+        </button>
         }
 
-        <!-- Quick-selection: Favorites / Frequently used contacts -->
-        @if (!searchInput() && !isNpubInput() && quickContacts().length > 0) {
-        <div class="quick-contacts">
-          @for (contact of quickContacts(); track contact.event.pubkey) {
+        @if (visibleContacts().length > 0) {
+        <div class="quick-contacts-grid">
+          @for (contact of visibleContacts(); track contact.event.pubkey) {
           <button class="quick-contact-chip" (click)="selectProfile(contact)" matTooltip="Add as recipient">
             <app-user-profile [pubkey]="contact.event.pubkey" view="chip" [disableLink]="true"></app-user-profile>
           </button>
@@ -136,17 +137,7 @@ export interface ShareArticleDialogData {
         </div>
         }
 
-        <!-- Search results -->
-        @if (searchInput() && !isNpubInput() && searchResults().length > 0) {
-        <div class="search-results">
-          @for (profile of searchResults(); track profile.event.pubkey) {
-          <div class="search-result-item" (click)="selectProfile(profile)">
-            <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
-          </div>
-          }
-        </div>
-        }
-        @if (searchInput() && !isNpubInput() && searchResults().length === 0) {
+        @if (searchInput() && !isNpubInput() && visibleContacts().length === 0) {
         <div class="no-results">
           <span>No contacts found. Try pasting an npub.</span>
         </div>
@@ -155,7 +146,7 @@ export interface ShareArticleDialogData {
 
       <!-- Comment field (shown when recipients selected) -->
       @if (selectedRecipients().length > 0) {
-      <mat-form-field appearance="outline" class="full-width">
+      <mat-form-field appearance="outline" class="full-width comment-field">
         <mat-label>Add a comment (optional)</mat-label>
         <textarea matInput [(ngModel)]="comment" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"
           [disabled]="isSending()"></textarea>
@@ -168,67 +159,66 @@ export interface ShareArticleDialogData {
       <!-- Share Actions -->
       <div class="share-actions-list">
         <button class="share-action-item" (click)="copyLink()">
-          <mat-icon>link</mat-icon>
-          <span>Copy Link</span>
+          <span class="action-icon-circle"><mat-icon>link</mat-icon></span>
+          <span class="action-label">Copy Link</span>
         </button>
 
         <button class="share-action-item" (click)="shareAsNote()">
-          <mat-icon>edit_note</mat-icon>
-          <span>Post on Nostr</span>
+          <span class="action-icon-circle"><mat-icon>edit_note</mat-icon></span>
+          <span class="action-label">Post on Nostr</span>
         </button>
-
-        <mat-divider></mat-divider>
 
         <button class="share-action-item" (click)="shareViaEmail()">
-          <mat-icon>mail</mat-icon>
-          <span>Email</span>
+          <span class="action-icon-circle"><mat-icon>mail</mat-icon></span>
+          <span class="action-label">Email</span>
         </button>
         <button class="share-action-item" (click)="shareToBluesky()">
-          <mat-icon>cloud</mat-icon>
-          <span>Bluesky</span>
+          <span class="action-icon-circle"><mat-icon>cloud</mat-icon></span>
+          <span class="action-label">Bluesky</span>
         </button>
         <button class="share-action-item" (click)="shareToTwitter()">
-          <mat-icon>tag</mat-icon>
-          <span>X (Twitter)</span>
+          <span class="action-icon-circle"><mat-icon>tag</mat-icon></span>
+          <span class="action-label">X (Twitter)</span>
         </button>
         <button class="share-action-item" (click)="shareToReddit()">
-          <mat-icon>forum</mat-icon>
-          <span>Reddit</span>
+          <span class="action-icon-circle"><mat-icon>forum</mat-icon></span>
+          <span class="action-label">Reddit</span>
         </button>
         <button class="share-action-item" (click)="shareToFacebook()">
-          <mat-icon>facebook</mat-icon>
-          <span>Facebook</span>
+          <span class="action-icon-circle"><mat-icon>facebook</mat-icon></span>
+          <span class="action-label">Facebook</span>
         </button>
         <button class="share-action-item" (click)="shareToLinkedIn()">
-          <mat-icon>work</mat-icon>
-          <span>LinkedIn</span>
+          <span class="action-icon-circle"><mat-icon>work</mat-icon></span>
+          <span class="action-label">LinkedIn</span>
         </button>
         <button class="share-action-item" (click)="shareToHackerNews()">
-          <mat-icon>code</mat-icon>
-          <span>Hacker News</span>
+          <span class="action-icon-circle"><mat-icon>code</mat-icon></span>
+          <span class="action-label">Hacker News</span>
         </button>
         <button class="share-action-item" (click)="shareToPinterest()">
-          <mat-icon>push_pin</mat-icon>
-          <span>Pinterest</span>
+          <span class="action-icon-circle"><mat-icon>push_pin</mat-icon></span>
+          <span class="action-label">Pinterest</span>
         </button>
         <button class="share-action-item" (click)="copyEmbed()">
-          <mat-icon>data_object</mat-icon>
-          <span>Copy Embed Code</span>
+          <span class="action-icon-circle"><mat-icon>data_object</mat-icon></span>
+          <span class="action-label">Copy Embed</span>
         </button>
       </div>
     </div>
     <div dialog-actions class="dialog-actions">
       @if (selectedRecipients().length > 0) {
       <button mat-button (click)="close()" [disabled]="isSending()">Cancel</button>
-      <button mat-flat-button (click)="sendToRecipients()" [disabled]="!canSend()">
-        @if (isSending()) {
+      @if (isSending()) {
+      <button mat-flat-button disabled>
         <mat-spinner diameter="18"></mat-spinner>
         <span>Sending...</span>
-        } @else {
-        <mat-icon>send</mat-icon>
-        <span>Send to {{ selectedRecipients().length }} {{ selectedRecipients().length === 1 ? 'person' : 'people' }}</span>
-        }
       </button>
+      } @else {
+      <button mat-flat-button (click)="sendToRecipients()" [disabled]="!canSend()">
+        <span>Send to {{ selectedRecipients().length }} {{ selectedRecipients().length === 1 ? 'person' : 'people' }}</span>
+      </button>
+      }
       } @else {
       <button mat-button (click)="close()">Close</button>
       }
@@ -238,6 +228,15 @@ export interface ShareArticleDialogData {
     .share-dialog-content {
       min-width: 320px;
       position: relative;
+    }
+
+    .sheet-handle {
+      width: 56px;
+      height: 5px;
+      border-radius: var(--mat-sys-corner-full);
+      background: var(--mat-sys-outline);
+      opacity: 0.7;
+      margin: 4px auto 12px;
     }
 
     .sending-overlay {
@@ -295,24 +294,10 @@ export interface ShareArticleDialogData {
         background: var(--mat-sys-surface-container-highest);
         border-color: var(--mat-sys-outline);
       }
-
-      &.repost-button:hover {
-        background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
-        border-color: var(--mat-sys-primary);
-      }
-
-      &.quote-button:hover {
-        background: color-mix(in srgb, var(--mat-sys-tertiary) 12%, transparent);
-        border-color: var(--mat-sys-tertiary);
-      }
-
-      &.quote-button mat-icon {
-        color: var(--mat-sys-tertiary);
-      }
     }
 
     .selected-recipients {
-      padding: 8px 0;
+      padding: 4px 0 10px;
 
       .section-header {
         font-size: 12px;
@@ -324,7 +309,7 @@ export interface ShareArticleDialogData {
 
       .recipient-chips {
         display: flex;
-        gap: 6px;
+        gap: 8px;
         flex-wrap: wrap;
       }
     }
@@ -333,14 +318,13 @@ export interface ShareArticleDialogData {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0;
       padding: 6px;
       background: var(--mat-sys-surface-container-high);
       color: var(--mat-sys-on-surface);
       border-radius: 12px;
       position: relative;
-      min-width: 60px;
-      max-width: 88px;
+      min-width: 64px;
+      max-width: 92px;
 
       .remove-recipient {
         position: absolute;
@@ -363,16 +347,50 @@ export interface ShareArticleDialogData {
           width: 12px;
           height: 12px;
         }
-
-        &:hover {
-          background: var(--mat-sys-error-container);
-          color: var(--mat-sys-on-error-container);
-        }
       }
     }
 
     .contact-search-section {
       margin-bottom: 8px;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .search-field {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
+
+      input {
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--mat-sys-on-surface);
+        width: 100%;
+        font-size: 16px;
+      }
+    }
+
+    .search-side-action {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: var(--mat-sys-corner-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .npub-valid-indicator {
@@ -384,106 +402,102 @@ export interface ShareArticleDialogData {
       color: var(--mat-sys-on-primary-container);
       border-radius: 8px;
       cursor: pointer;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       font-size: 13px;
-      transition: background-color 0.15s;
-
-      &:hover {
-        background: var(--mat-sys-primary);
-        color: var(--mat-sys-on-primary);
-      }
-
-      mat-icon:first-child {
-        color: inherit;
-      }
+      border: none;
+      width: 100%;
+      text-align: left;
 
       span {
         flex: 1;
       }
     }
 
-    .quick-contacts {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .quick-contacts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
       margin-bottom: 8px;
     }
 
     .quick-contact-chip {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 6px;
-      border: 1px solid var(--mat-sys-outline-variant);
-      background: var(--mat-sys-surface-container);
+      border: none;
+      padding: 8px 6px;
+      background: transparent;
+      border-radius: 14px;
       color: var(--mat-sys-on-surface);
-      border-radius: 12px;
       cursor: pointer;
-      transition: background-color 0.2s;
-      min-width: 60px;
-      max-width: 88px;
 
       &:hover {
         background: var(--mat-sys-surface-container-high);
       }
-    }
 
-    .search-results {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: 8px;
-    }
+      ::ng-deep .chip-view {
+        align-items: center;
+      }
 
-    .search-result-item {
-      padding: 6px 8px;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: background-color 0.15s;
-
-      &:hover {
-        background: var(--mat-sys-surface-container-high);
+      ::ng-deep .chip-label {
+        max-width: 90px;
+        text-align: center;
       }
     }
 
     .no-results {
-      padding: 12px;
+      padding: 8px 6px 12px;
       text-align: center;
       color: var(--mat-sys-on-surface-variant);
       font-size: 13px;
     }
 
+    .comment-field textarea {
+      field-sizing: content;
+    }
+
     .share-actions-list {
-      display: flex;
-      flex-direction: column;
-      padding: 8px 0;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px 6px;
+      padding: 8px 0 4px;
+
+      @media (max-width: 420px) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
 
     .share-action-item {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: 6px 4px;
       border: none;
       background: transparent;
       cursor: pointer;
-      border-radius: 8px;
-      transition: background-color 0.15s;
       color: var(--mat-sys-on-surface);
-      font-size: 14px;
-      text-align: left;
+      text-align: center;
+      border-radius: 10px;
 
       &:hover {
         background: var(--mat-sys-surface-container-high);
       }
+    }
 
-      mat-icon {
-        color: var(--mat-sys-on-surface-variant);
-        flex-shrink: 0;
-      }
+    .action-icon-circle {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mat-sys-corner-full);
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
+    }
 
-      span {
-        flex: 1;
-      }
+    .action-label {
+      font-size: 13px;
+      line-height: 1.2;
+      color: var(--mat-sys-on-surface);
     }
 
     .dialog-actions {
@@ -635,6 +649,13 @@ export class ShareArticleDialogComponent {
     }
 
     return result;
+  });
+
+  visibleContacts = computed(() => {
+    if (this.searchInput() && !this.isNpubInput()) {
+      return this.searchResults();
+    }
+    return this.quickContacts();
   });
 
   canSend = computed(() => this.selectedRecipients().length > 0 && !this.isSending());

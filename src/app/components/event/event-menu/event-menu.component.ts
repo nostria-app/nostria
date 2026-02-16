@@ -293,7 +293,9 @@ export class EventMenuComponent {
     };
 
     this.customDialog.open(ShareArticleDialogComponent, {
-      title: 'Share',
+      title: '',
+      showCloseButton: false,
+      panelClass: 'share-sheet-dialog',
       data: dialogData,
       width: '450px',
       maxWidth: '95vw',
@@ -766,13 +768,13 @@ export class EventMenuComponent {
 
     const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
       NoteEditorDialogComponent, {
-        title: 'Edit Note',
-        headerIcon: this.accountState.profile()?.data?.picture || '',
-        width: '680px',
-        maxWidth: '95vw',
-        disableClose: true,
-        data: editData,
-      }
+      title: 'Edit Note',
+      headerIcon: this.accountState.profile()?.data?.picture || '',
+      width: '680px',
+      maxWidth: '95vw',
+      disableClose: true,
+      data: editData,
+    }
     );
 
     dialogRef.componentInstance.dialogRef = dialogRef;

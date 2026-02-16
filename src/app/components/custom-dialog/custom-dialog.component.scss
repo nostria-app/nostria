@@ -337,6 +337,17 @@
   }
 }
 
+// Share Sheet Dialog Override
+.dialog-container.share-sheet-dialog {
+  .dialog-header {
+    display: none;
+  }
+
+  .dialog-content {
+    padding: 8px 14px 10px;
+  }
+}
+
 // Actions
 .dialog-actions {
   display: flex;
