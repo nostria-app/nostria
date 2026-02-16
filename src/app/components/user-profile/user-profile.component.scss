@@ -289,16 +289,46 @@
     color: var(--mat-sys-on-surface-variant);
     font-size: 13px;
     opacity: 0.8;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
   }
 
+  .user-profile-npub>span,
+  .user-profile-details>span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nip05-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    vertical-align: middle;
+
+    &.nip05-valid {
+      color: var(--mat-sys-primary);
+    }
+
+    &.nip05-invalid {
+      color: var(--mat-sys-error);
+    }
+  }
+
   .user-profile-details {
     font-size: 0.8rem;
     color: var(--mat-sys-on-surface);
-    display: inline-block; // Changed to inline-block so it doesn't stretch full width
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
     max-width: 100%; // Allow ellipsis to work
     white-space: nowrap;
     overflow: hidden;
@@ -348,26 +378,9 @@
       text-overflow: ellipsis;
     }
 
-  .user-profile-nip05 {
-    display: none;
-  }
-
-  // NIP-05 verification icons
-  .nip05-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-    vertical-align: middle;
-    margin-right: 2px;
-
-    &.nip05-valid {
-      color: var(--mat-sys-primary);
+    .user-profile-nip05 {
+      display: none;
     }
-
-    &.nip05-invalid {
-      color: var(--mat-sys-error);
-    }
-  }
 
     .user-about {
       display: none;
