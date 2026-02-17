@@ -574,10 +574,11 @@
   }
 
   .emoji-more {
-    font-size: 14px;
+    font-size: 18px;
     color: var(--mat-sys-on-surface-variant);
-    letter-spacing: 1px;
     line-height: 1;
+    display: flex;
+    align-items: center;
   }
 }
 
