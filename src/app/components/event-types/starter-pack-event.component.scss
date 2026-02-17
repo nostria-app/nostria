@@ -33,24 +33,53 @@
     padding: 12px 14px;
   }
 
+  .starter-pack-compact-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
   .starter-pack-compact-title {
-    margin: 0 0 8px 0;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
     font-size: 1.05rem;
     color: var(--mat-sys-on-surface);
     line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .starter-pack-compact-meta {
+  .starter-pack-compact-stats {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    color: var(--mat-sys-on-surface-variant);
-    font-size: 0.92rem;
+    flex-shrink: 0;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
 
     mat-icon {
-      width: 1rem;
-      height: 1rem;
-      font-size: 1rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      font-size: 1.15rem;
+      color: var(--mat-sys-primary);
+    }
+
+    .count-value {
+      font-size: 1.35rem;
+      line-height: 1;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .count-label {
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
   }
 }
@@ -61,10 +90,55 @@
   .starter-pack-header {
     margin-bottom: 24px;
 
+    .starter-pack-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: nowrap;
+    }
+
     .starter-pack-title {
-      margin: 0 0 16px 0;
+      margin: 0;
+      flex: 1;
+      min-width: 0;
       font-size: 1.25rem;
       color: var(--mat-app-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .starter-pack-count-pill {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        width: 1.1rem;
+        height: 1.1rem;
+        font-size: 1.1rem;
+        color: var(--mat-sys-primary);
+      }
+
+      .count-value {
+        font-size: 1.4rem;
+        line-height: 1;
+      }
+
+      .count-label {
+        font-size: 0.85rem;
+        color: var(--mat-sys-on-surface-variant);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
     }
 
     .starter-pack-banner {
@@ -119,6 +193,15 @@
             padding: 12px;
             cursor: pointer;
             transition: background-color 0.2s ease;
+
+            ::ng-deep app-user-profile .user-profile.grid .user-profile-content {
+              text-align: left;
+              align-items: flex-start;
+            }
+
+            ::ng-deep app-user-profile .user-profile.grid .user-profile-about {
+              text-align: left;
+            }
 
             &:hover {
               background-color: var(--mat-app-surface-variant);
