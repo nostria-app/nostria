@@ -760,6 +760,33 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
+    // Safety net: Auto-reload if the app hasn't initialized after 20 seconds.
+    // This handles edge cases where Angular bootstraps but services hang during init.
+    // Only attempts once per session to avoid reload loops on truly broken states.
+    {
+      const AUTO_RELOAD_KEY = 'nostria-app-auto-reload-attempted';
+      const initCheckTimeout = setTimeout(() => {
+        if (!this.app.initialized()) {
+          const hasAutoReloaded = sessionStorage.getItem(AUTO_RELOAD_KEY);
+          if (!hasAutoReloaded) {
+            this.logger.warn('[App] App not initialized after 20s, attempting automatic reload');
+            sessionStorage.setItem(AUTO_RELOAD_KEY, 'true');
+            window.location.reload();
+          } else {
+            this.logger.warn('[App] App not initialized after 20s, auto-reload already attempted this session');
+          }
+        }
+      }, 20000);
+
+      // Clear the timeout and session flag once initialized
+      effect(() => {
+        if (this.app.initialized()) {
+          clearTimeout(initCheckTimeout);
+          sessionStorage.removeItem(AUTO_RELOAD_KEY);
+        }
+      });
+    }
+
     if ('launchQueue' in window) {
       this.logger.info('[App] LaunchQueue is available, setting up consumer');
       const launchQueue = (window as any).launchQueue;

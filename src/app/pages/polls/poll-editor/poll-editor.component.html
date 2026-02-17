@@ -1,25 +1,19 @@
 <div class="poll-editor-container">
-  <header class="editor-header">
-    <div class="header-content">
-      <button mat-icon-button (click)="cancel()" class="back-button">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <h1>{{ currentPoll()?.isNewPoll ? 'Create Poll' : 'Edit Poll' }}</h1>
-    </div>
-  </header>
+  <div class="panel-header">
+    <button mat-icon-button (click)="cancel()" class="back-button" matTooltip="Back to Polls">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h2 class="panel-title title-font">{{ currentPoll()?.isNewPoll ? 'Create Poll' : 'Edit Poll' }}</h2>
+    <span class="panel-header-spacer"></span>
+  </div>
 
   <main class="editor-content">
     <form [formGroup]="pollForm" class="poll-form">
       <!-- Poll Question -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Poll Question</mat-label>
-        <textarea
-          matInput
-          formControlName="content"
-          placeholder="What would you like to ask?"
-          rows="3"
-          cdkTextareaAutosize
-        ></textarea>
+        <textarea matInput formControlName="content" placeholder="What would you like to ask?" rows="3"
+          cdkTextareaAutosize></textarea>
         @if (pollForm.get('content')?.hasError('required')) {
         <mat-error>Question is required</mat-error>
         }
@@ -57,14 +51,8 @@
               <mat-error>Option text is required</mat-error>
               }
             </mat-form-field>
-            <button
-              mat-icon-button
-              (click)="removeOption($index)"
-              type="button"
-              color="warn"
-              [disabled]="options.length <= 2"
-              matTooltip="Remove option"
-            >
+            <button mat-icon-button (click)="removeOption($index)" type="button" color="warn"
+              [disabled]="options.length <= 2" matTooltip="Remove option">
               <mat-icon>delete</mat-icon>
             </button>
           </div>
@@ -77,12 +65,7 @@
       <!-- End Date (Optional) -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>End Date (Optional)</mat-label>
-        <input 
-          matInput 
-          [matDatepicker]="picker" 
-          formControlName="endsAt"
-          placeholder="Select end date" 
-        />
+        <input matInput [matDatepicker]="picker" formControlName="endsAt" placeholder="Select end date" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
         <mat-hint>Leave empty for polls that never end</mat-hint>
@@ -95,21 +78,11 @@
           <mat-icon>save</mat-icon>
           Save Draft
         </button>
-        <button
-          mat-flat-button
-          (click)="publishAndShare()"
-          type="button"
-          [disabled]="isSaving() || !pollForm.valid"
-        >
+        <button mat-flat-button (click)="publishAndShare()" type="button" [disabled]="isSaving() || !pollForm.valid">
           <mat-icon>share</mat-icon>
           {{ isSaving() ? 'Publishing...' : 'Publish & Share' }}
         </button>
-        <button
-          mat-flat-button
-          (click)="publishPoll()"
-          type="button"
-          [disabled]="isSaving() || !pollForm.valid"
-        >
+        <button mat-flat-button (click)="publishPoll()" type="button" [disabled]="isSaving() || !pollForm.valid">
           <mat-icon>send</mat-icon>
           {{ isSaving() ? 'Publishing...' : 'Publish Poll' }}
         </button>

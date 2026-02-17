@@ -190,9 +190,19 @@ export class PollsComponent {
   }
 
   deletePoll(poll: Poll): void {
-    if (confirm(`Are you sure you want to delete "${poll.content}"?`)) {
+    const snackBarRef = this.snackBar.open(
+      `Delete "${poll.content}"?`,
+      'Delete',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    snackBarRef.onAction().subscribe(() => {
       this.pollService.deletePoll(poll.id);
-    }
+    });
   }
 
   loadDraft(draftId: string): void {
@@ -201,9 +211,19 @@ export class PollsComponent {
   }
 
   deleteDraft(draftId: string): void {
-    if (confirm('Are you sure you want to delete this draft?')) {
+    const snackBarRef = this.snackBar.open(
+      'Delete this draft?',
+      'Delete',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    snackBarRef.onAction().subscribe(() => {
       this.pollService.removeDraft(draftId);
-    }
+    });
   }
 
   toggleView(): void {

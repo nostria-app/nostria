@@ -221,10 +221,26 @@ export class PollEditorComponent implements OnInit {
   }
 
   cancel(): void {
-    if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+    if (!this.pollForm.dirty) {
       this.pollService.cancelEditing();
       this.router.navigate(['/polls']);
+      return;
     }
+
+    const snackBarRef = this.snackBar.open(
+      'Discard unsaved changes?',
+      'Discard',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    snackBarRef.onAction().subscribe(() => {
+      this.pollService.cancelEditing();
+      this.router.navigate(['/polls']);
+    });
   }
 
   private generateOptionId(): string {

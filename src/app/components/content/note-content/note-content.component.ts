@@ -146,7 +146,7 @@ export class NoteContentComponent implements OnDestroy {
 
   // Timeout duration for inline referenced event loading (10 seconds)
   private readonly EVENT_LOAD_TIMEOUT = 10000;
-  
+
   // Content length threshold for showing "Show more" button (in characters)
   private readonly CONTENT_LENGTH_THRESHOLD = 500;
 

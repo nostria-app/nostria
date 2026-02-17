@@ -29,7 +29,7 @@ export class PollService implements OnInitialized {
   private _polls = signal<Poll[]>([]);
   private _drafts = signal<PollDraft[]>([]);
   private _currentEditingPoll = signal<PollDraft | null>(null);
-  
+
   // Response cache for performance
   private _responsesCache = new Map<string, { responses: PollResponse[], timestamp: number }>();
   private readonly CACHE_DURATION = 30000; // 30 seconds
@@ -67,7 +67,7 @@ export class PollService implements OnInitialized {
   async fetchPollsFromNostr(pubkey: string): Promise<void> {
     try {
       const relayUrls = this.accountRelay.getRelayUrls();
-      
+
       if (relayUrls.length === 0) {
         console.warn('No relay URLs available for fetching polls');
         return;
@@ -106,7 +106,7 @@ export class PollService implements OnInitialized {
   async fetchPollsForPubkey(pubkey: string, relayUrls: string[]): Promise<Poll[]> {
     console.log(`[PollService] Fetching polls for ${pubkey.substring(0, 8)}... from ${relayUrls.length} relays`);
     console.log('[PollService] Relay URLs:', relayUrls);
-    
+
     if (relayUrls.length === 0) {
       console.warn('[PollService] No relay URLs provided');
       return [];
@@ -120,9 +120,9 @@ export class PollService implements OnInitialized {
     console.log('[PollService] Query filter:', filter);
 
     const events = await this.pool.query(relayUrls, filter, 5000);
-    
+
     console.log(`[PollService] Received ${events.length} events from relays`);
-    
+
     return events.map((event: Event) => this.parseNostrPollEvent(event));
   }
 
@@ -142,7 +142,7 @@ export class PollService implements OnInitialized {
     const timeCutoff = now - daysBack * 24 * 60 * 60;
 
     const allPolls: Poll[] = [];
-    
+
     // Process users in parallel (exactly like FeedService does)
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
@@ -169,7 +169,7 @@ export class PollService implements OnInitialized {
 
     // Execute all fetches in parallel (like FeedService does)
     const results = await Promise.all(fetchPromises);
-    
+
     // Flatten results
     results.forEach((polls: Poll[]) => {
       allPolls.push(...polls);
@@ -187,7 +187,7 @@ export class PollService implements OnInitialized {
    */
   async fetchPollsForMultiplePubkeys(pubkeys: string[]): Promise<Poll[]> {
     const relayUrls = this.accountRelay.getRelayUrls();
-    
+
     if (relayUrls.length === 0 || pubkeys.length === 0) {
       return [];
     }
@@ -201,9 +201,9 @@ export class PollService implements OnInitialized {
     };
 
     const events = await this.pool.query(relayUrls, filter, 10000);
-    
+
     console.log(`[PollService] Received ${events.length} poll events from relays`);
-    
+
     return events.map((event: Event) => this.parseNostrPollEvent(event));
   }
 
@@ -213,7 +213,7 @@ export class PollService implements OnInitialized {
    */
   async fetchPollResponsesBatch(polls: Poll[]): Promise<Map<string, PollResponse[]>> {
     const responsesMap = new Map<string, PollResponse[]>();
-    
+
     if (polls.length === 0) {
       return responsesMap;
     }
@@ -229,7 +229,7 @@ export class PollService implements OnInitialized {
     });
 
     const results = await Promise.all(fetchPromises);
-    
+
     // Build map
     results.forEach(({ pollId, responses }) => {
       responsesMap.set(pollId, responses);
@@ -258,7 +258,7 @@ export class PollService implements OnInitialized {
       const queryRelayUrls = relayUrls && relayUrls.length > 0
         ? relayUrls
         : this.accountRelay.getRelayUrls();
-      
+
       if (queryRelayUrls.length === 0) {
         return [];
       }

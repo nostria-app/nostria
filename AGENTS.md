@@ -133,6 +133,7 @@ Dark mode: `:host-context(.dark) .my-class { ... }`
 ## Dialogs
 
 Use `CustomDialogComponent`, NOT Angular Material dialogs.
+Never use native `confirm()` dialogs. Use app dialogs/snackbars for confirmations.
 
 ## SSR Safety
 

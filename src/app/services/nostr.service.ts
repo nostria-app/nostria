@@ -198,9 +198,16 @@ export class NostrService implements NostriaService {
     effect(async () => {
       if (this.database.initialized()) {
         this.logger.info('Storage initialized, loading Nostr Service');
-        await this.initialize();
-        // Load relay authentication state from storage
-        await this.relayAuth.loadAuthStateFromStorage();
+        try {
+          await this.initialize();
+          // Load relay authentication state from storage
+          await this.relayAuth.loadAuthStateFromStorage();
+        } catch (err) {
+          this.logger.error('[NostrService] Initialization failed in effect, setting initialized to unblock UI', err);
+          if (!this.initialized()) {
+            this.initialized.set(true);
+          }
+        }
       }
     });
 
@@ -334,6 +341,15 @@ export class NostrService implements NostriaService {
   }
 
   async initialize() {
+    // Safety timeout: ensure initialized is set even if something hangs
+    const safetyTimeout = setTimeout(() => {
+      if (!this.initialized()) {
+        this.logger.warn('[NostrService] Safety timeout (15s) reached during initialization, forcing initialized=true');
+        this.initialized.set(true);
+        this.accountsInitialized = true;
+      }
+    }, 15000);
+
     try {
       const startTime = Date.now();
       const accounts = await this.getAccountsFromStorage();
@@ -344,6 +360,7 @@ export class NostrService implements NostriaService {
         this.initialized.set(true);
         // Mark accounts as initialized even when empty to enable auto-save
         this.accountsInitialized = true;
+        clearTimeout(safetyTimeout);
         return;
       }
 
@@ -408,8 +425,15 @@ export class NostrService implements NostriaService {
       // This runs after the account is set, so the UI can start immediately
       this.fetchMissingAccountDataInBackground(pubkeys, cachedMetadata, cachedRelays);
 
+      clearTimeout(safetyTimeout);
     } catch (err) {
+      clearTimeout(safetyTimeout);
       this.logger.error('Failed to load data during initialization', err);
+      // Ensure initialized is set even on error to unblock the UI
+      if (!this.initialized()) {
+        this.initialized.set(true);
+      }
+      this.accountsInitialized = true;
     }
   }
 

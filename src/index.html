@@ -192,6 +192,7 @@
       setTimeout(function () {
         if (document.querySelector('app-root')?.children.length > 1) {
           sessionStorage.removeItem('nostria-recovery-attempted');
+          sessionStorage.removeItem('nostria-auto-reload-attempted');
         }
       }, 10000);
     })();
@@ -323,6 +324,27 @@
             reloadEl.classList.add('visible');
           }
         }, 10000);
+
+        // Auto-reload after 20 seconds if Angular still hasn't bootstrapped (one-time only)
+        setTimeout(function () {
+          var loadingEl = document.getElementById('app-loading');
+          // Only auto-reload if the pre-Angular loading screen is still visible
+          if (loadingEl && loadingEl.offsetParent !== null) {
+            var hasAutoReloaded = sessionStorage.getItem('nostria-auto-reload-attempted');
+            if (!hasAutoReloaded) {
+              console.warn('[BOOTSTRAP] App not loaded after 20s, attempting automatic reload');
+              sessionStorage.setItem('nostria-auto-reload-attempted', 'true');
+              window.location.reload();
+            }
+          }
+        }, 20000);
+
+        // Clear auto-reload flag on successful load
+        setTimeout(function () {
+          if (document.querySelector('app-root')?.children.length > 1) {
+            sessionStorage.removeItem('nostria-auto-reload-attempted');
+          }
+        }, 12000);
       </script>
     </div>
   </app-root>

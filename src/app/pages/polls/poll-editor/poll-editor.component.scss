@@ -1,29 +1,26 @@
 .poll-editor-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 24px;
 }
 
-.editor-header {
-  margin-bottom: 32px;
+.panel-header {
+  .panel-title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
 
-  .header-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+  .panel-header-spacer {
+    flex: 1;
+  }
 
-    .back-button {
-      margin-right: 8px;
-    }
-
-    h1 {
-      margin: 0;
-      color: var(--mat-sys-on-surface);
-    }
+  .back-button {
+    margin-right: 8px;
   }
 }
 
 .editor-content {
+  padding: 24px;
+
   .poll-form {
     display: flex;
     flex-direction: column;
@@ -91,11 +88,7 @@
 // Responsive design
 @media (max-width: 768px) {
   .poll-editor-container {
-    padding: 16px;
-  }
-
-  .editor-header .header-content h1 {
-    font-size: 1.5rem;
+    max-width: 100%;
   }
 
   .editor-content .poll-form .form-actions {
@@ -114,5 +107,9 @@
       margin-top: 0;
       align-self: flex-end;
     }
+  }
+
+  .editor-content {
+    padding: 16px;
   }
 }
