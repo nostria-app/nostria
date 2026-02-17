@@ -139,7 +139,7 @@ export class MediaPlayerService implements OnInitialized {
   private lastPodcastPositionSave = 0;
   private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
   private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
-  
+
   // Flag to track if media session handlers have been initialized
   private mediaSessionInitialized = false;
 
@@ -202,17 +202,17 @@ export class MediaPlayerService implements OnInitialized {
       navigator.mediaSession.setActionHandler('seekbackward', () => {
         this.rewind(10);
       });
-      
+
       navigator.mediaSession.setActionHandler('seekforward', () => {
         this.forward(10);
       });
-      
+
       navigator.mediaSession.setActionHandler('previoustrack', () => {
         if (this.canPrevious()) {
           this.previous();
         }
       });
-      
+
       navigator.mediaSession.setActionHandler('nexttrack', () => {
         if (this.canNext()) {
           this.next();
@@ -1093,8 +1093,8 @@ export class MediaPlayerService implements OnInitialized {
       }
 
       // Regex supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/live/ID
-      // Handles optional www. prefix
-      const regex = /(?:(?:www\.)?youtube\.com\/watch\?v=|(?:www\.)?youtube\.com\/shorts\/|(?:www\.)?youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      // Handles YouTube subdomains (e.g., www., music.)
+      const regex = /(?:(?:[a-zA-Z0-9-]+\.)?youtube\.com\/watch\?v=|(?:[a-zA-Z0-9-]+\.)?youtube\.com\/shorts\/|(?:[a-zA-Z0-9-]+\.)?youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       const match = url.match(regex);
 
       let embedUrl: SafeResourceUrl;

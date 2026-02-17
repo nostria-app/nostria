@@ -389,8 +389,8 @@ export class MetaService {
   private extractYouTubeId(url: string): string | null {
     if (!url) return null;
 
-    // Handle youtube.com/embed/ format
-    const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+    // Handle youtube.com/embed/ format (including subdomains like music.youtube.com)
+    const embedMatch = url.match(/(?:[a-zA-Z0-9-]+\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
     if (embedMatch) return embedMatch[1];
 
     // Handle youtube.com/watch?v= format
@@ -401,12 +401,12 @@ export class MetaService {
     const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
     if (shortMatch) return shortMatch[1];
 
-    // Handle youtube.com/shorts/ format
-    const shortsMatch = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+    // Handle youtube.com/shorts/ format (including subdomains like music.youtube.com)
+    const shortsMatch = url.match(/(?:[a-zA-Z0-9-]+\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
     if (shortsMatch) return shortsMatch[1];
 
-    // Handle youtube.com/live/ format
-    const liveMatch = url.match(/youtube\.com\/live\/([a-zA-Z0-9_-]+)/);
+    // Handle youtube.com/live/ format (including subdomains like music.youtube.com)
+    const liveMatch = url.match(/(?:[a-zA-Z0-9-]+\.)?youtube\.com\/live\/([a-zA-Z0-9_-]+)/);
     if (liveMatch) return liveMatch[1];
 
     return null;

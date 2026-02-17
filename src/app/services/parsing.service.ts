@@ -348,10 +348,11 @@ export class ParsingService implements OnDestroy {
     const bareDomainUrlRegex =
       /(^|[\s(>])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s##"<>]*)?)(?=\s|##LINEBREAK##|$|[),;!?])/gim;
     // YouTube regex: matches standard, shortened, Shorts, and Live YouTube URLs with optional query parameters
+    // Supports YouTube subdomains too (e.g., music.youtube.com)
     // Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/live/ID
     // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
     const youtubeRegex =
-      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
+      /(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
     // Media regexes: lookahead also matches uppercase letter (start of new word without space)
     // This handles cases like "...file.mp4Curious about..." where text follows without whitespace
     const imageRegex =
@@ -694,7 +695,7 @@ export class ParsingService implements OnDestroy {
       const youtubeUrl = match[0];
       const processedUrl = this.media.getYouTubeEmbedUrl()(youtubeUrl);
       // Detect if this is a YouTube Short (9:16 portrait video)
-      const isYouTubeShort = /youtube\.com\/shorts\//.test(youtubeUrl);
+      const isYouTubeShort = /(?:[a-zA-Z0-9-]+\.)?youtube\.com\/shorts\//.test(youtubeUrl);
 
       matches.push({
         start: match.index,

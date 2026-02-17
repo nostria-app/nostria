@@ -173,6 +173,23 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private observedEventId?: string; // Track which event we're observing for
   private readonly intersectionObserverService = inject(IntersectionObserverService);
 
+  // Off-screen virtualization: use CSS content-visibility to skip rendering work
+  // for events that scroll far off-screen, without removing them from the DOM.
+  // This avoids layout shifts that occur with @if/@else DOM swapping.
+  private isOffScreen = false;
+  private lastHeight = 0;
+  private virtualizeTimer?: ReturnType<typeof setTimeout>;
+
+  /**
+   * Whether this event should be virtualized when off-screen.
+   * Events in thread/detail view (mode="thread") and events with navigationDisabled
+   * (i.e. the main event on the event detail page) are excluded from virtualization
+   * since those views are typically small and the user is actively reading them.
+   */
+  shouldVirtualize = computed<boolean>(() => {
+    return this.mode() !== 'thread' && !this.navigationDisabled();
+  });
+
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
   bookmark = inject(BookmarkService);
@@ -1462,8 +1479,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Set up or recreate IntersectionObserver to lazy load interactions when event becomes visible
-   * This method can be called when the component initializes or when the event changes
+   * Set up or recreate IntersectionObserver to lazy load interactions when event becomes visible.
+   * Also handles off-screen virtualization: when an event that has already been rendered scrolls
+   * out of the viewport (plus buffer), it is replaced with a height-preserving placeholder to
+   * reduce DOM size and change detection cost.
+   *
+   * Uses a large rootMargin (600px) so events begin rendering well before they scroll into view.
+   * Virtualization on leave is debounced (200ms) to prevent rapid toggling during fast scrolls
+   * or programmatic scroll-to-top (e.g. "new posts" button).
    */
   private setupIntersectionObserver(): void {
     // Unregister from shared observer first (in case this is a re-setup)
@@ -1473,45 +1496,99 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.intersectionObserverService.observe(
       this.elementRef.nativeElement,
       (isIntersecting) => {
-        if (isIntersecting && !this.hasLoadedInteractions()) {
-          // CRITICAL: Capture the current event at the moment of intersection
-          // This prevents loading interactions for the wrong event
-          const currentRecord = this.record();
-          const currentEventId = currentRecord?.event.id;
+        if (isIntersecting) {
+          // --- Entering viewport (or buffer zone) ---
 
-          if (!currentRecord || !currentEventId) {
-            this.logger.warn('[Lazy Load] No record available when event became visible');
-            return;
+          // Cancel any pending virtualization — the event is back in view
+          if (this.virtualizeTimer) {
+            clearTimeout(this.virtualizeTimer);
+            this.virtualizeTimer = undefined;
           }
 
-          this.logger.debug('[Lazy Load] Event became visible:', currentEventId.substring(0, 8));
+          // Restore from CSS-hidden state if virtualized.
+          // content-visibility: hidden keeps the DOM intact but skips rendering.
+          // Removing it instantly paints the existing DOM — no reconstruction, no layout shift.
+          if (this.isOffScreen) {
+            const el = this.elementRef.nativeElement as HTMLElement;
+            el.style.contentVisibility = '';
+            el.style.containIntrinsicSize = '';
+            this.isOffScreen = false;
+          }
 
-          // Store which event we're loading for to prevent cross-contamination
-          this.observedEventId = currentEventId;
-          this.hasLoadedInteractions.set(true);
+          if (!this.hasLoadedInteractions()) {
+            // CRITICAL: Capture the current event at the moment of intersection
+            // This prevents loading interactions for the wrong event
+            const currentRecord = this.record();
+            const currentEventId = currentRecord?.event.id;
 
-          // Load interactions for the specific event that became visible
-          // Use supportsReactions() which correctly checks the target event kind for reposts
-          if (this.supportsReactions()) {
-            // Get the target record (reposted event for reposts, regular event otherwise)
-            const targetRecordData = this.targetRecord();
-            this.logger.debug('[Lazy Load] Loading interactions for visible event:',
-              targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
+            if (!currentRecord || !currentEventId) {
+              this.logger.warn('[Lazy Load] No record available when event became visible');
+              return;
+            }
 
-            // Double-check event ID before loading to prevent race conditions
-            if (this.record()?.event.id === currentEventId) {
-              // loadAllInteractions now also loads quotes
-              this.loadAllInteractions();
-              this.loadZaps();
-              this.loadLatestEditForEvent();
-            } else {
-              this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+            this.logger.debug('[Lazy Load] Event became visible:', currentEventId.substring(0, 8));
+
+            // Store which event we're loading for to prevent cross-contamination
+            this.observedEventId = currentEventId;
+            this.hasLoadedInteractions.set(true);
+
+            // Load interactions for the specific event that became visible
+            // Use supportsReactions() which correctly checks the target event kind for reposts
+            if (this.supportsReactions()) {
+              // Get the target record (reposted event for reposts, regular event otherwise)
+              const targetRecordData = this.targetRecord();
+              this.logger.debug('[Lazy Load] Loading interactions for visible event:',
+                targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
+
+              // Double-check event ID before loading to prevent race conditions
+              if (this.record()?.event.id === currentEventId) {
+                // loadAllInteractions now also loads quotes
+                this.loadAllInteractions();
+                this.loadZaps();
+                this.loadLatestEditForEvent();
+              } else {
+                this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+              }
+            }
+          }
+        } else {
+          // --- Leaving viewport (and buffer zone) ---
+          // Only virtualize if: the event has been fully rendered at least once,
+          // and virtualization is appropriate for this usage context.
+          if (this.hasLoadedInteractions() && this.shouldVirtualize()) {
+            // Capture height immediately while the DOM is still rendered.
+            // Use getBoundingClientRect for sub-pixel accuracy with flex layouts.
+            const el = this.elementRef.nativeElement as HTMLElement;
+            const height = el.getBoundingClientRect().height;
+
+            if (height > 0) {
+              // Debounce: wait 200ms before virtualizing. If the event re-enters
+              // the viewport within this window (fast scroll, scroll-to-top),
+              // the timer is cancelled above and the event stays rendered.
+              if (this.virtualizeTimer) {
+                clearTimeout(this.virtualizeTimer);
+              }
+              this.virtualizeTimer = setTimeout(() => {
+                this.virtualizeTimer = undefined;
+                // Re-check height in case layout shifted during the debounce window
+                const currentHeight = el.getBoundingClientRect().height;
+                const finalHeight = currentHeight > 0 ? Math.ceil(currentHeight) : Math.ceil(height);
+                this.lastHeight = finalHeight;
+
+                // Apply CSS content-visibility: hidden on the :host element.
+                // This tells the browser to skip rendering all children while
+                // preserving the element's space via contain-intrinsic-size.
+                // The DOM stays intact — no destruction/reconstruction needed on restore.
+                el.style.containIntrinsicSize = `auto ${finalHeight}px`;
+                el.style.contentVisibility = 'hidden';
+                this.isOffScreen = true;
+              }, 200);
             }
           }
         }
       },
       {
-        rootMargin: '200px', // Start loading 200px before entering viewport
+        rootMargin: '600px', // Large buffer: start rendering 600px before entering viewport
         threshold: 0.01, // Trigger when at least 1% is visible
       }
     );
@@ -1541,8 +1618,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Use getBoundingClientRect to check if element is in viewport
     const rect = element.getBoundingClientRect();
     const isVisible = (
-      rect.top < (window.innerHeight || document.documentElement.clientHeight) + 200 && // Add 200px margin like observer
-      rect.bottom > -200 &&
+      rect.top < (window.innerHeight || document.documentElement.clientHeight) + 600 && // Add 600px margin like observer
+      rect.bottom > -600 &&
       rect.left < (window.innerWidth || document.documentElement.clientWidth) &&
       rect.right > 0
     );
@@ -1568,6 +1645,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Cancel any pending virtualization timer
+    if (this.virtualizeTimer) {
+      clearTimeout(this.virtualizeTimer);
+      this.virtualizeTimer = undefined;
+    }
     // Unregister from shared IntersectionObserver service
     this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
   }
