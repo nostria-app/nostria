@@ -136,6 +136,15 @@ export class NoteContentComponent implements OnDestroy {
     expanded: boolean;
   }>>(new Map());
 
+  // Track tokens that have timed out (loading took > 15 seconds)
+  timedOutTokens = signal<Set<number>>(new Set());
+
+  // Timers for tracking loading timeouts per token
+  private eventLoadTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+  // Timeout duration for inline referenced event loading (10 seconds)
+  private readonly EVENT_LOAD_TIMEOUT = 10000;
+  
   // Content length threshold for showing "Show more" button (in characters)
   private readonly CONTENT_LENGTH_THRESHOLD = 500;
 
@@ -356,6 +365,10 @@ export class NoteContentComponent implements OnDestroy {
       expanded: boolean;
     }>();
 
+    // Clear any existing timeout timers from previous token sets
+    this.clearAllEventLoadTimers();
+    this.timedOutTokens.set(new Set());
+
     // Mark all event mentions as loading
     for (const token of tokens) {
       if (token.type === 'nostr-mention' && token.nostrData) {
@@ -370,6 +383,9 @@ export class NoteContentComponent implements OnDestroy {
             eventId: eventId as string,
             expanded: false,
           });
+
+          // Start a 15-second timeout timer for this token
+          this.startEventLoadTimer(token.id);
         }
       }
     }
@@ -421,6 +437,9 @@ export class NoteContentComponent implements OnDestroy {
             }
 
             if (eventData) {
+              // Clear the timeout timer - event loaded successfully
+              this.clearEventLoadTimer(token.id);
+
               // Store raw event for kind 20 photo events
               if (eventData.event.kind === 20) {
                 eventDataMap.set(token.id, eventData.event);
@@ -442,6 +461,9 @@ export class NoteContentComponent implements OnDestroy {
                 expanded: false,
               });
             } else {
+              // Clear the timeout timer - event failed (no need for timeout UI)
+              this.clearEventLoadTimer(token.id);
+
               loadingMap.set(token.id, 'failed');
               eventMentionsMap.set(token.id, {
                 event: null,
@@ -453,6 +475,9 @@ export class NoteContentComponent implements OnDestroy {
             }
           } catch (error) {
             console.error(`[NoteContent] Error loading event for token ${token.id}:`, error);
+            // Clear the timeout timer on error
+            this.clearEventLoadTimer(token.id);
+
             const eventId = type === 'nevent' ? data.id : data;
             loadingMap.set(token.id, 'failed');
             eventMentionsMap.set(token.id, {
@@ -471,6 +496,228 @@ export class NoteContentComponent implements OnDestroy {
         }
       }
     }
+  }
+
+  /**
+   * Start a timeout timer for a loading event token.
+   * If loading exceeds EVENT_LOAD_TIMEOUT, marks the token as timed out.
+   */
+  private startEventLoadTimer(tokenId: number): void {
+    this.clearEventLoadTimer(tokenId);
+    const timer = setTimeout(() => {
+      // Only mark as timed out if still in loading state
+      const loadingState = this.eventLoadingMap().get(tokenId);
+      if (loadingState === 'loading') {
+        this.timedOutTokens.update(set => {
+          const newSet = new Set(set);
+          newSet.add(tokenId);
+          return newSet;
+        });
+      }
+      this.eventLoadTimers.delete(tokenId);
+    }, this.EVENT_LOAD_TIMEOUT);
+    this.eventLoadTimers.set(tokenId, timer);
+  }
+
+  /**
+   * Clear a timeout timer for a specific token.
+   */
+  private clearEventLoadTimer(tokenId: number): void {
+    const timer = this.eventLoadTimers.get(tokenId);
+    if (timer) {
+      clearTimeout(timer);
+      this.eventLoadTimers.delete(tokenId);
+    }
+  }
+
+  /**
+   * Clear all event load timeout timers.
+   */
+  private clearAllEventLoadTimers(): void {
+    for (const timer of this.eventLoadTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.eventLoadTimers.clear();
+  }
+
+  /**
+   * Check if a token has timed out while loading.
+   */
+  isTokenTimedOut(tokenId: number): boolean {
+    return this.timedOutTokens().has(tokenId);
+  }
+
+  /**
+   * Retry loading a specific event mention that timed out.
+   */
+  async retryEventLoad(tokenId: number, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    // Remove from timed out set
+    this.timedOutTokens.update(set => {
+      const newSet = new Set(set);
+      newSet.delete(tokenId);
+      return newSet;
+    });
+
+    // Find the original token
+    const tokens = this.contentTokens();
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token || token.type !== 'nostr-mention' || !token.nostrData) return;
+
+    const { type, data } = token.nostrData;
+    if (type !== 'nevent' && type !== 'note') return;
+
+    const eventId = type === 'nevent' ? data.id : data;
+    const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
+    const relayHints = type === 'nevent' ? data.relays : undefined;
+
+    // Reset loading state for this token
+    this.eventLoadingMap.update(map => {
+      const newMap = new Map(map);
+      newMap.set(tokenId, 'loading');
+      return newMap;
+    });
+    this.eventMentionsMap.update(map => {
+      const newMap = new Map(map);
+      newMap.set(tokenId, {
+        event: null,
+        contentTokens: [],
+        loading: true,
+        eventId: eventId as string,
+        expanded: false,
+      });
+      return newMap;
+    });
+
+    // Start a new timeout timer
+    this.startEventLoadTimer(tokenId);
+
+    try {
+      let eventData: NostrRecord | null = null;
+
+      // Try relay hints first
+      if (relayHints && relayHints.length > 0) {
+        try {
+          const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
+          if (relayEvent) {
+            eventData = this.data.toRecord(relayEvent);
+          }
+        } catch {
+          console.debug(`Retry: Relay hints fetch failed for ${eventId}`);
+        }
+      }
+
+      // Fall back to regular fetch
+      if (!eventData) {
+        eventData = await this.data.getEventById(eventId, { save: true });
+      }
+
+      // Try author's relays
+      if (!eventData && authorPubkey) {
+        try {
+          const authorEvent = await this.userRelayService.getEventById(authorPubkey, eventId);
+          if (authorEvent) {
+            eventData = this.data.toRecord(authorEvent);
+          }
+        } catch (err) {
+          console.warn(`Retry: Failed to fetch event ${eventId} from author relays`, err);
+        }
+      }
+
+      // Clear timeout timer
+      this.clearEventLoadTimer(tokenId);
+
+      if (eventData) {
+        // Store raw event for kind 20 photo events
+        if (eventData.event.kind === 20) {
+          this.eventDataMap.update(map => {
+            const newMap = new Map(map);
+            newMap.set(tokenId, eventData!.event);
+            return newMap;
+          });
+        }
+
+        const parseResult = await this.parsing.parseContent(
+          eventData.data,
+          eventData.event.tags,
+          eventData.event.pubkey
+        );
+
+        this.eventLoadingMap.update(map => {
+          const newMap = new Map(map);
+          newMap.set(tokenId, 'loaded');
+          return newMap;
+        });
+        this.eventMentionsMap.update(map => {
+          const newMap = new Map(map);
+          newMap.set(tokenId, {
+            event: eventData,
+            contentTokens: parseResult.tokens,
+            loading: false,
+            eventId: eventId as string,
+            expanded: false,
+          });
+          return newMap;
+        });
+      } else {
+        this.eventLoadingMap.update(map => {
+          const newMap = new Map(map);
+          newMap.set(tokenId, 'failed');
+          return newMap;
+        });
+        this.eventMentionsMap.update(map => {
+          const newMap = new Map(map);
+          newMap.set(tokenId, {
+            event: null,
+            contentTokens: [],
+            loading: false,
+            eventId: eventId as string,
+            expanded: false,
+          });
+          return newMap;
+        });
+      }
+    } catch (error) {
+      console.error(`[NoteContent] Retry error for token ${tokenId}:`, error);
+      this.clearEventLoadTimer(tokenId);
+
+      this.eventLoadingMap.update(map => {
+        const newMap = new Map(map);
+        newMap.set(tokenId, 'failed');
+        return newMap;
+      });
+      this.eventMentionsMap.update(map => {
+        const newMap = new Map(map);
+        newMap.set(tokenId, {
+          event: null,
+          contentTokens: [],
+          loading: false,
+          eventId: eventId as string,
+          expanded: false,
+        });
+        return newMap;
+      });
+    }
+  }
+
+  /**
+   * Get njump.me URL for a nostr event token.
+   * Constructs the URL from the original nostr: URI identifier.
+   */
+  getNjumpUrl(token: ContentToken): string {
+    if (token.content) {
+      const identifier = this.parsing.extractNostrUriIdentifier(token.content);
+      if (identifier) {
+        return `https://njump.me/${identifier}`;
+      }
+    }
+    // Fallback: try to construct from event mention data
+    const mention = this.eventMentionsMap().get(token.id);
+    if (mention?.eventId) {
+      return `https://njump.me/${mention.eventId}`;
+    }
+    return 'https://njump.me/';
   }
 
   getEventPreview(tokenId: number): SafeHtml | undefined {
@@ -1477,6 +1724,7 @@ export class NoteContentComponent implements OnDestroy {
    */
   ngOnDestroy(): void {
     this.closeHoverCard();
+    this.clearAllEventLoadTimers();
     this.routerSubscription?.unsubscribe();
   }
 

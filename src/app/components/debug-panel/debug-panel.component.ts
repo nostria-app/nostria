@@ -7,6 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SubscriptionManagerService, SubscriptionInfo, ConnectionInfo, QueryInfo } from '../../services/relays/subscription-manager';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { MatTabsModule } from '@angular/material/tabs';
+import { RelayBlockService } from '../../services/relays/relay-block.service';
 
 interface RelayStatus {
   url: string;
@@ -42,12 +44,14 @@ interface QueryGroup {
     MatChipsModule,
     MatTooltipModule,
     MatProgressBarModule,
+    MatTabsModule,
   ],
   templateUrl: './debug-panel.component.html',
   styleUrls: ['./debug-panel.component.scss'],
 })
 export class DebugPanelComponent implements OnInit, OnDestroy {
   private subscriptionManager = inject(SubscriptionManagerService);
+  private relayBlock = inject(RelayBlockService);
   dialogRef = inject(CustomDialogRef);
 
   // Public constants for template access
@@ -61,6 +65,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
 
   // Get metrics signal from subscription manager
   metrics = this.subscriptionManager.metricsSignal;
+  blockedRelays = computed(() => this.relayBlock.getBlockedRelays());
 
   // Current time for relative calculations
   currentTime = signal(Date.now());
@@ -335,6 +340,27 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     navigator.clipboard.writeText(report).then(() => {
       console.log('Metrics report copied to clipboard');
     });
+  }
+
+  formatBlockedUntil(entry: { blockedUntil: number | null; remainingSeconds: number | null }): string {
+    if (entry.blockedUntil === null) {
+      return 'Auth required';
+    }
+
+    if (entry.remainingSeconds === null) {
+      return 'Unknown';
+    }
+
+    if (entry.remainingSeconds <= 0) {
+      return 'Expired';
+    }
+
+    if (entry.remainingSeconds < 60) {
+      return `${entry.remainingSeconds}s`;
+    }
+
+    const minutes = Math.ceil(entry.remainingSeconds / 60);
+    return `${minutes}m`;
   }
 
   private getRelayHealth(conn: ConnectionInfo): 'good' | 'warning' | 'error' {

@@ -491,7 +491,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     // Developer & Debug Tools
     {
       id: 'debug-panel',
-      label: 'Debug: Relay Diagnostics',
+      label: 'Debug: Relay',
       icon: 'bug_report',
       action: () => this.openDebugPanel(),
       keywords: ['debug', 'relay', 'diagnostics', 'subscriptions', 'connections', 'pool', 'developer', 'devtools', 'troubleshoot'],
@@ -590,7 +590,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
 
   openDebugPanel() {
     this.customDialog.open(DebugPanelComponent, {
-      title: 'Debug: Relay Diagnostics',
+      title: 'Debug: Relay',
       width: '1400px',
       maxWidth: '95vw',
     });

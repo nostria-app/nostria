@@ -387,7 +387,7 @@ export class DataService implements OnDestroy {
     return this.cache.get<NostrRecord>(cacheKey);
   }
 
-  async getProfile(pubkey: string, options?: boolean | { refresh?: boolean; forceRefresh?: boolean; deepResolve?: boolean }): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, options?: boolean | { refresh?: boolean; forceRefresh?: boolean; deepResolve?: boolean; allowDeepResolve?: boolean }): Promise<NostrRecord | undefined> {
     this.perfMetrics.incrementCounter('data.getProfile.calls');
     this.perfMetrics.startTimer(`data.getProfile`);
 
@@ -395,12 +395,14 @@ export class DataService implements OnDestroy {
     let refresh = false;
     let forceRefresh = false;
     let deepResolve = false;
+    let allowDeepResolve = false;
     if (typeof options === 'boolean') {
       refresh = options;
     } else if (options) {
       refresh = options.refresh ?? false;
       forceRefresh = options.forceRefresh ?? false;
       deepResolve = options.deepResolve ?? false;
+      allowDeepResolve = options.allowDeepResolve ?? false;
     }
 
     const cacheKey = `metadata-${pubkey}`;
@@ -408,7 +410,7 @@ export class DataService implements OnDestroy {
     // For forceRefresh, skip cache entirely and fetch fresh data from relays
     if (forceRefresh) {
       this.logger.debug(`[Profile] Force refreshing profile for: ${pubkey.substring(0, 8)}...`);
-      const result = await this.loadProfile(pubkey, cacheKey, true, deepResolve);
+      const result = await this.loadProfile(pubkey, cacheKey, true, deepResolve, allowDeepResolve);
       this.perfMetrics.endTimer('data.getProfile');
       return result;
     }
@@ -488,7 +490,7 @@ export class DataService implements OnDestroy {
 
     // Now do the async work
     try {
-      const result = await this.loadProfile(pubkey, cacheKey, refresh, deepResolve);
+      const result = await this.loadProfile(pubkey, cacheKey, refresh, deepResolve, allowDeepResolve);
       resolvePromise!(result);
       return result;
     } catch (error) {
@@ -507,7 +509,8 @@ export class DataService implements OnDestroy {
     pubkey: string,
     cacheKey: string,
     refresh: boolean,
-    deepResolve = false
+    deepResolve = false,
+    allowDeepResolve = false
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -522,7 +525,7 @@ export class DataService implements OnDestroy {
       });
 
       // If not found via normal relay fetch, attempt deep resolution (ONLY if explicitly enabled)
-      if (!metadata && deepResolve) {
+      if (!metadata && deepResolve && allowDeepResolve) {
         this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
         metadata = await this.loadProfileWithDeepResolution(pubkey);
         if (metadata) {
@@ -561,7 +564,7 @@ export class DataService implements OnDestroy {
         });
 
         // If not found via normal relay fetch, attempt deep resolution (ONLY if explicitly enabled)
-        if (!metadata && deepResolve) {
+        if (!metadata && deepResolve && allowDeepResolve) {
           this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
           metadata = await this.loadProfileWithDeepResolution(pubkey);
           if (metadata) {

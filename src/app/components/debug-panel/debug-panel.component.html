@@ -65,123 +65,150 @@
     </mat-progress-bar>
   </div>
 
-  <!-- Main Content Grid -->
-  <div class="content-grid">
-    <!-- Relays Column -->
-    <div class="panel relays-panel">
-      <div class="panel-header">
-        <mat-icon>dns</mat-icon>
-        <span>Relays</span>
-        @if (selectedRelay()) {
-          <button mat-icon-button class="clear-selection" (click)="clearRelaySelection()" matTooltip="Clear selection">
-            <mat-icon>close</mat-icon>
-          </button>
-        }
-      </div>
-      <div class="relays-list">
-        @for (relay of relayStatuses(); track trackByUrl($index, relay)) {
-          <div class="relay-item" 
-               [class.disconnected]="!relay.isConnected" 
-               [class.warning]="relay.health === 'warning'" 
-               [class.error]="relay.health === 'error'"
-               [class.selected]="selectedRelay() === relay.fullUrl"
-               (click)="selectRelay(relay.fullUrl)">
-            <div class="relay-status">
-              <span class="status-dot" [class.connected]="relay.isConnected" [class.disconnected]="!relay.isConnected"></span>
-            </div>
-            <div class="relay-info">
-              <span class="relay-url" [matTooltip]="relay.fullUrl">{{ relay.url }}</span>
-              <span class="relay-meta">
-                <span class="sub-count" [matTooltip]="'Active subscriptions'">{{ relay.subscriptions }}s</span>
-                @if (relay.pendingRequests > 0) {
-                  <span class="pending-count" [matTooltip]="'Pending requests'">{{ relay.pendingRequests }}p</span>
-                }
-                <span class="last-activity" [matTooltip]="'Last activity'">{{ relay.lastActivity }}</span>
-              </span>
-            </div>
+  <mat-tab-group>
+    <mat-tab label="Diagnostics">
+      <!-- Main Content Grid -->
+      <div class="content-grid">
+        <!-- Relays Column -->
+        <div class="panel relays-panel">
+          <div class="panel-header">
+            <mat-icon>dns</mat-icon>
+            <span>Relays</span>
+            @if (selectedRelay()) {
+              <button mat-icon-button class="clear-selection" (click)="clearRelaySelection()" matTooltip="Clear selection">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
           </div>
-        } @empty {
-          <div class="empty-state">No relay connections</div>
-        }
-      </div>
-    </div>
+          <div class="relays-list">
+            @for (relay of relayStatuses(); track trackByUrl($index, relay)) {
+              <div class="relay-item" 
+                   [class.disconnected]="!relay.isConnected" 
+                   [class.warning]="relay.health === 'warning'" 
+                   [class.error]="relay.health === 'error'"
+                   [class.selected]="selectedRelay() === relay.fullUrl"
+                   (click)="selectRelay(relay.fullUrl)">
+                <div class="relay-status">
+                  <span class="status-dot" [class.connected]="relay.isConnected" [class.disconnected]="!relay.isConnected"></span>
+                </div>
+                <div class="relay-info">
+                  <span class="relay-url" [matTooltip]="relay.fullUrl">{{ relay.url }}</span>
+                  <span class="relay-meta">
+                    <span class="sub-count" [matTooltip]="'Active subscriptions'">{{ relay.subscriptions }}s</span>
+                    @if (relay.pendingRequests > 0) {
+                      <span class="pending-count" [matTooltip]="'Pending requests'">{{ relay.pendingRequests }}p</span>
+                    }
+                    <span class="last-activity" [matTooltip]="'Last activity'">{{ relay.lastActivity }}</span>
+                  </span>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty-state">No relay connections</div>
+            }
+          </div>
+        </div>
 
-    <!-- Subscriptions Column -->
-    <div class="panel subscriptions-panel">
-      <div class="panel-header">
-        <mat-icon>sync</mat-icon>
-        <span>Subscriptions</span>
-        @if (selectedRelay()) {
-          <span class="filter-badge">filtered</span>
-        }
-      </div>
-      <div class="subscriptions-list">
-        @for (group of subscriptionGroups(); track trackBySource($index, group)) {
-          <div class="sub-group">
-            <div class="group-header" (click)="toggleGroup(group.source)">
-              <mat-icon class="expand-icon" [class.expanded]="group.expanded">
-                chevron_right
-              </mat-icon>
-              <span class="source-name">{{ group.source }}</span>
-              <mat-chip class="count-chip">{{ group.count }}</mat-chip>
-            </div>
-            @if (group.expanded) {
-              <div class="group-subs">
-                @for (sub of group.subscriptions; track trackById($index, sub)) {
-                  <div class="sub-item">
-                    <div class="sub-id" [matTooltip]="sub.id">{{ sub.id.slice(0, 12) }}...</div>
-                    <div class="sub-details">
-                      <span class="sub-filter" [matTooltip]="formatFilter(sub.filter)">{{ formatFilter(sub.filter) }}</span>
-                      <span class="sub-meta">
-                        <span class="sub-relays">{{ getSubscriptionRelays(sub.relayUrls) }}</span>
-                        <span class="sub-age">{{ getSubscriptionAge(sub.createdAt) }}</span>
-                      </span>
-                    </div>
+        <!-- Subscriptions Column -->
+        <div class="panel subscriptions-panel">
+          <div class="panel-header">
+            <mat-icon>sync</mat-icon>
+            <span>Subscriptions</span>
+            @if (selectedRelay()) {
+              <span class="filter-badge">filtered</span>
+            }
+          </div>
+          <div class="subscriptions-list">
+            @for (group of subscriptionGroups(); track trackBySource($index, group)) {
+              <div class="sub-group">
+                <div class="group-header" (click)="toggleGroup(group.source)">
+                  <mat-icon class="expand-icon" [class.expanded]="group.expanded">
+                    chevron_right
+                  </mat-icon>
+                  <span class="source-name">{{ group.source }}</span>
+                  <mat-chip class="count-chip">{{ group.count }}</mat-chip>
+                </div>
+                @if (group.expanded) {
+                  <div class="group-subs">
+                    @for (sub of group.subscriptions; track trackById($index, sub)) {
+                      <div class="sub-item">
+                        <div class="sub-id" [matTooltip]="sub.id">{{ sub.id.slice(0, 12) }}...</div>
+                        <div class="sub-details">
+                          <span class="sub-filter" [matTooltip]="formatFilter(sub.filter)">{{ formatFilter(sub.filter) }}</span>
+                          <span class="sub-meta">
+                            <span class="sub-relays">{{ getSubscriptionRelays(sub.relayUrls) }}</span>
+                            <span class="sub-age">{{ getSubscriptionAge(sub.createdAt) }}</span>
+                          </span>
+                        </div>
+                      </div>
+                    }
                   </div>
                 }
               </div>
+            } @empty {
+              <div class="empty-state">No active subscriptions</div>
             }
           </div>
-        } @empty {
-          <div class="empty-state">No active subscriptions</div>
-        }
-      </div>
-    </div>
+        </div>
 
-    <!-- Queries Column -->
-    <div class="panel queries-panel">
-      <div class="panel-header">
-        <mat-icon>query_stats</mat-icon>
-        <span>Queries</span>
-        <span class="query-history-label">last {{ totalQueries() }}</span>
-        @if (selectedRelay()) {
-          <span class="filter-badge">filtered</span>
-        }
-      </div>
-      <div class="queries-list">
-        @for (query of filteredQueries(); track trackByQueryId($index, query)) {
-          <div class="query-item" [class.completed]="query.status === 'completed'" [class.active]="query.status === 'active'">
-            <div class="query-row">
-              <span class="query-status-dot" [class.active]="query.status === 'active'" [class.completed]="query.status === 'completed'"></span>
-              <span class="query-source">{{ query.source }}</span>
-              <span class="query-duration" [matTooltip]="query.status === 'active' ? 'Running for' : 'Completed in'">{{ getQueryDuration(query) }}</span>
-              <span class="query-age">{{ getQueryTimeAgo(query) }}</span>
-            </div>
-            <div class="query-row query-details-row">
-              @if (query.filter) {
-                <span class="query-filter" [matTooltip]="formatFilterFull(query.filter)">{{ formatFilter(query.filter) }}</span>
-              } @else {
-                <span class="query-filter no-filter">No filter</span>
-              }
-              <span class="query-relays" [matTooltip]="query.relayUrls.join(', ')">{{ getSubscriptionRelays(query.relayUrls) }}</span>
-            </div>
+        <!-- Queries Column -->
+        <div class="panel queries-panel">
+          <div class="panel-header">
+            <mat-icon>query_stats</mat-icon>
+            <span>Queries</span>
+            <span class="query-history-label">last {{ totalQueries() }}</span>
+            @if (selectedRelay()) {
+              <span class="filter-badge">filtered</span>
+            }
           </div>
-        } @empty {
-          <div class="empty-state">No query history</div>
-        }
+          <div class="queries-list">
+            @for (query of filteredQueries(); track trackByQueryId($index, query)) {
+              <div class="query-item" [class.completed]="query.status === 'completed'" [class.active]="query.status === 'active'">
+                <div class="query-row">
+                  <span class="query-status-dot" [class.active]="query.status === 'active'" [class.completed]="query.status === 'completed'"></span>
+                  <span class="query-source">{{ query.source }}</span>
+                  <span class="query-duration" [matTooltip]="query.status === 'active' ? 'Running for' : 'Completed in'">{{ getQueryDuration(query) }}</span>
+                  <span class="query-age">{{ getQueryTimeAgo(query) }}</span>
+                </div>
+                <div class="query-row query-details-row">
+                  @if (query.filter) {
+                    <span class="query-filter" [matTooltip]="formatFilterFull(query.filter)">{{ formatFilter(query.filter) }}</span>
+                  } @else {
+                    <span class="query-filter no-filter">No filter</span>
+                  }
+                  <span class="query-relays" [matTooltip]="query.relayUrls.join(', ')">{{ getSubscriptionRelays(query.relayUrls) }}</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty-state">No query history</div>
+            }
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </mat-tab>
+    <mat-tab [label]="'Blocked (' + blockedRelays().length + ')'">
+      <div class="content-grid">
+        <div class="panel blocked-panel">
+          <div class="panel-header">
+            <mat-icon>block</mat-icon>
+            <span>Blocked Relays</span>
+          </div>
+          <div class="blocked-list">
+            @for (relay of blockedRelays(); track relay.url) {
+              <div class="blocked-item">
+                <div class="blocked-url">{{ relay.url }}</div>
+                <div class="blocked-meta">
+                  <span class="blocked-reason">{{ relay.reason }}</span>
+                  <span class="blocked-until">{{ formatBlockedUntil(relay) }}</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty-state">No blocked relays</div>
+            }
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 
   <!-- Actions Bar -->
   <div class="actions-bar" dialog-actions>

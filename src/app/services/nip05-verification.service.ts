@@ -84,8 +84,9 @@ export class Nip05VerificationService {
       }
     }
 
+    const normalized = nip05Raw.trim().toLowerCase();
     // Perform actual verification
-    const result = await this.performVerification(pubkey, nip05Raw, value);
+    const result = await this.performVerification(pubkey, normalized, value);
 
     // Cache the result
     this.cache.set(pubkey, {
@@ -109,7 +110,8 @@ export class Nip05VerificationService {
     const value = this.utilities.parseNip05(nip05Raw);
     if (!value) return EMPTY_RESULT;
 
-    const result = await this.performVerification(pubkey, nip05Raw, value);
+    const normalized = nip05Raw.trim().toLowerCase();
+    const result = await this.performVerification(pubkey, normalized, value);
 
     // Cache the result
     this.cache.set(pubkey, {

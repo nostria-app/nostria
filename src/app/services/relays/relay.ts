@@ -5,6 +5,8 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
+import { RelayBlockService } from './relay-block.service';
+import { LocalSettingsService } from '../local-settings.service';
 import { PerformanceMetricsService } from '../performance-metrics.service';
 
 // Forward reference to avoid circular dependency
@@ -26,6 +28,8 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
+  protected relayBlock = inject(RelayBlockService);
+  protected localSettings = inject(LocalSettingsService);
   protected perfMetrics = inject(PerformanceMetricsService);
   // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
   private _eventProcessor?: any;
@@ -160,13 +164,15 @@ export abstract class RelayServiceBase {
    * @returns Object with filtered URLs and whether the operation should proceed
    */
   protected filterAuthFailedRelays(urls: string[]): { urls: string[]; shouldProceed: boolean } {
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(urls)
+    );
     if (filteredUrls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute operation`);
+      this.logger.warn(`[${this.constructor.name}] All relays are unavailable, cannot execute operation`);
       return { urls: [], shouldProceed: false };
     }
     if (filteredUrls.length < urls.length) {
-      this.logger.debug(`[${this.constructor.name}] Filtered out ${urls.length - filteredUrls.length} auth-failed relays`);
+      this.logger.debug(`[${this.constructor.name}] Filtered out ${urls.length - filteredUrls.length} unavailable relays`);
     }
     return { urls: filteredUrls, shouldProceed: true };
   }
@@ -689,10 +695,12 @@ export abstract class RelayServiceBase {
       return event;
     } catch (error) {
       this.logger.error(`[${this.constructor.name}] Error fetching events`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       this.perfMetrics.incrementCounter('relay.get.errors');
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
+        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
@@ -790,6 +798,14 @@ export abstract class RelayServiceBase {
               this.logger.error('Subscriptions closed unexpectedly', reasons);
             }
 
+            reasons.forEach((reason) => {
+              if (reason) {
+                urls.forEach((url) => {
+                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                });
+              }
+            });
+
             // Update lastUsed for all relays used in this query if we received events
             if (events.length > 0) {
               urls.forEach((url) => this.updateRelayLastUsed(url));
@@ -872,6 +888,7 @@ export abstract class RelayServiceBase {
               if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
+              this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
               throw new Error(`${relayUrl}: ${errorMsg}`);
             });
           relayPromises.set(wrappedPromise, relayUrl);
@@ -930,6 +947,17 @@ export abstract class RelayServiceBase {
       const publishResults = this.#pool.publish(urls, event, { onauth: authCallback });
       this.logger.debug('Publish results:', publishResults);
 
+      publishResults.forEach((promise, index) => {
+        const relayUrl = urls[index];
+        promise.catch((error: unknown) => {
+          let errorMsg = error instanceof Error ? error.message : String(error);
+          if (!errorMsg || errorMsg.trim() === '') {
+            errorMsg = 'Unknown error (relay returned empty response)';
+          }
+          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
+        });
+      });
+
       // Update lastUsed for all relays used in this publish operation
       urls.forEach((url) => this.updateRelayLastUsed(url));
 
@@ -970,12 +998,12 @@ export abstract class RelayServiceBase {
       urls = this.relaysService.getOptimalRelays(this.relayUrls);
     }
 
-    // Filter out relays that have failed authentication
+    // Filter out relays that have failed authentication or are temporarily blocked
     const authResult = this.filterAuthFailedRelays(urls);
     if (!authResult.shouldProceed) {
       return {
         close: () => {
-          this.logger.debug(`[${this.constructor.name}] No subscription to close (all relays auth-failed)`);
+          this.logger.debug(`[${this.constructor.name}] No subscription to close (all relays unavailable)`);
         },
       };
     }
@@ -1094,6 +1122,13 @@ export abstract class RelayServiceBase {
           this.logger.info(`[${this.constructor.name}] Subscription closed`, {
             subscriptionId,
             reasons,
+          });
+          reasons.forEach((reason) => {
+            if (reason) {
+              availableRelays.forEach((url) => {
+                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+              });
+            }
           });
           if (onEose) {
             this.logger.debug(`[${this.constructor.name}] End of stored events reached`, {
@@ -1216,6 +1251,13 @@ export abstract class RelayServiceBase {
         },
         onclose: (reasons) => {
           this.logger.debug('Pool closed', reasons);
+          reasons.forEach((reason) => {
+            if (reason) {
+              urls.forEach((url) => {
+                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+              });
+            }
+          });
           if (onEose) {
             this.logger.debug('End of stored events reached');
             onEose();

@@ -242,6 +242,28 @@
   </mat-card-content>
 </mat-card>
 } @else if (mention?.loading) {
+@if (isTokenTimedOut(token.id)) {
+<!-- Timed out - show retry and njump link -->
+<mat-card appearance="outlined" class="event-mention-card timed-out-card">
+  <mat-card-content>
+    <div class="event-timed-out-placeholder">
+      <mat-icon>hourglass_disabled</mat-icon>
+      <span class="timed-out-text">Event is taking too long to load</span>
+      <div class="timed-out-actions">
+        <button mat-button class="retry-btn" (click)="retryEventLoad(token.id, $event)">
+          <mat-icon>refresh</mat-icon>
+          Retry
+        </button>
+        <a mat-button class="njump-btn" [href]="getNjumpUrl(token)" target="_blank" rel="noopener noreferrer"
+          (click)="$event.stopPropagation()">
+          <mat-icon>open_in_new</mat-icon>
+          Open on njump.me
+        </a>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
+} @else {
 <!-- Loading placeholder for event mention -->
 <mat-card appearance="outlined" class="event-mention-card loading-card">
   <mat-card-header class="loading-header">
@@ -258,6 +280,7 @@
     </div>
   </mat-card-content>
 </mat-card>
+}
 } @else if (mention?.event) {
 @if (mention!.event!.event.kind === 8) {
 <!-- Badge Award (kind 8) - show as simple link for now -->

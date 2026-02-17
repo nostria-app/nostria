@@ -931,6 +931,16 @@
     }
   }
 
+  // Timed out state for event mentions
+  &.timed-out-card {
+    cursor: default;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+  }
+
   // Collapsed state for long content
   mat-card-content.collapsed {
     max-height: 300px;
@@ -1063,6 +1073,48 @@
 
   .not-found-text {
     font-size: var(--text-sm);
+  }
+}
+
+// Event timed out placeholder
+.event-timed-out-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  > mat-icon {
+    color: var(--mat-sys-outline);
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .timed-out-text {
+    font-size: var(--text-sm);
+  }
+
+  .timed-out-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+
+    .retry-btn,
+    .njump-btn {
+      font-size: var(--text-sm);
+      color: var(--mat-sys-primary);
+      text-decoration: none;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        margin-right: 4px;
+      }
+    }
   }
 }
 

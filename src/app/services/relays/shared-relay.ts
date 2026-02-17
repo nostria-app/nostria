@@ -3,6 +3,8 @@ import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
+import { RelayBlockService } from './relay-block.service';
+import { LocalSettingsService } from '../local-settings.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -15,6 +17,8 @@ export class SharedRelayService {
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
+  private readonly relayBlock = inject(RelayBlockService);
+  private readonly localSettings = inject(LocalSettingsService);
   private readonly injector = inject(Injector);
   // Lazy-loaded to avoid circular dependency
   private _eventProcessor?: any;
@@ -95,15 +99,21 @@ export class SharedRelayService {
       return null;
     }
 
+    const filteredUrls = this.relayBlock.filterBlockedRelays(secureUrls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn('[SharedRelayService] All relays are unavailable, skipping request');
+      return null;
+    }
+
     await this.acquireSemaphore();
 
     try {
       // Track that we're attempting to connect to these relays
-      secureUrls.forEach((url) => {
+      filteredUrls.forEach((url) => {
         this.relaysService.updateRelayConnection(url, true);
       });
 
-      const event = (await this.#pool.get(secureUrls, filter, {
+      const event = (await this.#pool.get(filteredUrls, filter, {
         maxWait: timeout,
       })) as unknown as T;
 
@@ -115,7 +125,7 @@ export class SharedRelayService {
 
       // If we received an event, increment the count for all relays that could have provided it
       if (event) {
-        secureUrls.forEach((url) => {
+        filteredUrls.forEach((url) => {
           this.relaysService.incrementEventCount(url);
         });
       }
@@ -125,7 +135,9 @@ export class SharedRelayService {
       this.logger.error('Error fetching events', error);
 
       // Track connection retry for failed connections
-      relayUrls.forEach((url) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      filteredUrls.forEach((url) => {
+        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
@@ -220,7 +232,9 @@ export class SharedRelayService {
   ): Promise<T | null> {
     // Get optimal relays for the user
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
+    relayUrls = this.relayBlock.filterBlockedRelays(
+      this.relaysService.getOptimalRelays(relayUrls)
+    );
 
     // Reduced logging for metadata requests to prevent console spam
     if (!filter.kinds?.includes(0)) {
@@ -298,7 +312,9 @@ export class SharedRelayService {
     timeout: number,
   ): Promise<T[]> {
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
+    relayUrls = this.relayBlock.filterBlockedRelays(
+      this.relaysService.getOptimalRelays(relayUrls)
+    );
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -325,6 +341,13 @@ export class SharedRelayService {
             if (!reasons.includes('closed automatically on eose')) {
               this.logger.error('Subscriptions closed unexpectedly', reasons);
             }
+            reasons.forEach(reason => {
+              if (reason) {
+                relayUrls.forEach(url => {
+                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                });
+              }
+            });
 
             resolve(events);
           },

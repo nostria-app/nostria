@@ -99,7 +99,7 @@
   border: 1px solid var(--mat-sys-outline-variant);
   overflow: hidden;
   transition: all 0.2s ease;
-  max-height: 280px;
+  max-height: 185px;
   cursor: pointer;
   position: relative;
 
@@ -116,7 +116,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: 40px;
     background: linear-gradient(to bottom, transparent, var(--mat-sys-surface-container-low));
     pointer-events: none;
   }
@@ -126,7 +126,7 @@
     app-event {
       .event-container {
         padding: 0.75rem !important;
-        max-height: 280px;
+        max-height: 185px;
         overflow: hidden;
       }
 
@@ -148,11 +148,11 @@
       .event-content {
         font-size: 0.875rem !important;
         line-height: 1.4 !important;
-        max-height: 160px;
+        max-height: 105px;
         overflow: hidden;
         display: -webkit-box;
-        -webkit-line-clamp: 6;
-        line-clamp: 6;
+        -webkit-line-clamp: 4;
+        line-clamp: 4;
         -webkit-box-orient: vertical;
         word-wrap: break-word;
       }

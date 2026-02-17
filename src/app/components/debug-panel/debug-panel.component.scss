@@ -499,6 +499,85 @@
   color: var(--text-secondary, rgba(255, 255, 255, 0.4));
 }
 
+// Blocked Relays Panel
+.blocked-panel {
+  grid-column: 1 / -1;
+}
+
+.blocked-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.blocked-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem 0;
+  border-radius: 6px;
+  background: rgba(244, 67, 54, 0.08);
+  border-left: 3px solid #f44336;
+
+  &:hover {
+    background: rgba(244, 67, 54, 0.14);
+  }
+}
+
+.blocked-url {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blocked-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.blocked-reason {
+  color: #ef9a9a;
+  background: rgba(244, 67, 54, 0.12);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.blocked-until {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  flex-shrink: 0;
+  font-family: 'Roboto Mono', monospace;
+}
+
+// Blocked list scrollbar
+.blocked-list {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
 // Empty State
 .empty-state {
   display: flex;

@@ -4,6 +4,8 @@ import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
+import { RelayBlockService } from './relay-block.service';
+import { LocalSettingsService } from '../local-settings.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -17,6 +19,8 @@ export class RelayPoolService {
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
   private readonly relayAuth = inject(RelayAuthService);
+  private readonly relayBlock = inject(RelayBlockService);
+  private readonly localSettings = inject(LocalSettingsService);
   private readonly injector = inject(Injector);
   // Lazy-loaded to avoid circular dependency
   private _eventProcessor?: any;
@@ -73,10 +77,12 @@ export class RelayPoolService {
       return null;
     }
 
-    // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    // Filter out relays that have failed authentication or are temporarily blocked
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(secureUrls)
+    );
     if (filteredUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute get');
+      this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute get');
       return null;
     }
 
@@ -120,6 +126,10 @@ export class RelayPoolService {
       return event;
     } catch (error) {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      filteredUrls.forEach(url => {
+        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
+      });
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
@@ -148,10 +158,12 @@ export class RelayPoolService {
       return [];
     }
 
-    // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    // Filter out relays that have failed authentication or are temporarily blocked
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(secureUrls)
+    );
     if (filteredUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute query');
+      this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute query');
       return [];
     }
 
@@ -204,6 +216,10 @@ export class RelayPoolService {
       return events;
     } catch (error) {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      filteredUrls.forEach(url => {
+        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
+      });
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
@@ -232,13 +248,15 @@ export class RelayPoolService {
       };
     }
 
-    // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    // Filter out relays that have failed authentication or are temporarily blocked
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(secureUrls)
+    );
     if (filteredUrls.length === 0) {
-      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot subscribe');
+      this.logger.warn('[RelayPoolService] All relays are unavailable, cannot subscribe');
       return {
         close: () => {
-          this.logger.debug('[RelayPoolService] No subscription to close (all relays auth-failed)');
+          this.logger.debug('[RelayPoolService] No subscription to close (all relays unavailable)');
         },
       };
     }
@@ -303,6 +321,16 @@ export class RelayPoolService {
           subscriptionId,
           reason,
         });
+        if (reason && reason.length > 0) {
+          reason.forEach(reasonEntry => {
+            if (!reasonEntry) {
+              return;
+            }
+            filteredUrls.forEach(url => {
+              this.relayBlock.recordFailure(url, reasonEntry, this.localSettings.autoRelayAuth());
+            });
+          });
+        }
         this.subscriptionManager.unregisterSubscription(subscriptionId);
       }
     });
@@ -329,10 +357,12 @@ export class RelayPoolService {
       throw new Error('No relays provided');
     }
 
-    // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    // Filter out relays that have failed authentication or are temporarily blocked
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(relayUrls)
+    );
     if (filteredUrls.length === 0) {
-      throw new Error('All relays have failed authentication, cannot publish');
+      throw new Error('All relays are unavailable, cannot publish');
     }
 
     // Add any new relays to the pool
@@ -387,6 +417,7 @@ export class RelayPoolService {
           if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
             this.relayAuth.markAuthFailed(relayUrl, errorMsg);
           }
+          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
           this.relaysService.recordConnectionRetry(relayUrl);
           this.relaysService.updateRelayConnection(relayUrl, false);
         }
@@ -394,9 +425,11 @@ export class RelayPoolService {
 
     } catch (error) {
       this.logger.error('[RelayPoolService] Error publishing event:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
+        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
