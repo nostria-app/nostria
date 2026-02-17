@@ -525,7 +525,8 @@ export class ParsingService implements OnDestroy {
 
         // Check if there's an unclosed URL before this match
         // Look for https:// or http:// without whitespace/linebreak after it
-        const urlStartMatch = textBefore.match(/https?:\/\/[^\s]*$/);
+        // Must also treat ##LINEBREAK## markers as boundaries (they replace \n during preprocessing)
+        const urlStartMatch = textBefore.match(/https?:\/\/(?:(?!##LINEBREAK##)[^\s])*$/);
         if (urlStartMatch) {
           // There's a URL that extends to this match position - we're inside a URL
           isInsideUrl = true;
