@@ -24,12 +24,48 @@
   <div class="starter-pack-header">
     <div class="starter-pack-title-row">
       <h3 class="starter-pack-title">{{ title() }}</h3>
-      <div class="starter-pack-count-pill" aria-label="Starter pack member count">
-        <mat-icon>people</mat-icon>
-        <span class="count-value">{{ userCount() }}</span>
-        <span class="count-label">{{ userCount() === 1 ? 'user' : 'users' }}</span>
+      <div class="starter-pack-header-right">
+        <div class="starter-pack-count-pill" aria-label="Starter pack member count">
+          <mat-icon>people</mat-icon>
+          <span class="count-value">{{ userCount() }}</span>
+          <span class="count-label">{{ userCount() === 1 ? 'user' : 'users' }}</span>
+        </div>
+        <div class="starter-pack-actions" (click)="$event.stopPropagation()">
+          <button mat-stroked-button (click)="followAll($event)" [disabled]="isFollowingAll() || userCount() === 0"
+            matTooltip="Follow everyone in this starter pack">
+            @if (isFollowingAll()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>person_add</mat-icon>
+            }
+            <span>Follow All</span>
+          </button>
+
+          <button mat-stroked-button [matMenuTriggerFor]="addToListMenu"
+            [disabled]="isAddingToList() || userCount() === 0" matTooltip="Add all profiles to a people list">
+            @if (isAddingToList()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>group_add</mat-icon>
+            }
+            <span>Add to list</span>
+          </button>
+        </div>
       </div>
     </div>
+
+    <mat-menu #addToListMenu="matMenu">
+      @for (set of availableFollowSets(); track set.id) {
+      <button mat-menu-item (click)="addAllToFollowSet(set.dTag, $event)">
+        <mat-icon>playlist_add</mat-icon>
+        <span>{{ set.title }}</span>
+      </button>
+      }
+      <button mat-menu-item (click)="createListAndAddAll($event)">
+        <mat-icon>add_circle</mat-icon>
+        <span>Create new list</span>
+      </button>
+    </mat-menu>
 
     @if (image()) {
     <div class="starter-pack-banner">

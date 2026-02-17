@@ -99,6 +99,13 @@
       flex-wrap: nowrap;
     }
 
+    .starter-pack-header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
     .starter-pack-title {
       margin: 0;
       flex: 1;
@@ -138,6 +145,20 @@
         color: var(--mat-sys-on-surface-variant);
         text-transform: uppercase;
         letter-spacing: 0.02em;
+      }
+    }
+
+    .starter-pack-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      button[mat-stroked-button] {
+        height: 34px;
+      }
+
+      mat-spinner {
+        margin-right: 2px;
       }
     }
 
@@ -266,6 +287,23 @@
 // Responsive design
 @media (max-width: 567px) {
   .starter-pack-container {
+    .starter-pack-header {
+      .starter-pack-title-row {
+        flex-wrap: wrap;
+      }
+
+      .starter-pack-header-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .starter-pack-actions {
+        button[mat-stroked-button] {
+          padding-inline: 10px;
+        }
+      }
+    }
+
     .starter-pack-content {
       .users-section {
         .users-grid {
