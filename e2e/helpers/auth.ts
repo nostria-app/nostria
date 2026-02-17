@@ -169,13 +169,13 @@ export class TestAuthHelper {
   /**
    * Build a NostrUser object ready for injection into the app.
    *
-   * @returns A valid NostrUser with source 'nsec', plaintext hex privkey,
+   * @returns A valid NostrUser with source 'nsec' in read-only mode (no privkey),
    *          hasActivated true, isEncrypted false, and lastUsed set to now.
    */
   buildNostrUser(): TestNostrUser {
     return {
       pubkey: this.pubkeyHex,
-      privkey: this.privkeyHex,
+      privkey: '',
       source: 'nsec',
       hasActivated: true,
       lastUsed: Date.now(),

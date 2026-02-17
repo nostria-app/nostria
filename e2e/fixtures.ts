@@ -240,6 +240,30 @@ export const test = base.extend<TestContext>({
    * Automatically collect console logs
    */
   page: async ({ page, consoleLogs }, use) => {
+    await page.addInitScript(() => {
+      const originalSend = WebSocket.prototype.send;
+
+      WebSocket.prototype.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
+        try {
+          if (typeof data === 'string' && data.startsWith('[')) {
+            const parsed = JSON.parse(data) as unknown;
+            if (Array.isArray(parsed) && typeof parsed[0] === 'string') {
+              const messageType = parsed[0].toUpperCase();
+
+              if (messageType === 'EVENT' || messageType === 'AUTH') {
+                console.warn(`[E2E Read-Only Guard] Blocked outgoing Nostr message: ${messageType}`);
+                return;
+              }
+            }
+          }
+        } catch {
+          // If parsing fails, keep default behavior
+        }
+
+        originalSend.call(this, data);
+      };
+    });
+
     // Set up console log collection
     page.on('console', (msg: ConsoleMessage) => {
       const entry: ConsoleLogEntry = {

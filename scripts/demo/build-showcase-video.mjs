@@ -2,14 +2,14 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  FEATURE_TAGS,
   FINAL_OUTPUT_DIR,
   RAW_OUTPUT_DIR,
-  TEMP_OUTPUT_DIR,
   composeFinalVideo,
   ensureDirectories,
+  getLatestVideo,
+  getNewVideos,
   hasFfmpeg,
-  normalizeVideo,
+  listVideoArtifacts,
   run,
   sanitizeName,
 } from './video-utils.mjs';
@@ -37,29 +37,22 @@ function getOptionalPath(name) {
   return value ? path.resolve(value) : null;
 }
 
-function listRawVideos() {
-  if (!fs.existsSync(RAW_OUTPUT_DIR)) {
-    return [];
-  }
-
-  return fs
-    .readdirSync(RAW_OUTPUT_DIR)
-    .filter((name) => name.endsWith('-raw.webm'))
-    .map((name) => path.join(RAW_OUTPUT_DIR, name));
+function copyRawVideo(videoPath, device) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `${timestamp}-showcase-${sanitizeName(device)}-raw.webm`;
+  const destination = path.join(RAW_OUTPUT_DIR, filename);
+  fs.copyFileSync(videoPath, destination);
+  return destination;
 }
 
-function getLatestRawVideoForFeature(feature, device) {
-  const all = listRawVideos();
-  const marker = `-${sanitizeName(feature)}-${sanitizeName(device)}-raw.webm`;
-  const candidates = all.filter((filePath) => filePath.toLowerCase().endsWith(marker));
+function findLatestShowcaseArtifact(device) {
+  const marker = `demo-${sanitizeName(device)}`;
+  const candidates = listVideoArtifacts().filter((filePath) => {
+    const lower = filePath.toLowerCase();
+    return lower.includes('demo-showcase') && lower.includes(marker);
+  });
 
-  if (!candidates.length) {
-    return null;
-  }
-
-  return candidates
-    .map((filePath) => ({ filePath, mtime: fs.statSync(filePath).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime)[0]?.filePath || null;
+  return getLatestVideo(candidates);
 }
 
 async function main() {
@@ -78,82 +71,48 @@ async function main() {
     throw new Error('ffmpeg/ffprobe is required for showcase video generation.');
   }
 
+  let bodyVideoPath = null;
+
   if (rerun) {
-    const runArgs = [
-      'scripts/demo/run-demo-videos.mjs',
-      '--feature',
-      'all',
-      '--device',
-      device,
-      '--compose',
-      'false',
-    ];
+    const project = device === 'mobile' ? 'demo-mobile' : 'demo-desktop';
+    const beforeRunVideos = listVideoArtifacts();
 
-    if (introPath) {
-      runArgs.push('--intro', introPath);
-    }
-    if (outroPath) {
-      runArgs.push('--outro', outroPath);
-    }
+    console.log(`🎬 Recording single-session showcase (${device})...`);
+    run('npx', [
+      'playwright',
+      'test',
+      'e2e/tests/demo/demo-showcase.spec.ts',
+      '--project',
+      project,
+      '--grep',
+      '@demo-showcase',
+    ]);
 
-    console.log(`🎬 Capturing feature demos for showcase (${device})...`);
-    run('node', runArgs);
+    const newVideos = getNewVideos(beforeRunVideos);
+    bodyVideoPath = getLatestVideo(newVideos) || findLatestShowcaseArtifact(device);
+  } else {
+    const previousShowcaseRaws = fs.existsSync(RAW_OUTPUT_DIR)
+      ? fs
+        .readdirSync(RAW_OUTPUT_DIR)
+        .filter((name) => name.endsWith(`-showcase-${sanitizeName(device)}-raw.webm`))
+        .map((name) => path.join(RAW_OUTPUT_DIR, name))
+      : [];
+
+    bodyVideoPath = getLatestVideo(previousShowcaseRaws) || findLatestShowcaseArtifact(device);
   }
 
-  const featuresInOrder = Object.keys(FEATURE_TAGS);
-  const orderedRawVideos = [];
-
-  for (const feature of featuresInOrder) {
-    const videoPath = getLatestRawVideoForFeature(feature, device);
-    if (!videoPath) {
-      console.warn(`⚠ Missing raw clip for '${feature}' (${device}). Skipping it in showcase.`);
-      continue;
-    }
-    orderedRawVideos.push({ feature, videoPath });
+  if (!bodyVideoPath) {
+    throw new Error('No showcase body video found. Run with --rerun true to record a fresh showcase.');
   }
 
-  if (!orderedRawVideos.length) {
-    throw new Error('No raw demo clips found to build showcase video.');
-  }
-
-  const normalizePrefix = `showcase-${device}-${Date.now()}`;
-  const normalizedClips = [];
-  const targetSize = device === 'mobile' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
-
-  for (const entry of orderedRawVideos) {
-    const normalizedPath = path.join(
-      TEMP_OUTPUT_DIR,
-      `${normalizePrefix}-${sanitizeName(entry.feature)}.mp4`
-    );
-    normalizeVideo(entry.videoPath, normalizedPath, targetSize.width, targetSize.height);
-    normalizedClips.push(normalizedPath);
-  }
-
-  const concatListPath = path.join(TEMP_OUTPUT_DIR, `${normalizePrefix}-concat-list.txt`);
-  const concatListContent = normalizedClips
-    .map((clipPath) => `file '${clipPath.replace(/'/g, "'\\''")}'`)
-    .join('\n');
-  fs.writeFileSync(concatListPath, concatListContent, 'utf8');
-
-  const mergedBodyPath = path.join(TEMP_OUTPUT_DIR, `${normalizePrefix}-body.mp4`);
-  run('ffmpeg', [
-    '-y',
-    '-f',
-    'concat',
-    '-safe',
-    '0',
-    '-i',
-    concatListPath,
-    '-c',
-    'copy',
-    mergedBodyPath,
-  ]);
+  const rawPath = copyRawVideo(bodyVideoPath, device);
+  console.log(`📼 Showcase raw video: ${rawPath}`);
 
   const finalTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const finalPath = path.join(FINAL_OUTPUT_DIR, `${finalTimestamp}-showcase-${device}.mp4`);
 
   const result = composeFinalVideo({
-    bodyVideoPath: mergedBodyPath,
+    bodyVideoPath,
     finalOutputPath: finalPath,
     introPath,
     outroPath,

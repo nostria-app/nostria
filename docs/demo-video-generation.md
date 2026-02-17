@@ -96,8 +96,14 @@ npm run demo:showcase:mobile
 npm run demo:compose -- --feature all --device both
 ```
 
-`demo:showcase` re-runs all feature demos for the selected device, stitches the clips in feature order,
-and then adds a single intro and outro so you get one complete demonstration video.
+`demo:showcase` records a single long walkthrough in one browser session (single instance),
+then adds one intro and one outro to produce one complete demonstration video with minimal reloads.
+
+If you want to compose from the latest already-recorded single-session showcase raw clip:
+
+```bash
+npm run demo:showcase -- --rerun false
+```
 
 ## Intro/Outro handling
 
@@ -134,3 +140,13 @@ $env:TEST_NSEC='nsec1...'; npm run demo:feature -- --feature article-editor --de
 ```
 
 The demo runner enforces this for auth features and fails fast if `TEST_NSEC` is missing.
+
+## Read-only safety
+
+Demo E2E flows are configured as read-only:
+
+- Test auth is injected without a stored private key.
+- Outgoing Nostr WebSocket client messages of type `EVENT` and `AUTH` are blocked by test guard.
+- Demo flows do not click publish/post/save actions.
+
+This prevents signing and publishing from automated demo runs.

@@ -254,17 +254,6 @@ test.describe('Demo Videos @demo', () => {
     await settleTransition(authenticatedPage);
     await humanPause(authenticatedPage, 1400);
 
-    const editorInput = authenticatedPage.locator(
-      'textarea, [contenteditable="true"], input[placeholder*="title" i]'
-    ).first();
-
-    if (await editorInput.isVisible().catch(() => false)) {
-      await editorInput.click();
-      await humanPause(authenticatedPage, 500);
-      await editorInput.fill('Nostria Demo Article Draft');
-      await humanPause(authenticatedPage, 800);
-    }
-
     await smoothScroll(authenticatedPage, 0.65);
 
     const publishButton = authenticatedPage.locator(
