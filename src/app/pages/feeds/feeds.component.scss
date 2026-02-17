@@ -100,7 +100,7 @@ app-user-profile {
     }
 
     @media (max-width: 599px) {
-      bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(104px + env(safe-area-inset-bottom, 0px));
     }
   }
 
@@ -256,7 +256,7 @@ app-user-profile {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 10px;
+      padding: 6px 12px 6px 14px;
       border-radius: 10px;
       background-color: var(--mat-sys-primary-container);
       border: 1.5px solid var(--mat-sys-primary);
