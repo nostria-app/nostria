@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Change Demo</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #18111b;
+      color: #ecdeed;
+    }
+    .demo-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h2 {
+      color: #c5c0ff;
+      margin-bottom: 30px;
+    }
+    .comparison {
+      display: flex;
+      gap: 40px;
+      margin: 40px 0;
+    }
+    .example {
+      flex: 1;
+      background: #241d27;
+      padding: 20px;
+      border-radius: 12px;
+    }
+    .example h3 {
+      margin-top: 0;
+      color: #e2b5ff;
+    }
+    .emoji-indicators {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(197, 192, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .aggregated-emojis {
+      display: flex;
+      gap: 4px;
+    }
+    .emoji-item {
+      font-size: 16px;
+    }
+    .emoji-more {
+      font-size: 18px;
+      color: #a186b7;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+    .emoji-more-old {
+      font-size: 14px;
+      color: #a186b7;
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h2>Note Card Footer Icon Change</h2>
+    
+    <div class="comparison">
+      <div class="example">
+        <h3>Before (Three Dots)</h3>
+        <div class="emoji-indicators">
+          <span class="aggregated-emojis">
+            <span class="emoji-item">❤️</span>
+            <span class="emoji-item">🔥</span>
+            <span class="emoji-item">👍</span>
+          </span>
+          <span class="emoji-more-old">···</span>
+        </div>
+      </div>
+      
+      <div class="example">
+        <h3>After (Expand More Icon)</h3>
+        <div class="emoji-indicators">
+          <span class="aggregated-emojis">
+            <span class="emoji-item">❤️</span>
+            <span class="emoji-item">🔥</span>
+            <span class="emoji-item">👍</span>
+          </span>
+          <span class="material-icons emoji-more">expand_more</span>
+        </div>
+      </div>
+    </div>
+    
+    <p style="color: #a186b7; margin-top: 40px;">
+      The "..." has been replaced with the Material Design "expand_more" icon (down arrow) 
+      to better indicate that clicking will expand/collapse the reactions panel.
+    </p>
+  </div>
+</body>
+</html>
