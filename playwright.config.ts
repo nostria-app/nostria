@@ -157,6 +157,47 @@ export default defineConfig({
         },
       },
     },
+
+    // Demo video (desktop) - optimized for shareable walkthrough recordings
+    {
+      name: 'demo-desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        screenshot: 'off',
+        video: {
+          mode: 'on',
+          size: { width: 1920, height: 1080 },
+        },
+        trace: 'retain-on-failure',
+        viewport: { width: 1920, height: 1080 },
+        launchOptions: {
+          args: ['--enable-logging'],
+          slowMo: 220,
+        },
+      },
+      retries: 0,
+      workers: 1,
+    },
+
+    // Demo video (mobile) - optimized for human-paced device demos
+    {
+      name: 'demo-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        screenshot: 'off',
+        video: {
+          mode: 'on',
+          size: { width: 1080, height: 1920 },
+        },
+        trace: 'retain-on-failure',
+        launchOptions: {
+          args: ['--enable-logging'],
+          slowMo: 220,
+        },
+      },
+      retries: 0,
+      workers: 1,
+    },
   ],
 
   // Web server configuration - starts the app automatically

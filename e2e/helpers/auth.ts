@@ -4,6 +4,7 @@
  * Provides utilities for creating authenticated NostrUser objects
  * from nsec1 strings or hex private keys for E2E testing.
  */
+import 'dotenv/config';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { nip19 } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
@@ -229,10 +230,16 @@ export class TestAuthHelper {
    * ```
    */
   async clearAuth(page: Page): Promise<void> {
-    await page.evaluate(() => {
-      localStorage.removeItem('nostria-account');
-      localStorage.removeItem('nostria-accounts');
-    });
-    await page.reload();
+    try {
+      await page.evaluate(() => {
+        localStorage.removeItem('nostria-account');
+        localStorage.removeItem('nostria-accounts');
+      });
+    } catch {
+      // Ignore teardown failures on documents where localStorage is inaccessible
+      // (for example cross-origin error pages in flaky network/mobile runs).
+    }
+
+    await page.reload().catch(() => undefined);
   }
 }
