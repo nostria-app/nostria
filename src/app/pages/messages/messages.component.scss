@@ -490,7 +490,7 @@
   // On smaller screens, position where the mobile nav would be and stretch wider
   @media (max-width: 699px) {
     position: fixed;
-    bottom: max(8px, calc(8px + env(safe-area-inset-bottom, 0px)));
+    bottom: max(6px, calc(6px + env(safe-area-inset-bottom, 0px)));
     left: 8px;
     right: 8px;
     transform: none;

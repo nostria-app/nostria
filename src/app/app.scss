@@ -1775,7 +1775,7 @@ mat-sidenav-content {
 .mobile-nav {
   position: fixed;
   // Respect iOS safe area while keeping a minimum gap on all devices
-  bottom: max(8px, calc(8px + env(safe-area-inset-bottom, 0px)));
+  bottom: max(6px, calc(6px + env(safe-area-inset-bottom, 0px)));
   left: 50%;
   transform: translateX(-50%);
   right: auto;
