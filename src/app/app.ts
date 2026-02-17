@@ -1684,6 +1684,7 @@ export class App implements OnInit, OnDestroy {
 
   async switchAccount(pubkey: string): Promise<void> {
     await this.nostrService.switchToUser(pubkey);
+    this.accountsExpanded.set(false);
 
     if (this.layout.isHandset()) {
       this.toggleSidenav();

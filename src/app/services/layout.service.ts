@@ -2234,14 +2234,48 @@ export class LayoutService implements OnDestroy {
     // Find the scrollable panel element - profiles render in the left panel
     const scrollableElement = document.querySelector('.left-panel') || document.querySelector('.mat-drawer-content');
     if (scrollableElement) {
-      scrollableElement.scrollTo({
-        top: scrollPosition,
+      const container = scrollableElement as HTMLElement;
+
+      const getTargetScrollTop = (): number => {
+        const additionalScrollOffset = 60;
+        const profileHeader = container.querySelector('.profile-header') as HTMLElement | null;
+        const profileBanner = profileHeader?.querySelector('.profile-banner') as HTMLElement | null;
+
+        if (profileHeader && profileBanner) {
+          const bannerHeight = profileBanner.offsetHeight || profileBanner.getBoundingClientRect().height;
+          if (bannerHeight > 0) {
+            const dynamicTarget = profileHeader.offsetTop + (bannerHeight / 2) + additionalScrollOffset;
+            const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+            return Math.min(Math.max(0, dynamicTarget), maxScroll);
+          }
+        }
+
+        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+        return Math.min(Math.max(0, scrollPosition + additionalScrollOffset), maxScroll);
+      };
+
+      const initialTarget = getTargetScrollTop();
+
+      container.scrollTo({
+        top: initialTarget,
         behavior: 'smooth',
       });
 
+      // Recompute after render/layout settles to avoid occasional over-scroll
+      // caused by late sticky-header and content height adjustments.
+      setTimeout(() => {
+        const correctedTarget = getTargetScrollTop();
+        if (Math.abs(container.scrollTop - correctedTarget) > 12) {
+          container.scrollTo({
+            top: correctedTarget,
+            behavior: 'auto',
+          });
+        }
+      }, 260);
+
       this.logger.debug(
         'Scrolled panel to optimal profile view position',
-        scrollPosition
+        initialTarget
       );
 
       // Refresh scroll monitoring after programmatic scroll
