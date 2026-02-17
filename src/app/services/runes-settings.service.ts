@@ -2,21 +2,27 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 
 export type RuneId = 'bitcoin-price' | 'nostr-swiss-knife' | 'music-favorites';
+export type SidebarWidgetId = 'favorites' | 'runes';
 
 export interface RunesSettings {
   runeOrder: RuneId[];
   enabledRunes: RuneId[];
   openRunes: RuneId[];
+  sidebarWidgetOrder: SidebarWidgetId[];
+  enabledSidebarWidgets: SidebarWidgetId[];
 }
 
 const STORAGE_KEY = 'nostria-runes-settings-v1';
 
 const ALL_RUNES: RuneId[] = ['bitcoin-price', 'nostr-swiss-knife', 'music-favorites'];
+const ALL_SIDEBAR_WIDGETS: SidebarWidgetId[] = ['favorites', 'runes'];
 
 const DEFAULT_SETTINGS: RunesSettings = {
   runeOrder: [...ALL_RUNES],
   enabledRunes: [...ALL_RUNES],
   openRunes: [],
+  sidebarWidgetOrder: [...ALL_SIDEBAR_WIDGETS],
+  enabledSidebarWidgets: [...ALL_SIDEBAR_WIDGETS],
 };
 
 @Injectable({
@@ -31,6 +37,12 @@ export class RunesSettingsService {
   readonly runeOrder = computed(() => this._settings().runeOrder);
   readonly enabledRunes = computed(() => this._settings().enabledRunes);
   readonly openRunes = computed(() => this._settings().openRunes);
+  readonly sidebarWidgetOrder = computed(() => this._settings().sidebarWidgetOrder);
+  readonly enabledSidebarWidgets = computed(() => this._settings().enabledSidebarWidgets);
+  readonly visibleSidebarWidgets = computed(() => {
+    const enabled = this.enabledSidebarWidgets();
+    return this.sidebarWidgetOrder().filter(widget => enabled.includes(widget));
+  });
 
   isRuneEnabled(runeId: RuneId): boolean {
     return this.enabledRunes().includes(runeId);
@@ -123,6 +135,55 @@ export class RunesSettingsService {
     return this.moveRune(runeId, 1);
   }
 
+  isSidebarWidgetEnabled(widgetId: SidebarWidgetId): boolean {
+    return this.enabledSidebarWidgets().includes(widgetId);
+  }
+
+  setSidebarWidgetEnabled(widgetId: SidebarWidgetId, enabled: boolean): void {
+    this._settings.update(current => {
+      const hasWidget = current.enabledSidebarWidgets.includes(widgetId);
+
+      if (enabled && !hasWidget) {
+        return {
+          ...current,
+          enabledSidebarWidgets: this.sortSidebarWidgetsByOrder([...current.enabledSidebarWidgets, widgetId], current.sidebarWidgetOrder),
+        };
+      }
+
+      if (!enabled && hasWidget) {
+        return {
+          ...current,
+          enabledSidebarWidgets: current.enabledSidebarWidgets.filter(widget => widget !== widgetId),
+        };
+      }
+
+      return current;
+    });
+
+    this.persist();
+  }
+
+  setSidebarWidgetOrder(order: SidebarWidgetId[]): void {
+    this._settings.update(current => {
+      const normalizedOrder = this.normalizeSidebarWidgetOrder(order);
+      return {
+        ...current,
+        sidebarWidgetOrder: normalizedOrder,
+        enabledSidebarWidgets: this.sortSidebarWidgetsByOrder(current.enabledSidebarWidgets, normalizedOrder),
+      };
+    });
+
+    this.persist();
+  }
+
+  moveSidebarWidgetUp(widgetId: SidebarWidgetId): boolean {
+    return this.moveSidebarWidget(widgetId, -1);
+  }
+
+  moveSidebarWidgetDown(widgetId: SidebarWidgetId): boolean {
+    return this.moveSidebarWidget(widgetId, 1);
+  }
+
   clearOpenRunes(): void {
     this._settings.update(current => {
       return {
@@ -153,10 +214,25 @@ export class RunesSettingsService {
       runeOrder,
     );
 
+    const sidebarWidgetOrder = this.normalizeSidebarWidgetOrder(
+      Array.isArray(stored.sidebarWidgetOrder) ? stored.sidebarWidgetOrder : ALL_SIDEBAR_WIDGETS,
+    );
+
+    const enabledSidebarWidgetsRaw = Array.isArray(stored.enabledSidebarWidgets)
+      ? stored.enabledSidebarWidgets
+      : ALL_SIDEBAR_WIDGETS;
+
+    const enabledSidebarWidgets = this.sortSidebarWidgetsByOrder(
+      this.validateSidebarWidgetArray(enabledSidebarWidgetsRaw),
+      sidebarWidgetOrder,
+    );
+
     return {
       runeOrder,
       enabledRunes: enabledRunes.length > 0 ? enabledRunes : [...DEFAULT_SETTINGS.enabledRunes],
       openRunes,
+      sidebarWidgetOrder,
+      enabledSidebarWidgets: enabledSidebarWidgets.length > 0 ? enabledSidebarWidgets : [...DEFAULT_SETTINGS.enabledSidebarWidgets],
     };
   }
 
@@ -190,6 +266,36 @@ export class RunesSettingsService {
     return [...items].sort((left, right) => order.indexOf(left) - order.indexOf(right));
   }
 
+  private validateSidebarWidgetArray(items: unknown[]): SidebarWidgetId[] {
+    const validated: SidebarWidgetId[] = [];
+
+    for (const item of items) {
+      if (item === 'favorites' || item === 'runes') {
+        if (!validated.includes(item)) {
+          validated.push(item);
+        }
+      }
+    }
+
+    return validated;
+  }
+
+  private normalizeSidebarWidgetOrder(items: unknown[]): SidebarWidgetId[] {
+    const normalized = this.validateSidebarWidgetArray(items);
+
+    for (const widget of ALL_SIDEBAR_WIDGETS) {
+      if (!normalized.includes(widget)) {
+        normalized.push(widget);
+      }
+    }
+
+    return normalized;
+  }
+
+  private sortSidebarWidgetsByOrder(items: SidebarWidgetId[], order: SidebarWidgetId[]): SidebarWidgetId[] {
+    return [...items].sort((left, right) => order.indexOf(left) - order.indexOf(right));
+  }
+
   private moveRune(runeId: RuneId, direction: -1 | 1): boolean {
     const currentOrder = [...this.runeOrder()];
     const currentIndex = currentOrder.indexOf(runeId);
@@ -206,6 +312,25 @@ export class RunesSettingsService {
     currentOrder.splice(currentIndex, 1);
     currentOrder.splice(targetIndex, 0, runeId);
     this.setRuneOrder(currentOrder);
+    return true;
+  }
+
+  private moveSidebarWidget(widgetId: SidebarWidgetId, direction: -1 | 1): boolean {
+    const currentOrder = [...this.sidebarWidgetOrder()];
+    const currentIndex = currentOrder.indexOf(widgetId);
+
+    if (currentIndex < 0) {
+      return false;
+    }
+
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= currentOrder.length) {
+      return false;
+    }
+
+    currentOrder.splice(currentIndex, 1);
+    currentOrder.splice(targetIndex, 0, widgetId);
+    this.setSidebarWidgetOrder(currentOrder);
     return true;
   }
 

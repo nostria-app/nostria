@@ -54,6 +54,15 @@
   padding-right: 2px;
 }
 
+.rune-hover-preview {
+  position: fixed;
+  z-index: 1010;
+}
+
+.rune-settings-preview {
+  z-index: 1010;
+}
+
 .flyout-header {
   display: flex;
   align-items: center;
@@ -155,14 +164,16 @@
   background: var(--mat-sys-surface-container-low);
 }
 
-.settings-flyout {
-  position: fixed;
-  top: 74px;
-  right: 74px;
-}
-
 .settings-list {
   gap: 0.4rem;
+}
+
+.settings-section-title {
+  margin: 0.2rem 0 0.1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .settings-item {
@@ -203,8 +214,7 @@
     width: 300px;
   }
 
-  .rune-flyout-stack,
-  .settings-flyout {
+  .rune-flyout-stack {
     right: 68px;
   }
 }

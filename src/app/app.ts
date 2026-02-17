@@ -73,6 +73,7 @@ import { FollowSetsService } from './services/follow-sets.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './pages/people/edit-people-list-dialog.component';
 import { FeedConfig } from './services/feed.service';
+import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
 import { RunesSidebarComponent } from './components/runes-sidebar/runes-sidebar.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
@@ -113,6 +114,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RightPanelHeaderService } from './services/right-panel-header.service';
 import { LeftPanelHeaderService } from './services/left-panel-header.service';
 import { EventFocusService } from './services/event-focus.service';
+import { RunesSettingsService } from './services/runes-settings.service';
 
 interface NavItem {
   path: string;
@@ -160,6 +162,7 @@ interface NavItem {
     NavigationComponent,
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
+    FavoritesOverlayComponent,
     RunesSidebarComponent,
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
@@ -249,6 +252,7 @@ export class App implements OnInit, OnDestroy {
   panelActions = inject(PanelActionsService);
   rightPanelHeader = inject(RightPanelHeaderService);
   leftPanelHeader = inject(LeftPanelHeaderService);
+  runesSettings = inject(RunesSettingsService);
   private readonly customReuseStrategy = inject(RouteReuseStrategy) as CustomReuseStrategy;
 
   // Right panel routing state - use PanelNavigationService as source of truth
@@ -260,6 +264,7 @@ export class App implements OnInit, OnDestroy {
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
+  @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
   // Create menu overlay

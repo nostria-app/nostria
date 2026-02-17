@@ -411,6 +411,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['runes', 'close', 'pin', 'unpin', 'sidebar']
     },
     {
+      id: 'runes-toggle-sidebar-widget',
+      label: 'Toggle Sidebar: Runes',
+      icon: 'auto_awesome',
+      action: () => this.runesSettings.setSidebarWidgetEnabled('runes', !this.runesSettings.isSidebarWidgetEnabled('runes')),
+      keywords: ['runes', 'sidebar', 'show runes', 'hide runes', 'toggle runes']
+    },
+    {
+      id: 'favorites-toggle-sidebar-widget',
+      label: 'Toggle Sidebar: Favorites',
+      icon: 'star',
+      action: () => this.runesSettings.setSidebarWidgetEnabled('favorites', !this.runesSettings.isSidebarWidgetEnabled('favorites')),
+      keywords: ['favorites', 'sidebar', 'show favorites', 'hide favorites', 'toggle favorites']
+    },
+    {
       id: 'runes-move-bitcoin-up',
       label: 'Runes: Move Bitcoin Price Up',
       icon: 'arrow_upward',

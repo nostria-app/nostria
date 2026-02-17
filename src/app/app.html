@@ -246,7 +246,8 @@
       </mat-nav-list>
     </mat-sidenav>
 
-    <mat-sidenav-content [class.media-player-shown]="layout.showMediaPlayer()">
+    <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
+      [class.media-player-shown]="layout.showMediaPlayer()">
 
       <!-- Top toolbar - beside sidenav -->
       <mat-toolbar class="app-toolbar no-print no-select">
@@ -466,7 +467,14 @@
         @if (app.authenticated() && !layout.isHandset()) {
         <div class="right-sidebar">
           <!-- <app-shoutout-overlay></app-shoutout-overlay> -->
+          @for (widget of runesSettings.visibleSidebarWidgets(); track widget) {
+          @if (widget === 'favorites') {
+          <app-favorites-overlay></app-favorites-overlay>
+          }
+          @if (widget === 'runes') {
           <app-runes-sidebar></app-runes-sidebar>
+          }
+          }
         </div>
         }
       </div>

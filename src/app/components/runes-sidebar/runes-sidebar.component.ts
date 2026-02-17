@@ -12,7 +12,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LoggerService } from '../../services/logger.service';
-import { RunesSettingsService, RuneId } from '../../services/runes-settings.service';
+import { RunesSettingsService, RuneId, SidebarWidgetId } from '../../services/runes-settings.service';
 import { Playlist } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 
@@ -37,6 +37,12 @@ interface SwissKnifeResult {
   extraValue?: string;
 }
 
+interface SidebarWidgetOption {
+  id: SidebarWidgetId;
+  title: string;
+  icon: string;
+}
+
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
 
@@ -49,6 +55,10 @@ const MUSIC_PLAYLIST_KIND = 34139;
 })
 export class RunesSidebarComponent implements OnDestroy {
   private readonly HOVER_HIDE_DELAY_MS = 220;
+  private readonly FLYOUT_TOP_MIN_PX = 72;
+  private readonly FLYOUT_VIEWPORT_BOTTOM_MARGIN_PX = 24;
+  private readonly RUNE_PREVIEW_ESTIMATED_HEIGHT_PX = 420;
+  private readonly SETTINGS_PREVIEW_ESTIMATED_HEIGHT_PX = 520;
 
   private readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
@@ -83,14 +93,32 @@ export class RunesSidebarComponent implements OnDestroy {
     },
   ];
 
+  protected readonly sidebarWidgetOptions: SidebarWidgetOption[] = [
+    {
+      id: 'favorites',
+      title: 'Favorites',
+      icon: 'star',
+    },
+    {
+      id: 'runes',
+      title: 'Runes',
+      icon: 'auto_awesome',
+    },
+  ];
+
   protected readonly hoveredRuneId = signal<RuneId | null>(null);
+  protected readonly hoveredSettings = signal(false);
   protected readonly isFlyoutHovered = signal(false);
   protected readonly settingsOpen = signal(false);
   protected readonly swissKnifeInput = signal('');
   protected readonly draggedRuneId = signal<RuneId | null>(null);
   protected readonly dropTargetRuneId = signal<RuneId | null>(null);
+  protected readonly draggedWidgetId = signal<SidebarWidgetId | null>(null);
+  protected readonly dropTargetWidgetId = signal<SidebarWidgetId | null>(null);
   protected readonly isPlayingLikedSongs = signal(false);
   protected readonly isPlayingLikedPlaylists = signal(false);
+  protected readonly hoverPreviewPosition = signal<{ top: number; right: number } | null>(null);
+  protected readonly settingsPreviewPosition = signal<{ top: number; right: number } | null>(null);
 
   private hoverHideTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -105,6 +133,14 @@ export class RunesSidebarComponent implements OnDestroy {
   protected readonly runeOrder = this.runesSettings.runeOrder;
   protected readonly enabledRunes = this.runesSettings.enabledRunes;
   protected readonly openRunes = this.runesSettings.openRunes;
+  protected readonly sidebarWidgetOrder = this.runesSettings.sidebarWidgetOrder;
+  protected readonly enabledSidebarWidgets = this.runesSettings.enabledSidebarWidgets;
+
+  protected readonly orderedSidebarWidgets = computed(() => {
+    const order = this.sidebarWidgetOrder();
+    const orderMap = new Map<SidebarWidgetId, number>(order.map((id, index) => [id, index]));
+    return [...this.sidebarWidgetOptions].sort((left, right) => (orderMap.get(left.id) ?? 0) - (orderMap.get(right.id) ?? 0));
+  });
 
   protected readonly orderedRunes = computed(() => {
     const order = this.runeOrder();
@@ -118,21 +154,24 @@ export class RunesSidebarComponent implements OnDestroy {
   });
 
   protected readonly activeRunes = computed<RuneId[]>(() => {
-    const visibleIds = this.visibleRunes().map(rune => rune.id);
-    const visibleSet = new Set<RuneId>(visibleIds);
-    const open = this.openRunes().filter(id => visibleSet.has(id));
-
-    if (this.settingsOpen()) {
-      return open;
-    }
-
-    const hovered = this.hoveredRuneId();
-    if (hovered && visibleSet.has(hovered) && !open.includes(hovered)) {
-      return [...open, hovered];
-    }
-
-    return open;
+    const visibleSet = new Set<RuneId>(this.visibleRunes().map(rune => rune.id));
+    return this.openRunes().filter(id => visibleSet.has(id));
   });
+
+  protected readonly hoverPreviewRuneId = computed<RuneId | null>(() => {
+    const hovered = this.hoveredRuneId();
+    if (!hovered || this.settingsOpen()) {
+      return null;
+    }
+
+    if (this.openRunes().includes(hovered)) {
+      return null;
+    }
+
+    return this.visibleRunes().some(rune => rune.id === hovered) ? hovered : null;
+  });
+
+  protected readonly settingsPreviewVisible = computed(() => this.settingsOpen() || this.hoveredSettings());
 
   protected readonly bitcoinPriceLabel = computed(() => {
     const price = this.bitcoinPrice();
@@ -239,12 +278,47 @@ export class RunesSidebarComponent implements OnDestroy {
     this.scheduleHoverHide();
   }
 
-  protected onRuneEnter(runeId: RuneId): void {
+  protected onRuneEnter(event: MouseEvent, runeId: RuneId): void {
     if (this.settingsOpen()) {
       return;
     }
+
     this.clearHoverHideTimer();
+    this.hoveredSettings.set(false);
+    this.settingsPreviewPosition.set(null);
+
+    const target = event.currentTarget as HTMLElement | null;
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const top = this.clampFlyoutTop(rect.top, this.RUNE_PREVIEW_ESTIMATED_HEIGHT_PX);
+      const right = Math.max(72, window.innerWidth - rect.left + 8);
+      this.hoverPreviewPosition.set({ top, right });
+    }
+
     this.hoveredRuneId.set(runeId);
+  }
+
+  protected onSettingsEnter(event: MouseEvent): void {
+    this.clearHoverHideTimer();
+    this.hoveredRuneId.set(null);
+
+    const target = event.currentTarget as HTMLElement | null;
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const top = this.clampFlyoutTop(rect.top, this.SETTINGS_PREVIEW_ESTIMATED_HEIGHT_PX);
+      const right = Math.max(72, window.innerWidth - rect.left + 8);
+      this.settingsPreviewPosition.set({ top, right });
+    }
+
+    this.hoveredSettings.set(true);
+  }
+
+  protected onSettingsLeave(): void {
+    if (this.settingsOpen()) {
+      return;
+    }
+
+    this.scheduleHoverHide();
   }
 
   protected onRuneLeave(runeId: RuneId): void {
@@ -262,6 +336,20 @@ export class RunesSidebarComponent implements OnDestroy {
     this.scheduleHoverHide(runeId);
   }
 
+  protected onSettingsFlyoutEnter(): void {
+    this.clearHoverHideTimer();
+    this.isFlyoutHovered.set(true);
+    this.hoveredSettings.set(true);
+  }
+
+  protected onSettingsFlyoutLeave(): void {
+    this.isFlyoutHovered.set(false);
+    if (!this.settingsOpen()) {
+      this.hoveredSettings.set(false);
+      this.scheduleHoverHide();
+    }
+  }
+
   protected toggleRuneOpen(runeId: RuneId): void {
     this.runesSettings.toggleRuneOpen(runeId);
     this.hoveredRuneId.set(null);
@@ -269,10 +357,15 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected toggleSettings(): void {
     const nextOpen = !this.settingsOpen();
+
     this.settingsOpen.set(nextOpen);
 
     if (nextOpen) {
       this.hoveredRuneId.set(null);
+      this.hoveredSettings.set(false);
+    } else {
+      this.hoveredSettings.set(false);
+      this.settingsPreviewPosition.set(null);
     }
   }
 
@@ -281,7 +374,15 @@ export class RunesSidebarComponent implements OnDestroy {
   }
 
   protected isRuneActive(runeId: RuneId): boolean {
-    return this.activeRunes().includes(runeId);
+    return this.activeRunes().includes(runeId) || this.hoverPreviewRuneId() === runeId;
+  }
+
+  protected isSidebarWidgetEnabled(widgetId: SidebarWidgetId): boolean {
+    return this.runesSettings.isSidebarWidgetEnabled(widgetId);
+  }
+
+  protected setSidebarWidgetEnabled(widgetId: SidebarWidgetId, enabled: boolean): void {
+    this.runesSettings.setSidebarWidgetEnabled(widgetId, enabled);
   }
 
   protected setRuneEnabled(runeId: RuneId, enabled: boolean): void {
@@ -489,6 +590,64 @@ export class RunesSidebarComponent implements OnDestroy {
     this.clearDragState();
   }
 
+  protected onWidgetDragStart(event: DragEvent, widgetId: SidebarWidgetId): void {
+    this.draggedWidgetId.set(widgetId);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', widgetId);
+    }
+  }
+
+  protected onWidgetDragOver(event: DragEvent, targetWidgetId: SidebarWidgetId): void {
+    event.preventDefault();
+    this.dropTargetWidgetId.set(targetWidgetId);
+  }
+
+  protected onWidgetDrop(event: DragEvent, targetWidgetId: SidebarWidgetId): void {
+    event.preventDefault();
+
+    const draggedWidgetId = this.draggedWidgetId() || (event.dataTransfer?.getData('text/plain') as SidebarWidgetId | '');
+    if (!draggedWidgetId || draggedWidgetId === targetWidgetId) {
+      this.clearWidgetDragState();
+      return;
+    }
+
+    const currentOrder = [...this.sidebarWidgetOrder()];
+    const draggedIndex = currentOrder.indexOf(draggedWidgetId);
+    const targetIndex = currentOrder.indexOf(targetWidgetId);
+
+    if (draggedIndex < 0 || targetIndex < 0) {
+      this.clearWidgetDragState();
+      return;
+    }
+
+    currentOrder.splice(draggedIndex, 1);
+    currentOrder.splice(targetIndex, 0, draggedWidgetId);
+    this.runesSettings.setSidebarWidgetOrder(currentOrder);
+    this.clearWidgetDragState();
+  }
+
+  protected onWidgetDragEnd(): void {
+    this.clearWidgetDragState();
+  }
+
+  protected onWidgetItemKeyDown(event: KeyboardEvent, widgetId: SidebarWidgetId): void {
+    if (!event.altKey) {
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.runesSettings.moveSidebarWidgetUp(widgetId);
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.runesSettings.moveSidebarWidgetDown(widgetId);
+    }
+  }
+
   protected onSettingsItemKeyDown(event: KeyboardEvent, runeId: RuneId): void {
     if (!event.altKey) {
       return;
@@ -552,6 +711,11 @@ export class RunesSidebarComponent implements OnDestroy {
     this.dropTargetRuneId.set(null);
   }
 
+  private clearWidgetDragState(): void {
+    this.draggedWidgetId.set(null);
+    this.dropTargetWidgetId.set(null);
+  }
+
   private scheduleHoverHide(runeId?: RuneId): void {
     this.clearHoverHideTimer();
 
@@ -561,19 +725,24 @@ export class RunesSidebarComponent implements OnDestroy {
       }
 
       const hoveredRuneId = this.hoveredRuneId();
-      if (!hoveredRuneId) {
-        return;
+
+      if (hoveredRuneId) {
+        if (runeId && hoveredRuneId !== runeId) {
+          return;
+        }
+
+        if (this.openRunes().includes(hoveredRuneId)) {
+          return;
+        }
+
+        this.hoverPreviewPosition.set(null);
+        this.hoveredRuneId.set(null);
       }
 
-      if (runeId && hoveredRuneId !== runeId) {
-        return;
+      if (!this.settingsOpen()) {
+        this.hoveredSettings.set(false);
+        this.settingsPreviewPosition.set(null);
       }
-
-      if (this.openRunes().includes(hoveredRuneId)) {
-        return;
-      }
-
-      this.hoveredRuneId.set(null);
     }, this.HOVER_HIDE_DELAY_MS);
   }
 
@@ -582,6 +751,16 @@ export class RunesSidebarComponent implements OnDestroy {
       clearTimeout(this.hoverHideTimer);
       this.hoverHideTimer = null;
     }
+  }
+
+  private clampFlyoutTop(preferredTop: number, estimatedHeight: number): number {
+    const minTop = this.FLYOUT_TOP_MIN_PX;
+    const maxTop = Math.max(
+      minTop,
+      window.innerHeight - estimatedHeight - this.FLYOUT_VIEWPORT_BOTTOM_MARGIN_PX,
+    );
+
+    return Math.min(Math.max(minTop, preferredTop), maxTop);
   }
 
   private resolveRelayUrls(): string[] {
