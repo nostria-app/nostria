@@ -218,15 +218,14 @@
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===
 'nprofile')) {
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
-  (mouseleave)="onMentionMouseLeave()"
-  (touchstart)="onMentionTouchStart($event, token)" (touchmove)="onMentionTouchMove($event)"
-  (touchend)="onMentionTouchEnd()" (touchcancel)="onMentionTouchEnd()">&#64;{{ token.nostrData?.displayName }}</a>
+  (mouseleave)="onMentionMouseLeave()" (touchstart)="onMentionTouchStart($event, token)"
+  (touchmove)="onMentionTouchMove($event)" (touchend)="onMentionTouchEnd()" (touchcancel)="onMentionTouchEnd()">&#64;{{
+  token.nostrData?.displayName }}</a>
 } @else if (token.type === 'nostr-mention' && !token.nostrData) {
 <!-- Nostr mention without resolved data yet - show loading placeholder but make it clickable with hover -->
 <a class="nostr-mention loading" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
-  (mouseleave)="onMentionMouseLeave()"
-  (touchstart)="onMentionTouchStart($event, token)" (touchmove)="onMentionTouchMove($event)"
-  (touchend)="onMentionTouchEnd()" (touchcancel)="onMentionTouchEnd()"
+  (mouseleave)="onMentionMouseLeave()" (touchstart)="onMentionTouchStart($event, token)"
+  (touchmove)="onMentionTouchMove($event)" (touchend)="onMentionTouchEnd()" (touchcancel)="onMentionTouchEnd()"
   title="{{ token.content }}">@...</a>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
 {
@@ -273,7 +272,8 @@
   <app-photo-event [event]="mention!.event!.event" [hideComments]="true"
     [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
 </div>
-} @else if (mention!.event!.event.kind === 21 || mention!.event!.event.kind === 22 || mention!.event!.event.kind === 34235 || mention!.event!.event.kind === 34236) {
+} @else if (mention!.event!.event.kind === 21 || mention!.event!.event.kind === 22 || mention!.event!.event.kind ===
+34235 || mention!.event!.event.kind === 34236) {
 <!-- Video Event (kind 21/22/34235/34236, NIP-71) - show as clickable card -->
 <mat-card appearance="outlined" class="event-mention-card video-mention-card" tabindex="0" role="button"
   (click)="onEventMentionClick($event, mention!.event!.event)"
@@ -351,6 +351,10 @@
 } @else if (isEmojiSetMention(token)) {
 <!-- Emoji set -->
 <app-emoji-set-mention [identifier]="naddrData.identifier" [pubkey]="naddrData.pubkey"></app-emoji-set-mention>
+} @else if (isStarterPackMention(token)) {
+<!-- Starter pack -->
+<app-starter-pack-event [pubkey]="naddrData.pubkey" [identifierInput]="naddrData.identifier"
+  [relayHints]="naddrData.relayHints" mode="compact"></app-starter-pack-event>
 } @else {
 <!-- Article -->
 <app-article [slug]="naddrData.identifier" [pubkey]="naddrData.pubkey" [kind]="naddrData.kind"

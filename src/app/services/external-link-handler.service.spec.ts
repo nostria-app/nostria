@@ -39,6 +39,13 @@ describe('ExternalLinkHandlerService', () => {
     identifier: 'my-article',
   });
 
+  // Encode naddr for starter pack (kind 39089)
+  const starterPackNaddr = nip19.naddrEncode({
+    kind: 39089,
+    pubkey: testPubkey,
+    identifier: 'starter-pack',
+  });
+
   beforeEach(() => {
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     routerSpy.navigate.and.returnValue(Promise.resolve(true));
@@ -99,6 +106,16 @@ describe('ExternalLinkHandlerService', () => {
         `/a/${articleNaddr}`
       ]);
     });
+
+    it('should route sunami.app /release/naddr1 starter pack URL to addressable page', () => {
+      const url = `https://sunami.app/release/${starterPackNaddr}`;
+      const result = service.handleLinkClick(url);
+
+      expect(result).toBe(true);
+      expect(routerSpy.navigate).toHaveBeenCalledWith([
+        `/a/${starterPackNaddr}`
+      ]);
+    });
   });
 
   describe('handleLinkClick with naddr1 direct path', () => {
@@ -129,6 +146,16 @@ describe('ExternalLinkHandlerService', () => {
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
         `/a/${articleNaddr}`
+      ]);
+    });
+
+    it('should route direct /naddr1 starter pack URL to addressable page', () => {
+      const url = `https://njump.me/${starterPackNaddr}`;
+      const result = service.handleLinkClick(url);
+
+      expect(result).toBe(true);
+      expect(routerSpy.navigate).toHaveBeenCalledWith([
+        `/a/${starterPackNaddr}`
       ]);
     });
   });

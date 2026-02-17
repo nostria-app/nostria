@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, effect, computed, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal, effect, computed, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { nip19 } from 'nostr-tools';
@@ -12,9 +12,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { AccountStateService } from '../../services/account-state.service';
-import { Cache } from '../../services/cache';
 import { UserDataService } from '../../services/user-data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-article',
@@ -28,6 +28,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArticleComponent {
   // Required inputs for article identification
@@ -39,7 +40,6 @@ export class ArticleComponent {
   mode = input<ViewMode>('compact');
   showAuthor = input<boolean>(true);
   showMetadata = input<boolean>(true);
-  showActions = input<boolean>(false);
   clickable = input<boolean>(true);
   relayHints = input<string[] | undefined>(undefined);
 
@@ -49,9 +49,9 @@ export class ArticleComponent {
   private userDataService = inject(UserDataService);
   private utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);
-  private cache = inject(Cache);
   private relayPool = inject(RelayPoolService);
   private router = inject(Router);
+  private logger = inject(LoggerService);
 
   // State
   record = signal<NostrRecord | null>(null);
@@ -185,7 +185,7 @@ export class ArticleComponent {
           }
         } catch {
           // Relay hints failed, will try regular fetch
-          console.debug(`Relay hints fetch failed for article ${this.slug()}, trying regular fetch`);
+          this.logger.debug(`Relay hints fetch failed for article ${this.slug()}, trying regular fetch`);
         }
       }
 
@@ -212,7 +212,7 @@ export class ArticleComponent {
 
       this.record.set(event);
     } catch (error) {
-      console.error('Error loading article:', error);
+      this.logger.error('Error loading article:', error);
       this.record.set(null);
     } finally {
       this.loading.set(false);

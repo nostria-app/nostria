@@ -313,8 +313,8 @@ export class ExternalLinkHandlerService {
   }
 
   /**
-   * Decode an naddr1 identifier and route music kinds to the music section.
-   * Falls back to /a/{naddr} for non-music addressable events.
+   * Decode an naddr1 identifier and route special kinds to their dedicated sections.
+    * Uses /a for all non-music addressable events.
    */
   private mapNaddrToRoute(identifier: string): string | null {
     try {
@@ -332,12 +332,15 @@ export class ExternalLinkHandlerService {
           // Music track - route directly to song detail page
           return `/music/song/${npub}/${data.identifier}`;
         }
+
+        // All other addressable events (articles, starter packs, etc.)
+        return `/a/${identifier}`;
       }
     } catch (error) {
       this.logger.warn('[ExternalLinkHandler] Failed to decode naddr:', identifier, error);
     }
 
-    // Fallback to generic article/addressable route
+    // Fallback to canonical addressable event route
     return `/a/${identifier}`;
   }
 

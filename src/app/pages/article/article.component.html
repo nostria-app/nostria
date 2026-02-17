@@ -3,11 +3,11 @@
   <button mat-icon-button class="back-button" (click)="goBack()" matTooltip="Go back">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font">{{ title() || 'Article' }}</h2>
+  <h2 class="panel-title title-font">{{ title() || 'Addressable Event' }}</h2>
   <span class="panel-header-spacer"></span>
 
   @if (event()) {
-  @if (accountState.isCurrentUser(authorPubkey())) {
+  @if (isLongFormArticle() && accountState.isCurrentUser(authorPubkey())) {
   <button mat-icon-button (click)="layout.createArticle(link)" matTooltip="Edit Article">
     <mat-icon>edit</mat-icon>
   </button>
@@ -16,7 +16,7 @@
     [matTooltip]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
     <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
   </button>
-  <button mat-icon-button (click)="shareArticle()" matTooltip="Share Article">
+  <button mat-icon-button (click)="shareArticle()" matTooltip="Share Event">
     <mat-icon>share</mat-icon>
   </button>
   <app-zap-button [event]="event()!"></app-zap-button>
@@ -33,7 +33,7 @@
     <mat-card-content>
       <div class="loading-content">
         <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
-        <h2>Loading Article...</h2>
+        <h2>Loading Event...</h2>
         <p>Please wait while we fetch the content.</p>
       </div>
     </mat-card-content>
@@ -46,7 +46,7 @@
     <mat-card-content>
       <div class="error-content">
         <mat-icon>error_outline</mat-icon>
-        <h2>Unable to Load Article</h2>
+        <h2>Unable to Load Event</h2>
         <p>{{ error() }}</p>
         <button mat-raised-button color="primary" (click)="retryLoad()">
           <mat-icon>refresh</mat-icon>
@@ -58,17 +58,12 @@
 </div>
 } @else if (article) {
 <div class="article-container">
-  <!-- Use ArticleDisplayComponent for rendering -->
-  <app-article-display [article]="articleData()" mode="full" [showTopActions]="false" [isSpeaking]="isSpeaking()"
-    [isPaused]="isPaused()" [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()"
-    [isTranslating]="isTranslating()" [availableVoices]="availableVoices()" [selectedVoice]="selectedVoice()"
-    [playbackRate]="playbackRate()" (startSpeech)="startSpeech()" (pauseSpeech)="pauseSpeech()"
-    (resumeSpeech)="resumeSpeech()" (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)"
-    (voiceChange)="onVoiceChange($event)" (playbackRateChange)="onPlaybackRateChange($event)" (share)="shareArticle()"
-    (translate)="onTranslate($event)" [reactions]="reactions()" [repostsInput]="reposts()" [quotesInput]="quotes()"
-    [zapsInput]="zaps()" [replyCountInput]="replyCount()" (reactionChanged)="loadReactions(true)"
-    (zapSent)="onZapSent($event)" (replyClick)="openReplyEditor($event)"
-    (bookmarkClick)="onBookmarkClick($event)"></app-article-display>
+  @if (isLongFormArticle()) {
+  <app-article-display [article]="articleData()" mode="full" [showTopActions]="false" (share)="shareArticle()"
+    (bookmarkClick)="bookmarkArticle()" (replyClick)="scrollToComments()"></app-article-display>
+  } @else {
+  <app-event [event]="article" appearance="plain" [navigationDisabled]="true" mode="thread"></app-event>
+  }
 </div>
 } @else {
 <!-- Loading or Empty State -->
@@ -77,8 +72,8 @@
     <mat-card-content>
       <div class="empty-state-content">
         <mat-icon>article</mat-icon>
-        <h2>No Article Selected</h2>
-        <p>Please select an article to view its content.</p>
+        <h2>No Event Selected</h2>
+        <p>Please select an addressable event to view its content.</p>
       </div>
     </mat-card-content>
   </mat-card>

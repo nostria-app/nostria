@@ -35,6 +35,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { ArticleComponent } from '../../article/article.component';
 import { MusicEmbedComponent } from '../../music-embed/music-embed.component';
 import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-mention.component';
+import { StarterPackEventComponent } from '../../event-types/starter-pack-event.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { DataService } from '../../../services/data.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -49,6 +50,7 @@ import { ReportingService } from '../../../services/reporting.service';
 const MUSIC_TRACK_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
+const STARTER_PACK_KIND = 39089;
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -77,6 +79,7 @@ export interface DisplayItem {
     ArticleComponent,
     MusicEmbedComponent,
     EmojiSetMentionComponent,
+    StarterPackEventComponent,
     UserProfileComponent,
     AgoPipe,
     TimestampPipe,
@@ -592,6 +595,14 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
+   * Check if an naddr token is a starter pack mention
+   */
+  isStarterPackMention(token: ContentToken): boolean {
+    const data = this.getNaddrData(token);
+    return data !== null && data.kind === STARTER_PACK_KIND;
+  }
+
+  /**
    * Check if an naddr token is an article (not music or emoji set)
    */
   isArticleMention(token: ContentToken): boolean {
@@ -648,9 +659,18 @@ export class NoteContentComponent implements OnDestroy {
         this.layout.openGenericEvent(identifier);
         return;
       } else if (nostrUri.startsWith('nostr:naddr')) {
-        // Navigate to the article page using the raw naddr
+        // Navigate to address-based event by kind
         const identifier = nostrUri.replace('nostr:', '');
-        this.layout.openArticle(identifier);
+        try {
+          const decoded = nip19.decode(identifier);
+          if (decoded.type === 'naddr' && decoded.data.kind === 30023) {
+            this.layout.openArticle(identifier);
+          } else {
+            this.layout.openGenericEvent(identifier);
+          }
+        } catch {
+          this.layout.openGenericEvent(identifier);
+        }
         return;
       }
     }
@@ -670,6 +690,20 @@ export class NoteContentComponent implements OnDestroy {
         break;
       }
       case 'note':
+      case 'naddr': {
+        const encoded = this.parsing.extractNostrUriIdentifier(token.content);
+        try {
+          const decoded = nip19.decode(encoded);
+          if (decoded.type === 'naddr' && decoded.data.kind === 30023) {
+            this.layout.openArticle(encoded);
+          } else {
+            this.layout.openGenericEvent(encoded);
+          }
+        } catch {
+          this.layout.openGenericEvent(encoded);
+        }
+        break;
+      }
       default:
         console.warn('Unsupported nostr URI type:', type);
     }

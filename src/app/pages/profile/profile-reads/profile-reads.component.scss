@@ -36,11 +36,11 @@
 
 .articles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
 
   @media (min-width: 1200px) {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   @media (max-width: 768px) {
@@ -58,8 +58,11 @@
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
+  min-height: 440px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   outline: none;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     transform: translateY(-4px);
@@ -106,10 +109,11 @@
   }
 
   .article-content {
-    padding: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+    flex: 1;
   }
 
   .article-author-row {
@@ -142,7 +146,7 @@
 
       .user-profile-content {
         .user-profile-name-link {
-          font-size: 0.8125rem;
+          font-size: 0.875rem;
         }
       }
     }
@@ -157,82 +161,37 @@
 
   .article-title {
     margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.4;
+    font-size: 1.125rem;
+    line-height: 1.35;
     color: var(--mat-sys-on-surface);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .article-actions {
+  .article-summary {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--mat-sys-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .article-footer {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 4px;
+    justify-content: space-between;
+    margin-top: auto;
 
-    .reaction-action,
-    .comment-action,
-    .zap-action {
-      display: flex;
-      align-items: center;
-      height: 32px;
-    }
-
-    .reaction-action {
-      ::ng-deep app-reaction-button {
-        button {
-          width: 32px;
-          height: 32px;
-
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-          }
-        }
-      }
-
-      .count-badge {
-        font-size: 0.75rem;
-        color: var(--mat-sys-on-surface-variant);
-        margin-left: 2px;
-      }
-    }
-
-    .zap-action {
-      ::ng-deep app-zap-button {
-        button {
-          width: 32px;
-          height: 32px;
-
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-          }
-        }
-      }
-
-      .zap-count {
-        font-size: 0.75rem;
-        color: var(--nostria-bitcoin, #f7931a);
-        margin-left: 2px;
-      }
-    }
-
-    .comment-action {
-      .count-badge {
-        font-size: 0.75rem;
-        color: var(--mat-sys-on-surface-variant);
-        margin-left: 2px;
-      }
-
-      &:hover .count-badge {
-        color: var(--mat-sys-primary);
-      }
+    .read-time {
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .action-btn {

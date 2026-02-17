@@ -8,7 +8,7 @@ import { NoteContentComponent } from './note-content/note-content.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
-import { Event as NostrEvent } from 'nostr-tools';
+import { Event as NostrEvent, nip19 } from 'nostr-tools';
 
 interface SocialPreview {
   url: string;
@@ -446,9 +446,27 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         break;
       }
       case 'naddr': {
-        // Open address-based event (article) in right panel
+        // Open address-based event by kind
         const encoded = this.parsing.extractNostrUriIdentifier(token.content);
-        this.layoutService.openArticle(encoded);
+        const record = data as Record<string, unknown>;
+        let kind = Number(record['kind'] || 0);
+
+        if (!kind) {
+          try {
+            const decoded = nip19.decode(encoded);
+            if (decoded.type === 'naddr') {
+              kind = decoded.data.kind;
+            }
+          } catch {
+            // Ignore decode errors and fallback to generic event route
+          }
+        }
+
+        if (kind === 30023) {
+          this.layoutService.openArticle(encoded);
+        } else {
+          this.layoutService.openGenericEvent(encoded);
+        }
         break;
       }
       default:

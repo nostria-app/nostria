@@ -1106,10 +1106,7 @@ export class LayoutService implements OnDestroy {
       try {
         const decoded = nip19.decode(value).data as AddressPointer;
 
-        if (decoded.kind === kinds.LongFormArticle) {
-          // Route to article page in primary outlet
-          this.openArticleAsPrimary(value);
-        } else if (decoded.kind === 34139) {
+        if (decoded.kind === 34139) {
           // Music playlist - route directly to music playlist page
           const npub = nip19.npubEncode(decoded.pubkey);
           this.openMusicPlaylist(npub, decoded.identifier);
@@ -1118,8 +1115,8 @@ export class LayoutService implements OnDestroy {
           const npub = nip19.npubEncode(decoded.pubkey);
           this.openSongDetail(npub, decoded.identifier);
         } else {
-          // Route to event page in primary outlet
-          this.openEventAsPrimary(value);
+          // Route to addressable event page in primary outlet
+          this.openArticleAsPrimary(value);
         }
       } catch (error) {
         this.logger.warn('Failed to decode naddr:', value, error);
@@ -1308,22 +1305,23 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
-    let neventId = eventId;
-    if (!neventId.startsWith('nevent')) {
-      neventId = nip19.neventEncode({
-        id: event.id,
-        author: event.pubkey,
-        kind: event.kind,
-      });
+    const relayHints = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+    const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
+
+    if (encoded.startsWith('naddr')) {
+      this.openArticle(encoded, event);
+      return;
     }
-    if (event.kind === kinds.LongFormArticle) {
-      this.openArticle(neventId, event);
-    } else {
-      this.openGenericEvent(neventId, event, trustedByPubkey, options);
-    }
+
+    this.openGenericEvent(encoded, event, trustedByPubkey, options);
   }
 
   openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
+    if (eventId.startsWith('naddr')) {
+      this.openArticle(eventId, event);
+      return;
+    }
+
     this.navigateToRightPanel(`e/${eventId}`, {
       state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent, replies: options?.replies }
     });
@@ -1334,6 +1332,11 @@ export class LayoutService implements OnDestroy {
    * Used when navigating from search to make the event the main focus.
    */
   openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
+    if (eventId.startsWith('naddr')) {
+      this.openArticleAsPrimary(eventId, event);
+      return;
+    }
+
     this.router.navigateByUrl(`/e/${eventId}`, {
       state: { event, trustedByPubkey, replyCount: options?.replyCount, parentEvent: options?.parentEvent, replies: options?.replies }
     });

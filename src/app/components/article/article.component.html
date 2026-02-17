@@ -7,7 +7,6 @@
 } @else if (item) {
 <div class="article-container" [class]="'mode-' + mode()">
   @if (mode() === 'compact') {
-  <!-- Compact mode for list views -->
   <div class="article-compact" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
     [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
     (keydown.space)="openArticle()">
@@ -34,12 +33,11 @@
     </div>
   </div>
   } @else if (mode() === 'card') {
-  <!-- Card mode - horizontal layout with image on left -->
   <mat-card class="article-card" [class.clickable]="clickable()" (click)="openArticle()">
     <div class="card-layout">
       @if (image()) {
       <div class="card-image">
-        <img [src]="image()" [alt]="title() || 'Article image'" [title]="title() || 'Article image'" loading="lazy" />
+        <img [src]="image()" alt="Article image" title="Article image" loading="lazy" />
       </div>
       }
       <div class="card-content">
@@ -68,7 +66,6 @@
     </div>
   </mat-card>
   } @else {
-  <!-- Default/legacy mode -->
   <div class="article-content" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
     [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
     (keydown.space)="openArticle()">

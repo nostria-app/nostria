@@ -1,22 +1,23 @@
 <div class="tab-content">
-  @if (profileState.isInitiallyLoading() && sortedArticles().length === 0) {
+  @if (profileState.isInitiallyLoading() && visibleArticles().length === 0) {
   <div class="loading-state">
     <mat-spinner [diameter]="40"></mat-spinner>
     <p>Loading articles...</p>
   </div>
-  } @else if (sortedArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
+  } @else if (visibleArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
   <div class="empty-state">
     <mat-icon>article</mat-icon>
     <p>No articles to display yet</p>
   </div>
   } @else {
   <div class="articles-grid">
-    @for (note of sortedArticles(); track note.event.id) {
-    <div class="article-card" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)" tabindex="0"
-      role="button">
+    @for (note of visibleArticles(); track note.event.id) {
+    <div class="article-card" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)"
+      (keydown.space)="openArticle(note.event); $event.preventDefault()" tabindex="0">
       <div class="article-image-container">
         @if (getArticleImage(note.event); as image) {
-        <img [src]="image" [alt]="getArticleTitle(note.event)" [title]="getArticleTitle(note.event)" loading="lazy" />
+        <img [src]="image" [alt]="getArticleTitle(note.event) || 'Article image'" title="Article image"
+          loading="lazy" />
         } @else {
         <div class="image-placeholder">
           <mat-icon>article</mat-icon>
@@ -29,33 +30,11 @@
           <span class="article-date">{{ note.event.created_at | ago }}</span>
         </div>
         <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
-        <div class="article-actions">
-          <span class="reaction-action" (click)="$event.stopPropagation()">
-            <app-reaction-button [event]="note.event"></app-reaction-button>
-            @if (getEngagement(note.event.id); as engagement) {
-            @if (!engagement.isLoading && engagement.reactionCount > 0) {
-            <span class="count-badge">{{ engagement.reactionCount }}</span>
-            }
-            }
-          </span>
-          <span class="comment-action" (click)="openComments(note.event); $event.stopPropagation()">
-            <button mat-icon-button class="action-btn" matTooltip="Comments">
-              <mat-icon>chat_bubble_outline</mat-icon>
-            </button>
-            @if (getEngagement(note.event.id); as engagement) {
-            @if (!engagement.isLoading && engagement.commentCount > 0) {
-            <span class="count-badge">{{ engagement.commentCount }}</span>
-            }
-            }
-          </span>
-          <span class="zap-action" (click)="$event.stopPropagation()">
-            <app-zap-button [event]="note.event"></app-zap-button>
-            @if (getEngagement(note.event.id); as engagement) {
-            @if (!engagement.isLoading && engagement.zapTotal > 0) {
-            <span class="zap-count">{{ formatZapAmount(engagement.zapTotal) }}</span>
-            }
-            }
-          </span>
+        @if (getArticleSummary(note.event); as summary) {
+        <p class="article-summary">{{ summary }}</p>
+        }
+        <div class="article-footer">
+          <span class="read-time">{{ getReadTime(note.event) }}</span>
           <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()"
             matTooltip="Share">
             <mat-icon>share</mat-icon>
@@ -75,7 +54,8 @@
   }
 
   <!-- No more content indicator -->
-  @if (!profileState.hasMoreArticles() && profileState.articles().length > 0) {
+  @if (!profileState.hasMoreArticles() && visibleArticles().length >= sortedArticles().length && sortedArticles().length
+  > 0) {
   <div class="no-more-content">
     <mat-icon>check_circle</mat-icon>
     <p>You've seen all articles</p>

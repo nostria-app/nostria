@@ -443,6 +443,15 @@ export class EventPageComponent {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
           if (id) {
+            if (id.startsWith('naddr')) {
+              if (this.isInRightPanel()) {
+                this.layout.navigateToRightPanel(`a/${id}`);
+              } else {
+                this.router.navigateByUrl(`/a/${id}`);
+              }
+              return;
+            }
+
             // Scroll to top immediately when navigating to a new event
             // Use panel-aware scrolling to avoid scrolling the wrong panel
             const panel = this.isInRightPanel() ? 'right' : 'left';
@@ -545,8 +554,9 @@ export class EventPageComponent {
           // Update URL with proper encoding (naddr for addressable events, nevent for others)
           const encoded = this.utilities.encodeEventForUrl(partialData.event);
 
-          // Always use /e/ route for event page (articles use /a/ route separately)
-          this.url.updatePathSilently(['/e', encoded]);
+          // Use canonical route: /a for addressable events, /e for non-addressable
+          const routePrefix = encoded.startsWith('naddr') ? '/a' : '/e';
+          this.url.updatePathSilently([routePrefix, encoded]);
 
           // Hide main loading spinner once we have the main event
           this.isLoading.set(false);

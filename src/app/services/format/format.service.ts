@@ -262,6 +262,36 @@ export class FormatService {
     return this.utilities.getRelativeTime(timestamp);
   }
 
+  private buildNaddrPreview(
+    naddrData: { kind?: number; pubkey?: string; identifier?: string; relays?: string[] },
+    displayName?: string
+  ): string {
+    const identifier = naddrData.identifier || '';
+    const kind = Number(naddrData.kind || 0);
+    const authorPubkey = naddrData.pubkey || '';
+    const relayHints = naddrData.relays;
+    const addrRef = displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
+    const naddrEncoded = nip19.naddrEncode({
+      kind,
+      pubkey: authorPubkey,
+      identifier,
+      relays: relayHints,
+    });
+    const route = `/a/${naddrEncoded}`;
+
+    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
+                    <a href="${route}" class="nostr-embed-link">
+                      <div class="nostr-embed-icon">
+                        <span class="embed-icon">🔗</span>
+                      </div>
+                      <div class="nostr-embed-content">
+                        <div class="nostr-embed-title">${this.escapeHtml(addrRef)}</div>
+                        <div class="nostr-embed-meta">Addressable Event · Kind ${kind}</div>
+                      </div>
+                    </a>
+                  </div>`;
+  }
+
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
     const nostrRegex =
@@ -360,28 +390,10 @@ export class FormatService {
               }
 
               case 'naddr': {
-                // For addresses (like articles), create an embedded preview card
-                const identifier = nostrData.data?.identifier || '';
-                const kind = nostrData.data?.kind || '';
-                const authorPubkey = nostrData.data?.pubkey || '';
-                const addrRef =
-                  nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
-                const naddrEncoded = nip19.naddrEncode(nostrData.data);
-
-                // Create an embedded preview card for the article
+                const replacement = this.buildNaddrPreview(nostrData.data, nostrData.displayName);
                 return {
                   original: match[0],
-                  replacement: `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
-                    <a href="/a/${naddrEncoded}" class="nostr-embed-link">
-                      <div class="nostr-embed-icon">
-                        <span class="embed-icon">📄</span>
-                      </div>
-                      <div class="nostr-embed-content">
-                        <div class="nostr-embed-title">${this.escapeHtml(addrRef)}</div>
-                        <div class="nostr-embed-meta">Article · Kind ${kind}</div>
-                      </div>
-                    </a>
-                  </div>`,
+                  replacement,
                 };
               }
 
@@ -500,25 +512,7 @@ export class FormatService {
               }
 
               case 'naddr': {
-                // For addresses, create immediate preview
-                const identifier = nostrData.data?.identifier || '';
-                const kind = nostrData.data?.kind || '';
-                const authorPubkey = nostrData.data?.pubkey || '';
-                const addrRef =
-                  nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
-                const naddrEncoded = nip19.naddrEncode(nostrData.data);
-
-                replacement = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
-                    <a href="/a/${naddrEncoded}" class="nostr-embed-link">
-                      <div class="nostr-embed-icon">
-                        <span class="embed-icon">📄</span>
-                      </div>
-                      <div class="nostr-embed-content">
-                        <div class="nostr-embed-title">${this.escapeHtml(addrRef)}</div>
-                        <div class="nostr-embed-meta">Article · Kind ${kind}</div>
-                      </div>
-                    </a>
-                  </div>`;
+                replacement = this.buildNaddrPreview(nostrData.data, nostrData.displayName);
                 if (onPreviewLoaded) {
                   onPreviewLoaded(match[0], replacement);
                 }

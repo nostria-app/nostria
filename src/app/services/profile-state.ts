@@ -309,11 +309,11 @@ export class ProfileState {
     // 3. The filtered timeline is empty
     // 4. Replies filter is OFF
     // 5. There are actually replies that could be shown
-    return !isLoading && 
-           cachedLoaded && 
-           filteredTimeline.length === 0 && 
-           !filter.showReplies && 
-           replies.length > 0;
+    return !isLoading &&
+      cachedLoaded &&
+      filteredTimeline.length === 0 &&
+      !filter.showReplies &&
+      replies.length > 0;
   });
 
   /**
@@ -573,7 +573,7 @@ export class ProfileState {
       }
 
       this.logger.info(`Loaded cached events: notes=${this.notes().length}, replies=${this.replies().length}, reposts=${this.reposts().length}, articles=${this.articles().length}, media=${this.media().length}`);
-      
+
       // Log the computed timeline to verify filtering is working
       const currentTimeline = this.sortedTimeline();
       this.logger.debug(`[loadCachedEvents] After loading cache: sortedTimeline=${currentTimeline.length}, filter=${JSON.stringify(this.timelineFilter())}`);
@@ -762,7 +762,7 @@ export class ProfileState {
     // 2a. Load contacts (following list) - important for profile header
     try {
       const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-      
+
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
       if (contactsEvent && contactsEvent.kind === kinds.Contacts) {
@@ -789,7 +789,7 @@ export class ProfileState {
 
     try {
       const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-      
+
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
       if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
@@ -818,7 +818,7 @@ export class ProfileState {
       const articleEvents = await this.userRelayService.query(pubkey, {
         kinds: [kinds.LongFormArticle],
         authors: [pubkey],
-        limit: 20,
+        limit: 12,
       });
 
       if (this.currentlyLoadingPubkey() !== pubkey) return;
@@ -845,7 +845,7 @@ export class ProfileState {
 
     // 2d. Load media - for media tab
     if (this.currentlyLoadingPubkey() !== pubkey) return;
-    
+
     this.loadInitialMedia(pubkey);
 
     // 2e. Fallback contacts search (deferred) - only if we don't have contacts yet
@@ -1288,7 +1288,7 @@ export class ProfileState {
         // Small batch with no new content - increment counter
         const newCount = this.consecutiveSmallBatches() + 1;
         this.consecutiveSmallBatches.set(newCount);
-        
+
         if (newCount >= this.MAX_CONSECUTIVE_SMALL_BATCHES) {
           this.logger.info(`Reached end of notes for ${pubkey}: ${newCount} consecutive small batches with no new content`);
           this.hasMoreNotes.set(false);
@@ -1302,7 +1302,7 @@ export class ProfileState {
         // Increment counter since we're not making progress
         const newCount = this.consecutiveSmallBatches() + 1;
         this.consecutiveSmallBatches.set(newCount);
-        
+
         if (newCount >= this.MAX_CONSECUTIVE_SMALL_BATCHES) {
           this.logger.info(`Reached end of notes for ${pubkey}: ${newCount} consecutive batches with no new content`);
           this.hasMoreNotes.set(false);
@@ -1359,7 +1359,7 @@ export class ProfileState {
         kinds: [kinds.LongFormArticle],
         authors: [pubkey],
         until: oldestTimestamp,
-        limit: 10, // Load 10 more articles at a time
+        limit: 6, // Load smaller article batches for smoother incremental loading
       });
 
       // Check if profile was switched during the query

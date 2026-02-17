@@ -1,6 +1,4 @@
-
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -12,7 +10,6 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -20,37 +17,29 @@ import type { SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import type { Subscription } from 'rxjs';
-import type { ArticleData } from '../../components/article-display/article-display.component';
-import { ArticleDisplayComponent } from '../../components/article-display/article-display.component';
-import { MatMenuModule } from '@angular/material/menu';
-import { AiService } from '../../services/ai.service';
+import { ArticleDisplayComponent, type ArticleData } from '../../components/article-display/article-display.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserDataService } from '../../services/user-data.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
-import { FormatService } from '../../services/format/format.service';
 import { UrlUpdateService } from '../../services/url-update.service';
-import { Cache } from '../../services/cache';
+import { FormatService } from '../../services/format/format.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NostrRecord } from '../../interfaces';
-import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
-import { EventService, ReactionEvents } from '../../services/event';
-import { ZapService } from '../../services/zap.service';
-import { ReactionSummaryComponent, type ZapInfo } from '../../components/event/reaction-summary/reaction-summary.component';
+import { EventComponent as NostrEventComponent } from '../../components/event/event.component';
 
 @Component({
-  selector: 'app-article',
+  selector: 'app-article-page',
   imports: [
     MatCardModule,
     MatButtonModule,
@@ -58,254 +47,49 @@ import { ReactionSummaryComponent, type ZapInfo } from '../../components/event/r
     MatProgressSpinnerModule,
     MatTooltipModule,
     ArticleDisplayComponent,
-    MatMenuModule,
     ZapButtonComponent,
     EventMenuComponent,
-    ReactionSummaryComponent,
+    NostrEventComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArticleComponent implements OnDestroy {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private utilities = inject(UtilitiesService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly utilities = inject(UtilitiesService);
   private readonly userDataService = inject(UserDataService);
-  private logger = inject(LoggerService);
-  private data = inject(DataService);
+  private readonly logger = inject(LoggerService);
+  private readonly data = inject(DataService);
   layout = inject(LayoutService);
-  private formatService = inject(FormatService);
-  private url = inject(UrlUpdateService);
-  private readonly cache = inject(Cache);
-  private dialog = inject(MatDialog);
-  private customDialog = inject(CustomDialogService);
-  private aiService = inject(AiService);
+  private readonly formatService = inject(FormatService);
+  private readonly url = inject(UrlUpdateService);
+  private readonly customDialog = inject(CustomDialogService);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
-  private externalLinkHandler = inject(ExternalLinkHandlerService);
-  private relayPool = inject(RelayPoolService);
-  private rightPanel = inject(RightPanelService);
-  private panelNav = inject(PanelNavigationService);
-  private userRelaysService = inject(UserRelaysService);
-  private eventService = inject(EventService);
-  private zapService = inject(ZapService);
-  link = '';
+  private readonly relayPool = inject(RelayPoolService);
+  private readonly rightPanel = inject(RightPanelService);
+  private readonly panelNav = inject(PanelNavigationService);
+  private readonly userRelaysService = inject(UserRelaysService);
 
   private routeSubscription?: Subscription;
 
-  // Input for when component is opened via RightPanelService
   naddr = input<string | undefined>(undefined);
   articleEvent = input<Event | undefined>(undefined);
 
+  link = '';
   event = signal<Event | undefined>(undefined);
+  isLongFormArticle = computed(() => this.event()?.kind === kinds.LongFormArticle);
   isLoading = signal(false);
   error = signal<string | null>(null);
-
-  // Reactions/interactions state
-  reactions = signal<ReactionEvents>({ events: [], data: new Map() });
-  reposts = signal<NostrRecord[]>([]);
-  quotes = signal<NostrRecord[]>([]);
-  zaps = signal<ZapInfo[]>([]);
-  replyCount = signal<number>(0);
-  showReactionsSummary = signal<boolean>(false);
-  reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
-
-  likes = computed<NostrRecord[]>(() => {
-    return this.reactions().events;
-  });
-
-  topEmojis = computed<{ emoji: string; url?: string; count: number }[]>(() => {
-    const reactions = this.likes();
-    if (!reactions || reactions.length === 0) return [];
-
-    const emojiCounts = new Map<string, { count: number; url?: string }>();
-    for (const reaction of reactions) {
-      let content = reaction.event.content || '+';
-      if (content === '+') {
-        content = '\u2764\uFE0F';
-      }
-      const existing = emojiCounts.get(content);
-      if (existing) {
-        existing.count++;
-      } else {
-        let url: string | undefined;
-        if (content.startsWith(':') && content.endsWith(':')) {
-          const shortcode = content.slice(1, -1);
-          const emojiTag = reaction.event.tags.find(
-            (tag: string[]) => tag[0] === 'emoji' && tag[1] === shortcode
-          );
-          if (emojiTag && emojiTag[2]) {
-            url = emojiTag[2];
-          }
-        }
-        emojiCounts.set(content, { count: 1, url });
-      }
-    }
-
-    return Array.from(emojiCounts.entries())
-      .map(([emoji, data]) => ({ emoji, url: data.url, count: data.count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
-  });
-
-  totalZapAmount = computed<number>(() => {
-    return this.zaps().reduce((total, zap) => total + (zap.amount || 0), 0);
-  });
-
-  zapCount = computed<number>(() => {
-    return this.zaps().length;
-  });
-
-  repostCount = computed<number>(() => {
-    return this.reposts().length;
-  });
-
-  quoteCount = computed<number>(() => {
-    return this.quotes().length;
-  });
-
-  shareCount = computed<number>(() => {
-    return this.repostCount() + this.quoteCount();
-  });
-
-  hasAnyInteractions = computed<boolean>(() => {
-    return this.likes().length > 0
-      || this.replyCount() > 0
-      || this.repostCount() > 0
-      || this.quoteCount() > 0
-      || this.totalZapAmount() > 0;
-  });
-
-  // Text-to-Speech state
-  isSynthesizing = signal<boolean>(false);
-  isTranslating = signal<boolean>(false);
-  translatedSummary = signal<string | null>(null);
-  isSpeaking = signal(false);
-  isPaused = signal(false);
-  useAiVoice = signal(false);
-  availableVoices = signal<SpeechSynthesisVoice[]>([]);
-  selectedVoice = signal<SpeechSynthesisVoice | null>(null);
-  playbackRate = signal<number>(1);
-  private speechSynthesis: SpeechSynthesis | null = null;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
-  private audioPlayer: HTMLAudioElement | null = null;
-
-  constructor() {
-    if (!this.layout.isBrowser()) {
-      return;
-    }
-
-    // Initialize speech synthesis
-    this.speechSynthesis = window.speechSynthesis;
-
-    // Load available voices
-    this.loadVoices();
-    // Voices may load asynchronously
-    if (this.speechSynthesis) {
-      this.speechSynthesis.onvoiceschanged = () => this.loadVoices();
-    }
-
-    // Effect to handle naddr input (when opened via RightPanelService)
-    effect(() => {
-      const naddrValue = this.naddr();
-      const eventValue = this.articleEvent();
-      if (naddrValue) {
-        this.stopSpeech();
-        // If event is provided, use it directly
-        if (eventValue) {
-          this.event.set(eventValue);
-          this.link = naddrValue;
-        } else {
-          this.loadArticle(naddrValue);
-        }
-      }
-    });
-
-    // Subscribe to route parameter changes (when opened via router)
-    this.routeSubscription = this.route.paramMap.subscribe(params => {
-      const addrParam = params.get('id');
-      // Only use route params if naddr input is not provided
-      if (addrParam && !this.naddr()) {
-        // Stop speech when navigating to a new article
-        this.stopSpeech();
-        this.loadArticle(addrParam, params);
-        // Scroll to top when navigating to a new article - use panel-aware scrolling
-        const panel = this.isInRightPanel() ? 'right' : 'left';
-        setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
-      }
-    });
-
-    // Set up image and link click listeners after content is rendered
-    afterNextRender(() => {
-      this.setupImageClickListeners();
-      this.setupLinkClickListeners();
-    });
-
-    // Load interactions when the event changes
-    effect(() => {
-      const ev = this.event();
-      if (ev) {
-        // Reset interaction state
-        this.reactions.set({ events: [], data: new Map() });
-        this.reposts.set([]);
-        this.quotes.set([]);
-        this.zaps.set([]);
-        this.replyCount.set(0);
-        this.showReactionsSummary.set(false);
-
-        // Load interactions asynchronously
-        this.loadAllInteractions(ev);
-        this.loadZaps(ev);
-      }
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.routeSubscription?.unsubscribe();
-    this.stopSpeech();
-  }
-
-  /**
-   * Check if this component is rendered in the right panel
-   */
-  isInRightPanel(): boolean {
-    return this.route.outlet === 'right';
-  }
-
-  /**
-   * Navigate back - handle both primary outlet and right panel scenarios
-   */
-  goBack(): void {
-    // First check RightPanelService (for programmatic component-based panels)
-    if (this.rightPanel.canGoBack()) {
-      this.rightPanel.goBack();
-      return;
-    }
-
-    // If in right panel outlet, use panel navigation
-    if (this.isInRightPanel()) {
-      this.panelNav.goBackRight();
-      return;
-    }
-
-    // In primary outlet - check if there's left panel history to go back to
-    if (this.panelNav.canGoBackLeft()) {
-      this.panelNav.goBackLeft();
-    } else {
-      // No history - navigate to feeds as the default destination
-      this.router.navigate(['/f']);
-    }
-  }
-
-  bookmarkArticle() {
-    this.bookmark.toggleBookmark(this.id(), 'a');
-  }
+  parsedContent = signal<SafeHtml>('');
+  contentLoading = signal(false);
 
   id = computed(() => {
     const ev = this.event();
     if (!ev) return '';
-    return `${this.event()?.kind}:${this.authorPubkey()}:${this.slug()}`;
+    return `${ev.kind}:${ev.pubkey}:${this.slug()}`;
   });
 
   slug = computed(() => {
@@ -314,276 +98,15 @@ export class ArticleComponent implements OnDestroy {
     return this.utilities.getTagValues('d', ev.tags)[0] || '';
   });
 
-  /**
-   * Check if the string is in the addressable event format: kind:pubkey:d-tag
-   * e.g., 30023:b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc:my-article
-   */
-  private isAddressableFormat(value: string): boolean {
-    const parts = value.split(':');
-    if (parts.length < 3) return false;
-
-    // First part should be a valid kind number (e.g., 30023 for articles)
-    const kind = parseInt(parts[0], 10);
-    if (isNaN(kind) || kind <= 0) return false;
-
-    // Second part should be a 64-character hex pubkey
-    const pubkey = parts[1];
-    if (!/^[0-9a-fA-F]{64}$/.test(pubkey)) return false;
-
-    return true;
-  }
-
-  async loadArticle(naddr: string, params?: ParamMap): Promise<void> {
-    // Check for event passed via router state (supports both 'articleEvent' and legacy 'event' keys)
-    const receivedData = (history.state?.articleEvent || history.state?.event) as Event | undefined;
-
-    let pubkey = '';
-    let slug = '';
-
-    if (receivedData) {
-      // Redirect non-article kinds to their proper routes
-      if (receivedData.kind !== kinds.LongFormArticle) {
-        const identifier = receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '';
-        const npub = nip19.npubEncode(receivedData.pubkey);
-        if (receivedData.kind === 34139) {
-          // Music playlist
-          this.layout.openMusicPlaylist(npub, identifier, receivedData);
-          return;
-        } else if (receivedData.kind === 36787) {
-          // Music track
-          this.layout.openSongDetail(npub, identifier, receivedData);
-          return;
-        } else if (receivedData.kind === 32100) {
-          // M3U Playlist - redirect to event page
-          const nevent = nip19.neventEncode({
-            id: receivedData.id,
-            author: receivedData.pubkey,
-            kind: receivedData.kind,
-          });
-          this.layout.openGenericEvent(nevent, receivedData);
-          return;
-        }
-        // For other unknown kinds, continue loading as-is (fallback)
-      }
-
-      // Use the original naddr from route if available (preserves relay hints),
-      // otherwise create a new one (no relay hints available from receivedData)
-      if (naddr.startsWith('naddr1')) {
-        this.link = naddr;
-      } else {
-        const encoded = nip19.naddrEncode({
-          identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
-          kind: receivedData.kind,
-          pubkey: receivedData.pubkey,
-        });
-        this.link = encoded;
-      }
-
-      this.logger.debug('Received event from navigation state:', receivedData);
-      this.event.set(receivedData);
-      this.isLoading.set(false);
-      // Scroll to top when article is received from navigation state - use panel-aware scrolling
-      const panel = this.isInRightPanel() ? 'right' : 'left';
-      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 50);
-      return;
-    } else if (naddr.startsWith('naddr1')) {
-      this.link = naddr;
-
-      // Decode the naddr1 parameter using nip19.decode()
-      const decoded = this.utilities.decode(naddr);
-
-      if (decoded.type !== 'naddr') {
-        throw new Error('Invalid article address format');
-      }
-
-      const addrData = decoded.data as {
-        pubkey: string;
-        identifier: string;
-        kind: number;
-        relays?: string[];
-      };
-      this.logger.debug('Decoded naddr:', addrData);
-
-      // Redirect non-article kinds to their proper routes
-      if (addrData.kind !== kinds.LongFormArticle) {
-        const npub = nip19.npubEncode(addrData.pubkey);
-        if (addrData.kind === 34139) {
-          // Music playlist
-          this.layout.openMusicPlaylist(npub, addrData.identifier);
-          return;
-        } else if (addrData.kind === 36787) {
-          // Music track
-          this.layout.openSongDetail(npub, addrData.identifier);
-          return;
-        } else if (addrData.kind === 32100) {
-          // M3U Playlist - redirect to event page using naddr
-          const naddr = nip19.naddrEncode({
-            kind: addrData.kind,
-            pubkey: addrData.pubkey,
-            identifier: addrData.identifier,
-          });
-          this.layout.openGenericEvent(naddr);
-          return;
-        }
-        // For other unknown kinds, continue loading as-is (fallback)
-      }
-
-      pubkey = addrData.pubkey;
-      slug = decoded.data.identifier;
-
-      // If we have relay hints in the naddr, try them first for faster loading
-      if (addrData.relays && addrData.relays.length > 0) {
-        this.logger.debug('Trying relay hints from naddr:', addrData.relays);
-        try {
-          this.isLoading.set(true);
-          const event = await this.relayPool.get(
-            addrData.relays,
-            {
-              authors: [addrData.pubkey],
-              kinds: [addrData.kind],
-              '#d': [addrData.identifier],
-            },
-            2000 // Short timeout since we have specific hints
-          );
-          if (event) {
-            this.logger.debug('Article found via relay hints');
-            this.event.set(event);
-            this.isLoading.set(false);
-            return;
-          }
-          this.logger.debug('Article not found via relay hints, falling back to normal flow');
-        } catch (error) {
-          this.logger.debug('Failed to fetch from relay hints:', error);
-          // Continue with normal flow
-        }
-      }
-    } else if (this.isAddressableFormat(naddr)) {
-      // Handle raw addressable event format: kind:pubkey:d-tag (e.g., 30023:pubkey:slug)
-      const parts = naddr.split(':');
-      const kind = parseInt(parts[0], 10);
-      pubkey = parts[1];
-      slug = parts.slice(2).join(':'); // d-tag may contain colons
-
-      this.logger.debug('Parsed addressable format:', { kind, pubkey, slug });
-
-      // Redirect non-article kinds to their proper routes
-      if (kind !== kinds.LongFormArticle) {
-        const npub = nip19.npubEncode(pubkey);
-        if (kind === 34139) {
-          // Music playlist
-          this.layout.openMusicPlaylist(npub, slug);
-          return;
-        } else if (kind === 36787) {
-          // Music track
-          this.layout.openSongDetail(npub, slug);
-          return;
-        } else if (kind === 32100) {
-          // M3U Playlist - redirect to event page using naddr
-          const naddr = nip19.naddrEncode({
-            kind: kind,
-            pubkey: pubkey,
-            identifier: slug,
-          });
-          this.layout.openGenericEvent(naddr);
-          return;
-        }
-        // For other unknown kinds, continue loading as-is (fallback)
-      }
-
-      // Generate naddr for sharing
-      const encoded = nip19.naddrEncode({
-        identifier: slug,
-        kind: kind,
-        pubkey: pubkey,
-      });
-      this.link = encoded;
-
-      // Update URL to use the naddr format for cleaner sharing
-      const npub = this.utilities.getNpubFromPubkey(pubkey);
-      this.url.updatePathSilently(['/a', npub, slug]);
-    } else {
-      const slugParam = params?.get('slug') || this.route.snapshot.paramMap.get('slug');
-
-      // If we have slug, check if we have resolved article data from ArticleResolver
-      if (slugParam) {
-        slug = slugParam;
-
-        // Check if ArticleResolver resolved a NIP-05 address to pubkey
-        const articleData = this.route.snapshot.data['article'];
-        if (articleData?.pubkey) {
-          // NIP-05 was resolved, use the pubkey from resolver
-          pubkey = articleData.pubkey;
-          this.logger.debug('Using resolved pubkey from NIP-05:', articleData.identifier, '->', pubkey);
-          // Don't update URL - keep the NIP-05 alias as-is
-        } else {
-          // Regular npub/hex ID
-          pubkey = this.utilities.getPubkeyFromNpub(naddr);
-
-          // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
-          const npub = this.utilities.getNpubFromPubkey(pubkey);
-          this.url.updatePathSilently(['/a', npub, slug]);
-        }
-
-        const encoded = nip19.naddrEncode({
-          identifier: slug,
-          kind: kinds.LongFormArticle,
-          pubkey: pubkey,
-        });
-        this.link = encoded;
-      }
-    }
-
-    try {
-      this.isLoading.set(true);
-      this.error.set(null);
-
-      const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
-      let event: NostrRecord | null = null;
-
-      if (isNotCurrentUser) {
-        event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
-          pubkey,
-          kinds.LongFormArticle,
-          slug,
-          { save: false, cache: false }
-        );
-      } else {
-        event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-          pubkey,
-          kinds.LongFormArticle,
-          slug,
-          { save: false, cache: false }
-        );
-      }
-
-      if (event) {
-        this.logger.debug('Loaded article event from storage or relays:', event);
-        this.event.set(event.event);
-        this.isLoading.set(false);
-        return;
-      }
-    } catch (error) {
-      this.logger.error('Error loading article:', error);
-      this.error.set('Failed to load article');
-    } finally {
-      this.isLoading.set(false);
-      // Scroll to top after article loads (whether successful or not) - use panel-aware scrolling
-      const panel = this.isInRightPanel() ? 'right' : 'left';
-      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
-    }
-  }
-
-  // Computed properties for parsed event data
   title = computed(() => {
     const ev = this.event();
     if (!ev) return '';
     return this.utilities.getTagValues('title', ev.tags)[0] || '';
   });
 
-  image = computed(() => {
+  authorPubkey = computed(() => {
     const ev = this.event();
-    if (!ev) return '';
-    return this.utilities.getTagValues('image', ev.tags)[0] || '';
+    return ev?.pubkey || '';
   });
 
   summary = computed(() => {
@@ -592,12 +115,24 @@ export class ArticleComponent implements OnDestroy {
     return this.utilities.getTagValues('summary', ev.tags)[0] || '';
   });
 
+  image = computed(() => {
+    const ev = this.event();
+    if (!ev) return '';
+    return this.utilities.getTagValues('image', ev.tags)[0] || '';
+  });
+
+  hashtags = computed(() => {
+    const ev = this.event();
+    if (!ev) return [];
+    return this.utilities.getTagValues('t', ev.tags);
+  });
+
   publishedAt = computed(() => {
     const ev = this.event();
     if (!ev) return null;
     const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
     if (publishedAtTag) {
-      return new Date(parseInt(publishedAtTag) * 1000);
+      return new Date(parseInt(publishedAtTag, 10) * 1000);
     }
     return new Date(ev.created_at * 1000);
   });
@@ -607,143 +142,150 @@ export class ArticleComponent implements OnDestroy {
     if (!ev) return 0;
     const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
     if (publishedAtTag) {
-      return parseInt(publishedAtTag);
+      return parseInt(publishedAtTag, 10);
     }
     return ev.created_at;
   });
 
-  hashtags = computed(() => {
-    const ev = this.event();
-    if (!ev) return [];
-    return this.utilities.getTagValues('t', ev.tags);
-  });
-
-  content = computed(() => {
-    const ev = this.event();
-    if (!ev) return '';
-    try {
-      // Try to parse as JSON first, fall back to raw content
-      const parsed = JSON.parse(ev.content);
-      return typeof parsed === 'string' ? parsed : ev.content;
-    } catch {
-      return ev.content;
-    }
-  });
-
-  // Signal to hold the parsed markdown content
-  private _parsedContent = signal<SafeHtml>('');
-
-  // JSON content signals
-  isJsonContent = signal<boolean>(false);
-  jsonData = signal<Record<string, unknown> | unknown[] | null>(null);
-
-  // Content loading state
-  contentLoading = signal<boolean>(false);
-
-  // Computed property that returns the parsed content signal value
-  parsedContent = computed(() => this._parsedContent()); // Effect to handle async content parsing
-
-  private parseContentEffect = effect(async () => {
-    const content = this.content();
-    if (!content) {
-      this._parsedContent.set('');
-      this.isJsonContent.set(false);
-      this.jsonData.set(null);
-      this.contentLoading.set(false);
-      return;
-    }
-
-    // Check if content is JSON
-    const jsonResult = this.tryParseJson(content);
-    if (jsonResult.isJson) {
-      this.isJsonContent.set(true);
-      this.jsonData.set(jsonResult.data);
-      this._parsedContent.set(''); // Clear markdown content
-      this.contentLoading.set(false);
-      return;
-    }
-
-    this.isJsonContent.set(false);
-    this.jsonData.set(null);
-    this.contentLoading.set(true);
-    this._parsedContent.set(await this.formatService.markdownToHtml(content));
-    this.contentLoading.set(false);
-
-    // Set up image click listeners after content is rendered
-    setTimeout(() => {
-      this.setupImageClickListeners();
-    }, 0);
-  });
-
-  // Computed property to create ArticleData for ArticleDisplayComponent
   articleData = computed<ArticleData>(() => ({
     event: this.event(),
     title: this.title(),
-    summary: this.translatedSummary() || this.summary(),
+    summary: this.summary(),
     image: this.image(),
-    publishedAt: this.publishedAt(),
-    publishedAtTimestamp: this.publishedAtTimestamp(),
-    hashtags: this.hashtags(),
-    authorPubkey: this.authorPubkey(),
-    isJsonContent: this.isJsonContent(),
-    jsonData: this.jsonData(),
     parsedContent: this.parsedContent(),
     contentLoading: this.contentLoading(),
-    id: this.id(),
+    hashtags: this.hashtags(),
+    authorPubkey: this.authorPubkey(),
+    publishedAt: this.publishedAt(),
+    publishedAtTimestamp: this.publishedAtTimestamp(),
     link: this.link,
+    id: this.id(),
+    isJsonContent: false,
+    jsonData: null,
   }));
 
-  authorPubkey = computed(() => {
-    const ev = this.event();
-    return ev?.pubkey || '';
-  });
+  constructor() {
+    effect(() => {
+      const naddrValue = this.naddr();
+      const eventValue = this.articleEvent();
+      if (!naddrValue) return;
 
-  formatLocalDate(date: Date | null): string {
-    if (!date) return '';
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      if (eventValue) {
+        const shouldUseInputEvent = naddrValue.startsWith('naddr1')
+          ? this.matchesRequestedAddress(eventValue, naddrValue)
+          : !!this.getDTag(eventValue);
+
+        if (!shouldUseInputEvent) {
+          void this.loadAddressableEvent(naddrValue);
+          return;
+        }
+
+        this.event.set(eventValue);
+        this.link = naddrValue;
+        return;
+      }
+
+      void this.loadAddressableEvent(naddrValue);
     });
+
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
+      const addrParam = params.get('id');
+      if (!addrParam || this.naddr()) return;
+
+      void this.loadAddressableEvent(addrParam, params);
+      const panel = this.isInRightPanel() ? 'right' : 'left';
+      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
+    });
+
+    effect(() => {
+      const ev = this.event();
+      if (!ev || ev.kind !== kinds.LongFormArticle) {
+        this.parsedContent.set('');
+        this.contentLoading.set(false);
+        return;
+      }
+
+      void this.parseArticleContent(ev.content || '');
+    });
+  }
+
+  private async parseArticleContent(content: string): Promise<void> {
+    this.contentLoading.set(true);
+    try {
+      const html = await this.formatService.markdownToHtml(content);
+      this.parsedContent.set(html);
+    } catch (error) {
+      this.logger.error('Error parsing article content:', error);
+      this.parsedContent.set('');
+    } finally {
+      this.contentLoading.set(false);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+  }
+
+  isInRightPanel(): boolean {
+    return this.route.outlet === 'right';
+  }
+
+  goBack(): void {
+    if (this.rightPanel.canGoBack()) {
+      this.rightPanel.goBack();
+      return;
+    }
+
+    if (this.isInRightPanel()) {
+      this.panelNav.goBackRight();
+      return;
+    }
+
+    if (this.panelNav.canGoBackLeft()) {
+      this.panelNav.goBackLeft();
+    } else {
+      this.router.navigate(['/f']);
+    }
+  }
+
+  bookmarkArticle(): void {
+    this.bookmark.toggleBookmark(this.id(), 'a');
   }
 
   retryLoad(): void {
     const addrParam = this.route.snapshot.paramMap.get('id');
-    if (addrParam) {
-      this.loadArticle(addrParam);
-    }
+    if (!addrParam) return;
+    void this.loadAddressableEvent(addrParam);
   }
 
-  async shareArticle() {
+  async shareArticle(): Promise<void> {
     const event = this.event();
     if (!event) return;
 
-    // Parse title and summary from the Nostr event tags
     const title = this.title();
-    const summary = this.summary();
-    const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
-    const image = this.image();
+    const summary = this.utilities.getTagValues('summary', event.tags)[0] || undefined;
+    const identifier = this.slug();
+    const image = this.utilities.getTagValues('image', event.tags)[0] || undefined;
 
     await this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
     const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
     const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
     const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
+
     const dialogData: ShareArticleDialogData = {
-      title: title || 'Nostr Article',
-      summary: summary || undefined,
-      image: image || undefined,
+      title: title || 'Nostr Event',
+      summary,
+      image,
       url: window.location.href,
       eventId: event.id,
       pubkey: event.pubkey,
-      identifier: identifier,
+      identifier,
       kind: event.kind,
       encodedId,
       event,
       naddr: this.naddr() || this.link || nip19.naddrEncode({
-        identifier: identifier,
+        identifier,
         pubkey: event.pubkey,
         kind: event.kind,
         relays: relayHints,
@@ -760,627 +302,189 @@ export class ArticleComponent implements OnDestroy {
     });
   }
 
-  private setupImageClickListeners(): void {
-    // Find all images in the article content
-    const articleContent = document.querySelector('.markdown-content');
-    if (!articleContent) return;
-
-    const images = articleContent.querySelectorAll('img.article-image');
-    images.forEach(img => {
-      const imageElement = img as HTMLImageElement;
-
-      // Remove the inline onclick attribute
-      imageElement.removeAttribute('onclick');
-
-      // Add click event listener to open image dialog
-      imageElement.addEventListener('click', (event: MouseEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        this.openImageDialog(imageElement.src);
-      });
-
-      // Ensure cursor pointer style is applied
-      imageElement.style.cursor = 'pointer';
-    });
+  scrollToComments(): void {
+    const commentsSection = document.getElementById('article-comments');
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
-  private setupLinkClickListeners(): void {
-    // Find all external links in the article content
-    const articleContent = document.querySelector('.markdown-content');
-    if (!articleContent) return;
+  private isAddressableFormat(value: string): boolean {
+    const parts = value.split(':');
+    if (parts.length < 3) return false;
 
-    const links = articleContent.querySelectorAll('a.external-link');
-    links.forEach(link => {
-      const linkElement = link as HTMLAnchorElement;
+    const kind = parseInt(parts[0], 10);
+    if (isNaN(kind) || kind <= 0) return false;
 
-      // Add click event listener to potentially handle internally
-      linkElement.addEventListener('click', (event: MouseEvent) => {
-        const handled = this.externalLinkHandler.handleLinkClick(linkElement.href, event);
-
-        if (handled) {
-          // Prevent default navigation if we handled it internally
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        // Otherwise, let the browser handle it (open in new tab)
-      });
-    });
+    const pubkey = parts[1];
+    return /^[0-9a-fA-F]{64}$/.test(pubkey);
   }
 
-  private openImageDialog(imageUrl: string): void {
-    this.dialog.open(MediaPreviewDialogComponent, {
-      data: {
-        mediaItems: [{ url: imageUrl, type: 'image/jpeg', title: 'Article image' }],
-        initialIndex: 0,
-      },
-      maxWidth: '100vw',
-      maxHeight: '100vh',
-      width: '100vw',
-      height: '100vh',
-      panelClass: 'image-dialog-panel',
-    });
+  private getDTag(event: Event): string {
+    return event.tags.find(tag => tag[0] === 'd')?.[1] || '';
   }
 
-  /**
-   * Try to parse content as JSON
-   */
-  private tryParseJson(content: string): { isJson: boolean; data: Record<string, unknown> | unknown[] | null } {
+  private matchesRequestedAddress(event: Event, encodedAddress: string): boolean {
     try {
-      const trimmed = content.trim();
-      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-        return { isJson: false, data: null };
-      }
+      const decoded = this.utilities.decode(encodedAddress);
+      if (decoded.type !== 'naddr') return false;
 
-      const parsed = JSON.parse(trimmed);
-      // Only consider objects and arrays as JSON content
-      if (typeof parsed === 'object' && parsed !== null) {
-        return { isJson: true, data: parsed };
-      }
-      return { isJson: false, data: null };
-    } catch {
-      return { isJson: false, data: null };
-    }
-  }
-
-  /**
-   * Get keys from an object for template iteration
-   */
-  getObjectKeys(obj: unknown): string[] {
-    if (!obj || typeof obj !== 'object') return [];
-    return Object.keys(obj);
-  }
-
-  /**
-   * Get value from object by key
-   */
-  getObjectValue(obj: unknown, key: string): unknown {
-    if (!obj || typeof obj !== 'object') return null;
-    return (obj as Record<string, unknown>)[key];
-  }
-
-  /**
-   * Format JSON value for display
-   */
-  formatJsonValue(value: unknown): string {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    if (Array.isArray(value)) return `Array(${value.length})`;
-    if (typeof value === 'object') return 'Object';
-    return String(value);
-  }
-
-  /**
-   * Check if value is a primitive (string, number, boolean, null)
-   */
-  isPrimitive(value: unknown): boolean {
-    return value === null ||
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean';
-  }
-
-  /**
-   * Stringify complex values (objects/arrays) for display
-   */
-  stringifyValue(value: unknown): string {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return String(value);
-    }
-  }
-
-  /**
-   * Toggle between play and pause
-   */
-  toggleSpeech() {
-    if (this.isSpeaking()) {
-      if (this.isPaused()) {
-        this.resumeSpeech();
-      } else {
-        this.pauseSpeech();
-      }
-    } else {
-      this.startSpeech();
-    }
-  }
-
-  async startSpeech() {
-    const articleContent = this.event()?.content;
-    if (!articleContent) return;
-
-    // Strip markdown/html for speech
-    const textToSpeak = this.stripMarkdown(articleContent);
-
-    if (this.useAiVoice()) {
-      await this.startAiSpeech(textToSpeak);
-    } else {
-      this.startNativeSpeech(textToSpeak);
-    }
-  }
-
-  async startAiSpeech(text: string) {
-    this.isSynthesizing.set(true);
-    try {
-      // Check if model is loaded
-      const status = await this.aiService.checkModel('text-to-speech', 'Xenova/speecht5_tts');
-      if (!status.loaded) {
-        // Prompt user or auto-load? For now auto-load with notification
-        // Ideally we should show a dialog or toast
-        await this.aiService.loadModel('text-to-speech', 'Xenova/speecht5_tts');
-      }
-
-      // Split text into chunks if too long?
-      // For now, just try the first 500 chars as a demo/limit
-      const chunk = text.slice(0, 500);
-
-      const result = await this.aiService.synthesizeSpeech(chunk, {
-        speaker_embeddings: 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin'
-      }) as { audio: Float32Array, sampling_rate: number };
-
-      if (result && result.audio) {
-        this.playAudio(result.audio, result.sampling_rate);
-        this.isSpeaking.set(true);
-        this.isPaused.set(false);
-      }
-    } catch (err) {
-      this.logger.error('AI Speech error:', err);
-      // Fallback to native?
-      this.startNativeSpeech(text);
-    } finally {
-      this.isSynthesizing.set(false);
-    }
-  }
-
-  playAudio(audioData: Float32Array, sampleRate: number) {
-    const audioContext = new AudioContext();
-    const buffer = audioContext.createBuffer(1, audioData.length, sampleRate);
-    buffer.copyToChannel(new Float32Array(audioData), 0);
-
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start();
-
-    source.onended = () => {
-      this.stopSpeech();
-    };
-
-    // Store context/source to stop later if needed
-    // For simplicity in this demo, we just play it.
-    // To implement pause/resume with Web Audio API is more complex.
-  }
-
-  startNativeSpeech(text: string) {
-    if (!this.speechSynthesis) return;
-
-    this.stopSpeech();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    // Apply selected voice
-    const voice = this.selectedVoice();
-    if (voice) {
-      utterance.voice = voice;
-    }
-
-    // Apply playback rate
-    utterance.rate = this.playbackRate();
-
-    utterance.onend = () => {
-      this.isSpeaking.set(false);
-      this.isPaused.set(false);
-    };
-
-    this.currentUtterance = utterance;
-    this.speechSynthesis.speak(utterance);
-    this.isSpeaking.set(true);
-    this.isPaused.set(false);
-  }
-
-  /**
-   * Load available speech synthesis voices
-   */
-  private loadVoices() {
-    if (!this.speechSynthesis) return;
-
-    const voices = this.speechSynthesis.getVoices();
-
-    // Sort voices: natural/online voices first, then by name
-    const sortedVoices = voices.sort((a, b) => {
-      const aIsNatural = a.name.includes('Natural') || a.name.includes('Online');
-      const bIsNatural = b.name.includes('Natural') || b.name.includes('Online');
-
-      if (aIsNatural && !bIsNatural) return -1;
-      if (!aIsNatural && bIsNatural) return 1;
-
-      return a.name.localeCompare(b.name);
-    });
-
-    this.availableVoices.set(sortedVoices);
-
-    // Restore saved playback rate
-    const savedRate = localStorage.getItem('tts-playback-rate');
-    if (savedRate) {
-      const rate = parseFloat(savedRate);
-      if (!isNaN(rate) && rate >= 0.5 && rate <= 2) {
-        this.playbackRate.set(rate);
-      }
-    }
-
-    // Set default voice if not already selected
-    if (!this.selectedVoice() && sortedVoices.length > 0) {
-      // Try to restore previously selected voice from localStorage
-      const savedVoiceName = localStorage.getItem('tts-selected-voice');
-      if (savedVoiceName) {
-        const savedVoice = sortedVoices.find(v => v.name === savedVoiceName);
-        if (savedVoice) {
-          this.selectedVoice.set(savedVoice);
-          return;
-        }
-      }
-
-      // Try to find a natural English voice as default
-      const naturalEnglish = sortedVoices.find(
-        v => (v.name.includes('Natural') || v.name.includes('Online')) && v.lang.startsWith('en')
+      const requested = decoded.data as { kind: number; pubkey: string; identifier: string };
+      return (
+        event.kind === requested.kind &&
+        event.pubkey === requested.pubkey &&
+        this.getDTag(event) === requested.identifier
       );
-      if (naturalEnglish) {
-        this.selectedVoice.set(naturalEnglish);
-      } else {
-        // Fall back to first English voice or first voice
-        const englishVoice = sortedVoices.find(v => v.lang.startsWith('en'));
-        this.selectedVoice.set(englishVoice || sortedVoices[0]);
-      }
+    } catch {
+      return false;
     }
   }
 
-  /**
-   * Handle voice selection change
-   */
-  onVoiceChange(voice: SpeechSynthesisVoice) {
-    this.selectedVoice.set(voice);
+  async loadAddressableEvent(naddr: string, params?: ParamMap): Promise<void> {
+    const receivedData = (history.state?.articleEvent || history.state?.event) as Event | undefined;
 
-    // Save to localStorage for persistence
-    localStorage.setItem('tts-selected-voice', voice.name);
+    let pubkey = '';
+    let slug = '';
+    let addressKind = kinds.LongFormArticle;
 
-    // If currently speaking, restart with new voice
-    if (this.isSpeaking() && !this.useAiVoice()) {
-      const text = this.stripMarkdown(this.content() || '');
-      this.startNativeSpeech(text);
-    }
-  }
+    if (receivedData) {
+      const hasAddressData = !!this.getDTag(receivedData);
+      const shouldUseReceivedData = naddr.startsWith('naddr1')
+        ? hasAddressData && this.matchesRequestedAddress(receivedData, naddr)
+        : hasAddressData;
 
-  /**
-   * Handle playback rate change
-   */
-  onPlaybackRateChange(rate: number) {
-    this.playbackRate.set(rate);
-
-    // Save to localStorage for persistence
-    localStorage.setItem('tts-playback-rate', rate.toString());
-
-    // If currently speaking with native voice, update rate
-    if (this.currentUtterance && this.isSpeaking() && !this.useAiVoice()) {
-      // Need to restart speech to apply new rate
-      const text = this.stripMarkdown(this.content() || '');
-      this.startNativeSpeech(text);
-    }
-  }
-
-  pauseSpeech() {
-    if (this.useAiVoice()) {
-      // Web Audio API pause not implemented in this simple version
-      this.stopSpeech();
-    } else {
-      if (this.speechSynthesis) {
-        this.speechSynthesis.pause();
-        this.isPaused.set(true);
-      }
-    }
-  }
-
-  resumeSpeech() {
-    if (this.useAiVoice()) {
-      // Not implemented
-    } else {
-      if (this.speechSynthesis) {
-        this.speechSynthesis.resume();
-        this.isPaused.set(false);
-      }
-    }
-  }
-
-  stopSpeech() {
-    if (this.speechSynthesis) {
-      this.speechSynthesis.cancel();
-    }
-    // Stop Web Audio if playing
-
-    this.isSpeaking.set(false);
-    this.isPaused.set(false);
-    this.currentUtterance = null;
-  }
-
-  /**
-   * Translate content to target language
-   */
-  async onTranslate(targetLang: string) {
-    if (this.isTranslating()) return;
-    this.isTranslating.set(true);
-
-    try {
-      const model = 'Xenova/nllb-200-distilled-600M';
-      const status = await this.aiService.checkModel('translation', model);
-      if (!status.loaded) {
-        await this.aiService.loadModel('translation', model);
-      }
-
-      // Translate summary or first part of content
-      const text = this.stripMarkdown(this.content() || '').slice(0, 500);
-
-      // In a real app, we would detect language or let user choose
-      const result = await this.aiService.translateText(text, model, {
-        src_lang: 'eng_Latn', // Assuming English source for now
-        tgt_lang: targetLang
-      });
-
-      if (Array.isArray(result) && result.length > 0) {
-        const translated = (result[0] as { translation_text: string }).translation_text;
-        this.translatedSummary.set(translated);
-      }
-
-    } catch (err) {
-      this.logger.error('Translation error', err);
-    } finally {
-      this.isTranslating.set(false);
-    }
-  }
-
-  stripMarkdown(text: string): string {
-    // Basic markdown stripping
-    return text
-      .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images
-      .replace(/\[.*?\]\(.*?\)/g, '$1') // Remove links but keep text
-      .replace(/#{1,6}\s/g, '') // Remove headers
-      .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold
-      .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italic
-      .replace(/`{3}[\s\S]*?`{3}/g, '') // Remove code blocks
-      .replace(/`(.+?)`/g, '$1') // Remove inline code
-      .replace(/>\s/g, '') // Remove blockquotes
-      .replace(/\n+/g, '. '); // Replace newlines with periods for better pausing
-  }
-
-  /**
-   * Load all event interactions (reactions, reposts, quotes) in a single optimized query
-   */
-  async loadAllInteractions(ev: Event, invalidateCache = false) {
-    const targetEventId = ev.id;
-    const eventAuthorPubkey = ev.pubkey;
-
-    try {
-      const [interactions, quotesResult] = await Promise.all([
-        this.eventService.loadEventInteractions(
-          targetEventId,
-          ev.kind,
-          eventAuthorPubkey,
-          invalidateCache,
-          true // skipReplies - articles handle replies differently
-        ),
-        this.eventService.loadQuotes(
-          targetEventId,
-          eventAuthorPubkey,
-          invalidateCache
-        )
-      ]);
-
-      // Verify we're still showing the same event before updating state
-      const currentEvent = this.event();
-      if (currentEvent?.id !== targetEventId) {
-        return;
-      }
-
-      // Filter out interactions from muted accounts
-      const mutedAccounts = this.accountState.mutedAccounts();
-
-      const filteredReactionEvents = interactions.reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
-      const filteredReactionData = new Map<string, number>();
-      for (const event of filteredReactionEvents) {
-        const emoji = event.event.content || '+';
-        filteredReactionData.set(emoji, (filteredReactionData.get(emoji) || 0) + 1);
-      }
-
-      const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
-      const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
-
-      this.reactions.set({
-        events: filteredReactionEvents,
-        data: filteredReactionData
-      });
-      this.reposts.set(filteredReposts);
-      this.quotes.set(filteredQuotes);
-      this.replyCount.set(interactions.replyCount);
-    } catch (error) {
-      this.logger.error('Error loading article interactions:', error);
-    }
-  }
-
-  /**
-   * Load reactions for the article (used after user reacts to refresh)
-   */
-  async loadReactions(invalidateCache = false) {
-    const ev = this.event();
-    if (!ev) return;
-
-    try {
-      const reactions = await this.eventService.loadReactions(
-        ev.id,
-        ev.pubkey,
-        invalidateCache
-      );
-
-      const mutedAccounts = this.accountState.mutedAccounts();
-      const filteredEvents = reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
-
-      const filteredData = new Map<string, number>();
-      for (const event of filteredEvents) {
-        const emoji = event.event.content || '+';
-        filteredData.set(emoji, (filteredData.get(emoji) || 0) + 1);
-      }
-
-      this.reactions.set({
-        events: filteredEvents,
-        data: filteredData
-      });
-    } catch (error) {
-      this.logger.error('Error loading article reactions:', error);
-    }
-  }
-
-  /**
-   * Load zaps for the article
-   */
-  async loadZaps(ev: Event) {
-    const targetEventId = ev.id;
-
-    try {
-      const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
-
-      // Verify we're still showing the same event before updating state
-      const currentEvent = this.event();
-      if (currentEvent?.id !== targetEventId) {
-        return;
-      }
-
-      const parsedZaps: ZapInfo[] = [];
-
-      for (const receipt of zapReceipts) {
-        const parsed = this.zapService.parseZapReceipt(receipt);
-        if (parsed.zapRequest && parsed.amount) {
-          parsedZaps.push({
-            receipt,
-            zapRequest: parsed.zapRequest,
-            amount: parsed.amount,
-            comment: parsed.comment,
-            senderName: parsed.zapRequest.pubkey,
-            senderPubkey: parsed.zapRequest.pubkey,
-            timestamp: receipt.created_at,
+      if (shouldUseReceivedData) {
+        addressKind = receivedData.kind;
+        this.link = naddr.startsWith('naddr1')
+          ? naddr
+          : nip19.naddrEncode({
+            identifier: this.getDTag(receivedData),
+            kind: receivedData.kind,
+            pubkey: receivedData.pubkey,
           });
+        this.event.set(receivedData);
+        this.isLoading.set(false);
+        const panel = this.isInRightPanel() ? 'right' : 'left';
+        setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 50);
+        return;
+      }
+    }
+
+    if (naddr.startsWith('naddr1')) {
+      this.link = naddr;
+
+      const decoded = this.utilities.decode(naddr);
+      if (decoded.type !== 'naddr') {
+        this.error.set('Invalid address format');
+        return;
+      }
+
+      const addrData = decoded.data as {
+        pubkey: string;
+        identifier: string;
+        kind: number;
+        relays?: string[];
+      };
+
+      addressKind = addrData.kind;
+      pubkey = addrData.pubkey;
+      slug = addrData.identifier;
+
+      if (addrData.relays && addrData.relays.length > 0) {
+        try {
+          this.isLoading.set(true);
+          const relayEvent = await this.relayPool.get(
+            addrData.relays,
+            {
+              authors: [addrData.pubkey],
+              kinds: [addrData.kind],
+              '#d': [addrData.identifier],
+            },
+            2000,
+          );
+
+          if (relayEvent) {
+            this.event.set(relayEvent);
+            this.isLoading.set(false);
+            return;
+          }
+        } catch {
+          // Continue with normal loading flow
         }
       }
+    } else if (this.isAddressableFormat(naddr)) {
+      const parts = naddr.split(':');
+      addressKind = parseInt(parts[0], 10);
+      pubkey = parts[1];
+      slug = parts.slice(2).join(':');
 
-      this.zaps.set(parsedZaps);
-    } catch (error) {
-      this.logger.error('Error loading article zaps:', error);
+      this.link = nip19.naddrEncode({
+        identifier: slug,
+        kind: addressKind,
+        pubkey,
+      });
+
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      this.url.updatePathSilently(['/a', npub, slug]);
+    } else {
+      const slugParam = params?.get('slug') || this.route.snapshot.paramMap.get('slug');
+      if (!slugParam) {
+        this.error.set('Missing address identifier');
+        return;
+      }
+
+      slug = slugParam;
+      const articleData = this.route.snapshot.data['article'];
+      if (articleData?.pubkey) {
+        pubkey = articleData.pubkey;
+      } else {
+        pubkey = this.utilities.getPubkeyFromNpub(naddr);
+        const npub = this.utilities.getNpubFromPubkey(pubkey);
+        this.url.updatePathSilently(['/a', npub, slug]);
+      }
+
+      this.link = nip19.naddrEncode({
+        identifier: slug,
+        kind: addressKind,
+        pubkey,
+      });
     }
-  }
-
-  /**
-   * Handler for when a zap is successfully sent from the zap button.
-   */
-  async onZapSent(amount: number): Promise<void> {
-    this.logger.debug('[Zap Sent] Received zap sent event for amount:', amount);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const ev = this.event();
-      if (ev) {
-        await this.loadZaps(ev);
+      this.isLoading.set(true);
+      this.error.set(null);
+
+      const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
+      let loadedRecord: NostrRecord | null;
+
+      if (isNotCurrentUser) {
+        loadedRecord = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          addressKind,
+          slug,
+          { save: false, cache: false },
+        );
+      } else {
+        loadedRecord = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          addressKind,
+          slug,
+          { save: false, cache: false },
+        );
+      }
+
+      if (loadedRecord) {
+        this.event.set(loadedRecord.event);
+      } else {
+        this.error.set('Event not found');
       }
     } catch (error) {
-      this.logger.error('Error reloading zaps after send:', error);
+      this.logger.error('Error loading addressable event:', error);
+      this.error.set('Failed to load event');
+    } finally {
+      this.isLoading.set(false);
+      const panel = this.isInRightPanel() ? 'right' : 'left';
+      setTimeout(() => this.layout.scrollLayoutToTop(true, panel), 100);
     }
-  }
-
-  /**
-   * Toggle the reactions summary panel visibility
-   */
-  toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
-    const isCurrentlyVisible = this.showReactionsSummary();
-    const resolvedTab = this.resolveTabWithData(tab);
-    const currentTab = this.reactionsSummaryTab();
-
-    if (isCurrentlyVisible && currentTab === resolvedTab) {
-      this.showReactionsSummary.set(false);
-    } else {
-      this.reactionsSummaryTab.set(resolvedTab);
-      this.showReactionsSummary.set(true);
-    }
-  }
-
-  private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
-    const tabHasData: Record<string, () => boolean> = {
-      reactions: () => this.likes().length > 0,
-      reposts: () => this.repostCount() > 0,
-      quotes: () => this.quoteCount() > 0,
-      zaps: () => this.zapCount() > 0,
-    };
-
-    if (tabHasData[preferredTab]()) {
-      return preferredTab;
-    }
-
-    const tabs: ('reactions' | 'reposts' | 'quotes' | 'zaps')[] = ['reactions', 'reposts', 'quotes', 'zaps'];
-    return tabs.find(t => tabHasData[t]()) ?? preferredTab;
-  }
-
-  /**
-   * Format zap amount for display
-   */
-  formatZapAmount(amount: number): string {
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(1)}M`;
-    }
-    if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(1)}K`;
-    }
-    return amount.toLocaleString();
-  }
-
-  /**
-   * Open the reply editor for this article (uses comment mode for addressable events)
-   */
-  async openReplyEditor(event: MouseEvent) {
-    event.stopPropagation();
-    const ev = this.event();
-    if (!ev) return;
-
-    const userPubkey = this.accountState.pubkey();
-    const currentAccount = this.accountState.account();
-    if (!userPubkey || currentAccount?.source === 'preview') {
-      await this.layout.showLoginDialog();
-      return;
-    }
-
-    this.eventService.createComment(ev);
-  }
-
-  /**
-   * Handle bookmark button click in footer
-   */
-  onBookmarkClick(event: MouseEvent) {
-    event.stopPropagation();
-    this.bookmarkArticle();
   }
 }

@@ -14,7 +14,6 @@ import { SafeHtml } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
-import { RepostButtonComponent } from '../event/repost-button/repost-button.component';
 import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
 import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
@@ -71,7 +70,6 @@ interface TopZapper {
     RouterModule,
     UserProfileComponent,
     DateToggleComponent,
-    RepostButtonComponent,
     ReactionButtonComponent,
     ZapButtonComponent,
     EventMenuComponent,
@@ -225,11 +223,35 @@ export class ArticleDisplayComponent {
   reactionCount = signal<number>(0);
   commentCount = signal<number>(0);
   zapTotal = signal<number>(0);
+  zapCountInternal = signal<number>(0);
   topZappers = signal<TopZapper[]>([]);
   engagementLoading = signal<boolean>(false);
+  internalReactions = signal<ReactionEvents>({ events: [], data: new Map() });
+  internalZaps = signal<ZapInfo[]>([]);
 
   // Reaction footer computed properties
-  likes = computed<NostrRecord[]>(() => this.reactions().events);
+  effectiveReactions = computed<ReactionEvents>(() => {
+    const parentReactions = this.reactions();
+    if (parentReactions.events.length > 0) {
+      return parentReactions;
+    }
+    return this.internalReactions();
+  });
+
+  likes = computed<NostrRecord[]>(() => this.effectiveReactions().events);
+
+  effectiveZaps = computed<ZapInfo[]>(() => {
+    const parentZaps = this.zapsInput();
+    if (parentZaps.length > 0) {
+      return parentZaps;
+    }
+    return this.internalZaps();
+  });
+
+  effectiveReplyCount = computed<number>(() => {
+    const parentCount = this.replyCountInput();
+    return parentCount > 0 ? parentCount : this.commentCount();
+  });
 
   topEmojis = computed<{ emoji: string; url?: string; count: number }[]>(() => {
     const reactions = this.likes();
@@ -265,8 +287,17 @@ export class ArticleDisplayComponent {
       .slice(0, 3);
   });
 
-  totalZapAmount = computed<number>(() => this.zapsInput().reduce((total, zap) => total + (zap.amount || 0), 0));
-  zapCount = computed<number>(() => this.zapsInput().length);
+  totalZapAmount = computed<number>(() => {
+    const zaps = this.effectiveZaps();
+    if (zaps.length === 0) {
+      return this.zapTotal();
+    }
+    return zaps.reduce((total, zap) => total + (zap.amount || 0), 0);
+  });
+  zapCount = computed<number>(() => {
+    const zaps = this.effectiveZaps();
+    return zaps.length > 0 ? zaps.length : this.zapCountInternal();
+  });
   repostCount = computed<number>(() => this.repostsInput().length);
   quoteCount = computed<number>(() => this.quotesInput().length);
   shareCount = computed<number>(() => this.repostCount() + this.quoteCount());
@@ -370,15 +401,18 @@ export class ArticleDisplayComponent {
 
     try {
       // Load reactions, comments, and zaps in parallel
-      const [reactionCount, commentCount, zapData] = await Promise.all([
-        this.loadReactionCount(event),
+      const [reactionData, commentCount, zapData] = await Promise.all([
+        this.loadReactionData(event),
         this.loadCommentCount(event),
         this.loadZaps(event),
       ]);
 
-      this.reactionCount.set(reactionCount);
+      this.internalReactions.set(reactionData);
+      this.reactionCount.set(reactionData.events.length);
       this.commentCount.set(commentCount);
       this.zapTotal.set(zapData.total);
+      this.zapCountInternal.set(zapData.count);
+      this.internalZaps.set(zapData.zaps);
       this.topZappers.set(zapData.topZappers);
     } catch (err) {
       this.logger.error('Failed to load engagement metrics:', err);
@@ -387,13 +421,12 @@ export class ArticleDisplayComponent {
     }
   }
 
-  private async loadReactionCount(event: Event): Promise<number> {
+  private async loadReactionData(event: Event): Promise<ReactionEvents> {
     try {
-      const reactions = await this.eventService.loadReactions(event.id, event.pubkey);
-      return reactions.events.length;
+      return await this.eventService.loadReactions(event.id, event.pubkey);
     } catch (err) {
       this.logger.error('Failed to load reactions for article:', err);
-      return 0;
+      return { events: [], data: new Map() };
     }
   }
 
@@ -418,14 +451,15 @@ export class ArticleDisplayComponent {
     }
   }
 
-  private async loadZaps(event: Event): Promise<{ total: number; topZappers: TopZapper[] }> {
+  private async loadZaps(event: Event): Promise<{ total: number; count: number; topZappers: TopZapper[]; zaps: ZapInfo[] }> {
     try {
       const zapReceipts = await this.zapService.getZapsForEvent(event.id);
       let total = 0;
       const zapperAmounts = new Map<string, number>();
+      const zaps: ZapInfo[] = [];
 
       for (const receipt of zapReceipts) {
-        const { zapRequest, amount } = this.zapService.parseZapReceipt(receipt);
+        const { zapRequest, amount, comment } = this.zapService.parseZapReceipt(receipt);
         if (amount) {
           total += amount;
 
@@ -434,6 +468,15 @@ export class ArticleDisplayComponent {
             const zapperPubkey = zapRequest.pubkey;
             const current = zapperAmounts.get(zapperPubkey) || 0;
             zapperAmounts.set(zapperPubkey, current + amount);
+
+            zaps.push({
+              receipt,
+              zapRequest,
+              amount,
+              comment,
+              senderPubkey: zapRequest.pubkey,
+              timestamp: receipt.created_at,
+            });
           }
         }
       }
@@ -444,11 +487,29 @@ export class ArticleDisplayComponent {
         .slice(0, 3)
         .map(([pubkey, amount]) => ({ pubkey, amount }));
 
-      return { total, topZappers };
+      return { total, count: zapReceipts.length, topZappers, zaps };
     } catch (err) {
       this.logger.error('Failed to load zaps for article:', err);
-      return { total: 0, topZappers: [] };
+      return { total: 0, count: 0, topZappers: [], zaps: [] };
     }
+  }
+
+  onReactionChanged(): void {
+    this.reactionChanged.emit();
+    const currentEvent = this.event();
+    if (!currentEvent || this.mode() !== 'full') {
+      return;
+    }
+    void this.loadEngagementMetrics(currentEvent);
+  }
+
+  onZapSent(amount: number): void {
+    this.zapSent.emit(amount);
+    const currentEvent = this.event();
+    if (!currentEvent || this.mode() !== 'full') {
+      return;
+    }
+    void this.loadEngagementMetrics(currentEvent);
   }
 
   /**

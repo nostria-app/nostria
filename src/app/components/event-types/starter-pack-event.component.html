@@ -1,3 +1,22 @@
+@if (mode() === 'compact') {
+<mat-card class="starter-pack-compact" (click)="openStarterPack()" (keydown.enter)="openStarterPack()"
+  (keydown.space)="openStarterPack()" tabindex="0" role="button" title="Open starter pack"
+  [attr.aria-label]="'Open starter pack'">
+  @if (image()) {
+  <div class="starter-pack-compact-image-wrap">
+    <img [src]="image()" [alt]="title() + ' banner'" [title]="title() + ' banner'" class="starter-pack-compact-image"
+      loading="lazy" />
+  </div>
+  }
+  <div class="starter-pack-compact-content">
+    <h3 class="starter-pack-compact-title">{{ title() }}</h3>
+    <div class="starter-pack-compact-meta">
+      <mat-icon>people</mat-icon>
+      <span>{{ userCount() }} {{ userCount() === 1 ? 'user' : 'users' }}</span>
+    </div>
+  </div>
+</mat-card>
+} @else {
 <div class="starter-pack-container">
   <div class="starter-pack-header">
     <h3 class="starter-pack-title">{{ title() }}</h3>
@@ -51,3 +70,4 @@
     }
   </div>
 </div>
+}

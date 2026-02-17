@@ -29,7 +29,7 @@
   <header class="article-header">
     @if (image()) {
     <div class="article-hero-image">
-      <img [src]="image()" [alt]="title()" [title]="title()" loading="lazy" />
+      <img [src]="image()" [alt]="title()" title="Article image" loading="lazy" />
     </div>
     }
 
@@ -252,8 +252,9 @@
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
-        <app-reaction-button class="action-icon" #reactionBtn [event]="event()!" [reactionsFromParent]="reactions()"
-          (reactionChanged)="reactionChanged.emit()" view="icon"></app-reaction-button>
+        <app-reaction-button class="action-icon" #reactionBtn [event]="event()!"
+          [reactionsFromParent]="effectiveReactions()" (reactionChanged)="onReactionChanged()"
+          view="icon"></app-reaction-button>
         @if (likes().length > 0) {
         <span class="action-count">{{ likes().length }}</span>
         }
@@ -264,8 +265,8 @@
       <div class="action-button comment-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
         (click)="replyClick.emit($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
-        @if (replyCountInput() > 0) {
-        <span class="action-count">{{ replyCountInput() }}</span>
+        @if (effectiveReplyCount() > 0) {
+        <span class="action-count">{{ effectiveReplyCount() }}</span>
         }
         <span class="action-text">Reply</span>
       </div>
@@ -283,7 +284,7 @@
       <!-- Zap with sats -->
       <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
         <app-zap-button class="action-icon" #zapBtn [event]="event()!" [recipientPubkey]="event()!.pubkey"
-          (zapSent)="zapSent.emit($event)">
+          (zapSent)="onZapSent($event)">
         </app-zap-button>
         @if (totalZapAmount() > 0) {
         <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
@@ -305,14 +306,14 @@
         <span class="aggregated-emojis">
           @for (emoji of topEmojis(); track emoji.emoji) {
           @if (emoji.url) {
-          <img [src]="emoji.url" [alt]="emoji.emoji" class="emoji-item custom-emoji" />
+          <img [src]="emoji.url" [alt]="emoji.emoji" title="Custom emoji" class="emoji-item custom-emoji" />
           } @else {
           <span class="emoji-item">{{ emoji.emoji }}</span>
           }
           }
         </span>
         }
-        <mat-icon class="emoji-more">expand_more</mat-icon>
+        <mat-icon class="emoji-more">{{ showReactionsSummary() ? 'expand_less' : 'expand_more' }}</mat-icon>
       </div>
       }
     </div>

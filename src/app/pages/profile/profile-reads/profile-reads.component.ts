@@ -15,21 +15,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { Event, nip19 } from 'nostr-tools';
-import { ReactionButtonComponent } from '../../../components/event/reaction-button/reaction-button.component';
-import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
-import { EventService } from '../../../services/event';
-import { SharedRelayService } from '../../../services/relays/shared-relay';
-import { ZapService } from '../../../services/zap.service';
-import { AccountStateService } from '../../../services/account-state.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
-
-/** Engagement metrics for an article */
-interface ArticleEngagement {
-  reactionCount: number;
-  commentCount: number;
-  zapTotal: number;
-  isLoading: boolean;
-}
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-profile-reads',
@@ -42,14 +30,15 @@ interface ArticleEngagement {
     MatProgressSpinnerModule,
     UserProfileComponent,
     AgoPipe,
-    ReactionButtonComponent,
-    ZapButtonComponent,
   ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileReadsComponent {
+  private readonly INITIAL_RENDER_COUNT = 12;
+  private readonly RENDER_BATCH_SIZE = 12;
+
   isVisible = input(false);
 
   private route = inject(ActivatedRoute);
@@ -60,17 +49,13 @@ export class ProfileReadsComponent {
   bookmark = inject(BookmarkService);
   utilities = inject(UtilitiesService);
   private layoutService = inject(LayoutService);
-  private eventService = inject(EventService);
-  private sharedRelay = inject(SharedRelayService);
-  private zapService = inject(ZapService);
-  private accountState = inject(AccountStateService);
   private userRelaysService = inject(UserRelaysService);
+  private customDialog = inject(CustomDialogService);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
-
-  // Store engagement data per article (keyed by event id)
-  articleEngagement = signal<Map<string, ArticleEngagement>>(new Map());
+  renderCount = signal(this.INITIAL_RENDER_COUNT);
+  visibleArticles = computed(() => this.sortedArticles().slice(0, this.renderCount()));
 
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -84,6 +69,8 @@ export class ProfileReadsComponent {
     effect(() => {
       const currentPubkey = this.profileState.pubkey();
       const currentArticles = this.profileState.articles();
+
+      this.renderCount.set(this.INITIAL_RENDER_COUNT);
 
       // If we have a pubkey but no articles, and we're not already loading, load some articles
       if (currentPubkey && currentArticles.length === 0 && !this.profileState.isLoadingMoreArticles()) {
@@ -99,27 +86,40 @@ export class ProfileReadsComponent {
     // Dynamically uses the correct panel's scroll signal based on where profile is rendered
     effect(() => {
       const isInRightPanel = this.profileState.isInRightPanel();
-      const isAtBottom = isInRightPanel 
-        ? this.layoutService.rightPanelScrolledToBottom() 
+      const isAtBottom = isInRightPanel
+        ? this.layoutService.rightPanelScrolledToBottom()
         : this.layoutService.leftPanelScrolledToBottom();
-      const isReady = isInRightPanel 
-        ? this.layoutService.rightPanelScrollReady() 
+      const isAtTop = isInRightPanel
+        ? this.layoutService.rightPanelScrolledToTop()
+        : this.layoutService.leftPanelScrolledToTop();
+      const isReady = isInRightPanel
+        ? this.layoutService.rightPanelScrollReady()
         : this.layoutService.leftPanelScrollReady();
-      
-      // Only proceed if scroll monitoring is ready and user has scrolled to bottom
-      if (!isReady || !isAtBottom) {
+
+      // Only proceed if scroll monitoring is ready, user reached bottom, and has moved away from top
+      if (!isReady || !isAtBottom || isAtTop) {
         return;
       }
 
       // Use untracked to read state without creating dependencies
       untracked(() => {
         if (this.profileState.isLoadingMoreArticles() || !this.profileState.hasMoreArticles()) {
+          // Even when no more relay data is available, continue expanding render window
+          if (!this.profileState.hasMoreArticles()) {
+            this.expandRenderedWindow();
+          }
           return;
         }
 
         // Apply cooldown to prevent rapid-fire loading
         const now = Date.now();
         if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+          return;
+        }
+
+        // First reveal already-loaded articles from memory before fetching more
+        if (this.expandRenderedWindow()) {
+          this.lastLoadTime = now;
           return;
         }
 
@@ -140,19 +140,6 @@ export class ProfileReadsComponent {
       }
     });
 
-    // Effect to load engagement data when articles change
-    effect(() => {
-      const articles = this.sortedArticles();
-      const currentEngagement = this.articleEngagement();
-
-      // Find articles without engagement data
-      const newArticles = articles.filter(a => !currentEngagement.has(a.event.id));
-
-      if (newArticles.length > 0) {
-        // Load engagement data for new articles
-        this.loadEngagementForArticles(newArticles.map(a => a.event));
-      }
-    });
   }
 
   // Get the pubkey from the parent route
@@ -212,6 +199,11 @@ export class ProfileReadsComponent {
       // Load older articles from the profile state service
       const olderArticles = await this.profileState.loadMoreArticles(oldestTimestamp);
 
+      // Make newly fetched items visible in controlled batches
+      if (olderArticles.length > 0) {
+        this.expandRenderedWindow();
+      }
+
       this.logger.debug(`Loaded ${olderArticles.length} older articles`);
 
       if (olderArticles.length === 0) {
@@ -221,6 +213,18 @@ export class ProfileReadsComponent {
       this.logger.error('Failed to load more articles', err);
       this.error.set('Failed to load older articles. Please try again.');
     }
+  }
+
+  private expandRenderedWindow(): boolean {
+    const total = this.sortedArticles().length;
+    const current = this.renderCount();
+
+    if (current >= total) {
+      return false;
+    }
+
+    this.renderCount.set(Math.min(current + this.RENDER_BATCH_SIZE, total));
+    return true;
   }
 
   /**
@@ -238,6 +242,32 @@ export class ProfileReadsComponent {
   }
 
   /**
+   * Get article summary from summary tag, fallback to content excerpt
+   */
+  getArticleSummary(event: Event): string {
+    const summary = this.utilities.getTagValues('summary', event.tags)[0] || '';
+    if (summary.trim().length > 0) {
+      return summary;
+    }
+
+    const plainContent = event.content
+      .replace(/[#*_`>\[\]()-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return plainContent.slice(0, 180);
+  }
+
+  /**
+   * Estimate reading time based on content length
+   */
+  getReadTime(event: Event): string {
+    const words = event.content.split(/\s+/).filter(Boolean).length;
+    const minutes = Math.max(1, Math.ceil(words / 220));
+    return `${minutes} min read`;
+  }
+
+  /**
    * Open the full article page - passes event through router state for instant rendering
    */
   openArticle(event: Event): void {
@@ -250,14 +280,6 @@ export class ProfileReadsComponent {
       });
       this.layoutService.openArticle(naddr, event);
     }
-  }
-
-  /**
-   * Open comments for an article
-   */
-  openComments(event: Event): void {
-    // Navigate to the article page which shows comments
-    this.openArticle(event);
   }
 
   /**
@@ -278,151 +300,32 @@ export class ProfileReadsComponent {
         kind: event.kind,
         relays: relayHints,
       });
+      const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
       const url = `${window.location.origin}/a/${naddr}`;
 
-      if (navigator.share) {
-        navigator.share({
-          title: title || 'Article',
-          text: `Check out this article on Nostria`,
-          url: url,
-        }).catch(err => this.logger.error('Error sharing article:', err));
-      } else {
-        // Fallback to clipboard - copyToClipboard shows its own snackbar
-        this.layoutService.copyToClipboard(url, 'Article link');
-      }
-    }
-  }
-
-  /**
-   * Load engagement data (comments count, zaps total) for articles
-   */
-  async loadEngagementForArticles(events: Event[]): Promise<void> {
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
-
-    // Initialize loading state for each article
-    const currentEngagement = new Map(this.articleEngagement());
-    for (const event of events) {
-      currentEngagement.set(event.id, {
-        reactionCount: 0,
-        commentCount: 0,
-        zapTotal: 0,
-        isLoading: true,
-      });
-    }
-    this.articleEngagement.set(currentEngagement);
-
-    // Load engagement for each article in parallel
-    const loadPromises = events.map(async (event) => {
-      try {
-        const [reactionCount, commentCount, zapTotal] = await Promise.all([
-          this.loadReactionCount(event, userPubkey),
-          this.loadCommentCount(event, userPubkey),
-          this.loadZapTotal(event),
-        ]);
-
-        // Update engagement data
-        const updated = new Map(this.articleEngagement());
-        updated.set(event.id, {
-          reactionCount,
-          commentCount,
-          zapTotal,
-          isLoading: false,
-        });
-        this.articleEngagement.set(updated);
-      } catch (err) {
-        this.logger.error('Failed to load engagement for article:', event.id, err);
-        // Set loading to false even on error
-        const updated = new Map(this.articleEngagement());
-        updated.set(event.id, {
-          reactionCount: 0,
-          commentCount: 0,
-          zapTotal: 0,
-          isLoading: false,
-        });
-        this.articleEngagement.set(updated);
-      }
-    });
-
-    await Promise.all(loadPromises);
-  }
-
-  /**
-   * Load reaction count for an addressable event (article)
-   */
-  private async loadReactionCount(event: Event, userPubkey: string): Promise<number> {
-    try {
-      const reactions = await this.eventService.loadReactions(event.id, userPubkey);
-      return reactions.events.length;
-    } catch (err) {
-      this.logger.error('Failed to load reactions for article:', err);
-      return 0;
-    }
-  }
-
-  /**
-   * Load comment count for an addressable event (article)
-   */
-  private async loadCommentCount(event: Event, userPubkey: string): Promise<number> {
-    try {
-      // Get the 'd' tag (identifier) for addressable events
-      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
-      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
-
-      // Query for kind 1111 comments using the 'A' tag for addressable events
-      const filter = {
-        kinds: [1111],
-        '#A': [aTagValue],
-        limit: 100,
+      const dialogData: ShareArticleDialogData = {
+        title: title || 'Nostr Event',
+        summary: this.getArticleSummary(event) || undefined,
+        image: this.getArticleImage(event) || undefined,
+        url,
+        eventId: event.id,
+        pubkey: event.pubkey,
+        identifier: slug,
+        kind: event.kind,
+        encodedId,
+        event,
+        naddr,
       };
 
-      const comments = await this.sharedRelay.getMany(userPubkey, filter);
-      return comments?.length || 0;
-    } catch (err) {
-      this.logger.error('Failed to load comments for article:', err);
-      return 0;
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
     }
   }
 
-  /**
-   * Load total zap amount for an event
-   */
-  private async loadZapTotal(event: Event): Promise<number> {
-    try {
-      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
-      let total = 0;
-
-      for (const receipt of zapReceipts) {
-        const parsed = this.zapService.parseZapReceipt(receipt);
-        if (parsed.amount) {
-          total += parsed.amount;
-        }
-      }
-
-      return total;
-    } catch (err) {
-      this.logger.error('Failed to load zaps for article:', err);
-      return 0;
-    }
-  }
-
-  /**
-   * Get engagement data for an article
-   */
-  getEngagement(eventId: string): ArticleEngagement | undefined {
-    return this.articleEngagement().get(eventId);
-  }
-
-  /**
-   * Format zap amount with K/M suffix for display
-   */
-  formatZapAmount(amount: number): string {
-    if (amount >= 1000000) {
-      return (amount / 1000000).toFixed(1) + 'M';
-    }
-    if (amount >= 1000) {
-      return (amount / 1000).toFixed(1) + 'k';
-    }
-    return amount.toString();
-  }
 }
