@@ -26,6 +26,7 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
+import { PollEventComponent } from '../../event-types/poll-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
@@ -74,6 +75,7 @@ export interface DisplayItem {
     AudioPlayerComponent,
     InlineVideoPlayerComponent,
     PhotoEventComponent,
+    PollEventComponent,
     EventHeaderComponent,
     RouterLink,
     ArticleComponent,

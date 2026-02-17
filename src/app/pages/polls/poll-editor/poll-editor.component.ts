@@ -12,7 +12,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { PollService } from '../../../services/poll.service';
 import { LoggerService } from '../../../services/logger.service';
-import { PollDraft } from '../../../interfaces';
+import { Poll, PollDraft } from '../../../interfaces';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-poll-editor',
@@ -37,6 +40,7 @@ export class PollEditorComponent implements OnInit {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
+  private customDialog = inject(CustomDialogService);
 
   currentPoll = this.pollService.currentEditingPoll;
   isSaving = signal(false);
@@ -161,7 +165,7 @@ export class PollEditorComponent implements OnInit {
     });
   }
 
-  async publishPoll(): Promise<void> {
+  async publishPoll(shareAfterPublish = false): Promise<void> {
     if (!this.pollForm.valid) {
       this.snackBar.open('Please fill in all required fields', 'Close', {
         duration: 3000,
@@ -187,12 +191,18 @@ export class PollEditorComponent implements OnInit {
     this.isSaving.set(true);
 
     try {
-      await this.pollService.publishPoll(draft);
+      const poll = await this.pollService.publishPoll(draft);
       this.snackBar.open('Poll published successfully!', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom'
       });
+
+      if (shareAfterPublish) {
+        this.openShareDialogForPoll(poll);
+        return;
+      }
+
       this.router.navigate(['/polls']);
     } catch (error) {
       this.logger.error('Failed to publish poll:', error);
@@ -206,6 +216,10 @@ export class PollEditorComponent implements OnInit {
     }
   }
 
+  async publishAndShare(): Promise<void> {
+    await this.publishPoll(true);
+  }
+
   cancel(): void {
     if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
       this.pollService.cancelEditing();
@@ -215,5 +229,33 @@ export class PollEditorComponent implements OnInit {
 
   private generateOptionId(): string {
     return Math.random().toString(36).substring(2, 11);
+  }
+
+  private openShareDialogForPoll(poll: Poll): void {
+    const encodedId = nip19.neventEncode({
+      id: poll.eventId || poll.id,
+      relays: poll.relays,
+      kind: 1068,
+      author: poll.pubkey,
+    });
+
+    const dialogData: ShareArticleDialogData = {
+      title: poll.content || 'Poll',
+      summary: poll.content,
+      url: `https://nostria.app/e/${encodedId}`,
+      eventId: poll.eventId || poll.id,
+      pubkey: poll.pubkey,
+      kind: 1068,
+      encodedId,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: '',
+      showCloseButton: false,
+      panelClass: 'share-sheet-dialog',
+      data: dialogData,
+      width: '450px',
+      maxWidth: '95vw',
+    });
   }
 }

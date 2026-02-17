@@ -97,7 +97,15 @@
         </button>
         <button
           mat-flat-button
-          color="primary"
+          (click)="publishAndShare()"
+          type="button"
+          [disabled]="isSaving() || !pollForm.valid"
+        >
+          <mat-icon>share</mat-icon>
+          {{ isSaving() ? 'Publishing...' : 'Publish & Share' }}
+        </button>
+        <button
+          mat-flat-button
           (click)="publishPoll()"
           type="button"
           [disabled]="isSaving() || !pollForm.valid"

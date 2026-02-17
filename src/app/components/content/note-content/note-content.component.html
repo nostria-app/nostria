@@ -317,6 +317,11 @@
     </div>
   </mat-card-content>
 </mat-card>
+} @else if (mention!.event!.event.kind === 1068) {
+<!-- Poll Event (kind 1068, NIP-88) -->
+<div class="embedded-poll-event">
+  <app-poll-event [event]="mention!.event!.event"></app-poll-event>
+</div>
 } @else {
 <!-- Regular event mention (kind 1, etc.) -->
 <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -73,23 +73,38 @@ export class PollEventComponent {
   });
 
   constructor() {
-    // Load poll results when component initializes
-    this.loadPollResults();
+    effect(() => {
+      const event = this.event();
+      untracked(() => {
+        void this.loadPollResults(event);
+      });
+    });
   }
 
-  private async loadPollResults(): Promise<void> {
-    const poll = this.poll();
+  private async loadPollResults(event: Event): Promise<void> {
+    const poll = this.pollService.parseNostrPollEvent(event);
     this.isLoading.set(true);
 
     try {
       const responses = await this.pollService.fetchPollResponses(
         poll.eventId || poll.id,
-        poll.endsAt
+        poll.endsAt,
+        false,
+        poll.relays
       );
       this.responses.set(responses);
 
       const results = this.pollService.calculateResults(poll, responses);
       this.results.set(results);
+
+      const currentPubkey = this.app.accountState.pubkey();
+      if (!currentPubkey) {
+        this.selectedOptions.set([]);
+        return;
+      }
+
+      const currentResponse = responses.find(response => response.pubkey === currentPubkey);
+      this.selectedOptions.set(currentResponse?.responseIds ?? []);
     } catch (error) {
       console.error('Failed to load poll results:', error);
     } finally {
@@ -107,11 +122,13 @@ export class PollEventComponent {
     try {
       await this.pollService.submitPollResponse(
         poll.eventId || poll.id,
-        selectedOptions
+        selectedOptions,
+        poll.relays
       );
 
       // Reload results after voting
-      await this.loadPollResults();
+      this.pollService.clearResponseCache(poll.eventId || poll.id);
+      await this.loadPollResults(this.event());
 
       // Clear selection
       this.selectedOptions.set([]);

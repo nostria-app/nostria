@@ -77,7 +77,7 @@
     </div>
 
     @if (canVote() && selectedOptions().length > 0) {
-    <button mat-flat-button color="primary" (click)="submitVote()" [disabled]="isLoading()">
+    <button mat-flat-button (click)="submitVote()" [disabled]="isLoading()">
       <mat-icon>how_to_vote</mat-icon>
       Vote
     </button>

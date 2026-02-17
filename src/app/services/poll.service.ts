@@ -221,7 +221,7 @@ export class PollService implements OnInitialized {
     // Fetch responses for all polls in parallel (no logging to reduce spam)
     const fetchPromises = polls.map(async poll => {
       try {
-        const responses = await this.fetchPollResponses(poll.eventId || poll.id, poll.endsAt);
+        const responses = await this.fetchPollResponses(poll.eventId || poll.id, poll.endsAt, false, poll.relays);
         return { pollId: poll.id, responses };
       } catch {
         return { pollId: poll.id, responses: [] };
@@ -245,7 +245,7 @@ export class PollService implements OnInitialized {
    * Uses RelayPoolService for efficient querying
    * Cached for performance
    */
-  async fetchPollResponses(pollId: string, endsAt?: number, forceRefresh = false): Promise<PollResponse[]> {
+  async fetchPollResponses(pollId: string, endsAt?: number, forceRefresh = false, relayUrls?: string[]): Promise<PollResponse[]> {
     // Check cache first (unless force refresh)
     if (!forceRefresh) {
       const cached = this._responsesCache.get(pollId);
@@ -255,9 +255,11 @@ export class PollService implements OnInitialized {
     }
 
     try {
-      const relayUrls = this.accountRelay.getRelayUrls();
+      const queryRelayUrls = relayUrls && relayUrls.length > 0
+        ? relayUrls
+        : this.accountRelay.getRelayUrls();
       
-      if (relayUrls.length === 0) {
+      if (queryRelayUrls.length === 0) {
         return [];
       }
 
@@ -275,7 +277,7 @@ export class PollService implements OnInitialized {
       }
 
       // Reduced timeout from 5000 to 3000 for faster response loading
-      const events = await this.pool.query(relayUrls, filter, 3000);
+      const events = await this.pool.query(queryRelayUrls, filter, 3000);
 
       // One vote per pubkey - keep only the latest
       const responseMap = new Map<string, Event>();
@@ -333,6 +335,7 @@ export class PollService implements OnInitialized {
   calculateResults(poll: Poll, responses: PollResponse[]): PollResults {
     const optionCounts: Record<string, number> = {};
     const voters: string[] = [];
+    const validOptionIds = new Set(poll.options.map(option => option.id));
 
     poll.options.forEach(option => {
       optionCounts[option.id] = 0;
@@ -343,7 +346,22 @@ export class PollService implements OnInitialized {
         voters.push(response.pubkey);
       }
 
+      if (poll.pollType === 'singlechoice') {
+        const selectedOptionId = response.responseIds.find(optionId => validOptionIds.has(optionId));
+        if (selectedOptionId && optionCounts[selectedOptionId] !== undefined) {
+          optionCounts[selectedOptionId]++;
+        }
+        return;
+      }
+
+      const selectedOptionIds = new Set<string>();
       response.responseIds.forEach(optionId => {
+        if (validOptionIds.has(optionId)) {
+          selectedOptionIds.add(optionId);
+        }
+      });
+
+      selectedOptionIds.forEach(optionId => {
         if (optionCounts[optionId] !== undefined) {
           optionCounts[optionId]++;
         }
@@ -455,9 +473,13 @@ export class PollService implements OnInitialized {
       throw new Error('No authenticated user');
     }
 
+    const draftRelays = draft.relays.filter(relay => typeof relay === 'string' && relay.trim().length > 0);
+    const publishRelayUrls = draftRelays.length > 0 ? draftRelays : this.accountRelay.getRelayUrls();
+
     // Build tags according to NIP-88
     const tags: string[][] = [
       ...draft.options.map(opt => ['option', opt.id, opt.label]),
+      ...publishRelayUrls.map(relay => ['relay', relay]),
       ['polltype', draft.pollType],
     ];
 
@@ -480,6 +502,7 @@ export class PollService implements OnInitialized {
     // Publish using PublishService with optimized relays (same as notes)
     const result = await this.publishService.publish(signedEvent, {
       useOptimizedRelays: true,
+      relayUrls: publishRelayUrls,
     });
 
     if (!result.success) {
@@ -522,7 +545,7 @@ export class PollService implements OnInitialized {
    * Submit a response to a poll (NIP-88 kind:1018)
    * Uses PublishService for consistent publishing behavior
    */
-  async submitPollResponse(pollId: string, optionIds: string[]): Promise<void> {
+  async submitPollResponse(pollId: string, optionIds: string[], relayUrls?: string[]): Promise<void> {
     const currentUser = this.app.accountState.account();
     if (!currentUser) {
       throw new Error('No authenticated user');
@@ -549,6 +572,7 @@ export class PollService implements OnInitialized {
     // Publish using PublishService with optimized relays
     const result = await this.publishService.publish(signedEvent, {
       useOptimizedRelays: true,
+      relayUrls,
     });
 
     if (!result.success) {

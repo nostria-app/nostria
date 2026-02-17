@@ -107,7 +107,7 @@ export class PollsComponent {
     }
 
     try {
-      const responses = await this.pollService.fetchPollResponses(poll.eventId || poll.id, poll.endsAt);
+      const responses = await this.pollService.fetchPollResponses(poll.eventId || poll.id, poll.endsAt, false, poll.relays);
       const results = this.pollService.calculateResults(poll, responses);
 
       const currentMap = this.pollResults();
@@ -164,7 +164,7 @@ export class PollsComponent {
 
   async submitVote(poll: Poll, optionIds: string[]): Promise<void> {
     try {
-      await this.pollService.submitPollResponse(poll.eventId || poll.id, optionIds);
+      await this.pollService.submitPollResponse(poll.eventId || poll.id, optionIds, poll.relays);
       this.snackBar.open('Vote submitted successfully!', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
