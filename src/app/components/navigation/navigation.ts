@@ -63,9 +63,6 @@ export class NavigationComponent {
     // both the RightPanelService and the layout state
     this.panelNav.closeRight();
 
-    // Clear left panel navigation stack
-    this.panelNav.clearLeftStack();
-
     // Clear navigation history
     this.routeDataService.clearHistory();
 
@@ -90,7 +87,18 @@ export class NavigationComponent {
       path = '/' + path;
     }
 
-    this.router.navigate([path]);
+    // Check if we're already on the target path. If so, skip clearing the
+    // left stack because router.navigate() will be a no-op (same URL) and
+    // the NavigationEnd event that repopulates the stack won't fire, leaving
+    // the panel content hidden (blank screen).
+    const currentPath = '/' + this.router.url.split('?')[0].split('(')[0].replace(/^\/+/, '');
+    const alreadyOnTarget = currentPath === path;
+
+    if (!alreadyOnTarget) {
+      // Clear left panel navigation stack only when actually changing routes
+      this.panelNav.clearLeftStack();
+      this.router.navigate([path]);
+    }
   }
 
   // Right click - show context menu

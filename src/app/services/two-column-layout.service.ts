@@ -503,7 +503,15 @@ export class TwoColumnLayoutService {
       return;
     }
     
-    console.log('[resetNavigation] Full reset - different section or no right content');
+    // If already on the same section with no right content, there's nothing to reset.
+    // Skip clearing stacks because router.navigateByUrl() will be a no-op (same URL)
+    // and the NavigationEnd event that repopulates the stacks won't fire.
+    if (isSameSection) {
+      console.log('[resetNavigation] Same section, no right content - nothing to reset');
+      return;
+    }
+
+    console.log('[resetNavigation] Full reset - different section');
     // Full reset for different sections
     this.panelNav.clearHistory();
     // Clear right panel component stack (RightPanelService manages component instances)
