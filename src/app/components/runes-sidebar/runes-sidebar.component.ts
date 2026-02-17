@@ -12,7 +12,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LoggerService } from '../../services/logger.service';
-import { RunesSettingsService, RuneId, SidebarWidgetId } from '../../services/runes-settings.service';
+import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference } from '../../services/runes-settings.service';
 import { Playlist } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 
@@ -31,6 +31,61 @@ interface BitcoinPriceState {
   error: string | null;
 }
 
+interface WeatherState {
+  temperatureC: number | null;
+  feelsLikeC: number | null;
+  humidityPercent: number | null;
+  windKmh: number | null;
+  weatherCode: number | null;
+  isDay: boolean;
+  locationLabel: string;
+  minTempC: number | null;
+  maxTempC: number | null;
+  updatedAt: number | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface IpWhoIsResponse {
+  success?: boolean;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  region?: string;
+  country?: string;
+}
+
+interface OpenMeteoResponse {
+  current?: {
+    temperature_2m?: number;
+    apparent_temperature?: number;
+    relative_humidity_2m?: number;
+    wind_speed_10m?: number;
+    weather_code?: number;
+    is_day?: number;
+  };
+  daily?: {
+    temperature_2m_max?: number[];
+    temperature_2m_min?: number[];
+  };
+}
+
+interface OpenMeteoGeocodingResponse {
+  results?: {
+    name?: string;
+    admin1?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+  }[];
+}
+
+interface WeatherLocationSearchResult {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface SwissKnifeResult {
   type: string;
   primaryValue: string;
@@ -45,6 +100,9 @@ interface SidebarWidgetOption {
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
+const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
+const OPEN_METEO_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+const IP_LOCATION_URL = 'https://ipwho.is/';
 
 @Component({
   selector: 'app-runes-sidebar',
@@ -59,6 +117,7 @@ export class RunesSidebarComponent implements OnDestroy {
   private readonly FLYOUT_VIEWPORT_BOTTOM_MARGIN_PX = 24;
   private readonly RUNE_PREVIEW_ESTIMATED_HEIGHT_PX = 420;
   private readonly SETTINGS_PREVIEW_ESTIMATED_HEIGHT_PX = 520;
+  private readonly WEATHER_REFRESH_INTERVAL_MS = 15 * 60_000;
 
   private readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
@@ -78,6 +137,12 @@ export class RunesSidebarComponent implements OnDestroy {
       title: 'Bitcoin Price',
       icon: 'currency_bitcoin',
       tooltip: 'Bitcoin Price',
+    },
+    {
+      id: 'weather',
+      title: 'Weather',
+      icon: 'partly_cloudy_day',
+      tooltip: 'Weather',
     },
     {
       id: 'nostr-swiss-knife',
@@ -117,6 +182,9 @@ export class RunesSidebarComponent implements OnDestroy {
   protected readonly dropTargetWidgetId = signal<SidebarWidgetId | null>(null);
   protected readonly isPlayingLikedSongs = signal(false);
   protected readonly isPlayingLikedPlaylists = signal(false);
+  protected readonly weatherLocationQuery = signal('');
+  protected readonly weatherLocationResults = signal<WeatherLocationSearchResult[]>([]);
+  protected readonly weatherLocationSearching = signal(false);
   protected readonly hoverPreviewPosition = signal<{ top: number; right: number } | null>(null);
   protected readonly settingsPreviewPosition = signal<{ top: number; right: number } | null>(null);
 
@@ -125,6 +193,21 @@ export class RunesSidebarComponent implements OnDestroy {
   protected readonly bitcoinPrice = signal<BitcoinPriceState>({
     usd: null,
     eur: null,
+    updatedAt: null,
+    loading: true,
+    error: null,
+  });
+
+  protected readonly weather = signal<WeatherState>({
+    temperatureC: null,
+    feelsLikeC: null,
+    humidityPercent: null,
+    windKmh: null,
+    weatherCode: null,
+    isDay: true,
+    locationLabel: 'Local weather',
+    minTempC: null,
+    maxTempC: null,
     updatedAt: null,
     loading: true,
     error: null,
@@ -172,6 +255,8 @@ export class RunesSidebarComponent implements OnDestroy {
   });
 
   protected readonly settingsPreviewVisible = computed(() => this.settingsOpen() || this.hoveredSettings());
+  protected readonly weatherManualLocation = this.runesSettings.weatherManualLocation;
+  protected readonly weatherUsingManualLocation = computed(() => !!this.weatherManualLocation());
 
   protected readonly bitcoinPriceLabel = computed(() => {
     const price = this.bitcoinPrice();
@@ -184,6 +269,51 @@ export class RunesSidebarComponent implements OnDestroy {
     }
 
     return `BTC $${Math.round(price.usd).toLocaleString()}`;
+  });
+
+  protected readonly bitcoinMiniPrice = computed(() => {
+    const price = this.bitcoinPrice();
+    if (price.loading) {
+      return '…';
+    }
+
+    if (price.error || price.usd === null) {
+      return '—';
+    }
+
+    const roundedThousands = price.usd / 1000;
+    return roundedThousands.toFixed(1).replace('.', ',');
+  });
+
+  protected readonly weatherConditionLabel = computed(() => {
+    const weather = this.weather();
+    if (weather.weatherCode === null) {
+      return weather.loading ? 'Loading weather' : 'Weather unavailable';
+    }
+
+    return this.mapWeatherCodeToLabel(weather.weatherCode);
+  });
+
+  protected readonly weatherMiniIcon = computed(() => {
+    const weather = this.weather();
+    if (weather.error) {
+      return 'cloud_off';
+    }
+
+    if (weather.weatherCode === null) {
+      return 'partly_cloudy_day';
+    }
+
+    return this.mapWeatherCodeToIcon(weather.weatherCode, weather.isDay);
+  });
+
+  protected readonly weatherMiniTemp = computed(() => {
+    const weather = this.weather();
+    if (weather.temperatureC === null) {
+      return '—';
+    }
+
+    return `${Math.round(weather.temperatureC)}°`;
   });
 
   protected readonly swissKnifeResults = computed<SwissKnifeResult[]>(() => {
@@ -258,16 +388,31 @@ export class RunesSidebarComponent implements OnDestroy {
   });
 
   private readonly refreshTimer = setInterval(() => {
-    void this.loadBitcoinPrice();
+    if (this.runesSettings.isRuneEnabled('bitcoin-price')) {
+      void this.loadBitcoinPrice();
+    }
   }, 60_000);
 
+  private readonly weatherRefreshTimer = setInterval(() => {
+    if (this.runesSettings.isRuneEnabled('weather')) {
+      void this.loadWeather();
+    }
+  }, this.WEATHER_REFRESH_INTERVAL_MS);
+
   constructor() {
-    void this.loadBitcoinPrice();
+    if (this.runesSettings.isRuneEnabled('bitcoin-price')) {
+      void this.loadBitcoinPrice();
+    }
+
+    if (this.runesSettings.isRuneEnabled('weather')) {
+      void this.loadWeather();
+    }
   }
 
   ngOnDestroy(): void {
     this.clearHoverHideTimer();
     clearInterval(this.refreshTimer);
+    clearInterval(this.weatherRefreshTimer);
   }
 
   protected onSidebarEnter(): void {
@@ -296,6 +441,20 @@ export class RunesSidebarComponent implements OnDestroy {
     }
 
     this.hoveredRuneId.set(runeId);
+
+    if (runeId === 'bitcoin-price' && this.runesSettings.isRuneEnabled('bitcoin-price')) {
+      const state = this.bitcoinPrice();
+      if (!state.loading && (state.updatedAt === null || !!state.error)) {
+        void this.loadBitcoinPrice();
+      }
+    }
+
+    if (runeId === 'weather' && this.runesSettings.isRuneEnabled('weather')) {
+      const state = this.weather();
+      if (!state.loading && (state.updatedAt === null || !!state.error)) {
+        void this.loadWeather();
+      }
+    }
   }
 
   protected onSettingsEnter(event: MouseEvent): void {
@@ -387,6 +546,19 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected setRuneEnabled(runeId: RuneId, enabled: boolean): void {
     this.runesSettings.setRuneEnabled(runeId, enabled);
+
+    if (!enabled) {
+      return;
+    }
+
+    if (runeId === 'bitcoin-price') {
+      void this.loadBitcoinPrice();
+      return;
+    }
+
+    if (runeId === 'weather') {
+      void this.loadWeather();
+    }
   }
 
   protected isRuneEnabled(runeId: RuneId): boolean {
@@ -673,15 +845,118 @@ export class RunesSidebarComponent implements OnDestroy {
     return new Date(timestampSeconds * 1000).toLocaleTimeString();
   }
 
+  protected formatWeatherValue(value: number | null, suffix = ''): string {
+    if (value === null) {
+      return '—';
+    }
+
+    return `${Math.round(value)}${suffix}`;
+  }
+
+  protected formatWeatherDailyRange(min: number | null, max: number | null): string {
+    if (min === null || max === null) {
+      return '—';
+    }
+
+    return `${Math.round(min)}° / ${Math.round(max)}°`;
+  }
+
+  protected formatRoundedCurrency(value: number | null, symbol: '$' | '€'): string {
+    if (value === null) {
+      return '—';
+    }
+
+    return `${symbol}${Math.round(value).toLocaleString()}`;
+  }
+
   protected reloadBitcoinPrice(): void {
-    if (this.bitcoinPrice().loading) {
+    if (!this.runesSettings.isRuneEnabled('bitcoin-price') || this.bitcoinPrice().loading) {
       return;
     }
 
     void this.loadBitcoinPrice();
   }
 
+  protected reloadWeather(): void {
+    if (!this.runesSettings.isRuneEnabled('weather') || this.weather().loading) {
+      return;
+    }
+
+    void this.loadWeather();
+  }
+
+  protected updateWeatherLocationQuery(value: string): void {
+    this.weatherLocationQuery.set(value);
+  }
+
+  protected async searchWeatherLocations(): Promise<void> {
+    const queryText = this.weatherLocationQuery().trim();
+    if (!queryText || this.weatherLocationSearching()) {
+      return;
+    }
+
+    this.weatherLocationSearching.set(true);
+
+    try {
+      const query = new URLSearchParams({
+        name: queryText,
+        count: '6',
+        language: 'en',
+        format: 'json',
+      });
+
+      const response = await fetch(`${OPEN_METEO_GEOCODING_URL}?${query.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Location search failed (${response.status})`);
+      }
+
+      const data = await response.json() as OpenMeteoGeocodingResponse;
+      const results = (data.results || [])
+        .filter(result => typeof result.latitude === 'number' && typeof result.longitude === 'number' && !!result.name)
+        .map(result => {
+          const labelParts = [result.name, result.admin1, result.country].filter(part => !!part);
+          return {
+            label: labelParts.join(', '),
+            latitude: result.latitude as number,
+            longitude: result.longitude as number,
+          } as WeatherLocationSearchResult;
+        });
+
+      this.weatherLocationResults.set(results);
+    } catch {
+      this.weatherLocationResults.set([]);
+      this.weather.update(state => ({
+        ...state,
+        error: 'Failed to search weather locations',
+      }));
+    } finally {
+      this.weatherLocationSearching.set(false);
+    }
+  }
+
+  protected applyWeatherLocation(result: WeatherLocationSearchResult): void {
+    this.runesSettings.setWeatherManualLocation({
+      latitude: result.latitude,
+      longitude: result.longitude,
+      label: result.label,
+    });
+    this.weatherLocationQuery.set(result.label);
+    this.weatherLocationResults.set([]);
+    void this.loadWeather();
+  }
+
+  protected useAutomaticWeatherLocation(): void {
+    this.runesSettings.clearWeatherManualLocation();
+    this.weatherLocationResults.set([]);
+    this.weatherLocationQuery.set('');
+    void this.loadWeather();
+  }
+
   private async loadBitcoinPrice(): Promise<void> {
+    if (!this.runesSettings.isRuneEnabled('bitcoin-price')) {
+      return;
+    }
+
     this.bitcoinPrice.update(state => ({
       ...state,
       loading: true,
@@ -712,6 +987,167 @@ export class RunesSidebarComponent implements OnDestroy {
         error: 'Failed to fetch Bitcoin price',
       }));
     }
+  }
+
+  private async loadWeather(): Promise<void> {
+    if (!this.runesSettings.isRuneEnabled('weather')) {
+      return;
+    }
+
+    this.weather.update(state => ({
+      ...state,
+      loading: true,
+      error: null,
+    }));
+
+    try {
+      const manualLocation = this.weatherManualLocation();
+      const location = manualLocation || await this.fetchLocationFromIp();
+      if (!location) {
+        this.weather.update(state => ({
+          ...state,
+          loading: false,
+          error: 'Location unavailable. Search and set your city.',
+        }));
+        return;
+      }
+
+      const query = new URLSearchParams({
+        latitude: String(location.latitude),
+        longitude: String(location.longitude),
+        current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m',
+        daily: 'temperature_2m_max,temperature_2m_min',
+        timezone: 'auto',
+        forecast_days: '1',
+      });
+
+      const response = await fetch(`${OPEN_METEO_URL}?${query.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Weather request failed (${response.status})`);
+      }
+
+      const data = await response.json() as OpenMeteoResponse;
+      const current = data.current;
+
+      this.weather.set({
+        temperatureC: current?.temperature_2m ?? null,
+        feelsLikeC: current?.apparent_temperature ?? null,
+        humidityPercent: current?.relative_humidity_2m ?? null,
+        windKmh: current?.wind_speed_10m ?? null,
+        weatherCode: current?.weather_code ?? null,
+        isDay: current?.is_day === 1,
+        locationLabel: location.label,
+        minTempC: data.daily?.temperature_2m_min?.[0] ?? null,
+        maxTempC: data.daily?.temperature_2m_max?.[0] ?? null,
+        updatedAt: Math.floor(Date.now() / 1000),
+        loading: false,
+        error: current?.temperature_2m === undefined ? 'No weather data in response' : null,
+      });
+    } catch {
+      this.weather.update(state => ({
+        ...state,
+        loading: false,
+        error: 'Failed to fetch weather',
+      }));
+    }
+  }
+
+  private async fetchLocationFromIp(): Promise<WeatherLocationPreference | null> {
+    try {
+      const response = await fetch(IP_LOCATION_URL);
+      if (!response.ok) {
+        throw new Error(`IP location request failed (${response.status})`);
+      }
+
+      const data = await response.json() as IpWhoIsResponse;
+      const latitude = typeof data.latitude === 'number' ? data.latitude : null;
+      const longitude = typeof data.longitude === 'number' ? data.longitude : null;
+
+      if (latitude === null || longitude === null) {
+        throw new Error('Missing latitude/longitude from IP response');
+      }
+
+      const placeParts = [data.city, data.region, data.country].filter(part => !!part);
+      return {
+        latitude,
+        longitude,
+        label: placeParts.join(', ') || 'Local weather',
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private mapWeatherCodeToLabel(code: number): string {
+    if (code === 0) {
+      return 'Clear sky';
+    }
+
+    if (code === 1 || code === 2) {
+      return 'Partly cloudy';
+    }
+
+    if (code === 3) {
+      return 'Overcast';
+    }
+
+    if (code === 45 || code === 48) {
+      return 'Foggy';
+    }
+
+    if (code === 51 || code === 53 || code === 55 || code === 56 || code === 57) {
+      return 'Drizzle';
+    }
+
+    if (code === 61 || code === 63 || code === 65 || code === 66 || code === 67 || code === 80 || code === 81 || code === 82) {
+      return 'Rain';
+    }
+
+    if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86) {
+      return 'Snow';
+    }
+
+    if (code === 95 || code === 96 || code === 99) {
+      return 'Thunderstorm';
+    }
+
+    return 'Weather';
+  }
+
+  private mapWeatherCodeToIcon(code: number, isDay: boolean): string {
+    if (code === 0) {
+      return isDay ? 'light_mode' : 'dark_mode';
+    }
+
+    if (code === 1 || code === 2) {
+      return isDay ? 'partly_cloudy_day' : 'nights_stay';
+    }
+
+    if (code === 3) {
+      return 'cloud';
+    }
+
+    if (code === 45 || code === 48) {
+      return 'foggy';
+    }
+
+    if (code === 51 || code === 53 || code === 55 || code === 56 || code === 57) {
+      return 'grain';
+    }
+
+    if (code === 61 || code === 63 || code === 65 || code === 66 || code === 67 || code === 80 || code === 81 || code === 82) {
+      return 'rainy';
+    }
+
+    if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86) {
+      return 'ac_unit';
+    }
+
+    if (code === 95 || code === 96 || code === 99) {
+      return 'thunderstorm';
+    }
+
+    return 'partly_cloudy_day';
   }
 
   private clearDragState(): void {

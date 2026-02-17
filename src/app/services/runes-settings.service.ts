@@ -1,8 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 
-export type RuneId = 'bitcoin-price' | 'nostr-swiss-knife' | 'music-favorites';
+export type RuneId = 'bitcoin-price' | 'weather' | 'nostr-swiss-knife' | 'music-favorites';
 export type SidebarWidgetId = 'favorites' | 'runes';
+
+export interface WeatherLocationPreference {
+  latitude: number;
+  longitude: number;
+  label: string;
+}
 
 export interface RunesSettings {
   runeOrder: RuneId[];
@@ -10,19 +16,21 @@ export interface RunesSettings {
   openRunes: RuneId[];
   sidebarWidgetOrder: SidebarWidgetId[];
   enabledSidebarWidgets: SidebarWidgetId[];
+  weatherManualLocation: WeatherLocationPreference | null;
 }
 
 const STORAGE_KEY = 'nostria-runes-settings-v1';
 
-const ALL_RUNES: RuneId[] = ['bitcoin-price', 'nostr-swiss-knife', 'music-favorites'];
+const ALL_RUNES: RuneId[] = ['bitcoin-price', 'weather', 'nostr-swiss-knife', 'music-favorites'];
 const ALL_SIDEBAR_WIDGETS: SidebarWidgetId[] = ['favorites', 'runes'];
 
 const DEFAULT_SETTINGS: RunesSettings = {
   runeOrder: [...ALL_RUNES],
-  enabledRunes: [...ALL_RUNES],
+  enabledRunes: ['nostr-swiss-knife', 'music-favorites'],
   openRunes: [],
   sidebarWidgetOrder: [...ALL_SIDEBAR_WIDGETS],
   enabledSidebarWidgets: [...ALL_SIDEBAR_WIDGETS],
+  weatherManualLocation: null,
 };
 
 @Injectable({
@@ -39,6 +47,7 @@ export class RunesSettingsService {
   readonly openRunes = computed(() => this._settings().openRunes);
   readonly sidebarWidgetOrder = computed(() => this._settings().sidebarWidgetOrder);
   readonly enabledSidebarWidgets = computed(() => this._settings().enabledSidebarWidgets);
+  readonly weatherManualLocation = computed(() => this._settings().weatherManualLocation);
   readonly visibleSidebarWidgets = computed(() => {
     const enabled = this.enabledSidebarWidgets();
     return this.sidebarWidgetOrder().filter(widget => enabled.includes(widget));
@@ -184,6 +193,28 @@ export class RunesSettingsService {
     return this.moveSidebarWidget(widgetId, 1);
   }
 
+  setWeatherManualLocation(location: WeatherLocationPreference): void {
+    this._settings.update(current => ({
+      ...current,
+      weatherManualLocation: {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        label: location.label,
+      },
+    }));
+
+    this.persist();
+  }
+
+  clearWeatherManualLocation(): void {
+    this._settings.update(current => ({
+      ...current,
+      weatherManualLocation: null,
+    }));
+
+    this.persist();
+  }
+
   clearOpenRunes(): void {
     this._settings.update(current => {
       return {
@@ -227,12 +258,33 @@ export class RunesSettingsService {
       sidebarWidgetOrder,
     );
 
+    const weatherManualLocation = this.parseWeatherManualLocation(stored.weatherManualLocation);
+
     return {
       runeOrder,
       enabledRunes: enabledRunes.length > 0 ? enabledRunes : [...DEFAULT_SETTINGS.enabledRunes],
       openRunes,
       sidebarWidgetOrder,
       enabledSidebarWidgets: enabledSidebarWidgets.length > 0 ? enabledSidebarWidgets : [...DEFAULT_SETTINGS.enabledSidebarWidgets],
+      weatherManualLocation,
+    };
+  }
+
+  private parseWeatherManualLocation(value: unknown): WeatherLocationPreference | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Partial<WeatherLocationPreference>;
+
+    if (typeof record.latitude !== 'number' || typeof record.longitude !== 'number' || typeof record.label !== 'string') {
+      return null;
+    }
+
+    return {
+      latitude: record.latitude,
+      longitude: record.longitude,
+      label: record.label,
     };
   }
 
@@ -240,7 +292,7 @@ export class RunesSettingsService {
     const validated: RuneId[] = [];
 
     for (const item of items) {
-      if (item === 'bitcoin-price' || item === 'nostr-swiss-knife' || item === 'music-favorites') {
+      if (item === 'bitcoin-price' || item === 'weather' || item === 'nostr-swiss-knife' || item === 'music-favorites') {
         if (!validated.includes(item)) {
           validated.push(item);
         }

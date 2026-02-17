@@ -390,6 +390,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['runes', 'bitcoin', 'price', 'widget', 'mini app']
     },
     {
+      id: 'runes-toggle-weather',
+      label: 'Toggle Rune: Weather',
+      icon: 'partly_cloudy_day',
+      action: () => this.runesSettings.toggleRuneEnabled('weather'),
+      keywords: ['runes', 'weather', 'forecast', 'temperature', 'climate']
+    },
+    {
       id: 'runes-toggle-swiss-knife',
       label: 'Toggle Rune: Nostr Swizz Knife',
       icon: 'construction',
@@ -437,6 +444,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'arrow_downward',
       action: () => this.runesSettings.moveRuneDown('bitcoin-price'),
       keywords: ['runes', 'bitcoin', 'move down', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-weather-up',
+      label: 'Runes: Move Weather Up',
+      icon: 'arrow_upward',
+      action: () => this.runesSettings.moveRuneUp('weather'),
+      keywords: ['runes', 'weather', 'move up', 'reorder', 'order']
+    },
+    {
+      id: 'runes-move-weather-down',
+      label: 'Runes: Move Weather Down',
+      icon: 'arrow_downward',
+      action: () => this.runesSettings.moveRuneDown('weather'),
+      keywords: ['runes', 'weather', 'move down', 'reorder', 'order']
     },
     {
       id: 'runes-move-swiss-up',

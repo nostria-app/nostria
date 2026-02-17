@@ -3,7 +3,21 @@
   <button mat-icon-button class="rune-button" [class.rune-active]="isRuneActive(rune.id)"
     (mouseenter)="onRuneEnter($event, rune.id)" (mouseleave)="onRuneLeave(rune.id)" (click)="toggleRuneOpen(rune.id)"
     [attr.aria-label]="rune.title">
+    @if (rune.id === 'weather') {
+    <span class="weather-mini" [class.loading]="weather().loading" [class.error]="!!weather().error">
+      <mat-icon>{{ weatherMiniIcon() }}</mat-icon>
+      <span class="weather-mini-temp">{{ weatherMiniTemp() }}</span>
+    </span>
+    } @else if (rune.id === 'bitcoin-price') {
+    <span class="bitcoin-mini" [class.loading]="bitcoinPrice().loading" [class.error]="!!bitcoinPrice().error">
+      @if (bitcoinPrice().usd === null) {
+      <mat-icon>currency_bitcoin</mat-icon>
+      }
+      <span class="bitcoin-mini-price">{{ bitcoinMiniPrice() }}</span>
+    </span>
+    } @else {
     <mat-icon>{{ rune.icon }}</mat-icon>
+    }
   </button>
   }
 
@@ -28,21 +42,13 @@
     <div class="btc-row">
       <span class="btc-label">USD</span>
       <span class="btc-value">
-        @if (bitcoinPrice().usd !== null) {
-        ${{ bitcoinPrice().usd!.toLocaleString() }}
-        } @else {
-        —
-        }
+        {{ formatRoundedCurrency(bitcoinPrice().usd, '$') }}
       </span>
     </div>
     <div class="btc-row">
       <span class="btc-label">EUR</span>
       <span class="btc-value">
-        @if (bitcoinPrice().eur !== null) {
-        €{{ bitcoinPrice().eur!.toLocaleString() }}
-        } @else {
-        —
-        }
+        {{ formatRoundedCurrency(bitcoinPrice().eur, '€') }}
       </span>
     </div>
     <div class="btc-meta-row">
@@ -54,6 +60,81 @@
     </div>
     @if (bitcoinPrice().error) {
     <div class="rune-error">{{ bitcoinPrice().error }}</div>
+    }
+  </div>
+  }
+
+  @case ('weather') {
+  <div class="rune-content weather-card">
+    <div class="weather-hero">
+      <div class="weather-main">
+        <mat-icon class="weather-main-icon">{{ weatherMiniIcon() }}</mat-icon>
+        <div class="weather-main-temp">
+          {{ formatWeatherValue(weather().temperatureC, '°') }}
+        </div>
+      </div>
+      <div class="weather-details">
+        <div class="weather-condition">{{ weatherConditionLabel() }}</div>
+        <div class="weather-location">{{ weather().locationLabel }}</div>
+      </div>
+      <button mat-icon-button class="weather-reload-button" [disabled]="weather().loading" (click)="reloadWeather()"
+        aria-label="Reload weather">
+        <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+      </button>
+    </div>
+
+    <div class="weather-metrics">
+      <div class="weather-chip">
+        <span>Feels</span>
+        <strong>{{ formatWeatherValue(weather().feelsLikeC, '°') }}</strong>
+      </div>
+      <div class="weather-chip">
+        <span>Humidity</span>
+        <strong>{{ formatWeatherValue(weather().humidityPercent, '%') }}</strong>
+      </div>
+      <div class="weather-chip">
+        <span>Wind</span>
+        <strong>{{ formatWeatherValue(weather().windKmh, ' km/h') }}</strong>
+      </div>
+      <div class="weather-chip">
+        <span>Today</span>
+        <strong>{{ formatWeatherDailyRange(weather().minTempC, weather().maxTempC) }}</strong>
+      </div>
+    </div>
+
+    <div class="weather-location-controls">
+      <div class="weather-location-input-row">
+        <input class="weather-location-input" type="text" placeholder="Search city" [value]="weatherLocationQuery()"
+          (input)="updateWeatherLocationQuery($any($event.target).value)"
+          (keydown.enter)="$event.preventDefault(); searchWeatherLocations()" />
+        <button mat-stroked-button [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()"
+          (click)="searchWeatherLocations()">
+          @if (weatherLocationSearching()) {
+          Searching…
+          } @else {
+          Search
+          }
+        </button>
+      </div>
+
+      <button mat-stroked-button [disabled]="!weatherUsingManualLocation()" (click)="useAutomaticWeatherLocation()">
+        Use Auto Location
+      </button>
+
+      @if (weatherLocationResults().length > 0) {
+      <div class="weather-location-results">
+        @for (result of weatherLocationResults(); track result.label + result.latitude + result.longitude) {
+        <button class="weather-location-result" type="button" (click)="applyWeatherLocation(result)">
+          {{ result.label }}
+        </button>
+        }
+      </div>
+      }
+    </div>
+
+    <div class="weather-meta">Updated: {{ formatUpdatedAt(weather().updatedAt) }}</div>
+    @if (weather().error) {
+    <div class="rune-error">{{ weather().error }}</div>
     }
   </div>
   }
@@ -140,21 +221,13 @@
       <div class="btc-row">
         <span class="btc-label">USD</span>
         <span class="btc-value">
-          @if (bitcoinPrice().usd !== null) {
-          ${{ bitcoinPrice().usd!.toLocaleString() }}
-          } @else {
-          —
-          }
+          {{ formatRoundedCurrency(bitcoinPrice().usd, '$') }}
         </span>
       </div>
       <div class="btc-row">
         <span class="btc-label">EUR</span>
         <span class="btc-value">
-          @if (bitcoinPrice().eur !== null) {
-          €{{ bitcoinPrice().eur!.toLocaleString() }}
-          } @else {
-          —
-          }
+          {{ formatRoundedCurrency(bitcoinPrice().eur, '€') }}
         </span>
       </div>
       <div class="btc-meta-row">
@@ -166,6 +239,81 @@
       </div>
       @if (bitcoinPrice().error) {
       <div class="rune-error">{{ bitcoinPrice().error }}</div>
+      }
+    </div>
+    }
+
+    @case ('weather') {
+    <div class="rune-content weather-card">
+      <div class="weather-hero">
+        <div class="weather-main">
+          <mat-icon class="weather-main-icon">{{ weatherMiniIcon() }}</mat-icon>
+          <div class="weather-main-temp">
+            {{ formatWeatherValue(weather().temperatureC, '°') }}
+          </div>
+        </div>
+        <div class="weather-details">
+          <div class="weather-condition">{{ weatherConditionLabel() }}</div>
+          <div class="weather-location">{{ weather().locationLabel }}</div>
+        </div>
+        <button mat-icon-button class="weather-reload-button" [disabled]="weather().loading" (click)="reloadWeather()"
+          aria-label="Reload weather">
+          <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+        </button>
+      </div>
+
+      <div class="weather-metrics">
+        <div class="weather-chip">
+          <span>Feels</span>
+          <strong>{{ formatWeatherValue(weather().feelsLikeC, '°') }}</strong>
+        </div>
+        <div class="weather-chip">
+          <span>Humidity</span>
+          <strong>{{ formatWeatherValue(weather().humidityPercent, '%') }}</strong>
+        </div>
+        <div class="weather-chip">
+          <span>Wind</span>
+          <strong>{{ formatWeatherValue(weather().windKmh, ' km/h') }}</strong>
+        </div>
+        <div class="weather-chip">
+          <span>Today</span>
+          <strong>{{ formatWeatherDailyRange(weather().minTempC, weather().maxTempC) }}</strong>
+        </div>
+      </div>
+
+      <div class="weather-location-controls">
+        <div class="weather-location-input-row">
+          <input class="weather-location-input" type="text" placeholder="Search city" [value]="weatherLocationQuery()"
+            (input)="updateWeatherLocationQuery($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault(); searchWeatherLocations()" />
+          <button mat-stroked-button [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()"
+            (click)="searchWeatherLocations()">
+            @if (weatherLocationSearching()) {
+            Searching…
+            } @else {
+            Search
+            }
+          </button>
+        </div>
+
+        <button mat-stroked-button [disabled]="!weatherUsingManualLocation()" (click)="useAutomaticWeatherLocation()">
+          Use Auto Location
+        </button>
+
+        @if (weatherLocationResults().length > 0) {
+        <div class="weather-location-results">
+          @for (result of weatherLocationResults(); track result.label + result.latitude + result.longitude) {
+          <button class="weather-location-result" type="button" (click)="applyWeatherLocation(result)">
+            {{ result.label }}
+          </button>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="weather-meta">Updated: {{ formatUpdatedAt(weather().updatedAt) }}</div>
+      @if (weather().error) {
+      <div class="rune-error">{{ weather().error }}</div>
       }
     </div>
     }
