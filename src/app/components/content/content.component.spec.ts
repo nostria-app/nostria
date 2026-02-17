@@ -124,7 +124,7 @@ describe('ContentComponent', () => {
     expect(displayed[0].type).toBe('text');
   });
 
-  it('should collapse extra linebreaks left by hidden media tokens', () => {
+  it('should preserve linebreaks when hiding media tokens', () => {
     (component as unknown as {
       _hasBeenVisible: { set: (value: boolean) => void };
       _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
@@ -144,7 +144,7 @@ describe('ContentComponent', () => {
     fixture.detectChanges();
 
     const displayed = component.displayContentTokens();
-    expect(displayed.map(token => token.type)).toEqual(['text', 'linebreak', 'text']);
+    expect(displayed.map(token => token.type)).toEqual(['text', 'linebreak', 'linebreak', 'text']);
   });
 
   it('should compute proxyWebUrl as null when no event', () => {

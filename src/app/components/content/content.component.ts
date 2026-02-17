@@ -112,32 +112,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return tokens;
     }
 
-    const filtered = tokens.filter(token => !this.collapsedHiddenTokenTypes.has(token.type));
-    return this.normalizeCollapsedTokens(filtered);
+    return tokens.filter(token => !this.collapsedHiddenTokenTypes.has(token.type));
   });
-
-  private normalizeCollapsedTokens(tokens: ContentToken[]): ContentToken[] {
-    const normalized: ContentToken[] = [];
-
-    for (const token of tokens) {
-      if (token.type === 'linebreak') {
-        const previous = normalized[normalized.length - 1];
-        // Avoid duplicate or leading linebreaks
-        if (!previous || previous.type === 'linebreak') {
-          continue;
-        }
-      }
-
-      normalized.push(token);
-    }
-
-    // Remove trailing linebreaks to avoid empty hole at the bottom
-    while (normalized.length > 0 && normalized[normalized.length - 1].type === 'linebreak') {
-      normalized.pop();
-    }
-
-    return normalized;
-  }
 
   // Social previews for URLs
   socialPreviews = signal<SocialPreview[]>([]);
