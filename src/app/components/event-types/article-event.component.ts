@@ -29,6 +29,9 @@ export class ArticleEventComponent {
   private readonly MAX_SUMMARY_LENGTH = 200;
   private readonly MIN_SUMMARY_PARAGRAPH_LENGTH = 20;
   private readonly IMAGE_EXTENSIONS = '(jpg|jpeg|png|gif|webp)';
+  // Compile regex patterns once to avoid repeated compilation in computed properties
+  private readonly MARKDOWN_IMAGE_REGEX = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|webp)(\?[^\s)]*)?)\)/i;
+  private readonly STANDALONE_IMAGE_REGEX = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?/i;
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
@@ -174,15 +177,13 @@ export class ArticleEventComponent {
     // Fallback: Extract first image from markdown content
     if (event.content) {
       // Try markdown image syntax: ![alt](url)
-      const markdownImageRegex = new RegExp(`!\\[.*?\\]\\((https?:\\/\\/[^\\s)]+\\.${this.IMAGE_EXTENSIONS}(\\?[^\\s)]*)?)\\)`, 'i');
-      const markdownImageMatch = event.content.match(markdownImageRegex);
+      const markdownImageMatch = event.content.match(this.MARKDOWN_IMAGE_REGEX);
       if (markdownImageMatch) {
         return markdownImageMatch[1];
       }
 
       // Try standalone image URLs
-      const standaloneImageRegex = new RegExp(`https?:\\/\\/[^\\s]+\\.${this.IMAGE_EXTENSIONS}(\\?[^\\s]*)?`, 'i');
-      const standaloneImageMatch = event.content.match(standaloneImageRegex);
+      const standaloneImageMatch = event.content.match(this.STANDALONE_IMAGE_REGEX);
       if (standaloneImageMatch) {
         return standaloneImageMatch[0];
       }
