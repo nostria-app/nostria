@@ -76,11 +76,10 @@
     }
   }
 
-  // Image loaded state - fade out placeholder
+  // Image loaded state - immediately hide placeholder
   &.image-loaded {
     .blurhash-placeholder {
       opacity: 0;
-      transition: opacity 0.4s ease-out;
     }
 
     .main-image.loaded {
@@ -174,7 +173,6 @@
     z-index: 2;
     opacity: 0; // Start hidden, show when loaded
     visibility: hidden;
-    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
     // Only show when loaded AND not hidden (not blurred)
     &.loaded:not(.hidden) {
@@ -191,7 +189,6 @@
   &.blurhash-placeholder {
     z-index: 1;
     opacity: 1; // Show by default
-    transition: opacity 0.4s ease-out;
     filter: blur(1px);
     // Use cover to fill container - blurhash shows full blurred preview,
     // then fades out to reveal the properly letterboxed image

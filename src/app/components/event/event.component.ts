@@ -180,6 +180,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
 
+  // Interaction loading: delay + abort support.
+  // When an event enters the viewport, we wait a short period before starting
+  // interaction queries. If it leaves within that window, the queries never fire.
+  // If queries are already in-flight, the AbortController lets us skip processing
+  // their results (the underlying relay queries can't be cancelled, but we avoid
+  // the CPU work of filtering/parsing/updating signals for events the user scrolled past).
+  private interactionLoadTimer?: ReturnType<typeof setTimeout>;
+  private interactionAbortController?: AbortController;
+
   /**
    * Whether this event should be virtualized when off-screen.
    * Events in thread/detail view (mode="thread") and events with navigationDisabled
@@ -1530,29 +1539,73 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
             // Store which event we're loading for to prevent cross-contamination
             this.observedEventId = currentEventId;
-            this.hasLoadedInteractions.set(true);
 
-            // Load interactions for the specific event that became visible
-            // Use supportsReactions() which correctly checks the target event kind for reposts
-            if (this.supportsReactions()) {
-              // Get the target record (reposted event for reposts, regular event otherwise)
-              const targetRecordData = this.targetRecord();
-              this.logger.debug('[Lazy Load] Loading interactions for visible event:',
-                targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
-
-              // Double-check event ID before loading to prevent race conditions
-              if (this.record()?.event.id === currentEventId) {
-                // loadAllInteractions now also loads quotes
-                this.loadAllInteractions();
-                this.loadZaps();
-                this.loadLatestEditForEvent();
-              } else {
-                this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
-              }
+            // Delay interaction loading: if the user scrolls past quickly,
+            // the timer is cancelled in the !isIntersecting path and no
+            // relay queries are ever started.
+            if (this.interactionLoadTimer) {
+              clearTimeout(this.interactionLoadTimer);
             }
+            this.interactionLoadTimer = setTimeout(() => {
+              this.interactionLoadTimer = undefined;
+
+              // Re-verify the event hasn't changed during the delay
+              if (this.record()?.event.id !== currentEventId) {
+                this.logger.warn('[Lazy Load] Event changed during interaction delay, skipping:', currentEventId.substring(0, 8));
+                return;
+              }
+
+              this.hasLoadedInteractions.set(true);
+
+              // Create a fresh AbortController for this load cycle
+              this.interactionAbortController?.abort();
+              this.interactionAbortController = new AbortController();
+
+              // Load interactions for the specific event that became visible
+              // Use supportsReactions() which correctly checks the target event kind for reposts
+              if (this.supportsReactions()) {
+                // Get the target record (reposted event for reposts, regular event otherwise)
+                const targetRecordData = this.targetRecord();
+                this.logger.debug('[Lazy Load] Loading interactions for visible event:',
+                  targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
+
+                // Double-check event ID before loading to prevent race conditions
+                if (this.record()?.event.id === currentEventId) {
+                  const signal = this.interactionAbortController.signal;
+                  // loadAllInteractions now also loads quotes
+                  this.loadAllInteractions(false, signal);
+                  this.loadZaps(signal);
+                  this.loadLatestEditForEvent();
+                } else {
+                  this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+                }
+              }
+            }, 150);
           }
         } else {
           // --- Leaving viewport (and buffer zone) ---
+
+          // Cancel any pending interaction load that hasn't started yet.
+          // This prevents relay queries from firing for events the user scrolled past.
+          if (this.interactionLoadTimer) {
+            clearTimeout(this.interactionLoadTimer);
+            this.interactionLoadTimer = undefined;
+          }
+
+          // Abort any in-flight interaction queries.
+          // The relay query itself will complete, but result processing is skipped.
+          if (this.interactionAbortController) {
+            this.interactionAbortController.abort();
+            this.interactionAbortController = undefined;
+          }
+
+          // If interactions were marked as loading but results haven't been applied yet
+          // (e.g. isLoadingReactions is still true), reset so they can re-trigger
+          // when the event scrolls back into view.
+          if (this.hasLoadedInteractions() && this.isLoadingReactions()) {
+            this.hasLoadedInteractions.set(false);
+          }
+
           // Only virtualize if: the event has been fully rendered at least once,
           // and virtualization is appropriate for this usage context.
           if (this.hasLoadedInteractions() && this.shouldVirtualize()) {
@@ -1637,8 +1690,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this.logger.debug('[Lazy Load] Loading interactions for already-visible event:',
           targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
 
-        this.loadAllInteractions();
-        this.loadZaps();
+        // Create an AbortController so these queries can be cancelled if the event
+        // goes off-screen before results arrive
+        this.interactionAbortController?.abort();
+        this.interactionAbortController = new AbortController();
+        const signal = this.interactionAbortController.signal;
+
+        this.loadAllInteractions(false, signal);
+        this.loadZaps(signal);
         this.loadLatestEditForEvent();
       }
     }
@@ -1649,6 +1708,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (this.virtualizeTimer) {
       clearTimeout(this.virtualizeTimer);
       this.virtualizeTimer = undefined;
+    }
+    // Cancel any pending interaction load and abort in-flight queries
+    if (this.interactionLoadTimer) {
+      clearTimeout(this.interactionLoadTimer);
+      this.interactionLoadTimer = undefined;
+    }
+    if (this.interactionAbortController) {
+      this.interactionAbortController.abort();
+      this.interactionAbortController = undefined;
     }
     // Unregister from shared IntersectionObserver service
     this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
@@ -1689,7 +1757,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    *
    * For reposts, loads interactions for the reposted event, not the repost itself.
    */
-  async loadAllInteractions(invalidateCache = false) {
+  async loadAllInteractions(invalidateCache = false, signal?: AbortSignal) {
     // Use targetRecord to get the actual event for interactions
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -1729,6 +1797,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           queryLimit,  // Limit quotes too
         )
       ]);
+
+      // If the load was aborted (event scrolled off-screen), skip result processing
+      if (signal?.aborted) {
+        this.logger.debug('[Loading Interactions] Aborted, discarding results for:', targetEventId.substring(0, 8));
+        return;
+      }
 
       // CRITICAL: Verify we're still showing the same event before updating state
       const currentTargetRecord = this.targetRecord();
@@ -1895,7 +1969,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load zaps for an event
    * For reposts, loads zaps for the reposted event, not the repost itself
    */
-  async loadZaps() {
+  async loadZaps(signal?: AbortSignal) {
     // Use targetRecord to get the actual event for zaps
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -1910,6 +1984,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // Only apply limits in timeline (feed) mode; thread (detail) mode loads all zaps
       const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
       const zapReceipts = await this.zapService.getZapsForEvent(targetEventId, queryLimit);
+
+      // If the load was aborted (event scrolled off-screen), skip result processing
+      if (signal?.aborted) {
+        this.logger.debug('[Loading Zaps] Aborted, discarding results for:', targetEventId.substring(0, 8));
+        return;
+      }
 
       // CRITICAL: Verify we're still showing the same event before updating state
       // For reposts, we compare against targetRecord which is the reposted event

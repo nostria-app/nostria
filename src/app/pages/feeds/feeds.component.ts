@@ -1946,9 +1946,7 @@ export class FeedsComponent implements OnDestroy {
       const placeholder = container.querySelector('.blurhash-placeholder') as HTMLImageElement;
       if (placeholder) {
         placeholder.style.opacity = '0';
-        setTimeout(() => {
-          placeholder.style.display = 'none';
-        }, 300);
+        placeholder.style.display = 'none';
       }
     }
   }

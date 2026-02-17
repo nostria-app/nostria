@@ -76,11 +76,10 @@
       outline-offset: 2px;
     }
 
-    // Progressive loading state - fade out placeholder when thumbnail loads
+    // Progressive loading state - hide placeholder when thumbnail loads
     &.thumbnail-loaded {
       .blurhash-thumbnail {
         opacity: 0;
-        transition: opacity 0.4s ease-out;
       }
 
       .main-thumbnail.loaded {
@@ -123,7 +122,6 @@
       &.main-thumbnail {
         z-index: 2;
         opacity: 0; // Start hidden
-        transition: opacity 0.4s ease-out;
 
         &.loaded {
           opacity: 1;
@@ -143,7 +141,6 @@
         z-index: 1;
         opacity: 1;
         filter: blur(1px);
-        transition: opacity 0.4s ease-out;
         object-fit: cover; // Cover for placeholder since we don't know real dimensions yet
       }
     }
@@ -295,7 +292,6 @@
       z-index: 1;
       filter: blur(2px);
       opacity: 1;
-      transition: opacity 0.4s ease-out;
     }
 
     &.video-ready .video-placeholder-bg {
@@ -325,7 +321,6 @@
       z-index: 2;
       object-fit: contain;
       opacity: 0;
-      transition: opacity 0.4s ease-out;
 
       &.loaded {
         opacity: 1;

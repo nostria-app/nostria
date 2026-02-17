@@ -466,7 +466,6 @@
   .main-image {
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
     // Only show when loaded AND not hidden (not blurred)
     &.loaded:not(.hidden) {
@@ -483,7 +482,6 @@
     height: 100%;
     object-fit: contain;
     opacity: 1; // Show by default for progressive loading
-    transition: opacity 0.4s ease-out;
     pointer-events: none;
     filter: blur(1px);
   }
@@ -653,7 +651,6 @@
     &.main-image {
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
       // Only show when loaded AND not hidden (not blurred)
       &.loaded:not(.hidden) {
@@ -671,7 +668,6 @@
     height: 100%;
     object-fit: contain;
     opacity: 1; // Show by default
-    transition: opacity 0.4s ease-out;
     pointer-events: none;
     filter: blur(1px);
   }
