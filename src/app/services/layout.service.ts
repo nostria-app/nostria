@@ -2261,13 +2261,15 @@ export class LayoutService implements OnDestroy {
         behavior: 'smooth',
       });
 
-      // Recompute after render/layout settles to avoid occasional over-scroll
-      // caused by late sticky-header and content height adjustments.
+      // Correct after render/layout settles to avoid occasional over-scroll
+      // caused by late sticky-header adjustments.
+      // IMPORTANT: Reuse the same initialTarget instead of recomputing, because
+      // new content (timeline events) loading in the meantime increases scrollHeight
+      // which would uncap the maxScroll clamp and cause unwanted further scrolling.
       setTimeout(() => {
-        const correctedTarget = getTargetScrollTop();
-        if (Math.abs(container.scrollTop - correctedTarget) > 12) {
+        if (Math.abs(container.scrollTop - initialTarget) > 12) {
           container.scrollTo({
-            top: correctedTarget,
+            top: initialTarget,
             behavior: 'auto',
           });
         }
@@ -2874,7 +2876,6 @@ export class LayoutService implements OnDestroy {
    */
   scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
     if (!isPlatformBrowser(this.platformId)) return;
-
     this.logger.debug('[LayoutService] scrollLayoutToTop called with panel:', panel);
     const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
     const panelContainer = document.querySelector(panelSelector);

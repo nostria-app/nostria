@@ -947,7 +947,7 @@ export class FeedsComponent implements OnDestroy {
 
       // Reset rendered counts when feed changes or when its kinds change
       const feedChanged = previousFeedId !== null && previousFeedId !== currentFeedId;
-      const kindsChanged = previousFeedKinds !== null && 
+      const kindsChanged = previousFeedKinds !== null &&
         JSON.stringify([...previousFeedKinds].sort()) !== JSON.stringify([...currentKinds].sort());
 
       if (feedChanged || kindsChanged) {
@@ -970,8 +970,14 @@ export class FeedsComponent implements OnDestroy {
       const pendingCount = this.activeFeedPendingCount();
       const scrolledToTop = this.feedsScrolledToTop();
       const feed = this.activeFeed();
+      const feedsVisible = this.panelNav.showFeeds();
 
-      if (pendingCount > 0 && scrolledToTop && feed) {
+      // Only auto-load when feeds panel is actually visible.
+      // When feeds is hidden (e.g. user is on profile page), feedsScrollTop stays at 0
+      // so scrolledToTop is always true. Loading pending events while hidden causes DOM
+      // changes inside the same scroll container, triggering browser scroll anchoring
+      // which unexpectedly scrolls the profile page.
+      if (pendingCount > 0 && scrolledToTop && feed && feedsVisible) {
         untracked(() => {
           this.logger.debug(`Auto-loading ${pendingCount} pending events (user is scrolled to top)`);
           this.feedService.loadPendingEvents(feed.id);
@@ -1520,7 +1526,7 @@ export class FeedsComponent implements OnDestroy {
    */
   closeRelayFeed(): void {
     this.activeRelayDomain.set('');
-    
+
     this.router.navigate(['/f'], {
       queryParams: { r: null },
       queryParamsHandling: 'merge',
@@ -1560,7 +1566,7 @@ export class FeedsComponent implements OnDestroy {
     this.activeListFeed.set(null);
     this.listMentionedMode.set(false);
     this.listFeedMenu?.clearSelection();
-    
+
     this.router.navigate(['/f'], {
       queryParams: { l: null },
       queryParamsHandling: 'merge',
@@ -1964,7 +1970,7 @@ export class FeedsComponent implements OnDestroy {
    */
   closeDynamicFeed(): void {
     this.cleanupDynamicFeed();
-    
+
     // Clear the hashtag query param from URL
     this.router.navigate([], {
       queryParams: { t: null },
