@@ -726,9 +726,17 @@ export class MediaComponent {
     }
 
     if (itemsToPublish.length > 1) {
-      const confirmed = confirm(
-        `You have selected ${itemsToPublish.length} items. Do you want to publish them one by one?`
-      );
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Publish Multiple Items',
+          message: `You selected ${itemsToPublish.length} items. Publish them one by one?`,
+          confirmText: 'Publish',
+          cancelText: 'Cancel',
+          confirmColor: 'primary',
+        },
+      });
+
+      const confirmed = await dialogRef.afterClosed().toPromise();
       if (!confirmed) return;
 
       let successCount = 0;

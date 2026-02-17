@@ -76,12 +76,12 @@ export class PollEventComponent {
     effect(() => {
       const event = this.event();
       untracked(() => {
-        void this.loadPollResults(event);
+        void this.loadPollResults(event, false);
       });
     });
   }
 
-  private async loadPollResults(event: Event): Promise<void> {
+  private async loadPollResults(event: Event, forceRefresh = false): Promise<void> {
     const poll = this.pollService.parseNostrPollEvent(event);
     this.isLoading.set(true);
 
@@ -89,7 +89,7 @@ export class PollEventComponent {
       const responses = await this.pollService.fetchPollResponses(
         poll.eventId || poll.id,
         poll.endsAt,
-        false,
+        forceRefresh,
         poll.relays
       );
       this.responses.set(responses);
@@ -113,25 +113,46 @@ export class PollEventComponent {
   }
 
   async submitVote(): Promise<void> {
-    const selectedOptions = this.selectedOptions();
-    if (selectedOptions.length === 0) return;
+    const selectedOptionIds = this.selectedOptions();
+    if (selectedOptionIds.length === 0) return;
 
     const poll = this.poll();
+    const pollId = poll.eventId || poll.id;
+    const currentPubkey = this.app.accountState.pubkey();
+
+    if (!currentPubkey) {
+      return;
+    }
+
     this.isLoading.set(true);
 
     try {
       await this.pollService.submitPollResponse(
-        poll.eventId || poll.id,
-        selectedOptions,
+        pollId,
+        selectedOptionIds,
         poll.relays
       );
 
-      // Reload results after voting
-      this.pollService.clearResponseCache(poll.eventId || poll.id);
-      await this.loadPollResults(this.event());
+      const createdAt = Math.floor(Date.now() / 1000);
+      const existingResponses = this.responses().filter(response => response.pubkey !== currentPubkey);
+      const optimisticResponse: PollResponse = {
+        id: `local-${pollId}-${createdAt}`,
+        pollId,
+        responseIds: [...selectedOptionIds],
+        pubkey: currentPubkey,
+        created_at: createdAt,
+      };
 
-      // Clear selection
-      this.selectedOptions.set([]);
+      const updatedResponses = [...existingResponses, optimisticResponse];
+      this.responses.set(updatedResponses);
+      this.results.set(this.pollService.calculateResults(poll, updatedResponses));
+      this.selectedOptions.set([...selectedOptionIds]);
+
+      // Reload results after voting
+      this.pollService.clearResponseCache(pollId);
+      setTimeout(() => {
+        void this.loadPollResults(this.event(), true);
+      }, 1200);
     } catch (error) {
       console.error('Failed to submit vote:', error);
     } finally {

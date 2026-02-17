@@ -255,9 +255,7 @@ export class PollService implements OnInitialized {
     }
 
     try {
-      const queryRelayUrls = relayUrls && relayUrls.length > 0
-        ? relayUrls
-        : this.accountRelay.getRelayUrls();
+      const queryRelayUrls = this.mergeRelayUrls(relayUrls);
 
       if (queryRelayUrls.length === 0) {
         return [];
@@ -572,7 +570,7 @@ export class PollService implements OnInitialized {
     // Publish using PublishService with optimized relays
     const result = await this.publishService.publish(signedEvent, {
       useOptimizedRelays: true,
-      relayUrls,
+      relayUrls: this.mergeRelayUrls(relayUrls),
     });
 
     if (!result.success) {
@@ -667,5 +665,14 @@ export class PollService implements OnInitialized {
 
   private getCurrentUserPubkey(): string | null {
     return this.app.accountState.pubkey();
+  }
+
+  private mergeRelayUrls(relayUrls?: string[]): string[] {
+    const candidateRelays = [
+      ...(relayUrls || []),
+      ...this.accountRelay.getRelayUrls(),
+    ];
+
+    return Array.from(new Set(candidateRelays.filter(relay => typeof relay === 'string' && relay.trim().length > 0)));
   }
 }

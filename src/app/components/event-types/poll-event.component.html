@@ -58,6 +58,12 @@
 
   <div class="poll-footer">
     <div class="poll-info">
+      @if (hasVoted()) {
+      <span class="total-votes">
+        <mat-icon>check_circle</mat-icon>
+        You voted
+      </span>
+      }
       @if (results()) {
       <span class="total-votes">
         <mat-icon>how_to_vote</mat-icon>

@@ -56,20 +56,21 @@ npx playwright test --grep @security
 ```typescript
 @Component({
   selector: 'app-example',
-  imports: [CommonModule],           // Standalone imports
+  imports: [CommonModule], // Standalone imports
   templateUrl: './example.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,  // ALWAYS OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush, // ALWAYS OnPush
 })
 export class ExampleComponent {
-  data = input<DataType>();          // NOT @Input decorator
-  selected = output<Item>();         // NOT @Output decorator
+  data = input<DataType>(); // NOT @Input decorator
+  selected = output<Item>(); // NOT @Output decorator
   private service = inject(MyService); // NOT constructor injection
-  items = signal<Item[]>([]);        // State with signals
-  filtered = computed(() => this.items().filter(i => i.active)); // Derived
+  items = signal<Item[]>([]); // State with signals
+  filtered = computed(() => this.items().filter((i) => i.active)); // Derived
 }
 ```
 
 **Key Rules:**
+
 - Standalone components only - NO NgModules
 - Do NOT set `standalone: true` - it's default in Angular 21+
 - Do NOT use `@HostBinding`/`@HostListener` - use `host: {}` in decorator
@@ -79,9 +80,9 @@ export class ExampleComponent {
 ## Templates - Native Control Flow
 
 ```html
-@if (condition()) { <div>Content</div> }
-
-@for (item of items(); track item.id) { <app-item [data]="item" /> }
+@if (condition()) {
+<div>Content</div>
+} @for (item of items(); track item.id) { <app-item [data]="item" /> }
 
 <!-- WRONG: *ngIf, *ngFor, *ngSwitch -->
 ```
@@ -100,6 +101,7 @@ export class ExampleService {
 ## HTTP Requests
 
 **Always use `fetch`**, NOT HttpClient:
+
 ```typescript
 const response = await fetch(url);
 const data = await response.json();
@@ -108,14 +110,16 @@ const data = await response.json();
 ## Nostr Protocol
 
 **CRITICAL:** Timestamps are in **SECONDS**, not milliseconds:
+
 ```typescript
-const timestamp = Math.floor(Date.now() / 1000);  // CORRECT
-const timestamp = Date.now();                      // WRONG!
+const timestamp = Math.floor(Date.now() / 1000); // CORRECT
+const timestamp = Date.now(); // WRONG!
 ```
 
 ## Styling
 
 Use CSS variables (Material 3), never hardcoded colors:
+
 ```scss
 background: var(--mat-sys-surface);
 color: var(--mat-sys-on-surface);
@@ -125,6 +129,7 @@ color: var(--mat-sys-primary);
 Dark mode: `:host-context(.dark) .my-class { ... }`
 
 **Rules:**
+
 - Never set `font-weight` - current font doesn't support it
 - Use `field-sizing: content` for auto-growing textareas
 - Do NOT use `color="primary"` on buttons (Material 3)
@@ -138,6 +143,7 @@ Never use native `confirm()` dialogs. Use app dialogs/snackbars for confirmation
 ## SSR Safety
 
 Never access browser APIs directly:
+
 ```typescript
 private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 if (this.isBrowser) { const w = window.innerWidth; }
@@ -200,16 +206,16 @@ After running tests, check these outputs:
 
 Tests are tagged for filtering. Use `--grep` to select:
 
-| Tag | Description |
-|-----|-------------|
-| `@public` | No authentication required |
-| `@auth` | Requires logged-in account |
-| `@smoke` | Critical path, fast CI |
-| `@metrics` | Performance/metrics collection |
-| `@network` | Network/WebSocket monitoring |
-| `@security` | Security validation |
-| `@a11y` | Accessibility checks |
-| `@visual` | Visual regression screenshots |
+| Tag         | Description                    |
+| ----------- | ------------------------------ |
+| `@public`   | No authentication required     |
+| `@auth`     | Requires logged-in account     |
+| `@smoke`    | Critical path, fast CI         |
+| `@metrics`  | Performance/metrics collection |
+| `@network`  | Network/WebSocket monitoring   |
+| `@security` | Security validation            |
+| `@a11y`     | Accessibility checks           |
+| `@visual`   | Visual regression screenshots  |
 
 ### Writing E2E Tests
 
@@ -227,17 +233,17 @@ When creating new E2E tests, follow these conventions:
 
 ### Test Infrastructure Files
 
-| File | Purpose |
-|------|---------|
-| `e2e/fixtures.ts` | Extended Playwright fixtures (authenticatedPage, performanceMetrics, etc.) |
-| `e2e/helpers/auth.ts` | Auth injection/cleanup via TestAuthHelper |
-| `e2e/helpers/console-analyzer.ts` | Log categorization and assertions |
-| `e2e/helpers/metrics-collector.ts` | Performance data aggregation |
-| `e2e/helpers/websocket-monitor.ts` | CDP-based WebSocket inspection |
-| `e2e/helpers/report-generator.ts` | Full report generation (JSON + Markdown) |
-| `e2e/fixtures/test-data.ts` | Centralized constants (profiles, relays, routes, timeouts) |
-| `e2e/fixtures/mock-events.ts` | Nostr event factory functions |
-| `e2e/fixtures/test-isolation.ts` | App state reset helpers |
+| File                               | Purpose                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| `e2e/fixtures.ts`                  | Extended Playwright fixtures (authenticatedPage, performanceMetrics, etc.) |
+| `e2e/helpers/auth.ts`              | Auth injection/cleanup via TestAuthHelper                                  |
+| `e2e/helpers/console-analyzer.ts`  | Log categorization and assertions                                          |
+| `e2e/helpers/metrics-collector.ts` | Performance data aggregation                                               |
+| `e2e/helpers/websocket-monitor.ts` | CDP-based WebSocket inspection                                             |
+| `e2e/helpers/report-generator.ts`  | Full report generation (JSON + Markdown)                                   |
+| `e2e/fixtures/test-data.ts`        | Centralized constants (profiles, relays, routes, timeouts)                 |
+| `e2e/fixtures/mock-events.ts`      | Nostr event factory functions                                              |
+| `e2e/fixtures/test-isolation.ts`   | App state reset helpers                                                    |
 
 ### Reporting Tools
 
@@ -251,3 +257,4 @@ npm run test:e2e:report
 ```
 
 The full report includes: test results table, performance metrics with pass/fail indicators, console error summary, network health, memory trends, and actionable improvement recommendations.
+

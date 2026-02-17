@@ -71,7 +71,6 @@ When adding new features or routes, always add corresponding commands to the Com
 - Use the `providedIn: 'root'` option for singleton services
 - Use the `inject()` function instead of constructor injection
 
-
 ## Styling
 
 Always use "field-sizing: content" for textareas that grow with content. This is compatible with all modern browsers.
@@ -83,8 +82,8 @@ Due to Angular component styles are encapsulated by default, so use this way to 
 
 ```css
 :host-context(.dark) .your-class {
-    background-color: var(--mat-sys-surface-container);
-    color: var(--mat-sys-on-surface);
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
 }
 ```
 

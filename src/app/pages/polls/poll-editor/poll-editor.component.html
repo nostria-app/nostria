@@ -46,7 +46,8 @@
           <div [formGroupName]="$index" class="option-item">
             <mat-form-field appearance="outline" class="option-input">
               <mat-label>Option {{ $index + 1 }}</mat-label>
-              <input matInput formControlName="label" placeholder="Enter option text" />
+              <input #optionInput matInput formControlName="label" placeholder="Enter option text"
+                (keydown.enter)="addOptionBelow($index, $event)" />
               @if (option.get('label')?.hasError('required')) {
               <mat-error>Option text is required</mat-error>
               }

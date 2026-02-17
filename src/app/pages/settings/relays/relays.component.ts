@@ -46,6 +46,7 @@ import { EventRepublishService } from '../../../services/event-republish.service
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { BackupComponent } from '../backup/backup.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -894,9 +895,17 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async clearObservedRelayData(): Promise<void> {
-    const confirmed = confirm(
-      'Are you sure you want to clear all observed relay data? This action cannot be undone.'
-    );
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Clear Observed Relay Data',
+        message: 'Are you sure you want to clear all observed relay data? This action cannot be undone.',
+        confirmText: 'Clear',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
     if (confirmed) {
       try {
         // Clear in-memory data
@@ -956,7 +965,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       newInfo.set(url, info);
       this.nip11Info.set(newInfo);
     } catch (error) {
-        this.logger.error(`Error fetching NIP-11 info for ${url}:`, error);
+      this.logger.error(`Error fetching NIP-11 info for ${url}:`, error);
       // Store null to indicate fetch was attempted but failed
       const currentInfo = this.nip11Info();
       const newInfo = new Map(currentInfo);

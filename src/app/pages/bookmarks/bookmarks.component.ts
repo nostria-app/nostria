@@ -350,7 +350,18 @@ export class BookmarksComponent implements OnInit {
   async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
 
-    if (!confirm(`Are you sure you want to delete this bookmark?\n${bookmark.title}`)) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Bookmark',
+        message: `Are you sure you want to delete this bookmark?\n${bookmark.title}`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (!confirmed) {
       return;
     }
 

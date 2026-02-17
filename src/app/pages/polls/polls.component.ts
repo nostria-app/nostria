@@ -99,15 +99,15 @@ export class PollsComponent {
    * Load poll results (responses and calculated results)
    * Cached to avoid redundant queries
    */
-  private async loadPollResults(poll: Poll): Promise<void> {
+  private async loadPollResults(poll: Poll, forceRefresh = false): Promise<void> {
     // Check if already loaded
     const existing = this.pollResults().get(poll.id);
-    if (existing) {
+    if (existing && !forceRefresh) {
       return; // Already cached
     }
 
     try {
-      const responses = await this.pollService.fetchPollResponses(poll.eventId || poll.id, poll.endsAt, false, poll.relays);
+      const responses = await this.pollService.fetchPollResponses(poll.eventId || poll.id, poll.endsAt, forceRefresh, poll.relays);
       const results = this.pollService.calculateResults(poll, responses);
 
       const currentMap = this.pollResults();
@@ -164,7 +164,33 @@ export class PollsComponent {
 
   async submitVote(poll: Poll, optionIds: string[]): Promise<void> {
     try {
-      await this.pollService.submitPollResponse(poll.eventId || poll.id, optionIds, poll.relays);
+      const pollId = poll.eventId || poll.id;
+      await this.pollService.submitPollResponse(pollId, optionIds, poll.relays);
+
+      const currentPubkey = this.app.accountState.pubkey();
+      if (currentPubkey) {
+        const currentMap = this.pollResults();
+        const existing = currentMap.get(poll.id);
+        const existingResponses = existing?.responses || [];
+        const createdAt = Math.floor(Date.now() / 1000);
+        const optimisticResponses = [
+          ...existingResponses.filter(response => response.pubkey !== currentPubkey),
+          {
+            id: `local-${pollId}-${createdAt}`,
+            pollId,
+            responseIds: [...optionIds],
+            pubkey: currentPubkey,
+            created_at: createdAt,
+          },
+        ];
+
+        currentMap.set(poll.id, {
+          responses: optimisticResponses,
+          results: this.pollService.calculateResults(poll, optimisticResponses),
+        });
+        this.pollResults.set(new Map(currentMap));
+      }
+
       this.snackBar.open('Vote submitted successfully!', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
@@ -172,13 +198,12 @@ export class PollsComponent {
       });
 
       // Clear caches to force fresh data
-      this.pollService.clearResponseCache(poll.id);
-      const currentMap = this.pollResults();
-      currentMap.delete(poll.id);
-      this.pollResults.set(new Map(currentMap));
+      this.pollService.clearResponseCache(pollId);
 
       // Reload with fresh data
-      await this.loadPollResults(poll);
+      setTimeout(() => {
+        void this.loadPollResults(poll, true);
+      }, 1200);
     } catch (error) {
       this.logger.error('Failed to submit vote:', error);
       this.snackBar.open('Failed to submit vote', 'Close', {

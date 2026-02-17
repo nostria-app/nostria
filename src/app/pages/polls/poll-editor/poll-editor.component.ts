@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,6 +44,9 @@ export class PollEditorComponent implements OnInit {
 
   currentPoll = this.pollService.currentEditingPoll;
   isSaving = signal(false);
+  private initialFormSnapshot = '';
+
+  @ViewChildren('optionInput') optionInputs!: QueryList<ElementRef<HTMLInputElement>>;
 
   pollForm: FormGroup;
 
@@ -107,6 +110,8 @@ export class PollEditorComponent implements OnInit {
       pollType: poll.pollType,
       endsAt: poll.endsAt ? new Date(poll.endsAt * 1000) : null,
     });
+
+    this.updateSavedState();
   }
 
   private createOptionFormGroup(): FormGroup {
@@ -122,6 +127,13 @@ export class PollEditorComponent implements OnInit {
 
   addOption(): void {
     this.options.push(this.createOptionFormGroup());
+  }
+
+  addOptionBelow(index: number, event: Event): void {
+    event.preventDefault();
+    const insertIndex = index + 1;
+    this.options.insert(insertIndex, this.createOptionFormGroup());
+    this.focusOptionInput(insertIndex);
   }
 
   removeOption(index: number): void {
@@ -157,12 +169,16 @@ export class PollEditorComponent implements OnInit {
     });
 
     this.pollService.saveDraft();
+    this.updateSavedState();
 
     this.snackBar.open('Draft saved successfully', 'Close', {
       duration: 3000,
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+
+    this.pollService.cancelEditing();
+    this.router.navigate(['/polls']);
   }
 
   async publishPoll(shareAfterPublish = false): Promise<void> {
@@ -221,7 +237,7 @@ export class PollEditorComponent implements OnInit {
   }
 
   cancel(): void {
-    if (!this.pollForm.dirty) {
+    if (!this.hasUnsavedChanges()) {
       this.pollService.cancelEditing();
       this.router.navigate(['/polls']);
       return;
@@ -245,6 +261,37 @@ export class PollEditorComponent implements OnInit {
 
   private generateOptionId(): string {
     return Math.random().toString(36).substring(2, 11);
+  }
+
+  private focusOptionInput(index: number): void {
+    setTimeout(() => {
+      this.optionInputs.get(index)?.nativeElement.focus();
+    });
+  }
+
+  private hasUnsavedChanges(): boolean {
+    return this.createFormSnapshot() !== this.initialFormSnapshot;
+  }
+
+  private updateSavedState(): void {
+    this.initialFormSnapshot = this.createFormSnapshot();
+    this.pollForm.markAsPristine();
+    this.pollForm.markAsUntouched();
+  }
+
+  private createFormSnapshot(): string {
+    const formValue = this.pollForm.getRawValue();
+    const endsAt = formValue.endsAt ? Math.floor(new Date(formValue.endsAt).getTime() / 1000) : null;
+
+    return JSON.stringify({
+      content: (formValue.content || '').trim(),
+      pollType: formValue.pollType,
+      endsAt,
+      options: (formValue.options || []).map((option: { id?: string; label?: string }) => ({
+        id: option.id || '',
+        label: (option.label || '').trim(),
+      })),
+    });
   }
 
   private openShareDialogForPoll(poll: Poll): void {

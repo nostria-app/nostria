@@ -15,6 +15,7 @@ import { Playlist } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { CreatePlaylistDialogComponent } from '../../playlists/create-playlist-dialog/create-playlist-dialog.component';
 import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylistDialogResult } from '../../../components/rename-playlist-dialog/rename-playlist-dialog.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-playlists-tab',
@@ -133,8 +134,19 @@ export class PlaylistsTabComponent {
     });
   }
 
-  deletePlaylist(playlist: Playlist): void {
-    if (confirm(`Are you sure you want to delete "${playlist.title}"?`)) {
+  async deletePlaylist(playlist: Playlist): Promise<void> {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Playlist',
+        message: `Are you sure you want to delete "${playlist.title}"?`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (confirmed) {
       this.playlistService.deletePlaylist(playlist.id);
     }
   }
@@ -169,8 +181,19 @@ export class PlaylistsTabComponent {
     this.router.navigate(['/playlists/edit', draftId]);
   }
 
-  deleteDraft(draftId: string): void {
-    if (confirm('Are you sure you want to delete this draft?')) {
+  async deleteDraft(draftId: string): Promise<void> {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Draft',
+        message: 'Are you sure you want to delete this draft?',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (confirmed) {
       this.playlistService.removeDraft(draftId);
     }
   }

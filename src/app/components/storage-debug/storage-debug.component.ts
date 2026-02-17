@@ -5,6 +5,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { CommonModule } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-storage-debug',
@@ -104,6 +106,7 @@ import { CommonModule } from '@angular/common';
 export class StorageDebugComponent implements OnInit {
   database = inject(DatabaseService);
   logger = inject(LoggerService);
+  private readonly dialog = inject(MatDialog);
 
   diagnosticInfo = signal<unknown>(null);
   storageHealth = signal<string>('');
@@ -141,14 +144,25 @@ export class StorageDebugComponent implements OnInit {
   }
 
   async clearStorage() {
-    if (confirm('This will clear all stored data and restart the app. Continue?')) {
-      try {
-        await this.database.wipe();
-        window.location.reload();
-      } catch (error) {
-        this.logger.error('Failed to clear storage', error);
-        alert('Failed to clear storage. Check console for details.');
-      }
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Clear Storage',
+        message: 'This will clear all stored data and restart the app. Continue?',
+        confirmText: 'Clear & Restart',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (!confirmed) return;
+
+    try {
+      await this.database.wipe();
+      window.location.reload();
+    } catch (error) {
+      this.logger.error('Failed to clear storage', error);
+      alert('Failed to clear storage. Check console for details.');
     }
   }
 }

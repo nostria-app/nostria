@@ -641,14 +641,26 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
 
     const content = this.content().trim();
     if (content) {
-      if (confirm('Discard your reply?')) {
-        this.content.set('');
-        this.mentionMap.clear();
-        this.pubkeyToNameMap.clear();
-        this.mediaMetadata.set([]);
-        this.isExpanded.set(false);
-        this.cancelled.emit();
-      }
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Discard Reply',
+          message: 'Discard your reply?',
+          confirmText: 'Discard',
+          cancelText: 'Keep Editing',
+          confirmColor: 'warn',
+        },
+      });
+
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (confirmed) {
+          this.content.set('');
+          this.mentionMap.clear();
+          this.pubkeyToNameMap.clear();
+          this.mediaMetadata.set([]);
+          this.isExpanded.set(false);
+          this.cancelled.emit();
+        }
+      });
     } else {
       this.isExpanded.set(false);
       this.cancelled.emit();
