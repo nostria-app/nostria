@@ -673,6 +673,14 @@ export class RunesSidebarComponent implements OnDestroy {
     return new Date(timestampSeconds * 1000).toLocaleTimeString();
   }
 
+  protected reloadBitcoinPrice(): void {
+    if (this.bitcoinPrice().loading) {
+      return;
+    }
+
+    void this.loadBitcoinPrice();
+  }
+
   private async loadBitcoinPrice(): Promise<void> {
     this.bitcoinPrice.update(state => ({
       ...state,

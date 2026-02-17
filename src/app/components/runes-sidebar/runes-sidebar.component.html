@@ -45,7 +45,13 @@
         }
       </span>
     </div>
-    <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
+    <div class="btc-meta-row">
+      <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
+      <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
+        (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
+        <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+      </button>
+    </div>
     @if (bitcoinPrice().error) {
     <div class="rune-error">{{ bitcoinPrice().error }}</div>
     }
@@ -151,7 +157,13 @@
           }
         </span>
       </div>
-      <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
+      <div class="btc-meta-row">
+        <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
+        <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
+          (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
+          <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+        </button>
+      </div>
       @if (bitcoinPrice().error) {
       <div class="rune-error">{{ bitcoinPrice().error }}</div>
       }

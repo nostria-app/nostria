@@ -96,6 +96,32 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.btc-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.btc-reload-button {
+  --mdc-icon-button-state-layer-size: 30px;
+  --mat-icon-button-touch-target-size: 30px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+
+  .mat-icon {
+    margin: 0;
+    line-height: 1;
+  }
+}
+
 .rune-error {
   color: var(--mat-sys-error);
   font-size: 0.85rem;
