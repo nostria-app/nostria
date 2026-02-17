@@ -27,6 +27,11 @@ export class ArticleEventComponent {
   private ethiopianCalendar = inject(EthiopianCalendarService);
   private readonly MAX_LENGTH = 300;
   private readonly MAX_SUMMARY_LENGTH = 200;
+  private readonly MIN_SUMMARY_PARAGRAPH_LENGTH = 20;
+  private readonly IMAGE_EXTENSIONS = '(jpg|jpeg|png|gif|webp)';
+  // Compile regex patterns once to avoid repeated compilation in computed properties
+  private readonly MARKDOWN_IMAGE_REGEX = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|webp)(\?[^\s)]*)?)\)/i;
+  private readonly STANDALONE_IMAGE_REGEX = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?/i;
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
@@ -36,7 +41,18 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    return this.getEventTitle(event);
+    const tagTitle = this.getEventTitle(event);
+    if (tagTitle) return tagTitle;
+
+    // Fallback: Extract title from first heading in markdown content
+    if (event.content) {
+      const firstHeadingMatch = event.content.match(/^#\s+(.+?)\s*$/m);
+      if (firstHeadingMatch) {
+        return firstHeadingMatch[1].trim();
+      }
+    }
+
+    return null;
   });
 
   // Article summary/description
@@ -45,7 +61,26 @@ export class ArticleEventComponent {
     if (!event) return null;
 
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
-    return summaryTag?.[1] || null;
+    if (summaryTag?.[1]) return summaryTag[1];
+
+    // Fallback: Extract first paragraph from content (after title if present)
+    if (event.content) {
+      let content = event.content;
+      
+      // Remove title if it exists (first # heading)
+      content = content.replace(/^#\s+.+$/m, '').trim();
+      
+      // Get first substantial paragraph (at least MIN_SUMMARY_PARAGRAPH_LENGTH chars)
+      const paragraphs = content.split(/\n\n+/);
+      for (const para of paragraphs) {
+        const cleaned = para.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim(); // Remove images
+        if (cleaned.length >= this.MIN_SUMMARY_PARAGRAPH_LENGTH) {
+          return cleaned;
+        }
+      }
+    }
+
+    return null;
   });
 
   // Truncated summary for display in listings
@@ -137,7 +172,24 @@ export class ArticleEventComponent {
     if (!event) return null;
 
     const imageTag = event.tags.find(tag => tag[0] === 'image');
-    return imageTag?.[1] || null;
+    if (imageTag?.[1]) return imageTag[1];
+
+    // Fallback: Extract first image from markdown content
+    if (event.content) {
+      // Try markdown image syntax: ![alt](url)
+      const markdownImageMatch = event.content.match(this.MARKDOWN_IMAGE_REGEX);
+      if (markdownImageMatch) {
+        return markdownImageMatch[1];
+      }
+
+      // Try standalone image URLs
+      const standaloneImageMatch = event.content.match(this.STANDALONE_IMAGE_REGEX);
+      if (standaloneImageMatch) {
+        return standaloneImageMatch[0];
+      }
+    }
+
+    return null;
   });
 
   // Author information from tags
