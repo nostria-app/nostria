@@ -27,6 +27,8 @@ export class ArticleEventComponent {
   private ethiopianCalendar = inject(EthiopianCalendarService);
   private readonly MAX_LENGTH = 300;
   private readonly MAX_SUMMARY_LENGTH = 200;
+  private readonly MIN_SUMMARY_PARAGRAPH_LENGTH = 20;
+  private readonly IMAGE_EXTENSIONS = '(jpg|jpeg|png|gif|webp)';
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
@@ -41,7 +43,7 @@ export class ArticleEventComponent {
 
     // Fallback: Extract title from first heading in markdown content
     if (event.content) {
-      const firstHeadingMatch = event.content.match(/^#\s+(.+)$/m);
+      const firstHeadingMatch = event.content.match(/^#\s+(.+?)\s*$/m);
       if (firstHeadingMatch) {
         return firstHeadingMatch[1].trim();
       }
@@ -65,11 +67,11 @@ export class ArticleEventComponent {
       // Remove title if it exists (first # heading)
       content = content.replace(/^#\s+.+$/m, '').trim();
       
-      // Get first substantial paragraph (at least 20 chars)
+      // Get first substantial paragraph (at least MIN_SUMMARY_PARAGRAPH_LENGTH chars)
       const paragraphs = content.split(/\n\n+/);
       for (const para of paragraphs) {
-        const cleaned = para.replace(/!\[.*?\]\(.*?\)/g, '').trim(); // Remove images
-        if (cleaned.length >= 20) {
+        const cleaned = para.replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim(); // Remove images
+        if (cleaned.length >= this.MIN_SUMMARY_PARAGRAPH_LENGTH) {
           return cleaned;
         }
       }
@@ -172,13 +174,15 @@ export class ArticleEventComponent {
     // Fallback: Extract first image from markdown content
     if (event.content) {
       // Try markdown image syntax: ![alt](url)
-      const markdownImageMatch = event.content.match(/!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|webp)(\?[^\s)]*)?)\)/i);
+      const markdownImageRegex = new RegExp(`!\\[.*?\\]\\((https?:\\/\\/[^\\s)]+\\.${this.IMAGE_EXTENSIONS}(\\?[^\\s)]*)?)\\)`, 'i');
+      const markdownImageMatch = event.content.match(markdownImageRegex);
       if (markdownImageMatch) {
         return markdownImageMatch[1];
       }
 
       // Try standalone image URLs
-      const standaloneImageMatch = event.content.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?/i);
+      const standaloneImageRegex = new RegExp(`https?:\\/\\/[^\\s]+\\.${this.IMAGE_EXTENSIONS}(\\?[^\\s]*)?`, 'i');
+      const standaloneImageMatch = event.content.match(standaloneImageRegex);
       if (standaloneImageMatch) {
         return standaloneImageMatch[0];
       }
