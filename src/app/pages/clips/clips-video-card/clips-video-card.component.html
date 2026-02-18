@@ -60,12 +60,14 @@
 
     <button mat-icon-button class="action-item" (click)="onComments($event)" matTooltip="Comments">
       <mat-icon>mode_comment</mat-icon>
-      <span class="action-count" [class.hidden]="commentsCount() <= 0">{{ commentsCount() > 0 ? commentsCount() : '0' }}</span>
+      <span class="action-count" [class.hidden]="commentsCount() <= 0">{{ commentsCount() > 0 ? commentsCount() : '0'
+        }}</span>
     </button>
 
     <button mat-icon-button class="action-item" (click)="onShare($event)" matTooltip="Share">
       <mat-icon>share</mat-icon>
-      <span class="action-count" [class.hidden]="sharesCount() <= 0">{{ sharesCount() > 0 ? sharesCount() : '0' }}</span>
+      <span class="action-count" [class.hidden]="sharesCount() <= 0">{{ sharesCount() > 0 ? sharesCount() : '0'
+        }}</span>
     </button>
 
     <div class="action-item zap-action" matTooltip="Zap">

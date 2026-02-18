@@ -36,11 +36,13 @@ const INITIAL_CLIPS_RELAY_LIMIT_TOTAL = 12;
 const FULL_CLIPS_RELAY_LIMIT_PER_SOURCE = 8;
 const FULL_CLIPS_RELAY_LIMIT_TOTAL = 20;
 const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
+const FOLLOWING_FETCH_CONCURRENCY = 3;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 const CLIP_COMMENTS_KIND = 1111;
 const CLIP_COMMENTS_PREFETCH_LIMIT = 30;
 const PROFILE_PREFETCH_MAX_AUTHORS = 120;
 const CLIPS_CURRENT_EVENT_STORAGE_PREFIX = 'clips-current-event';
+const INTERACTION_PREFETCH_COOLDOWN_MS = 6000;
 
 interface CachedClipEventRecord {
   version: 1;
@@ -131,6 +133,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
   private prefetchedInteractionIds = new Set<string>();
   private interactionPrefetchInFlight = new Set<string>();
+  private interactionLastPrefetchedAt = new Map<string, number>();
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -681,22 +684,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
       const followingAuthors = Array.from(new Set(this.accountState.followingList()));
       if (followingAuthors.length > 0) {
-        await Promise.all(
-          followingAuthors.map(async author => {
-            const authorRelayUrls = await this.getFollowingRelayUrls(author, relayUrls);
-
-            await this.collectClipsForFilter(
-              authorRelayUrls,
-              {
-                kinds: [...CLIPS_KINDS],
-                authors: [author],
-                limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
-              },
-              dedupedMap,
-              3500
-            );
-          })
-        );
+        await this.loadFollowingAuthorClips(followingAuthors, relayUrls, dedupedMap);
       }
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
@@ -1157,14 +1145,18 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();
     const currentClip = clips[Math.min(Math.max(currentIndex, 0), clips.length - 1)] ?? null;
-    const nextClip = currentIndex + 1 < clips.length ? clips[currentIndex + 1] : null;
 
     this.prefetchClipInteractions(currentClip);
-    this.prefetchClipInteractions(nextClip);
   }
 
   private prefetchClipInteractions(event: Event | null): void {
     if (!event) {
+      return;
+    }
+
+    const now = Date.now();
+    const lastPrefetchedAt = this.interactionLastPrefetchedAt.get(event.id) || 0;
+    if (now - lastPrefetchedAt < INTERACTION_PREFETCH_COOLDOWN_MS) {
       return;
     }
 
@@ -1175,10 +1167,14 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.interactionPrefetchInFlight.add(event.id);
 
     const interactions: Promise<unknown>[] = [
-      this.eventService.loadReactions(event.id, event.pubkey),
-      this.eventService.loadReplies(event.id, event.pubkey),
-      this.eventService.loadReposts(event.id, event.kind, event.pubkey),
-      this.eventService.loadQuotes(event.id, event.pubkey),
+      this.eventService.loadEventInteractions(
+        event.id,
+        event.kind,
+        event.pubkey,
+        false,
+        false,
+        EventService.INTERACTION_QUERY_LIMIT,
+      ),
       this.zapService.getZapsForEvent(event.id),
     ];
 
@@ -1190,7 +1186,40 @@ export class ClipsComponent implements OnInit, OnDestroy {
     void Promise.allSettled(interactions).finally(() => {
       this.interactionPrefetchInFlight.delete(event.id);
       this.prefetchedInteractionIds.add(event.id);
+      this.interactionLastPrefetchedAt.set(event.id, Date.now());
     });
+  }
+
+  private async loadFollowingAuthorClips(
+    followingAuthors: string[],
+    relayUrls: string[],
+    dedupedMap: Map<string, Event>
+  ): Promise<void> {
+    let cursor = 0;
+
+    const worker = async (): Promise<void> => {
+      while (cursor < followingAuthors.length) {
+        const index = cursor;
+        cursor += 1;
+        const author = followingAuthors[index];
+
+        const authorRelayUrls = await this.getFollowingRelayUrls(author, relayUrls);
+
+        await this.collectClipsForFilter(
+          authorRelayUrls,
+          {
+            kinds: [...CLIPS_KINDS],
+            authors: [author],
+            limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
+          },
+          dedupedMap,
+          3500
+        );
+      }
+    };
+
+    const workerCount = Math.min(FOLLOWING_FETCH_CONCURRENCY, followingAuthors.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
   }
 
   private async prefetchComments(event: Event, currentUserPubkey: string): Promise<void> {
