@@ -635,10 +635,12 @@ export class RelayBatchService {
       since: number;
       until?: number;
       timeout?: number;
+      authors?: string[];
     },
     onEventsReceived?: (events: Event[]) => void
   ): Promise<Event[]> {
-    const followingList = this.accountState.followingList();
+    const requestedAuthors = options.authors ?? this.accountState.followingList();
+    const followingList = Array.from(new Set(requestedAuthors));
 
     if (followingList.length === 0) {
       this.logger.debug('[RelayBatchService] Following list is empty');

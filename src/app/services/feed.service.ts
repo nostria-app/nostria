@@ -3112,18 +3112,29 @@ export class FeedService {
    * Fetch new events for following-based feeds
    */
   private async fetchNewEventsForFollowing(feedData: FeedItem, sinceTimestamp: number): Promise<Event[]> {
+    // Keep recommendation-based behavior for For You feed
+    if (feedData.feed.source === 'for-you') {
+      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+
+      const topEngagedUsers = isArticlesFeed
+        ? await this.algorithms.getRecommendedUsersForArticles(10)
+        : await this.algorithms.getRecommendedUsers(10);
+
+      if (topEngagedUsers.length === 0) return [];
+
+      const pubkeys = topEngagedUsers.map(user => user.pubkey);
+      return this.fetchNewEventsFromUsers(pubkeys, feedData, sinceTimestamp);
+    }
+
+    const windowPubkeys = await this.followingData.getFollowingRefreshWindowPubkeys(140);
+    if (windowPubkeys.length === 0) {
+      return [];
+    }
+
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+    const kinds = isArticlesFeed ? [30023] : feedData.feed.kinds;
 
-    const topEngagedUsers = isArticlesFeed
-      ? await this.algorithms.getRecommendedUsersForArticles(10)
-      : await this.algorithms.getRecommendedUsers(10);
-
-    if (topEngagedUsers.length === 0) return [];
-
-    // Extract pubkeys from UserMetric objects
-    const pubkeys = topEngagedUsers.map(user => user.pubkey);
-
-    return this.fetchNewEventsFromUsers(pubkeys, feedData, sinceTimestamp);
+    return this.followingData.fetchNewEventsForAuthors(windowPubkeys, kinds, sinceTimestamp, 1800);
   }
 
   /**

@@ -2,9 +2,10 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
-import { DatabaseService } from './database.service';
+import { DatabaseService, FollowingActivityRecord } from './database.service';
 import { RelayBatchService } from './relay-batch.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { FollowSetsService } from './follow-sets.service';
 
 /**
  * Service for managing following data fetching across the application.
@@ -35,6 +36,7 @@ export class FollowingDataService {
   private readonly database = inject(DatabaseService);
   private readonly relayBatch = inject(RelayBatchService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly followSets = inject(FollowSetsService);
 
   // How long before data is considered stale (5 minutes)
   private readonly STALE_THRESHOLD_MS = 5 * 60 * 1000;
@@ -47,6 +49,14 @@ export class FollowingDataService {
   // This limits how many events are loaded at startup for the feed display
   // Older events can still be loaded via infinite scroll pagination
   private readonly MAX_INITIAL_CACHE_SECONDS = 7 * 24 * 60 * 60;
+
+  // Activity persistence tuning
+  private readonly ACTIVITY_FLUSH_DELAY_MS = 750;
+  private readonly ACTIVITY_PRUNE_INTERVAL_MS = 10 * 60 * 1000;
+
+  // Periodic following refresh tuning
+  private readonly REFRESH_TOP_ACTIVE_RATIO = 0.4;
+  private readonly REFRESH_MIN_TOP_ACTIVE = 10;
 
   // Loading state
   readonly isLoading = signal(false);
@@ -67,6 +77,14 @@ export class FollowingDataService {
 
   // Current pagination fetch promise (for loading older events)
   private paginationFetchPromise: Promise<Event[]> | null = null;
+
+  // Windowed rotation cursor for periodic refresh checks
+  private refreshWindowCursor = 0;
+
+  // Batched activity write buffer (pubkey -> aggregate)
+  private pendingActivityUpdates = new Map<string, { lastPostedAtSec: number; lastSeenAtMs: number; eventCountDelta: number }>();
+  private activityFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastActivityPruneAtMs = 0;
 
   /**
    * Get the timestamp of when we last fetched following data.
@@ -268,6 +286,237 @@ export class FollowingDataService {
   }
 
   /**
+   * Build a tracked pubkey set from default follows + all people lists.
+   */
+  private getTrackedPubkeysSet(): Set<string> {
+    const tracked = new Set<string>();
+
+    for (const pubkey of this.accountState.followingList()) {
+      if (pubkey) {
+        tracked.add(pubkey);
+      }
+    }
+
+    for (const followSet of this.followSets.followSets()) {
+      for (const pubkey of followSet.pubkeys) {
+        if (pubkey) {
+          tracked.add(pubkey);
+        }
+      }
+    }
+
+    return tracked;
+  }
+
+  /**
+   * Keep shared activity store scoped to currently tracked pubkeys.
+   */
+  private async pruneActivityIfNeeded(trackedPubkeys: string[]): Promise<void> {
+    const nowMs = Date.now();
+    if (nowMs - this.lastActivityPruneAtMs < this.ACTIVITY_PRUNE_INTERVAL_MS) {
+      return;
+    }
+
+    this.lastActivityPruneAtMs = nowMs;
+    try {
+      await this.database.pruneFollowingActivity(trackedPubkeys);
+    } catch (error) {
+      this.logger.warn('[FollowingDataService] Failed to prune following activity records:', error);
+    }
+  }
+
+  /**
+   * Returns following authors prioritized by:
+   * 1) known last-posted activity (desc)
+   * 2) reverse follow-list order fallback for unknowns (bottom first)
+   */
+  private async getPrioritizedFollowingPubkeys(): Promise<string[]> {
+    const followingList = this.accountState.followingList();
+    if (followingList.length === 0) {
+      return [];
+    }
+
+    const reverseDeduped: string[] = [];
+    const seen = new Set<string>();
+
+    // Reverse processing for first-time unknown users: newest follows (bottom) first
+    for (let index = followingList.length - 1; index >= 0; index--) {
+      const pubkey = followingList[index];
+      if (!pubkey || seen.has(pubkey)) {
+        continue;
+      }
+      seen.add(pubkey);
+      reverseDeduped.push(pubkey);
+    }
+
+    let records: FollowingActivityRecord[] = [];
+    try {
+      records = await this.database.getFollowingActivity(reverseDeduped);
+    } catch (error) {
+      this.logger.warn('[FollowingDataService] Failed to load following activity for prioritization:', error);
+    }
+
+    const activityByPubkey = new Map(records.map(record => [record.pubkey, record]));
+
+    const knownActive = reverseDeduped
+      .filter(pubkey => activityByPubkey.has(pubkey))
+      .sort((pubkeyA, pubkeyB) => {
+        const a = activityByPubkey.get(pubkeyA)?.lastPostedAtSec ?? 0;
+        const b = activityByPubkey.get(pubkeyB)?.lastPostedAtSec ?? 0;
+        return b - a;
+      });
+
+    const unknownActive = reverseDeduped.filter(pubkey => !activityByPubkey.has(pubkey));
+
+    return [...knownActive, ...unknownActive];
+  }
+
+  /**
+   * Queue activity updates and flush shortly after to avoid excessive IndexedDB writes.
+   */
+  private queueActivityUpdates(events: Event[], trackedPubkeys: Set<string>): void {
+    if (events.length === 0 || trackedPubkeys.size === 0) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    let hasUpdates = false;
+
+    for (const event of events) {
+      const pubkey = event.pubkey;
+      if (!pubkey || !trackedPubkeys.has(pubkey)) {
+        continue;
+      }
+
+      const existing = this.pendingActivityUpdates.get(pubkey);
+      const nextLastPosted = Math.max(existing?.lastPostedAtSec ?? 0, event.created_at ?? 0);
+
+      this.pendingActivityUpdates.set(pubkey, {
+        lastPostedAtSec: nextLastPosted,
+        lastSeenAtMs: nowMs,
+        eventCountDelta: (existing?.eventCountDelta ?? 0) + 1,
+      });
+
+      hasUpdates = true;
+    }
+
+    if (!hasUpdates || this.activityFlushTimer) {
+      return;
+    }
+
+    this.activityFlushTimer = setTimeout(() => {
+      void this.flushActivityUpdates();
+    }, this.ACTIVITY_FLUSH_DELAY_MS);
+  }
+
+  /**
+   * Flush queued activity updates to shared DB.
+   */
+  private async flushActivityUpdates(): Promise<void> {
+    if (this.activityFlushTimer) {
+      clearTimeout(this.activityFlushTimer);
+      this.activityFlushTimer = null;
+    }
+
+    if (this.pendingActivityUpdates.size === 0) {
+      return;
+    }
+
+    const updates = Array.from(this.pendingActivityUpdates.entries()).map(([pubkey, data]) => ({
+      pubkey,
+      lastPostedAtSec: data.lastPostedAtSec,
+      lastSeenAtMs: data.lastSeenAtMs,
+      eventCountDelta: data.eventCountDelta,
+    }));
+
+    this.pendingActivityUpdates.clear();
+
+    try {
+      await this.database.upsertFollowingActivity(updates);
+    } catch (error) {
+      this.logger.warn('[FollowingDataService] Failed to persist following activity updates:', error);
+    }
+  }
+
+  /**
+   * Get a periodic refresh window: always include a top-active slice,
+   * then rotate through the remaining followed authors.
+   */
+  async getFollowingRefreshWindowPubkeys(windowSize = 140): Promise<string[]> {
+    const prioritized = await this.getPrioritizedFollowingPubkeys();
+    if (prioritized.length <= windowSize) {
+      return prioritized;
+    }
+
+    const topCount = Math.min(
+      prioritized.length,
+      Math.max(this.REFRESH_MIN_TOP_ACTIVE, Math.floor(windowSize * this.REFRESH_TOP_ACTIVE_RATIO))
+    );
+
+    const topAuthors = prioritized.slice(0, topCount);
+    const rotatingPool = prioritized.slice(topCount);
+    const remainingSlots = Math.max(windowSize - topAuthors.length, 0);
+
+    if (remainingSlots === 0 || rotatingPool.length === 0) {
+      return topAuthors;
+    }
+
+    const start = this.refreshWindowCursor % rotatingPool.length;
+    const rotated: string[] = [];
+
+    for (let i = 0; i < remainingSlots; i++) {
+      const pubkey = rotatingPool[(start + i) % rotatingPool.length];
+      rotated.push(pubkey);
+    }
+
+    this.refreshWindowCursor = (start + remainingSlots) % rotatingPool.length;
+
+    return Array.from(new Set([...topAuthors, ...rotated]));
+  }
+
+  /**
+   * Fetch newest events for an explicit subset of following authors.
+   */
+  async fetchNewEventsForAuthors(
+    pubkeys: string[],
+    kinds: number[],
+    sinceTimestamp: number,
+    timeout = 1800
+  ): Promise<Event[]> {
+    if (pubkeys.length === 0) {
+      return [];
+    }
+
+    const trackedPubkeys = this.getTrackedPubkeysSet();
+    await this.pruneActivityIfNeeded(Array.from(trackedPubkeys));
+
+    const now = Math.floor(Date.now() / 1000);
+
+    const events = await this.relayBatch.fetchFollowingEventsFast(
+      kinds,
+      {
+        authors: pubkeys,
+        since: sinceTimestamp,
+        until: now,
+        timeout,
+      },
+      (batchEvents: Event[]) => {
+        for (const event of batchEvents) {
+          this.database.saveEvent(event).catch(err => {
+            this.logger.error('[FollowingDataService] Error saving event during refresh fetch:', err);
+          });
+        }
+        this.queueActivityUpdates(batchEvents, trackedPubkeys);
+      }
+    );
+
+    this.queueActivityUpdates(events, trackedPubkeys);
+    await this.flushActivityUpdates();
+
+    return events;
+  }
+
+  /**
    * Fetch events from relays using the FAST method (account relays directly).
    * 
    * PERFORMANCE: This uses the user's own account relays instead of discovering
@@ -287,7 +536,14 @@ export class FollowingDataService {
     customSince?: number,
     customUntil?: number
   ): Promise<Event[]> {
-    const followingList = this.accountState.followingList();
+    const trackedPubkeys = this.getTrackedPubkeysSet();
+    const followingList = await this.getPrioritizedFollowingPubkeys();
+
+    if (followingList.length === 0) {
+      return [];
+    }
+
+    await this.pruneActivityIfNeeded(Array.from(trackedPubkeys));
 
     this.isLoading.set(true);
     this.isFetching.set(true);
@@ -307,6 +563,7 @@ export class FollowingDataService {
       const newEvents = await this.relayBatch.fetchFollowingEventsFast(
         kinds,
         {
+          authors: followingList,
           since: sinceTimestamp,
           until: untilTimestamp,
           timeout: 2000, // Short timeout - fail fast on slow relays, we have caching
@@ -324,8 +581,13 @@ export class FollowingDataService {
           if (onProgress) {
             onProgress(batchEvents);
           }
+
+          this.queueActivityUpdates(batchEvents, trackedPubkeys);
         }
       );
+
+      this.queueActivityUpdates(newEvents, trackedPubkeys);
+      await this.flushActivityUpdates();
 
       // Update last fetch timestamp to NOW
       this.setLastFetchTimestamp(Date.now());
@@ -458,5 +720,11 @@ export class FollowingDataService {
     this.oldestFetchedTimestamp.set(null);
     this.currentFetchPromise = null;
     this.paginationFetchPromise = null;
+    this.refreshWindowCursor = 0;
+    this.pendingActivityUpdates.clear();
+    if (this.activityFlushTimer) {
+      clearTimeout(this.activityFlushTimer);
+      this.activityFlushTimer = null;
+    }
   }
 }

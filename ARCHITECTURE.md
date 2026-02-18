@@ -683,6 +683,25 @@ const profile = await sharedRelay.getUserProfile(pubkey);
 - Automatic deduplication
 - Lifecycle tracking
 
+### Following Feed Retrieval Strategy
+
+The `Following` feed uses a hybrid author-priority strategy to minimize time-to-first-render:
+
+1. **Known active authors first** (sorted by `lastPostedAtSec`)
+2. **Unknown authors fallback to reverse follow order** (latest follows at the bottom of kind-3 list are queried first)
+3. **Incremental render path** pushes events to UI as soon as each relay batch returns
+
+Author activity is persisted in shared IndexedDB (`followingActivity` store) and updated when events arrive from tracked pubkeys.
+Tracked pubkeys are built from:
+
+- Default kind-3 following list
+- Pubkeys present in the account's People Lists (kind 30000)
+
+Periodic refresh for `Following` uses a **windowed active-first rotation**:
+
+- A fixed top-active slice is always queried each cycle
+- Remaining authors are queried via rotating windows so all follows are eventually checked
+
 ---
 
 ## Encryption & Privacy
