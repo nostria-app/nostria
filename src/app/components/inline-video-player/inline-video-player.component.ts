@@ -127,8 +127,11 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Track if video was auto-played (vs manually played by user click)
   // Only auto-played videos should be auto-paused when leaving viewport
   private wasAutoPlayed = signal(false);
+  private userPausedByInteraction = signal(false);
 
   private fullscreenCleanup: (() => void) | null = null;
+  private visibilityChangeCleanup: (() => void) | null = null;
+  private pageShowCleanup: (() => void) | null = null;
 
   private readonly onFullscreenChange = (fullscreen: boolean) => {
     this.isFullscreen.set(fullscreen);
@@ -157,6 +160,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.duration.set(0);
         this.buffered.set(0);
         this.wasAutoPlayed.set(false);
+        this.userPausedByInteraction.set(false);
         this.cleanupVideoListeners();
         this.attachVideoListeners(this.videoElement.nativeElement);
       }
@@ -239,6 +243,33 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.videoElement?.nativeElement,
         this.onFullscreenChange
       );
+
+      const onVisibilityChange = () => {
+        if (document.visibilityState !== 'visible') {
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          this.resumeAutoplayAfterAppReturn();
+        });
+      };
+
+      const onPageShow = () => {
+        requestAnimationFrame(() => {
+          this.resumeAutoplayAfterAppReturn();
+        });
+      };
+
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('pageshow', onPageShow);
+
+      this.visibilityChangeCleanup = () => {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      };
+
+      this.pageShowCleanup = () => {
+        window.removeEventListener('pageshow', onPageShow);
+      };
     }
   }
 
@@ -254,6 +285,16 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     if (isPlatformBrowser(this.platformId) && this.fullscreenCleanup) {
       this.fullscreenCleanup();
       this.fullscreenCleanup = null;
+    }
+
+    if (this.visibilityChangeCleanup) {
+      this.visibilityChangeCleanup();
+      this.visibilityChangeCleanup = null;
+    }
+
+    if (this.pageShowCleanup) {
+      this.pageShowCleanup();
+      this.pageShowCleanup = null;
     }
 
     // Clean up blob URL if created
@@ -421,12 +462,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     if (video.paused) {
       // Mark as manually played - don't auto-pause when leaving viewport
       this.wasAutoPlayed.set(false);
+      this.userPausedByInteraction.set(false);
       video.play().catch(() => {
         // Play failed, likely due to autoplay restrictions
       });
       // Start auto-hide timer when video starts playing
       this.startAutoHideTimer();
     } else {
+      this.userPausedByInteraction.set(true);
       video.pause();
     }
   }
@@ -558,6 +601,26 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       current = current.parentElement;
     }
     return false;
+  }
+
+  private resumeAutoplayAfterAppReturn(): void {
+    const video = this.videoElement?.nativeElement;
+    if (!video) {
+      return;
+    }
+
+    if (!this.autoplay() || this.blurred() || !this.isInViewport() || this.userPausedByInteraction() || !video.paused) {
+      return;
+    }
+
+    const canAutoPlay = this.inFeedsPanel() ? this.videoPlayback.autoPlayAllowed() : true;
+    if (!canAutoPlay) {
+      return;
+    }
+
+    video.play().catch(() => {
+      // Autoplay may still be blocked by browser policy
+    });
   }
 
   formatTime = formatDuration;
