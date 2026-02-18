@@ -139,7 +139,7 @@ export class CommentsListComponent implements AfterViewInit {
 
       // Determine filter based on event kind
       // For addressable events (like articles, kind 30023), query by 'A' tag
-      // For regular events, query by 'e' tag
+      // For regular events, query by both 'e' and 'E' tags
       const isAddressable = event.kind >= 30000 && event.kind < 40000;
       const filter: Record<string, unknown> = {
         kinds: this.allowedKinds(),
@@ -152,8 +152,47 @@ export class CommentsListComponent implements AfterViewInit {
         const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
         filter['#A'] = [aTagValue];
       } else {
-        // Regular events use event ID
-        filter['#e'] = [event.id];
+        // Regular events use event ID in both tag variants
+        const uppercaseEventTagFilter: Record<string, unknown> = {
+          ...filter,
+          '#E': [event.id],
+        };
+
+        const [lowercaseTagComments, uppercaseTagComments] = await Promise.all([
+          this.sharedRelay.getMany(userPubkey, {
+            ...filter,
+            '#e': [event.id],
+          }),
+          this.sharedRelay.getMany(userPubkey, uppercaseEventTagFilter),
+        ]);
+
+        const dedupedById = new Map<string, Event>();
+        for (const commentEvent of [...lowercaseTagComments, ...uppercaseTagComments]) {
+          dedupedById.set(commentEvent.id, commentEvent);
+        }
+
+        const commentEvents = Array.from(dedupedById.values());
+
+        if (commentEvents.length === 0) {
+          this.hasMore.set(false);
+          this.hasLoadedInitial.set(true);
+          this.isLoading.set(false);
+          return;
+        }
+
+        const commentRecords = commentEvents.map((e) => this.data.toRecord(e));
+        commentRecords.sort((a, b) => a.event.created_at - b.event.created_at);
+
+        if (commentRecords.length > 0) {
+          this.oldestCommentTimestamp = commentRecords[0].event.created_at;
+        }
+
+        const reachedLimit = lowercaseTagComments.length >= this.INITIAL_LIMIT || uppercaseTagComments.length >= this.INITIAL_LIMIT;
+        this.hasMore.set(reachedLimit);
+
+        this.comments.set(commentRecords);
+        this.hasLoadedInitial.set(true);
+        return;
       }
 
       // Query for initial batch of comments (most recent 30)
@@ -207,7 +246,7 @@ export class CommentsListComponent implements AfterViewInit {
       // Determine filter based on event kind
       const isAddressable = event.kind >= 30000 && event.kind < 40000;
       const filter: Record<string, unknown> = {
-        kinds: [1111],
+        kinds: this.allowedKinds(),
         until: this.oldestCommentTimestamp - 1,
         limit: this.LOAD_MORE_LIMIT,
       };
@@ -217,7 +256,52 @@ export class CommentsListComponent implements AfterViewInit {
         const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
         filter['#A'] = [aTagValue];
       } else {
-        filter['#e'] = [event.id];
+        const uppercaseEventTagFilter: Record<string, unknown> = {
+          ...filter,
+          '#E': [event.id],
+        };
+
+        const [lowercaseTagComments, uppercaseTagComments] = await Promise.all([
+          this.sharedRelay.getMany(userPubkey, {
+            ...filter,
+            '#e': [event.id],
+          }),
+          this.sharedRelay.getMany(userPubkey, uppercaseEventTagFilter),
+        ]);
+
+        const dedupedById = new Map<string, Event>();
+        for (const commentEvent of [...lowercaseTagComments, ...uppercaseTagComments]) {
+          dedupedById.set(commentEvent.id, commentEvent);
+        }
+
+        const commentEvents = Array.from(dedupedById.values());
+
+        if (commentEvents.length === 0) {
+          this.hasMore.set(false);
+          this.isLoadingMore.set(false);
+          return;
+        }
+
+        const newComments = commentEvents.map((e) => this.data.toRecord(e));
+
+        if (newComments.length > 0) {
+          const oldestNew = Math.min(...newComments.map((c) => c.event.created_at));
+          this.oldestCommentTimestamp = oldestNew;
+        }
+
+        const reachedLimit = lowercaseTagComments.length >= this.LOAD_MORE_LIMIT || uppercaseTagComments.length >= this.LOAD_MORE_LIMIT;
+        this.hasMore.set(reachedLimit);
+
+        const allComments = [...newComments, ...this.comments()];
+        const dedupedComments = new Map<string, NostrRecord>();
+        for (const comment of allComments) {
+          dedupedComments.set(comment.event.id, comment);
+        }
+
+        const mergedComments = Array.from(dedupedComments.values());
+        mergedComments.sort((a, b) => a.event.created_at - b.event.created_at);
+        this.comments.set(mergedComments);
+        return;
       }
 
       // Query for older comments using until timestamp

@@ -80,6 +80,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   loading = signal(true);
   selectedTabIndex = signal(2);
   showSettingsDialog = signal(false);
+  isHandset = computed(() => this.layout.isHandset());
 
   includeArchive = signal(false);
   archiveOnly = signal(false);

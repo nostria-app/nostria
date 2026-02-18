@@ -159,9 +159,8 @@
 }
 
 .swipe-card {
-  height: 100%;
-  width: auto;
-  max-width: 100%;
+  height: min(100%, calc(100dvh - 10rem));
+  width: min(100%, calc((100dvh - 10rem) * 9 / 16));
   aspect-ratio: 9 / 16;
   max-height: 100%;
   border-radius: var(--mat-sys-corner-large);
@@ -344,5 +343,16 @@
   .fullscreen-empty {
     box-sizing: border-box;
     padding-top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
+  }
+}
+
+@media (min-width: 701px) {
+  .swipe-content {
+    padding: 0.5rem 0.75rem 0.75rem;
+  }
+
+  .swipe-card {
+    height: min(100%, calc(100dvh - 10rem));
+    width: min(100%, calc((100dvh - 10rem) * 9 / 16));
   }
 }

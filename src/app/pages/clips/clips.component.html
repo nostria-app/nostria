@@ -1,9 +1,11 @@
 <div class="clips-container">
   <mat-menu #clipsTopMenu="matMenu">
+    @if (isHandset()) {
     <button mat-menu-item (click)="goHome()">
       <mat-icon>home</mat-icon>
       <span>Home</span>
     </button>
+    }
     <button mat-menu-item (click)="refresh()" [disabled]="loading()">
       <mat-icon>refresh</mat-icon>
       <span>Refresh</span>

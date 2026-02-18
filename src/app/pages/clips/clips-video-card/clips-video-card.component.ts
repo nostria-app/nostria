@@ -223,6 +223,11 @@ export class ClipsVideoCardComponent implements OnDestroy {
     }
 
     const queryPubkey = this.accountState.pubkey() || clipEvent.pubkey;
+    const uppercaseEventTagFilter: Record<string, unknown> = {
+      kinds: [1111],
+      limit: 200,
+      '#E': [clipEvent.id],
+    };
 
     const [lowercaseTagComments, uppercaseTagComments] = await Promise.all([
       this.sharedRelay.getMany(queryPubkey, {
@@ -230,11 +235,7 @@ export class ClipsVideoCardComponent implements OnDestroy {
         '#e': [clipEvent.id],
         limit: 200,
       }),
-      this.sharedRelay.getMany(queryPubkey, {
-        kinds: [1111],
-        '#E': [clipEvent.id],
-        limit: 200,
-      }),
+      this.sharedRelay.getMany(queryPubkey, uppercaseEventTagFilter),
     ]);
 
     const uniqueCommentIds = new Set<string>();
