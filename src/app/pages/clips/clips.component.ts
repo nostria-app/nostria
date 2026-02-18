@@ -512,9 +512,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
       const cachedClips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       if (cachedClips.length > 0) {
-        this.allClips.set(cachedClips);
-        this.resetExploreLimit();
-        this.ensureIndexesInRange();
+        this.applyClipsAndPreserveCurrentSelection(cachedClips);
 
         const clipsRelayUrls = this.clipsRelays().length > 0 ? this.clipsRelays() : DEFAULT_CLIPS_RELAYS;
         void this.prefetchClipAuthorProfiles(cachedClips, clipsRelayUrls);
@@ -627,13 +625,13 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       if (clips.length > 0) {
-        this.allClips.set(clips);
+        this.applyClipsAndPreserveCurrentSelection(clips);
         void Promise.allSettled(clips.map(event => this.database.saveEvent(event)));
         void this.prefetchClipAuthorProfiles(clips, relayUrls);
+      } else {
+        this.resetExploreLimit();
+        this.ensureIndexesInRange();
       }
-
-      this.resetExploreLimit();
-      this.ensureIndexesInRange();
     } catch (error) {
       this.logger.error('Failed to load initial clips batch', error);
     } finally {
@@ -689,11 +687,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
       }
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
-      this.allClips.set(clips);
+      this.applyClipsAndPreserveCurrentSelection(clips);
       await Promise.allSettled(clips.map(event => this.database.saveEvent(event)));
       void this.prefetchClipAuthorProfiles(clips, relayUrls);
-      this.resetExploreLimit();
-      this.ensureIndexesInRange();
       this.clearUnresolvedRestoreTargets();
 
       if (this.selectedTabIndex() === 1) {
@@ -733,6 +729,36 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     return this.relaysService.getOptimalRelays(mergedRelays, totalLimit);
+  }
+
+  private applyClipsAndPreserveCurrentSelection(clips: Event[]): void {
+    const currentFollowingEventId = this.currentFollowingClip()?.id || this.pendingFollowingRestoreEventId;
+    const currentForYouEventId = this.currentForYouClip()?.id || this.pendingForYouRestoreEventId;
+
+    this.allClips.set(clips);
+    this.restoreClipIndexById('following', currentFollowingEventId);
+    this.restoreClipIndexById('foryou', currentForYouEventId);
+    this.resetExploreLimit();
+    this.ensureIndexesInRange();
+  }
+
+  private restoreClipIndexById(mode: SwipeMode, eventId: string | null): void {
+    if (!eventId) {
+      return;
+    }
+
+    if (mode === 'following') {
+      const index = this.followingClips().findIndex(event => event.id === eventId);
+      if (index >= 0) {
+        this.followingIndex.set(index);
+      }
+      return;
+    }
+
+    const index = this.forYouClips().findIndex(event => event.id === eventId);
+    if (index >= 0) {
+      this.forYouIndex.set(index);
+    }
   }
 
   private async collectClipsForFilter(
