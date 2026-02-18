@@ -95,6 +95,30 @@ export class DataService implements OnDestroy {
     return this.utilities.toRecords(events);
   }
 
+  private isValidNostrEvent(event: unknown): event is Event {
+    if (!event || typeof event !== 'object' || Array.isArray(event)) {
+      return false;
+    }
+
+    const candidate = event as Partial<Event>;
+    return (
+      typeof candidate.id === 'string'
+      && typeof candidate.kind === 'number'
+      && typeof candidate.pubkey === 'string'
+      && Array.isArray(candidate.tags)
+      && typeof candidate.content === 'string'
+    );
+  }
+
+  private asValidNostrEvent(event: unknown, context: string): Event | null {
+    if (!this.isValidNostrEvent(event)) {
+      this.logger.warn(`[DataService] Ignoring malformed event in ${context}:`, event);
+      return null;
+    }
+
+    return event;
+  }
+
   /**
    * How long before a cached profile is considered stale (24 hours)
    * This is much longer than general cache TTL since profiles don't change often
@@ -519,15 +543,18 @@ export class DataService implements OnDestroy {
     if (refresh) {
       // When refresh is true, skip storage and go directly to relays for fresh data
       // Reduced logging to prevent console spam
-      metadata = await this.sharedRelayEx.get(pubkey, {
+      metadata = this.asValidNostrEvent(await this.sharedRelayEx.get(pubkey, {
         authors: [pubkey],
         kinds: [kinds.Metadata],
-      });
+      }), `loadProfile(refresh)-relay:${pubkey.substring(0, 8)}`);
 
       // If not found via normal relay fetch, attempt deep resolution (ONLY if explicitly enabled)
       if (!metadata && deepResolve && allowDeepResolve) {
         this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
-        metadata = await this.loadProfileWithDeepResolution(pubkey);
+        metadata = this.asValidNostrEvent(
+          await this.loadProfileWithDeepResolution(pubkey),
+          `loadProfile(refresh)-deep-resolution:${pubkey.substring(0, 8)}`
+        );
         if (metadata) {
           foundViaDeepResolution = true;
         }
@@ -551,22 +578,28 @@ export class DataService implements OnDestroy {
       }
     } else {
       // Normal flow: try storage first, then relays if not found
-      metadata = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      metadata = this.asValidNostrEvent(
+        await this.database.getEventByPubkeyAndKind(pubkey, kinds.Metadata),
+        `loadProfile(storage):${pubkey.substring(0, 8)}`
+      );
 
       if (metadata) {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record, { persistent: true });
       } else {
         // Try to get from relays - reduced logging to prevent console spam
-        metadata = await this.sharedRelayEx.get(pubkey, {
+        metadata = this.asValidNostrEvent(await this.sharedRelayEx.get(pubkey, {
           authors: [pubkey],
           kinds: [kinds.Metadata],
-        });
+        }), `loadProfile(relay):${pubkey.substring(0, 8)}`);
 
         // If not found via normal relay fetch, attempt deep resolution (ONLY if explicitly enabled)
         if (!metadata && deepResolve && allowDeepResolve) {
           this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
-          metadata = await this.loadProfileWithDeepResolution(pubkey);
+          metadata = this.asValidNostrEvent(
+            await this.loadProfileWithDeepResolution(pubkey),
+            `loadProfile(deep-resolution):${pubkey.substring(0, 8)}`
+          );
           if (metadata) {
             foundViaDeepResolution = true;
           }
@@ -843,6 +876,11 @@ export class DataService implements OnDestroy {
    * This ensures events are available in the new events store
    */
   private async saveEventToDatabase(event: Event): Promise<void> {
+    if (!this.isValidNostrEvent(event)) {
+      this.logger.warn('[DataService] Skipping saveEventToDatabase for malformed event:', event);
+      return;
+    }
+
     try {
       await this.database.init();
       await this.database.saveEvent(event);
@@ -1093,6 +1131,11 @@ export class DataService implements OnDestroy {
    * Process an event and collect relay hints for storage (from DataService to avoid circular dependency)
    */
   private async processEventForRelayHints(event: Event): Promise<void> {
+    if (!this.isValidNostrEvent(event)) {
+      this.logger.warn('[DataService] Skipping relay hint processing for malformed event:', event);
+      return;
+    }
+
     // Skip kind 10002 events (user relay lists) as these should not be stored in the mapping
     if (event.kind === 10002) {
       return;
