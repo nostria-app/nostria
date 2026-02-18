@@ -153,7 +153,7 @@ The demo runner enforces this for auth features and fails fast if `TEST_NSEC` is
 
 Demo E2E flows are configured as read-only:
 
-- Test auth is injected without a stored private key.
+- Test auth is injected with the test account key so account/profile/relay state can load.
 - Outgoing Nostr WebSocket client messages of type `EVENT` and `AUTH` are blocked by test guard.
 - Demo flows do not click publish/post/save actions.
 
