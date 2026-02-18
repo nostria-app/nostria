@@ -186,7 +186,11 @@ export const test = base.extend<TestContext>({
       await page.waitForTimeout(500);
 
       // Wait for network to be mostly idle
-      await page.waitForLoadState('networkidle');
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 10000 });
+      } catch {
+        await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => undefined);
+      }
     };
 
     await use(waitForNostrReady);

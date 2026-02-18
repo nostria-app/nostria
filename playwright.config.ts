@@ -187,8 +187,9 @@ export default defineConfig({
         screenshot: 'off',
         video: {
           mode: 'on',
-          size: { width: 1080, height: 1920 },
+          size: { width: 393, height: 851 },
         },
+        viewport: { width: 393, height: 851 },
         trace: 'retain-on-failure',
         launchOptions: {
           args: ['--enable-logging'],

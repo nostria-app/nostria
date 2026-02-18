@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 
 export const ROOT_DIR = process.cwd();
 export const ARTIFACTS_DIR = path.join(ROOT_DIR, 'test-results', 'artifacts');
+export const REPORT_DATA_DIR = path.join(ROOT_DIR, 'test-results', 'html-report', 'data');
 export const RAW_OUTPUT_DIR = path.join(ROOT_DIR, 'test-results', 'demo-videos', 'raw');
 export const FINAL_OUTPUT_DIR = path.join(ROOT_DIR, 'test-results', 'demo-videos', 'final');
 export const TEMP_OUTPUT_DIR = path.join(ROOT_DIR, 'test-results', 'demo-videos', 'temp');
@@ -64,12 +65,20 @@ function walkFilesRecursive(directory, result = []) {
 }
 
 export function listVideoArtifacts() {
-  return walkFilesRecursive(ARTIFACTS_DIR).filter((filePath) => filePath.endsWith('.webm'));
+  const directories = [ARTIFACTS_DIR, REPORT_DATA_DIR];
+  return directories.flatMap((directory) => walkFilesRecursive(directory)).filter((filePath) => filePath.endsWith('.webm'));
 }
 
-export function getNewVideos(previousVideos) {
-  const before = new Set(previousVideos);
-  return listVideoArtifacts().filter((filePath) => !before.has(filePath));
+export function getNewVideos(previousVideos, minMtimeMs = 0) {
+  const previousMtimeByPath = new Map(
+    previousVideos.map((filePath) => [filePath, fs.existsSync(filePath) ? fs.statSync(filePath).mtimeMs : 0])
+  );
+
+  return listVideoArtifacts().filter((filePath) => {
+    const currentMtime = fs.statSync(filePath).mtimeMs;
+    const previousMtime = previousMtimeByPath.get(filePath) ?? 0;
+    return currentMtime > Math.max(previousMtime, minMtimeMs);
+  });
 }
 
 export function getLatestVideo(videoPaths) {
@@ -166,9 +175,11 @@ export function createSegmentFromLogo(outputPath, width, height, durationSeconds
     '-t',
     String(durationSeconds),
     '-vf',
-    `scale=${Math.floor(width * 0.42)}:-1:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p`,
+    `scale=${Math.floor(width * 0.42)}:-1:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p,setsar=1`,
     '-c:v',
     'libx264',
+    '-threads',
+    '2',
     '-preset',
     'veryfast',
     '-crf',
@@ -190,9 +201,11 @@ export function normalizeVideo(inputPath, outputPath, width, height) {
     '-i',
     'anullsrc=channel_layout=stereo:sample_rate=48000',
     '-vf',
-    `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p`,
+    `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p,setsar=1`,
     '-c:v',
     'libx264',
+    '-threads',
+    '2',
     '-preset',
     'veryfast',
     '-crf',
@@ -212,7 +225,13 @@ export function composeFinalVideo({
   feature,
   device,
 }) {
-  const { width, height } = getVideoResolution(bodyVideoPath);
+  const bodyResolution = getVideoResolution(bodyVideoPath);
+  const targetResolution = device === 'mobile'
+    ? { width: 1080, height: 1920 }
+    : device === 'desktop'
+      ? { width: 1920, height: 1080 }
+      : bodyResolution;
+  const { width, height } = targetResolution;
   const tempPrefix = `${sanitizeName(feature)}-${sanitizeName(device)}-${Date.now()}`;
 
   const introTemp = path.join(TEMP_OUTPUT_DIR, `${tempPrefix}-intro.mp4`);
@@ -251,6 +270,8 @@ export function composeFinalVideo({
     '[a]',
     '-c:v',
     'libx264',
+    '-threads',
+    '2',
     '-preset',
     'medium',
     '-crf',

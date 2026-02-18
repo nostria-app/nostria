@@ -30,6 +30,8 @@
     "demo:auth-all:mobile": "node scripts/demo/run-demo-videos.mjs --feature auth --device mobile",
     "demo:showcase": "node scripts/demo/build-showcase-video.mjs --device desktop",
     "demo:showcase:mobile": "node scripts/demo/build-showcase-video.mjs --device mobile",
+    "demo:scenes": "node scripts/demo/run-scenes-from-markdown.mjs",
+    "demo:scenes:dry": "node scripts/demo/run-scenes-from-markdown.mjs --dry-run",
     "demo:compose": "node scripts/demo/compose-demo-videos.mjs",
     "test:e2e:codegen": "playwright codegen http://localhost:4200",
     "tauri": "tauri",

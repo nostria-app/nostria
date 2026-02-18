@@ -9,9 +9,14 @@ export async function humanPause(page: Page, delayMs = DEFAULT_STEP_DELAY_MS): P
 
 export async function settleTransition(
   page: Page,
-  delayMs = DEFAULT_TRANSITION_DELAY_MS
+  delayMs = DEFAULT_TRANSITION_DELAY_MS,
+  networkIdleTimeoutMs = 10000
 ): Promise<void> {
-  await page.waitForLoadState('networkidle');
+  try {
+    await page.waitForLoadState('networkidle', { timeout: networkIdleTimeoutMs });
+  } catch {
+    await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => undefined);
+  }
   await page.waitForTimeout(delayMs);
 }
 

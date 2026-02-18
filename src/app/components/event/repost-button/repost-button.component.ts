@@ -10,6 +10,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { EventService } from '../../../services/event';
 import { RepostService } from '../../../services/repost.service';
 import { LayoutService } from '../../../services/layout.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 type ViewMode = 'icon' | 'full';
 
@@ -31,6 +33,8 @@ export class RepostButtonComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly repostService = inject(RepostService);
   private readonly layout = inject(LayoutService);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly utilities = inject(UtilitiesService);
 
   isLoadingReposts = signal<boolean>(false);
   reposts = signal<NostrRecord[]>([]);
@@ -130,12 +134,17 @@ export class RepostButtonComponent {
     if (!event) return;
     if (!this.canRepostOrQuote()) return;
 
+    const accountRelays = this.accountRelay.getRelayUrls();
+    const relayHints = accountRelays.length > 0
+      ? this.utilities.normalizeRelayUrls([accountRelays[0]])
+      : [];
+
     this.eventService.createNote({
       quote: {
         id: event.id,
         pubkey: event.pubkey,
         kind: event.kind,
-        // TODO: pass relay part of 'q' tag
+        relays: relayHints,
       },
     });
   }

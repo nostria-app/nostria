@@ -123,6 +123,7 @@ async function main() {
       const grepTag = FEATURE_TAGS[feature];
 
       const beforeRunVideos = listVideoArtifacts();
+      const runStartedAtMs = Date.now();
 
       console.log(`\n🎬 Running demo for feature='${feature}' device='${device}' project='${project}'`);
       run('npx', [
@@ -135,7 +136,7 @@ async function main() {
         grepTag,
       ]);
 
-      const newVideos = getNewVideos(beforeRunVideos);
+      const newVideos = getNewVideos(beforeRunVideos, runStartedAtMs);
       const latestVideo = getLatestVideo(newVideos);
 
       if (!latestVideo) {

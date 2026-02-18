@@ -89,6 +89,7 @@ async function main() {
     ]);
 
     const beforeRunVideos = listVideoArtifacts();
+    const runStartedAtMs = Date.now();
 
     console.log(`🎬 Recording single-session showcase (${device})...`);
     run('npx', [
@@ -101,7 +102,7 @@ async function main() {
       '@demo-showcase',
     ]);
 
-    const newVideos = getNewVideos(beforeRunVideos);
+    const newVideos = getNewVideos(beforeRunVideos, runStartedAtMs);
     bodyVideoPath = getLatestVideo(newVideos) || findLatestShowcaseArtifact(device);
   } else {
     const previousShowcaseRaws = fs.existsSync(RAW_OUTPUT_DIR)

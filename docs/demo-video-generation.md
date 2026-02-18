@@ -90,6 +90,24 @@ npm run demo:showcase
 npm run demo:showcase:mobile
 ```
 
+- Run scenes from one markdown file:
+
+```bash
+npm run demo:scenes
+```
+
+- Preview parsed scenes without running recordings:
+
+```bash
+npm run demo:scenes:dry
+```
+
+- Run only one named scene from markdown:
+
+```bash
+npm run demo:scenes -- --scene "Summary Desktop"
+```
+
 - Compose from already recorded Playwright artifacts:
 
 ```bash
@@ -113,6 +131,31 @@ If you want to compose from the latest already-recorded single-session showcase 
 npm run demo:showcase -- --rerun false
 ```
 
+## Markdown scene file
+
+Scene definitions live in `docs/demo-scenes.md`.
+
+Update the table rows there to control what runs, including:
+
+- `mode` (`feature` or `showcase`)
+- `feature` (`summary`, `music`, `all`, `auth`, etc.)
+- `device` (`desktop`, `mobile`, `both`)
+- `enabled` (`true`/`false`)
+- `compose` and `rerun`
+- optional `intro` and `outro` clip paths
+
+This gives one editable markdown file as the source of truth for batch demo generation.
+
+## Human-language brief workflow
+
+If you prefer writing requirements in plain language, use `docs/demo-video-brief.md`.
+
+Workflow:
+
+1. Fill `docs/demo-video-brief.md` with your goals, constraints, and scene ideas.
+2. Ask Copilot: "Generate demo scenes and commands from docs/demo-video-brief.md".
+3. Copilot converts it into `docs/demo-scenes.md` and can run `npm run demo:scenes`.
+
 ## Intro/Outro handling
 
 By default, intro and outro clips are auto-generated from the app logo.
@@ -130,6 +173,12 @@ If custom clips are not provided, the generator creates logo-based intro/outro a
 - Raw videos: `test-results/demo-videos/raw`
 - Final composed videos: `test-results/demo-videos/final`
 - Temporary composition files: `test-results/demo-videos/temp`
+
+### Resolution behavior
+
+- Mobile is captured at native mobile viewport size for correct rendering.
+- Final mobile videos are composed to `1080x1920` for social sharing.
+- Desktop final videos are composed to `1920x1080`.
 
 ## Authenticated demo flows
 

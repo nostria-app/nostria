@@ -807,10 +807,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Initialize content with quote if provided
     if (this.data?.quote) {
+      // Include relay hints so other clients can find the quoted event.
+      // Use relays passed with the quote data, or fall back to the first account relay.
+      let relayHints: string[] = this.data.quote.relays?.length
+        ? this.data.quote.relays
+        : [];
+      if (relayHints.length === 0) {
+        const accountRelays = this.accountRelay.getRelayUrls();
+        if (accountRelays.length > 0) {
+          relayHints = [accountRelays[0]];
+        }
+      }
+
       const nevent = nip19.neventEncode({
         id: this.data.quote.id,
         author: this.data.quote.pubkey,
         kind: this.data.quote.kind,
+        relays: this.utilities.normalizeRelayUrls(relayHints),
       });
 
       const quoteText = `nostr:${nevent}`;

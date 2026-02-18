@@ -934,11 +934,19 @@ export class ShareArticleDialogComponent {
     }
 
     this.dialogRef?.close();
+
+    // Include relay hints so the quoted nevent encodes a relay for discoverability
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+    const relayHints = authorRelays.length > 0
+      ? this.utilities.normalizeRelayUrls([authorRelays[0]])
+      : [];
+
     this.eventService.createNote({
       quote: {
         id: ev.id,
         pubkey: ev.pubkey,
         kind: ev.kind,
+        relays: relayHints,
       },
     });
   }

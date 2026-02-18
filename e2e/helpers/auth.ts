@@ -203,11 +203,39 @@ export class TestAuthHelper {
     const user = this.buildNostrUser();
     const userJson = JSON.stringify(user);
     const accountsJson = JSON.stringify([user]);
+    const discoveryRelaysJson = JSON.stringify([
+      'wss://indexer.coracle.social/',
+      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.primal.net',
+    ]);
+    const searchRelaysJson = JSON.stringify([
+      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.primal.net',
+    ]);
 
-    await page.addInitScript(({ account, accounts }: { account: string; accounts: string }) => {
+    await page.addInitScript(({
+      account,
+      accounts,
+      discoveryRelays,
+      searchRelays,
+    }: {
+      account: string;
+      accounts: string;
+      discoveryRelays: string;
+      searchRelays: string;
+    }) => {
       localStorage.setItem('nostria-account', account);
       localStorage.setItem('nostria-accounts', accounts);
-    }, { account: userJson, accounts: accountsJson });
+      localStorage.setItem('nostria-discovery-relays', discoveryRelays);
+      localStorage.setItem('nostria-search-relays', searchRelays);
+    }, {
+      account: userJson,
+      accounts: accountsJson,
+      discoveryRelays: discoveryRelaysJson,
+      searchRelays: searchRelaysJson,
+    });
   }
 
   /**
