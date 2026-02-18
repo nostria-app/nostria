@@ -10,6 +10,7 @@ import { InlineVideoPlayerComponent } from '../../../components/inline-video-pla
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { LayoutService } from '../../../services/layout.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 
@@ -37,7 +38,10 @@ export class ClipsVideoCardComponent {
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private customDialog = inject(CustomDialogService);
+  private layout = inject(LayoutService);
   private userRelaysService = inject(UserRelaysService);
+
+  objectFitMode = computed<'cover' | 'contain'>(() => this.layout.isHandset() ? 'cover' : 'contain');
 
   videoUrl = computed(() => {
     const imetaTag = this.event().tags.find(tag => tag[0] === 'imeta');

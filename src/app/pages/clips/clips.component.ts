@@ -14,6 +14,7 @@ import { LoggerService } from '../../services/logger.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { ReportingService } from '../../services/reporting.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
@@ -58,6 +59,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
+  private userRelays = inject(UserRelaysService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private database = inject(DatabaseService);
@@ -507,16 +509,20 @@ export class ClipsComponent implements OnInit, OnDestroy {
       const followingAuthors = Array.from(new Set(this.accountState.followingList()));
       if (followingAuthors.length > 0) {
         await Promise.all(
-          followingAuthors.map(author => this.collectClipsForFilter(
-            relayUrls,
-            {
-              kinds: [...CLIPS_KINDS],
-              authors: [author],
-              limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
-            },
-            dedupedMap,
-            3500
-          ))
+          followingAuthors.map(async author => {
+            const authorRelayUrls = await this.getFollowingRelayUrls(author, relayUrls);
+
+            await this.collectClipsForFilter(
+              authorRelayUrls,
+              {
+                kinds: [...CLIPS_KINDS],
+                authors: [author],
+                limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
+              },
+              dedupedMap,
+              3500
+            );
+          })
         );
       }
 
@@ -759,6 +765,22 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), clip.id);
+  }
+
+  private async getFollowingRelayUrls(authorPubkey: string, featureRelayUrls: string[]): Promise<string[]> {
+    try {
+      await this.userRelays.ensureRelaysForPubkey(authorPubkey);
+      const authorRelays = this.userRelays.getRelaysForPubkey(authorPubkey);
+      const mergedRelays = this.utilities.getUniqueNormalizedRelayUrls([...featureRelayUrls, ...authorRelays]);
+
+      if (mergedRelays.length > 0) {
+        return mergedRelays;
+      }
+    } catch (error) {
+      this.logger.debug('Failed to load author relays for clips following fetch', { authorPubkey, error });
+    }
+
+    return featureRelayUrls;
   }
 
   private refreshExploreAutoLoadObserver(): void {
