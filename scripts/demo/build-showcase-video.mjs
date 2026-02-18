@@ -75,6 +75,19 @@ async function main() {
 
   if (rerun) {
     const project = device === 'mobile' ? 'demo-mobile' : 'demo-desktop';
+    const warmupProject = device === 'mobile' ? 'mobile-chrome' : 'chromium';
+
+    console.log(`🔥 Warmup before recording (${device})...`);
+    run('npx', [
+      'playwright',
+      'test',
+      'e2e/tests/demo/demo-showcase-warmup.spec.ts',
+      '--project',
+      warmupProject,
+      '--grep',
+      '@demo-showcase-warmup',
+    ]);
+
     const beforeRunVideos = listVideoArtifacts();
 
     console.log(`🎬 Recording single-session showcase (${device})...`);

@@ -25,6 +25,23 @@ async function safeClick(page: import('@playwright/test').Page, selectors: strin
   }
 }
 
+async function gotoWithRetry(page: import('@playwright/test').Page, url: string): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await page.waitForTimeout(2_000);
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 }).catch(() => undefined);
+    }
+  }
+
+  throw lastError;
+}
+
 async function runMusicFlow(page: import('@playwright/test').Page): Promise<void> {
   await spaNavigate(page, '/music');
   await humanPause(page, 1600);
@@ -89,7 +106,7 @@ test.describe('Single Session Showcase @demo @demo-showcase', () => {
 
     const page = authenticatedPage;
 
-    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await gotoWithRetry(page, '/');
     await showcaseTransition(page, 1600);
     await humanPause(page, 900);
 

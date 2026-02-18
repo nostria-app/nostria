@@ -99,6 +99,14 @@ npm run demo:compose -- --feature all --device both
 `demo:showcase` records a single long walkthrough in one browser session (single instance),
 then adds one intro and one outro to produce one complete demonstration video with minimal reloads.
 
+Before recording starts, showcase runs a warmup flow:
+
+- authenticate,
+- load the app,
+- wait 5 seconds,
+- reload once,
+- then start recording.
+
 If you want to compose from the latest already-recorded single-session showcase raw clip:
 
 ```bash
