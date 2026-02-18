@@ -12,6 +12,9 @@
 }
 
 .panel-header {
+  display: flex;
+  align-items: center;
+
   .panel-title {
     margin: 0;
     font-size: 1.25rem;
@@ -20,6 +23,17 @@
   .panel-header-spacer {
     flex: 1;
   }
+}
+
+.desktop-pane-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+}
+
+.desktop-pane-create-button {
+  color: var(--mat-sys-on-surface);
 }
 
 ::ng-deep .clips-container .mat-mdc-tab-body-wrapper {
@@ -292,6 +306,7 @@
   }
 
   .clips-tabs {
+    display: flex;
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
     left: 50%;
@@ -311,6 +326,10 @@
 
   .clips-tabs-create-button {
     left: 0.35rem;
+  }
+
+  .desktop-pane-tabs {
+    display: none;
   }
 
   .explore-list {
@@ -351,6 +370,10 @@
 }
 
 @media (min-width: 701px) {
+  .clips-tabs {
+    display: none;
+  }
+
   .swipe-content {
     padding: 0.5rem 0.75rem 0.75rem;
   }

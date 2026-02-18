@@ -10,6 +10,24 @@ import { ProfileDisplayNameComponent } from '../../user-profile/display-name/pro
 import { LayoutService } from '../../../services/layout.service';
 import { DataService } from '../../../services/data.service';
 import { NostrRecord } from '../../../interfaces';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { DatabaseService } from '../../../services/database.service';
+import { RelaysService } from '../../../services/relays/relays';
+import { UtilitiesService } from '../../../services/utilities.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService, ANONYMOUS_PUBKEY } from '../../../services/account-local-state.service';
+import { Router } from '@angular/router';
+import { LocalStorageService } from '../../../services/local-storage.service';
+
+const RELAY_SET_KIND = 30002;
+const CLIPS_RELAY_SET_D_TAG = 'clips';
+const DEFAULT_CLIPS_RELAYS = [
+  'wss://nos.lol/',
+  'wss://relay.damus.io/',
+  'wss://relay3.openvine.co/',
+  'wss://relay.divine.video/',
+];
+const CLIPS_CURRENT_EVENT_STORAGE_PREFIX = 'clips-current-event';
 
 interface ParsedMention {
   pubkey: string;
@@ -44,6 +62,16 @@ interface ParsedArticle {
 export class TaggedReferencesComponent {
   private layout = inject(LayoutService);
   private data = inject(DataService);
+  private relayPool = inject(RelayPoolService);
+  private database = inject(DatabaseService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
+  private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
+  private localStorage = inject(LocalStorageService);
+  private router = inject(Router);
+
+  private clipsRelayUrlsPromise: Promise<string[]> | null = null;
 
   event = input<Event | null>(null);
 
@@ -73,7 +101,7 @@ export class TaggedReferencesComponent {
     if (!event || !event.tags) return [];
 
     const validArticles = event.tags
-      .filter(tag => tag[0] === 'a' && tag[1])
+      .filter(tag => (tag[0] === 'a' || tag[0] === 'A') && tag[1])
       .map(tag => {
         const parts = tag[1].split(':');
         if (parts.length !== 3) return null;
@@ -136,12 +164,16 @@ export class TaggedReferencesComponent {
     });
 
     try {
-      const eventData = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+      let eventData = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
         article.pubkey,
         article.kind,
         article.identifier,
         { cache: true, save: true }
       );
+
+      if (!eventData && article.kind === 34236) {
+        eventData = await this.loadKind34236FromClipsRelays(article);
+      }
 
       // Cache image, title, and description in the article object
       if (eventData?.event) {
@@ -153,8 +185,14 @@ export class TaggedReferencesComponent {
         const pictureTag = event.tags?.find(tag => tag[0] === 'picture');
         const thumbTag = event.tags?.find(tag => tag[0] === 'thumb');
 
+        const imetaTag = event.tags?.find(tag => tag[0] === 'imeta');
+        const parsedImeta = imetaTag ? this.utilities.parseImetaTag(imetaTag, true) : null;
+        const imetaImage = parsedImeta?.['image'] || null;
+
         if (thumbTag?.[1]) {
           article.image = thumbTag[1];
+        } else if (imetaImage) {
+          article.image = imetaImage;
         } else if (imageTag?.[1]) {
           article.image = imageTag[1];
         } else if (bannerTag?.[1]) {
@@ -219,6 +257,13 @@ export class TaggedReferencesComponent {
 
     const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
     const eventData = this.articleData().get(key);
+
+    if (article.kind === 34236 && eventData?.event) {
+      this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), eventData.event.id);
+      this.persistCurrentClipToStorage(eventData.event);
+      void this.router.navigateByUrl('/clips');
+      return;
+    }
 
     if (article.kind === 30023) {
       // Long-form article
@@ -287,6 +332,8 @@ export class TaggedReferencesComponent {
         return 'Live Event';
       case 32100:
         return 'Playlist';
+      case 34236:
+        return 'Short Video';
       case 39089:
         return 'Starter Pack';
       default:
@@ -309,6 +356,14 @@ export class TaggedReferencesComponent {
       const thumbTag = eventData.event.tags.find(tag => tag[0] === 'thumb');
       if (thumbTag?.[1]) {
         return thumbTag[1];
+      }
+
+      const imetaTag = eventData.event.tags.find(tag => tag[0] === 'imeta');
+      if (imetaTag) {
+        const parsedImeta = this.utilities.parseImetaTag(imetaTag, true);
+        if (parsedImeta['image']) {
+          return parsedImeta['image'];
+        }
       }
 
       // Try to get image from tags
@@ -341,6 +396,8 @@ export class TaggedReferencesComponent {
         return 'sensors';
       case 32100:
         return 'queue_music';
+      case 34236:
+        return 'smart_display';
       case 39089:
         return 'group_add';
       default:
@@ -356,4 +413,86 @@ export class TaggedReferencesComponent {
   shouldShowReferences = computed<boolean>(() => {
     return this.mentions().length > 0 || this.articles().length > 0;
   });
+
+  private async loadKind34236FromClipsRelays(article: ParsedArticle): Promise<NostrRecord | null> {
+    const relayUrls = await this.getClipsRelayUrlsForResolution();
+    if (relayUrls.length === 0) {
+      return null;
+    }
+
+    const events = await this.relayPool.query(
+      relayUrls,
+      {
+        kinds: [34236],
+        authors: [article.pubkey],
+        '#d': [article.identifier],
+        limit: 1,
+      },
+      5000
+    );
+
+    if (!events || events.length === 0) {
+      return null;
+    }
+
+    const latest = events.sort((a, b) => b.created_at - a.created_at)[0];
+    await this.database.saveEvent({ ...latest, dTag: article.identifier });
+    return this.utilities.toRecord(latest);
+  }
+
+  private getClipsRelayUrlsForResolution(): Promise<string[]> {
+    if (this.clipsRelayUrlsPromise) {
+      return this.clipsRelayUrlsPromise;
+    }
+
+    this.clipsRelayUrlsPromise = this.resolveClipsRelayUrls();
+    return this.clipsRelayUrlsPromise;
+  }
+
+  private async resolveClipsRelayUrls(): Promise<string[]> {
+    const accountPubkey = this.accountState.pubkey();
+    if (!accountPubkey) {
+      return [...DEFAULT_CLIPS_RELAYS];
+    }
+
+    try {
+      const relaySetEvent = await this.database.getParameterizedReplaceableEvent(
+        accountPubkey,
+        RELAY_SET_KIND,
+        CLIPS_RELAY_SET_D_TAG
+      );
+
+      const configuredRelays = relaySetEvent
+        ? relaySetEvent.tags
+          .filter(tag => tag[0] === 'relay' && !!tag[1])
+          .map(tag => tag[1])
+        : [];
+
+      const merged = this.utilities.getUniqueNormalizedRelayUrls([
+        ...configuredRelays,
+        ...DEFAULT_CLIPS_RELAYS,
+      ]);
+
+      return this.relaysService.getOptimalRelays(merged, 8);
+    } catch {
+      return [...DEFAULT_CLIPS_RELAYS];
+    }
+  }
+
+  private getAccountKey(): string {
+    return this.accountState.pubkey() || ANONYMOUS_PUBKEY;
+  }
+
+  private persistCurrentClipToStorage(event: Event): void {
+    const payload = {
+      version: 1,
+      savedAt: this.utilities.currentDate(),
+      event,
+    };
+
+    this.localStorage.setObject(
+      `${CLIPS_CURRENT_EVENT_STORAGE_PREFIX}:${this.getAccountKey()}`,
+      payload
+    );
+  }
 }

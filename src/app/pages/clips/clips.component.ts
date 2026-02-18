@@ -23,6 +23,7 @@ import { ClipsSettingsDialogComponent } from './clips-settings-dialog/clips-sett
 import { ClipsVideoCardComponent } from './clips-video-card/clips-video-card.component';
 import { SharedRelayService } from '../../services/relays/shared-relay';
 import { ZapService } from '../../services/zap.service';
+import { LocalStorageService } from '../../services/local-storage.service';
 
 const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
@@ -32,6 +33,14 @@ const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 const CLIP_COMMENTS_KIND = 1111;
 const CLIP_COMMENTS_PREFETCH_LIMIT = 30;
+const PROFILE_PREFETCH_MAX_AUTHORS = 120;
+const CLIPS_CURRENT_EVENT_STORAGE_PREFIX = 'clips-current-event';
+
+interface CachedClipEventRecord {
+  version: 1;
+  savedAt: number;
+  event: Event;
+}
 
 const DEFAULT_CLIPS_RELAYS = [
   'wss://nos.lol/',
@@ -74,6 +83,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private eventService = inject(EventService);
   private sharedRelay = inject(SharedRelayService);
   private zapService = inject(ZapService);
+  private localStorage = inject(LocalStorageService);
   private router = inject(Router);
   private logger = inject(LoggerService);
 
@@ -155,6 +165,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.pendingForYouRestoreEventId = this.accountLocalState.getClipsLastForYouEventId(this.getAccountKey()) || null;
+    this.restoreCurrentClipFromStorage();
 
     if (this.layout.isHandset()) {
       this.layout.hideMobileNav.set(true);
@@ -413,6 +424,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
         this.allClips.set(cachedClips);
         this.resetExploreLimit();
         this.ensureIndexesInRange();
+
+        const clipsRelayUrls = this.clipsRelays().length > 0 ? this.clipsRelays() : DEFAULT_CLIPS_RELAYS;
+        void this.prefetchClipAuthorProfiles(cachedClips, clipsRelayUrls);
       }
     } catch (error) {
       this.logger.error('Failed to load cached clips', error);
@@ -546,6 +560,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       this.allClips.set(clips);
       await Promise.allSettled(clips.map(event => this.database.saveEvent(event)));
+      void this.prefetchClipAuthorProfiles(clips, relayUrls);
       this.resetExploreLimit();
       this.ensureIndexesInRange();
     } catch (error) {
@@ -786,6 +801,56 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), clip.id);
+    this.persistCurrentClipToStorage(clip);
+  }
+
+  private getCurrentClipStorageKey(): string {
+    return `${CLIPS_CURRENT_EVENT_STORAGE_PREFIX}:${this.getAccountKey()}`;
+  }
+
+  private restoreCurrentClipFromStorage(): void {
+    try {
+      const storageKey = this.getCurrentClipStorageKey();
+      const cached = this.localStorage.getObject<CachedClipEventRecord>(storageKey);
+      const event = cached?.event;
+
+      if (!event || !this.isValidCachedClipEvent(event)) {
+        if (cached) {
+          this.localStorage.removeItem(storageKey);
+        }
+        return;
+      }
+
+      this.allClips.set([event]);
+      this.pendingForYouRestoreEventId = event.id;
+      this.forYouRestoreApplied = false;
+      this.tryRestoreForYouPosition();
+      this.loading.set(false);
+    } catch (error) {
+      this.logger.debug('Failed to restore cached current clip', error);
+    }
+  }
+
+  private persistCurrentClipToStorage(event: Event): void {
+    if (!this.isValidCachedClipEvent(event)) {
+      return;
+    }
+
+    const payload: CachedClipEventRecord = {
+      version: 1,
+      savedAt: this.utilities.currentDate(),
+      event,
+    };
+
+    this.localStorage.setObject(this.getCurrentClipStorageKey(), payload);
+  }
+
+  private isValidCachedClipEvent(event: Event): boolean {
+    if (!event || !event.id || !event.pubkey || !Array.isArray(event.tags) || !CLIPS_KINDS.includes(event.kind)) {
+      return false;
+    }
+
+    return this.isVideoEvent(event);
   }
 
   private prefetchActiveAndNextInteractions(): void {
@@ -866,6 +931,52 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     return featureRelayUrls;
+  }
+
+  private async prefetchClipAuthorProfiles(clips: Event[], clipsRelayUrls: string[]): Promise<void> {
+    const authors = Array.from(new Set(clips.map(event => event.pubkey).filter(pubkey => !!pubkey)))
+      .slice(0, PROFILE_PREFETCH_MAX_AUTHORS);
+
+    if (authors.length === 0) {
+      return;
+    }
+
+    const queryRelayUrls = this.relaysService.getOptimalRelays(
+      this.utilities.getUniqueNormalizedRelayUrls(clipsRelayUrls),
+      8
+    );
+
+    if (queryRelayUrls.length === 0) {
+      return;
+    }
+
+    try {
+      const metadataEvents = await this.pool.query(
+        queryRelayUrls,
+        {
+          kinds: [0],
+          authors,
+          limit: authors.length,
+        },
+        4000
+      );
+
+      if (metadataEvents.length === 0) {
+        return;
+      }
+
+      const latestByAuthor = new Map<string, Event>();
+      metadataEvents.forEach(event => {
+        const existing = latestByAuthor.get(event.pubkey);
+        if (!existing || event.created_at > existing.created_at) {
+          latestByAuthor.set(event.pubkey, event);
+        }
+      });
+
+      await Promise.allSettled(Array.from(latestByAuthor.values()).map(event => this.database.saveEvent(event)));
+    } catch (error) {
+      this.logger.debug('Failed to prefetch clip author profiles from clips relays', error);
+    }
   }
 
   private refreshExploreAutoLoadObserver(): void {

@@ -287,7 +287,7 @@ export class App implements OnInit, OnDestroy {
   // Track current route for route-aware shell UI behaviors
   currentRouteUrl = signal(this.router.url);
 
-  isClipsMobileMode = computed(() => {
+  isClipsMode = computed(() => {
     if (!this.layout.isHandset()) {
       return false;
     }

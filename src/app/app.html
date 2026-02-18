@@ -247,10 +247,10 @@
     </mat-sidenav>
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
-      [class.media-player-shown]="layout.showMediaPlayer()" [class.clips-mobile-mode]="isClipsMobileMode()">
+      [class.media-player-shown]="layout.showMediaPlayer()" [class.clips-mobile-mode]="isClipsMode()">
 
       <!-- Top toolbar - beside sidenav -->
-      <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMobileMode()">
+      <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMode()">
 
 
 
@@ -488,7 +488,7 @@
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav() &&
-  !isClipsMobileMode()) {
+  !isClipsMode()) {
   <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
     [class.sidenav-open]="opened()">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']"
