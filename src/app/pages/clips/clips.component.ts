@@ -29,6 +29,12 @@ const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
 const CLIPS_KINDS = [22, 34236];
 const EXPLORE_PAGE_SIZE = 24;
+const INITIAL_CLIPS_BATCH_SIZE = 5;
+const INITIAL_CLIPS_TIMEOUT_MS = 1500;
+const INITIAL_CLIPS_RELAY_LIMIT_PER_SOURCE = 4;
+const INITIAL_CLIPS_RELAY_LIMIT_TOTAL = 12;
+const FULL_CLIPS_RELAY_LIMIT_PER_SOURCE = 8;
+const FULL_CLIPS_RELAY_LIMIT_TOTAL = 20;
 const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 const CLIP_COMMENTS_KIND = 1111;
@@ -179,6 +185,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.persistForYouPosition();
     this.layout.hideMobileNav.set(false);
     this.exploreLoadObserver?.disconnect();
     this.exploreLoadObserver = null;
@@ -187,7 +194,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   async refresh(): Promise<void> {
     await this.loadCachedClips();
     this.loading.set(false);
-    await this.loadClips();
+    await this.loadClips(true);
   }
 
   onTabChange(index: number): void {
@@ -461,10 +468,18 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   private async initializeClips(): Promise<void> {
-    await this.loadClipsRelaySet();
     await this.loadCachedClips();
-    this.loading.set(false);
-    await this.loadClips();
+
+    if (this.allClips().length > 0) {
+      this.loading.set(false);
+    }
+
+    const relaySetPromise = this.loadClipsRelaySet();
+    await this.loadInitialClips();
+
+    await relaySetPromise;
+
+    void this.loadClips(false);
   }
 
   private async loadCachedClips(): Promise<void> {
@@ -577,13 +592,53 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async loadClips(): Promise<void> {
-    if (this.allClips().length === 0) {
+  private async loadInitialClips(): Promise<void> {
+    try {
+      const relayUrls = this.getClipsQueryRelayUrls(INITIAL_CLIPS_RELAY_LIMIT_PER_SOURCE, INITIAL_CLIPS_RELAY_LIMIT_TOTAL);
+      const dedupedMap = new Map<string, Event>();
+
+      for (const event of this.allClips()) {
+        const dedupeKey = this.getDedupeKey(event);
+        const existing = dedupedMap.get(dedupeKey);
+        if (!existing || event.created_at > existing.created_at) {
+          dedupedMap.set(dedupeKey, event);
+        }
+      }
+
+      await this.collectClipsForFilter(
+        relayUrls,
+        {
+          kinds: [...CLIPS_KINDS],
+          limit: INITIAL_CLIPS_BATCH_SIZE,
+        },
+        dedupedMap,
+        INITIAL_CLIPS_TIMEOUT_MS,
+        INITIAL_CLIPS_BATCH_SIZE
+      );
+
+      const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
+      if (clips.length > 0) {
+        this.allClips.set(clips);
+        void Promise.allSettled(clips.map(event => this.database.saveEvent(event)));
+        void this.prefetchClipAuthorProfiles(clips, relayUrls);
+      }
+
+      this.resetExploreLimit();
+      this.ensureIndexesInRange();
+    } catch (error) {
+      this.logger.error('Failed to load initial clips batch', error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  private async loadClips(showLoadingIndicator = true): Promise<void> {
+    if (showLoadingIndicator && this.allClips().length === 0) {
       this.loading.set(true);
     }
 
     try {
-      const relayUrls = this.clipsRelays().length > 0 ? this.clipsRelays() : DEFAULT_CLIPS_RELAYS;
+      const relayUrls = this.getClipsQueryRelayUrls(FULL_CLIPS_RELAY_LIMIT_PER_SOURCE, FULL_CLIPS_RELAY_LIMIT_TOTAL);
       const dedupedMap = new Map<string, Event>();
 
       for (const event of this.allClips()) {
@@ -637,18 +692,66 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
   }
 
+  private getClipsQueryRelayUrls(perSourceLimit: number, totalLimit: number): string[] {
+    const configuredRelays = this.clipsRelays().length > 0
+      ? this.relaysService.getOptimalRelays(this.clipsRelays(), perSourceLimit)
+      : [];
+
+    const defaultClipsRelays = this.relaysService.getOptimalRelays(DEFAULT_CLIPS_RELAYS, perSourceLimit);
+
+    const accountRelayUrls = this.accountRelay.getRelayUrls();
+    const accountRelays = accountRelayUrls.length > 0
+      ? this.relaysService.getOptimalRelays(accountRelayUrls, perSourceLimit)
+      : [];
+
+    const mergedRelays = this.utilities.getUniqueNormalizedRelayUrls([
+      ...configuredRelays,
+      ...defaultClipsRelays,
+      ...accountRelays,
+    ]);
+
+    if (mergedRelays.length <= totalLimit) {
+      return mergedRelays;
+    }
+
+    return this.relaysService.getOptimalRelays(mergedRelays, totalLimit);
+  }
+
   private async collectClipsForFilter(
     relayUrls: string[],
     filter: Filter,
     targetMap: Map<string, Event>,
-    timeoutMs: number
+    timeoutMs: number,
+    resolveWhenTotalAtLeast?: number
   ): Promise<void> {
-    await new Promise<void>(resolve => {
-      const timeout = setTimeout(() => {
-        resolve();
-      }, timeoutMs + 2000);
+    if (relayUrls.length === 0) {
+      return;
+    }
 
-      const subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+    if (resolveWhenTotalAtLeast && targetMap.size >= resolveWhenTotalAtLeast) {
+      return;
+    }
+
+    await new Promise<void>(resolve => {
+      let finished = false;
+      let subscription: { close: () => void } | null = null;
+
+      const finish = (): void => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        subscription?.close();
+        clearTimeout(timeout);
+        resolve();
+      };
+
+      const timeout = setTimeout(() => {
+        finish();
+      }, timeoutMs);
+
+      subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
         if (this.reporting.isUserBlocked(event.pubkey) || this.reporting.isContentBlocked(event)) {
           return;
         }
@@ -658,13 +761,11 @@ export class ClipsComponent implements OnInit, OnDestroy {
         if (!existing || event.created_at > existing.created_at) {
           targetMap.set(dedupeKey, event);
         }
-      });
 
-      setTimeout(() => {
-        subscription.close();
-        clearTimeout(timeout);
-        resolve();
-      }, timeoutMs);
+        if (resolveWhenTotalAtLeast && targetMap.size >= resolveWhenTotalAtLeast) {
+          finish();
+        }
+      });
     });
   }
 
