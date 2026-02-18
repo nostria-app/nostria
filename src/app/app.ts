@@ -644,6 +644,11 @@ export class App implements OnInit, OnDestroy {
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
     {
+      path: 'clips',
+      label: $localize`:@@app.nav.clips:Clips`,
+      icon: 'smart_display',
+    },
+    {
       path: 'music',
       label: $localize`:@@app.nav.music:Music`,
       icon: 'music_note',
@@ -688,6 +693,7 @@ export class App implements OnInit, OnDestroy {
     'collections',
     'music',
     'streams',
+    'clips',
   ];
 
   constructor() {

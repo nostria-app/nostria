@@ -119,6 +119,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['articles', 'blogs', 'long-form', 'reads', 'posts']
     },
     {
+      id: 'nav-clips',
+      label: 'Open Clips',
+      icon: 'smart_display',
+      action: () => this.router.navigate(['/clips']),
+      keywords: ['clips', 'shorts', 'reels', 'videos', 'vertical']
+    },
+    {
       id: 'nav-music',
       label: 'Open Music',
       icon: 'music_note',

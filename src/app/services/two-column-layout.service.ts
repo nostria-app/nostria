@@ -248,6 +248,7 @@ export class TwoColumnLayoutService {
 
     // Wide list views (left panel, 1400px)
     'streams': { type: 'list', preserveOnNavigation: true },
+    'clips': { type: 'list', preserveOnNavigation: true },
 
     // Full-width views (right panel, takes remaining space)
     'stream': { type: 'full-width' },
@@ -446,21 +447,21 @@ export class TwoColumnLayoutService {
   resetNavigation(route: string): void {
     // Normalize the route for comparison (remove leading slashes)
     const normalizedTarget = route.replace(/^\/+/, '');
-    
+
     // Get the current left panel route (the primary route, without right panel or query params)
     const currentUrl = this.router.url;
     const currentPrimaryPath = currentUrl.split('(')[0].split('?')[0].replace(/^\/+/, '');
-    
+
     // Check if we're already on the same section
-    const isSameSection = currentPrimaryPath === normalizedTarget || 
+    const isSameSection = currentPrimaryPath === normalizedTarget ||
       currentPrimaryPath.startsWith(normalizedTarget + '/') ||
       (normalizedTarget === '' && currentPrimaryPath === '') ||
       (normalizedTarget === '/' && currentPrimaryPath === '') ||
       (normalizedTarget === 'f' && currentPrimaryPath === 'f');
-    
+
     // Check if there's right panel content
     const hasRightContent = this.panelNav.hasRightContent() || this.rightPanel.hasContent();
-    
+
     console.log('[resetNavigation]', {
       route,
       normalizedTarget,
@@ -471,7 +472,7 @@ export class TwoColumnLayoutService {
       panelNavHasRight: this.panelNav.hasRightContent(),
       rightPanelHasContent: this.rightPanel.hasContent()
     });
-    
+
     // If re-opening the same section and there's right panel content, just clear the right panel
     if (isSameSection && hasRightContent) {
       console.log('[resetNavigation] Same section with right content - clearing right panel only');
@@ -479,11 +480,11 @@ export class TwoColumnLayoutService {
       this.panelNav.clearRightStack();
       this.rightPanel.clearHistory();
       this.panelActions.clearRightPanelActions();
-      
+
       // Reset internal state
       this.rightPanelRoute.set(null);
       this._viewMode.set('fixed');
-      
+
       // Navigate to clear the right outlet but preserve query params
       // Query params can appear before or after the auxiliary outlet: 
       // /notifications?tab=1(right:...) or /notifications(right:...)?tab=1
@@ -491,7 +492,7 @@ export class TwoColumnLayoutService {
       const tree = this.router.parseUrl(currentUrl);
       const queryParams = tree.queryParams;
       const hasQueryParams = Object.keys(queryParams).length > 0;
-      
+
       // Navigate to the same route without the right outlet
       const targetUrl = '/' + normalizedTarget;
       console.log('[resetNavigation] Navigating to:', targetUrl, 'with queryParams:', queryParams);
@@ -502,7 +503,7 @@ export class TwoColumnLayoutService {
       }
       return;
     }
-    
+
     // If already on the same section with no right content, there's nothing to reset.
     // Skip clearing stacks because router.navigateByUrl() will be a no-op (same URL)
     // and the NavigationEnd event that repopulates the stacks won't fire.
@@ -548,7 +549,7 @@ export class TwoColumnLayoutService {
     // Always use npub in URLs for consistency and bookmarkability
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
     this.rightPanelRoute.set(`/p/${npub}`);
-    
+
     // Use navigateByUrl to avoid router state issues with named outlets
     const currentUrl = this.router.url;
     const primaryPath = currentUrl.split('(')[0] || '/';

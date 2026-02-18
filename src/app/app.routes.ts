@@ -356,6 +356,13 @@ export const routes: Routes = [
     title: 'Live Streams',
   },
   {
+    path: 'clips',
+    loadComponent: () =>
+      import('./pages/clips/clips.component').then(m => m.ClipsComponent),
+    data: { isRoot: true },
+    title: 'Clips',
+  },
+  {
     path: 'meetings',
     loadComponent: () =>
       import('./pages/meetings/meetings.component').then(m => m.MeetingsComponent),

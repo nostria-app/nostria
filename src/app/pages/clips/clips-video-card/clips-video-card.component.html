@@ -1,0 +1,55 @@
+<div class="clip-card">
+  @if (videoUrl()) {
+  <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
+    [loop]="true">
+  </app-inline-video-player>
+  } @else {
+  <div class="video-fallback">
+    <mat-icon>movie</mat-icon>
+    <span>Video unavailable</span>
+  </div>
+  }
+
+  <div class="top-gradient"></div>
+  <div class="bottom-gradient"></div>
+
+  <div class="clip-metadata">
+    <div class="author">{{ authorLabel() }}</div>
+    <div class="title">{{ title() }}</div>
+    @if (description()) {
+    <div class="description">{{ description() }}</div>
+    }
+  </div>
+
+  <div class="clip-actions">
+    <div class="action-item like-action">
+      <app-reaction-button [event]="event()" view="icon"></app-reaction-button>
+      @if (likesCount() > 0) {
+      <span class="action-count">{{ likesCount() }}</span>
+      }
+    </div>
+
+    <button mat-icon-button class="action-item" (click)="onComments($event)" matTooltip="Comments">
+      <mat-icon>mode_comment</mat-icon>
+      @if (commentsCount() > 0) {
+      <span class="action-count">{{ commentsCount() }}</span>
+      }
+    </button>
+
+    <button mat-icon-button class="action-item" (click)="onShare($event)" matTooltip="Share">
+      <mat-icon>share</mat-icon>
+      @if (sharesCount() > 0) {
+      <span class="action-count">{{ sharesCount() }}</span>
+      }
+    </button>
+
+    <div class="action-item zap-action" matTooltip="Zap">
+      <app-zap-button [event]="event()" [recipientPubkey]="event().pubkey"></app-zap-button>
+    </div>
+
+    <button mat-icon-button class="action-item" (click)="toggleBookmark($event)"
+      [matTooltip]="bookmark.getBookmarkTooltip(event().id)">
+      <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,126 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.clip-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface-container-lowest);
+}
+
+.clip-player {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.video-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 2rem;
+    height: 2rem;
+    font-size: 2rem;
+  }
+}
+
+.top-gradient,
+.bottom-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.top-gradient {
+  top: 0;
+  height: 8rem;
+  background: linear-gradient(180deg, var(--mat-sys-scrim), transparent);
+  opacity: 0.5;
+}
+
+.bottom-gradient {
+  bottom: 0;
+  height: 14rem;
+  background: linear-gradient(0deg, var(--mat-sys-scrim), transparent);
+  opacity: 0.65;
+}
+
+.clip-metadata {
+  position: absolute;
+  left: 0;
+  right: 4.5rem;
+  bottom: 1rem;
+  padding: 0 1rem;
+  color: var(--mat-sys-on-primary-fixed);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  .author {
+    font-size: 0.85rem;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .description {
+    font-size: 0.9rem;
+    opacity: 0.95;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
+.clip-actions {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 2;
+}
+
+.action-item {
+  width: 2.75rem;
+  min-height: 2.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-primary-fixed);
+
+  .action-count {
+    font-size: 0.72rem;
+    line-height: 1;
+  }
+}
+
+.like-action,
+.zap-action {
+
+  ::ng-deep app-reaction-button,
+  ::ng-deep app-zap-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

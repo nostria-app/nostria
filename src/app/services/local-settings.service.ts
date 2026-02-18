@@ -175,6 +175,7 @@ export class LocalSettingsService {
     'collections',
     'music',
     'streams',
+    'clips',
   ];
 
   /**

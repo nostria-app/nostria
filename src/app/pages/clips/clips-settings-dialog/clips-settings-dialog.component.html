@@ -1,0 +1,102 @@
+<app-custom-dialog [title]="'Clips Settings'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'500px'"
+  [maxWidth]="'95vw'" (closed)="onCancel()">
+  <div dialog-content>
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading settings...</p>
+    </div>
+    } @else {
+    <p class="dialog-subtitle">Configure which relays to use for short-form clips.</p>
+
+    @if (!hasExistingRelaySet()) {
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <div class="info-content">
+        <span class="info-title">No clips relay set found</span>
+        <span class="info-description">Suggested relays are added to get you started. You can fully customize this
+          list.</span>
+      </div>
+    </div>
+    }
+
+    <div class="relays-section">
+      <h3>Clips Relays</h3>
+      <p class="section-description">These relays are used for short-form clips and archive discovery.</p>
+
+      @if (relays().length > 0) {
+      <div class="relays-list">
+        @for (relay of relays(); track relay) {
+        <div class="relay-item">
+          <div class="relay-url">
+            <mat-icon>hub</mat-icon>
+            <span>{{ relay }}</span>
+          </div>
+          <button mat-icon-button (click)="removeRelay(relay)" aria-label="Remove relay">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+      </div>
+      } @else {
+      <div class="empty-relays">
+        <mat-icon>warning</mat-icon>
+        <span>No relays configured. Add at least one relay to discover clips.</span>
+      </div>
+      }
+
+      <div class="add-relay-form">
+        <mat-form-field appearance="outline" class="relay-input">
+          <mat-label>Relay URL</mat-label>
+          <input matInput [(ngModel)]="newRelayUrl" placeholder="wss://relay.example.com" (keyup.enter)="addRelay()" />
+          <mat-hint>Enter a WebSocket relay URL</mat-hint>
+        </mat-form-field>
+        <button mat-icon-button (click)="addRelay()" [disabled]="!newRelayUrl()" aria-label="Add relay">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      @if (suggestedRelays.length > 0) {
+      <div class="suggested-relays">
+        <span class="suggested-label">Suggested relays:</span>
+        <div class="suggested-chips">
+          @for (relay of suggestedRelays; track relay) {
+          <button mat-stroked-button class="suggested-chip" (click)="addDefaultRelay(relay)">
+            <mat-icon>add</mat-icon>
+            <span>{{ relay }}</span>
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="info-section">
+      <h4>What is a Clips Relay Set?</h4>
+      <p>
+        A relay set is a Nostr list of relays tailored for a content type. Clips relay sets help the app discover
+        short-form video events more efficiently, including Vine archive imports.
+      </p>
+      <p class="nip-reference">
+        This uses
+        <a href="https://github.com/nostr-protocol/nips/blob/master/51.md" target="_blank" rel="noopener">NIP-51</a>
+        Relay Sets (kind 30002).
+      </p>
+    </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    <button mat-button (click)="onCancel()" [disabled]="isSaving()">Cancel</button>
+    <button mat-flat-button (click)="saveRelaySet()" [disabled]="isSaving() || isLoading() || relays().length === 0">
+      @if (isSaving()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>save</mat-icon>
+      }
+      <span>{{ hasExistingRelaySet() ? 'Update' : 'Create' }} Relay Set</span>
+    </button>
+  </div>
+</app-custom-dialog>

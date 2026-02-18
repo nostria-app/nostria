@@ -1,0 +1,158 @@
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 0;
+}
+
+.dialog-subtitle {
+  margin: 0 0 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.info-banner {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.875rem;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container-low);
+  margin-bottom: 1rem;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  .info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .info-title {
+    color: var(--mat-sys-on-surface);
+  }
+
+  .info-description {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
+.relays-section {
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+  }
+
+  .section-description {
+    margin: 0.35rem 0 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
+.relays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 240px;
+  overflow: auto;
+  margin-bottom: 0.75rem;
+}
+
+.relay-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 0.4rem 0.55rem;
+}
+
+.relay-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+    width: 1rem;
+    height: 1rem;
+    font-size: 1rem;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface);
+    font-size: 0.9rem;
+  }
+}
+
+.empty-relays {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--mat-sys-error);
+  background: var(--mat-sys-error-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.add-relay-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.relay-input {
+  flex: 1;
+}
+
+.suggested-relays {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .suggested-label {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.85rem;
+  }
+
+  .suggested-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .suggested-chip {
+    min-height: 2rem;
+    border-color: var(--mat-sys-outline-variant);
+  }
+}
+
+.info-section {
+  margin-top: 1rem;
+
+  h4 {
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    margin: 0 0 0.5rem;
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.4;
+  }
+
+  .nip-reference a {
+    color: var(--mat-sys-primary);
+  }
+}
