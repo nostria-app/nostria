@@ -75,6 +75,17 @@
     font-size: 0.85rem;
   }
 
+  .author-button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
   .title {
     font-size: 1rem;
   }
@@ -117,6 +128,11 @@
   }
 }
 
+.bookmark-action,
+.like-action {
+  pointer-events: auto;
+}
+
 .like-action,
 .zap-action {
 
@@ -129,5 +145,7 @@
 
   ::ng-deep app-reaction-button .reaction-container>button[mat-icon-button] {
     color: var(--mat-sys-on-surface) !important;
+    pointer-events: auto;
+    opacity: 1;
   }
 }

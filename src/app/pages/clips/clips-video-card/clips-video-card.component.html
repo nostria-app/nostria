@@ -29,7 +29,7 @@
   <div class="bottom-gradient"></div>
 
   <div class="clip-metadata">
-    <div class="author">{{ authorLabel() }}</div>
+    <button class="author author-button" (click)="openAuthorProfile($event)">{{ authorLabel() }}</button>
     <div class="title">{{ title() }}</div>
     @if (description()) {
     <div class="description">{{ description() }}</div>
@@ -38,7 +38,7 @@
 
   <div class="clip-actions">
     <div class="action-item like-action">
-      <app-reaction-button [event]="event()" view="icon"></app-reaction-button>
+      <app-reaction-button [event]="event()" view="icon" (reactionChanged)="onReactionChanged()"></app-reaction-button>
       @if (likesCount() > 0) {
       <span class="action-count">{{ likesCount() }}</span>
       }
@@ -62,7 +62,7 @@
       <app-zap-button [event]="event()" [recipientPubkey]="event().pubkey"></app-zap-button>
     </div>
 
-    <button mat-icon-button class="action-item" (click)="toggleBookmark($event)"
+    <button mat-icon-button class="action-item bookmark-action" (click)="toggleBookmark($event)"
       [matTooltip]="bookmark.getBookmarkTooltip(event().id)">
       <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
     </button>
