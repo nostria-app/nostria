@@ -87,6 +87,22 @@
   font-size: 0.8rem;
 }
 
+.desktop-nav-buttons {
+  position: absolute;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  z-index: 40;
+}
+
+.desktop-nav-btn {
+  background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+}
+
 .loading-container,
 .empty-state {
   display: flex;
@@ -217,6 +233,10 @@
   }
 
   .swipe-position {
-    top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+    display: none;
+  }
+
+  .desktop-nav-buttons {
+    display: none;
   }
 }

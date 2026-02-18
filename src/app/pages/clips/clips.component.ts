@@ -143,6 +143,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   async refresh(): Promise<void> {
+    await this.loadCachedClips();
+    this.loading.set(false);
     await this.loadClips();
   }
 
@@ -189,6 +191,21 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   loadMoreExploreClips(): void {
     this.exploreLimit.update(limit => limit + EXPLORE_PAGE_SIZE);
+  }
+
+  nextClip(mode: SwipeMode): void {
+    this.advanceByKeyboard(mode, 1);
+  }
+
+  previousClip(mode: SwipeMode): void {
+    this.advanceByKeyboard(mode, -1);
+  }
+
+  canNavigate(mode: SwipeMode, delta: number): boolean {
+    const clips = mode === 'following' ? this.followingClips() : this.forYouClips();
+    const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();
+    const nextIndex = currentIndex + delta;
+    return nextIndex >= 0 && nextIndex < clips.length;
   }
 
   onSwipeProgress(event: SwipeProgressEvent, mode: SwipeMode): void {
@@ -299,7 +316,39 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   private async initializeClips(): Promise<void> {
     await this.loadClipsRelaySet();
+    await this.loadCachedClips();
+    this.loading.set(false);
     await this.loadClips();
+  }
+
+  private async loadCachedClips(): Promise<void> {
+    try {
+      const eventsByKind = await Promise.all(CLIPS_KINDS.map(kind => this.database.getEventsByKind(kind)));
+      const dedupedMap = new Map<string, Event>();
+
+      for (const events of eventsByKind) {
+        for (const event of events) {
+          if (this.reporting.isUserBlocked(event.pubkey) || this.reporting.isContentBlocked(event)) {
+            continue;
+          }
+
+          const dedupeKey = this.getDedupeKey(event);
+          const existing = dedupedMap.get(dedupeKey);
+          if (!existing || event.created_at > existing.created_at) {
+            dedupedMap.set(dedupeKey, event);
+          }
+        }
+      }
+
+      const cachedClips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
+      if (cachedClips.length > 0) {
+        this.allClips.set(cachedClips);
+        this.resetExploreLimit();
+        this.ensureIndexesInRange();
+      }
+    } catch (error) {
+      this.logger.error('Failed to load cached clips', error);
+    }
   }
 
   private async loadClipsRelaySet(): Promise<void> {
@@ -380,7 +429,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   private async loadClips(): Promise<void> {
-    this.loading.set(true);
+    if (this.allClips().length === 0) {
+      this.loading.set(true);
+    }
 
     try {
       const relayUrls = this.clipsRelays().length > 0 ? this.clipsRelays() : DEFAULT_CLIPS_RELAYS;
@@ -418,6 +469,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       this.allClips.set(clips);
+      await Promise.allSettled(clips.map(event => this.database.saveEvent(event)));
       this.resetExploreLimit();
       this.ensureIndexesInRange();
     } catch (error) {

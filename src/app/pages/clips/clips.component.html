@@ -102,6 +102,16 @@
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
             (commentsClick)="openComments(clip)" />
         </div>
+        <div class="desktop-nav-buttons">
+          <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
+            (click)="previousClip('following')" [disabled]="!canNavigate('following', -1)">
+            <mat-icon>keyboard_arrow_up</mat-icon>
+          </button>
+          <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
+            (click)="nextClip('following')" [disabled]="!canNavigate('following', 1)">
+            <mat-icon>keyboard_arrow_down</mat-icon>
+          </button>
+        </div>
         <div class="swipe-position">{{ followingIndex() + 1 }} / {{ followingClips().length }}</div>
         } @else {
         <div class="empty-state fullscreen-empty">
@@ -132,6 +142,16 @@
           [style.transform]="getCardTransform('foryou')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
             (commentsClick)="openComments(clip)" />
+        </div>
+        <div class="desktop-nav-buttons">
+          <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
+            (click)="previousClip('foryou')" [disabled]="!canNavigate('foryou', -1)">
+            <mat-icon>keyboard_arrow_up</mat-icon>
+          </button>
+          <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
+            (click)="nextClip('foryou')" [disabled]="!canNavigate('foryou', 1)">
+            <mat-icon>keyboard_arrow_down</mat-icon>
+          </button>
         </div>
         <div class="swipe-position">{{ forYouIndex() + 1 }} / {{ forYouClips().length }}</div>
         } @else {
