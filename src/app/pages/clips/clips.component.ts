@@ -38,6 +38,9 @@ const FULL_CLIPS_RELAY_LIMIT_TOTAL = 20;
 const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
 const FOLLOWING_FETCH_CONCURRENCY = 3;
 const FOLLOWING_AUTHOR_RELAY_LIMIT = 6;
+const FOLLOWING_AUTHORS_BATCH_SIZE = 6;
+const FOLLOWING_BATCH_EVENT_LIMIT_PER_AUTHOR = 20;
+const FOLLOWING_BATCH_EVENT_LIMIT_MAX = 160;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 const CLIP_COMMENTS_KIND = 1111;
 const CLIP_COMMENTS_PREFETCH_LIMIT = 30;
@@ -1200,18 +1203,36 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     const worker = async (): Promise<void> => {
       while (cursor < followingAuthors.length) {
-        const index = cursor;
-        cursor += 1;
-        const author = followingAuthors[index];
+        const start = cursor;
+        cursor += FOLLOWING_AUTHORS_BATCH_SIZE;
+        const authorBatch = followingAuthors.slice(start, start + FOLLOWING_AUTHORS_BATCH_SIZE);
+        if (authorBatch.length === 0) {
+          continue;
+        }
 
-        const authorRelayUrls = await this.getFollowingRelayUrls(author, relayUrls);
+        const authorRelayUrls = await Promise.all(
+          authorBatch.map(author => this.getFollowingRelayUrls(author, relayUrls))
+        );
+
+        const batchRelayUrls = this.relaysService.getOptimalRelays(
+          this.utilities.getUniqueNormalizedRelayUrls([
+            ...relayUrls,
+            ...authorRelayUrls.flat(),
+          ]),
+          FOLLOWING_AUTHOR_RELAY_LIMIT,
+        );
+
+        const batchLimit = Math.min(
+          FOLLOWING_BATCH_EVENT_LIMIT_MAX,
+          Math.max(FOLLOWING_PROFILE_VIDEO_LIMIT, authorBatch.length * FOLLOWING_BATCH_EVENT_LIMIT_PER_AUTHOR)
+        );
 
         await this.collectClipsForFilter(
-          authorRelayUrls,
+          batchRelayUrls,
           {
             kinds: [...CLIPS_KINDS],
-            authors: [author],
-            limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
+            authors: authorBatch,
+            limit: batchLimit,
           },
           dedupedMap,
           3500
