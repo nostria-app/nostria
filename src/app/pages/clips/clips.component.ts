@@ -8,6 +8,7 @@ import { Event, Filter } from 'nostr-tools';
 import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../directives/swipe-gesture.directive';
 import { CommentsListComponent } from '../../components/comments-list/comments-list.component';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService, ANONYMOUS_PUBKEY } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -56,6 +57,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private database = inject(DatabaseService);
   private reporting = inject(ReportingService);
   private utilities = inject(UtilitiesService);
@@ -87,6 +89,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouCommittedSwipe = false;
   private followingSwipeDelta = 0;
   private forYouSwipeDelta = 0;
+  private pendingForYouRestoreEventId: string | null = null;
+  private forYouRestoreApplied = false;
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -132,6 +136,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
+    this.pendingForYouRestoreEventId = this.accountLocalState.getClipsLastForYouEventId(this.getAccountKey()) || null;
+
     if (this.layout.isHandset()) {
       this.layout.hideMobileNav.set(true);
     }
@@ -150,6 +156,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+    if (index === 2) {
+      this.tryRestoreForYouPosition();
+      this.persistForYouPosition();
+    }
   }
 
   openClipFromExplore(clip: Event): void {
@@ -157,8 +167,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
     const index = forYou.findIndex(item => item.id === clip.id);
     if (index >= 0) {
       this.forYouIndex.set(index);
+      this.persistForYouPosition();
     }
     this.selectedTabIndex.set(2);
+    this.tryRestoreForYouPosition();
   }
 
   getClipPoster(event: Event): string {
@@ -520,6 +532,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
     } else if (this.forYouIndex() > forYouLength - 1) {
       this.forYouIndex.set(forYouLength - 1);
     }
+
+    this.tryRestoreForYouPosition();
+
+    if (this.selectedTabIndex() === 2) {
+      this.persistForYouPosition();
+    }
   }
 
   private resetExploreLimit(): void {
@@ -559,6 +577,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
     const next = this.forYouIndex() + delta;
     if (next >= 0 && next < clips.length) {
       this.forYouIndex.set(next);
+      this.persistForYouPosition();
       return true;
     }
 
@@ -621,5 +640,42 @@ export class ClipsComponent implements OnInit, OnDestroy {
     const hasArchiveNamespace = event.tags.some(tag => tag[0] === 'L' && tag[1] === 'archive.divine.video');
 
     return hasPlatformVine || hasOriginVine || hasVineId || hasArchiveLabel || hasArchiveNamespace;
+  }
+
+  private getAccountKey(): string {
+    return this.accountState.pubkey() || ANONYMOUS_PUBKEY;
+  }
+
+  private tryRestoreForYouPosition(): void {
+    if (this.forYouRestoreApplied) {
+      return;
+    }
+
+    const targetEventId = this.pendingForYouRestoreEventId;
+    if (!targetEventId) {
+      this.forYouRestoreApplied = true;
+      return;
+    }
+
+    const clips = this.forYouClips();
+    if (clips.length === 0) {
+      return;
+    }
+
+    const index = clips.findIndex(event => event.id === targetEventId);
+    if (index >= 0) {
+      this.forYouIndex.set(index);
+    }
+
+    this.forYouRestoreApplied = true;
+  }
+
+  private persistForYouPosition(): void {
+    const clip = this.currentForYouClip();
+    if (!clip) {
+      return;
+    }
+
+    this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), clip.id);
   }
 }

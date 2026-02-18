@@ -96,6 +96,7 @@ interface AccountLocalState {
   boardsViewMode?: string; // View mode for boards: 'compact' or 'standard'
   actionsDisplayMode?: string; // Display mode for action buttons on original posts: 'labels-only', 'icons-and-labels', 'icons-only'
   actionsDisplayModeReplies?: string; // Display mode for action buttons on replies: 'labels-only', 'icons-and-labels', 'icons-only'
+  clipsLastForYouEventId?: string; // Last viewed clip event id in Clips For You
 }
 
 /**
@@ -639,6 +640,21 @@ export class AccountLocalStateService {
    */
   setArticlesActiveTab(pubkey: string, tabIndex: number): void {
     this.updateAccountState(pubkey, { articlesActiveTab: tabIndex });
+  }
+
+  /**
+   * Get last viewed Clips For You event id for an account
+   */
+  getClipsLastForYouEventId(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.clipsLastForYouEventId;
+  }
+
+  /**
+   * Set last viewed Clips For You event id for an account
+   */
+  setClipsLastForYouEventId(pubkey: string, eventId: string | null | undefined): void {
+    this.updateAccountState(pubkey, { clipsLastForYouEventId: eventId || undefined });
   }
 
   /**

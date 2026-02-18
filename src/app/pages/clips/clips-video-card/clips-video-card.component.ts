@@ -7,9 +7,11 @@ import { Event } from 'nostr-tools';
 import { ReactionButtonComponent } from '../../../components/event/reaction-button/reaction-button.component';
 import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
 import { InlineVideoPlayerComponent } from '../../../components/inline-video-player/inline-video-player.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { BookmarkService } from '../../../services/bookmark.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { ApplicationService } from '../../../services/application.service';
 
 @Component({
   selector: 'app-clips-video-card',
@@ -34,7 +36,8 @@ export class ClipsVideoCardComponent {
   bookmark = inject(BookmarkService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
-  private app = inject(ApplicationService);
+  private customDialog = inject(CustomDialogService);
+  private userRelaysService = inject(UserRelaysService);
 
   videoUrl = computed(() => {
     const imetaTag = this.event().tags.find(tag => tag[0] === 'imeta');
@@ -77,29 +80,39 @@ export class ClipsVideoCardComponent {
   async onShare(event: MouseEvent): Promise<void> {
     event.stopPropagation();
 
-    const eventUrl = `https://nostria.app/e/${this.event().id}`;
-    const shareData = {
-      title: this.title(),
-      text: this.description() || 'Check this clip on Nostria',
-      url: eventUrl,
-    };
+    try {
+      const clipEvent = this.event();
+      await this.userRelaysService.ensureRelaysForPubkey(clipEvent.pubkey);
 
-    if (this.app.isBrowser() && typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share(shareData);
-        return;
-      } catch {
-        // fall back to clipboard
-      }
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(clipEvent.pubkey);
+      const relayHint = authorRelays[0];
+      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const encodedId = this.utilities.encodeEventForUrl(clipEvent, relayHints.length > 0 ? relayHints : undefined);
+
+      const dialogData: ShareArticleDialogData = {
+        title: this.title(),
+        summary: this.description() || undefined,
+        image: this.posterUrl() || undefined,
+        url: `https://nostria.app/e/${encodedId}`,
+        eventId: clipEvent.id,
+        pubkey: clipEvent.pubkey,
+        identifier: clipEvent.tags.find(tag => tag[0] === 'd')?.[1],
+        kind: clipEvent.kind,
+        encodedId,
+        event: clipEvent,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
+    } catch {
+      this.snackBar.open('Unable to open share dialog', 'Dismiss', { duration: 2500 });
     }
-
-    if (this.app.isBrowser() && navigator?.clipboard) {
-      await navigator.clipboard.writeText(eventUrl);
-      this.snackBar.open('Link copied to clipboard', 'Dismiss', { duration: 2500 });
-      return;
-    }
-
-    this.snackBar.open(eventUrl, 'Dismiss', { duration: 4000 });
   }
 
   private getNumericTag(tagName: string): number {
