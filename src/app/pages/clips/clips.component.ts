@@ -37,6 +37,7 @@ const FULL_CLIPS_RELAY_LIMIT_PER_SOURCE = 8;
 const FULL_CLIPS_RELAY_LIMIT_TOTAL = 20;
 const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
 const FOLLOWING_FETCH_CONCURRENCY = 3;
+const FOLLOWING_AUTHOR_RELAY_LIMIT = 6;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 const CLIP_COMMENTS_KIND = 1111;
 const CLIP_COMMENTS_PREFETCH_LIMIT = 30;
@@ -1247,13 +1248,13 @@ export class ClipsComponent implements OnInit, OnDestroy {
       const mergedRelays = this.utilities.getUniqueNormalizedRelayUrls([...featureRelayUrls, ...authorRelays]);
 
       if (mergedRelays.length > 0) {
-        return mergedRelays;
+        return this.relaysService.getOptimalRelays(mergedRelays, FOLLOWING_AUTHOR_RELAY_LIMIT);
       }
     } catch (error) {
       this.logger.debug('Failed to load author relays for clips following fetch', { authorPubkey, error });
     }
 
-    return featureRelayUrls;
+    return this.relaysService.getOptimalRelays(featureRelayUrls, FOLLOWING_AUTHOR_RELAY_LIMIT);
   }
 
   private async prefetchClipAuthorProfiles(clips: Event[], clipsRelayUrls: string[]): Promise<void> {

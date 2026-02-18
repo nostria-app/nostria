@@ -298,6 +298,24 @@ export class RelayPoolService {
 
     // Get auth callback for NIP-42 authentication
     const authCallback = this.relayAuth.getAuthCallback();
+    let manuallyClosed = false;
+    let unregistered = false;
+
+    const unregisterSubscription = () => {
+      if (unregistered) {
+        return;
+      }
+
+      unregistered = true;
+      this.subscriptionManager.unregisterSubscription(subscriptionId);
+    };
+
+    const shouldIgnoreCloseReason = (reasonEntry: string): boolean => {
+      const normalized = reasonEntry.toLowerCase();
+      return normalized.includes('closed automatically on eose') ||
+        normalized.includes('closed by caller') ||
+        normalized.includes('aborted by caller');
+    };
 
     // Use only the available relays (those not at the subscription limit)
     const sub = this.#pool.subscribe(availableRelays, filter, {
@@ -320,10 +338,12 @@ export class RelayPoolService {
         this.logger.info('[RelayPoolService] Subscription closed', {
           subscriptionId,
           reason,
+          manuallyClosed,
         });
-        if (reason && reason.length > 0) {
+
+        if (!manuallyClosed && reason && reason.length > 0) {
           reason.forEach(reasonEntry => {
-            if (!reasonEntry) {
+            if (!reasonEntry || shouldIgnoreCloseReason(reasonEntry)) {
               return;
             }
             filteredUrls.forEach(url => {
@@ -331,7 +351,8 @@ export class RelayPoolService {
             });
           });
         }
-        this.subscriptionManager.unregisterSubscription(subscriptionId);
+
+        unregisterSubscription();
       }
     });
 
@@ -340,8 +361,9 @@ export class RelayPoolService {
         this.logger.info('[RelayPoolService] Closing subscription', {
           subscriptionId,
         });
+        manuallyClosed = true;
         sub.close();
-        this.subscriptionManager.unregisterSubscription(subscriptionId);
+        unregisterSubscription();
       },
     };
   }

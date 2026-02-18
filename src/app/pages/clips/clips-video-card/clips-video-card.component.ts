@@ -26,6 +26,7 @@ import { NostrRecord } from '../../../interfaces';
 
 const CLIP_KINDS = [22, 34236];
 const INTERACTION_REFRESH_MIN_INTERVAL_MS = 1200;
+const INTERACTION_REFRESH_INTERVAL_MS = 15000;
 
 @Component({
   selector: 'app-clips-video-card',
@@ -171,8 +172,8 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
       if (isActive) {
         this.interactionsRefreshTimer = setInterval(() => {
-          void this.refreshInteractionCounts(true, clipEvent.id);
-        }, 6000);
+          void this.refreshInteractionCounts(false, clipEvent.id);
+        }, INTERACTION_REFRESH_INTERVAL_MS);
       }
     });
   }
