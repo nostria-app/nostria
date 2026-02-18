@@ -1856,7 +1856,7 @@ export class DatabaseService {
   /**
    * Upsert following activity records in shared DB.
    */
-  async upsertFollowingActivity(records: Array<{ pubkey: string; lastPostedAtSec: number; lastSeenAtMs?: number; eventCountDelta?: number }>): Promise<void> {
+  async upsertFollowingActivity(records: { pubkey: string; lastPostedAtSec: number; lastSeenAtMs?: number; eventCountDelta?: number }[]): Promise<void> {
     const db = this.sharedDb;
     if (!db || records.length === 0) {
       return;
