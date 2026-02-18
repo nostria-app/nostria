@@ -331,6 +331,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     }
 
     // Default to 16:9 for videos
+    if (this.isShortFormVideo()) {
+      return '9 / 16';
+    }
+
     return '16 / 9';
   });
 

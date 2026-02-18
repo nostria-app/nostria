@@ -129,7 +129,8 @@
     @if (selectedTabIndex() === 1) {
     <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
       [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')"
-      (swipe)="onSwipe($event, 'following')" (swipeEnd)="onSwipeEnd('following')">
+      (swipe)="onSwipe($event, 'following')" (swipeEnd)="onSwipeEnd('following')"
+      (wheel)="onWheelNavigate($event, 'following')">
       @if (loading()) {
       <div class="loading-container fullscreen-loading">
         <mat-spinner diameter="40"></mat-spinner>
@@ -137,9 +138,17 @@
       } @else {
       @let clip = currentFollowingClip();
       @if (clip) {
-      <div class="swipe-card" [class.animating]="isCardAnimating('following')"
-        [style.transform]="getCardTransform('following')">
-        <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1" (commentsClick)="openComments(clip)" />
+      <div class="swipe-stack">
+        <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
+          [style.transform]="getCardTransform('following')">
+          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
+            (commentsClick)="openComments(clip)" />
+        </div>
+        @if (hasSwipePreview('following') && getSwipePreviewClip('following'); as previewClip) {
+        <div class="swipe-card swipe-card-preview" [style.transform]="getSwipePreviewTransform('following')">
+          <app-clips-video-card [event]="previewClip" [active]="false" />
+        </div>
+        }
       </div>
       <div class="desktop-nav-buttons">
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
@@ -165,7 +174,7 @@
     @if (selectedTabIndex() === 2) {
     <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
       [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'foryou')" (swipe)="onSwipe($event, 'foryou')"
-      (swipeEnd)="onSwipeEnd('foryou')">
+      (swipeEnd)="onSwipeEnd('foryou')" (wheel)="onWheelNavigate($event, 'foryou')">
       @if (loading()) {
       <div class="loading-container fullscreen-loading">
         <mat-spinner diameter="40"></mat-spinner>
@@ -173,9 +182,17 @@
       } @else {
       @let clip = currentForYouClip();
       @if (clip) {
-      <div class="swipe-card" [class.animating]="isCardAnimating('foryou')"
-        [style.transform]="getCardTransform('foryou')">
-        <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2" (commentsClick)="openComments(clip)" />
+      <div class="swipe-stack">
+        <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
+          [style.transform]="getCardTransform('foryou')">
+          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
+            (commentsClick)="openComments(clip)" />
+        </div>
+        @if (hasSwipePreview('foryou') && getSwipePreviewClip('foryou'); as previewClip) {
+        <div class="swipe-card swipe-card-preview" [style.transform]="getSwipePreviewTransform('foryou')">
+          <app-clips-video-card [event]="previewClip" [active]="false" />
+        </div>
+        }
       </div>
       <div class="desktop-nav-buttons">
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"

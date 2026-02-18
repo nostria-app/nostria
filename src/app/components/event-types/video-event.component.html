@@ -13,12 +13,11 @@
 @let videoInfo = videoData()!;
 @let blurhashUrl = blurhashDataUrl();
 <div class="video-container" [class.clickable]="showOverlay()" [class.blurred]="shouldBlurMedia()"
-  [class.revealing]="!shouldBlurMedia() && isRevealed()" [style.aspect-ratio]="videoAspectRatio()"
-  (click)="$event.stopPropagation()">
+  [class.revealing]="!shouldBlurMedia() && isRevealed()" [class.short-form]="isShortFormVideo()"
+  [style.aspect-ratio]="videoAspectRatio()" (click)="$event.stopPropagation()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
-  <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
-    (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))"
+  <div class="video-thumbnail-container" (click)="expandVideo($any($event))"
     [class.thumbnail-loaded]="thumbnailLoaded()">
     <!-- Video icon indicator (shown in grid view) -->
     @if (showOverlay()) {
@@ -30,14 +29,14 @@
     <!-- Placeholder background (always shown initially) -->
     @if (blurhashUrl) {
     <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" aria-hidden="true" />
+      title="Video thumbnail" [attr.title]="videoInfo.title || 'Video thumbnail'" aria-hidden="true" />
     }
 
     @if (videoInfo.thumbnail) {
     <!-- Use provided thumbnail image with progressive loading -->
     <img [src]="videoInfo.thumbnail" class="video-thumbnail main-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" [class.hidden]="shouldBlurMedia()"
-      [class.loaded]="thumbnailLoaded()" (load)="thumbnailLoaded.set(true)" />
+      title="Video thumbnail" [attr.title]="videoInfo.title || videoInfo.alt || 'Video thumbnail'" loading="lazy"
+      [class.hidden]="shouldBlurMedia()" [class.loaded]="thumbnailLoaded()" (load)="thumbnailLoaded.set(true)" />
     } @else if (!blurhashUrl) {
     <!-- Use video element with preload="metadata" to show first frame -->
     <video [src]="videoInfo.url" preload="metadata" class="video-thumbnail" [class.hidden]="shouldBlurMedia()"></video>
@@ -68,24 +67,27 @@
   } @else {
   <!-- Video Player (Expanded State) -->
   <div class="video-player-container" [style.aspect-ratio]="videoAspectRatio()" [class.video-ready]="videoReady()"
-    [class.needs-rotation]="needsRotationCorrection()" (mouseenter)="onVideoContainerMouseEnter()"
-    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
+    [class.needs-rotation]="needsRotationCorrection()" [class.short-form]="isShortFormVideo()"
+    (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
+    (mousemove)="onVideoContainerMouseMove()">
     <!-- Placeholder shown until video is ready -->
     @if (blurhashUrl && !videoReady()) {
     <img [src]="blurhashUrl" class="video-placeholder-bg" alt="" aria-hidden="true" />
     }
     <!-- Video wrapper for proper play button positioning -->
     <div class="video-wrapper">
-      <video #videoPlayer class="video-player" [class.loaded]="videoReady()"
-        [loop]="shouldRepeat()" [muted]="shouldBeMuted()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
-        (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()"
-        (canplay)="onVideoCanPlay()" (click)="togglePlayPause()" (dblclick)="onVideoDoubleClick($event)">
+      <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [loop]="shouldRepeat()"
+        [muted]="shouldBeMuted()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined"
+        (play)="onVideoPlay($event)" (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()"
+        (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()" (click)="togglePlayPause()"
+        (dblclick)="onVideoDoubleClick($event)">
         <source [src]="videoInfo.url" [type]="videoMimeType()" />
         Your browser does not support the video tag.
       </video>
       <!-- Center play button positioned relative to actual video -->
       @if (videoPaused() && !hasPlayedOnce()) {
-      <button class="video-center-play-btn" (click)="onCenterPlayButtonClick(); $event.stopPropagation()" aria-label="Play video">
+      <button class="video-center-play-btn" (click)="onCenterPlayButtonClick(); $event.stopPropagation()"
+        aria-label="Play video">
         <mat-icon>play_arrow</mat-icon>
       </button>
       }

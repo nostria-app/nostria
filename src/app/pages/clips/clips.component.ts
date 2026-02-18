@@ -51,6 +51,9 @@ const DEFAULT_CLIPS_RELAYS = [
 
 type SwipeMode = 'following' | 'foryou';
 
+const SWIPE_DRAG_DEADZONE_PX = 6;
+const SWIPE_PREVIEW_THRESHOLD_PX = 18;
+
 @Component({
   selector: 'app-clips',
   host: {
@@ -112,6 +115,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouCommittedSwipe = false;
   private followingSwipeDelta = 0;
   private forYouSwipeDelta = 0;
+  private lastWheelNavigationAt = 0;
   private pendingForYouRestoreEventId: string | null = null;
   private forYouRestoreApplied = false;
   private exploreLoadObserver: IntersectionObserver | null = null;
@@ -290,14 +294,16 @@ export class ClipsComponent implements OnInit, OnDestroy {
   onSwipeProgress(event: SwipeProgressEvent, mode: SwipeMode): void {
     if (event.direction !== 'vertical') return;
 
+    const offset = Math.abs(event.deltaY) <= SWIPE_DRAG_DEADZONE_PX ? 0 : event.deltaY;
+
     if (mode === 'following') {
       this.followingAnimating.set(false);
-      this.followingDragOffset.set(event.deltaY);
+      this.followingDragOffset.set(offset);
       return;
     }
 
     this.forYouAnimating.set(false);
-    this.forYouDragOffset.set(event.deltaY);
+    this.forYouDragOffset.set(offset);
   }
 
   onSwipe(event: SwipeEvent, mode: SwipeMode): void {
@@ -342,6 +348,30 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.forYouSwipeDelta = 0;
   }
 
+  onWheelNavigate(event: WheelEvent, mode: SwipeMode): void {
+    if (this.loading() || this.commentsOpen() || this.showSettingsDialog()) {
+      return;
+    }
+
+    if (Math.abs(event.deltaY) < 24) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastWheelNavigationAt < 220) {
+      return;
+    }
+
+    const delta = event.deltaY > 0 ? 1 : -1;
+    if (!this.canNavigate(mode, delta)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.lastWheelNavigationAt = now;
+    this.advanceByKeyboard(mode, delta);
+  }
+
   onWindowKeyDown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     const tagName = target?.tagName?.toLowerCase();
@@ -381,6 +411,43 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   isCardAnimating(mode: SwipeMode): boolean {
     return mode === 'following' ? this.followingAnimating() : this.forYouAnimating();
+  }
+
+  hasSwipePreview(mode: SwipeMode): boolean {
+    const offset = mode === 'following' ? this.followingDragOffset() : this.forYouDragOffset();
+    if (Math.abs(offset) < SWIPE_PREVIEW_THRESHOLD_PX) {
+      return false;
+    }
+
+    const previewDelta = offset > 0 ? -1 : 1;
+    return this.canNavigate(mode, previewDelta);
+  }
+
+  getSwipePreviewClip(mode: SwipeMode): Event | null {
+    if (!this.hasSwipePreview(mode)) {
+      return null;
+    }
+
+    const clips = mode === 'following' ? this.followingClips() : this.forYouClips();
+    const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();
+    const offset = mode === 'following' ? this.followingDragOffset() : this.forYouDragOffset();
+    const previewIndex = currentIndex + (offset > 0 ? -1 : 1);
+
+    return clips[previewIndex] || null;
+  }
+
+  getSwipePreviewTransform(mode: SwipeMode): string {
+    const offset = mode === 'following' ? this.followingDragOffset() : this.forYouDragOffset();
+    if (offset === 0) {
+      return 'translateY(100%)';
+    }
+
+    const gap = 18;
+    if (offset > 0) {
+      return `translateY(calc(-100% + ${offset - gap}px))`;
+    }
+
+    return `translateY(calc(100% + ${offset + gap}px))`;
   }
 
   openComments(event: Event): void {
