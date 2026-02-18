@@ -34,6 +34,9 @@ export interface VideoControlsConfig {
   showFullscreen?: boolean;
   showPlaybackRate?: boolean;
   showCast?: boolean;
+  showPlayPauseButton?: boolean;
+  showCenterPlayButton?: boolean;
+  forceCastPiPInSettingsMenu?: boolean;
   isLiveStream?: boolean;
   autoHide?: boolean;
   autoHideDelay?: number;
@@ -45,6 +48,9 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showFullscreen: true,
   showPlaybackRate: true,
   showCast: true,
+  showPlayPauseButton: true,
+  showCenterPlayButton: true,
+  forceCastPiPInSettingsMenu: false,
   isLiveStream: false,
   autoHide: true,
   autoHideDelay: 1500, // Shorter delay for more responsive feel

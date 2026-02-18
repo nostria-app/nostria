@@ -691,9 +691,9 @@ export class App implements OnInit, OnDestroy {
     'messages',
     'people',
     'collections',
+    'clips',
     'music',
     'streams',
-    'clips',
   ];
 
   constructor() {

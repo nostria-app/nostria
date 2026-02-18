@@ -30,6 +30,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },
   { id: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
   { id: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
+  { id: 'clips', label: $localize`:@@app.nav.clips:Clips`, icon: 'smart_display', authenticated: false },
   { id: 'music', label: $localize`:@@app.nav.music:Music`, icon: 'music_note', authenticated: false },
   { id: 'streams', label: $localize`:@@app.nav.streams:Streams`, icon: 'live_tv', authenticated: false },
   { id: 'notifications', label: $localize`:@@menu.notifications:Notifications`, icon: 'notifications', authenticated: true },
@@ -59,6 +60,7 @@ const DEFAULT_MENU_IDS = [
   'messages',
   'people',
   'collections',
+  'clips',
   'music',
   'streams',
 ];

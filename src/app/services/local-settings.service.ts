@@ -173,9 +173,9 @@ export class LocalSettingsService {
     'messages',
     'people',
     'collections',
+    'clips',
     'music',
     'streams',
-    'clips',
   ];
 
   /**

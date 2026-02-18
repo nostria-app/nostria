@@ -463,6 +463,23 @@
   }
 }
 
+.tile-clips {
+  background: linear-gradient(160deg, var(--mat-sys-secondary-container) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .tile-icon {
+    color: var(--mat-sys-secondary);
+  }
+
+  .tile-background {
+    background: linear-gradient(160deg, var(--mat-sys-secondary-container) 0%, var(--mat-sys-surface-container) 100%);
+  }
+
+  &:hover {
+    border-color: var(--mat-sys-secondary);
+  }
+}
+
 .tile-music {
   background: linear-gradient(180deg, rgba(255, 87, 34, 0.15) 0%, rgba(255, 87, 34, 0.05) 100%);
   border: 1px solid rgba(255, 87, 34, 0.2);

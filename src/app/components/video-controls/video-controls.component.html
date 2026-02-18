@@ -3,7 +3,7 @@
   <div class="gradient-top"></div>
 
   <!-- Center play button (large, only when paused and never played) -->
-  @if (paused() && !hasPlayedOnce()) {
+  @if (mergedConfig().showCenterPlayButton && paused() && !hasPlayedOnce()) {
   <button class="center-play-btn" mat-icon-button (click)="onCenterPlayButtonClick(); $event.stopPropagation()"
     aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
@@ -41,10 +41,12 @@
       <!-- Left controls -->
       <div class="controls-left">
         <!-- Play/Pause -->
+        @if (mergedConfig().showPlayPauseButton) {
         <button mat-icon-button (click)="onPlayPause()" [matTooltip]="paused() ? 'Play (k)' : 'Pause (k)'"
           class="control-btn">
           <mat-icon>{{ paused() ? 'play_arrow' : 'pause' }}</mat-icon>
         </button>
+        }
 
         <!-- Volume -->
         <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
@@ -74,6 +76,7 @@
       <div class="controls-right">
         <!-- Settings Menu (YouTube-style with Playback Speed and Quality) -->
         @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate || (isSmallScreen() &&
+        (mergedConfig().showCast || mergedConfig().showPiP)) || (mergedConfig().forceCastPiPInSettingsMenu &&
         (mergedConfig().showCast || mergedConfig().showPiP))) {
         <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
           <mat-icon>settings</mat-icon>
@@ -96,14 +99,14 @@
           </button>
           }
           <!-- Cast to TV (in menu on small screens) -->
-          @if (isSmallScreen() && mergedConfig().showCast) {
+          @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showCast) {
           <button mat-menu-item (click)="onCastToggle()">
             <mat-icon>cast</mat-icon>
             <span>Play on TV</span>
           </button>
           }
           <!-- Picture in Picture (in menu on small screens) -->
-          @if (isSmallScreen() && mergedConfig().showPiP) {
+          @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showPiP) {
           <button mat-menu-item (click)="onPipToggle()">
             <mat-icon>picture_in_picture_alt</mat-icon>
             <span>Picture-in-picture</span>
@@ -135,14 +138,14 @@
         }
 
         <!-- Cast to TV (visible only on larger screens) -->
-        @if (!isSmallScreen() && mergedConfig().showCast) {
+        @if (!isSmallScreen() && !mergedConfig().forceCastPiPInSettingsMenu && mergedConfig().showCast) {
         <button mat-icon-button (click)="onCastToggle()" matTooltip="Play on TV" class="control-btn">
           <mat-icon>cast</mat-icon>
         </button>
         }
 
         <!-- Picture in Picture (visible only on larger screens) -->
-        @if (!isSmallScreen() && mergedConfig().showPiP) {
+        @if (!isSmallScreen() && !mergedConfig().forceCastPiPInSettingsMenu && mergedConfig().showPiP) {
         <button mat-icon-button (click)="onPipToggle()" matTooltip="Picture-in-picture" class="control-btn">
           <mat-icon>picture_in_picture_alt</mat-icon>
         </button>

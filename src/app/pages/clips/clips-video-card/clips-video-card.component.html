@@ -1,7 +1,13 @@
 <div class="clip-card">
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
-    [loop]="true">
+    [loop]="true" [controlsConfig]="{
+      showQuality: false,
+      isLiveStream: false,
+      showPlayPauseButton: false,
+      showCenterPlayButton: false,
+      forceCastPiPInSettingsMenu: true
+    }">
   </app-inline-video-player>
   } @else {
   <div class="video-fallback">

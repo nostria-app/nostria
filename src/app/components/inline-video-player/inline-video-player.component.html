@@ -16,7 +16,7 @@
 
   <!-- Video Controls - unified UI component -->
   @if (!hasError()) {
-  <app-video-controls [videoElement]="videoElementSignal()" [config]="{ showQuality: false, isLiveStream: false }"
+  <app-video-controls [videoElement]="videoElementSignal()" [config]="effectiveControlsConfig()"
     (playPause)="togglePlay()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
     (muteToggle)="onMuteToggle()" (playbackRateChange)="onPlaybackRateChange($event)"
     (fullscreenToggle)="toggleFullscreen()" (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />

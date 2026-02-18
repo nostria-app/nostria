@@ -24,8 +24,13 @@ import {
   isInFullscreen,
   addFullscreenChangeListener,
 } from '../../utils/fullscreen';
-import { VideoControlsComponent } from '../video-controls/video-controls.component';
+import { VideoControlsComponent, VideoControlsConfig } from '../video-controls/video-controls.component';
 import { CastService } from '../../services/cast.service';
+
+const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
+  showQuality: false,
+  isLiveStream: false,
+};
 
 @Component({
   selector: 'app-inline-video-player',
@@ -57,6 +62,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   muted = input<boolean>(false);
   loop = input<boolean>(false);
   blurred = input<boolean>(false);
+  controlsConfig = input<VideoControlsConfig | undefined>(undefined);
   /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
   inFeedsPanel = input<boolean>(false);
 
@@ -94,6 +100,11 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   // Computed source - use blob URL if available, otherwise original src
   effectiveSrc = computed(() => this.blobUrl() ?? this.src());
+
+  effectiveControlsConfig = computed<VideoControlsConfig>(() => ({
+    ...DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG,
+    ...(this.controlsConfig() ?? {}),
+  }));
 
   // Computed mute state - uses persisted state from service
   // The muted input is only used during initial load if no persisted state exists
