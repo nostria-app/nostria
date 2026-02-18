@@ -198,6 +198,14 @@ export interface PubkeyRelayMapping {
   eventCount: number; // Number of events seen from this pubkey on this relay
 }
 
+export interface FollowingActivityRecord {
+  pubkey: string;
+  lastPostedAtSec: number;
+  lastSeenAtMs: number;
+  eventCount: number;
+  updated: number;
+}
+
 /**
  * Interface for stored direct messages
  */
@@ -275,7 +283,7 @@ export interface InfoRecord {
  */
 const SHARED_DB_NAME = 'nostria-shared';
 const ACCOUNT_DB_PREFIX = 'nostria-account-';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /** Legacy database names to delete during migration */
 const LEGACY_DB_NAMES = ['nostria-db', 'nostria'];
@@ -300,6 +308,7 @@ const STORES = {
   NOTIFICATIONS: 'notifications',
   OBSERVED_RELAYS: 'observedRelays',
   PUBKEY_RELAY_MAPPINGS: 'pubkeyRelayMappings',
+  FOLLOWING_ACTIVITY: 'followingActivity',
   BADGE_DEFINITIONS: 'badgeDefinitions',
   EVENTS_CACHE: 'eventsCache',
   MESSAGES: 'messages',
@@ -311,6 +320,7 @@ const SHARED_STORES = new Set([
   STORES.RELAYS,
   STORES.OBSERVED_RELAYS,
   STORES.PUBKEY_RELAY_MAPPINGS,
+  STORES.FOLLOWING_ACTIVITY,
   STORES.BADGE_DEFINITIONS,
 ]);
 
@@ -683,6 +693,15 @@ export class DatabaseService {
       mappingsStore.createIndex('by-last-seen', 'lastSeen', { unique: false });
       mappingsStore.createIndex('by-source', 'source', { unique: false });
       this.logger.debug('Created pubkeyRelayMappings store');
+    }
+
+    // Create following activity store
+    if (!db.objectStoreNames.contains(STORES.FOLLOWING_ACTIVITY)) {
+      const followingActivityStore = db.createObjectStore(STORES.FOLLOWING_ACTIVITY, { keyPath: 'pubkey' });
+      followingActivityStore.createIndex('by-last-posted', 'lastPostedAtSec', { unique: false });
+      followingActivityStore.createIndex('by-last-seen', 'lastSeenAtMs', { unique: false });
+      followingActivityStore.createIndex('by-updated', 'updated', { unique: false });
+      this.logger.debug('Created followingActivity store');
     }
 
     // Create badge definitions store
@@ -1804,6 +1823,111 @@ export class DatabaseService {
    */
   async deleteTrustMetrics(pubkey: string): Promise<void> {
     await this.deleteInfoByKeyAndType(pubkey, 'trust');
+  }
+
+  // ============================================================================
+  // FOLLOWING ACTIVITY OPERATIONS (SHARED DB)
+  // ============================================================================
+
+  /**
+   * Get following activity records for a subset of pubkeys.
+   */
+  async getFollowingActivity(pubkeys: string[]): Promise<FollowingActivityRecord[]> {
+    const db = this.sharedDb;
+    if (!db || pubkeys.length === 0) {
+      return [];
+    }
+
+    const pubkeysSet = new Set(pubkeys);
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.FOLLOWING_ACTIVITY, 'readonly');
+      const store = transaction.objectStore(STORES.FOLLOWING_ACTIVITY);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const records = (request.result as FollowingActivityRecord[] | undefined) ?? [];
+        resolve(records.filter(record => pubkeysSet.has(record.pubkey)));
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Upsert following activity records in shared DB.
+   */
+  async upsertFollowingActivity(records: { pubkey: string; lastPostedAtSec: number; lastSeenAtMs?: number; eventCountDelta?: number }[]): Promise<void> {
+    const db = this.sharedDb;
+    if (!db || records.length === 0) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.FOLLOWING_ACTIVITY, 'readwrite');
+      const store = transaction.objectStore(STORES.FOLLOWING_ACTIVITY);
+      const now = Date.now();
+
+      for (const record of records) {
+        const getRequest = store.get(record.pubkey);
+
+        getRequest.onsuccess = () => {
+          const existing = getRequest.result as FollowingActivityRecord | undefined;
+          const nextRecord: FollowingActivityRecord = {
+            pubkey: record.pubkey,
+            lastPostedAtSec: Math.max(existing?.lastPostedAtSec ?? 0, record.lastPostedAtSec),
+            lastSeenAtMs: Math.max(existing?.lastSeenAtMs ?? 0, record.lastSeenAtMs ?? now),
+            eventCount: Math.max(0, (existing?.eventCount ?? 0) + (record.eventCountDelta ?? 1)),
+            updated: now,
+          };
+
+          store.put(nextRecord);
+        };
+
+        getRequest.onerror = () => {
+          this.logger.warn('[DatabaseService] Failed to read following activity record for upsert', getRequest.error);
+        };
+      }
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Remove activity records that are no longer tracked by follows/people lists.
+   */
+  async pruneFollowingActivity(trackedPubkeys: string[]): Promise<void> {
+    const db = this.sharedDb;
+    if (!db) {
+      return;
+    }
+
+    const trackedSet = new Set(trackedPubkeys);
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.FOLLOWING_ACTIVITY, 'readwrite');
+      const store = transaction.objectStore(STORES.FOLLOWING_ACTIVITY);
+      const request = store.openCursor();
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          return;
+        }
+
+        const value = cursor.value as FollowingActivityRecord;
+        if (!trackedSet.has(value.pubkey)) {
+          cursor.delete();
+        }
+        cursor.continue();
+      };
+
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
   }
 
   // ============================================================================
