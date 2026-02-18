@@ -1,4 +1,29 @@
 <div class="clips-container">
+  <div class="clips-mobile-menu">
+    <button mat-icon-button [matMenuTriggerFor]="clipsTopMenu" aria-label="Clips options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+  </div>
+
+  <mat-menu #clipsTopMenu="matMenu">
+    <button mat-menu-item (click)="refresh()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      <span>Refresh</span>
+    </button>
+    <button mat-menu-item (click)="openSettings()">
+      <mat-icon>settings</mat-icon>
+      <span>Relay settings</span>
+    </button>
+    <button mat-menu-item (click)="toggleIncludeArchive()">
+      <mat-icon>{{ includeArchive() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+      <span>Include archive</span>
+    </button>
+    <button mat-menu-item (click)="toggleArchiveOnly()">
+      <mat-icon>{{ archiveOnly() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+      <span>Archive only</span>
+    </button>
+  </mat-menu>
+
   <div class="panel-header">
     <h2 class="panel-title title-font">Clips</h2>
     <span class="panel-header-spacer"></span>
@@ -39,10 +64,16 @@
         </div>
         } @else {
         <div class="explore-list">
-          @for (clip of exploreClips(); track clip.id) {
-          <app-event [event]="clip" appearance="card" [hideComments]="true"></app-event>
+          @for (clip of visibleExploreClips(); track clip.id) {
+          <app-clips-video-card class="explore-clip-card" [event]="clip" [active]="false"
+            (commentsClick)="openComments(clip)" />
           }
         </div>
+        @if (hasMoreExploreClips()) {
+        <div class="explore-load-more">
+          <button mat-flat-button (click)="loadMoreExploreClips()">Load more</button>
+        </div>
+        }
         }
       </div>
     </mat-tab>

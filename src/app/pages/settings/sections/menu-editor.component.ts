@@ -40,7 +40,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
   { id: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
   { id: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
-{ id: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
+  { id: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
   { id: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
   { id: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
   { id: 'newsletter', label: $localize`:@@menu.newsletter:Newsletter`, icon: 'campaign', authenticated: true },

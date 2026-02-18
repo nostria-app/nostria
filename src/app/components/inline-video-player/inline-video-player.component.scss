@@ -12,6 +12,10 @@
   background: #000;
   overflow: hidden;
   border-radius: 12px;
+
+  &.fill-container {
+    height: 100%;
+  }
 }
 
 .video-element {
@@ -20,6 +24,11 @@
   height: auto;
   max-height: 70vh;
   object-fit: contain;
+
+  &.fill-container {
+    height: 100%;
+    max-height: none;
+  }
 
   &.blurred {
     filter: blur(20px);

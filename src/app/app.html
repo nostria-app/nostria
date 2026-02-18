@@ -247,10 +247,10 @@
     </mat-sidenav>
 
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
-      [class.media-player-shown]="layout.showMediaPlayer()">
+      [class.media-player-shown]="layout.showMediaPlayer()" [class.clips-mobile-mode]="isClipsMobileMode()">
 
       <!-- Top toolbar - beside sidenav -->
-      <mat-toolbar class="app-toolbar no-print no-select">
+      <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMobileMode()">
 
 
 

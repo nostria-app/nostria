@@ -1,13 +1,13 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter } from 'nostr-tools';
 import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../directives/swipe-gesture.directive';
 import { CommentsListComponent } from '../../components/comments-list/comments-list.component';
-import { EventComponent } from '../../components/event/event.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
@@ -16,12 +16,14 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { ReportingService } from '../../services/reporting.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LayoutService } from '../../services/layout.service';
 import { ClipsSettingsDialogComponent } from './clips-settings-dialog/clips-settings-dialog.component';
 import { ClipsVideoCardComponent } from './clips-video-card/clips-video-card.component';
 
 const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
 const CLIPS_KINDS = [22, 34236];
+const EXPLORE_PAGE_SIZE = 24;
 
 const DEFAULT_CLIPS_RELAYS = [
   'wss://nos.lol/',
@@ -40,7 +42,7 @@ type SwipeMode = 'following' | 'foryou';
     MatTabsModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
-    EventComponent,
+    MatMenuModule,
     CommentsListComponent,
     SwipeGestureDirective,
     ClipsSettingsDialogComponent,
@@ -49,7 +51,7 @@ type SwipeMode = 'following' | 'foryou';
   templateUrl: './clips.component.html',
   styleUrl: './clips.component.scss',
 })
-export class ClipsComponent implements OnInit {
+export class ClipsComponent implements OnInit, OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -57,6 +59,7 @@ export class ClipsComponent implements OnInit {
   private database = inject(DatabaseService);
   private reporting = inject(ReportingService);
   private utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
   private logger = inject(LoggerService);
 
   loading = signal(true);
@@ -67,6 +70,7 @@ export class ClipsComponent implements OnInit {
   archiveOnly = signal(false);
 
   allClips = signal<Event[]>([]);
+  exploreLimit = signal(EXPLORE_PAGE_SIZE);
   clipsRelaySet = signal<Event | null>(null);
   clipsRelays = signal<string[]>([]);
 
@@ -107,6 +111,8 @@ export class ClipsComponent implements OnInit {
 
   forYouClips = computed(() => this.eligibleClips());
   exploreClips = computed(() => this.eligibleClips());
+  visibleExploreClips = computed(() => this.exploreClips().slice(0, this.exploreLimit()));
+  hasMoreExploreClips = computed(() => this.visibleExploreClips().length < this.exploreClips().length);
 
   currentFollowingClip = computed(() => {
     const clips = this.followingClips();
@@ -123,7 +129,14 @@ export class ClipsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    if (this.layout.isHandset()) {
+      this.layout.hideMobileNav.set(true);
+    }
     await this.initializeClips();
+  }
+
+  ngOnDestroy(): void {
+    this.layout.hideMobileNav.set(false);
   }
 
   async refresh(): Promise<void> {
@@ -150,6 +163,7 @@ export class ClipsComponent implements OnInit {
     if (!value && this.archiveOnly()) {
       this.archiveOnly.set(false);
     }
+    this.resetExploreLimit();
     this.ensureIndexesInRange();
   }
 
@@ -158,7 +172,20 @@ export class ClipsComponent implements OnInit {
     if (value) {
       this.includeArchive.set(true);
     }
+    this.resetExploreLimit();
     this.ensureIndexesInRange();
+  }
+
+  toggleIncludeArchive(): void {
+    this.onIncludeArchiveChanged(!this.includeArchive());
+  }
+
+  toggleArchiveOnly(): void {
+    this.onArchiveOnlyChanged(!this.archiveOnly());
+  }
+
+  loadMoreExploreClips(): void {
+    this.exploreLimit.update(limit => limit + EXPLORE_PAGE_SIZE);
   }
 
   onSwipeProgress(event: SwipeProgressEvent, mode: SwipeMode): void {
@@ -349,6 +376,7 @@ export class ClipsComponent implements OnInit {
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       this.allClips.set(clips);
+      this.resetExploreLimit();
       this.ensureIndexesInRange();
     } catch (error) {
       this.logger.error('Failed to load clips', error);
@@ -372,6 +400,10 @@ export class ClipsComponent implements OnInit {
     } else if (this.forYouIndex() > forYouLength - 1) {
       this.forYouIndex.set(forYouLength - 1);
     }
+  }
+
+  private resetExploreLimit(): void {
+    this.exploreLimit.set(EXPLORE_PAGE_SIZE);
   }
 
   private advanceIndex(mode: SwipeMode, delta: number): void {

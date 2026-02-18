@@ -284,6 +284,18 @@ export class App implements OnInit, OnDestroy {
   // Track search focus state for mobile full-width mode
   searchFocused = signal(false);
 
+  // Track current route for route-aware shell UI behaviors
+  currentRouteUrl = signal(this.router.url);
+
+  isClipsMobileMode = computed(() => {
+    if (!this.layout.isHandset()) {
+      return false;
+    }
+
+    const path = this.currentRouteUrl().split('?')[0] ?? '';
+    return path === '/clips' || path.startsWith('/clips/');
+  });
+
   // Track shortcuts dialog reference for toggle behavior
   private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
 
@@ -961,6 +973,8 @@ export class App implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((event: NavigationEnd) => {
+        this.currentRouteUrl.set(event.urlAfterRedirects || this.router.url);
+
         const pubkey = this.accountState.pubkey();
         if (pubkey && event.urlAfterRedirects) {
           this.accountLocalState.setLastRoute(pubkey, event.urlAfterRedirects);

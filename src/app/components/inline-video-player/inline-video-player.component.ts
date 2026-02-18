@@ -62,6 +62,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   muted = input<boolean>(false);
   loop = input<boolean>(false);
   blurred = input<boolean>(false);
+  objectFit = input<'contain' | 'cover'>('contain');
+  fillContainer = input<boolean>(false);
   controlsConfig = input<VideoControlsConfig | undefined>(undefined);
   /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
   inFeedsPanel = input<boolean>(false);

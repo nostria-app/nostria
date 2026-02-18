@@ -2561,3 +2561,19 @@ mat-sidenav-content {
     white-space: nowrap;
   }
 }
+
+.app-toolbar.hidden-for-clips {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+mat-sidenav-content.clips-mobile-mode {
+  .main-content-area {
+    height: 100%;
+  }
+}
