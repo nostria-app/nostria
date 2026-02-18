@@ -49,121 +49,125 @@
     </button>
   </div>
 
-  <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)">
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <span>Explore</span>
-      </ng-template>
+  <div class="clips-tabs" aria-label="Clips tabs">
+    <button class="clips-tab" [class.active]="selectedTabIndex() === 0" (click)="onTabChange(0)">
+      Explore
+    </button>
+    <button class="clips-tab" [class.active]="selectedTabIndex() === 1" (click)="onTabChange(1)">
+      Following
+    </button>
+    <button class="clips-tab" [class.active]="selectedTabIndex() === 2" (click)="onTabChange(2)">
+      For You
+    </button>
+  </div>
 
-      <div class="explore-content">
-        @if (loading()) {
-        <div class="loading-container">
-          <mat-spinner diameter="40"></mat-spinner>
-          <p>Loading clips...</p>
-        </div>
-        } @else if (exploreClips().length === 0) {
-        <div class="empty-state">
-          <mat-icon>movie</mat-icon>
-          <p>No clips found for current filters.</p>
-        </div>
-        } @else {
-        <div class="explore-list">
-          @for (clip of visibleExploreClips(); track clip.id) {
-          <app-clips-video-card class="explore-clip-card" [event]="clip" [active]="false"
-            (commentsClick)="openComments(clip)" />
+  <div class="clips-tab-content">
+    @if (selectedTabIndex() === 0) {
+    <div class="explore-content">
+      @if (loading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading clips...</p>
+      </div>
+      } @else if (exploreClips().length === 0) {
+      <div class="empty-state">
+        <mat-icon>movie</mat-icon>
+        <p>No clips found for current filters.</p>
+      </div>
+      } @else {
+      <div class="explore-list">
+        @for (clip of visibleExploreClips(); track clip.id) {
+        <button class="explore-card" (click)="openClipFromExplore(clip)" aria-label="Open clip in For You view">
+          @if (getClipPoster(clip)) {
+          <img [src]="getClipPoster(clip)" [alt]="getClipTitle(clip)" title="Clip thumbnail" class="explore-thumb" />
+          } @else {
+          <div class="explore-thumb explore-thumb-fallback">
+            <mat-icon>movie</mat-icon>
+          </div>
           }
-        </div>
-        @if (hasMoreExploreClips()) {
-        <div class="explore-load-more">
-          <button mat-flat-button (click)="loadMoreExploreClips()">Load more</button>
-        </div>
-        }
+          <div class="explore-card-title">{{ getClipTitle(clip) }}</div>
+        </button>
         }
       </div>
-    </mat-tab>
-
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <span>Following</span>
-      </ng-template>
-
-      <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
-        [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')"
-        (swipe)="onSwipe($event, 'following')" (swipeEnd)="onSwipeEnd('following')">
-        @if (loading()) {
-        <div class="loading-container fullscreen-loading">
-          <mat-spinner diameter="40"></mat-spinner>
-        </div>
-        } @else {
-        @let clip = currentFollowingClip();
-        @if (clip) {
-        <div class="swipe-card" [class.animating]="isCardAnimating('following')"
-          [style.transform]="getCardTransform('following')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
-            (commentsClick)="openComments(clip)" />
-        </div>
-        <div class="desktop-nav-buttons">
-          <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
-            (click)="previousClip('following')" [disabled]="!canNavigate('following', -1)">
-            <mat-icon>keyboard_arrow_up</mat-icon>
-          </button>
-          <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
-            (click)="nextClip('following')" [disabled]="!canNavigate('following', 1)">
-            <mat-icon>keyboard_arrow_down</mat-icon>
-          </button>
-        </div>
-        <div class="swipe-position">{{ followingIndex() + 1 }} / {{ followingClips().length }}</div>
-        } @else {
-        <div class="empty-state fullscreen-empty">
-          <mat-icon>movie</mat-icon>
-          <p>No clips from people you follow.</p>
-        </div>
-        }
-        }
+      @if (hasMoreExploreClips()) {
+      <div class="explore-load-more">
+        <button mat-flat-button (click)="loadMoreExploreClips()">Load more</button>
       </div>
-    </mat-tab>
+      }
+      }
+    </div>
+    }
 
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <span>For You</span>
-      </ng-template>
-
-      <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
-        [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'foryou')" (swipe)="onSwipe($event, 'foryou')"
-        (swipeEnd)="onSwipeEnd('foryou')">
-        @if (loading()) {
-        <div class="loading-container fullscreen-loading">
-          <mat-spinner diameter="40"></mat-spinner>
-        </div>
-        } @else {
-        @let clip = currentForYouClip();
-        @if (clip) {
-        <div class="swipe-card" [class.animating]="isCardAnimating('foryou')"
-          [style.transform]="getCardTransform('foryou')">
-          <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
-            (commentsClick)="openComments(clip)" />
-        </div>
-        <div class="desktop-nav-buttons">
-          <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
-            (click)="previousClip('foryou')" [disabled]="!canNavigate('foryou', -1)">
-            <mat-icon>keyboard_arrow_up</mat-icon>
-          </button>
-          <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
-            (click)="nextClip('foryou')" [disabled]="!canNavigate('foryou', 1)">
-            <mat-icon>keyboard_arrow_down</mat-icon>
-          </button>
-        </div>
-        <div class="swipe-position">{{ forYouIndex() + 1 }} / {{ forYouClips().length }}</div>
-        } @else {
-        <div class="empty-state fullscreen-empty">
-          <mat-icon>movie</mat-icon>
-          <p>No clips found for current filters.</p>
-        </div>
-        }
-        }
+    @if (selectedTabIndex() === 1) {
+    <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
+      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')" (swipe)="onSwipe($event, 'following')"
+      (swipeEnd)="onSwipeEnd('following')">
+      @if (loading()) {
+      <div class="loading-container fullscreen-loading">
+        <mat-spinner diameter="40"></mat-spinner>
       </div>
-    </mat-tab>
-  </mat-tab-group>
+      } @else {
+      @let clip = currentFollowingClip();
+      @if (clip) {
+      <div class="swipe-card" [class.animating]="isCardAnimating('following')" [style.transform]="getCardTransform('following')">
+        <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1" (commentsClick)="openComments(clip)" />
+      </div>
+      <div class="desktop-nav-buttons">
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
+          (click)="previousClip('following')" [disabled]="!canNavigate('following', -1)">
+          <mat-icon>keyboard_arrow_up</mat-icon>
+        </button>
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
+          (click)="nextClip('following')" [disabled]="!canNavigate('following', 1)">
+          <mat-icon>keyboard_arrow_down</mat-icon>
+        </button>
+      </div>
+      <div class="swipe-position">{{ followingIndex() + 1 }} / {{ followingClips().length }}</div>
+      } @else {
+      <div class="empty-state fullscreen-empty">
+        <mat-icon>movie</mat-icon>
+        <p>No clips from people you follow.</p>
+      </div>
+      }
+      }
+    </div>
+    }
+
+    @if (selectedTabIndex() === 2) {
+    <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
+      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'foryou')" (swipe)="onSwipe($event, 'foryou')"
+      (swipeEnd)="onSwipeEnd('foryou')">
+      @if (loading()) {
+      <div class="loading-container fullscreen-loading">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+      } @else {
+      @let clip = currentForYouClip();
+      @if (clip) {
+      <div class="swipe-card" [class.animating]="isCardAnimating('foryou')" [style.transform]="getCardTransform('foryou')">
+        <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2" (commentsClick)="openComments(clip)" />
+      </div>
+      <div class="desktop-nav-buttons">
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
+          (click)="previousClip('foryou')" [disabled]="!canNavigate('foryou', -1)">
+          <mat-icon>keyboard_arrow_up</mat-icon>
+        </button>
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Next clip" matTooltip="Next (↓ / j)"
+          (click)="nextClip('foryou')" [disabled]="!canNavigate('foryou', 1)">
+          <mat-icon>keyboard_arrow_down</mat-icon>
+        </button>
+      </div>
+      <div class="swipe-position">{{ forYouIndex() + 1 }} / {{ forYouClips().length }}</div>
+      } @else {
+      <div class="empty-state fullscreen-empty">
+        <mat-icon>movie</mat-icon>
+        <p>No clips found for current filters.</p>
+      </div>
+      }
+      }
+    </div>
+    }
+  </div>
 </div>
 
 @if (showSettingsDialog()) {

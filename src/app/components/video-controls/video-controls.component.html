@@ -13,12 +13,11 @@
   <!-- Bottom gradient and controls -->
   <div class="gradient-bottom"></div>
 
-  <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()"
-    (click)="$event.stopPropagation()">
+  <div class="controls-bar" [class.progress-only-bottom]="!mergedConfig().showControlsRow && mergedConfig().progressPosition === 'bottom'"
+    (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()" (click)="$event.stopPropagation()">
     <!-- Progress bar (hidden for live streams) -->
-    @if (!mergedConfig().isLiveStream) {
-    <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" role="slider"
-      [attr.aria-valuenow]="progressPercent()" aria-valuemin="0" aria-valuemax="100" aria-label="Video progress"
+    @if (!mergedConfig().isLiveStream && mergedConfig().progressPosition !== 'bottom') {
+    <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" aria-label="Video progress"
       (click)="onProgressClick($event)"
       (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
       (mousedown)="onProgressMouseDown($event)" (mousemove)="onProgressMouseMove($event)"
@@ -37,6 +36,7 @@
     }
 
     <!-- Controls row -->
+    @if (mergedConfig().showControlsRow) {
     <div class="controls-row">
       <!-- Left controls -->
       <div class="controls-left">
@@ -49,6 +49,7 @@
         }
 
         <!-- Volume -->
+        @if (mergedConfig().showVolumeControl) {
         <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
           <button mat-icon-button [matTooltip]="muted() ? 'Unmute (m)' : 'Mute (m)'" class="control-btn"
             appVolumeGesture (volumeChange)="onVolumeGestureChange($event)" (tap)="onMuteToggle()">
@@ -63,9 +64,10 @@
           </div>
           }
         </div>
+        }
 
         <!-- Time display -->
-        @if (!mergedConfig().isLiveStream) {
+        @if (mergedConfig().showTimeDisplay && !mergedConfig().isLiveStream) {
         <span class="time-display">
           {{ formattedCurrentTime() }} / {{ formattedDuration() }}
         </span>
@@ -159,5 +161,24 @@
         }
       </div>
     </div>
+    }
+
+    @if (!mergedConfig().isLiveStream && mergedConfig().progressPosition === 'bottom') {
+    <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" aria-label="Video progress"
+      (click)="onProgressClick($event)"
+      (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
+      (mousedown)="onProgressMouseDown($event)" (mousemove)="onProgressMouseMove($event)"
+      (mouseleave)="onProgressMouseLeave()" (touchstart)="onProgressTouchStart($event)">
+      <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
+      <div class="progress-played" [style.width.%]="isSeeking() ? seekPreviewPercent() : progressPercent()"></div>
+      <div class="progress-thumb" [style.left.%]="isSeeking() ? seekPreviewPercent() : progressPercent()"></div>
+
+      @if (isShowingSeekPreview() && formattedSeekPreview()) {
+      <div class="seek-preview-bubble" [style.left.%]="seekPreviewPercent()">
+        {{ formattedSeekPreview() }}
+      </div>
+      }
+    </div>
+    }
   </div>
 </div>

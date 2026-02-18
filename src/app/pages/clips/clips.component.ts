@@ -2,7 +2,6 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter } from 'nostr-tools';
 import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../directives/swipe-gesture.directive';
@@ -41,7 +40,6 @@ type SwipeMode = 'following' | 'foryou';
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatTabsModule,
     MatProgressSpinnerModule,
     MatMenuModule,
     CommentsListComponent,
@@ -150,6 +148,26 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+  }
+
+  openClipFromExplore(clip: Event): void {
+    const forYou = this.forYouClips();
+    const index = forYou.findIndex(item => item.id === clip.id);
+    if (index >= 0) {
+      this.forYouIndex.set(index);
+    }
+    this.selectedTabIndex.set(2);
+  }
+
+  getClipPoster(event: Event): string {
+    const imetaTag = event.tags.find(tag => tag[0] === 'imeta');
+    if (!imetaTag) return '';
+    const parsed = this.utilities.parseImetaTag(imetaTag, true);
+    return parsed['image'] || '';
+  }
+
+  getClipTitle(event: Event): string {
+    return event.tags.find(tag => tag[0] === 'title')?.[1] || 'Clip';
   }
 
   openSettings(): void {

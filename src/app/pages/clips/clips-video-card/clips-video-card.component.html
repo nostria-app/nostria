@@ -1,12 +1,20 @@
 <div class="clip-card">
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
-    [loop]="true" [objectFit]="'cover'" [fillContainer]="true" [controlsConfig]="{
+    [muted]="true" [loop]="true" [objectFit]="'cover'" [fillContainer]="true" [controlsConfig]="{
       showQuality: false,
+      showPlaybackRate: false,
+      showCast: false,
+      showPiP: false,
+      showFullscreen: false,
+      showVolumeControl: false,
+      showTimeDisplay: false,
+      showControlsRow: false,
+      progressPosition: 'bottom',
       isLiveStream: false,
+      autoHide: false,
       showPlayPauseButton: false,
-      showCenterPlayButton: false,
-      forceCastPiPInSettingsMenu: true
+      showCenterPlayButton: false
     }">
   </app-inline-video-player>
   } @else {

@@ -26,8 +26,38 @@
   min-height: 540px;
 }
 
-::ng-deep .clips-container .mat-mdc-tab-body-content {
-  overflow: visible;
+.clips-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.14);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-radius: var(--mat-sys-corner-large);
+  margin: 0 0.75rem;
+}
+
+.clips-tab {
+  border: 0;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  border-radius: var(--mat-sys-corner-full);
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+
+  &.active {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.clips-tab-content {
+  flex: 1;
+  min-height: 0;
 }
 
 .explore-content {
@@ -40,6 +70,39 @@
   gap: 1rem;
   padding: 1rem;
   justify-items: center;
+}
+
+.explore-card {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explore-thumb {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--mat-sys-corner-medium);
+  object-fit: cover;
+  display: block;
+}
+
+.explore-thumb-fallback {
+  background: var(--mat-sys-surface-container-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explore-card-title {
+  margin-top: 0.35rem;
+  color: var(--mat-sys-on-surface);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .explore-clip-card {
@@ -198,32 +261,31 @@
   }
 
   ::ng-deep .clips-container .mat-mdc-tab-header {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
-    left: 0;
-    right: 3.25rem;
-    z-index: 70;
-    background: var(--mat-sys-surface-container-high);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    display: none;
   }
 
-  ::ng-deep .clips-container .mat-mdc-tab-body-wrapper {
-    height: 100dvh;
-    min-height: 100dvh;
+  .clips-tabs {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+    left: 0.5rem;
+    right: 3.25rem;
+    z-index: 70;
+    margin: 0;
+    border-radius: var(--mat-sys-corner-full);
   }
 
   .explore-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 3.8rem) 0.55rem 1rem;
   }
 
-  .explore-clip-card {
-    width: 100%;
-    max-width: 420px;
+  .explore-card-title {
+    font-size: 0.74rem;
   }
 
   .swipe-content {
-    padding: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 3.7rem) 0 0;
   }
 
   .swipe-card {

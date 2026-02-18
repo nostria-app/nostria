@@ -96,6 +96,17 @@
   z-index: 2;
   // Allow clicking on controls
   pointer-events: auto;
+
+  &.progress-only-bottom {
+    padding: 0 0 3px;
+    gap: 0;
+
+    .progress-container {
+      margin-bottom: 0;
+      border-radius: 0;
+      height: 3px;
+    }
+  }
 }
 
 // Progress bar

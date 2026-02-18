@@ -111,9 +111,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Computed mute state - uses persisted state from service
   // The muted input is only used during initial load if no persisted state exists
   shouldBeMuted = computed(() => {
-    // Always use the persisted mute state from the service
-    // This ensures user's mute preference carries across videos
-    return this.videoPlayback.isMuted();
+    // Allow caller to force muted mode (used by Clips), otherwise use persisted global preference
+    return this.muted() || this.videoPlayback.isMuted();
   });
 
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -307,14 +306,22 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.videoLoadedMetadata.emit(e);
 
       // Apply persisted mute state when video loads
-      const persistedMuted = this.videoPlayback.getMutedState();
-      video.muted = persistedMuted;
-      this.isMuted.set(persistedMuted);
+      const mutedState = this.shouldBeMuted();
+      video.muted = mutedState;
+      this.isMuted.set(mutedState);
     };
     const onCanPlay = () => {
       this.isReady.set(true);
       this.hasError.set(false);
       this.videoCanPlay.emit();
+
+      const canAutoPlay = this.inFeedsPanel() ? this.videoPlayback.autoPlayAllowed() : true;
+      if (canAutoPlay && this.autoplay() && this.isInViewport() && !this.hasPlayedOnce() && !this.blurred() && video.paused) {
+        this.wasAutoPlayed.set(true);
+        video.play().catch(() => {
+          // Autoplay may still be blocked by browser policy
+        });
+      }
     };
     const onError = (e: Event) => {
       // Try blob fallback on network errors (like QUIC protocol errors)

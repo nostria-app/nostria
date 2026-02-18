@@ -34,6 +34,10 @@ export interface VideoControlsConfig {
   showFullscreen?: boolean;
   showPlaybackRate?: boolean;
   showCast?: boolean;
+  showVolumeControl?: boolean;
+  showTimeDisplay?: boolean;
+  showControlsRow?: boolean;
+  progressPosition?: 'top' | 'bottom';
   showPlayPauseButton?: boolean;
   showCenterPlayButton?: boolean;
   forceCastPiPInSettingsMenu?: boolean;
@@ -48,6 +52,10 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showFullscreen: true,
   showPlaybackRate: true,
   showCast: true,
+  showVolumeControl: true,
+  showTimeDisplay: true,
+  showControlsRow: true,
+  progressPosition: 'top',
   showPlayPauseButton: true,
   showCenterPlayButton: true,
   forceCastPiPInSettingsMenu: false,
