@@ -91,7 +91,8 @@ app-video-controls {
 
 // Fullscreen styles - remove height constraints
 // Note: fullscreen is requested on .inline-video-container (video's parent element)
-.inline-video-container:fullscreen {
+.inline-video-container:fullscreen,
+.inline-video-container:-webkit-full-screen {
   width: 100vw !important;
   height: 100vh !important;
   border-radius: 0;
@@ -100,15 +101,10 @@ app-video-controls {
   justify-content: center;
   background: black;
 
-  .video-element {
-    max-height: 100vh;
-    max-width: 100vw;
-    width: 100vw;
-    height: 100vh;
-    object-fit: contain;
-  }
 }
 
+.inline-video-container:fullscreen .video-element,
+.inline-video-container:-webkit-full-screen .video-element,
 .video-element:fullscreen,
 .video-element:-webkit-full-screen {
   width: 100vw !important;
