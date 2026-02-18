@@ -1,7 +1,7 @@
 <div class="inline-video-container" [class.fill-container]="fillContainer()" (click)="$event.stopPropagation()">
   <video #videoElement class="video-element" [src]="effectiveSrc()" [poster]="poster()" [muted]="shouldBeMuted()"
     [loop]="loop()" playsinline preload="metadata" (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
-    [class.fill-container]="fillContainer()" [style.object-fit]="objectFit()" (click)="onVideoClick($event)"
+    [class.fill-container]="fillContainer()" [style.object-fit]="objectFit()" (click)="onVideoClick()"
     (dblclick)="onVideoDoubleClick($event)"></video>
 
   <!-- Error overlay - shown when video fails to load -->

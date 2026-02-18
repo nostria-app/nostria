@@ -13,8 +13,10 @@
   <!-- Bottom gradient and controls -->
   <div class="gradient-bottom"></div>
 
-  <div class="controls-bar" [class.progress-only-bottom]="!mergedConfig().showControlsRow && mergedConfig().progressPosition === 'bottom'"
-    (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()" (click)="$event.stopPropagation()">
+  <div class="controls-bar"
+    [class.progress-only-bottom]="!mergedConfig().showControlsRow && mergedConfig().progressPosition === 'bottom'"
+    (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()"
+    (click)="$event.stopPropagation()">
     <!-- Progress bar (hidden for live streams) -->
     @if (!mergedConfig().isLiveStream && mergedConfig().progressPosition !== 'bottom') {
     <div class="progress-container" [class.seeking]="isSeeking()" tabindex="0" aria-label="Video progress"

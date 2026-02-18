@@ -358,16 +358,22 @@ export class VideoControlsComponent implements OnDestroy {
         this.seekRelative(5);
         break;
       case 'ArrowUp':
-        event.preventDefault();
-        this.changeVolume(Math.min(1, this.volume() + 0.1));
+        if (this.mergedConfig().showVolumeControl) {
+          event.preventDefault();
+          this.changeVolume(Math.min(1, this.volume() + 0.1));
+        }
         break;
       case 'ArrowDown':
-        event.preventDefault();
-        this.changeVolume(Math.max(0, this.volume() - 0.1));
+        if (this.mergedConfig().showVolumeControl) {
+          event.preventDefault();
+          this.changeVolume(Math.max(0, this.volume() - 0.1));
+        }
         break;
       case 'm':
-        event.preventDefault();
-        this.onMuteToggle();
+        if (this.mergedConfig().showVolumeControl) {
+          event.preventDefault();
+          this.onMuteToggle();
+        }
         break;
       case 'f':
         event.preventDefault();

@@ -62,6 +62,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   muted = input<boolean>(false);
   loop = input<boolean>(false);
   blurred = input<boolean>(false);
+  ignoreGlobalMutePreference = input<boolean>(false);
   objectFit = input<'contain' | 'cover'>('contain');
   fillContainer = input<boolean>(false);
   controlsConfig = input<VideoControlsConfig | undefined>(undefined);
@@ -111,7 +112,10 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   // Computed mute state - uses persisted state from service
   // The muted input is only used during initial load if no persisted state exists
   shouldBeMuted = computed(() => {
-    // Allow caller to force muted mode (used by Clips), otherwise use persisted global preference
+    if (this.ignoreGlobalMutePreference()) {
+      return this.muted();
+    }
+
     return this.muted() || this.videoPlayback.isMuted();
   });
 
@@ -427,7 +431,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onVideoClick(_event: MouseEvent | TouchEvent): void {
+  onVideoClick(): void {
     // Toggle play/pause when clicking on video
     this.togglePlay();
   }

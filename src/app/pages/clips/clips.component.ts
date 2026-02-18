@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
+import { Router } from '@angular/router';
 import { Event, Filter } from 'nostr-tools';
 import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../directives/swipe-gesture.directive';
 import { CommentsListComponent } from '../../components/comments-list/comments-list.component';
@@ -59,6 +60,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private reporting = inject(ReportingService);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private router = inject(Router);
   private logger = inject(LoggerService);
 
   loading = signal(true);
@@ -168,6 +170,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   getClipTitle(event: Event): string {
     return event.tags.find(tag => tag[0] === 'title')?.[1] || 'Clip';
+  }
+
+  async goHome(): Promise<void> {
+    this.closeComments();
+    this.showSettingsDialog.set(false);
+    await this.router.navigateByUrl('/');
   }
 
   openSettings(): void {

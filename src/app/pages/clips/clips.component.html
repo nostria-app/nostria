@@ -1,11 +1,9 @@
 <div class="clips-container">
-  <div class="clips-mobile-menu">
-    <button mat-icon-button [matMenuTriggerFor]="clipsTopMenu" aria-label="Clips options">
-      <mat-icon>more_vert</mat-icon>
-    </button>
-  </div>
-
   <mat-menu #clipsTopMenu="matMenu">
+    <button mat-menu-item (click)="goHome()">
+      <mat-icon>home</mat-icon>
+      <span>Home</span>
+    </button>
     <button mat-menu-item (click)="refresh()" [disabled]="loading()">
       <mat-icon>refresh</mat-icon>
       <span>Refresh</span>
@@ -33,6 +31,9 @@
     </button>
     <button mat-icon-button [matMenuTriggerFor]="clipsFiltersMenu" matTooltip="Clips filters">
       <mat-icon>tune</mat-icon>
+    </button>
+    <button mat-icon-button [matMenuTriggerFor]="clipsTopMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #clipsFiltersMenu="matMenu">
       <button mat-menu-item (click)="toggleIncludeArchive()">
@@ -100,8 +101,8 @@
 
     @if (selectedTabIndex() === 1) {
     <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
-      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')" (swipe)="onSwipe($event, 'following')"
-      (swipeEnd)="onSwipeEnd('following')">
+      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')"
+      (swipe)="onSwipe($event, 'following')" (swipeEnd)="onSwipeEnd('following')">
       @if (loading()) {
       <div class="loading-container fullscreen-loading">
         <mat-spinner diameter="40"></mat-spinner>
@@ -109,7 +110,8 @@
       } @else {
       @let clip = currentFollowingClip();
       @if (clip) {
-      <div class="swipe-card" [class.animating]="isCardAnimating('following')" [style.transform]="getCardTransform('following')">
+      <div class="swipe-card" [class.animating]="isCardAnimating('following')"
+        [style.transform]="getCardTransform('following')">
         <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1" (commentsClick)="openComments(clip)" />
       </div>
       <div class="desktop-nav-buttons">
@@ -144,7 +146,8 @@
       } @else {
       @let clip = currentForYouClip();
       @if (clip) {
-      <div class="swipe-card" [class.animating]="isCardAnimating('foryou')" [style.transform]="getCardTransform('foryou')">
+      <div class="swipe-card" [class.animating]="isCardAnimating('foryou')"
+        [style.transform]="getCardTransform('foryou')">
         <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2" (commentsClick)="openComments(clip)" />
       </div>
       <div class="desktop-nav-buttons">

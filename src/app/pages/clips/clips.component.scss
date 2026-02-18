@@ -237,7 +237,7 @@
   padding: 0.75rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 700px) {
   .clips-container {
     gap: 0;
     height: 100dvh;
@@ -248,16 +248,7 @@
   }
 
   .clips-mobile-menu {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
-    right: 0.5rem;
-    z-index: 80;
-    display: block;
-
-    button {
-      background: var(--mat-sys-surface-container-high);
-      color: var(--mat-sys-on-surface);
-    }
+    display: none;
   }
 
   ::ng-deep .clips-container .mat-mdc-tab-header {
@@ -268,10 +259,11 @@
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
     left: 0.5rem;
-    right: 3.25rem;
+    right: 0.5rem;
     z-index: 70;
     margin: 0;
     border-radius: var(--mat-sys-corner-full);
+    background: rgba(0, 0, 0, 0.18);
   }
 
   .explore-list {
@@ -285,7 +277,8 @@
   }
 
   .swipe-content {
-    padding: calc(env(safe-area-inset-top, 0px) + 3.7rem) 0 0;
+    padding: 0;
+    align-items: flex-start;
   }
 
   .swipe-card {
