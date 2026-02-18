@@ -51,6 +51,10 @@
   </div>
 
   <div class="clips-tabs" aria-label="Clips tabs">
+    <button mat-icon-button class="clips-tabs-create-button" (click)="createClip()" aria-label="Create clip"
+      matTooltip="Create clip">
+      <mat-icon>add</mat-icon>
+    </button>
     <button class="clips-tab" [class.active]="selectedTabIndex() === 0" (click)="onTabChange(0)">
       Explore
     </button>

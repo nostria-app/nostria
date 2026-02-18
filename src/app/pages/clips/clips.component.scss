@@ -31,7 +31,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 0 3rem 0 1rem;
+  padding: 0 3rem;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -44,6 +44,14 @@
   backdrop-filter: blur(18px) saturate(140%);
   border-radius: var(--mat-sys-corner-large);
   box-shadow: var(--mat-sys-level2);
+}
+
+.clips-tabs-create-button {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mat-sys-on-surface);
 }
 
 .clips-tabs-menu-button {
@@ -296,6 +304,10 @@
 
   .clips-tabs-menu-button {
     right: 0.35rem;
+  }
+
+  .clips-tabs-create-button {
+    left: 0.35rem;
   }
 
   .explore-list {

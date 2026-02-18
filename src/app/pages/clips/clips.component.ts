@@ -18,8 +18,11 @@ import { UserRelaysService } from '../../services/relays/user-relays';
 import { ReportingService } from '../../services/reporting.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
+import { EventService } from '../../services/event';
 import { ClipsSettingsDialogComponent } from './clips-settings-dialog/clips-settings-dialog.component';
 import { ClipsVideoCardComponent } from './clips-video-card/clips-video-card.component';
+import { SharedRelayService } from '../../services/relays/shared-relay';
+import { ZapService } from '../../services/zap.service';
 
 const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
@@ -27,6 +30,8 @@ const CLIPS_KINDS = [22, 34236];
 const EXPLORE_PAGE_SIZE = 24;
 const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
 // TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
+const CLIP_COMMENTS_KIND = 1111;
+const CLIP_COMMENTS_PREFETCH_LIMIT = 30;
 
 const DEFAULT_CLIPS_RELAYS = [
   'wss://nos.lol/',
@@ -66,6 +71,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private reporting = inject(ReportingService);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private eventService = inject(EventService);
+  private sharedRelay = inject(SharedRelayService);
+  private zapService = inject(ZapService);
   private router = inject(Router);
   private logger = inject(LoggerService);
 
@@ -98,6 +106,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private exploreLoadObserver: IntersectionObserver | null = null;
   private exploreAutoLoadInProgress = false;
   private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
+  private prefetchedInteractionIds = new Set<string>();
+  private interactionPrefetchInFlight = new Set<string>();
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -167,6 +177,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
     this.refreshExploreAutoLoadObserver();
+    this.prefetchActiveAndNextInteractions();
 
     if (index === 2) {
       this.tryRestoreForYouPosition();
@@ -183,6 +194,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
     this.selectedTabIndex.set(2);
     this.tryRestoreForYouPosition();
+    this.prefetchActiveAndNextInteractions();
   }
 
   getClipPoster(event: Event): string {
@@ -200,6 +212,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.closeComments();
     this.showSettingsDialog.set(false);
     await this.router.navigateByUrl('/');
+  }
+
+  createClip(): void {
+    this.layout.openRecordVideoDialog();
   }
 
   openSettings(): void {
@@ -590,6 +606,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
     if (this.selectedTabIndex() === 2) {
       this.persistForYouPosition();
     }
+
+    this.prefetchActiveAndNextInteractions();
   }
 
   private resetExploreLimit(): void {
@@ -620,6 +638,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
       const next = this.followingIndex() + delta;
       if (next >= 0 && next < clips.length) {
         this.followingIndex.set(next);
+        this.prefetchActiveAndNextInteractions();
         return true;
       }
       return false;
@@ -631,6 +650,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
     if (next >= 0 && next < clips.length) {
       this.forYouIndex.set(next);
       this.persistForYouPosition();
+      this.prefetchActiveAndNextInteractions();
       return true;
     }
 
@@ -765,6 +785,70 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), clip.id);
+  }
+
+  private prefetchActiveAndNextInteractions(): void {
+    const mode: SwipeMode = this.selectedTabIndex() === 1 ? 'following' : 'foryou';
+    const clips = mode === 'following' ? this.followingClips() : this.forYouClips();
+
+    if (clips.length === 0) {
+      return;
+    }
+
+    const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();
+    const currentClip = clips[Math.min(Math.max(currentIndex, 0), clips.length - 1)] ?? null;
+    const nextClip = currentIndex + 1 < clips.length ? clips[currentIndex + 1] : null;
+
+    this.prefetchClipInteractions(currentClip);
+    this.prefetchClipInteractions(nextClip);
+  }
+
+  private prefetchClipInteractions(event: Event | null): void {
+    if (!event) {
+      return;
+    }
+
+    if (this.prefetchedInteractionIds.has(event.id) || this.interactionPrefetchInFlight.has(event.id)) {
+      return;
+    }
+
+    this.interactionPrefetchInFlight.add(event.id);
+
+    const interactions: Promise<unknown>[] = [
+      this.eventService.loadReactions(event.id, event.pubkey),
+      this.eventService.loadReplies(event.id, event.pubkey),
+      this.eventService.loadReposts(event.id, event.kind, event.pubkey),
+      this.eventService.loadQuotes(event.id, event.pubkey),
+      this.zapService.getZapsForEvent(event.id),
+    ];
+
+    const currentUserPubkey = this.accountState.pubkey();
+    if (currentUserPubkey) {
+      interactions.push(this.prefetchComments(event, currentUserPubkey));
+    }
+
+    void Promise.allSettled(interactions).finally(() => {
+      this.interactionPrefetchInFlight.delete(event.id);
+      this.prefetchedInteractionIds.add(event.id);
+    });
+  }
+
+  private async prefetchComments(event: Event, currentUserPubkey: string): Promise<void> {
+    const filter: Record<string, unknown> = {
+      kinds: [CLIP_COMMENTS_KIND],
+      limit: CLIP_COMMENTS_PREFETCH_LIMIT,
+    };
+
+    const isAddressable = event.kind >= 30000 && event.kind < 40000;
+    if (isAddressable) {
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+      filter['#A'] = [aTagValue];
+    } else {
+      filter['#e'] = [event.id];
+    }
+
+    await this.sharedRelay.getMany(currentUserPubkey, filter);
   }
 
   private async getFollowingRelayUrls(authorPubkey: string, featureRelayUrls: string[]): Promise<string[]> {
