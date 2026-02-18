@@ -157,7 +157,20 @@ export class ClipsComponent implements OnInit, OnDestroy {
   });
 
   forYouClips = computed(() => this.eligibleClips());
-  exploreClips = computed(() => this.eligibleClips());
+  exploreClips = computed(() => {
+    const deduped = new Map<string, Event>();
+
+    const combined = [...this.forYouClips(), ...this.followingClips()];
+    for (const event of combined) {
+      const dedupeKey = this.getDedupeKey(event);
+      const existing = deduped.get(dedupeKey);
+      if (!existing || event.created_at > existing.created_at) {
+        deduped.set(dedupeKey, event);
+      }
+    }
+
+    return Array.from(deduped.values()).sort((a, b) => b.created_at - a.created_at);
+  });
   visibleExploreClips = computed(() => this.exploreClips().slice(0, this.exploreLimit()));
   hasMoreExploreClips = computed(() => this.visibleExploreClips().length < this.exploreClips().length);
 
