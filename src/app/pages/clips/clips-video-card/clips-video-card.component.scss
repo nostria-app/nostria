@@ -127,7 +127,7 @@
     justify-content: center;
   }
 
-  ::ng-deep app-reaction-button .reaction-container > button[mat-icon-button] {
+  ::ng-deep app-reaction-button .reaction-container>button[mat-icon-button] {
     color: var(--mat-sys-on-surface) !important;
   }
 }

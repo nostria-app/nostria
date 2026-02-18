@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -66,7 +66,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
 
   loading = signal(true);
-  selectedTabIndex = signal(0);
+  selectedTabIndex = signal(2);
   showSettingsDialog = signal(false);
 
   includeArchive = signal(false);
@@ -91,6 +91,9 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouSwipeDelta = 0;
   private pendingForYouRestoreEventId: string | null = null;
   private forYouRestoreApplied = false;
+  private exploreLoadObserver: IntersectionObserver | null = null;
+  private exploreAutoLoadInProgress = false;
+  private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -142,10 +145,13 @@ export class ClipsComponent implements OnInit, OnDestroy {
       this.layout.hideMobileNav.set(true);
     }
     await this.initializeClips();
+    this.refreshExploreAutoLoadObserver();
   }
 
   ngOnDestroy(): void {
     this.layout.hideMobileNav.set(false);
+    this.exploreLoadObserver?.disconnect();
+    this.exploreLoadObserver = null;
   }
 
   async refresh(): Promise<void> {
@@ -156,6 +162,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+    this.refreshExploreAutoLoadObserver();
+
     if (index === 2) {
       this.tryRestoreForYouPosition();
       this.persistForYouPosition();
@@ -229,6 +237,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   loadMoreExploreClips(): void {
     this.exploreLimit.update(limit => limit + EXPLORE_PAGE_SIZE);
+    this.refreshExploreAutoLoadObserver();
   }
 
   nextClip(mode: SwipeMode): void {
@@ -542,6 +551,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   private resetExploreLimit(): void {
     this.exploreLimit.set(EXPLORE_PAGE_SIZE);
+    this.refreshExploreAutoLoadObserver();
   }
 
   private advanceByKeyboard(mode: SwipeMode, delta: number): void {
@@ -677,5 +687,55 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     this.accountLocalState.setClipsLastForYouEventId(this.getAccountKey(), clip.id);
+  }
+
+  private refreshExploreAutoLoadObserver(): void {
+    if (typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    if (!this.exploreLoadObserver) {
+      this.exploreLoadObserver = new IntersectionObserver(
+        entries => {
+          const visible = entries.some(entry => entry.isIntersecting);
+          if (visible) {
+            this.onExploreLoadSentinelVisible();
+          }
+        },
+        {
+          root: null,
+          rootMargin: '200px 0px 300px 0px',
+          threshold: 0,
+        }
+      );
+    }
+
+    this.exploreLoadObserver.disconnect();
+
+    if (this.selectedTabIndex() !== 0 || this.loading() || !this.hasMoreExploreClips()) {
+      return;
+    }
+
+    setTimeout(() => {
+      const sentinel = this.exploreLoadSentinel()?.nativeElement;
+      if (!sentinel || !this.exploreLoadObserver || this.selectedTabIndex() !== 0 || !this.hasMoreExploreClips()) {
+        return;
+      }
+      this.exploreLoadObserver.observe(sentinel);
+    }, 0);
+  }
+
+  private onExploreLoadSentinelVisible(): void {
+    if (this.exploreAutoLoadInProgress || this.selectedTabIndex() !== 0 || this.loading() || !this.hasMoreExploreClips()) {
+      return;
+    }
+
+    this.exploreAutoLoadInProgress = true;
+    this.loadMoreExploreClips();
+
+    setTimeout(() => {
+      this.exploreAutoLoadInProgress = false;
+      this.refreshExploreAutoLoadObserver();
+    }, 0);
   }
 }

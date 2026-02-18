@@ -60,6 +60,10 @@
     <button class="clips-tab" [class.active]="selectedTabIndex() === 2" (click)="onTabChange(2)">
       For You
     </button>
+    <button mat-icon-button class="clips-tabs-menu-button" [matMenuTriggerFor]="clipsTopMenu" aria-label="More options"
+      matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
   </div>
 
   <div class="clips-tab-content">
@@ -92,6 +96,7 @@
       </div>
       @if (hasMoreExploreClips()) {
       <div class="explore-load-more">
+        <div #exploreLoadSentinel class="explore-load-sentinel" aria-hidden="true"></div>
         <button mat-flat-button (click)="loadMoreExploreClips()">Load more</button>
       </div>
       }

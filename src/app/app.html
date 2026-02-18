@@ -487,7 +487,7 @@
   }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-  @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav()) {
+  @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated() && !layout.hideMobileNav() && !isClipsMobileMode()) {
   <div class="mobile-nav no-print" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
     [class.sidenav-open]="opened()">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']"

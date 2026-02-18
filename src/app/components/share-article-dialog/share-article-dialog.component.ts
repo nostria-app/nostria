@@ -219,6 +219,12 @@ export interface ShareArticleDialogData {
           <span class="action-label">Screenshot</span>
         </button>
         }
+        @if (isVideoShare()) {
+        <button class="share-action-item" (click)="downloadVideo()">
+          <span class="action-icon-circle"><mat-icon>download</mat-icon></span>
+          <span class="action-label">Download</span>
+        </button>
+        }
         @if (isArticleShare()) {
         <button class="share-action-item" (click)="printArticle()">
           <span class="action-icon-circle"><mat-icon>print</mat-icon></span>
@@ -742,6 +748,19 @@ export class ShareArticleDialogComponent {
     );
   });
 
+  isVideoShare = computed(() => {
+    const ev = this.data.event;
+    if (!ev) {
+      return false;
+    }
+
+    if (ev.kind === 22 || ev.kind === 34236) {
+      return true;
+    }
+
+    return this.getVideoUrlFromEvent(ev).length > 0;
+  });
+
   // Track repost state
   hasReposted = signal<boolean>(false);
 
@@ -1182,6 +1201,54 @@ export class ShareArticleDialogComponent {
     }
   }
 
+  async downloadVideo(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const ev = this.data.event;
+    if (!ev) {
+      this.snackBar.open('Download is only available for events', 'Close', { duration: 2500 });
+      return;
+    }
+
+    const videoUrl = this.getVideoUrlFromEvent(ev);
+    if (!videoUrl) {
+      this.snackBar.open('No video URL found for this event', 'Close', { duration: 2500 });
+      return;
+    }
+
+    try {
+      this.snackBar.open('Downloading video...', undefined, { duration: 2000 });
+
+      const response = await fetch(videoUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download video: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const extFromType = blob.type.startsWith('video/') ? blob.type.replace('video/', '') : '';
+      const safeTitle = (this.data.title || 'nostria-video').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const extension = extFromType || this.getExtensionFromUrl(videoUrl) || 'mp4';
+      const filename = `${safeTitle || 'nostria-video'}-${Date.now()}.${extension}`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+
+      this.snackBar.open('Video downloaded', 'Close', { duration: 2500 });
+      this.dialogRef?.close();
+    } catch (error) {
+      console.error('Failed to download video:', error);
+      this.snackBar.open('Failed to download video', 'Close', { duration: 3000 });
+    }
+  }
+
   saveArticleAsHtml(): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
@@ -1286,6 +1353,38 @@ export class ShareArticleDialogComponent {
     });
 
     return Promise.all(promises).then(() => undefined);
+  }
+
+  private getVideoUrlFromEvent(event: Event): string {
+    for (const tag of event.tags) {
+      if (tag[0] !== 'imeta') {
+        continue;
+      }
+
+      const parsed = this.utilities.parseImetaTag(tag, true);
+      const mimeType = parsed['m'] || '';
+      const url = parsed['url'] || '';
+
+      if (url && (!mimeType || mimeType.startsWith('video/'))) {
+        return url;
+      }
+    }
+
+    return '';
+  }
+
+  private getExtensionFromUrl(url: string): string {
+    const withoutQuery = url.split('?')[0].split('#')[0];
+    const extension = withoutQuery.split('.').pop()?.toLowerCase() || '';
+    if (!extension) {
+      return '';
+    }
+
+    if (extension.length > 5) {
+      return '';
+    }
+
+    return extension;
   }
 
   private getEncodedId(): string {
