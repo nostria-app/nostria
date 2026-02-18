@@ -61,6 +61,7 @@ class RelayTrackingWebSocket implements WebSocket {
 
     this.socket.onopen = (event) => {
       this.opened = true;
+      this.markConnectionSuccess();
       this.onopen?.(event);
     };
 
@@ -150,11 +151,23 @@ class RelayTrackingWebSocket implements WebSocket {
     }
 
     const normalizedUrl = RelayTrackingWebSocket.normalizeRelayUrl(this.socket.url);
-    relayBlock.blockConnectionFailure(normalizedUrl, reason);
-    RelayTrackingWebSocket.logger?.warn('[RelayWebSocket] Blocking relay after connection failure', {
+    relayBlock.recordFailure(normalizedUrl, reason, false);
+    RelayTrackingWebSocket.logger?.debug('[RelayWebSocket] Recorded relay connection failure', {
       relay: normalizedUrl,
       reason,
     });
+  }
+
+  private markConnectionSuccess(): void {
+    const utilities = RelayTrackingWebSocket.utilities;
+    const relayBlock = RelayTrackingWebSocket.relayBlock;
+
+    if (!utilities || !relayBlock) {
+      return;
+    }
+
+    const normalizedUrl = RelayTrackingWebSocket.normalizeRelayUrl(this.socket.url);
+    relayBlock.recordSuccess(normalizedUrl);
   }
 
   private static normalizeRelayUrl(url: string): string {

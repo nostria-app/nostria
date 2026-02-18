@@ -1238,7 +1238,7 @@ export class EventService {
     pubkey: string,
     invalidateCache = false,
   ): Promise<ReactionEvents> {
-    this.logger.info('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
+    this.logger.debug('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
     // Handle cache invalidation if requested
     if (invalidateCache) {

@@ -25,6 +25,7 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrRecord } from '../../../interfaces';
 
 const CLIP_KINDS = [22, 34236];
+const INTERACTION_REFRESH_MIN_INTERVAL_MS = 1200;
 
 @Component({
   selector: 'app-clips-video-card',
@@ -61,6 +62,11 @@ export class ClipsVideoCardComponent implements OnDestroy {
   private settings = inject(SettingsService);
   private imageCache = inject(ImageCacheService);
   private interactionsRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private lastInteractionEventId: string | null = null;
+  private interactionRefreshInFlight = new Map<string, Promise<void>>();
+  private lastInteractionRefreshAt = new Map<string, number>();
+  private loadedProfilePubkey: string | null = null;
+  private profileLoadInFlightPubkey: string | null = null;
 
   private liveLikes = signal<number | null>(null);
   private liveComments = signal<number | null>(null);
@@ -142,15 +148,26 @@ export class ClipsVideoCardComponent implements OnDestroy {
     effect(() => {
       const clipEvent = this.event();
       const isActive = this.active();
+      const eventChanged = this.lastInteractionEventId !== clipEvent.id;
 
       this.stopInteractionsRefreshTimer();
 
-      this.liveLikes.set(null);
-      this.liveComments.set(null);
-      this.profileRecord.set(null);
+      if (eventChanged) {
+        this.liveLikes.set(null);
+        this.liveComments.set(null);
+        this.profileRecord.set(null);
+        this.loadedProfilePubkey = null;
+        this.profileLoadInFlightPubkey = null;
+        this.lastInteractionEventId = clipEvent.id;
+      }
 
-      void this.refreshInteractionCounts(false, clipEvent.id);
-      void this.loadAuthorProfile(clipEvent.pubkey);
+      if (eventChanged || isActive) {
+        void this.refreshInteractionCounts(false, clipEvent.id);
+      }
+
+      if (this.loadedProfilePubkey !== clipEvent.pubkey) {
+        void this.loadAuthorProfile(clipEvent.pubkey);
+      }
 
       if (isActive) {
         this.interactionsRefreshTimer = setInterval(() => {
@@ -270,22 +287,42 @@ export class ClipsVideoCardComponent implements OnDestroy {
   private async refreshInteractionCounts(invalidateCache = false, expectedEventId?: string): Promise<void> {
     const clipEvent = this.event();
     const targetEventId = expectedEventId || clipEvent.id;
+    const now = Date.now();
+    const lastRefreshedAt = this.lastInteractionRefreshAt.get(targetEventId) || 0;
 
-    try {
-      const [reactions, commentsCount] = await Promise.all([
-        this.eventService.loadReactions(clipEvent.id, clipEvent.pubkey, invalidateCache),
-        this.loadCommentCount(clipEvent),
-      ]);
-
-      if (this.event().id !== targetEventId) {
-        return;
-      }
-
-      this.liveLikes.set(reactions.events.length);
-      this.liveComments.set(commentsCount);
-    } catch {
-      // Keep tag-based fallback values if live counts fail
+    if (!invalidateCache && now - lastRefreshedAt < INTERACTION_REFRESH_MIN_INTERVAL_MS) {
+      return;
     }
+
+    const inFlightKey = `${targetEventId}:${invalidateCache ? '1' : '0'}`;
+    const inFlightRequest = this.interactionRefreshInFlight.get(inFlightKey);
+    if (inFlightRequest) {
+      return inFlightRequest;
+    }
+
+    const request = (async () => {
+      try {
+        const [reactions, commentsCount] = await Promise.all([
+          this.eventService.loadReactions(clipEvent.id, clipEvent.pubkey, invalidateCache),
+          this.loadCommentCount(clipEvent),
+        ]);
+
+        if (this.event().id !== targetEventId) {
+          return;
+        }
+
+        this.liveLikes.set(reactions.events.length);
+        this.liveComments.set(commentsCount);
+        this.lastInteractionRefreshAt.set(targetEventId, Date.now());
+      } catch {
+        // Keep tag-based fallback values if live counts fail
+      } finally {
+        this.interactionRefreshInFlight.delete(inFlightKey);
+      }
+    })();
+
+    this.interactionRefreshInFlight.set(inFlightKey, request);
+    return request;
   }
 
   private async loadCommentCount(clipEvent: Event): Promise<number> {
@@ -328,14 +365,32 @@ export class ClipsVideoCardComponent implements OnDestroy {
   }
 
   private async loadAuthorProfile(pubkey: string): Promise<void> {
+    if (this.loadedProfilePubkey === pubkey && this.profileRecord()) {
+      return;
+    }
+
+    if (this.profileLoadInFlightPubkey === pubkey) {
+      return;
+    }
+
     const cached = this.data.getCachedProfile(pubkey);
     if (cached) {
       this.profileRecord.set(cached);
+      this.loadedProfilePubkey = pubkey;
+      return;
     }
 
-    const resolved = await this.data.getProfile(pubkey);
-    if (resolved && this.event().pubkey === pubkey) {
-      this.profileRecord.set(resolved);
+    this.profileLoadInFlightPubkey = pubkey;
+    try {
+      const resolved = await this.data.getProfile(pubkey);
+      if (resolved && this.event().pubkey === pubkey) {
+        this.profileRecord.set(resolved);
+        this.loadedProfilePubkey = pubkey;
+      }
+    } finally {
+      if (this.profileLoadInFlightPubkey === pubkey) {
+        this.profileLoadInFlightPubkey = null;
+      }
     }
   }
 }

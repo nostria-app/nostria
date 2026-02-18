@@ -55,23 +55,17 @@
 
     <div class="action-item like-action">
       <app-reaction-button [event]="event()" view="icon" (reactionChanged)="onReactionChanged()"></app-reaction-button>
-      @if (likesCount() > 0) {
-      <span class="action-count">{{ likesCount() }}</span>
-      }
+      <span class="action-count" [class.hidden]="likesCount() <= 0">{{ likesCount() > 0 ? likesCount() : '0' }}</span>
     </div>
 
     <button mat-icon-button class="action-item" (click)="onComments($event)" matTooltip="Comments">
       <mat-icon>mode_comment</mat-icon>
-      @if (commentsCount() > 0) {
-      <span class="action-count">{{ commentsCount() }}</span>
-      }
+      <span class="action-count" [class.hidden]="commentsCount() <= 0">{{ commentsCount() > 0 ? commentsCount() : '0' }}</span>
     </button>
 
     <button mat-icon-button class="action-item" (click)="onShare($event)" matTooltip="Share">
       <mat-icon>share</mat-icon>
-      @if (sharesCount() > 0) {
-      <span class="action-count">{{ sharesCount() }}</span>
-      }
+      <span class="action-count" [class.hidden]="sharesCount() <= 0">{{ sharesCount() > 0 ? sharesCount() : '0' }}</span>
     </button>
 
     <div class="action-item zap-action" matTooltip="Zap">

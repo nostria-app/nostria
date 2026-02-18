@@ -13,6 +13,8 @@ interface RelayFailureEntry {
   connectionFailures: number;
   firstFailureAt: number;
   lastFailureAt: number;
+  lastFailureReason?: string;
+  lastFailureType?: 'transient' | 'connection';
 }
 
 @Injectable({
@@ -25,6 +27,7 @@ export class RelayBlockService {
   private readonly transientBlockDurationSeconds = 30;
   private readonly connectionBlockDurationSeconds = 180;
   private readonly failureWindowSeconds = 120;
+  private readonly duplicateFailureSuppressSeconds = 10;
   private readonly transientFailuresBeforeBlock = 3;
   private readonly connectionFailuresBeforeBlock = 2;
 
@@ -117,14 +120,35 @@ export class RelayBlockService {
     this.blockRelay(relayUrl, this.connectionBlockDurationSeconds, reason);
   }
 
+  recordSuccess(relayUrl: string): void {
+    const normalizedUrl = this.normalizeUrl(relayUrl);
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const hadFailures = this.relayFailures.delete(normalizedUrl);
+    const wasBlocked = this.blockedRelays.delete(normalizedUrl);
+
+    if (hadFailures || wasBlocked) {
+      this.logger.debug('[RelayBlockService] Cleared relay failure/block state after successful connection', {
+        relay: normalizedUrl,
+      });
+    }
+  }
+
   recordFailure(relayUrl: string, reason: string, autoAuthEnabled: boolean): void {
     const normalizedReason = reason.trim();
     if (!normalizedReason || this.isIgnorableReason(normalizedReason)) {
       return;
     }
 
-    if (!autoAuthEnabled && this.isAuthRequiredReason(normalizedReason)) {
-      this.blockAuthRequired(relayUrl, normalizedReason);
+    if (this.isAuthRequiredReason(normalizedReason)) {
+      this.clearAuthRelatedBlock(relayUrl);
+      this.logger.debug('[RelayBlockService] Ignoring auth-required relay failure signal', {
+        relay: this.normalizeUrl(relayUrl) || relayUrl,
+        reason: normalizedReason,
+        autoAuthEnabled,
+      });
       return;
     }
 
@@ -199,6 +223,18 @@ export class RelayBlockService {
         ...existing,
         lastFailureAt: now,
       };
+
+      const sameFailureType = existing.lastFailureType === failureType;
+      const sameReason = existing.lastFailureReason === reason;
+      const tooSoon = now - existing.lastFailureAt < this.duplicateFailureSuppressSeconds;
+      if (sameFailureType && sameReason && tooSoon) {
+        this.logger.debug('[RelayBlockService] Suppressing duplicate relay failure signal', {
+          relay: normalizedUrl,
+          reason,
+          failureType,
+        });
+        return;
+      }
     }
 
     if (failureType === 'connection') {
@@ -206,6 +242,9 @@ export class RelayBlockService {
     } else {
       failureEntry.transientFailures += 1;
     }
+
+    failureEntry.lastFailureReason = reason;
+    failureEntry.lastFailureType = failureType;
 
     this.relayFailures.set(normalizedUrl, failureEntry);
 
@@ -241,15 +280,11 @@ export class RelayBlockService {
 
   private isConnectionFailureReason(reason: string): boolean {
     const normalized = reason.toLowerCase();
-    return normalized.includes('connection timed out') ||
-      normalized.includes('relay connection timed out') ||
-      normalized.includes('websocket error') ||
-      normalized.includes('websocket closed') ||
+    return normalized.includes('websocket closed') ||
       normalized.includes('relay connection closed') ||
       normalized.includes('relay connection errored') ||
       normalized.includes('failed to connect') ||
-      normalized.includes('connection error') ||
-      normalized.includes('network error');
+      normalized.includes('connection refused');
   }
 
   private isIgnorableReason(reason: string): boolean {
@@ -261,6 +296,29 @@ export class RelayBlockService {
 
   private isNeverBlockRelay(relayUrl: string): boolean {
     return this.neverBlockRelays.has(relayUrl);
+  }
+
+  private clearAuthRelatedBlock(relayUrl: string): void {
+    const normalizedUrl = this.normalizeUrl(relayUrl);
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const existing = this.blockedRelays.get(normalizedUrl);
+    if (!existing) {
+      return;
+    }
+
+    const reason = existing.reason.toLowerCase();
+    if (reason.includes('auth-required') || reason.includes('auth required') || reason.includes('restricted')) {
+      this.blockedRelays.delete(normalizedUrl);
+      this.relayFailures.delete(normalizedUrl);
+
+      this.logger.debug('[RelayBlockService] Cleared stale auth-related relay block', {
+        relay: normalizedUrl,
+        reason: existing.reason,
+      });
+    }
   }
 
   private normalizeUrl(relayUrl: string): string {

@@ -130,6 +130,11 @@
   .action-count {
     font-size: 0.72rem;
     line-height: 1;
+    min-height: 0.72rem;
+  }
+
+  .action-count.hidden {
+    visibility: hidden;
   }
 }
 
