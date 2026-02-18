@@ -18,6 +18,11 @@ import { EventService } from '../../../services/event';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { DataService } from '../../../services/data.service';
+import { SettingsService } from '../../../services/settings.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { NostrRecord } from '../../../interfaces';
 
 const CLIP_KINDS = [22, 34236];
 
@@ -31,6 +36,7 @@ const CLIP_KINDS = [22, 34236];
     ReactionButtonComponent,
     ZapButtonComponent,
     InlineVideoPlayerComponent,
+    AgoPipe,
   ],
   templateUrl: './clips-video-card.component.html',
   styleUrl: './clips-video-card.component.scss',
@@ -51,10 +57,15 @@ export class ClipsVideoCardComponent implements OnDestroy {
   private sharedRelay = inject(SharedRelayService);
   private accountState = inject(AccountStateService);
   private userRelaysService = inject(UserRelaysService);
+  private data = inject(DataService);
+  private settings = inject(SettingsService);
+  private imageCache = inject(ImageCacheService);
   private interactionsRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
   private liveLikes = signal<number | null>(null);
   private liveComments = signal<number | null>(null);
+  private profileRecord = signal<NostrRecord | null>(null);
+  private followInProgress = signal(false);
 
   objectFitMode = computed<'cover' | 'contain'>(() => this.layout.isHandset() ? 'cover' : 'contain');
 
@@ -80,7 +91,48 @@ export class ClipsVideoCardComponent implements OnDestroy {
     return text;
   });
 
-  authorLabel = computed(() => this.utilities.getNpubShort(this.event().pubkey, 14));
+  authorLabel = computed(() => {
+    const profile = this.profileRecord()?.data as Record<string, unknown> | undefined;
+    const displayName = typeof profile?.['display_name'] === 'string' ? profile['display_name'] : '';
+    const name = typeof profile?.['name'] === 'string' ? profile['name'] : '';
+
+    if (displayName && displayName.trim().length > 0) {
+      return displayName.trim();
+    }
+
+    if (name && name.trim().length > 0) {
+      return name.trim();
+    }
+
+    return this.utilities.getNpubShort(this.event().pubkey, 14);
+  });
+
+  authorAvatar = computed(() => {
+    const profile = this.profileRecord()?.data as Record<string, unknown> | undefined;
+    const picture = typeof profile?.['picture'] === 'string' ? profile['picture'] : '';
+    if (!picture) {
+      return '';
+    }
+
+    if (this.settings.settings().imageCacheEnabled) {
+      return this.imageCache.getOptimizedImageUrl(picture);
+    }
+
+    return picture;
+  });
+
+  canQuickFollow = computed(() => {
+    const clipEvent = this.event();
+    if (!this.accountState.pubkey()) {
+      return false;
+    }
+
+    if (this.accountState.isCurrentUser(clipEvent.pubkey)) {
+      return false;
+    }
+
+    return !this.accountState.isFollowing()(clipEvent.pubkey);
+  });
 
   likesCount = computed(() => this.liveLikes() ?? this.getNumericTag('likes'));
   commentsCount = computed(() => this.liveComments() ?? this.getNumericTag('comments'));
@@ -95,8 +147,10 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
       this.liveLikes.set(null);
       this.liveComments.set(null);
+      this.profileRecord.set(null);
 
       void this.refreshInteractionCounts(false, clipEvent.id);
+      void this.loadAuthorProfile(clipEvent.pubkey);
 
       if (isActive) {
         this.interactionsRefreshTimer = setInterval(() => {
@@ -104,6 +158,24 @@ export class ClipsVideoCardComponent implements OnDestroy {
         }, 6000);
       }
     });
+  }
+
+  async quickFollow(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    if (!this.canQuickFollow() || this.followInProgress()) {
+      return;
+    }
+
+    this.followInProgress.set(true);
+    try {
+      await this.accountState.follow(this.event().pubkey);
+      this.snackBar.open('Following account', 'Dismiss', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Unable to follow account', 'Dismiss', { duration: 2500 });
+    } finally {
+      this.followInProgress.set(false);
+    }
   }
 
   ngOnDestroy(): void {
@@ -253,5 +325,17 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
     clearInterval(this.interactionsRefreshTimer);
     this.interactionsRefreshTimer = null;
+  }
+
+  private async loadAuthorProfile(pubkey: string): Promise<void> {
+    const cached = this.data.getCachedProfile(pubkey);
+    if (cached) {
+      this.profileRecord.set(cached);
+    }
+
+    const resolved = await this.data.getProfile(pubkey);
+    if (resolved && this.event().pubkey === pubkey) {
+      this.profileRecord.set(resolved);
+    }
   }
 }

@@ -27,10 +27,6 @@
   <div class="panel-header">
     <h2 class="panel-title title-font">Clips</h2>
     <div class="desktop-pane-tabs" aria-label="Clips tabs">
-      <button mat-icon-button class="desktop-pane-create-button" (click)="createClip()" aria-label="Create clip"
-        matTooltip="Create clip">
-        <mat-icon>add</mat-icon>
-      </button>
       <button class="clips-tab" [class.active]="selectedTabIndex() === 0" (click)="onTabChange(0)">
         Explore
       </button>
@@ -42,6 +38,11 @@
       </button>
     </div>
     <span class="panel-header-spacer"></span>
+
+    <button mat-icon-button class="desktop-pane-create-button" (click)="createClip()" aria-label="Create clip"
+      matTooltip="Create clip">
+      <mat-icon>add</mat-icon>
+    </button>
 
     <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh clips">
       <mat-icon>refresh</mat-icon>

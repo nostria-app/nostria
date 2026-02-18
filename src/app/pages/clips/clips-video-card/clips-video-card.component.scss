@@ -75,6 +75,11 @@
     font-size: 0.85rem;
   }
 
+  .timestamp {
+    font-size: 0.8rem;
+    opacity: 0.9;
+  }
+
   .author-button {
     border: 0;
     background: transparent;
@@ -125,6 +130,62 @@
   .action-count {
     font-size: 0.72rem;
     line-height: 1;
+  }
+}
+
+.author-avatar-action {
+  position: relative;
+  min-height: 3.2rem;
+}
+
+.author-avatar-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 70%, transparent);
+  color: var(--mat-sys-on-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  .author-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  mat-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 1.8rem;
+  }
+}
+
+.quick-follow-button {
+  position: absolute;
+  right: -0.05rem;
+  bottom: -0.2rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  mat-icon {
+    width: 0.85rem;
+    height: 0.85rem;
+    font-size: 0.85rem;
   }
 }
 

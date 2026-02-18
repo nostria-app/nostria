@@ -30,6 +30,7 @@
 
   <div class="clip-metadata">
     <button class="author author-button" (click)="openAuthorProfile($event)">{{ authorLabel() }}</button>
+    <div class="timestamp">{{ event().created_at | ago }}</div>
     <div class="title">{{ title() }}</div>
     @if (description()) {
     <div class="description">{{ description() }}</div>
@@ -37,6 +38,21 @@
   </div>
 
   <div class="clip-actions">
+    <div class="action-item author-avatar-action">
+      <button class="author-avatar-button" (click)="openAuthorProfile($event)" aria-label="Open author profile">
+        @if (authorAvatar()) {
+        <img [src]="authorAvatar()" alt="Author avatar" class="author-avatar-image" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </button>
+      @if (canQuickFollow()) {
+      <button class="quick-follow-button" (click)="quickFollow($event)" aria-label="Follow author">
+        <mat-icon>add</mat-icon>
+      </button>
+      }
+    </div>
+
     <div class="action-item like-action">
       <app-reaction-button [event]="event()" view="icon" (reactionChanged)="onReactionChanged()"></app-reaction-button>
       @if (likesCount() > 0) {
