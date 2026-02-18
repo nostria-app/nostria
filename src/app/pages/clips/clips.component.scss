@@ -4,6 +4,7 @@
   gap: 0.75rem;
   height: calc(100% - 1px);
   position: relative;
+  overflow: hidden;
 }
 
 .clips-mobile-menu {
@@ -35,6 +36,7 @@
   position: sticky;
   top: 0;
   z-index: 30;
+  flex-shrink: 0;
   width: fit-content;
   max-width: calc(100% - 1rem);
   margin: 0 auto;
@@ -80,6 +82,8 @@
 .clips-tab-content {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .explore-content {
