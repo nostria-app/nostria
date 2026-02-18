@@ -109,6 +109,14 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     ...(this.controlsConfig() ?? {}),
   }));
 
+  effectiveObjectFit = computed<'contain' | 'cover'>(() => {
+    if (this.isFullscreen()) {
+      return 'contain';
+    }
+
+    return this.objectFit();
+  });
+
   // Computed mute state - uses persisted state from service
   // The muted input is only used during initial load if no persisted state exists
   shouldBeMuted = computed(() => {

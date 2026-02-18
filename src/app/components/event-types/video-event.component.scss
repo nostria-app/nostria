@@ -470,7 +470,8 @@
 
 // Fullscreen styles - remove height constraints
 // Note: fullscreen is requested on .video-player-container, not :host
-.video-player-container:fullscreen {
+.video-player-container:fullscreen,
+.video-player-container:-webkit-full-screen {
   width: 100vw !important;
   height: 100vh !important;
   max-height: none !important;
@@ -486,9 +487,28 @@
   }
 
   .video-player {
-    max-height: 100vh;
-    max-width: 100vw;
-    width: auto;
-    height: auto;
+    max-height: 100vh !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: contain !important;
   }
+
+  &.short-form .video-player {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    object-fit: contain !important;
+  }
+}
+
+.video-player:fullscreen,
+.video-player:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  object-fit: contain !important;
+  background: black;
 }

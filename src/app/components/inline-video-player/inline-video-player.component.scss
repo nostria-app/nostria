@@ -103,7 +103,18 @@ app-video-controls {
   .video-element {
     max-height: 100vh;
     max-width: 100vw;
-    width: auto;
-    height: auto;
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
   }
+}
+
+.video-element:fullscreen,
+.video-element:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  object-fit: contain !important;
+  background: black;
 }
