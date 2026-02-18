@@ -21,21 +21,17 @@
   }
 }
 
-.clips-filters {
-  display: flex;
-  gap: 1rem;
-  padding: 0 1rem;
-  flex-wrap: wrap;
-}
-
 ::ng-deep .clips-container .mat-mdc-tab-body-wrapper {
   height: calc(100vh - 210px);
   min-height: 540px;
 }
 
+::ng-deep .clips-container .mat-mdc-tab-body-content {
+  overflow: visible;
+}
+
 .explore-content {
-  height: 100%;
-  overflow: auto;
+  overflow: visible;
 }
 
 .explore-list {
@@ -168,8 +164,7 @@
     height: 100dvh;
   }
 
-  .panel-header,
-  .clips-filters {
+  .panel-header {
     display: none;
   }
 

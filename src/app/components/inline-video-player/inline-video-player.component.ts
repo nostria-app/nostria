@@ -148,6 +148,12 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       // Re-attach listeners when src changes
       const currentSrc = this.src();
       if (currentSrc && this.videoElement?.nativeElement) {
+        this.hasPlayedOnce.set(false);
+        this.paused.set(true);
+        this.currentTime.set(0);
+        this.duration.set(0);
+        this.buffered.set(0);
+        this.wasAutoPlayed.set(false);
         this.cleanupVideoListeners();
         this.attachVideoListeners(this.videoElement.nativeElement);
       }

@@ -2,7 +2,6 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter } from 'nostr-tools';
@@ -36,12 +35,14 @@ type SwipeMode = 'following' | 'foryou';
 
 @Component({
   selector: 'app-clips',
+  host: {
+    '(window:keydown)': 'onWindowKeyDown($event)',
+  },
   imports: [
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
     MatProgressSpinnerModule,
-    MatSlideToggleModule,
     MatMenuModule,
     CommentsListComponent,
     SwipeGestureDirective,
@@ -84,6 +85,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   private followingCommittedSwipe = false;
   private forYouCommittedSwipe = false;
+  private followingSwipeDelta = 0;
+  private forYouSwipeDelta = 0;
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -203,35 +206,74 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   onSwipe(event: SwipeEvent, mode: SwipeMode): void {
     const delta = event.direction === 'up' ? 1 : -1;
-    this.advanceIndex(mode, delta);
 
     if (mode === 'following') {
       this.followingCommittedSwipe = true;
-      this.followingAnimating.set(true);
-      this.followingDragOffset.set(0);
+      this.followingSwipeDelta = delta;
       return;
     }
 
     this.forYouCommittedSwipe = true;
-    this.forYouAnimating.set(true);
-    this.forYouDragOffset.set(0);
+    this.forYouSwipeDelta = delta;
   }
 
   onSwipeEnd(mode: SwipeMode): void {
     if (mode === 'following') {
-      if (!this.followingCommittedSwipe) {
-        this.followingAnimating.set(true);
-        this.followingDragOffset.set(0);
+      if (this.followingCommittedSwipe) {
+        this.advanceIndex('following', this.followingSwipeDelta);
       }
+
+      if (this.followingDragOffset() !== 0) {
+        this.followingAnimating.set(true);
+      }
+
+      this.followingDragOffset.set(0);
       this.followingCommittedSwipe = false;
+      this.followingSwipeDelta = 0;
       return;
     }
 
-    if (!this.forYouCommittedSwipe) {
-      this.forYouAnimating.set(true);
-      this.forYouDragOffset.set(0);
+    if (this.forYouCommittedSwipe) {
+      this.advanceIndex('foryou', this.forYouSwipeDelta);
     }
+
+    if (this.forYouDragOffset() !== 0) {
+      this.forYouAnimating.set(true);
+    }
+
+    this.forYouDragOffset.set(0);
     this.forYouCommittedSwipe = false;
+    this.forYouSwipeDelta = 0;
+  }
+
+  onWindowKeyDown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    const tagName = target?.tagName?.toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea' || target?.isContentEditable) {
+      return;
+    }
+
+    if (this.commentsOpen() || this.showSettingsDialog()) {
+      return;
+    }
+
+    const mode = this.selectedTabIndex() === 1 ? 'following' : this.selectedTabIndex() === 2 ? 'foryou' : null;
+    if (!mode) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+
+    if (event.key === 'ArrowDown' || key === 'j') {
+      event.preventDefault();
+      this.advanceByKeyboard(mode, 1);
+      return;
+    }
+
+    if (event.key === 'ArrowUp' || key === 'k') {
+      event.preventDefault();
+      this.advanceByKeyboard(mode, -1);
+    }
   }
 
   getCardTransform(mode: SwipeMode): string {
@@ -406,23 +448,43 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.exploreLimit.set(EXPLORE_PAGE_SIZE);
   }
 
-  private advanceIndex(mode: SwipeMode, delta: number): void {
-    if (mode === 'following') {
-      const clips = this.followingClips();
-      if (clips.length === 0) return;
-      const next = this.followingIndex() + delta;
-      if (next >= 0 && next < clips.length) {
-        this.followingIndex.set(next);
-      }
+  private advanceByKeyboard(mode: SwipeMode, delta: number): void {
+    const moved = this.advanceIndex(mode, delta);
+    if (!moved) {
       return;
     }
 
+    if (mode === 'following') {
+      this.followingAnimating.set(true);
+      this.followingDragOffset.set(0);
+      return;
+    }
+
+    this.forYouAnimating.set(true);
+    this.forYouDragOffset.set(0);
+  }
+
+  private advanceIndex(mode: SwipeMode, delta: number): boolean {
+    if (mode === 'following') {
+      const clips = this.followingClips();
+      if (clips.length === 0) return false;
+      const next = this.followingIndex() + delta;
+      if (next >= 0 && next < clips.length) {
+        this.followingIndex.set(next);
+        return true;
+      }
+      return false;
+    }
+
     const clips = this.forYouClips();
-    if (clips.length === 0) return;
+    if (clips.length === 0) return false;
     const next = this.forYouIndex() + delta;
     if (next >= 0 && next < clips.length) {
       this.forYouIndex.set(next);
+      return true;
     }
+
+    return false;
   }
 
   private extractRelaysFromRelaySet(event: Event): string[] {

@@ -31,18 +31,22 @@
     <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh clips">
       <mat-icon>refresh</mat-icon>
     </button>
+    <button mat-icon-button [matMenuTriggerFor]="clipsFiltersMenu" matTooltip="Clips filters">
+      <mat-icon>tune</mat-icon>
+    </button>
+    <mat-menu #clipsFiltersMenu="matMenu">
+      <button mat-menu-item (click)="toggleIncludeArchive()">
+        <mat-icon>{{ includeArchive() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+        <span>Include archive</span>
+      </button>
+      <button mat-menu-item (click)="toggleArchiveOnly()">
+        <mat-icon>{{ archiveOnly() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+        <span>Archive only</span>
+      </button>
+    </mat-menu>
     <button mat-icon-button (click)="openSettings()" matTooltip="Clips relay settings">
       <mat-icon>settings</mat-icon>
     </button>
-  </div>
-
-  <div class="clips-filters">
-    <mat-slide-toggle [checked]="includeArchive()" (change)="onIncludeArchiveChanged($event.checked)">
-      Include archive
-    </mat-slide-toggle>
-    <mat-slide-toggle [checked]="archiveOnly()" (change)="onArchiveOnlyChanged($event.checked)">
-      Archive only
-    </mat-slide-toggle>
   </div>
 
   <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)">
