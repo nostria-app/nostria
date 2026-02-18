@@ -122,6 +122,8 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private followingSwipeDelta = 0;
   private forYouSwipeDelta = 0;
   private lastWheelNavigationAt = 0;
+  private pendingFollowingRestoreEventId: string | null = null;
+  private followingRestoreApplied = false;
   private pendingForYouRestoreEventId: string | null = null;
   private forYouRestoreApplied = false;
   private exploreLoadObserver: IntersectionObserver | null = null;
@@ -174,6 +176,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
+    this.pendingFollowingRestoreEventId = this.accountLocalState.getClipsLastFollowingEventId(this.getAccountKey()) || null;
     this.pendingForYouRestoreEventId = this.accountLocalState.getClipsLastForYouEventId(this.getAccountKey()) || null;
     this.restoreCurrentClipFromStorage();
 
@@ -185,6 +188,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.persistFollowingPosition();
     this.persistForYouPosition();
     this.layout.hideMobileNav.set(false);
     this.exploreLoadObserver?.disconnect();
@@ -201,6 +205,11 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.selectedTabIndex.set(index);
     this.refreshExploreAutoLoadObserver();
     this.prefetchActiveAndNextInteractions();
+
+    if (index === 1) {
+      this.tryRestoreFollowingPosition();
+      this.persistFollowingPosition();
+    }
 
     if (index === 2) {
       this.tryRestoreForYouPosition();
@@ -685,6 +694,15 @@ export class ClipsComponent implements OnInit, OnDestroy {
       void this.prefetchClipAuthorProfiles(clips, relayUrls);
       this.resetExploreLimit();
       this.ensureIndexesInRange();
+      this.clearUnresolvedRestoreTargets();
+
+      if (this.selectedTabIndex() === 1) {
+        this.persistFollowingPosition();
+      }
+
+      if (this.selectedTabIndex() === 2) {
+        this.persistForYouPosition();
+      }
     } catch (error) {
       this.logger.error('Failed to load clips', error);
     } finally {
@@ -785,7 +803,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
       this.forYouIndex.set(forYouLength - 1);
     }
 
+    this.tryRestoreFollowingPosition();
     this.tryRestoreForYouPosition();
+
+    if (this.selectedTabIndex() === 1) {
+      this.persistFollowingPosition();
+    }
 
     if (this.selectedTabIndex() === 2) {
       this.persistForYouPosition();
@@ -822,6 +845,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
       const next = this.followingIndex() + delta;
       if (next >= 0 && next < clips.length) {
         this.followingIndex.set(next);
+        this.persistFollowingPosition();
         this.prefetchActiveAndNextInteractions();
         return true;
       }
@@ -938,6 +962,32 @@ export class ClipsComponent implements OnInit, OnDestroy {
     return this.accountState.pubkey() || ANONYMOUS_PUBKEY;
   }
 
+  private tryRestoreFollowingPosition(): void {
+    if (this.followingRestoreApplied) {
+      return;
+    }
+
+    const targetEventId = this.pendingFollowingRestoreEventId;
+    if (!targetEventId) {
+      this.followingRestoreApplied = true;
+      return;
+    }
+
+    const clips = this.followingClips();
+    if (clips.length === 0) {
+      return;
+    }
+
+    const index = clips.findIndex(event => event.id === targetEventId);
+    if (index < 0) {
+      return;
+    }
+
+    this.followingIndex.set(index);
+    this.followingRestoreApplied = true;
+    this.pendingFollowingRestoreEventId = null;
+  }
+
   private tryRestoreForYouPosition(): void {
     if (this.forYouRestoreApplied) {
       return;
@@ -955,14 +1005,33 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     const index = clips.findIndex(event => event.id === targetEventId);
-    if (index >= 0) {
-      this.forYouIndex.set(index);
+    if (index < 0) {
+      return;
     }
 
+    this.forYouIndex.set(index);
     this.forYouRestoreApplied = true;
+    this.pendingForYouRestoreEventId = null;
+  }
+
+  private persistFollowingPosition(): void {
+    if (this.pendingFollowingRestoreEventId && !this.followingRestoreApplied) {
+      return;
+    }
+
+    const clip = this.currentFollowingClip();
+    if (!clip) {
+      return;
+    }
+
+    this.accountLocalState.setClipsLastFollowingEventId(this.getAccountKey(), clip.id);
   }
 
   private persistForYouPosition(): void {
+    if (this.pendingForYouRestoreEventId && !this.forYouRestoreApplied) {
+      return;
+    }
+
     const clip = this.currentForYouClip();
     if (!clip) {
       return;
@@ -1019,6 +1088,24 @@ export class ClipsComponent implements OnInit, OnDestroy {
     }
 
     return this.isVideoEvent(event);
+  }
+
+  private clearUnresolvedRestoreTargets(): void {
+    if (!this.followingRestoreApplied && this.pendingFollowingRestoreEventId && this.followingClips().length > 0) {
+      const followingContainsTarget = this.followingClips().some(event => event.id === this.pendingFollowingRestoreEventId);
+      if (!followingContainsTarget) {
+        this.followingRestoreApplied = true;
+        this.pendingFollowingRestoreEventId = null;
+      }
+    }
+
+    if (!this.forYouRestoreApplied && this.pendingForYouRestoreEventId && this.forYouClips().length > 0) {
+      const forYouContainsTarget = this.forYouClips().some(event => event.id === this.pendingForYouRestoreEventId);
+      if (!forYouContainsTarget) {
+        this.forYouRestoreApplied = true;
+        this.pendingForYouRestoreEventId = null;
+      }
+    }
   }
 
   private prefetchActiveAndNextInteractions(): void {

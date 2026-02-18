@@ -97,6 +97,7 @@ interface AccountLocalState {
   actionsDisplayMode?: string; // Display mode for action buttons on original posts: 'labels-only', 'icons-and-labels', 'icons-only'
   actionsDisplayModeReplies?: string; // Display mode for action buttons on replies: 'labels-only', 'icons-and-labels', 'icons-only'
   clipsLastForYouEventId?: string; // Last viewed clip event id in Clips For You
+  clipsLastFollowingEventId?: string; // Last viewed clip event id in Clips Following
 }
 
 /**
@@ -655,6 +656,21 @@ export class AccountLocalStateService {
    */
   setClipsLastForYouEventId(pubkey: string, eventId: string | null | undefined): void {
     this.updateAccountState(pubkey, { clipsLastForYouEventId: eventId || undefined });
+  }
+
+  /**
+   * Get last viewed Clips Following event id for an account
+   */
+  getClipsLastFollowingEventId(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.clipsLastFollowingEventId;
+  }
+
+  /**
+   * Set last viewed Clips Following event id for an account
+   */
+  setClipsLastFollowingEventId(pubkey: string, eventId: string | null | undefined): void {
+    this.updateAccountState(pubkey, { clipsLastFollowingEventId: eventId || undefined });
   }
 
   /**
