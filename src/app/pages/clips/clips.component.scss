@@ -327,4 +327,10 @@
   .desktop-nav-buttons {
     display: none;
   }
+
+  .fullscreen-loading,
+  .fullscreen-empty {
+    box-sizing: border-box;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
+  }
 }

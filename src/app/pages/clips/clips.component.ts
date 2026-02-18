@@ -24,6 +24,8 @@ const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
 const CLIPS_KINDS = [22, 34236];
 const EXPLORE_PAGE_SIZE = 24;
+const FOLLOWING_PROFILE_VIDEO_LIMIT = 50;
+// TODO: As clip volume grows, consider reducing this limit and using a created_at-based latest window per profile.
 
 const DEFAULT_CLIPS_RELAYS = [
   'wss://nos.lol/',
@@ -104,7 +106,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
     const archiveOnly = this.archiveOnly();
 
     return events
-      .filter(event => this.isPortraitShortFormVideo(event))
+      .filter(event => this.isPortraitShortFormVideo(event) || (this.isArchiveEvent(event) && this.isVideoEvent(event)))
       .filter(event => {
         const isArchive = this.isArchiveEvent(event);
         if (archiveOnly) return isArchive;
@@ -482,37 +484,41 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     try {
       const relayUrls = this.clipsRelays().length > 0 ? this.clipsRelays() : DEFAULT_CLIPS_RELAYS;
-      const filter: Filter = {
-        kinds: [...CLIPS_KINDS],
-        limit: 300,
-      };
-
       const dedupedMap = new Map<string, Event>();
 
-      await new Promise<void>(resolve => {
-        const timeout = setTimeout(() => {
-          resolve();
-        }, 7000);
+      for (const event of this.allClips()) {
+        const dedupeKey = this.getDedupeKey(event);
+        const existing = dedupedMap.get(dedupeKey);
+        if (!existing || event.created_at > existing.created_at) {
+          dedupedMap.set(dedupeKey, event);
+        }
+      }
 
-        const subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-          if (this.reporting.isUserBlocked(event.pubkey) || this.reporting.isContentBlocked(event)) {
-            return;
-          }
+      await this.collectClipsForFilter(
+        relayUrls,
+        {
+          kinds: [...CLIPS_KINDS],
+          limit: 300,
+        },
+        dedupedMap,
+        4500
+      );
 
-          const dedupeKey = this.getDedupeKey(event);
-          const existing = dedupedMap.get(dedupeKey);
-
-          if (!existing || event.created_at > existing.created_at) {
-            dedupedMap.set(dedupeKey, event);
-          }
-        });
-
-        setTimeout(() => {
-          subscription.close();
-          clearTimeout(timeout);
-          resolve();
-        }, 4500);
-      });
+      const followingAuthors = Array.from(new Set(this.accountState.followingList()));
+      if (followingAuthors.length > 0) {
+        await Promise.all(
+          followingAuthors.map(author => this.collectClipsForFilter(
+            relayUrls,
+            {
+              kinds: [...CLIPS_KINDS],
+              authors: [author],
+              limit: FOLLOWING_PROFILE_VIDEO_LIMIT,
+            },
+            dedupedMap,
+            3500
+          ))
+        );
+      }
 
       const clips = Array.from(dedupedMap.values()).sort((a, b) => b.created_at - a.created_at);
       this.allClips.set(clips);
@@ -524,6 +530,37 @@ export class ClipsComponent implements OnInit, OnDestroy {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private async collectClipsForFilter(
+    relayUrls: string[],
+    filter: Filter,
+    targetMap: Map<string, Event>,
+    timeoutMs: number
+  ): Promise<void> {
+    await new Promise<void>(resolve => {
+      const timeout = setTimeout(() => {
+        resolve();
+      }, timeoutMs + 2000);
+
+      const subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+        if (this.reporting.isUserBlocked(event.pubkey) || this.reporting.isContentBlocked(event)) {
+          return;
+        }
+
+        const dedupeKey = this.getDedupeKey(event);
+        const existing = targetMap.get(dedupeKey);
+        if (!existing || event.created_at > existing.created_at) {
+          targetMap.set(dedupeKey, event);
+        }
+      });
+
+      setTimeout(() => {
+        subscription.close();
+        clearTimeout(timeout);
+        resolve();
+      }, timeoutMs);
+    });
   }
 
   private ensureIndexesInRange(): void {
@@ -641,15 +678,50 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   private isArchiveEvent(event: Event): boolean {
-    const hasPlatformVine = event.tags.some(tag => tag[0] === 'platform' && tag[1] === 'vine');
-    const hasOriginVine = event.tags.some(tag => tag[0] === 'origin' && tag[1] === 'vine');
+    const hasPlatformVine = event.tags.some(tag => {
+      if (tag[0] !== 'platform' || !tag[1]) return false;
+      return tag[1].toLowerCase().includes('vine');
+    });
+    const hasOriginVine = event.tags.some(tag => {
+      if (tag[0] !== 'origin' || !tag[1]) return false;
+      return tag[1].toLowerCase().includes('vine');
+    });
     const hasVineId = event.tags.some(tag => tag[0] === 'vine_id' && !!tag[1]);
     const hasArchiveLabel = event.tags.some(
-      tag => tag[0] === 'l' && tag[1] === 'vine-archive' && tag[2] === 'archive.divine.video'
+      tag => tag[0] === 'l' && !!tag[1] && tag[1].toLowerCase().includes('archive')
     );
-    const hasArchiveNamespace = event.tags.some(tag => tag[0] === 'L' && tag[1] === 'archive.divine.video');
+    const hasArchiveNamespace = event.tags.some(
+      tag => tag[0] === 'L' && !!tag[1] && tag[1].toLowerCase().includes('archive')
+    );
 
     return hasPlatformVine || hasOriginVine || hasVineId || hasArchiveLabel || hasArchiveNamespace;
+  }
+
+  private isVideoEvent(event: Event): boolean {
+    if (!CLIPS_KINDS.includes(event.kind)) {
+      return false;
+    }
+
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+    if (imetaTags.length === 0) {
+      return false;
+    }
+
+    for (const imetaTag of imetaTags) {
+      const parsed = this.utilities.parseImetaTag(imetaTag, true);
+      const mimeType = parsed['m'] || '';
+      const url = parsed['url'] || '';
+
+      if (!url) {
+        continue;
+      }
+
+      if (!mimeType || mimeType.startsWith('video/')) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private getAccountKey(): string {
