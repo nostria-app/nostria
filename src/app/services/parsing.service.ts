@@ -69,6 +69,11 @@ export interface ContentToken {
   isYouTubeShort?: boolean; // True if the YouTube URL is a Short (9:16 aspect ratio)
 }
 
+interface ParsedDimensions {
+  width: number;
+  height: number;
+}
+
 /**
  * Represents a pending resolution for a nostr mention that timed out during initial parsing.
  * The promise resolves with the NostrData once the profile is loaded.
@@ -133,6 +138,22 @@ export class ParsingService implements OnDestroy {
       clearInterval(this.cacheCleanupIntervalHandle);
       this.cacheCleanupIntervalHandle = null;
     }
+  }
+
+  private parseDimValue(dimValue: string): ParsedDimensions | undefined {
+    const dimMatch = dimValue.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/);
+    if (!dimMatch) {
+      return undefined;
+    }
+
+    const width = Math.round(Number(dimMatch[1]));
+    const height = Math.round(Number(dimMatch[2]));
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return undefined;
+    }
+
+    return { width, height };
   }
 
   async parseNostrUri(
@@ -734,13 +755,7 @@ export class ParsingService implements OnDestroy {
           const dimTag = imeta.find(v => v.startsWith('dim '));
           if (dimTag) {
             const dimValue = dimTag.substring(4);
-            const dimMatch = dimValue.match(/(\d+)x(\d+)/);
-            if (dimMatch) {
-              dimensions = {
-                width: parseInt(dimMatch[1], 10),
-                height: parseInt(dimMatch[2], 10)
-              };
-            }
+            dimensions = this.parseDimValue(dimValue);
           }
         }
       }
@@ -810,13 +825,7 @@ export class ParsingService implements OnDestroy {
           const dimTag = imeta.find(v => v.startsWith('dim '));
           if (dimTag) {
             const dimValue = dimTag.substring(4);
-            const dimMatch = dimValue.match(/(\d+)x(\d+)/);
-            if (dimMatch) {
-              dimensions = {
-                width: parseInt(dimMatch[1], 10),
-                height: parseInt(dimMatch[2], 10)
-              };
-            }
+            dimensions = this.parseDimValue(dimValue);
           }
         }
       }
