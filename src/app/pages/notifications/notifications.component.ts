@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
@@ -87,7 +87,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport)
@@ -442,20 +441,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.viewportRefreshRafId = window.requestAnimationFrame(() => {
       this.viewportRefreshRafId = null;
       this._notificationViewport?.checkViewportSize();
-      this.cdr.detectChanges();
     });
 
     this.viewportRefreshTimeouts.push(
       window.setTimeout(() => {
         this._notificationViewport?.checkViewportSize();
-        this.cdr.detectChanges();
       }, 120)
     );
 
     this.viewportRefreshTimeouts.push(
       window.setTimeout(() => {
         this._notificationViewport?.checkViewportSize();
-        this.cdr.detectChanges();
       }, 460)
     );
   }
