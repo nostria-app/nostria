@@ -67,7 +67,10 @@
     <mat-icon>translate</mat-icon>
     Translate
   </button>
-  }
+  <button mat-menu-item (click)="readAloud()">
+    <mat-icon>record_voice_over</mat-icon>
+    Read Aloud
+  </button>
   <mat-divider></mat-divider>
   @if (isOurEvent() && isTextNote()) {
   <button mat-menu-item (click)="editEvent()">
@@ -91,12 +94,7 @@
     <span>Block User</span>
   </button>
   }
-  @if (showAiOptions()) {
-  <button mat-menu-item (click)="readAloud()">
-    <mat-icon>record_voice_over</mat-icon>
-    Read Aloud
-  </button>
-  }
+
 </mat-menu>
 
 <mat-menu #copyMenu="matMenu">
