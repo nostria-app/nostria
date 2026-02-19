@@ -2,7 +2,7 @@
   @if (videoUrl()) {
   <app-inline-video-player class="clip-player" [src]="videoUrl()" [poster]="posterUrl()" [autoplay]="active()"
     [muted]="false" [ignoreGlobalMutePreference]="true" [loop]="true" [objectFit]="objectFitMode()"
-    [fillContainer]="true" [controlsConfig]="{
+    [expectedDim]="videoDim()" [fillContainer]="true" [controlsConfig]="{
       showQuality: false,
       showPlaybackRate: false,
       showCast: false,

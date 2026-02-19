@@ -33,6 +33,15 @@
   &.blurred {
     filter: blur(20px);
   }
+
+  &.needs-rotation-correction {
+    transform: rotate(90deg);
+    transform-origin: center center;
+  }
+
+  &.rotation-correction-fill {
+    object-fit: contain !important;
+  }
 }
 
 // Error overlay

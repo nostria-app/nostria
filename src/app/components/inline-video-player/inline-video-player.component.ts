@@ -64,6 +64,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   blurred = input<boolean>(false);
   ignoreGlobalMutePreference = input<boolean>(false);
   objectFit = input<'contain' | 'cover'>('contain');
+  expectedDim = input<string>('');
   fillContainer = input<boolean>(false);
   controlsConfig = input<VideoControlsConfig | undefined>(undefined);
   /** Whether this video is rendered inside the Feeds panel (which is always alive in background) */
@@ -96,6 +97,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   isFullscreen = signal(false);
   isReady = signal(false);
   hasError = signal(false);
+  needsRotationCorrection = signal(false);
 
   // Fallback blob URL when QUIC protocol fails
   private blobUrl = signal<string | null>(null);
@@ -167,6 +169,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.currentTime.set(0);
         this.duration.set(0);
         this.buffered.set(0);
+        this.needsRotationCorrection.set(false);
         this.wasAutoPlayed.set(false);
         this.userPausedByInteraction.set(false);
         this.cleanupVideoListeners();
@@ -357,6 +360,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.volume.set(video.volume);
       this.playbackRate.set(video.playbackRate);
       this.videoLoadedMetadata.emit(e);
+      this.applyOrientationCorrectionHint(video);
 
       // Apply persisted mute state when video loads
       const mutedState = this.shouldBeMuted();
@@ -418,6 +422,44 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.duration.set(video.duration || 0);
     this.volume.set(video.volume);
     this.isMuted.set(video.muted);
+  }
+
+  private applyOrientationCorrectionHint(video: HTMLVideoElement): void {
+    const expected = this.expectedDim().trim();
+    if (!expected || !this.fillContainer()) {
+      this.needsRotationCorrection.set(false);
+      return;
+    }
+
+    const [expectedWidthRaw, expectedHeightRaw] = expected.toLowerCase().split('x');
+    const expectedWidth = Number.parseInt(expectedWidthRaw || '', 10);
+    const expectedHeight = Number.parseInt(expectedHeightRaw || '', 10);
+
+    if (Number.isNaN(expectedWidth) || Number.isNaN(expectedHeight) || expectedWidth <= 0 || expectedHeight <= 0) {
+      this.needsRotationCorrection.set(false);
+      return;
+    }
+
+    const actualWidth = video.videoWidth;
+    const actualHeight = video.videoHeight;
+    if (!actualWidth || !actualHeight) {
+      this.needsRotationCorrection.set(false);
+      return;
+    }
+
+    const expectedRatio = expectedWidth / expectedHeight;
+    const actualRatio = actualWidth / actualHeight;
+    const reciprocalExpected = 1 / expectedRatio;
+
+    const normalDiff = Math.abs(actualRatio - expectedRatio);
+    const reciprocalDiff = Math.abs(actualRatio - reciprocalExpected);
+
+    const expectedPortrait = expectedHeight >= expectedWidth;
+    const actualPortrait = actualHeight >= actualWidth;
+    const orientationMismatch = expectedPortrait !== actualPortrait;
+
+    const shouldRotate = orientationMismatch && reciprocalDiff + 0.05 < normalDiff;
+    this.needsRotationCorrection.set(shouldRotate);
   }
 
   private cleanupVideoListeners(): void {

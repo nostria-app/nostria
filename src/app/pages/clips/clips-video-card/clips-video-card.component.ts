@@ -90,6 +90,13 @@ export class ClipsVideoCardComponent implements OnDestroy {
     return parsed['image'] || '';
   });
 
+  videoDim = computed(() => {
+    const imetaTag = this.event().tags.find(tag => tag[0] === 'imeta');
+    if (!imetaTag) return '';
+    const parsed = this.utilities.parseImetaTag(imetaTag, true);
+    return parsed['dim'] || '';
+  });
+
   title = computed(() => this.event().tags.find(tag => tag[0] === 'title')?.[1] || 'Clip');
 
   description = computed(() => {
