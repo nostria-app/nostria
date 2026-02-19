@@ -33,6 +33,8 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
 import { PlaylistService } from '../../../services/playlist.service';
+import { FavoritesService } from '../../../services/favorites.service';
+import { FollowSetsService } from '../../../services/follow-sets.service';
 import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
 import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
@@ -44,6 +46,7 @@ import { EventImageService } from '../../../services/event-image.service';
 import { NoteEditorDialogData } from '../../../interfaces/note-editor';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { LoggerService } from '../../../services/logger.service';
+import { CreateListDialogComponent, type CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
 
 @Component({
   selector: 'app-event-menu',
@@ -74,6 +77,8 @@ export class EventMenuComponent {
   mediaPlayer = inject(MediaPlayerService);
   utilities = inject(UtilitiesService);
   playlistService = inject(PlaylistService);
+  favoritesService = inject(FavoritesService);
+  followSetsService = inject(FollowSetsService);
   eventService = inject(EventService);
   private router = inject(Router);
   private userRelaysService = inject(UserRelaysService);
@@ -144,6 +149,32 @@ export class EventMenuComponent {
   // Check if AI options should be shown
   showAiOptions = computed<boolean>(() => {
     return !!this.settings.settings().aiEnabled && this.isTextNote();
+  });
+
+  canShowProfileMenu = computed<boolean>(() => {
+    const event = this.event();
+    const accountPubkey = this.accountState.pubkey();
+    return !!event?.pubkey && !!accountPubkey && event.pubkey !== accountPubkey;
+  });
+
+  isAuthorFollowed = computed<boolean>(() => {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return false;
+    }
+    return this.accountState.isFollowing()(event.pubkey);
+  });
+
+  isAuthorFavorite = computed<boolean>(() => {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return false;
+    }
+    return this.favoritesService.isFavorite(event.pubkey);
+  });
+
+  availableFollowSets = computed(() => {
+    return [...this.followSetsService.followSets()].sort((a, b) => a.title.localeCompare(b.title));
   });
 
   // Regex patterns for detecting media URLs
@@ -457,6 +488,135 @@ export class EventMenuComponent {
     } else {
       await this.pinned.pinNote(targetEvent.id);
       this.snackBar.open('Note pinned to profile', 'Close', { duration: 3000 });
+    }
+  }
+
+  private async ensureRealAccount(): Promise<boolean> {
+    const account = this.accountState.account();
+    if (!account || account.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return false;
+    }
+    return true;
+  }
+
+  async toggleAuthorFollow(): Promise<void> {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return;
+    }
+
+    if (!(await this.ensureRealAccount())) {
+      return;
+    }
+
+    try {
+      if (this.isAuthorFollowed()) {
+        await this.accountState.unfollow(event.pubkey);
+        this.layout.toast('Unfollowed');
+      } else {
+        await this.accountState.follow(event.pubkey);
+        this.layout.toast('Following');
+      }
+    } catch {
+      this.layout.toast('Failed to update follow status');
+    }
+  }
+
+  async toggleAuthorFavorite(): Promise<void> {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return;
+    }
+
+    if (!(await this.ensureRealAccount())) {
+      return;
+    }
+
+    const wasFavorite = this.favoritesService.isFavorite(event.pubkey);
+    const success = this.favoritesService.toggleFavorite(event.pubkey);
+
+    if (!success) {
+      this.layout.toast('Failed to update favorites');
+      return;
+    }
+
+    this.layout.toast(wasFavorite ? 'Removed from favorites' : 'Added to favorites');
+  }
+
+  isAuthorInFollowSet(dTag: string): boolean {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return false;
+    }
+
+    const set = this.followSetsService.getFollowSetByDTag(dTag);
+    return set ? set.pubkeys.includes(event.pubkey) : false;
+  }
+
+  async addAuthorToFollowSet(dTag: string): Promise<void> {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return;
+    }
+
+    if (!(await this.ensureRealAccount())) {
+      return;
+    }
+
+    const isCurrentlyInSet = this.isAuthorInFollowSet(dTag);
+
+    try {
+      if (isCurrentlyInSet) {
+        await this.followSetsService.removeFromFollowSet(dTag, event.pubkey);
+        this.layout.toast('Removed from list');
+      } else {
+        await this.followSetsService.addToFollowSet(dTag, event.pubkey);
+        this.layout.toast('Added to list');
+      }
+    } catch {
+      this.layout.toast('Failed to update list');
+    }
+  }
+
+  async createNewFollowSetForAuthor(): Promise<void> {
+    const event = this.event();
+    if (!event?.pubkey) {
+      return;
+    }
+
+    if (!(await this.ensureRealAccount())) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      data: {
+        initialPrivate: false,
+      },
+      width: '450px',
+    });
+
+    const result: CreateListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+
+    if (!result || !result.title.trim()) {
+      return;
+    }
+
+    try {
+      const newSet = await this.followSetsService.createFollowSet(
+        result.title.trim(),
+        [event.pubkey],
+        result.isPrivate,
+      );
+
+      if (newSet) {
+        const privacyLabel = result.isPrivate ? 'private list' : 'list';
+        this.layout.toast(`Created ${privacyLabel} "${result.title}" and added author`);
+      } else {
+        this.layout.toast('Failed to create list');
+      }
+    } catch {
+      this.layout.toast('Failed to create list');
     }
   }
 

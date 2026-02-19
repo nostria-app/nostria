@@ -13,6 +13,12 @@
     <mat-icon>content_copy</mat-icon>
     Copy
   </button>
+  @if (canShowProfileMenu()) {
+  <button mat-menu-item [matMenuTriggerFor]="profileMenu">
+    <mat-icon>account_circle</mat-icon>
+    Profile
+  </button>
+  }
   <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">
@@ -84,6 +90,7 @@
     Delete
   </button>
   }
+  }
   <button mat-menu-item (click)="reportContent()">
     <mat-icon>warning</mat-icon>
     Report Content
@@ -95,6 +102,35 @@
   </button>
   }
 
+</mat-menu>
+
+<mat-menu #profileMenu="matMenu">
+  <button mat-menu-item (click)="toggleAuthorFollow()">
+    <mat-icon>{{ isAuthorFollowed() ? 'person_remove' : 'person_add' }}</mat-icon>
+    {{ isAuthorFollowed() ? 'Unfollow' : 'Follow' }}
+  </button>
+  <button mat-menu-item (click)="toggleAuthorFavorite()">
+    <mat-icon>{{ isAuthorFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+    {{ isAuthorFavorite() ? 'Unfavorite' : 'Favorite' }}
+  </button>
+  <button mat-menu-item [matMenuTriggerFor]="profileListsMenu">
+    <mat-icon>group_add</mat-icon>
+    Add to list
+  </button>
+</mat-menu>
+
+<mat-menu #profileListsMenu="matMenu">
+  @for (set of availableFollowSets(); track set.id) {
+  <button mat-menu-item (click)="addAuthorToFollowSet(set.dTag)">
+    <mat-icon>{{ isAuthorInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+    <span>{{ set.title }}</span>
+  </button>
+  }
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="createNewFollowSetForAuthor()">
+    <mat-icon>add_circle</mat-icon>
+    Create new list
+  </button>
 </mat-menu>
 
 <mat-menu #copyMenu="matMenu">
