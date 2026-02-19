@@ -504,6 +504,14 @@
   @media (max-width: 699px) and (display-mode: standalone) {
     bottom: max(32px, calc(8px + env(safe-area-inset-bottom, 0px)));
   }
+
+  // When the keyboard is open (textarea focused), remove extra standalone lift
+  // so the composer anchors just above the keyboard instead of floating too high.
+  @media (max-width: 699px) and (display-mode: standalone) {
+    &:focus-within {
+      bottom: max(6px, calc(6px + env(safe-area-inset-bottom, 0px)));
+    }
+  }
 }
 
 .message-input-row {
