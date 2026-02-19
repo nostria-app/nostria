@@ -129,8 +129,8 @@
     @if (selectedTabIndex() === 1) {
     <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
       [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'following')"
-      (swipe)="onSwipe($event, 'following')" (swipeEnd)="onSwipeEnd('following')"
-      (wheel)="onWheelNavigate($event, 'following')">
+      (swipeStart)="onSwipeStart('following')" (swipe)="onSwipe($event, 'following')"
+      (swipeEnd)="onSwipeEnd('following')" (wheel)="onWheelNavigate($event, 'following')">
       @if (loading()) {
       <div class="loading-container fullscreen-loading">
         <mat-spinner diameter="40"></mat-spinner>
@@ -174,8 +174,8 @@
 
     @if (selectedTabIndex() === 2) {
     <div class="swipe-content" appSwipeGesture [threshold]="95" [horizontalSwipe]="false" [verticalSwipe]="true"
-      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'foryou')" (swipe)="onSwipe($event, 'foryou')"
-      (swipeEnd)="onSwipeEnd('foryou')" (wheel)="onWheelNavigate($event, 'foryou')">
+      [trackProgress]="true" (swipeProgress)="onSwipeProgress($event, 'foryou')" (swipeStart)="onSwipeStart('foryou')"
+      (swipe)="onSwipe($event, 'foryou')" (swipeEnd)="onSwipeEnd('foryou')" (wheel)="onWheelNavigate($event, 'foryou')">
       @if (loading()) {
       <div class="loading-container fullscreen-loading">
         <mat-spinner diameter="40"></mat-spinner>

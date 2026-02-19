@@ -65,6 +65,9 @@ type SwipeMode = 'following' | 'foryou';
 
 const SWIPE_DRAG_DEADZONE_PX = 6;
 const SWIPE_PREVIEW_THRESHOLD_PX = 18;
+const SWIPE_COMMIT_OFFSET_PX = 72;
+const SWIPE_TAIL_DELTA_PX = 6;
+const SWIPE_REVERSAL_CANCEL_PX = 20;
 const SWIPE_PREVIEW_GAP_PX = 18;
 const SWIPE_COMPLETION_ANIMATION_MS = 220;
 
@@ -129,6 +132,14 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private forYouCommittedSwipe = false;
   private followingSwipeDelta = 0;
   private forYouSwipeDelta = 0;
+  private followingTailDirection: -1 | 0 | 1 = 0;
+  private forYouTailDirection: -1 | 0 | 1 = 0;
+  private followingMinOffset = 0;
+  private followingMaxOffset = 0;
+  private forYouMinOffset = 0;
+  private forYouMaxOffset = 0;
+  private followingLastOffset = 0;
+  private forYouLastOffset = 0;
   private lastWheelNavigationAt = 0;
   private pendingFollowingRestoreEventId: string | null = null;
   private followingRestoreApplied = false;
@@ -337,15 +348,46 @@ export class ClipsComponent implements OnInit, OnDestroy {
     if (event.direction !== 'vertical') return;
 
     const offset = Math.abs(event.deltaY) <= SWIPE_DRAG_DEADZONE_PX ? 0 : event.deltaY;
+    const tailDelta = mode === 'following' ? offset - this.followingLastOffset : offset - this.forYouLastOffset;
+
+    if (Math.abs(tailDelta) >= SWIPE_TAIL_DELTA_PX) {
+      const tailDirection: -1 | 1 = tailDelta < 0 ? 1 : -1;
+      if (mode === 'following') {
+        this.followingTailDirection = tailDirection;
+      } else {
+        this.forYouTailDirection = tailDirection;
+      }
+    }
 
     if (mode === 'following') {
       this.followingAnimating.set(false);
       this.followingDragOffset.set(offset);
+      this.followingMinOffset = Math.min(this.followingMinOffset, offset);
+      this.followingMaxOffset = Math.max(this.followingMaxOffset, offset);
+      this.followingLastOffset = offset;
       return;
     }
 
     this.forYouAnimating.set(false);
     this.forYouDragOffset.set(offset);
+    this.forYouMinOffset = Math.min(this.forYouMinOffset, offset);
+    this.forYouMaxOffset = Math.max(this.forYouMaxOffset, offset);
+    this.forYouLastOffset = offset;
+  }
+
+  onSwipeStart(mode: SwipeMode): void {
+    if (mode === 'following') {
+      this.followingTailDirection = 0;
+      this.followingMinOffset = 0;
+      this.followingMaxOffset = 0;
+      this.followingLastOffset = 0;
+      return;
+    }
+
+    this.forYouTailDirection = 0;
+    this.forYouMinOffset = 0;
+    this.forYouMaxOffset = 0;
+    this.forYouLastOffset = 0;
   }
 
   onSwipe(event: SwipeEvent, mode: SwipeMode): void {
@@ -363,8 +405,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
   onSwipeEnd(mode: SwipeMode): void {
     if (mode === 'following') {
-      if (this.followingCommittedSwipe) {
-        this.completeSwipeTransition('following', this.followingSwipeDelta);
+      const releaseDelta = this.getReleaseSwipeDelta('following');
+
+      if (releaseDelta !== 0) {
+        this.completeSwipeTransition('following', releaseDelta);
       } else if (this.followingDragOffset() !== 0) {
         this.followingAnimating.set(true);
         this.followingDragOffset.set(0);
@@ -375,8 +419,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.forYouCommittedSwipe) {
-      this.completeSwipeTransition('foryou', this.forYouSwipeDelta);
+    const releaseDelta = this.getReleaseSwipeDelta('foryou');
+
+    if (releaseDelta !== 0) {
+      this.completeSwipeTransition('foryou', releaseDelta);
     } else if (this.forYouDragOffset() !== 0) {
       this.forYouAnimating.set(true);
       this.forYouDragOffset.set(0);
@@ -384,6 +430,37 @@ export class ClipsComponent implements OnInit, OnDestroy {
 
     this.forYouCommittedSwipe = false;
     this.forYouSwipeDelta = 0;
+  }
+
+  private getReleaseSwipeDelta(mode: SwipeMode): -1 | 0 | 1 {
+    const finalOffset = mode === 'following' ? this.followingDragOffset() : this.forYouDragOffset();
+    const tailDirection = mode === 'following' ? this.followingTailDirection : this.forYouTailDirection;
+    const minOffset = mode === 'following' ? this.followingMinOffset : this.forYouMinOffset;
+    const maxOffset = mode === 'following' ? this.followingMaxOffset : this.forYouMaxOffset;
+
+    if (Math.abs(finalOffset) >= SWIPE_COMMIT_OFFSET_PX) {
+      const releaseDirectionDelta: -1 | 1 = finalOffset < 0 ? 1 : -1;
+
+      if (tailDirection !== 0 && tailDirection !== releaseDirectionDelta) {
+        return 0;
+      }
+
+      if (releaseDirectionDelta === 1) {
+        const reversalAmount = finalOffset - minOffset;
+        if (reversalAmount >= SWIPE_REVERSAL_CANCEL_PX) {
+          return 0;
+        }
+      } else {
+        const reversalAmount = maxOffset - finalOffset;
+        if (reversalAmount >= SWIPE_REVERSAL_CANCEL_PX) {
+          return 0;
+        }
+      }
+
+      return releaseDirectionDelta;
+    }
+
+    return 0;
   }
 
   private completeSwipeTransition(mode: SwipeMode, delta: number): void {
