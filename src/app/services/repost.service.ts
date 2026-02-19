@@ -119,7 +119,7 @@ export class RepostService {
 
     // NIP-18 specification: kind:1 events (ShortTextNote) must use kind:6 reposts,
     // while all other event kinds use kind:16 generic reposts.
-    // See: https://github.com/nostr-protocol/nips/blob/master/18.md
+    // See: https://github.com/nostria-app/nips/blob/master/18.md
     if (event.kind === kinds.ShortTextNote) {
       return this.nostrService.createEvent(kinds.Repost, JSON.stringify(event), tags);
     }

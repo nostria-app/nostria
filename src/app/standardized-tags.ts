@@ -199,7 +199,7 @@ export const standardizedTag = {
   /** pubkey (hex), relay URL (weight) - NIP-57 */
   zap: 'zap',
 
-  /** https://github.com/nostr-protocol/nips/blob/master/51.md */
+  /** https://github.com/nostria-app/nips/blob/master/51.md */
   word: 'word',
 } as const;
 

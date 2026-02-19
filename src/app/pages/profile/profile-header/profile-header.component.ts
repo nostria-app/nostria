@@ -1342,7 +1342,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const currentPubkey = this.pubkey();
 
     if (currentPubkey) {
-      this.layout.openFollowingPage(currentPubkey);
+      this.layout.openFollowingPage(currentPubkey, this.profileState.followingList());
     }
   }
 
@@ -1356,7 +1356,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const currentPubkey = this.pubkey();
 
     if (currentPubkey) {
-      this.layout.openRelaysPage(currentPubkey);
+      this.layout.openRelaysPage(currentPubkey, this.getUserRelays());
     }
   }
 
@@ -1370,7 +1370,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const currentPubkey = this.pubkey();
 
     if (currentPubkey) {
-      this.layout.openLinksPage(currentPubkey);
+      this.layout.openLinksPage(currentPubkey, this.profile());
     }
   }
 

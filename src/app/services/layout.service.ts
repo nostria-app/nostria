@@ -1587,15 +1587,36 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-badges/${pubkeyOrNpub}`);
   }
 
-  openFollowingPage(pubkeyOrNpub: string): void {
+  openFollowingPage(pubkeyOrNpub: string, followingList?: string[]): void {
+    if (followingList && followingList.length > 0) {
+      this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`, {
+        state: { followingList },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
   }
 
-  openRelaysPage(pubkeyOrNpub: string): void {
+  openRelaysPage(pubkeyOrNpub: string, relayList?: string[]): void {
+    if (relayList && relayList.length > 0) {
+      this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`, {
+        state: { relayList },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`);
   }
 
-  openLinksPage(pubkeyOrNpub: string): void {
+  openLinksPage(pubkeyOrNpub: string, profile?: NostrRecord): void {
+    if (profile) {
+      this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`, {
+        state: { profile },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`);
   }
 

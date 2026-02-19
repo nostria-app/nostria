@@ -412,7 +412,7 @@
   padding: 10px 10px;
   gap: 16px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
-  transition: background-color 0.2s, opacity 0.2s;
+  transition: background-color 0.2s;
   min-width: 0; // Enable proper flex shrinking
   overflow-x: hidden; // Prevent horizontal overflow only
   position: relative;
@@ -472,7 +472,6 @@
   // Read notifications - hide the accent bar, significantly muted
   &.read {
     background: var(--mat-sys-surface-container);
-    opacity: 0.6;
     border-color: transparent;
 
     &::before {
@@ -490,13 +489,12 @@
     }
 
     .notification-avatar-wrapper {
-      opacity: 0.7;
+      filter: saturate(0.8);
     }
   }
 
   &:hover {
     background: var(--mat-sys-surface-container-high);
-    opacity: 1;
 
     // Show accent bar on hover even for read notifications
     &::before {
@@ -506,11 +504,6 @@
 
   &.clickable .notification-content {
     cursor: pointer;
-    transition: opacity 0.2s;
-
-    &:hover {
-      opacity: 0.8;
-    }
 
     &:focus {
       outline: 2px solid var(--mat-app-primary);
@@ -640,6 +633,7 @@
     gap: 8px;
     min-width: 0; // Allow container to shrink and enable text wrapping
     overflow: hidden; // Prevent overflow
+    contain: paint;
 
     .notification-header {
       display: flex;
@@ -1060,7 +1054,6 @@
     // Read notifications in dark mode - much darker/more muted
     &.read {
       background: var(--mat-sys-surface-container-lowest);
-      opacity: 0.5;
       border-color: transparent;
     }
   }

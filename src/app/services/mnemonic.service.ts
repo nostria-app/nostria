@@ -14,7 +14,7 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
  * - BIP32 is used to derive the path m/44'/1237'/<account>'/0/0
  * - Basic clients use account 0 to derive a single key
  * 
- * @see https://github.com/nostr-protocol/nips/blob/master/06.md
+ * @see https://github.com/nostria-app/nips/blob/master/06.md
  */
 @Injectable({
   providedIn: 'root',
@@ -107,7 +107,7 @@ export class MnemonicService {
    */
   async encryptMnemonic(mnemonic: string, pin: string = this.crypto.DEFAULT_PIN): Promise<EncryptedData> {
     this.logger.debug('Encrypting mnemonic');
-    
+
     // We can reuse the crypto service's encryption method since it just encrypts strings
     return await this.crypto.encryptPrivateKey(mnemonic, pin);
   }
@@ -121,7 +121,7 @@ export class MnemonicService {
    */
   async decryptMnemonic(encryptedData: EncryptedData, pin: string): Promise<string> {
     this.logger.debug('Decrypting mnemonic');
-    
+
     // We can reuse the crypto service's decryption method
     return await this.crypto.decryptPrivateKey(encryptedData, pin);
   }
@@ -134,7 +134,7 @@ export class MnemonicService {
    */
   isMnemonic(input: string): boolean {
     const trimmed = input.trim();
-    
+
     // Check if it contains spaces (mnemonics are space-separated words)
     if (!trimmed.includes(' ')) {
       return false;
@@ -142,7 +142,7 @@ export class MnemonicService {
 
     // Count words
     const words = trimmed.split(/\s+/);
-    
+
     // Valid mnemonic lengths are 12, 15, 18, 21, or 24 words
     const validLengths = [12, 15, 18, 21, 24];
     if (!validLengths.includes(words.length)) {

@@ -64,6 +64,8 @@ export class UserRelaysComponent {
   nip11Info = signal<Map<string, Nip11RelayInfo | null>>(new Map());
   nip11Loading = signal<Set<string>>(new Set());
 
+  private hasInitialRelays = signal(false);
+
   constructor() {
     // Get pubkey from route params
     let pubkeyParam = this.route.snapshot.paramMap.get('pubkey');
@@ -71,6 +73,20 @@ export class UserRelaysComponent {
       // Convert npub to hex if needed
       pubkeyParam = this.utilities.safeGetHexPubkey(pubkeyParam) || pubkeyParam;
       this.viewingPubkey.set(pubkeyParam);
+    }
+
+    const historyState = typeof window !== 'undefined' ? history.state : null;
+    const navState = (this.router.getCurrentNavigation()?.extras.state ?? historyState) as {
+      relayList?: unknown;
+    } | null;
+    const preloadedRelayList = Array.isArray(navState?.relayList)
+      ? navState.relayList.filter((relay): relay is string => typeof relay === 'string' && relay.trim() !== '')
+      : [];
+
+    if (preloadedRelayList.length > 0) {
+      this.relayList.set(Array.from(new Set(preloadedRelayList)));
+      this.hasInitialRelays.set(true);
+      this.isLoading.set(false);
     }
 
     // Load data when pubkey is available
@@ -84,7 +100,9 @@ export class UserRelaysComponent {
 
   private async loadData(pubkey: string): Promise<void> {
     try {
-      this.isLoading.set(true);
+      if (!this.hasInitialRelays()) {
+        this.isLoading.set(true);
+      }
       this.error.set(null);
 
       // Load profile data
@@ -93,20 +111,28 @@ export class UserRelaysComponent {
 
       // Load relay list (kind 10002)
       const relayListEvent = await this.dataService.getRelayListEvent(pubkey);
-      if (relayListEvent) {
-        // Extract relay URLs from r tags
-        const relays = relayListEvent.tags
-          .filter(tag => tag[0] === 'r' && tag[1])
-          .map(tag => tag[1]);
+      let relays: string[] = [];
 
-        this.relayList.set(relays);
-      } else {
-        this.relayList.set([]);
+      if (relayListEvent) {
+        relays = this.utilities.getRelayUrls(relayListEvent);
       }
+
+      // Fallback for users without usable kind 10002 relay list:
+      // parse relay map from kind 3 contacts event content.
+      if (relays.length === 0) {
+        const contactsEvent = await this.dataService.getContactsEvent(pubkey);
+        if (contactsEvent) {
+          relays = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
+        }
+      }
+
+      this.relayList.set(Array.from(new Set(relays)));
 
       this.isLoading.set(false);
     } catch (err) {
-      this.error.set('Failed to load relay list');
+      if (!this.hasInitialRelays()) {
+        this.error.set('Failed to load relay list');
+      }
       this.isLoading.set(false);
       this.logger.error('Error loading relay data', err);
     }

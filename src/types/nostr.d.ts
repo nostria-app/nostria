@@ -1,5 +1,5 @@
 // Type definitions for NIP-07 window.nostr object
-// Based on NIP-07 spec: https://github.com/nostr-protocol/nips/blob/master/07.md
+// Based on NIP-07 spec: https://github.com/nostria-app/nips/blob/master/07.md
 
 interface UserMetadata {
   name?: string;
@@ -64,4 +64,4 @@ declare global {
   }
 }
 
-export {};
+export { };

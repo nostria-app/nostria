@@ -556,6 +556,16 @@ export class ProfileState {
               this.followingListTimestamp.set(event.created_at);
               this.logger.debug(`Loaded cached following list with ${followingList.length} entries (timestamp: ${event.created_at})`);
             }
+
+            // Fallback for profiles without kind 10002 relay list:
+            // parse relays from kind 3 content (legacy relay map).
+            if (this.relayList().length === 0) {
+              const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event)));
+              if (fallbackRelayUrls.length > 0) {
+                this.relayList.set(fallbackRelayUrls);
+                this.logger.debug(`Loaded cached relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
+              }
+            }
           }
         } else if (event.kind === kinds.RelayList) {
           // Load cached relay list (kind 10002) for initial display
@@ -775,6 +785,16 @@ export class ProfileState {
           this.database.saveReplaceableEvent(contactsEvent).catch(err => {
             this.logger.error('Failed to cache contacts event:', err);
           });
+        }
+
+        // Fallback for profiles without kind 10002 relay list:
+        // parse relays from kind 3 content (legacy relay map).
+        if (this.relayList().length === 0) {
+          const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent)));
+          if (fallbackRelayUrls.length > 0) {
+            this.relayList.set(fallbackRelayUrls);
+            this.logger.debug(`Updated relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
+          }
         }
       }
     } catch (err) {
