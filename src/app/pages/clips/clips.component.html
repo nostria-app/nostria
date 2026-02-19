@@ -138,14 +138,15 @@
       } @else {
       @let clip = currentFollowingClip();
       @if (clip) {
-      <div class="swipe-stack">
+      <div class="swipe-stack" #followingSwipeStack>
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
           [style.transform]="getCardTransform('following')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
             (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('following') && getSwipePreviewClip('following'); as previewClip) {
-        <div class="swipe-card swipe-card-preview" [style.transform]="getSwipePreviewTransform('following')">
+        <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('following')"
+          [style.transform]="getSwipePreviewTransform('following')">
           <app-clips-video-card [event]="previewClip" [active]="false" />
         </div>
         }
@@ -182,14 +183,15 @@
       } @else {
       @let clip = currentForYouClip();
       @if (clip) {
-      <div class="swipe-stack">
+      <div class="swipe-stack" #forYouSwipeStack>
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getCardTransform('foryou')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"
             (commentsClick)="openComments(clip)" />
         </div>
         @if (hasSwipePreview('foryou') && getSwipePreviewClip('foryou'); as previewClip) {
-        <div class="swipe-card swipe-card-preview" [style.transform]="getSwipePreviewTransform('foryou')">
+        <div class="swipe-card swipe-card-preview" [class.animating]="isCardAnimating('foryou')"
+          [style.transform]="getSwipePreviewTransform('foryou')">
           <app-clips-video-card [event]="previewClip" [active]="false" />
         </div>
         }

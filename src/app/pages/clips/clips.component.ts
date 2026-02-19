@@ -65,6 +65,8 @@ type SwipeMode = 'following' | 'foryou';
 
 const SWIPE_DRAG_DEADZONE_PX = 6;
 const SWIPE_PREVIEW_THRESHOLD_PX = 18;
+const SWIPE_PREVIEW_GAP_PX = 18;
+const SWIPE_COMPLETION_ANIMATION_MS = 220;
 
 @Component({
   selector: 'app-clips',
@@ -132,9 +134,12 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private followingRestoreApplied = false;
   private pendingForYouRestoreEventId: string | null = null;
   private forYouRestoreApplied = false;
+  private swipeCompletionTimer: ReturnType<typeof setTimeout> | null = null;
   private exploreLoadObserver: IntersectionObserver | null = null;
   private exploreAutoLoadInProgress = false;
   private exploreLoadSentinel = viewChild<ElementRef<HTMLDivElement>>('exploreLoadSentinel');
+  private followingSwipeStack = viewChild<ElementRef<HTMLDivElement>>('followingSwipeStack');
+  private forYouSwipeStack = viewChild<ElementRef<HTMLDivElement>>('forYouSwipeStack');
   private prefetchedInteractionIds = new Set<string>();
   private interactionPrefetchInFlight = new Set<string>();
   private interactionLastPrefetchedAt = new Map<string, number>();
@@ -208,6 +213,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearSwipeCompletionTimer();
     this.persistFollowingPosition();
     this.persistForYouPosition();
     this.layout.hideMobileNav.set(false);
@@ -358,30 +364,88 @@ export class ClipsComponent implements OnInit, OnDestroy {
   onSwipeEnd(mode: SwipeMode): void {
     if (mode === 'following') {
       if (this.followingCommittedSwipe) {
-        this.advanceIndex('following', this.followingSwipeDelta);
-      }
-
-      if (this.followingDragOffset() !== 0) {
+        this.completeSwipeTransition('following', this.followingSwipeDelta);
+      } else if (this.followingDragOffset() !== 0) {
         this.followingAnimating.set(true);
+        this.followingDragOffset.set(0);
       }
 
-      this.followingDragOffset.set(0);
       this.followingCommittedSwipe = false;
       this.followingSwipeDelta = 0;
       return;
     }
 
     if (this.forYouCommittedSwipe) {
-      this.advanceIndex('foryou', this.forYouSwipeDelta);
-    }
-
-    if (this.forYouDragOffset() !== 0) {
+      this.completeSwipeTransition('foryou', this.forYouSwipeDelta);
+    } else if (this.forYouDragOffset() !== 0) {
       this.forYouAnimating.set(true);
+      this.forYouDragOffset.set(0);
     }
 
-    this.forYouDragOffset.set(0);
     this.forYouCommittedSwipe = false;
     this.forYouSwipeDelta = 0;
+  }
+
+  private completeSwipeTransition(mode: SwipeMode, delta: number): void {
+    const canMove = this.canNavigate(mode, delta);
+    const currentOffset = mode === 'following' ? this.followingDragOffset() : this.forYouDragOffset();
+
+    if (!canMove) {
+      if (currentOffset !== 0) {
+        if (mode === 'following') {
+          this.followingAnimating.set(true);
+          this.followingDragOffset.set(0);
+        } else {
+          this.forYouAnimating.set(true);
+          this.forYouDragOffset.set(0);
+        }
+      }
+      return;
+    }
+
+    const completionOffset = this.getSwipeCompletionOffset(mode, delta);
+    this.clearSwipeCompletionTimer();
+
+    if (mode === 'following') {
+      this.followingAnimating.set(true);
+      this.followingDragOffset.set(completionOffset);
+    } else {
+      this.forYouAnimating.set(true);
+      this.forYouDragOffset.set(completionOffset);
+    }
+
+    this.swipeCompletionTimer = setTimeout(() => {
+      this.advanceIndex(mode, delta);
+
+      if (mode === 'following') {
+        this.followingAnimating.set(false);
+        this.followingDragOffset.set(0);
+      } else {
+        this.forYouAnimating.set(false);
+        this.forYouDragOffset.set(0);
+      }
+
+      this.swipeCompletionTimer = null;
+    }, SWIPE_COMPLETION_ANIMATION_MS);
+  }
+
+  private getSwipeCompletionOffset(mode: SwipeMode, delta: number): number {
+    const stackElement = mode === 'following'
+      ? this.followingSwipeStack()?.nativeElement
+      : this.forYouSwipeStack()?.nativeElement;
+    const stackHeight = stackElement?.getBoundingClientRect().height || 0;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const offscreenDistance = Math.max(720, stackHeight + SWIPE_PREVIEW_GAP_PX, viewportHeight || 0);
+    return delta > 0 ? -offscreenDistance : offscreenDistance;
+  }
+
+  private clearSwipeCompletionTimer(): void {
+    if (!this.swipeCompletionTimer) {
+      return;
+    }
+
+    clearTimeout(this.swipeCompletionTimer);
+    this.swipeCompletionTimer = null;
   }
 
   onWheelNavigate(event: WheelEvent, mode: SwipeMode): void {
@@ -478,12 +542,11 @@ export class ClipsComponent implements OnInit, OnDestroy {
       return 'translateY(100%)';
     }
 
-    const gap = 18;
     if (offset > 0) {
-      return `translateY(calc(-100% + ${offset - gap}px))`;
+      return `translateY(calc(-100% + ${offset - SWIPE_PREVIEW_GAP_PX}px))`;
     }
 
-    return `translateY(calc(100% + ${offset + gap}px))`;
+    return `translateY(calc(100% + ${offset + SWIPE_PREVIEW_GAP_PX}px))`;
   }
 
   openComments(event: Event): void {
