@@ -1591,7 +1591,14 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
   }
 
-  openRelaysPage(pubkeyOrNpub: string): void {
+  openRelaysPage(pubkeyOrNpub: string, relayList?: string[]): void {
+    if (relayList && relayList.length > 0) {
+      this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`, {
+        state: { relayList },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`);
   }
 

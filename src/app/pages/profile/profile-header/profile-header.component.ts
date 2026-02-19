@@ -1356,7 +1356,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const currentPubkey = this.pubkey();
 
     if (currentPubkey) {
-      this.layout.openRelaysPage(currentPubkey);
+      this.layout.openRelaysPage(currentPubkey, this.getUserRelays());
     }
   }
 
