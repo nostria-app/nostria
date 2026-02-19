@@ -1587,7 +1587,14 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-badges/${pubkeyOrNpub}`);
   }
 
-  openFollowingPage(pubkeyOrNpub: string): void {
+  openFollowingPage(pubkeyOrNpub: string, followingList?: string[]): void {
+    if (followingList && followingList.length > 0) {
+      this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`, {
+        state: { followingList },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
   }
 

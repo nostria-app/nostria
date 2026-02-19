@@ -80,6 +80,7 @@ export class UserFollowingComponent {
   // The pubkey we're viewing
   viewingPubkey = signal<string>('');
   viewingProfile = signal<NostrRecord | undefined>(undefined);
+  private hasInitialFollowing = signal(false);
 
   // Search and sorting
   searchTerm = signal<string>('');
@@ -161,6 +162,20 @@ export class UserFollowingComponent {
       this.viewingPubkey.set(pubkeyParam);
     }
 
+    const historyState = typeof window !== 'undefined' ? history.state : null;
+    const navState = (this.router.getCurrentNavigation()?.extras.state ?? historyState) as {
+      followingList?: unknown;
+    } | null;
+    const preloadedFollowingList = Array.isArray(navState?.followingList)
+      ? navState.followingList.filter((pubkey): pubkey is string => typeof pubkey === 'string' && pubkey.trim() !== '')
+      : [];
+
+    if (preloadedFollowingList.length > 0) {
+      this.hasInitialFollowing.set(true);
+      this.loadFollowingList(preloadedFollowingList);
+      this.isLoading.set(false);
+    }
+
     // Load data when pubkey is available
     effect(() => {
       const pubkey = this.viewingPubkey();
@@ -172,7 +187,9 @@ export class UserFollowingComponent {
 
   private async loadData(pubkey: string): Promise<void> {
     try {
-      this.isLoading.set(true);
+      if (!this.hasInitialFollowing()) {
+        this.isLoading.set(true);
+      }
       this.error.set(null);
 
       // Load profile data
@@ -189,12 +206,16 @@ export class UserFollowingComponent {
 
         await this.loadFollowingList(followingPubkeys);
       } else {
-        this.followingList.set([]);
+        if (!this.hasInitialFollowing()) {
+          this.followingList.set([]);
+        }
       }
 
       this.isLoading.set(false);
     } catch (err) {
-      this.error.set('Failed to load following list');
+      if (!this.hasInitialFollowing()) {
+        this.error.set('Failed to load following list');
+      }
       this.isLoading.set(false);
       this.logger.error('Error loading following data', err);
     }
