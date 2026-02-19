@@ -79,14 +79,35 @@ export const imageUrlsToMarkdown = async (content: string) => {
   });
 };
 
+export const normalizeMarkdownLinkDestinations = (content: string): string => {
+  return content.replace(
+    /\[([^\]]+)\]\(\s*(https?:\/\/[^\s)]+)\s*\)/g,
+    '[$1]($2)'
+  );
+};
+
 export const urlsToMarkdownLinks = (content: string): string => {
+  const normalizedMarkdownLinks = normalizeMarkdownLinkDestinations(content);
+
+  const normalizedContent = normalizedMarkdownLinks.replace(
+    /(^|[\s(>])([A-Z0-9][A-Za-z0-9@#:_\-/ ]{0,80}?)\)\]\((https?:\/\/[^\s)]+)\)\)?/g,
+    (match, prefix: string, label: string, href: string) => {
+      const trimmedLabel = label.trim();
+      if (!trimmedLabel || trimmedLabel.includes('](')) {
+        return match;
+      }
+
+      return `${prefix}[${trimmedLabel}](${href})`;
+    }
+  );
+
   const standaloneUrlPattern =
     /(^|[\s(>])((?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>\[\]]*)?)/gim;
 
-  return content.replace(standaloneUrlPattern, (match, prefix: string, rawUrl: string, offset: number) => {
+  return normalizedContent.replace(standaloneUrlPattern, (match, prefix: string, rawUrl: string, offset: number) => {
     const urlStart = offset + prefix.length;
-    const charBeforeUrl = content[urlStart - 1] || '';
-    const markdownLinkPrefix = content.slice(Math.max(0, urlStart - 2), urlStart);
+    const charBeforeUrl = normalizedContent[urlStart - 1] || '';
+    const markdownLinkPrefix = normalizedContent.slice(Math.max(0, urlStart - 2), urlStart);
 
     if (charBeforeUrl === '@') {
       return match;

@@ -52,6 +52,7 @@ import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.compo
 import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -192,7 +193,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
   // Markdown preview with nostr: reference handling
   markdownHtml = computed(() => {
-    const content = this.article().content;
+    const content = normalizeMarkdownLinkDestinations(this.article().content);
     if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('');
 
     try {
@@ -671,6 +672,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     try {
       this.isPublishing.set(true);
       const art = this.article();
+      const normalizedContent = normalizeMarkdownLinkDestinations(art.content);
 
       // Handle image file upload if selected
       let imageUrl = art.image;
@@ -745,10 +747,10 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
       // Parse NIP-27 references from content and add appropriate tags
       // This is optional according to NIP-27, but recommended for notifications
-      this.extractNip27Tags(art.content, tags);
+      this.extractNip27Tags(normalizedContent, tags);
 
       // Create the event
-      const event = await this.nostrService.createEvent(kind, art.content, tags);
+      const event = await this.nostrService.createEvent(kind, normalizedContent, tags);
 
       if (!event) {
         throw new Error('Failed to create event');
