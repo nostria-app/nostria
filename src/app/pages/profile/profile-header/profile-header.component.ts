@@ -1370,7 +1370,7 @@ export class ProfileHeaderComponent implements OnDestroy {
     const currentPubkey = this.pubkey();
 
     if (currentPubkey) {
-      this.layout.openLinksPage(currentPubkey);
+      this.layout.openLinksPage(currentPubkey, this.profile());
     }
   }
 

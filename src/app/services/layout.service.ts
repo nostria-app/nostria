@@ -1609,7 +1609,14 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`);
   }
 
-  openLinksPage(pubkeyOrNpub: string): void {
+  openLinksPage(pubkeyOrNpub: string, profile?: NostrRecord): void {
+    if (profile) {
+      this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`, {
+        state: { profile },
+      });
+      return;
+    }
+
     this.navigateToRightPanel(`user-links/${pubkeyOrNpub}`);
   }
 

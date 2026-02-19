@@ -69,6 +69,7 @@ export class UserLinksComponent {
   viewingProfile = signal<NostrRecord | undefined>(undefined);
   identities = signal<ExternalIdentity[]>([]);
   autoVerifyTriggered = signal(false);
+  private hasInitialData = signal(false);
 
   identityCount = computed(() => this.identities().length);
 
@@ -77,6 +78,25 @@ export class UserLinksComponent {
     if (pubkeyParam) {
       pubkeyParam = this.utilities.safeGetHexPubkey(pubkeyParam) || pubkeyParam;
       this.viewingPubkey.set(pubkeyParam);
+    }
+
+    const historyState = typeof window !== 'undefined' ? history.state : null;
+    const navState = (this.router.getCurrentNavigation()?.extras.state ?? historyState) as {
+      profile?: unknown;
+    } | null;
+    const preloadedProfile = this.asNostrRecord(navState?.profile);
+
+    if (preloadedProfile) {
+      this.viewingProfile.set(preloadedProfile);
+      const parsed = this.parseIdentityTags(preloadedProfile.event.tags || []);
+      this.identities.set(parsed);
+      this.hasInitialData.set(true);
+      this.isLoading.set(false);
+
+      if (parsed.length > 0 && !this.autoVerifyTriggered()) {
+        this.autoVerifyTriggered.set(true);
+        this.verifyAll();
+      }
     }
 
     effect(() => {
@@ -89,7 +109,9 @@ export class UserLinksComponent {
 
   private async loadData(pubkey: string): Promise<void> {
     try {
-      this.isLoading.set(true);
+      if (!this.hasInitialData()) {
+        this.isLoading.set(true);
+      }
       this.error.set(null);
 
       const profile = await this.dataService.getProfile(pubkey);
@@ -110,10 +132,30 @@ export class UserLinksComponent {
 
       this.isLoading.set(false);
     } catch (err) {
-      this.error.set('Failed to load external identities');
+      if (!this.hasInitialData()) {
+        this.error.set('Failed to load external identities');
+      }
       this.isLoading.set(false);
       this.logger.error('Error loading identity data', err);
     }
+  }
+
+  private asNostrRecord(value: unknown): NostrRecord | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Partial<NostrRecord>;
+    if (!record.event || typeof record.event !== 'object') {
+      return null;
+    }
+
+    const event = record.event as { tags?: unknown };
+    if (!Array.isArray(event.tags)) {
+      return null;
+    }
+
+    return value as NostrRecord;
   }
 
   private parseIdentityTags(tags: string[][]): ExternalIdentity[] {
