@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
@@ -22,7 +22,7 @@ import {
 } from '../../services/database.service';
 import { RouterModule } from '@angular/router';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { ContentNotification } from '../../services/database.service';
 import { NostrRecord } from '../../interfaces';
 import { nip19 } from 'nostr-tools';
@@ -87,6 +87,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport)
@@ -101,9 +102,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.viewportScrollSubscription = viewport.elementScrolled().subscribe(() => {
       this.onViewportScrolled();
     });
+
+    this.scheduleViewportRefresh();
   }
   private _notificationViewport?: CdkVirtualScrollViewport;
   private viewportScrollSubscription?: Subscription;
+  private routerNavigationSubscription?: Subscription;
+  private viewportRefreshRafId: number | null = null;
+  private viewportRefreshTimeouts: number[] = [];
 
   notifications = this.notificationService.notifications;
 
@@ -213,6 +219,26 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       // Use untracked to avoid circular dependency with prefetchedProfiles
       untracked(() => {
         this.batchPreloadProfiles(notifications as ContentNotification[]);
+      });
+    });
+
+    // When right-panel visibility changes (open/close detail views),
+    // force virtual viewport to recalculate and repaint recycled rows.
+    effect(() => {
+      this.twoColumnLayout.hasRightContent();
+      this.showSystemNotifications();
+
+      untracked(() => {
+        this.scheduleViewportRefresh();
+      });
+    });
+
+    // Recalculate viewport when filtered content size changes.
+    effect(() => {
+      this.contentNotifications().length;
+
+      untracked(() => {
+        this.scheduleViewportRefresh();
       });
     });
   }
@@ -377,10 +403,61 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
+
+    // Handle auxiliary outlet navigation changes while this list component stays mounted.
+    this.routerNavigationSubscription = this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.scheduleViewportRefresh();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.viewportScrollSubscription?.unsubscribe();
+    this.routerNavigationSubscription?.unsubscribe();
+
+    if (this.viewportRefreshRafId !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(this.viewportRefreshRafId);
+      this.viewportRefreshRafId = null;
+    }
+
+    if (typeof window !== 'undefined') {
+      this.viewportRefreshTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+      this.viewportRefreshTimeouts = [];
+    }
+  }
+
+  private scheduleViewportRefresh(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.viewportRefreshRafId !== null) {
+      window.cancelAnimationFrame(this.viewportRefreshRafId);
+    }
+
+    this.viewportRefreshTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+    this.viewportRefreshTimeouts = [];
+
+    this.viewportRefreshRafId = window.requestAnimationFrame(() => {
+      this.viewportRefreshRafId = null;
+      this._notificationViewport?.checkViewportSize();
+      this.cdr.detectChanges();
+    });
+
+    this.viewportRefreshTimeouts.push(
+      window.setTimeout(() => {
+        this._notificationViewport?.checkViewportSize();
+        this.cdr.detectChanges();
+      }, 120)
+    );
+
+    this.viewportRefreshTimeouts.push(
+      window.setTimeout(() => {
+        this._notificationViewport?.checkViewportSize();
+        this.cdr.detectChanges();
+      }, 460)
+    );
   }
 
   /**
