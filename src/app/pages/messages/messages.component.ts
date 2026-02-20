@@ -1380,6 +1380,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
 
+      // Restore focus to the input field after sending (desktop behavior)
+      setTimeout(() => {
+        this.messageInput?.nativeElement?.focus();
+      }, 0);
+
       // Determine which encryption to use based on chat and client capabilities
       const selectedChat = this.selectedChat()!;
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
