@@ -188,6 +188,8 @@
       font-size: 14px;
       color: var(--mat-sys-on-surface-variant);
       text-align: center;
+      -webkit-text-size-adjust: 100%; /* Prevent iOS Safari from auto-adjusting font size */
+      text-size-adjust: 100%; /* Standard property for other browsers */
 
       .nip05-icon {
         font-size: 14px;
