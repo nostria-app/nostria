@@ -295,6 +295,9 @@ export class LocalSettingsService {
         const mergedSettings: LocalSettings = {
           ...DEFAULT_LOCAL_SETTINGS,
           ...stored,
+          // Trust toggle was removed from UI; keep trust features always enabled.
+          // This migrates legacy persisted values where trustEnabled was set to false.
+          trustEnabled: true,
           // Explicitly ensure startOnLastRoute defaults to true for existing users
           // who don't have this property yet
           startOnLastRoute: stored.startOnLastRoute !== undefined ? stored.startOnLastRoute : true,
@@ -424,7 +427,11 @@ export class LocalSettingsService {
    * Set trust enabled preference
    */
   setTrustEnabled(trustEnabled: boolean): void {
-    this.updateSettings({ trustEnabled });
+    // Trust toggle was removed from UI; keep trust features always enabled.
+    if (!trustEnabled) {
+      this.logger.debug('Ignoring request to disable trust; feature is always enabled');
+    }
+    this.updateSettings({ trustEnabled: true });
   }
 
   /**
