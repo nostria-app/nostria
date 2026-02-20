@@ -1,7 +1,8 @@
 <div class="inline-video-container" [class.fill-container]="fillContainer()" (click)="$event.stopPropagation()">
-  <video #videoElement class="video-element" [src]="effectiveSrc()" [poster]="effectivePoster()" [muted]="shouldBeMuted()"
-    [loop]="loop()" playsinline [attr.preload]="effectivePreload()" (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
-    [class.fill-container]="fillContainer()" [class.needs-rotation-correction]="needsRotationCorrection()"
+  <video #videoElement class="video-element" [src]="effectiveSrc()" [poster]="effectivePoster()"
+    [muted]="shouldBeMuted()" [loop]="loop()" playsinline [attr.preload]="effectivePreload()"
+    (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()" [class.fill-container]="fillContainer()"
+    [class.needs-rotation-correction]="needsRotationCorrection()"
     [class.rotation-correction-fill]="needsRotationCorrection() && fillContainer()"
     [style.object-fit]="effectiveObjectFit()" (click)="onVideoClick()" (dblclick)="onVideoDoubleClick($event)"></video>
 
