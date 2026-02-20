@@ -1,4 +1,5 @@
-import { Injectable, signal, effect, inject, NgZone, Injector } from '@angular/core';
+import { Injectable, signal, effect, inject, NgZone, Injector, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import {
   Event,
   EventTemplate,
@@ -106,6 +107,8 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 })
 export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly accountRelay = inject(AccountRelayService);
@@ -174,6 +177,13 @@ export class NostrService implements NostriaService {
 
   constructor() {
     this.logger.info('Initializing NostrService');
+
+    if (!this.isBrowser) {
+      this.initialized.set(true);
+      this.accountsInitialized = true;
+      this.logger.debug('[NostrService] SSR context detected, skipping browser-only initialization');
+      return;
+    }
 
     // Set the signing function in AccountStateService to avoid circular dependency
     this.accountState.setSignFunction((event: UnsignedEvent) => this.sign(event));

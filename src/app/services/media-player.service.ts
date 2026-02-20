@@ -992,6 +992,7 @@ export class MediaPlayerService implements OnInitialized {
 
       let embedUrl: SafeResourceUrl;
 
+      // Consider &controls=0 in the future, but needs tracker.
       if (match && match[1]) {
         const baseEmbedUrl = `https://www.youtube.com/embed/${match[1]}?enablejsapi=1&rel=0&iv_load_policy=3&modestbranding=1`;
         const finalUrl = query ? `${baseEmbedUrl}&${query}` : baseEmbedUrl;

@@ -17,12 +17,26 @@ const MUSIC_PLAYLIST_KIND = 34139;
 const ARTICLE_KIND = kinds.LongFormArticle; // 30023
 
 /**
- * Ensure Node.js WebSocket is available for SSR and return a SimplePool instance.
+ * Configure nostr-tools to use Node.js WebSocket implementation during SSR.
  */
+let ssrWebSocketConfigured = false;
+
+async function configureSsrWebSocketImplementation(): Promise<void> {
+  if (ssrWebSocketConfigured) {
+    return;
+  }
+
+  const [{ WebSocket: WS }, { useWebSocketImplementation }] = await Promise.all([
+    import('ws'),
+    import('nostr-tools/pool'),
+  ]);
+
+  useWebSocketImplementation(WS as unknown as typeof WebSocket);
+  ssrWebSocketConfigured = true;
+}
+
 async function createSSRPool() {
-  const { WebSocket: WS } = await import('ws');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).WebSocket = WS;
+  await configureSsrWebSocketImplementation();
 
   const { SimplePool } = await import('nostr-tools/pool');
   return new SimplePool({ enablePing: true, enableReconnect: true });

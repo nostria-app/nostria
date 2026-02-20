@@ -13,8 +13,6 @@
   <!-- Footer controls (always visible in footer mode; stays visible for YouTube in fullscreen to preserve iframe) -->
   <div class="footer-drag-zone"
     [class.hidden]="!footer() && !isYouTube()"
-    [class.footer-expanded-yt]="isYouTube() && layout.expandedMediaPlayer() && footer()"
-    [class.footer-fullscreen-yt]="isYouTube() && !footer()"
     (mousedown)="onFooterMouseDown($event)">
     @if (isLiveStream()) {
       <app-live-stream-player [footer]="footer()" />

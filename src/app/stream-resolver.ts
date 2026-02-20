@@ -16,11 +16,24 @@ export interface StreamData {
   event?: Event;
 }
 
+let ssrWebSocketConfigured = false;
+
+async function configureSsrWebSocketImplementation(): Promise<void> {
+  if (ssrWebSocketConfigured) {
+    return;
+  }
+
+  const [{ WebSocket: WS }, { useWebSocketImplementation }] = await Promise.all([
+    import('ws'),
+    import('nostr-tools/pool'),
+  ]);
+
+  useWebSocketImplementation(WS as unknown as typeof WebSocket);
+  ssrWebSocketConfigured = true;
+}
+
 async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Promise<Event | null> {
-  // Force Node.js WebSocket for SSR environment
-  const { WebSocket: WS } = await import('ws');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).WebSocket = WS;
+  await configureSsrWebSocketImplementation();
 
   // Import SimplePool dynamically
   const { SimplePool } = await import('nostr-tools/pool');
@@ -51,10 +64,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
  * Fetch event from relays by address (kind, pubkey, identifier)
  */
 async function fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
-   
-  const { WebSocket: WS } = await import('ws');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).WebSocket = WS;
+  await configureSsrWebSocketImplementation();
 
   const { SimplePool } = await import('nostr-tools/pool');
   const pool = new SimplePool({ enablePing: true, enableReconnect: true });

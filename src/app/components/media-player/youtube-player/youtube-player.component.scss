@@ -80,7 +80,6 @@
 .youtube-area {
   position: relative;
   overflow: hidden;
-  transition: flex 0.3s ease-out;
 
   .footer-mode & {
     flex: 0 0 auto;
@@ -151,8 +150,6 @@
   }
 }
 
-/* In collapsed footer mode, media-info-text sits between the thumbnail and buttons.
-   In expanded mode, it sits at the left of the 64px control bar at the bottom. */
 .media-info-text {
   flex: 1;
   min-width: 0;

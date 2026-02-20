@@ -11,7 +11,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: opacity 0.3s ease-out, height 0.3s ease-out, border-radius 0.3s ease-out;
+    transition: opacity 0.3s ease-out, border-radius 0.3s ease-out;
     cursor: grab;
 
     // Floating pill layout
@@ -734,28 +734,12 @@ app-stream-info-bar {
 .footer-drag-zone {
   display: flex;
   width: 100%;
-  height: 64px;
-  flex-shrink: 0;
+  height: 100%;
+  flex: 1;
   align-items: center;
 
   &.hidden {
     display: none;
-  }
-
-  /* When YouTube is expanded, the drag zone fills the entire pill so the
-     youtube-player component can show its own iframe above its controls */
-  &.footer-expanded-yt {
-    flex: 1;
-    height: auto;
-    min-height: 64px;
-  }
-
-  /* When YouTube is in fullscreen, the drag zone fills the entire viewport.
-     The single youtube-player instance stays alive (no iframe restart). */
-  &.footer-fullscreen-yt {
-    flex: 1;
-    height: 100%;
-    width: 100%;
   }
 }
 
