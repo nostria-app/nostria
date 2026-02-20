@@ -13,7 +13,7 @@ interface YouTubeChannelEntry {
 }
 
 interface YouTubeChannel extends YouTubeChannelEntry {
-  videos: unknown[];
+  videoCount: number;
   loading: boolean;
   error?: string;
 }
@@ -25,8 +25,6 @@ function createComponent(): YouTubeComponent {
   (component as any).loading = signal(true);
   (component as any).channels = signal<YouTubeChannel[]>([]);
   (component as any).channelEntries = signal<YouTubeChannelEntry[]>([]);
-  (component as any).currentVideo = signal(null);
-  (component as any).collapsedChannels = signal(new Set<string>());
   (component as any).migrating = signal(false);
   (component as any).oldBookmarkCount = signal(0);
 
@@ -61,17 +59,13 @@ function createComponent(): YouTubeComponent {
     enque: jasmine.createSpy('enque'),
   };
   (component as any).layout = {
-    scrollToTop: jasmine.createSpy('scrollToTop'),
+    navigateToRightPanel: jasmine.createSpy('navigateToRightPanel'),
   };
   (component as any).dialog = {
     open: jasmine.createSpy('open'),
   };
   (component as any).snackBar = {
     open: jasmine.createSpy('open'),
-  };
-  (component as any).sanitizer = {
-    bypassSecurityTrustResourceUrl: jasmine.createSpy('bypassSecurityTrustResourceUrl')
-      .and.callFake((url: string) => url),
   };
   (component as any).app = {
     authenticated: signal(true),
@@ -185,8 +179,8 @@ describe('YouTubeComponent', () => {
       const component = createComponent();
       (component as any).channelEntries.set([sampleEntry, secondEntry]);
       (component as any).channels.set([
-        { ...sampleEntry, videos: [], loading: false },
-        { ...secondEntry, videos: [], loading: false },
+        { ...sampleEntry, videoCount: 0, loading: false },
+        { ...secondEntry, videoCount: 0, loading: false },
       ]);
 
       await component.removeChannel('UC1XvxnHFtWruS9egyFasP1Q');
@@ -200,8 +194,8 @@ describe('YouTubeComponent', () => {
       const component = createComponent();
       (component as any).channelEntries.set([sampleEntry, secondEntry]);
       (component as any).channels.set([
-        { ...sampleEntry, videos: [], loading: false },
-        { ...secondEntry, videos: [], loading: false },
+        { ...sampleEntry, videoCount: 0, loading: false },
+        { ...secondEntry, videoCount: 0, loading: false },
       ]);
 
       await component.removeChannel('UC1XvxnHFtWruS9egyFasP1Q');
@@ -219,7 +213,7 @@ describe('YouTubeComponent', () => {
       const component = createComponent();
       (component as any).channelEntries.set([sampleEntry]);
       (component as any).channels.set([
-        { ...sampleEntry, videos: [], loading: false },
+        { ...sampleEntry, videoCount: 0, loading: false },
       ]);
 
       await component.removeChannel('UC1XvxnHFtWruS9egyFasP1Q');
@@ -233,7 +227,7 @@ describe('YouTubeComponent', () => {
       const component = createComponent();
       (component as any).channelEntries.set([sampleEntry]);
       (component as any).channels.set([
-        { ...sampleEntry, videos: [], loading: false },
+        { ...sampleEntry, videoCount: 0, loading: false },
       ]);
       (component as any).nostrService.signEvent.and.rejectWith(new Error('Sign failed'));
 
@@ -274,71 +268,6 @@ describe('YouTubeComponent', () => {
       await expectAsync(
         (component as any).publishYouTubeEvent([sampleEntry])
       ).toBeRejectedWithError('Failed to sign event');
-    });
-  });
-
-  describe('toggleChannel', () => {
-    it('should collapse a channel', () => {
-      const component = createComponent();
-
-      component.toggleChannel('channel-1');
-
-      expect(component.isChannelCollapsed('channel-1')).toBe(true);
-    });
-
-    it('should expand a collapsed channel', () => {
-      const component = createComponent();
-
-      component.toggleChannel('channel-1');
-      component.toggleChannel('channel-1');
-
-      expect(component.isChannelCollapsed('channel-1')).toBe(false);
-    });
-  });
-
-  describe('formatViews', () => {
-    it('should format millions', () => {
-      const component = createComponent();
-      expect(component.formatViews(1500000)).toBe('1.5M');
-    });
-
-    it('should format thousands', () => {
-      const component = createComponent();
-      expect(component.formatViews(1500)).toBe('1.5K');
-    });
-
-    it('should return raw number for small values', () => {
-      const component = createComponent();
-      expect(component.formatViews(999)).toBe('999');
-    });
-  });
-
-  describe('createYouTubeBookmarkSet (add channel)', () => {
-    it('should add a new channel to existing entries', async () => {
-      const component = createComponent();
-      (component as any).channelEntries.set([sampleEntry]);
-      (component as any).accountRelay.getMany.and.resolveTo([
-        makeYouTubeEvent([sampleEntry, secondEntry]),
-      ]);
-      (component as any).corsProxy.fetchText.and.resolveTo('<feed></feed>');
-
-      await (component as any).createYouTubeBookmarkSet({
-        channelId: secondEntry.channelId,
-        feedUrl: secondEntry.feedUrl,
-        title: secondEntry.title,
-        description: secondEntry.description,
-        image: secondEntry.image,
-      });
-
-      // Verify the event was published with both entries
-      expect((component as any).nostrService.createEvent).toHaveBeenCalledWith(
-        30078,
-        JSON.stringify([sampleEntry, secondEntry]),
-        [['d', 'youtube-channels']]
-      );
-      expect((component as any).snackBar.open).toHaveBeenCalledWith(
-        'YouTube channel added!', 'Close', { duration: 3000 }
-      );
     });
   });
 

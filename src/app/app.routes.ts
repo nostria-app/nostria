@@ -873,6 +873,13 @@ export const routes: Routes = [
     title: 'Details',
   },
   {
+    path: 'youtube/channel/:channelId',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/youtube/youtube-channel-videos/youtube-channel-videos.component').then(m => m.YouTubeChannelVideosComponent),
+    title: 'YouTube Channel',
+  },
+  {
     path: 'profile-edit',
     outlet: 'right',
     loadComponent: () =>

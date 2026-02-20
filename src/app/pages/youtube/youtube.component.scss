@@ -200,35 +200,7 @@
 
 /* Main YouTube Container */
 .youtube-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.youtube-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.youtube-header h1 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.premium-icon {
-  color: var(--mat-sys-secondary);
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
+  padding: 8px;
 }
 
 /* Loading State */
@@ -237,12 +209,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
-  gap: 16px;
+  min-height: 300px;
+  gap: 12px;
 }
 
 .loading-container p {
   color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9rem;
 }
 
 /* Empty State */
@@ -251,7 +224,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
+  min-height: 300px;
   text-align: center;
   padding: 2rem;
 }
@@ -275,280 +248,96 @@
   max-width: 500px;
 }
 
-.help-section {
-  background: var(--mat-sys-surface-container);
-  border-radius: 16px;
-  padding: 1.5rem 2rem;
-  text-align: left;
-  max-width: 500px;
+/* Channel List */
+.channels-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.help-section h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-}
-
-.help-section ol {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.help-section li {
-  margin-bottom: 0.5rem;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.9rem;
-}
-
-/* Video Player Section */
-.video-player-section {
-  margin-bottom: 32px;
-  background: var(--mat-sys-surface-container);
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.video-player-container {
-  position: relative;
-  width: 100%;
-  padding-top: 56.25%;
-  /* 16:9 aspect ratio */
-}
-
-.video-player {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.video-info {
-  padding: 16px 24px;
-}
-
-.video-info h2 {
-  margin: 0 0 8px 0;
-  font-size: 1.25rem;
-}
-
-.video-meta {
+.channel-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.9rem;
-  margin-bottom: 12px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &:hover .channel-actions {
+    opacity: 1;
+  }
 }
 
-.video-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.separator {
-  opacity: 0.5;
-}
-
-.channel-name {
-  color: var(--mat-sys-primary);
-}
-
-/* Channel Section */
-.channel-section {
-  margin-bottom: 32px;
-}
-
-.channel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-  gap: 16px;
-}
-
-.channel-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  flex: 1;
-}
-
-.channel-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
+.channel-avatar-wrapper {
   flex-shrink: 0;
 }
 
+.channel-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .channel-avatar-placeholder {
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff0000, #cc0000);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+
+  mat-icon {
+    color: white;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
 }
 
-.channel-avatar-placeholder mat-icon {
-  color: white;
-  font-size: 28px;
-  width: 28px;
-  height: 28px;
+.channel-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.channel-details h2 {
-  margin: 0 0 4px 0;
-  font-size: 1.25rem;
-}
-
-.channel-description {
-  margin: 0;
-  color: var(--mat-sys-on-surface-variant);
+.channel-name {
   font-size: 0.9rem;
-  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-meta {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.channel-error-text {
+  color: var(--mat-sys-error);
 }
 
 .channel-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
   flex-shrink: 0;
-}
-
-.channel-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.no-videos {
-  color: var(--mat-sys-on-surface-variant);
-  font-style: italic;
-  padding: 16px 0;
-}
-
-/* Videos Grid */
-.videos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.video-card {
-  cursor: pointer;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--mat-sys-surface-container);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.video-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--mat-sys-level3);
-}
-
-.video-card:hover .play-overlay {
-  opacity: 1;
-}
-
-.video-thumbnail {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-}
-
-.video-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.play-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
 }
 
-.play-overlay mat-icon {
-  font-size: 64px;
-  width: 64px;
-  height: 64px;
-  color: white;
-}
-
-.video-details {
-  padding: 12px;
-}
-
-.video-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.video-title-row .video-title {
-  flex: 1;
-  margin: 0;
-}
-
-.video-menu-btn {
-  flex-shrink: 0;
-  margin: -8px -8px 0 0;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.video-card:hover .video-menu-btn,
-.video-card:focus-within .video-menu-btn {
+.channel-item:focus-within .channel-actions {
   opacity: 1;
-}
-
-.video-title {
-  margin: 0 0 8px 0;
-  font-size: 0.95rem;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.video-details .video-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.8rem;
-  margin: 0;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .youtube-container {
-    padding: 16px;
-  }
-
-  .youtube-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
   .mock-videos-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -561,12 +350,8 @@
     font-size: 1.5rem;
   }
 
-  .channel-header {
-    flex-direction: column;
-  }
-
-  .videos-grid {
-    grid-template-columns: 1fr;
+  .channel-actions {
+    opacity: 1;
   }
 }
 
@@ -582,11 +367,5 @@
   .feature-icon {
     width: 40px;
     height: 40px;
-  }
-
-  .channel-info {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
   }
 }

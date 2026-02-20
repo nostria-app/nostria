@@ -222,6 +222,7 @@ export class PanelNavigationService {
     'badges/create': { type: 'detail', title: 'Create Badge' },
     'badges/edit': { type: 'detail', title: 'Edit Badge' },
     'profile-edit': { type: 'detail', title: 'Edit Profile' },
+    'youtube/channel': { type: 'detail', title: 'YouTube Channel' },
     'user-badges': { type: 'detail', title: 'User Badges' },
     'collections/media/details': { type: 'detail', title: 'Media Details' },
     'playlists/edit': { type: 'detail', title: 'Edit Playlist' },

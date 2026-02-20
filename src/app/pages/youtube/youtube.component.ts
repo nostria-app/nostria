@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, computed } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,13 +13,10 @@ import { ApplicationService } from '../../services/application.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CorsProxyService } from '../../services/cors-proxy.service';
 import { NostrService } from '../../services/nostr.service';
-import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
-import { MediaItem } from '../../interfaces';
 import { Event, Filter } from 'nostr-tools';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { DatePipe, SlicePipe } from '@angular/common';
+import { PanelHeaderComponent } from '../../components/panel-header/panel-header.component';
 
 interface YouTubeChannelEntry {
   channelId: string;
@@ -30,21 +27,9 @@ interface YouTubeChannelEntry {
 }
 
 interface YouTubeChannel extends YouTubeChannelEntry {
-  videos: YouTubeVideo[];
+  videoCount: number;
   loading: boolean;
   error?: string;
-}
-
-interface YouTubeVideo {
-  videoId: string;
-  title: string;
-  link: string;
-  published: Date;
-  thumbnail: string;
-  description: string;
-  views: number;
-  channelTitle: string;
-  channelId: string;
 }
 
 @Component({
@@ -58,8 +43,7 @@ interface YouTubeVideo {
     MatDialogModule,
     MatSnackBarModule,
     RouterModule,
-    DatePipe,
-    SlicePipe,
+    PanelHeaderComponent,
   ],
   template: `
     @if (!app.authenticated()) {
@@ -152,41 +136,32 @@ interface YouTubeVideo {
               <mat-icon>stars</mat-icon>
               Upgrade to Premium
             </a>
-            <p class="cta-hint">Includes all premium features • Cancel anytime</p>
+            <p class="cta-hint">Includes all premium features &bull; Cancel anytime</p>
           </div>
         </div>
       </div>
     } @else {
-      <div class="youtube-container">
-        <header class="youtube-header">
-          <h1>
-            YouTube
-            <mat-icon class="premium-icon">diamond</mat-icon>
-          </h1>
-          <div class="header-actions">
-            @if (oldBookmarkCount() > 0) {
-              <button mat-flat-button (click)="migrateOldBookmarks()" [disabled]="migrating()" matTooltip="Import channels from old bookmark format">
-                <mat-icon>sync</mat-icon>
-                @if (migrating()) {
-                  Migrating...
-                } @else {
-                  Migrate ({{ oldBookmarkCount() }})
-                }
-              </button>
-            }
-            <button mat-flat-button (click)="openAddChannelDialog()" matTooltip="Add YouTube channel">
-              <mat-icon>add</mat-icon>
-              Add Channel
-            </button>
-            <button mat-icon-button (click)="refreshAll()" [disabled]="loading()" matTooltip="Refresh all channels">
-              <mat-icon>refresh</mat-icon>
-            </button>
-          </div>
-        </header>
+      <app-panel-header
+        title="YouTube"
+        [showBack]="false"
+      >
+        @if (oldBookmarkCount() > 0) {
+          <button mat-icon-button (click)="migrateOldBookmarks()" [disabled]="migrating()" matTooltip="Migrate old bookmarks ({{ oldBookmarkCount() }})">
+            <mat-icon>sync</mat-icon>
+          </button>
+        }
+        <button mat-icon-button (click)="refreshAll()" [disabled]="loading()" matTooltip="Refresh all channels">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        <button mat-icon-button (click)="openAddChannelDialog()" matTooltip="Add YouTube channel">
+          <mat-icon>add</mat-icon>
+        </button>
+      </app-panel-header>
 
+      <div class="youtube-container">
         @if (loading() && channels().length === 0) {
           <div class="loading-container">
-            <mat-spinner />
+            <mat-spinner diameter="32" />
             <p>Loading your YouTube subscriptions...</p>
           </div>
         } @else if (channels().length === 0) {
@@ -200,50 +175,17 @@ interface YouTubeVideo {
             </button>
           </div>
         } @else {
-          <!-- Currently playing video -->
-          @if (currentVideo()) {
-            <div class="video-player-section">
-              <div class="video-player-container">
-                <iframe
-                  [src]="getEmbedUrl(currentVideo()!.videoId)"
-                  frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen
-                  class="video-player"
-                ></iframe>
-              </div>
-              <div class="video-info">
-                <h2>{{ currentVideo()!.title }}</h2>
-                <div class="video-meta">
-                  <span class="channel-name">{{ currentVideo()!.channelTitle }}</span>
-                  <span class="separator">•</span>
-                  <span class="views">{{ formatViews(currentVideo()!.views) }} views</span>
-                  <span class="separator">•</span>
-                  <span class="date">{{ currentVideo()!.published | date:'mediumDate' }}</span>
-                </div>
-                <div class="video-actions">
-                  <button mat-button (click)="closeVideo()">
-                    <mat-icon>close</mat-icon>
-                    Close
-                  </button>
-                  <button mat-button (click)="playNow(currentVideo()!)">
-                    <mat-icon>play_arrow</mat-icon>
-                    Play now
-                  </button>
-                  <button mat-button (click)="addToQueue(currentVideo()!)">
-                    <mat-icon>queue</mat-icon>
-                    Add to queue
-                  </button>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- Channel sections -->
-          @for (channel of channels(); track channel.channelId) {
-            <section class="channel-section">
-              <div class="channel-header">
-                <div class="channel-info">
+          <div class="channels-list">
+            @for (channel of channels(); track channel.channelId) {
+              <div
+                class="channel-item"
+                tabindex="0"
+                role="button"
+                (click)="openChannelVideos(channel)"
+                (keydown.enter)="openChannelVideos(channel)"
+                (keydown.space)="openChannelVideos(channel)"
+              >
+                <div class="channel-avatar-wrapper">
                   @if (channel.image) {
                     <img [src]="channel.image" [alt]="channel.title" class="channel-avatar" />
                   } @else {
@@ -251,103 +193,63 @@ interface YouTubeVideo {
                       <mat-icon>smart_display</mat-icon>
                     </div>
                   }
-                  <div class="channel-details">
-                    <h2>{{ channel.title }}</h2>
-                    @if (channel.description) {
-                      <p class="channel-description">{{ channel.description | slice:0:150 }}{{ channel.description.length > 150 ? '...' : '' }}</p>
+                </div>
+                <div class="channel-info">
+                  <span class="channel-name">{{ channel.title }}</span>
+                  <span class="channel-meta">
+                    @if (channel.loading) {
+                      Loading...
+                    } @else if (channel.error) {
+                      <span class="channel-error-text">Error loading videos</span>
+                    } @else if (channel.videoCount > 0) {
+                      {{ channel.videoCount }} videos
+                    } @else {
+                      No videos
                     }
-                  </div>
+                  </span>
                 </div>
                 <div class="channel-actions">
                   @if (channel.loading) {
-                    <mat-spinner diameter="24" />
+                    <mat-spinner diameter="20" />
                   }
-                  <button mat-icon-button (click)="refreshChannel(channel)" [disabled]="channel.loading" matTooltip="Refresh">
-                    <mat-icon>refresh</mat-icon>
+                  <button mat-icon-button [matMenuTriggerFor]="channelMenu" (click)="$event.stopPropagation()" matTooltip="Channel options">
+                    <mat-icon>more_vert</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="removeChannel(channel.channelId)" matTooltip="Remove channel">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="toggleChannel(channel.channelId)" [matTooltip]="isChannelCollapsed(channel.channelId) ? 'Expand' : 'Collapse'">
-                    <mat-icon>{{ isChannelCollapsed(channel.channelId) ? 'expand_more' : 'expand_less' }}</mat-icon>
-                  </button>
+                  <mat-menu #channelMenu="matMenu">
+                    <button mat-menu-item (click)="refreshChannel(channel)">
+                      <mat-icon>refresh</mat-icon>
+                      <span>Refresh</span>
+                    </button>
+                    <button mat-menu-item (click)="removeChannel(channel.channelId)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Remove</span>
+                    </button>
+                  </mat-menu>
                 </div>
               </div>
-
-              @if (channel.error) {
-                <div class="channel-error">
-                  <mat-icon>error_outline</mat-icon>
-                  <span>{{ channel.error }}</span>
-                </div>
-              }
-
-              @if (!isChannelCollapsed(channel.channelId)) {
-                @if (channel.videos.length > 0) {
-                  <div class="videos-grid">
-                    @for (video of channel.videos; track video.videoId) {
-                      <div class="video-card">
-                        <div class="video-thumbnail" tabindex="0" role="button" (click)="playVideo(video)" (keydown.enter)="playVideo(video)" (keydown.space)="playVideo(video)">
-                          <img [src]="video.thumbnail" [alt]="video.title" loading="lazy" />
-                          <div class="play-overlay">
-                            <mat-icon>play_circle</mat-icon>
-                          </div>
-                        </div>
-                        <div class="video-details">
-                          <div class="video-title-row">
-                            <h3 class="video-title">{{ video.title }}</h3>
-                            <button mat-icon-button [matMenuTriggerFor]="videoMenu" class="video-menu-btn" (click)="$event.stopPropagation()">
-                              <mat-icon>more_vert</mat-icon>
-                            </button>
-                            <mat-menu #videoMenu="matMenu">
-                              <button mat-menu-item (click)="playNow(video)">
-                                <mat-icon>play_arrow</mat-icon>
-                                <span>Play now</span>
-                              </button>
-                              <button mat-menu-item (click)="addToQueue(video)">
-                                <mat-icon>queue</mat-icon>
-                                <span>Add to queue</span>
-                              </button>
-                            </mat-menu>
-                          </div>
-                          <div class="video-meta">
-                            <span class="views">{{ formatViews(video.views) }} views</span>
-                            <span class="separator">•</span>
-                            <span class="date">{{ video.published | date:'mediumDate' }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                } @else if (!channel.loading) {
-                  <p class="no-videos">No videos found</p>
-                }
-              }
-            </section>
-          }
+            }
+          </div>
         }
       </div>
     }
   `,
   styleUrl: './youtube.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class YouTubeComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly corsProxy = inject(CorsProxyService);
   private readonly nostrService = inject(NostrService);
-  private readonly mediaPlayer = inject(MediaPlayerService);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly sanitizer = inject(DomSanitizer);
   protected readonly app = inject(ApplicationService);
 
   readonly loading = signal(true);
   readonly channels = signal<YouTubeChannel[]>([]);
   readonly channelEntries = signal<YouTubeChannelEntry[]>([]);
-  readonly currentVideo = signal<YouTubeVideo | null>(null);
-  readonly collapsedChannels = signal<Set<string>>(new Set());
   readonly migrating = signal(false);
   readonly oldBookmarkCount = signal(0);
 
@@ -368,22 +270,6 @@ export class YouTubeComponent {
     });
   }
 
-  toggleChannel(channelId: string): void {
-    this.collapsedChannels.update(set => {
-      const newSet = new Set(set);
-      if (newSet.has(channelId)) {
-        newSet.delete(channelId);
-      } else {
-        newSet.add(channelId);
-      }
-      return newSet;
-    });
-  }
-
-  isChannelCollapsed(channelId: string): boolean {
-    return this.collapsedChannels().has(channelId);
-  }
-
   async openAddChannelDialog(): Promise<void> {
     const { AddYouTubeChannelDialogComponent } = await import(
       './add-youtube-channel-dialog/add-youtube-channel-dialog.component'
@@ -398,6 +284,16 @@ export class YouTubeComponent {
     if (result) {
       await this.createYouTubeBookmarkSet(result);
     }
+  }
+
+  openChannelVideos(channel: YouTubeChannel): void {
+    this.layout.navigateToRightPanel(`youtube/channel/${channel.channelId}`, {
+      state: {
+        title: channel.title,
+        feedUrl: channel.feedUrl,
+        image: channel.image,
+      },
+    });
   }
 
   private async createYouTubeBookmarkSet(data: {
@@ -503,15 +399,15 @@ export class YouTubeComponent {
 
       const channelList: YouTubeChannel[] = entries.map(entry => ({
         ...entry,
-        videos: [],
+        videoCount: 0,
         loading: false,
       }));
 
       this.channels.set(channelList);
 
-      // Load videos for each channel
+      // Fetch video counts for each channel
       for (const channel of channelList) {
-        this.fetchChannelVideos(channel);
+        this.fetchChannelVideoCount(channel);
       }
     } catch (error) {
       this.logger.error('Error loading YouTube bookmarks:', error);
@@ -614,121 +510,43 @@ export class YouTubeComponent {
     }
   }
 
-  async fetchChannelVideos(channel: YouTubeChannel): Promise<void> {
-    // Update channel loading state
+  private async fetchChannelVideoCount(channel: YouTubeChannel): Promise<void> {
     this.channels.update(channels =>
       channels.map(c => (c.channelId === channel.channelId ? { ...c, loading: true, error: undefined } : c))
     );
 
     try {
-      // Use our CORS proxy to fetch the RSS feed
       const xmlText = await this.corsProxy.fetchText(channel.feedUrl);
-      const videos = this.parseRssFeed(xmlText, channel.title, channel.channelId);
+      const count = this.countVideosInFeed(xmlText);
 
       this.channels.update(channels =>
-        channels.map(c => (c.channelId === channel.channelId ? { ...c, videos, loading: false } : c))
+        channels.map(c => (c.channelId === channel.channelId ? { ...c, videoCount: count, loading: false } : c))
       );
     } catch (error) {
       this.logger.error(`Error fetching videos for ${channel.title}:`, error);
       this.channels.update(channels =>
         channels.map(c =>
           c.channelId === channel.channelId
-            ? { ...c, loading: false, error: 'Failed to load videos. Try refreshing.' }
+            ? { ...c, loading: false, error: 'Failed to load videos' }
             : c
         )
       );
     }
   }
 
-  private parseRssFeed(xmlText: string, channelTitle: string, channelId: string): YouTubeVideo[] {
+  private countVideosInFeed(xmlText: string): number {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlText, 'application/xml');
-
-    const entries = doc.querySelectorAll('entry');
-    const videos: YouTubeVideo[] = [];
-
-    entries.forEach(entry => {
-      const videoId = entry.querySelector('videoId')?.textContent || '';
-      const title = entry.querySelector('title')?.textContent || '';
-      const link = entry.querySelector('link[rel="alternate"]')?.getAttribute('href') || '';
-      const publishedStr = entry.querySelector('published')?.textContent || '';
-      const thumbnail = entry.querySelector('thumbnail')?.getAttribute('url') || 
-                        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-      const description = entry.querySelector('description')?.textContent || '';
-      const viewsStr = entry.querySelector('statistics')?.getAttribute('views') || '0';
-
-      if (videoId && title) {
-        videos.push({
-          videoId,
-          title,
-          link,
-          published: new Date(publishedStr),
-          thumbnail,
-          description,
-          views: parseInt(viewsStr, 10) || 0,
-          channelTitle,
-          channelId,
-        });
-      }
-    });
-
-    return videos;
-  }
-
-  private createMediaItem(video: YouTubeVideo): MediaItem {
-    return {
-      artwork: video.thumbnail,
-      title: video.title,
-      artist: video.channelTitle,
-      source: `https://www.youtube.com/watch?v=${video.videoId}`,
-      type: 'YouTube',
-    };
-  }
-
-  playNow(video: YouTubeVideo): void {
-    const mediaItem = this.createMediaItem(video);
-    this.mediaPlayer.play(mediaItem);
-    this.snackBar.open('Playing in media player', 'Close', { duration: 2000 });
-  }
-
-  addToQueue(video: YouTubeVideo): void {
-    const mediaItem = this.createMediaItem(video);
-    this.mediaPlayer.enque(mediaItem);
-    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
-  }
-
-  playVideo(video: YouTubeVideo): void {
-    this.currentVideo.set(video);
-    // Scroll to top to see the video player
-    this.layout.scrollToTop();
-  }
-
-  closeVideo(): void {
-    this.currentVideo.set(null);
-  }
-
-  getEmbedUrl(videoId: string): SafeResourceUrl {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(
-      `https://www.youtube.com/embed/${videoId}?autoplay=1`
-    );
-  }
-
-  formatViews(views: number): string {
-    if (views >= 1_000_000) {
-      return `${(views / 1_000_000).toFixed(1)}M`;
-    } else if (views >= 1_000) {
-      return `${(views / 1_000).toFixed(1)}K`;
-    }
-    return views.toString();
+    return doc.querySelectorAll('entry').length;
   }
 
   refreshChannel(channel: YouTubeChannel): void {
-    this.fetchChannelVideos(channel);
+    this.fetchChannelVideoCount(channel);
   }
 
   refreshAll(): void {
     for (const channel of this.channels()) {
-      this.fetchChannelVideos(channel);
+      this.fetchChannelVideoCount(channel);
     }
   }
 }

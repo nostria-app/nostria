@@ -242,6 +242,7 @@ export class TwoColumnLayoutService {
     'badges/details': { type: 'detail' },
     'badges/create': { type: 'detail' },
     'badges/edit': { type: 'detail' },
+    'youtube/channel': { type: 'detail' },
     'collections/media/details': { type: 'detail' },
     'playlists/edit': { type: 'detail' },
     'polls/edit': { type: 'detail' },
