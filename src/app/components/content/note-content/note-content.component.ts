@@ -827,6 +827,20 @@ export class NoteContentComponent implements OnDestroy {
     };
   }
 
+  getArticleSlugFromEvent(event: NostrEvent): string | null {
+    const dTag = event.tags.find(tag => tag[0] === 'd' && tag[1]);
+    return dTag?.[1] || null;
+  }
+
+  getEventMentionRelayHints(token: ContentToken): string[] | undefined {
+    if (token.type !== 'nostr-mention' || token.nostrData?.type !== 'nevent') {
+      return undefined;
+    }
+
+    const data = token.nostrData.data as { relays?: string[] };
+    return data.relays && data.relays.length > 0 ? data.relays : undefined;
+  }
+
   /**
    * Check if an naddr token is a music mention (track or playlist)
    */

@@ -323,6 +323,13 @@
 <div class="embedded-poll-event">
   <app-poll-event [event]="mention!.event!.event"></app-poll-event>
 </div>
+} @else if (mention!.event!.event.kind === 30023) {
+<!-- Article Event (kind 30023, NIP-23) -->
+<div class="embedded-article-event">
+  <app-article [slug]="getArticleSlugFromEvent(mention!.event!.event) || ''" [pubkey]="mention!.event!.event.pubkey"
+    [kind]="mention!.event!.event.kind" [relayHints]="getEventMentionRelayHints(token)" mode="compact"
+    [showAuthor]="true" [showMetadata]="true" [clickable]="true"></app-article>
+</div>
 } @else {
 <!-- Regular event mention (kind 1, etc.) -->
 <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
