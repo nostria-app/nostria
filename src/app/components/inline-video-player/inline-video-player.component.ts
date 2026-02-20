@@ -26,6 +26,7 @@ import {
 } from '../../utils/fullscreen';
 import { VideoControlsComponent, VideoControlsConfig } from '../video-controls/video-controls.component';
 import { CastService } from '../../services/cast.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
   showQuality: false,
@@ -53,6 +54,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   private readonly overlayContainer = inject(OverlayContainer);
   private readonly videoPlayback = inject(VideoPlaybackService);
   private readonly castService = inject(CastService);
+  private readonly utilities = inject(UtilitiesService);
 
   @ViewChild(VideoControlsComponent) videoControlsRef?: VideoControlsComponent;
   // Inputs
@@ -105,6 +107,12 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   // Computed source - use blob URL if available, otherwise original src
   effectiveSrc = computed(() => this.blobUrl() ?? this.src());
+  private generatedPoster = signal<string | null>(null);
+  private posterFallbackAttemptedForSrc: string | null = null;
+
+  effectivePoster = computed(() => this.poster() || this.generatedPoster() || undefined);
+
+  effectivePreload = computed<'metadata' | 'auto'>(() => this.effectivePoster() ? 'metadata' : 'auto');
 
   effectiveControlsConfig = computed<VideoControlsConfig>(() => ({
     ...DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG,
@@ -161,8 +169,16 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      // Re-attach listeners when src changes
-      const currentSrc = this.src();
+      // Re-attach listeners when effective source changes
+      const currentSrc = this.effectiveSrc();
+
+      if (currentSrc !== this.posterFallbackAttemptedForSrc) {
+        this.posterFallbackAttemptedForSrc = null;
+        this.clearGeneratedPoster();
+      }
+
+      this.ensurePosterFallback(currentSrc);
+
       if (currentSrc && this.videoElement?.nativeElement) {
         this.hasPlayedOnce.set(false);
         this.paused.set(true);
@@ -314,6 +330,8 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       URL.revokeObjectURL(blob);
     }
 
+    this.clearGeneratedPoster();
+
     // Unregister from video playback service
     const video = this.videoElement?.nativeElement;
     if (video) {
@@ -366,11 +384,25 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       const mutedState = this.shouldBeMuted();
       video.muted = mutedState;
       this.isMuted.set(mutedState);
+
+      const currentSource = this.effectiveSrc();
+      if (currentSource) {
+        this.ensurePosterFallback(currentSource);
+      }
+
+      this.ensurePreviewFrame(video);
     };
     const onCanPlay = () => {
       this.isReady.set(true);
       this.hasError.set(false);
       this.videoCanPlay.emit();
+
+      const currentSource = this.effectiveSrc();
+      if (currentSource) {
+        this.ensurePosterFallback(currentSource);
+      }
+
+      this.ensurePreviewFrame(video);
 
       const canAutoPlay = this.inFeedsPanel() ? this.videoPlayback.autoPlayAllowed() : true;
       if (canAutoPlay && this.autoplay() && this.isInViewport() && !this.hasPlayedOnce() && !this.blurred() && video.paused) {
@@ -502,6 +534,53 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       // Blob fallback also failed, show error state
       this.hasError.set(true);
     }
+  }
+
+  private ensurePosterFallback(src: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    if (!src || this.poster() || this.generatedPoster() || this.posterFallbackAttemptedForSrc === src) {
+      return;
+    }
+
+    this.posterFallbackAttemptedForSrc = src;
+
+    void this.generatePosterFallback(src);
+  }
+
+  private async generatePosterFallback(src: string): Promise<void> {
+    try {
+      const result = await this.utilities.extractThumbnailFromVideo(src, 0.35);
+
+      if (this.src() !== src || this.poster()) {
+        URL.revokeObjectURL(result.objectUrl);
+        return;
+      }
+
+      this.clearGeneratedPoster();
+      this.generatedPoster.set(result.objectUrl);
+    } catch {
+      // Allow future retry attempts if this attempt failed.
+      if (this.effectiveSrc() === src && !this.poster() && !this.generatedPoster()) {
+        this.posterFallbackAttemptedForSrc = null;
+      }
+    }
+  }
+
+  private clearGeneratedPoster(): void {
+    const currentPoster = this.generatedPoster();
+    if (currentPoster) {
+      URL.revokeObjectURL(currentPoster);
+      this.generatedPoster.set(null);
+    }
+  }
+
+  private ensurePreviewFrame(video: HTMLVideoElement): void {
+    // Keep initial timeline position stable (0:00) on load.
+    // Preview fallback is handled via generated poster extraction only.
+    void video;
   }
 
   // Control methods
