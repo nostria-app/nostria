@@ -6,7 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { NostriaService } from '../interfaces';
 import { BadgeService } from './badge.service';
 import { NotificationService } from './notification.service';
-import { NostrService } from './nostr.service';
+import { NostrService, NostrUser } from './nostr.service';
 import { MessagingService } from './messaging.service';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { AccountRelayService } from './relays/account-relay';
@@ -39,12 +39,20 @@ export class StateService implements NostriaService {
   following = inject(FollowingService);
   metricsTracking = inject(MetricsTrackingService);
   settingsService = inject(SettingsService);
+  private skipNextExtensionPubkeyVerificationFor: string | null = null;
+  private extensionPubkeyVerificationInFlightFor: string | null = null;
 
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
       if (account) {
         try {
+          if (account.source === 'extension') {
+            // Trigger extension pubkey verification as early as possible on startup.
+            // This runs in the background and never blocks loading.
+            this.startExtensionPubkeyVerification(account);
+          }
+
           // Clear previous account state first
           this.clear();
 
@@ -56,19 +64,6 @@ export class StateService implements NostriaService {
           await this.nostr.loadCachedData();
           this.logger.info(`[StateService] Cached data loaded in ${Date.now() - startTime}ms`);
 
-          // For extension-based accounts, wait for the browser extension to be available
-          // before loading data that may require signing or decryption
-          if (account.source === 'extension') {
-            this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
-            const extensionAvailable = await this.utilities.waitForNostrExtension();
-            if (!extensionAvailable) {
-              this.logger.warn('[StateService] Browser extension not available after timeout');
-              // Continue anyway - individual operations will handle missing extension
-            } else {
-              this.logger.info('[StateService] Browser extension is ready');
-            }
-          }
-
           await this.load();
         } catch (error) {
           console.error('Error during account change:', error);
@@ -78,6 +73,40 @@ export class StateService implements NostriaService {
       } else {
         // Clear when account is null (logout)
         this.clear();
+      }
+    });
+  }
+
+  private startExtensionPubkeyVerification(account: NostrUser): void {
+    if (this.skipNextExtensionPubkeyVerificationFor === account.pubkey) {
+      this.logger.info('[StateService] Skipping redundant extension pubkey verification for account', {
+        pubkey: account.pubkey.substring(0, 16),
+      });
+      this.skipNextExtensionPubkeyVerificationFor = null;
+      return;
+    }
+
+    if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
+      return;
+    }
+
+    this.extensionPubkeyVerificationInFlightFor = account.pubkey;
+
+    void (async () => {
+      this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
+
+      // Use a longer timeout because extension injection can be delayed during startup.
+      const extensionAvailable = await this.utilities.waitForNostrExtension(20000);
+      if (!extensionAvailable) {
+        this.logger.warn('[StateService] Browser extension not available after timeout');
+        return;
+      }
+
+      this.logger.info('[StateService] Browser extension is ready');
+      this.verifyExtensionPubkey(account);
+    })().finally(() => {
+      if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
+        this.extensionPubkeyVerificationInFlightFor = null;
       }
     });
   }
@@ -230,6 +259,88 @@ export class StateService implements NostriaService {
       // Don't fail the entire load process if discovery relay setup fails
       this.logger.error('[StateService] Error ensuring default discovery relays:', error);
     }
+  }
+
+  /**
+   * Non-blocking verification of the extension's active pubkey.
+   * 
+   * Browser extensions (NIP-07) can have multiple accounts. The user may have
+   * switched their active key in the extension since last using the app. We
+   * optimistically continue with the stored account, but fire off a
+   * getPublicKey() request in the background. If the returned pubkey differs,
+   * we switch to that account (existing or newly created).
+   * 
+   * Some extensions (e.g. nos2x) require user approval via a popup for
+   * getPublicKey(). If the user doesn't interact with it, the promise hangs
+   * forever, so we apply a timeout.
+   */
+  private verifyExtensionPubkey(currentAccount: NostrUser): void {
+    if (!window.nostr) {
+      return;
+    }
+
+    this.logger.info('[StateService] Querying extension for active pubkey (non-blocking)');
+
+    // Timeout: extensions that require user approval via a popup may hang
+    // indefinitely if the user doesn't interact with the popup.
+    const TIMEOUT_MS = 60000;
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error('Extension getPublicKey() timed out')), TIMEOUT_MS);
+    });
+
+    // Fire-and-forget — don't await, don't block the app
+    Promise.race([
+      window.nostr.getPublicKey(),
+      timeoutPromise,
+    ]).then(async (extensionPubkey) => {
+      if (!extensionPubkey) {
+        this.logger.warn('[StateService] Extension returned empty pubkey');
+        return;
+      }
+
+      // Same pubkey — nothing to do
+      if (extensionPubkey === currentAccount.pubkey) {
+        this.logger.info('[StateService] Extension pubkey matches current account');
+        return;
+      }
+
+      // Different pubkey — the user switched keys in their extension
+      this.logger.info('[StateService] Extension pubkey differs from current account', {
+        current: currentAccount.pubkey.substring(0, 16),
+        extension: extensionPubkey.substring(0, 16),
+      });
+
+      // We already know the active extension pubkey from this request.
+      // Mark the next account-change cycle to avoid a redundant second request.
+      this.skipNextExtensionPubkeyVerificationFor = extensionPubkey;
+
+      // Check if we already have this account
+      const existingAccount = this.accountState.accounts().find(
+        (a) => a.pubkey === extensionPubkey
+      );
+
+      if (existingAccount) {
+        // Switch to the existing account
+        this.logger.info('[StateService] Switching to existing account from extension');
+        await this.nostr.switchToUser(extensionPubkey);
+      } else {
+        // Create a new extension account and switch to it
+        this.logger.info('[StateService] Creating new account from extension pubkey');
+        const newUser: NostrUser = {
+          pubkey: extensionPubkey,
+          name: this.utilities.getTruncatedNpub(extensionPubkey),
+          source: 'extension',
+          lastUsed: Date.now(),
+          hasActivated: true,
+        };
+        await this.nostr.setAccount(newUser);
+      }
+    }).catch((error) => {
+      // Don't disrupt the app if the extension rejects or times out.
+      // Timeout is expected for extensions that require popup approval —
+      // the user will still be asked to approve when they first sign an event.
+      this.logger.warn('[StateService] Extension getPublicKey() failed (non-blocking)', error);
+    });
   }
 
   clear() {

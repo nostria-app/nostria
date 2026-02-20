@@ -96,6 +96,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
   subscriptionHistory = signal<SubscriptionHistoryItem[]>([]);
   paymentHistory = signal<PaymentHistoryItem[]>([]);
   isLoadingHistory = signal(false);
+  private premiumDataLoaded = false;
 
   // Premium computed values
   isExpired = computed(() => {
@@ -140,6 +141,15 @@ export class AccountsComponent implements OnInit, OnDestroy {
         this.cachedMnemonic.set('');
       }
     });
+
+    // Load premium data only when the Premium tab is selected
+    effect(() => {
+      const tabIndex = this.selectedTabIndex();
+      if (tabIndex === 2 && !this.premiumDataLoaded) {
+        this.premiumDataLoaded = true;
+        this.refreshPremiumData();
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -158,9 +168,6 @@ export class AccountsComponent implements OnInit, OnDestroy {
     // Load credentials
     this.loadNsec();
     this.loadMnemonic();
-
-    // Refresh subscription and load history
-    this.refreshPremiumData();
   }
 
   ngOnDestroy(): void {
