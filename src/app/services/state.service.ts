@@ -92,6 +92,13 @@ export class StateService implements NostriaService {
 
     this.extensionPubkeyVerificationInFlightFor = account.pubkey;
 
+    if (this.utilities.isBrowser() && window.nostr) {
+      this.logger.info('[StateService] Browser extension already available, requesting pubkey immediately');
+      this.verifyExtensionPubkey(account);
+      this.extensionPubkeyVerificationInFlightFor = null;
+      return;
+    }
+
     void (async () => {
       this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
 
