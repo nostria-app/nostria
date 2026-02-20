@@ -4,6 +4,8 @@ import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService, TrustMetrics } from './database.service';
 import { TrustProviderService } from './trust-provider.service';
+import { RelayBlockService } from './relays/relay-block.service';
+import { RelayAuthService } from './relays/relay-auth.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 /** Pending relay fetch request waiting in the queue */
@@ -26,6 +28,8 @@ export class TrustService {
   private relayPool = inject(RelayPoolService);
   private database = inject(DatabaseService);
   private trustProviderService = inject(TrustProviderService);
+  private relayBlock = inject(RelayBlockService);
+  private relayAuth = inject(RelayAuthService);
   private injector = inject(Injector);
 
   // In-memory cache for quick access
@@ -35,7 +39,12 @@ export class TrustService {
   private pendingFetches = new Map<string, Promise<TrustMetrics | null>>();
 
   // Track pubkeys that have no metrics (to avoid repeated relay queries)
-  private notFoundCache = new Set<string>();
+  // Entries have a timestamp and expire after NOT_FOUND_TTL_MS to allow retries
+  // when relay connectivity was temporarily unavailable.
+  private notFoundCache = new Map<string, number>();
+
+  /** How long a "not found" entry stays valid before retrying the relay */
+  private readonly NOT_FOUND_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   // Signal for tracking loaded pubkeys
   private loadedPubkeys = signal<Set<string>>(new Set());
@@ -118,8 +127,8 @@ export class TrustService {
    * Internal method to fetch metrics from database or relay
    */
   private async fetchMetricsInternal(pubkey: string): Promise<TrustMetrics | null> {
-    // Check if we've already determined this pubkey has no metrics
-    if (this.notFoundCache.has(pubkey)) {
+    // Check if we've already determined this pubkey has no metrics (with TTL)
+    if (this.isInNotFoundCache(pubkey)) {
       return null;
     }
 
@@ -229,6 +238,18 @@ export class TrustService {
 
     try {
       const { relayUrls, authors } = this.resolveProviderConfig();
+
+      // Trust relays are essential infrastructure — clear any blocks/auth-failures
+      // that may have accumulated (e.g., transient WebSocket failures in WKWebView).
+      // Without this, a couple of connection hiccups can permanently block trust
+      // data for the entire session.
+      for (const url of relayUrls) {
+        this.relayBlock.recordSuccess(url);
+        if (this.relayAuth.hasAuthFailed(url)) {
+          this.relayAuth.resetAuthFailure(url);
+        }
+      }
+
       this.logger.debug(
         `Fetching trust metrics for ${pubkeys.length} pubkeys from ${relayUrls.join(', ')}`,
         { authors: authors.length > 0 ? authors : 'any' }
@@ -244,6 +265,16 @@ export class TrustService {
       }
 
       const events = await this.relayPool.query(relayUrls, filter, 10_000);
+
+      if (events.length === 0) {
+        this.logger.debug(
+          `Trust relay returned 0 events for ${pubkeys.length} pubkeys from ${relayUrls.join(', ')}`
+        );
+      } else {
+        this.logger.debug(
+          `Trust relay returned ${events.length} events for ${pubkeys.length} pubkeys`
+        );
+      }
 
       // Index events by their 'd' tag (the target pubkey)
       const eventByPubkey = new Map<string, NostrEvent>();
@@ -263,7 +294,7 @@ export class TrustService {
         try {
           const event = eventByPubkey.get(req.pubkey);
           if (!event) {
-            this.notFoundCache.add(req.pubkey);
+            this.notFoundCache.set(req.pubkey, Date.now());
             req.resolve(null);
             continue;
           }
@@ -288,7 +319,11 @@ export class TrustService {
         }
       }
     } catch (error) {
-      this.logger.error(`Batch trust metrics relay query failed`, error);
+      this.logger.error(`Batch trust metrics relay query failed for ${pubkeys.length} pubkeys`, {
+        error,
+        relayUrls: this.resolveProviderConfig().relayUrls,
+        blockedRelays: this.relayBlock.getBlockedRelays().map(r => r.url),
+      });
       // Reject all requests in this batch
       for (const req of batch) {
         req.resolve(null);
@@ -329,7 +364,7 @@ export class TrustService {
     for (const pubkey of pubkeys) {
       if (!forceRefresh && this.metricsCache.has(pubkey)) {
         results.set(pubkey, this.metricsCache.get(pubkey)!);
-      } else if (!forceRefresh && this.notFoundCache.has(pubkey)) {
+      } else if (!forceRefresh && this.isInNotFoundCache(pubkey)) {
         results.set(pubkey, null);
       } else {
         toFetch.push(pubkey);
@@ -500,6 +535,22 @@ export class TrustService {
    */
   hasMetrics(pubkey: string): boolean {
     return this.metricsCache.has(pubkey);
+  }
+
+  /**
+   * Check if a pubkey is in the not-found cache and the entry hasn't expired.
+   * Expired entries are automatically removed.
+   */
+  private isInNotFoundCache(pubkey: string): boolean {
+    const timestamp = this.notFoundCache.get(pubkey);
+    if (timestamp === undefined) {
+      return false;
+    }
+    if (Date.now() - timestamp > this.NOT_FOUND_TTL_MS) {
+      this.notFoundCache.delete(pubkey);
+      return false;
+    }
+    return true;
   }
 
   /**

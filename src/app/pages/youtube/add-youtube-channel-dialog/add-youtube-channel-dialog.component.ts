@@ -1,15 +1,24 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CorsProxyService } from '../../../services/cors-proxy.service';
 import { LoggerService } from '../../../services/logger.service';
 
 export interface AddYouTubeChannelData {
+  channelId: string;
+  feedUrl: string;
+  title: string;
+  description: string;
+  image: string;
+}
+
+export interface EditYouTubeChannelDialogData {
   channelId: string;
   feedUrl: string;
   title: string;
@@ -27,30 +36,34 @@ export interface AddYouTubeChannelData {
     MatInputModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>Add YouTube Channel</h2>
+    <h2 mat-dialog-title>{{ isEditMode ? 'Edit YouTube Channel' : 'Add YouTube Channel' }}</h2>
     <mat-dialog-content>
       <div class="form-container">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Channel URL, ID, or Feed URL</mat-label>
-          <input
-            matInput
-            [(ngModel)]="channelInput"
-            (ngModelChange)="onInputChange()"
-            placeholder="https://www.youtube.com/&#64;NASA or channel ID"
-          />
-          <mat-hint>Paste a YouTube channel URL, &#64;handle, channel ID, or RSS feed URL</mat-hint>
-          @if (error()) {
-            <mat-error>{{ error() }}</mat-error>
-          }
-        </mat-form-field>
+        @if (!isEditMode) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Channel URL, ID, or Feed URL</mat-label>
+            <input
+              matInput
+              [(ngModel)]="channelInput"
+              (ngModelChange)="onInputChange()"
+              (keydown.enter)="fetchAndValidate()"
+              placeholder="https://www.youtube.com/&#64;NASA or channel ID"
+            />
+            <mat-hint>Paste a YouTube channel URL, &#64;handle, channel ID, or RSS feed URL</mat-hint>
+            @if (error()) {
+              <mat-error>{{ error() }}</mat-error>
+            }
+          </mat-form-field>
 
-        @if (loading()) {
-          <div class="loading-indicator">
-            <mat-spinner diameter="24" />
-            <span>Fetching channel info...</span>
-          </div>
+          @if (loading()) {
+            <div class="loading-indicator">
+              <mat-spinner diameter="24" />
+              <span>Fetching channel info...</span>
+            </div>
+          }
         }
 
         @if (channelTitle()) {
@@ -62,35 +75,52 @@ export interface AddYouTubeChannelData {
               <span class="channel-preview-title">{{ channelTitle() }}</span>
               <span class="channel-preview-id">{{ channelId() }}</span>
             </div>
+            @if (isEditMode) {
+              <button
+                mat-icon-button
+                (click)="reloadAvatar()"
+                [disabled]="loadingAvatar()"
+                matTooltip="Reload avatar from YouTube"
+                class="reload-avatar-btn"
+              >
+                @if (loadingAvatar()) {
+                  <mat-spinner diameter="20" />
+                } @else {
+                  <mat-icon>refresh</mat-icon>
+                }
+              </button>
+            }
           </div>
         }
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Title</mat-label>
-          <input matInput [(ngModel)]="title" placeholder="Channel name" />
-          <mat-hint>Will be auto-filled from the feed if left empty</mat-hint>
-        </mat-form-field>
+        @if (channelTitle()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input matInput [(ngModel)]="title" placeholder="Channel name" />
+            <mat-hint>Custom name for this channel</mat-hint>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Description (optional)</mat-label>
-          <textarea
-            matInput
-            [(ngModel)]="description"
-            rows="3"
-            placeholder="Description of this channel"
-          ></textarea>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description (optional)</mat-label>
+            <textarea
+              matInput
+              [(ngModel)]="description"
+              rows="3"
+              placeholder="Description of this channel"
+            ></textarea>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Image URL (optional)</mat-label>
-          <input matInput [(ngModel)]="image" placeholder="https://..." />
-          <mat-hint>Channel avatar or thumbnail URL</mat-hint>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Image URL (optional)</mat-label>
+            <input matInput [(ngModel)]="image" placeholder="https://..." />
+            <mat-hint>Channel avatar or thumbnail URL</mat-hint>
+          </mat-form-field>
+        }
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancel()">Cancel</button>
-      @if (!channelTitle()) {
+      @if (!isEditMode && !channelTitle()) {
         <button
           mat-flat-button
           (click)="fetchAndValidate()"
@@ -99,14 +129,14 @@ export interface AddYouTubeChannelData {
           <mat-icon>search</mat-icon>
           Fetch Channel
         </button>
-      } @else {
+      }
+      @if (channelTitle()) {
         <button
           mat-flat-button
-          (click)="fetchAndValidate()"
-          [disabled]="loading()"
+          (click)="save()"
         >
-          <mat-icon>add</mat-icon>
-          Add Channel
+          <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+          {{ isEditMode ? 'Save Changes' : 'Add Channel' }}
         </button>
       }
     </mat-dialog-actions>
@@ -159,6 +189,7 @@ export interface AddYouTubeChannelData {
         display: flex;
         flex-direction: column;
         gap: 2px;
+        flex: 1;
       }
 
       .channel-preview-title {
@@ -168,6 +199,10 @@ export interface AddYouTubeChannelData {
       .channel-preview-id {
         font-size: 0.85rem;
         color: var(--mat-sys-on-surface-variant);
+      }
+
+      .reload-avatar-btn {
+        flex-shrink: 0;
       }
 
       @media (max-width: 599px) {
@@ -183,18 +218,37 @@ export class AddYouTubeChannelDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<AddYouTubeChannelDialogComponent>);
   private readonly corsProxy = inject(CorsProxyService);
   private readonly logger = inject(LoggerService);
+  private readonly editData = inject<EditYouTubeChannelDialogData | null>(MAT_DIALOG_DATA, { optional: true });
 
   channelInput = '';
   title = '';
   description = '';
   image = '';
 
+  readonly isEditMode: boolean;
+
   readonly loading = signal(false);
+  readonly loadingAvatar = signal(false);
   readonly error = signal('');
   readonly channelId = signal('');
   readonly channelTitle = signal('');
   readonly channelImage = signal('');
   readonly feedUrl = signal('');
+
+  constructor() {
+    if (this.editData) {
+      this.isEditMode = true;
+      this.channelId.set(this.editData.channelId);
+      this.feedUrl.set(this.editData.feedUrl);
+      this.channelTitle.set(this.editData.title);
+      this.channelImage.set(this.editData.image);
+      this.title = this.editData.title;
+      this.description = this.editData.description;
+      this.image = this.editData.image;
+    } else {
+      this.isEditMode = false;
+    }
+  }
 
   onInputChange(): void {
     // Reset preview when input changes
@@ -203,15 +257,30 @@ export class AddYouTubeChannelDialogComponent {
     this.error.set('');
   }
 
+  async reloadAvatar(): Promise<void> {
+    const channelId = this.channelId();
+    if (!channelId) return;
+
+    this.loadingAvatar.set(true);
+    try {
+      const thumbnailUrl = await this.fetchChannelThumbnail(channelId);
+      if (thumbnailUrl) {
+        this.channelImage.set(thumbnailUrl);
+        this.image = thumbnailUrl;
+      }
+    } catch (err) {
+      this.logger.error('Error reloading avatar:', err);
+    } finally {
+      this.loadingAvatar.set(false);
+    }
+  }
+
   async fetchAndValidate(): Promise<void> {
     const input = this.channelInput.trim();
     if (!input) return;
 
-    // If we already have channel info, save and close
-    if (this.channelTitle()) {
-      this.save();
-      return;
-    }
+    // If already fetched, don't re-fetch
+    if (this.channelTitle()) return;
 
     this.loading.set(true);
     this.error.set('');

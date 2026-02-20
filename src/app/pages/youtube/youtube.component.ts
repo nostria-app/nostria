@@ -221,6 +221,10 @@ interface YouTubeChannel extends YouTubeChannelEntry {
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #channelMenu="matMenu">
+                    <button mat-menu-item (click)="editChannel(channel)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit</span>
+                    </button>
                     <button mat-menu-item (click)="refreshChannel(channel)">
                       <mat-icon>refresh</mat-icon>
                       <span>Refresh</span>
@@ -292,6 +296,29 @@ export class YouTubeComponent {
     }
   }
 
+  async editChannel(channel: YouTubeChannel): Promise<void> {
+    const { AddYouTubeChannelDialogComponent } = await import(
+      './add-youtube-channel-dialog/add-youtube-channel-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(AddYouTubeChannelDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: {
+        channelId: channel.channelId,
+        feedUrl: channel.feedUrl,
+        title: channel.title,
+        description: channel.description,
+        image: channel.image,
+      },
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
+      await this.updateYouTubeChannel(result);
+    }
+  }
+
   openChannelVideos(channel: YouTubeChannel): void {
     this.layout.navigateToRightPanel(`youtube/channel/${channel.channelId}`, {
       state: {
@@ -355,9 +382,12 @@ export class YouTubeComponent {
         feedUrl: data.feedUrl,
       };
 
-      // Get existing channels and add the new one
+      // Get existing channels — replace if same channelId exists, otherwise append
       const existing = this.channelEntries();
-      const updated = [...existing, entry];
+      const alreadyExists = existing.some(e => e.channelId === entry.channelId);
+      const updated = alreadyExists
+        ? existing.map(e => e.channelId === entry.channelId ? entry : e)
+        : [...existing, entry];
 
       await this.publishYouTubeEvent(updated);
 
@@ -386,6 +416,40 @@ export class YouTubeComponent {
     } catch (error) {
       this.logger.error('Error removing YouTube channel:', error);
       this.snackBar.open('Failed to remove channel. Please try again.', 'Close', { duration: 3000 });
+    }
+  }
+
+  private async updateYouTubeChannel(data: {
+    channelId: string;
+    feedUrl: string;
+    title: string;
+    description: string;
+    image: string;
+  }): Promise<void> {
+    try {
+      const existing = this.channelEntries();
+      const updated = existing.map(entry =>
+        entry.channelId === data.channelId
+          ? { ...entry, title: data.title, description: data.description, image: data.image }
+          : entry
+      );
+
+      await this.publishYouTubeEvent(updated);
+
+      this.snackBar.open('YouTube channel updated!', 'Close', { duration: 3000 });
+
+      // Update local state immediately
+      this.channelEntries.set(updated);
+      this.channels.update(channels =>
+        channels.map(c =>
+          c.channelId === data.channelId
+            ? { ...c, title: data.title, description: data.description, image: data.image }
+            : c
+        )
+      );
+    } catch (error) {
+      this.logger.error('Error updating YouTube channel:', error);
+      this.snackBar.open('Failed to update channel. Please try again.', 'Close', { duration: 3000 });
     }
   }
 
