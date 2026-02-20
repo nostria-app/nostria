@@ -35,6 +35,7 @@ export class RelayBlockService {
     'wss://relay.damus.io/',
     'wss://nos.lol/',
     'wss://relay.primal.net/',
+    'wss://premium.primal.net',
     'wss://relay.snort.social/',
     'wss://relay.nostr.bg/',
     'wss://nostr.wine/',

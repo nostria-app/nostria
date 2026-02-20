@@ -542,6 +542,7 @@ export class UtilitiesService {
     'wss://relay.damus.io/',
     'wss://nos.lol/',
     'wss://relay.primal.net/',
+    'wss://premium.primal.net',
     'wss://nostr.wine/',
     'wss://eden.nostr.land/',
     'wss://relay.snort.social/',

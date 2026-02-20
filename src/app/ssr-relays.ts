@@ -14,6 +14,7 @@ export const SSR_POPULAR_RELAYS = [
   'wss://nos.lol',
   'wss://relay.snort.social',
   'wss://relay.primal.net',
+  'wss://premium.primal.net',
   'wss://nostr.wine',
   'wss://relay.nos.social',
   'wss://nostr.mom',
