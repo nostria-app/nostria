@@ -1,8 +1,8 @@
 import {
   Component,
   inject,
-  computed,
   input,
+  computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -27,8 +27,9 @@ import { nip19 } from 'nostr-tools';
   templateUrl: './youtube-player.component.html',
   styleUrl: './youtube-player.component.scss',
   host: {
-    '[class.footer-mode]': 'footer()',
-    '[class.compact-mode]': '!footer()',
+    '[class.footer-mode]': '!layout.fullscreenMediaPlayer() && !layout.expandedMediaPlayer()',
+    '[class.footer-expanded-mode]': '!layout.fullscreenMediaPlayer() && layout.expandedMediaPlayer()',
+    '[class.compact-mode]': 'layout.fullscreenMediaPlayer()',
   },
 })
 export class YouTubePlayerComponent {
@@ -37,8 +38,17 @@ export class YouTubePlayerComponent {
 
   footer = input<boolean>(false);
 
+  /** Whether we're in fullscreen mode. For YouTube, the single instance always
+   *  lives in the footer-drag-zone with [footer]="true", so we read the layout
+   *  signal directly instead of relying on the footer input. */
+  readonly isFullscreen = computed(() => this.layout.fullscreenMediaPlayer());
+
   toggleFullscreen(): void {
     this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  toggleExpand(): void {
+    this.layout.expandedMediaPlayer.update(v => !v);
   }
 
   isNpubArtist(artist: string | undefined): boolean {

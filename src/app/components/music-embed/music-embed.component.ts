@@ -562,7 +562,6 @@ export class MusicEmbedComponent {
     };
 
     this.mediaPlayer.play(mediaItem);
-    this.snackBar.open('Now playing', 'Close', { duration: 2000 });
   }
 
   private async queueTrack(): Promise<void> {
@@ -609,7 +608,7 @@ export class MusicEmbedComponent {
       this.mediaPlayer.enque(mediaItems[i]);
     }
 
-    this.snackBar.open(`Playing ${mediaItems.length} tracks`, 'Close', { duration: 2000 });
+    this.snackBar.open(`Queued ${mediaItems.length} tracks`, 'Close', { duration: 2000 });
   }
 
   private async queuePlaylist(): Promise<void> {

@@ -1,60 +1,7 @@
-@if (media.current?.type === 'YouTube' || media.current?.type === 'Video') {
-<div #videoWindow class="video-window"
-  [class.minimized]="media.videoWindowState().isMinimized"
-  [class.maximized]="media.videoWindowState().isMaximized"
-  [class.dragging]="isDraggingState()"
-  [class.resizing]="isResizingState()"
-  (mousedown)="onMouseDown($event)">
-  <!-- Window title bar -->
-  <div class="window-titlebar">
-    <div class="window-title">
-      <span>{{ media.current?.title || 'Video Player' }}</span>
-    </div>
-
-    <div class="window-controls">
-      <button mat-icon-button class="control-button minimize" (click)="onMinimize()" title="Minimize">
-        <mat-icon>minimize</mat-icon>
-      </button>
-
-      <button mat-icon-button class="control-button maximize" (click)="onMaximize()" title="Maximize">
-        <mat-icon>{{
-          media.videoWindowState().isMaximized ? 'fullscreen_exit' : 'fullscreen'
-          }}</mat-icon>
-      </button>
-
-      <button mat-icon-button class="control-button close" (click)="onClose()" title="Close">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  </div>
-
-  <!-- Video content -->
-  @if (!media.videoWindowState().isMinimized) {
-  <div class="video-content">
-    @if (media.current?.type === 'YouTube') {
-    <div class="media-info">
-      @if (media.youtubeUrl()) {
-      <iframe sandbox="allow-scripts allow-same-origin allow-presentation" id="ytplayer" class="youtube-video"
-        type="text/html" [src]="media.youtubeUrl()" frameborder="0" allowfullscreen allow="autoplay"></iframe>
-      }
-    </div>
-    }
-
-    @if (media.current?.type === 'Video') {
-    <div class="media-info">
-      <video class="event-video" controls autoplay="true" preload="none">
-        <source [src]="media.videoUrl()" [type]="videoMimeType()" />
-      </video>
-    </div>
-    }
-  </div>
-  }
-
-  <!-- Resize handle -->
-  @if (!media.videoWindowState().isMaximized && !media.videoWindowState().isMinimized) {
-  <div class="resize-handle" (mousedown)="onResizeMouseDown($event)">
-    <mat-icon>drag_handle</mat-icon>
-  </div>
-  }
+@if (media.current()?.type === 'Video') {
+<div class="video-container">
+  <video class="event-video" controls autoplay="true" preload="none">
+    <source [src]="media.videoUrl()" [type]="videoMimeType()" />
+  </video>
 </div>
 }

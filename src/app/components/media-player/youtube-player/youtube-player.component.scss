@@ -6,6 +6,12 @@
   &.footer-mode {
     height: 64px;
   }
+
+  &.footer-expanded-mode {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .youtube-player-container {
@@ -29,6 +35,13 @@
   &.expanded-mode {
     flex-direction: column;
     background: #000;
+  }
+
+  /* Footer expanded: pill is expanded, iframe on top, controls on bottom */
+  &.footer-expanded-mode {
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
   }
 }
 
@@ -67,13 +80,13 @@
 .youtube-area {
   position: relative;
   overflow: hidden;
+  transition: flex 0.3s ease-out;
 
   .footer-mode & {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    // background: #000;
     border-radius: 32px 0 0 32px;
     max-width: 114px;
     height: 64px;
@@ -89,6 +102,20 @@
     padding-top: 60px;
     /* Space for header */
     box-sizing: border-box;
+  }
+
+  /* When footer is expanded, the iframe fills available space above the controls */
+  .footer-expanded-mode & {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    max-width: none;
+    height: auto;
+    background: #000;
+    border-radius: 16px 16px 0 0;
   }
 }
 
@@ -106,12 +133,26 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
 
   &.hidden {
     display: none;
   }
+
+  /* In footer-expanded mode, controls sit at bottom as a full-width row */
+  .footer-expanded-mode & {
+    flex: 0 0 64px;
+    width: 100%;
+    height: 64px;
+    justify-content: space-between;
+    padding: 0 16px;
+    box-sizing: border-box;
+  }
 }
 
+/* In collapsed footer mode, media-info-text sits between the thumbnail and buttons.
+   In expanded mode, it sits at the left of the 64px control bar at the bottom. */
 .media-info-text {
   flex: 1;
   min-width: 0;
@@ -120,6 +161,18 @@
   &.hidden {
     display: none;
   }
+}
+
+.control-buttons {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.control-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .media-title {

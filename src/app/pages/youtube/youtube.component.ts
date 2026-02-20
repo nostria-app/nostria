@@ -15,8 +15,10 @@ import { CorsProxyService } from '../../services/cors-proxy.service';
 import { NostrService } from '../../services/nostr.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 import { Event, Filter } from 'nostr-tools';
 import { PanelHeaderComponent } from '../../components/panel-header/panel-header.component';
+import { MediaItem } from '../../interfaces';
 
 interface YouTubeChannelEntry {
   channelId: string;
@@ -150,11 +152,11 @@ interface YouTubeChannel extends YouTubeChannelEntry {
             <mat-icon>sync</mat-icon>
           </button>
         }
-        <button mat-icon-button (click)="refreshAll()" [disabled]="loading()" matTooltip="Refresh all channels">
-          <mat-icon>refresh</mat-icon>
-        </button>
         <button mat-icon-button (click)="openAddChannelDialog()" matTooltip="Add YouTube channel">
           <mat-icon>add</mat-icon>
+        </button>
+        <button mat-icon-button (click)="refreshAll()" [disabled]="loading()" matTooltip="Refresh all channels">
+          <mat-icon>refresh</mat-icon>
         </button>
       </app-panel-header>
 
@@ -209,6 +211,9 @@ interface YouTubeChannel extends YouTubeChannelEntry {
                   </span>
                 </div>
                 <div class="channel-actions">
+                  <button mat-icon-button (click)="playLatestVideo(channel); $event.stopPropagation()" matTooltip="Play latest video">
+                    <mat-icon>play_arrow</mat-icon>
+                  </button>
                   @if (channel.loading) {
                     <mat-spinner diameter="20" />
                   }
@@ -245,6 +250,7 @@ export class YouTubeComponent {
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly mediaPlayer = inject(MediaPlayerService);
   protected readonly app = inject(ApplicationService);
 
   readonly loading = signal(true);
@@ -294,6 +300,43 @@ export class YouTubeComponent {
         image: channel.image,
       },
     });
+  }
+
+  async playLatestVideo(channel: YouTubeChannel): Promise<void> {
+    try {
+      const xmlText = await this.corsProxy.fetchText(channel.feedUrl);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'application/xml');
+      const firstEntry = doc.querySelector('entry');
+
+      if (!firstEntry) {
+        this.snackBar.open('No videos found for this channel.', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const videoId = firstEntry.querySelector('videoId')?.textContent || '';
+      const title = firstEntry.querySelector('title')?.textContent || 'YouTube Video';
+      const thumbnail = firstEntry.querySelector('thumbnail')?.getAttribute('url') ||
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+      if (!videoId) {
+        this.snackBar.open('Could not find video ID.', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const mediaItem: MediaItem = {
+        artwork: thumbnail,
+        title,
+        artist: channel.title,
+        source: `https://www.youtube.com/watch?v=${videoId}`,
+        type: 'YouTube',
+      };
+
+      this.mediaPlayer.play(mediaItem);
+    } catch (error) {
+      this.logger.error(`Error playing latest video for ${channel.title}:`, error);
+      this.snackBar.open('Failed to load video. Try again.', 'Close', { duration: 3000 });
+    }
   }
 
   private async createYouTubeBookmarkSet(data: {

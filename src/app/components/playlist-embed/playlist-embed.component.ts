@@ -484,7 +484,7 @@ export class PlaylistEmbedComponent {
         this.mediaPlayer.enque(mediaItems[i]);
       }
 
-      this.snackBar.open(`Playing ${mediaItems.length} tracks`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Queued ${mediaItems.length} tracks`, 'Close', { duration: 2000 });
     } finally {
       this.isLoading.set(false);
     }

@@ -1,49 +1,30 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { VideoPlayerComponent } from './video-player.component';
+import { StandaloneVideoPlayerComponent } from './video-player.component';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 
-describe('VideoPlayerComponent', () => {
-  let component: VideoPlayerComponent;
-  let fixture: ComponentFixture<VideoPlayerComponent>;
+describe('StandaloneVideoPlayerComponent', () => {
+  let component: StandaloneVideoPlayerComponent;
+  let fixture: ComponentFixture<StandaloneVideoPlayerComponent>;
   let mockMediaService: {
-    current: { type: string; title: string } | undefined;
-    videoWindowState: ReturnType<typeof signal>;
+    current: ReturnType<typeof signal>;
     youtubeUrl: ReturnType<typeof signal>;
     videoUrl: ReturnType<typeof signal>;
-    minimizeWindow: jasmine.Spy;
-    maximizeWindow: jasmine.Spy;
-    closeVideoWindow: jasmine.Spy;
-    updateWindowPosition: jasmine.Spy;
-    updateWindowSize: jasmine.Spy;
   };
   let mockLayoutService: Record<string, unknown>;
 
   beforeEach(async () => {
     mockMediaService = {
-      current: undefined,
-      videoWindowState: signal({
-        x: 100,
-        y: 100,
-        width: 560,
-        height: 315,
-        isMinimized: false,
-        isMaximized: false,
-      }),
+      current: signal(undefined),
       youtubeUrl: signal(undefined),
       videoUrl: signal(undefined),
-      minimizeWindow: jasmine.createSpy('minimizeWindow'),
-      maximizeWindow: jasmine.createSpy('maximizeWindow'),
-      closeVideoWindow: jasmine.createSpy('closeVideoWindow'),
-      updateWindowPosition: jasmine.createSpy('updateWindowPosition'),
-      updateWindowSize: jasmine.createSpy('updateWindowSize'),
     };
 
     mockLayoutService = {};
 
     await TestBed.configureTestingModule({
-      imports: [VideoPlayerComponent],
+      imports: [StandaloneVideoPlayerComponent],
       providers: [
         provideZonelessChangeDetection(),
         { provide: MediaPlayerService, useValue: mockMediaService },
@@ -51,7 +32,7 @@ describe('VideoPlayerComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(VideoPlayerComponent);
+    fixture = TestBed.createComponent(StandaloneVideoPlayerComponent);
     component = fixture.componentInstance;
   });
 
@@ -59,110 +40,10 @@ describe('VideoPlayerComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should not render video window when no media is current', async () => {
+  it('should not render video container when no media is current', async () => {
     await fixture.whenStable();
-    const videoWindow = fixture.nativeElement.querySelector('.video-window');
-    expect(videoWindow).toBeNull();
-  });
-
-  describe('when YouTube media is playing', () => {
-    beforeEach(async () => {
-      mockMediaService.current = { type: 'YouTube', title: 'Test Video' };
-      fixture.detectChanges();
-      await fixture.whenStable();
-    });
-
-    it('should render video window', () => {
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow).toBeTruthy();
-    });
-
-    it('should display the video title', () => {
-      const title = fixture.nativeElement.querySelector('.window-title span');
-      expect(title?.textContent?.trim()).toBe('Test Video');
-    });
-
-    it('should apply minimized class when minimized', async () => {
-      mockMediaService.videoWindowState.set({
-        x: 100, y: 100, width: 560, height: 315,
-        isMinimized: true, isMaximized: false,
-      });
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow.classList.contains('minimized')).toBeTrue();
-    });
-
-    it('should apply maximized class when maximized', async () => {
-      mockMediaService.videoWindowState.set({
-        x: 100, y: 100, width: 560, height: 315,
-        isMinimized: false, isMaximized: true,
-      });
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow.classList.contains('maximized')).toBeTrue();
-    });
-
-    it('should apply dragging class when dragging', async () => {
-      component.isDraggingState.set(true);
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow.classList.contains('dragging')).toBeTrue();
-    });
-
-    it('should apply resizing class when resizing', async () => {
-      component.isResizingState.set(true);
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow.classList.contains('resizing')).toBeTrue();
-    });
-
-    it('should not apply minimized/maximized/dragging/resizing classes by default', () => {
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow.classList.contains('minimized')).toBeFalse();
-      expect(videoWindow.classList.contains('maximized')).toBeFalse();
-      expect(videoWindow.classList.contains('dragging')).toBeFalse();
-      expect(videoWindow.classList.contains('resizing')).toBeFalse();
-    });
-
-    it('should call minimizeWindow on minimize click', () => {
-      const minimizeBtn = fixture.nativeElement.querySelector('.control-button.minimize');
-      minimizeBtn.click();
-      expect(mockMediaService.minimizeWindow).toHaveBeenCalled();
-    });
-
-    it('should call maximizeWindow on maximize click', () => {
-      const maximizeBtn = fixture.nativeElement.querySelector('.control-button.maximize');
-      maximizeBtn.click();
-      expect(mockMediaService.maximizeWindow).toHaveBeenCalled();
-    });
-
-    it('should call closeVideoWindow on close click', () => {
-      const closeBtn = fixture.nativeElement.querySelector('.control-button.close');
-      closeBtn.click();
-      expect(mockMediaService.closeVideoWindow).toHaveBeenCalled();
-    });
-  });
-
-  describe('when Video media is playing', () => {
-    beforeEach(async () => {
-      mockMediaService.current = { type: 'Video', title: 'My Video' };
-      fixture.detectChanges();
-      await fixture.whenStable();
-    });
-
-    it('should render video window', () => {
-      const videoWindow = fixture.nativeElement.querySelector('.video-window');
-      expect(videoWindow).toBeTruthy();
-    });
-
-    it('should display the video title', () => {
-      const title = fixture.nativeElement.querySelector('.window-title span');
-      expect(title?.textContent?.trim()).toBe('My Video');
-    });
+    const videoContainer = fixture.nativeElement.querySelector('.video-container');
+    expect(videoContainer).toBeNull();
   });
 
   describe('videoMimeType', () => {

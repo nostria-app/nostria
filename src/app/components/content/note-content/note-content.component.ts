@@ -1789,20 +1789,16 @@ export class NoteContentComponent implements OnDestroy {
       if (feed && feed.items.length > 0) {
         // Determine media type based on feed medium
         let mediaType: 'Music' | 'Podcast' | 'Video';
-        let toastMessage: string;
         switch (feed.medium) {
           case 'music':
             mediaType = 'Music';
-            toastMessage = 'Playing music';
             break;
           case 'video':
           case 'film':
             mediaType = 'Video';
-            toastMessage = 'Playing video';
             break;
           default:
             mediaType = 'Podcast';
-            toastMessage = 'Playing podcast';
         }
 
         for (const item of feed.items) {
@@ -1818,7 +1814,6 @@ export class NoteContentComponent implements OnDestroy {
         // Start playing immediately
         this.mediaPlayer.index = startIndex;
         this.mediaPlayer.start();
-        this.layout.toast(toastMessage);
       } else {
         // Fallback: add URL directly as podcast
         this.mediaPlayer.enque({
@@ -1830,7 +1825,6 @@ export class NoteContentComponent implements OnDestroy {
         });
         this.mediaPlayer.index = this.mediaPlayer.media().length - 1;
         this.mediaPlayer.start();
-        this.layout.toast('Playing media');
       }
     } catch (err) {
       console.error('Failed to parse RSS:', err);

@@ -23,15 +23,6 @@ interface YouTubePlayerEvent {
   data: number;
 }
 
-export interface VideoWindowState {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  isMinimized: boolean;
-  isMaximized: boolean;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -66,17 +57,6 @@ export class MediaPlayerService implements OnInitialized {
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
-  readonly WINDOW_STATE_STORAGE_KEY = 'nostria-video-window-state';
-
-  // Video window state
-  videoWindowState = signal<VideoWindowState>({
-    x: 100,
-    y: 100,
-    width: 560,
-    height: 315,
-    isMinimized: false,
-    isMaximized: false,
-  });
 
   // Convert to computed signals - consider shuffle and repeat states
   canPrevious = computed(() => {
@@ -283,44 +263,6 @@ export class MediaPlayerService implements OnInitialized {
         this.podcastPositions.set({});
       }
     }
-
-    // Load video window state (per-account UI preference for floating video player position/size)
-    const windowStateJson = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
-    if (windowStateJson && windowStateJson !== 'undefined') {
-      try {
-        const parsed = JSON.parse(windowStateJson);
-
-        // Check if it's the old format (VideoWindowState directly) or new format (Record<pubkey, VideoWindowState>)
-        // Old format has x, y, width, height properties directly
-        if ('x' in parsed && 'y' in parsed && 'width' in parsed) {
-          // Old format: migrate to new format
-          console.log('Migrating video window state from old format to new pubkey-keyed format');
-          const allStates: Record<string, VideoWindowState> = {};
-          if (pubkey) {
-            allStates[pubkey] = parsed as VideoWindowState;
-          }
-          this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(allStates));
-          this.videoWindowState.set(pubkey ? (allStates[pubkey] || this.getDefaultWindowState()) : this.getDefaultWindowState());
-        } else {
-          // New format: Record<pubkey, VideoWindowState>
-          const allStates = parsed as Record<string, VideoWindowState>;
-          this.videoWindowState.set(pubkey ? (allStates[pubkey] || this.getDefaultWindowState()) : this.getDefaultWindowState());
-        }
-      } catch {
-        this.videoWindowState.set(this.getDefaultWindowState());
-      }
-    }
-  }
-
-  private getDefaultWindowState(): VideoWindowState {
-    return {
-      x: 100,
-      y: 100,
-      width: 560,
-      height: 315,
-      isMinimized: false,
-      isMaximized: false,
-    };
   }
 
   private loadYouTubeAPI(): void {
@@ -587,6 +529,12 @@ export class MediaPlayerService implements OnInitialized {
 
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
+
+    // Auto-expand for YouTube content to show video
+    if (file.type === 'YouTube') {
+      this.layout.expandedMediaPlayer.set(true);
+    }
+
     // Add the file to the queue
     this.media.update(files => [...files, file]);
 
@@ -649,30 +597,6 @@ export class MediaPlayerService implements OnInitialized {
     } else {
       this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(allQueues));
     }
-  }
-
-  saveWindowState() {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) return;
-
-    // Load existing data for all accounts
-    let allStates: Record<string, VideoWindowState> = {};
-    const stored = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
-    if (stored && stored !== 'undefined') {
-      try {
-        const parsed = JSON.parse(stored);
-        // Handle old format (VideoWindowState directly) - just replace with new format
-        if (!('x' in parsed && 'y' in parsed && 'width' in parsed)) {
-          allStates = parsed as Record<string, VideoWindowState>;
-        }
-      } catch {
-        allStates = {};
-      }
-    }
-
-    // Update current user's window state
-    allStates[pubkey] = this.videoWindowState();
-    this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(allStates));
   }
 
   /**
@@ -908,37 +832,6 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
-  updateWindowPosition(x: number, y: number) {
-    this.videoWindowState.update(state => ({ ...state, x, y }));
-    this.saveWindowState();
-  }
-
-  updateWindowSize(width: number, height: number) {
-    this.videoWindowState.update(state => ({ ...state, width, height }));
-    this.saveWindowState();
-  }
-
-  minimizeWindow() {
-    this.videoWindowState.update(state => ({
-      ...state,
-      isMinimized: !state.isMinimized,
-    }));
-    this.saveWindowState();
-  }
-
-  maximizeWindow() {
-    this.videoWindowState.update(state => ({
-      ...state,
-      isMaximized: !state.isMaximized,
-      isMinimized: false,
-    }));
-    this.saveWindowState();
-  }
-
-  closeVideoWindow() {
-    this.exit();
-  }
-
   setVideoElement(videoElement: HTMLVideoElement | undefined) {
     console.log('setVideoElement called with:', videoElement);
 
@@ -1100,7 +993,7 @@ export class MediaPlayerService implements OnInitialized {
       let embedUrl: SafeResourceUrl;
 
       if (match && match[1]) {
-        const baseEmbedUrl = `https://www.youtube.com/embed/${match[1]}?enablejsapi=1`;
+        const baseEmbedUrl = `https://www.youtube.com/embed/${match[1]}?enablejsapi=1&rel=0&iv_load_policy=3&modestbranding=1`;
         const finalUrl = query ? `${baseEmbedUrl}&${query}` : baseEmbedUrl;
         embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(finalUrl);
       } else {
@@ -1606,12 +1499,6 @@ export class MediaPlayerService implements OnInitialized {
     const footerVideo = document.querySelector('.media-player-footer video') as HTMLVideoElement;
     if (footerVideo) {
       return footerVideo;
-    }
-
-    // Try to find video element in the video window
-    const windowVideo = document.querySelector('.video-window video') as HTMLVideoElement;
-    if (windowVideo) {
-      return windowVideo;
     }
 
     // Try to find any video element on the page

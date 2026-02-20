@@ -44,6 +44,9 @@ interface YouTubeVideo {
       [showBack]="true"
       (backClick)="goBack()"
     >
+      <button mat-icon-button (click)="playAll()" [disabled]="loading() || videos().length === 0" matTooltip="Play all">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
       <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Refresh">
         <mat-icon>refresh</mat-icon>
       </button>
@@ -214,7 +217,23 @@ export class YouTubeChannelVideosComponent {
   playNow(video: YouTubeVideo): void {
     const mediaItem = this.createMediaItem(video);
     this.mediaPlayer.play(mediaItem);
-    this.snackBar.open('Playing in media player', 'Close', { duration: 2000 });
+  }
+
+  playAll(): void {
+    const allVideos = this.videos();
+    if (allVideos.length === 0) return;
+
+    // Play the first video immediately
+    const firstItem = this.createMediaItem(allVideos[0]);
+    this.mediaPlayer.play(firstItem);
+
+    // Queue the rest
+    for (let i = 1; i < allVideos.length; i++) {
+      const mediaItem = this.createMediaItem(allVideos[i]);
+      this.mediaPlayer.enque(mediaItem);
+    }
+
+    this.snackBar.open(`Queued ${allVideos.length} videos`, 'Close', { duration: 2000 });
   }
 
   addToQueue(video: YouTubeVideo): void {

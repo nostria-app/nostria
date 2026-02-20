@@ -1,25 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject, signal, effect, ElementRef, viewChild, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  selector: 'app-video-player',
-  imports: [MatIconModule, MatButtonModule],
+  selector: 'app-standalone-video-player',
+  imports: [],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VideoPlayerComponent {
+export class StandaloneVideoPlayerComponent {
   media = inject(MediaPlayerService);
   layout = inject(LayoutService);
-
-  private windowRef = viewChild<ElementRef>('videoWindow');
-  isDraggingState = signal(false);
-  isResizingState = signal(false);
-  private dragStart = signal({ x: 0, y: 0, windowX: 0, windowY: 0 });
-  private resizeStart = signal({ x: 0, y: 0, width: 0, height: 0 });
 
   // Computed MIME type for video based on URL
   videoMimeType = computed(() => {
@@ -29,108 +21,6 @@ export class VideoPlayerComponent {
     const url = String(videoUrl);
     return this.getMimeTypeFromUrl(url);
   });
-
-  constructor() {
-    // Handle window resize
-    effect(() => {
-      const state = this.media.videoWindowState();
-      if (this.windowRef()) {
-        const element = this.windowRef()!.nativeElement;
-        element.style.left = `${state.x}px`;
-        element.style.top = `${state.y}px`;
-        element.style.width = `${state.width}px`;
-        element.style.height = `${state.height}px`;
-      }
-    });
-  }
-
-  onMouseDown(event: MouseEvent) {
-    if (
-      (event.target as HTMLElement).closest('.window-controls') ||
-      (event.target as HTMLElement).closest('.resize-handle')
-    ) {
-      return;
-    }
-
-    this.isDraggingState.set(true);
-    const state = this.media.videoWindowState();
-    this.dragStart.set({
-      x: event.clientX,
-      y: event.clientY,
-      windowX: state.x,
-      windowY: state.y,
-    });
-
-    document.addEventListener('mousemove', this.onMouseMove.bind(this));
-    document.addEventListener('mouseup', this.onMouseUp.bind(this));
-    event.preventDefault();
-  }
-
-  onResizeMouseDown(event: MouseEvent) {
-    this.isResizingState.set(true);
-    const state = this.media.videoWindowState();
-    this.resizeStart.set({
-      x: event.clientX,
-      y: event.clientY,
-      width: state.width,
-      height: state.height,
-    });
-
-    document.addEventListener('mousemove', this.onResizeMouseMove.bind(this));
-    document.addEventListener('mouseup', this.onResizeMouseUp.bind(this));
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  private onMouseMove(event: MouseEvent) {
-    if (this.isDraggingState()) {
-      const start = this.dragStart();
-      const newX = start.windowX + (event.clientX - start.x);
-      const newY = start.windowY + (event.clientY - start.y);
-
-      // Constrain to viewport
-      const maxX = window.innerWidth - this.media.videoWindowState().width;
-      const maxY = window.innerHeight - this.media.videoWindowState().height;
-
-      this.media.updateWindowPosition(
-        Math.max(0, Math.min(newX, maxX)),
-        Math.max(0, Math.min(newY, maxY))
-      );
-    }
-  }
-
-  private onResizeMouseMove(event: MouseEvent) {
-    if (this.isResizingState()) {
-      const start = this.resizeStart();
-      const newWidth = Math.max(320, start.width + (event.clientX - start.x));
-      const newHeight = Math.max(180, start.height + (event.clientY - start.y));
-
-      this.media.updateWindowSize(newWidth, newHeight);
-    }
-  }
-
-  private onMouseUp() {
-    this.isDraggingState.set(false);
-    document.removeEventListener('mousemove', this.onMouseMove.bind(this));
-    document.removeEventListener('mouseup', this.onMouseUp.bind(this));
-  }
-
-  private onResizeMouseUp() {
-    this.isResizingState.set(false);
-    document.removeEventListener('mousemove', this.onResizeMouseMove.bind(this));
-    document.removeEventListener('mouseup', this.onResizeMouseUp.bind(this));
-  }
-
-  onMinimize() {
-    this.media.minimizeWindow();
-  }
-
-  onMaximize() {
-    this.media.maximizeWindow();
-  }
-
-  onClose() {
-    this.media.closeVideoWindow();
-  }
 
   /**
    * Determines the correct MIME type based on the video file extension

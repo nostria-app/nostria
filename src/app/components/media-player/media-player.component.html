@@ -1,11 +1,45 @@
 @if (media.hasQueue()) {
-@if (isLiveStream()) {
-<app-live-stream-player [footer]="footer()" />
-} @else if (isYouTube()) {
-<app-youtube-player [footer]="footer()" />
-} @else if (isVideo()) {
-<app-video-player [footer]="footer()" />
-} @else if (isAudio()) {
-<app-audio-player [footer]="footer()" />
-}
+  <!-- Expanded video area (shown above controls when expanded, for non-YouTube content) -->
+  @if (layout.expandedMediaPlayer() && footer() && !isYouTube()) {
+    <div class="expanded-video-area">
+      @if (isVideo()) {
+        <app-video-player [footer]="false" />
+      } @else if (isLiveStream()) {
+        <app-live-stream-player [footer]="false" />
+      }
+    </div>
+  }
+
+  <!-- Footer controls (always visible in footer mode; stays visible for YouTube in fullscreen to preserve iframe) -->
+  <div class="footer-drag-zone"
+    [class.hidden]="!footer() && !isYouTube()"
+    [class.footer-expanded-yt]="isYouTube() && layout.expandedMediaPlayer() && footer()"
+    [class.footer-fullscreen-yt]="isYouTube() && !footer()"
+    (mousedown)="onFooterMouseDown($event)">
+    @if (isLiveStream()) {
+      <app-live-stream-player [footer]="footer()" />
+    } @else if (isYouTube()) {
+      <app-youtube-player [footer]="true" />
+    } @else if (isVideo()) {
+      <app-video-player [footer]="footer()" />
+    } @else if (isAudio()) {
+      <app-audio-player [footer]="footer()" />
+    }
+  </div>
+
+  <!-- Resize handle (bottom-right corner, footer mode only) -->
+  @if (footer() && layout.expandedMediaPlayer()) {
+    <div class="resize-handle" (mousedown)="onResizeMouseDown($event)"></div>
+  }
+
+  <!-- Fullscreen mode content (YouTube uses the single instance in footer-drag-zone above) -->
+  @if (!footer()) {
+    @if (isLiveStream()) {
+      <app-live-stream-player [footer]="false" />
+    } @else if (isVideo()) {
+      <app-video-player [footer]="false" />
+    } @else if (isAudio()) {
+      <app-audio-player [footer]="false" />
+    }
+  }
 }

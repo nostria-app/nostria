@@ -1,6 +1,6 @@
-<div class="youtube-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()">
-  <!-- Header (Expanded Mode Only) -->
-  <div class="youtube-header" [class.hidden]="footer()">
+<div class="youtube-player-container" [class.footer-mode]="!isFullscreen() && !layout.expandedMediaPlayer()" [class.footer-expanded-mode]="!isFullscreen() && layout.expandedMediaPlayer()" [class.expanded-mode]="isFullscreen()">
+  <!-- Header (Fullscreen Mode Only) -->
+  <div class="youtube-header" [class.hidden]="!isFullscreen()">
     <div class="youtube-title">
       <h2>{{ media.current()?.title || 'YouTube Video' }}</h2>
     </div>
@@ -14,7 +14,7 @@
     </div>
   </div>
 
-  <!-- Video Area (Shared) -->
+  <!-- Video Area (always present, resized by CSS) -->
   <div class="youtube-area">
     @if (media.youtubeUrl()) {
     <iframe id="ytplayer" class="youtube-iframe" type="text/html" [src]="media.youtubeUrl()" frameborder="0"
@@ -22,20 +22,20 @@
     }
   </div>
 
-  <!-- Media Info (Footer Mode Only) -->
-  <div class="media-info-text" [class.hidden]="!footer()">
-    <div class="media-title">{{ media.current()?.title }}</div>
-    <div class="media-artist">
-      @if (isNpubArtist(media.current()?.artist)) {
-      <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
-      } @else {
-      {{ media.current()?.artist }}
-      }
+  <!-- Footer Controls (hidden in fullscreen — title/artist sits inside the control bar) -->
+  <div class="youtube-controls" [class.hidden]="isFullscreen()">
+    <!-- Media Info (title + artist) — in the left portion of the control bar -->
+    <div class="media-info-text" [class.hidden]="isFullscreen()">
+      <div class="media-title">{{ media.current()?.title }}</div>
+      <div class="media-artist">
+        @if (isNpubArtist(media.current()?.artist)) {
+        <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
+        } @else {
+        {{ media.current()?.artist }}
+        }
+      </div>
     </div>
-  </div>
 
-  <!-- Footer Controls (Footer Mode Only) -->
-  <div class="youtube-controls" [class.hidden]="!footer()">
     <div class="control-buttons">
       <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
         <mat-icon>skip_previous</mat-icon>
@@ -61,7 +61,10 @@
     </div>
 
     <div class="control-actions">
-      <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+      <button mat-icon-button [matTooltip]="layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video'" (click)="toggleExpand()">
+        <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
         <mat-icon>open_in_full</mat-icon>
       </button>
       <button matTooltip="Close" (click)="media.exit()" mat-icon-button>

@@ -131,9 +131,6 @@ describe('YouTubeChannelVideosComponent', () => {
         source: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         type: 'YouTube',
       });
-      expect((component as any).snackBar.open).toHaveBeenCalledWith(
-        'Playing in media player', 'Close', { duration: 2000 }
-      );
     });
   });
 

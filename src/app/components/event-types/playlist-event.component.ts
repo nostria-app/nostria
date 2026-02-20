@@ -194,7 +194,7 @@ export class PlaylistEventComponent {
         this.mediaPlayerService.enque(mediaItems[i]);
       }
 
-      this.snackBar.open(`Playing ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''}`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Queued ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''}`, 'Close', { duration: 2000 });
     }
   }
 
