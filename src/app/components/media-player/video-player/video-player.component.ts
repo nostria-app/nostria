@@ -202,11 +202,25 @@ export class VideoPlayerComponent implements OnDestroy {
   }
 
   toggleFullscreen(): void {
-    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+    const nextFullscreen = !this.layout.fullscreenMediaPlayer();
+    this.layout.fullscreenMediaPlayer.set(nextFullscreen);
+
+    // Leaving fullscreen: ensure cursor is visible and any pending hide timer is cleared
+    if (!nextFullscreen) {
+      this.clearAutoHideTimeout();
+      this.showCursor();
+    }
   }
 
   toggleExpand(): void {
-    this.layout.expandedMediaPlayer.set(!this.layout.expandedMediaPlayer());
+    const nextExpanded = !this.layout.expandedMediaPlayer();
+    this.layout.expandedMediaPlayer.set(nextExpanded);
+
+    // Collapsing expanded mode: ensure cursor remains visible in compact mini-player
+    if (!nextExpanded) {
+      this.clearAutoHideTimeout();
+      this.showCursor();
+    }
   }
 
   async pictureInPicture(): Promise<void> {
@@ -370,7 +384,7 @@ export class VideoPlayerComponent implements OnDestroy {
 
     this.clearAutoHideTimeout();
     this.autoHideTimeout = setTimeout(() => {
-      if (!this.media.paused && !this.isHoveringControlsBar()) {
+      if (!this.footer() && !this.media.paused && !this.isHoveringControlsBar()) {
         this.cursorHidden.set(true);
       }
     }, this.AUTO_HIDE_DELAY);
@@ -383,7 +397,7 @@ export class VideoPlayerComponent implements OnDestroy {
     this.clearAutoHideTimeout();
     this.autoHideTimeout = setTimeout(() => {
       // Only check hover state, not paused (video should be playing if user went fullscreen)
-      if (!this.isHoveringControlsBar()) {
+      if (!this.footer() && !this.isHoveringControlsBar()) {
         this.cursorHidden.set(true);
       }
     }, this.AUTO_HIDE_DELAY);
