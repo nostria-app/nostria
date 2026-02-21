@@ -1233,12 +1233,52 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`collections/media/details/${sha256}`);
   }
 
-  openProfile(pubkey: string): void {
+  private getProfileTargetPanelFromEvent(event?: MouseEvent): 'left' | 'right' | null {
+    if (!event) {
+      return null;
+    }
+
+    const eventTarget = event.currentTarget instanceof Element
+      ? event.currentTarget
+      : event.target instanceof Element
+        ? event.target
+        : null;
+
+    if (!eventTarget) {
+      return null;
+    }
+
+    if (eventTarget.closest('.right-panel')) {
+      return 'right';
+    }
+
+    if (eventTarget.closest('.left-panel')) {
+      return 'left';
+    }
+
+    return null;
+  }
+
+  openProfile(pubkey: string, options?: { sourceEvent?: MouseEvent }): void {
     // Always use npub in URLs for consistency and bookmarkability
     const npub = pubkey.startsWith('npub') ? pubkey : nip19.npubEncode(pubkey);
 
     const currentUrl = this.router.url;
     const { primaryPath } = this.parseUrlParts(currentUrl);
+
+    const targetPanel = this.getProfileTargetPanelFromEvent(options?.sourceEvent);
+
+    // Explicit left-panel interaction should always navigate in primary outlet
+    if (targetPanel === 'left') {
+      this.router.navigateByUrl(`/p/${npub}`);
+      return;
+    }
+
+    // Explicit right-panel interaction should always navigate in right outlet
+    if (targetPanel === 'right') {
+      this.navigateToRightPanel(`p/${npub}`);
+      return;
+    }
 
     // If we're already on a profile page in primary, navigate to the new profile as primary
     // This avoids "profile in profile" routing issues with Angular's auxiliary outlets

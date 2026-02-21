@@ -673,6 +673,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     event.stopPropagation();
 
     // Use layout service to handle navigation (supports two-column view)
-    this.layout.openProfile(this.pubkey());
+    this.layout.openProfile(this.pubkey(), { sourceEvent: event });
   }
 }
