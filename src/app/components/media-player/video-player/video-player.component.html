@@ -4,7 +4,7 @@
   @if (!footer()) {
   <!-- Fullscreen Mode - Full video interface -->
   <div class="video-wrapper" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
-    (mousemove)="onVideoContainerMouseMove()" (touchstart)="onVideoContainerTouchStart($event)">
+    (mousemove)="onVideoContainerMouseMove()" (touchstart)="onVideoContainerTouchStart()">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)" (click)="onPlayPause()"></video>
 

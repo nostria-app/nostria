@@ -71,6 +71,8 @@ export class VideoPlayerComponent implements OnDestroy {
   // Track if last interaction was touch to ignore synthetic mouse events
   private lastInteractionWasTouch = false;
   private touchInteractionTimeout: ReturnType<typeof setTimeout> | null = null;
+  private boundNativeFullscreenMouseMove = this.onNativeFullscreenMouseMove.bind(this);
+  private boundNativeFullscreenTouchStart = this.onNativeFullscreenTouchStart.bind(this);
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -99,6 +101,11 @@ export class VideoPlayerComponent implements OnDestroy {
       this.fullscreenCleanup();
       this.fullscreenCleanup = null;
     }
+
+    if (this.utilities.isBrowser()) {
+      document.removeEventListener('mousemove', this.boundNativeFullscreenMouseMove, true);
+      document.removeEventListener('touchstart', this.boundNativeFullscreenTouchStart, true);
+    }
   }
 
   private onFullscreenChange = (isFullscreen: boolean) => {
@@ -113,16 +120,22 @@ export class VideoPlayerComponent implements OnDestroy {
         this.ignoreMouseEvents = false;
       }, 100);
 
-      // Move overlay container into fullscreen element
-      const videoWrapper = document.querySelector('.video-wrapper');
-      if (videoWrapper && overlayContainerEl) {
-        videoWrapper.appendChild(overlayContainerEl);
+      // Move overlay container into this component's fullscreen element
+      const videoWrapper = this.elementRef.nativeElement.querySelector('.video-wrapper') as HTMLElement | null;
+      const fullscreenElement = document.fullscreenElement as HTMLElement | null;
+      const targetElement = fullscreenElement ?? videoWrapper;
+
+      if (targetElement && overlayContainerEl) {
+        targetElement.appendChild(overlayContainerEl);
       }
 
       // Reset hover state and start auto-hide timer when entering fullscreen
       this.isHoveringControlsBar.set(false);
       this.videoControlsRef?.forceShowControlsAndStartTimer();
       this.forceStartAutoHideTimer();
+
+      document.addEventListener('mousemove', this.boundNativeFullscreenMouseMove, true);
+      document.addEventListener('touchstart', this.boundNativeFullscreenTouchStart, true);
     } else {
       // Move overlay container back to body
       if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
@@ -131,8 +144,44 @@ export class VideoPlayerComponent implements OnDestroy {
       // Show cursor when exiting fullscreen
       this.ignoreMouseEvents = false;
       this.showCursor();
+
+      document.removeEventListener('mousemove', this.boundNativeFullscreenMouseMove, true);
+      document.removeEventListener('touchstart', this.boundNativeFullscreenTouchStart, true);
     }
   };
+
+  private onNativeFullscreenMouseMove(): void {
+    if (!this.isNativeFullscreen() || this.footer() || this.ignoreMouseEvents) {
+      return;
+    }
+
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) {
+      return;
+    }
+
+    this.videoControlsRef?.showControlsAndStartTimer();
+    this.showCursor();
+    this.startAutoHideTimer();
+  }
+
+  private onNativeFullscreenTouchStart(): void {
+    if (!this.isNativeFullscreen() || this.footer() || this.ignoreMouseEvents) {
+      return;
+    }
+
+    this.lastInteractionWasTouch = true;
+    if (this.touchInteractionTimeout) {
+      clearTimeout(this.touchInteractionTimeout);
+    }
+    this.touchInteractionTimeout = setTimeout(() => {
+      this.lastInteractionWasTouch = false;
+    }, 500);
+
+    this.videoControlsRef?.showControlsAndStartTimer();
+    this.showCursor();
+    this.startAutoHideTimer();
+  }
 
   private setupFullscreenListener(): void {
     this.fullscreenCleanup = addFullscreenChangeListener(
@@ -201,7 +250,7 @@ export class VideoPlayerComponent implements OnDestroy {
   }
 
   async requestNativeFullscreen(): Promise<void> {
-    const videoWrapper = document.querySelector('.video-wrapper');
+    const videoWrapper = this.elementRef.nativeElement.querySelector('.video-wrapper') as HTMLElement | null;
     const video = this.videoElement?.nativeElement;
 
     const success = await fullscreenToggle(videoWrapper, video);
@@ -273,7 +322,7 @@ export class VideoPlayerComponent implements OnDestroy {
   }
 
   /** Handle touch events on the video container for mobile auto-hide support */
-  onVideoContainerTouchStart(event: TouchEvent): void {
+  onVideoContainerTouchStart(): void {
     // Mark that this was a touch interaction to ignore subsequent synthetic mouse events
     this.lastInteractionWasTouch = true;
     // Clear any existing timeout
