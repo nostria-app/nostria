@@ -24,6 +24,10 @@ export interface RelayEntry {
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
+  private readonly ignoredRelayDomains = new Set<string>([
+    'nwc.primal.net',
+    'relay.nostr.band'
+  ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
   regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm|mov|avi|wmv|flv|mkv))/gi;
@@ -435,7 +439,7 @@ export class UtilitiesService {
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
 
-    return relayUrls;
+    return relayUrls.filter(url => !this.isIgnoredRelayDomain(url));
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
@@ -447,7 +451,8 @@ export class UtilitiesService {
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
       })
-      .filter(url => url.trim() !== '');
+      .filter(url => url.trim() !== '')
+      .filter(url => !this.isIgnoredRelayDomain(url));
 
     return relayUrls;
   }
@@ -478,7 +483,8 @@ export class UtilitiesService {
 
         return { url, read: isRead, write: isWrite };
       })
-      .filter(entry => entry.url.trim() !== '');
+      .filter(entry => entry.url.trim() !== '')
+      .filter(entry => !this.isIgnoredRelayDomain(entry.url));
   }
 
   /**
@@ -604,6 +610,9 @@ export class UtilitiesService {
     }
     try {
       const parsedUrl = new URL(url);
+      if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
+        return false;
+      }
       // Must have a real hostname with a dot (valid domain)
       return parsedUrl.hostname.includes('.');
     } catch {
@@ -627,6 +636,11 @@ export class UtilitiesService {
 
       const parsedUrl = new URL(url);
 
+      if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
+        this.logger.debug(`Ignoring relay URL from excluded domain: ${url}`);
+        return '';
+      }
+
       // Must have a real hostname with a dot (not malformed like "wss://was//snort.social")
       // This catches autocomplete errors where "wss" becomes "was" and creates invalid URLs
       if (!parsedUrl.hostname.includes('.')) {
@@ -646,6 +660,15 @@ export class UtilitiesService {
       // If URL parsing fails, return original URL
       this.logger.warn(`Failed to parse URL: ${url}`, error);
       return '';
+    }
+  }
+
+  private isIgnoredRelayDomain(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url);
+      return this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase());
+    } catch {
+      return false;
     }
   }
 
