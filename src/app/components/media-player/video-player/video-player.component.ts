@@ -47,6 +47,7 @@ import { MatSliderModule } from '@angular/material/slider';
   styleUrl: './video-player.component.scss',
   host: {
     '[class.footer-mode]': 'footer()',
+    '[class.footer-expanded-mode]': 'footer() && layout.expandedMediaPlayer()',
   },
 })
 export class VideoPlayerComponent implements OnDestroy {
@@ -153,6 +154,10 @@ export class VideoPlayerComponent implements OnDestroy {
 
   toggleFullscreen(): void {
     this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  toggleExpand(): void {
+    this.layout.expandedMediaPlayer.set(!this.layout.expandedMediaPlayer());
   }
 
   async pictureInPicture(): Promise<void> {

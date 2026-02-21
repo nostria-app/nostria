@@ -527,11 +527,15 @@ export class MediaPlayerService implements OnInitialized {
     return 'Music';
   }
 
+  private shouldAutoExpandForVideo(file: MediaItem): boolean {
+    return ['YouTube', 'Video', 'HLS', 'LiveKit', 'External'].includes(file.type);
+  }
+
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
 
-    // Auto-expand for YouTube content to show video
-    if (file.type === 'YouTube') {
+    // Auto-expand for video content to show the video area above controls
+    if (this.shouldAutoExpandForVideo(file)) {
       this.layout.expandedMediaPlayer.set(true);
     }
 
@@ -1029,6 +1033,10 @@ export class MediaPlayerService implements OnInitialized {
     this.videoPlaybackInitialized = false;
 
     this.layout.showMediaPlayer.set(true);
+    if (this.shouldAutoExpandForVideo(file)) {
+      this.layout.expandedMediaPlayer.set(true);
+    }
+
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
