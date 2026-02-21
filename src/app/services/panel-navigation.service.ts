@@ -509,14 +509,18 @@ export class PanelNavigationService {
 
       this._currentRoute.set(entry);
       this._currentRoutePanel.set('right');
-    } else if (!rightPath && !clearingRightPanel && this._isBackNavigation) {
-      // Back navigation to a URL without a right panel - clear the right stack
-      // This happens when user presses back and browser history goes to a URL
-      // that didn't have right panel content (e.g., the initial left panel route)
+    } else if (!rightPath && !clearingRightPanel) {
+      // Navigation to a URL without a right outlet should never keep stale router-based
+      // right panel history. Otherwise, the shell can think right content still exists
+      // and keep an empty right pane visible.
       const rightStack = this._rightStack();
       if (rightStack.length > 0) {
         this._rightStack.set([]);
-        if (this._clearRightPanelCallback) {
+
+        // On browser back navigation, also clear any dynamic right panel content.
+        // On forward/normal navigation, only clear stale router state and leave
+        // dynamic component-based right panel content untouched.
+        if (this._isBackNavigation && this._clearRightPanelCallback) {
           this._clearRightPanelCallback();
         }
       }
