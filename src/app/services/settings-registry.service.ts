@@ -101,6 +101,17 @@ export class SettingsRegistryService {
       priority: 10,
     },
     {
+      id: 'relay-mode',
+      title: $localize`:@@settings.relay-mode.title:Relays Mode`,
+      description: $localize`:@@settings.relay-mode.description:Choose how relays are selected for querying other users`,
+      keywords: ['relay', 'mode', 'outbox', 'hybrid', 'discovery', 'query'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'hub',
+      route: '/settings/general',
+      priority: 10,
+    },
+    {
       id: 'auto-relay-auth',
       title: $localize`:@@settings.auto-relay-auth.title:Relay Authentication`,
       description: $localize`:@@settings.auto-relay-auth.description:Automatically authenticate with relays that require authentication`,

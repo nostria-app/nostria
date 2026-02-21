@@ -42,6 +42,34 @@
   </div>
 
   <div>
+    <h2 i18n="@@settings.relay-mode.title">Relays Mode</h2>
+    <p class="setting-description" i18n="@@settings.relay-mode.description">Choose how relays are selected when
+      querying events for other users.</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.relay-mode.label">Relays Mode</mat-label>
+      <mat-select [ngModel]="settings.settings().relayDiscoveryMode ?? 'outbox'"
+        (selectionChange)="setRelayDiscoveryMode($event.value)">
+        <mat-option value="outbox" i18n="@@settings.relay-mode.outbox">Outbox</mat-option>
+        <mat-option value="hybrid" i18n="@@settings.relay-mode.hybrid">Hybrid</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <p class="setting-description">
+      @switch (settings.settings().relayDiscoveryMode ?? 'outbox') {
+      @case ('hybrid') {
+      <ng-container i18n="@@settings.relay-mode.hybrid.description">Hybrid combines discovered user relays with your
+        current account relays for improved event discovery.</ng-container>
+      }
+      @default {
+      <ng-container i18n="@@settings.relay-mode.outbox.description">Outbox queries only the relays discovered from the
+        target user (kind 10002 or kind 3).</ng-container>
+      }
+      }
+    </p>
+  </div>
+
+  <div>
     <h2 i18n="@@settings.auto-relay-auth.title">Relay Authentication</h2>
 
     <div class="setting-item">

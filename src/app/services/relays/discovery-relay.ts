@@ -6,6 +6,7 @@ import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
 import { RegionService } from '../region.service';
 import { kinds, SimplePool, UnsignedEvent, Event } from 'nostr-tools';
+import { AccountRelayService } from './account-relay';
 
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
 export const DiscoveryRelayListKind = 10086;
@@ -61,6 +62,18 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         } catch (error) {
           this.logger.warn(`Failed to save contacts event for pubkey ${pubkey}:`, error);
         }
+      }
+    }
+
+    if (this.localSettings.relayDiscoveryMode() === 'hybrid') {
+      try {
+        const accountRelayUrls = this.injector.get(AccountRelayService).getRelayUrls();
+        if (accountRelayUrls.length > 0) {
+          relayUrls = this.utilities.normalizeRelayUrls([...relayUrls, ...accountRelayUrls]);
+          this.logger.debug(`[DiscoveryRelay] Hybrid mode enabled: merged ${accountRelayUrls.length} account relays for ${pubkey.slice(0, 16)}...`);
+        }
+      } catch (error) {
+        this.logger.debug('[DiscoveryRelay] Unable to merge account relays in hybrid mode', error);
       }
     }
 

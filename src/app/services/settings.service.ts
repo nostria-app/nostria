@@ -5,6 +5,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
+import { LocalSettingsService, RelayDiscoveryMode } from './local-settings.service';
 
 export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
 
@@ -36,6 +37,7 @@ export interface SyncedFeedConfig {
 
 export interface UserSettings {
   socialSharingPreview: boolean;
+  relayDiscoveryMode?: RelayDiscoveryMode;
   imageCacheEnabled?: boolean; // Optional setting for image cache
   // Report type visibility settings (NIP-56)
   hideNudity?: boolean;
@@ -77,6 +79,7 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
+  relayDiscoveryMode: 'outbox',
   imageCacheEnabled: true,
   // By default, hide all reported content
   hideNudity: true,
@@ -121,6 +124,7 @@ export class SettingsService {
   private accountRelay = inject(AccountRelayService);
   private database = inject(DatabaseService);
   private logger = inject(LoggerService);
+  private localSettings = inject(LocalSettingsService);
 
   settings = signal<UserSettings>({ ...DEFAULT_SETTINGS });
 
@@ -172,6 +176,7 @@ export class SettingsService {
             ...parsedContent,
           };
           this.settings.set(mergedSettings);
+          this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
           this.logger.info('Settings loaded from cache', this.settings());
 
           // Refresh from relay in background (don't await)
@@ -211,6 +216,7 @@ export class SettingsService {
           ...parsedContent,
         };
         this.settings.set(mergedSettings);
+        this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
         this.logger.info('Settings loaded successfully', this.settings());
 
         // Save to cache for next time
@@ -255,6 +261,7 @@ export class SettingsService {
               ...parsedContent,
             };
             this.settings.set(mergedSettings);
+            this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
             this.logger.info('Settings refreshed from relay', this.settings());
 
             // Update cache

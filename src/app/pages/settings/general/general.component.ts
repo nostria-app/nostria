@@ -12,7 +12,12 @@ import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
-import { CalendarType, LocalSettingsService, TimeFormat } from '../../../services/local-settings.service';
+import {
+  CalendarType,
+  LocalSettingsService,
+  RelayDiscoveryMode,
+  TimeFormat,
+} from '../../../services/local-settings.service';
 import { PlaceholderAlgorithm, SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
@@ -117,6 +122,11 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   setMaxRelaysPerUser(event: { value: number }): void {
     const value = event.value;
     this.localSettings.setMaxRelaysPerUser(value);
+  }
+
+  setRelayDiscoveryMode(mode: RelayDiscoveryMode): void {
+    this.localSettings.setRelayDiscoveryMode(mode);
+    this.settings.updateSettings({ relayDiscoveryMode: mode });
   }
 
   toggleAutoRelayAuth(): void {

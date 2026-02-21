@@ -8,6 +8,7 @@ import { Subject, debounceTime } from 'rxjs';
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
 export type HomeDestination = 'feeds' | 'home' | 'first-menu-item';
+export type RelayDiscoveryMode = 'outbox' | 'hybrid';
 
 /**
  * Global content filter settings for feeds
@@ -52,6 +53,7 @@ export interface LocalSettings {
   menuExpanded: boolean;
   locale: string;
   maxRelaysPerUser: number;
+  relayDiscoveryMode: RelayDiscoveryMode;
   autoRelayAuth: boolean;
   addClientTag: boolean;
   showClientTag: boolean;
@@ -87,6 +89,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuExpanded: true,
   locale: 'en',
   maxRelaysPerUser: 4,
+  relayDiscoveryMode: 'outbox',
   autoRelayAuth: false,
   addClientTag: true,
   showClientTag: true,
@@ -145,6 +148,7 @@ export class LocalSettingsService {
   readonly menuExpanded = computed(() => this.settings().menuExpanded);
   readonly locale = computed(() => this.settings().locale);
   readonly maxRelaysPerUser = computed(() => this.settings().maxRelaysPerUser);
+  readonly relayDiscoveryMode = computed(() => this.settings().relayDiscoveryMode ?? 'outbox');
   readonly autoRelayAuth = computed(() => this.settings().autoRelayAuth);
   readonly addClientTag = computed(() => this.settings().addClientTag);
   readonly showClientTag = computed(() => this.settings().showClientTag);
@@ -400,6 +404,13 @@ export class LocalSettingsService {
    */
   setMaxRelaysPerUser(maxRelaysPerUser: number): void {
     this.updateSettings({ maxRelaysPerUser });
+  }
+
+  /**
+   * Set relay discovery mode
+   */
+  setRelayDiscoveryMode(relayDiscoveryMode: RelayDiscoveryMode): void {
+    this.updateSettings({ relayDiscoveryMode });
   }
 
   /**
