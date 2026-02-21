@@ -21,7 +21,7 @@ export class ReactionService {
    * @param event The event to react to
    * @param customEmojiUrl Optional URL for custom emoji if content contains :shortcode:
    */
-  async addReaction(content: string, event: Event, customEmojiUrl?: string): Promise<{ success: boolean; error?: string }> {
+  async addReaction(content: string, event: Event, customEmojiUrl?: string): Promise<{ success: boolean; event?: Event; error?: string }> {
     const tags: string[][] = [
       ['e', event.id],
       ['p', event.pubkey],
@@ -58,14 +58,14 @@ export class ReactionService {
 
     const result = await this.nostrService.signAndPublish(reactionEvent);
     console.log('Reaction added:', { content, eventId: event.id, success: result.success });
-    return { success: result.success, error: result.error };
+    return { success: result.success, event: result.event, error: result.error };
   }
 
-  async addLike(event: Event): Promise<{ success: boolean; error?: string }> {
+  async addLike(event: Event): Promise<{ success: boolean; event?: Event; error?: string }> {
     return this.addReaction('+', event);
   }
 
-  async addDislike(event: Event): Promise<{ success: boolean; error?: string }> {
+  async addDislike(event: Event): Promise<{ success: boolean; event?: Event; error?: string }> {
     return this.addReaction('-', event);
   }
 

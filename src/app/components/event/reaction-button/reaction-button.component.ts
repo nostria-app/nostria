@@ -329,6 +329,7 @@ export class ReactionButtonComponent {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressTriggered = false;
   private readonly LONG_PRESS_DURATION = 500; // ms
+  private reactionsMutationVersion = 0;
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -540,6 +541,7 @@ export class ReactionButtonComponent {
 
       // If parent provides reactions, use them
       if (parentReactions !== null) {
+        this.reactionsMutationVersion++;
         this.reactions.set(parentReactions);
       }
     });
@@ -653,6 +655,9 @@ export class ReactionButtonComponent {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
         this.handleReactionError(result.error, 'Failed to add reaction. Please try again.');
       } else {
+        if (result.event) {
+          this.replaceOptimisticReactionWithSigned(this.accountState.pubkey()!, emoji, result.event);
+        }
         // Track emoji usage for recent emojis
         this.trackEmojiUsage(emoji, emojiUrl);
         // Notify parent to reload reactions
@@ -702,6 +707,8 @@ export class ReactionButtonComponent {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.handleReactionError(result.error, 'Failed to add like. Please try again.');
+        } else if (result.event) {
+          this.replaceOptimisticReactionWithSigned(userPubkey, '+', result.event);
         }
       }
 
@@ -744,12 +751,19 @@ export class ReactionButtonComponent {
     if (!userPubkey) return;
 
     this.isLoadingReactions.set(true);
+    const mutationVersionAtStart = this.reactionsMutationVersion;
     try {
       const reactions = await this.eventService.loadReactions(
         event.id,
         userPubkey,
         invalidateCache
       );
+
+      if (mutationVersionAtStart !== this.reactionsMutationVersion) {
+        return;
+      }
+
+      this.reactionsMutationVersion++;
       this.reactions.set(reactions);
     } finally {
       this.isLoadingReactions.set(false);
@@ -825,6 +839,7 @@ export class ReactionButtonComponent {
    * Optimistically update reactions for immediate UI feedback
    */
   private updateReactionsOptimistically(userPubkey: string, emoji: string, isAdding: boolean) {
+    this.reactionsMutationVersion++;
     const currentReactions = this.reactions();
     const currentEvents = [...currentReactions.events];
     const currentData = new Map(currentReactions.data);
@@ -900,6 +915,38 @@ export class ReactionButtonComponent {
     this.reactions.set({
       events: currentEvents,
       data: currentData,
+    });
+  }
+
+  private replaceOptimisticReactionWithSigned(userPubkey: string, emoji: string, signedEvent: Event): void {
+    this.reactionsMutationVersion++;
+
+    const currentReactions = this.reactions();
+    const updatedEvents = currentReactions.events.filter(record => {
+      if (record.event.pubkey !== userPubkey || record.event.content !== emoji) {
+        return true;
+      }
+
+      return !record.event.id.startsWith('temp-');
+    });
+
+    const alreadyPresent = updatedEvents.some(record => record.event.id === signedEvent.id);
+    if (!alreadyPresent) {
+      updatedEvents.push({
+        event: signedEvent,
+        data: signedEvent.content,
+      });
+    }
+
+    const updatedData = new Map<string, number>();
+    for (const record of updatedEvents) {
+      const content = record.event.content;
+      updatedData.set(content, (updatedData.get(content) || 0) + 1);
+    }
+
+    this.reactions.set({
+      events: updatedEvents,
+      data: updatedData,
     });
   }
 
