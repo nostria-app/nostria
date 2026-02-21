@@ -138,10 +138,9 @@
     <mat-icon>link</mat-icon>
     Link
   </button>
-  <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">
     <mat-icon>content_copy</mat-icon>
-    ID
+    Note ID
   </button>
   @if (isArticle()) {
   <button mat-menu-item (click)="layout.copyToClipboard(articleId(), 'text')">
@@ -149,20 +148,18 @@
     Article ID
   </button>
   }
-  <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
+  <!-- <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
     <mat-icon>content_copy</mat-icon>
     ID (hex)
-  </button>
-  <mat-divider></mat-divider>
+  </button> -->
   <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
     <mat-icon>content_copy</mat-icon>
     Text
   </button>
-  <button mat-menu-item (click)="layout.copyToClipboard(event(), 'json')">
+  <!-- <button mat-menu-item (click)="layout.copyToClipboard(event(), 'json')">
     <mat-icon>content_copy</mat-icon>
     Data
-  </button>
-  <mat-divider></mat-divider>
+  </button> -->
   <button mat-menu-item (click)="copyAsImage()">
     <mat-icon>image</mat-icon>
     Screenshot

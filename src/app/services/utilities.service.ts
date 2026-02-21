@@ -1234,34 +1234,28 @@ export class UtilitiesService {
       setTimeout(() => reject(new Error('Video loading timeout')), 10000);
     });
 
-    // Calculate seek time
-    const calculatedSeekTime = seekTime ?? Math.min(1, video.duration * 0.1);
-    const clampedSeekTime = Math.max(0, Math.min(calculatedSeekTime, video.duration - 0.5));
+    const videoDuration = Number.isFinite(video.duration) ? video.duration : 0;
+    const seekCandidates = this.getThumbnailSeekCandidates(videoDuration, seekTime);
 
-    // Seek to the desired time
-    video.currentTime = clampedSeekTime;
+    // Try multiple seek points to avoid black intro frames.
+    // Use the first frame that isn't mostly dark, otherwise fall back to the last attempt.
+    let selectedSeekTime = seekCandidates[seekCandidates.length - 1] ?? 0;
+    for (let i = 0; i < seekCandidates.length; i++) {
+      const candidate = seekCandidates[i];
 
-    // Wait for seek to complete
-    await new Promise<void>((resolve, reject) => {
-      video.onseeked = () => resolve();
-      video.onerror = () => reject(new Error('Failed to seek video'));
+      await this.seekVideoToTime(video, candidate);
+      await this.ensureVideoFrameReady(video);
 
-      // Timeout
-      setTimeout(() => reject(new Error('Video seek timeout')), 5000);
-    });
-
-    // Play for a brief moment to ensure frame is rendered, then pause
-    try {
-      await video.play();
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
-      video.pause();
-    } catch (error) {
-      // Play might fail, but we can still try to capture
-      console.warn('Could not play video, attempting capture anyway:', error);
+      const isLikelyDark = this.isLikelyDarkVideoFrame(video);
+      if (!isLikelyDark || i === seekCandidates.length - 1) {
+        selectedSeekTime = candidate;
+        break;
+      }
     }
 
-    // Wait a bit more to ensure the frame is painted
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Ensure the selected frame is active before final capture.
+    await this.seekVideoToTime(video, selectedSeekTime);
+    await this.ensureVideoFrameReady(video);
 
     // Create canvas and draw the video frame
     const canvas = document.createElement('canvas');
@@ -1318,6 +1312,105 @@ export class UtilitiesService {
       dimensions: { width: canvas.width, height: canvas.height },
       objectUrl,
     };
+  }
+
+  private getThumbnailSeekCandidates(duration: number, preferredSeekTime?: number): number[] {
+    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    const maxSeek = safeDuration > 0.4 ? safeDuration - 0.2 : 0;
+
+    const candidates = preferredSeekTime !== undefined
+      ? [
+        preferredSeekTime,
+        safeDuration * 0.18,
+        safeDuration * 0.33,
+        safeDuration * 0.5,
+      ]
+      : [
+        safeDuration * 0.12,
+        safeDuration * 0.28,
+        safeDuration * 0.45,
+      ];
+
+    const normalized = candidates
+      .map(value => this.normalizeThumbnailSeekTime(value, maxSeek))
+      .filter((value, index, all) => all.indexOf(value) === index);
+
+    return normalized.length > 0 ? normalized : [0];
+  }
+
+  private normalizeThumbnailSeekTime(value: number, maxSeek: number): number {
+    if (!Number.isFinite(value) || value < 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(value, maxSeek));
+  }
+
+  private async seekVideoToTime(video: HTMLVideoElement, time: number): Promise<void> {
+    video.currentTime = time;
+
+    await new Promise<void>((resolve, reject) => {
+      video.onseeked = () => resolve();
+      video.onerror = () => reject(new Error('Failed to seek video'));
+      setTimeout(() => reject(new Error('Video seek timeout')), 5000);
+    });
+  }
+
+  private async ensureVideoFrameReady(video: HTMLVideoElement): Promise<void> {
+    try {
+      await video.play();
+      await new Promise(resolve => setTimeout(resolve, 80));
+      video.pause();
+    } catch (error) {
+      console.warn('Could not play video, attempting capture anyway:', error);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 80));
+  }
+
+  private isLikelyDarkVideoFrame(video: HTMLVideoElement): boolean {
+    const sampleCanvas = document.createElement('canvas');
+    sampleCanvas.width = 48;
+    sampleCanvas.height = 27;
+
+    const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+    if (!sampleCtx) {
+      return false;
+    }
+
+    sampleCtx.drawImage(video, 0, 0, sampleCanvas.width, sampleCanvas.height);
+    const { data } = sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
+
+    let luminanceSum = 0;
+    let luminanceSquaredSum = 0;
+    let pixelCount = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      if (a === 0) {
+        continue;
+      }
+
+      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      luminanceSum += luminance;
+      luminanceSquaredSum += luminance * luminance;
+      pixelCount++;
+    }
+
+    if (pixelCount === 0) {
+      return true;
+    }
+
+    const average = luminanceSum / pixelCount;
+    const variance = (luminanceSquaredSum / pixelCount) - average * average;
+    const stdDev = Math.sqrt(Math.max(variance, 0));
+
+    // Treat as a likely black placeholder frame if it's both very dark and low-detail.
+    return average < 28 && stdDev < 16;
   }
 
   /**
