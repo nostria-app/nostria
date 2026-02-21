@@ -19,6 +19,12 @@
     Profile
   </button>
   }
+  @if (hasMedia()) {
+  <button mat-menu-item [matMenuTriggerFor]="mediaMenu">
+    <mat-icon>perm_media</mat-icon>
+    Media
+  </button>
+  }
   <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">
@@ -52,22 +58,7 @@
     <mat-icon>tune</mat-icon>
     Advanced
   </button>
-  @if (hasMedia()) {
-  <mat-divider></mat-divider>
-  <button mat-menu-item (click)="addMediaToQueue()">
-    <mat-icon>playlist_add</mat-icon>
-    Add to Queue
-  </button>
-  <button mat-menu-item [matMenuTriggerFor]="playlistMenu">
-    <mat-icon>video_library</mat-icon>
-    Add to Playlist
-  </button>
-  <button mat-menu-item (click)="playMediaInPlayer()">
-    <mat-icon>play_circle</mat-icon>
-    Play in Media Player
-  </button>
-  }
-  @if (showAiOptions()) {
+  <!-- @if (showAiOptions()) {
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="translate()">
     <mat-icon>translate</mat-icon>
@@ -77,7 +68,7 @@
     <mat-icon>record_voice_over</mat-icon>
     Read Aloud
   </button>
-  <mat-divider></mat-divider>
+  } -->
   @if (isOurEvent() && isTextNote()) {
   <button mat-menu-item (click)="editEvent()">
     <mat-icon>edit</mat-icon>
@@ -90,7 +81,8 @@
     Delete
   </button>
   }
-  }
+
+  <mat-divider></mat-divider>
   <button mat-menu-item (click)="reportContent()">
     <mat-icon>warning</mat-icon>
     Report Content
@@ -102,6 +94,21 @@
   </button>
   }
 
+</mat-menu>
+
+<mat-menu #mediaMenu="matMenu">
+  <button mat-menu-item (click)="addMediaToQueue()">
+    <mat-icon>playlist_add</mat-icon>
+    Add to Queue
+  </button>
+  <button mat-menu-item [matMenuTriggerFor]="playlistMenu">
+    <mat-icon>video_library</mat-icon>
+    Add to Playlist
+  </button>
+  <button mat-menu-item (click)="playMediaInPlayer()">
+    <mat-icon>play_circle</mat-icon>
+    Play in Media Player
+  </button>
 </mat-menu>
 
 <mat-menu #profileMenu="matMenu">
@@ -138,6 +145,14 @@
     <mat-icon>link</mat-icon>
     Link
   </button>
+  <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
+    <mat-icon>content_copy</mat-icon>
+    Text
+  </button>
+  <button mat-menu-item (click)="copyAsImage()">
+    <mat-icon>image</mat-icon>
+    Screenshot
+  </button>
   <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">
     <mat-icon>content_copy</mat-icon>
     Note ID
@@ -152,18 +167,10 @@
     <mat-icon>content_copy</mat-icon>
     ID (hex)
   </button> -->
-  <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
-    <mat-icon>content_copy</mat-icon>
-    Text
-  </button>
   <!-- <button mat-menu-item (click)="layout.copyToClipboard(event(), 'json')">
     <mat-icon>content_copy</mat-icon>
     Data
   </button> -->
-  <button mat-menu-item (click)="copyAsImage()">
-    <mat-icon>image</mat-icon>
-    Screenshot
-  </button>
 </mat-menu>
 
 <mat-menu #playlistMenu="matMenu">
