@@ -11,6 +11,8 @@ import { MentionHoverDirective } from '../../directives/mention-hover.directive'
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
+import { MatDialog } from '@angular/material/dialog';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
 @Component({
   selector: 'app-article-event',
@@ -21,6 +23,7 @@ import { EthiopianCalendarService } from '../../services/ethiopian-calendar.serv
 })
 export class ArticleEventComponent {
   private layout = inject(LayoutService);
+  private dialog = inject(MatDialog);
   private formatService = inject(FormatService);
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
@@ -28,7 +31,6 @@ export class ArticleEventComponent {
   private readonly MAX_LENGTH = 300;
   private readonly MAX_SUMMARY_LENGTH = 200;
   private readonly MIN_SUMMARY_PARAGRAPH_LENGTH = 20;
-  private readonly IMAGE_EXTENSIONS = '(jpg|jpeg|png|gif|webp)';
   // Compile regex patterns once to avoid repeated compilation in computed properties
   private readonly MARKDOWN_IMAGE_REGEX = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|webp)(\?[^\s)]*)?)\)/i;
   private readonly STANDALONE_IMAGE_REGEX = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?/i;
@@ -66,10 +68,10 @@ export class ArticleEventComponent {
     // Fallback: Extract first paragraph from content (after title if present)
     if (event.content) {
       let content = event.content;
-      
+
       // Remove title if it exists (first # heading)
       content = content.replace(/^#\s+.+$/m, '').trim();
-      
+
       // Get first substantial paragraph (at least MIN_SUMMARY_PARAGRAPH_LENGTH chars)
       const paragraphs = content.split(/\n\n+/);
       for (const para of paragraphs) {
@@ -237,7 +239,18 @@ export class ArticleEventComponent {
     return previewContent || content || '';
   });
 
-  openFullArticle(): void {
+  openFullArticle(interactionEvent?: MouseEvent | KeyboardEvent): void {
+    if (interactionEvent instanceof MouseEvent) {
+      const target = interactionEvent.target as HTMLElement;
+      const imageElement = target.closest('img');
+      const imageSource = imageElement?.getAttribute('src');
+
+      if (imageSource) {
+        this.openImagePreview(imageSource, interactionEvent);
+        return;
+      }
+    }
+
     const event = this.event();
     if (!event) return;
 
@@ -253,6 +266,24 @@ export class ArticleEventComponent {
 
     // Navigate to the article page using layout service
     this.layout.openArticle(naddr, event);
+  }
+
+  openImagePreview(imageUrl: string, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: imageUrl,
+        mediaType: 'image',
+        mediaTitle: this.title() || 'Article image',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   private getEventTitle(event: Event): string | null {

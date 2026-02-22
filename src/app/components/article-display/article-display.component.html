@@ -28,8 +28,8 @@
   <!-- Header Section -->
   <header class="article-header">
     @if (image()) {
-    <div class="article-hero-image">
-      <img [src]="image()" [alt]="title()" title="Article image" loading="lazy" />
+    <div class="article-hero-image" (click)="openImagePreview(image(), $event)">
+      <img [src]="image()" [alt]="title()" title="{{ title() || ' ' }}" loading="lazy" />
     </div>
     }
 

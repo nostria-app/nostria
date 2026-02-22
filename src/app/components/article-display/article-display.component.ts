@@ -34,6 +34,7 @@ import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmar
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
 import { DataService } from '../../services/data.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
 export interface ArticleData {
   event?: Event;
@@ -582,6 +583,16 @@ export class ArticleDisplayComponent {
    */
   handleContentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
+    const imageElement = target.closest('img');
+
+    if (imageElement) {
+      const imageSource = imageElement.getAttribute('src');
+      if (imageSource) {
+        this.openImagePreview(imageSource, event);
+        return;
+      }
+    }
+
     const link = target.closest('a');
 
     if (!link) return;
@@ -612,6 +623,28 @@ export class ArticleDisplayComponent {
         this.layout.openArticle(id, slug);
       }
     }
+  }
+
+  openImagePreview(imageUrl: string, event?: MouseEvent): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (!imageUrl) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: imageUrl,
+        mediaType: 'image',
+        mediaTitle: this.title() || 'Article image',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   /**
