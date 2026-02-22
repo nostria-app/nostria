@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { ArticleEditorDialogComponent } from '../../../components/article-editor-dialog/article-editor-dialog.component';
+import type { Event } from 'nostr-tools';
 
 @Component({
   selector: 'app-editor',
@@ -17,6 +18,8 @@ export class EditorComponent implements OnInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
+    const state = this.location.getState() as { articleEvent?: Event };
+    const articleEvent = state?.articleEvent;
 
     // Open the article editor dialog
     const dialogRef = this.dialog.open(ArticleEditorDialogComponent, {
@@ -26,12 +29,12 @@ export class EditorComponent implements OnInit {
       disableEnterSubmit: true,
       showCloseButton: true,
       title: id ? 'Edit Article' : 'New Article',
-      data: { articleId: id || undefined }
+      data: { articleId: id || undefined, articleEvent }
     });
 
     // Set the dialogRef and data on the component instance
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.data = { articleId: id || undefined };
+    dialogRef.componentInstance.data = { articleId: id || undefined, articleEvent };
 
     // When dialog closes, navigate back if we're still on this route
     const checkClosed = () => {

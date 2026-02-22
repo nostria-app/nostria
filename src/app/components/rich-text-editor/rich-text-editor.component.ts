@@ -81,6 +81,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   readonly featuredImageUploadRequest = output<void>();
   readonly featuredImageLibraryRequest = output<void>();
   readonly featuredImageUrlRequest = output<void>();
+  readonly importArticleRequest = output<void>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -183,6 +184,10 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   requestFeaturedImageUrl(): void {
     this.featuredImageUrlRequest.emit();
+  }
+
+  requestImportArticle(): void {
+    this.importArticleRequest.emit();
   }
 
   setContent(content: string) {

@@ -13,9 +13,9 @@
         <div class="editor-pane">
 
           <!-- Featured Image Preview -->
-          @if (article().image && (!showPreview() || showSplitView())) {
+          @if ((previewImage() || article().image) && (!showPreview() || showSplitView())) {
           <div class="featured-image-preview">
-            <img [src]="article().image" [alt]="article().title || 'Featured image'"
+            <img [src]="previewImage() || article().image" [alt]="article().title || 'Featured image'"
               title="{{ article().title || 'Featured image' }}" loading="lazy" />
             <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
               <mat-icon>close</mat-icon>
@@ -38,14 +38,16 @@
             <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
               [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)"
               [disableAdvancedActions]="false" [showArticleActions]="true" [showFeaturedImageAction]="true"
-              [hasFeaturedImage]="!!article().image" [previewActive]="showPreview()" [splitViewActive]="showSplitView()"
-              [canUseSplitView]="canUseSplitView()" [showEditorContent]="!showPreview() || showSplitView()"
-              [actionsDisabled]="isPublishing()" [recording]="isRecording()" [transcribing]="isTranscribing()"
-              [requireContentFocusForActions]="false" (featuredImageUploadRequest)="openFeaturedImageUpload()"
+              [hasFeaturedImage]="!!(previewImage() || article().image)" [previewActive]="showPreview()"
+              [splitViewActive]="showSplitView()" [canUseSplitView]="canUseSplitView()"
+              [showEditorContent]="!showPreview() || showSplitView()" [actionsDisabled]="isPublishing()"
+              [recording]="isRecording()" [transcribing]="isTranscribing()" [requireContentFocusForActions]="false"
+              (featuredImageUploadRequest)="openFeaturedImageUpload()"
               (featuredImageLibraryRequest)="openFeaturedImageChooser()"
               (featuredImageUrlRequest)="openFeaturedImageUrl()" (insertReferenceRequest)="openReferencePicker()"
-              (aiActionRequest)="openAiDialog($event)" (toggleRecordingRequest)="toggleRecording()"
-              (togglePreviewRequest)="togglePreview()" (toggleSplitViewRequest)="toggleSplitView()">
+              (importArticleRequest)="openImportArticleDialog()" (aiActionRequest)="openAiDialog($event)"
+              (toggleRecordingRequest)="toggleRecording()" (togglePreviewRequest)="togglePreview()"
+              (toggleSplitViewRequest)="toggleSplitView()">
             </app-rich-text-editor>
           </div>
 

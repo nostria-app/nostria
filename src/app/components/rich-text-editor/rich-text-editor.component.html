@@ -47,6 +47,11 @@
           <mat-icon>bookmarks</mat-icon>
         </button>
 
+        <button mat-icon-button type="button" (click)="requestImportArticle()" [disabled]="actionsDisabled()"
+          matTooltip="Import article event">
+          <mat-icon>file_download</mat-icon>
+        </button>
+
         <button mat-icon-button [matMenuTriggerFor]="aiMenu" [disabled]="actionsDisabled()" matTooltip="AI Tools">
           <mat-icon>psychology</mat-icon>
         </button>

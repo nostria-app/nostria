@@ -1288,6 +1288,12 @@ export class NostrService implements NostriaService {
     try {
       const signedEvent = await this.signEvent(event);
 
+      try {
+        await this.database.saveEvent(signedEvent);
+      } catch (saveError) {
+        this.logger.warn('[NostrService] Failed to save signed event locally before publish', saveError);
+      }
+
       // IMPORTANT: ALL events must go to ALL configured relays to prevent data fragmentation
       // For replies, reactions, and reposts, we also publish to mentioned users' relays
       const options = signedEvent.kind === kinds.Contacts

@@ -1708,7 +1708,7 @@ export class LayoutService implements OnDestroy {
     this.scrollToOptimalPosition(this.optimalProfilePosition);
   }
 
-  async createArticle(articleId?: string): Promise<CustomDialogRef<any>> {
+  async createArticle(articleId?: string, articleEvent?: Event): Promise<CustomDialogRef<any>> {
     // Open the article editor dialog
     const { ArticleEditorDialogComponent } = await import('../components/article-editor-dialog/article-editor-dialog.component');
 
@@ -1719,13 +1719,13 @@ export class LayoutService implements OnDestroy {
       disableEnterSubmit: true,
       showCloseButton: true,
       title: articleId ? 'Edit Article' : 'New Article',
-      data: { articleId },
+      data: { articleId, articleEvent },
       panelClass: 'article-editor-dialog'
     });
 
     // Set the dialogRef and data on the component instance
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.data = { articleId };
+    dialogRef.componentInstance.data = { articleId, articleEvent };
 
     return dialogRef;
   }

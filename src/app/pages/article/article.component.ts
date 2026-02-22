@@ -462,14 +462,14 @@ export class ArticleComponent implements OnDestroy {
           pubkey,
           addressKind,
           slug,
-          { save: false, cache: false },
+          { save: true, cache: true },
         );
       } else {
         loadedRecord = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
           pubkey,
           addressKind,
           slug,
-          { save: false, cache: false },
+          { save: true, cache: true },
         );
       }
 

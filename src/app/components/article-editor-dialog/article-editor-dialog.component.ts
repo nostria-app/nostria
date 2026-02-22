@@ -35,7 +35,7 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { MatCardModule } from '@angular/material/card';
 import { AccountStateService } from '../../services/account-state.service';
 import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.component';
-import { nip19 } from 'nostr-tools';
+import { nip19, type Event as NostrEvent } from 'nostr-tools';
 import { DecodedNaddr } from 'nostr-tools/nip19';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { Cache } from '../../services/cache';
@@ -53,9 +53,11 @@ import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 import { ArticleReferencePickerResult } from '../article-reference-picker-dialog/article-reference-picker-dialog.component';
+import { TextInputDialogComponent } from '../text-input-dialog/text-input-dialog.component';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
+  articleEvent?: NostrEvent;
 }
 
 interface ArticleDraft {
@@ -220,10 +222,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   // Computed property for preview - creates ArticleData from current draft
   previewArticleData = computed<ArticleData>(() => {
     const art = this.article();
+    const displayImage = this.previewImage() || art.image;
     return {
       title: art.title || 'Untitled Article',
       summary: art.summary,
-      image: art.image,
+      image: displayImage,
       parsedContent: this.markdownHtml(),
       contentLoading: false,
       hashtags: art.tags,
@@ -264,6 +267,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   // Drag and drop state for featured image
   isFeaturedImageDragOver = signal(false);
   private featuredImageDragCounter = 0;
+  private readonly base64ImageDataUrlRegex = /^data:image\/[a-zA-Z0-9.+-]+;base64,/i;
+  private readonly articleUrlPattern = /\/a\/(npub1[02-9ac-hj-np-z]+)\/([^/?#]+)/i;
 
   constructor() {
     this.initializeSplitViewSupport();
@@ -282,11 +287,12 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     // Check if we're editing an existing article
     effect(() => {
       const articleId = this.data.articleId;
+      const articleEvent = this.data.articleEvent;
       if (articleId && typeof articleId === 'string') {
         this.isEditMode.set(true);
 
         untracked(async () => {
-          await this.loadArticle(articleId);
+          await this.loadArticle(articleId, articleEvent);
         });
       } else {
         // Only load auto-saved draft for completely new articles (not editing existing ones)
@@ -478,6 +484,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
           tags: [...autoDraft.tags],
           dTag: autoDraft.dTag,
         });
+        this.previewImage.set(autoDraft.image || null);
 
         this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
 
@@ -500,7 +507,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     this.localStorage.removeItem(key);
   }
 
-  async loadArticle(articleId: string): Promise<void> {
+  async loadArticle(articleId: string, sourceEvent?: NostrEvent): Promise<void> {
     try {
       this.isLoading.set(true);
       this.isLoadingArticle.set(true); // Mark that we're loading an existing article
@@ -548,6 +555,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         return;
       }
 
+      if (sourceEvent) {
+        this.applyArticleEventToDraft(sourceEvent, articleId);
+        return;
+      }
+
       // Since we're doing editing here, we'll save and cache locally.
       const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
@@ -560,18 +572,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       );
 
       if (record?.event) {
-        const event = record.event;
-        const tags = event.tags;
-
-        this.article.set({
-          title: this.getTagValue(tags, 'title') || '',
-          summary: this.getTagValue(tags, 'summary') || '',
-          image: this.getTagValue(tags, 'image') || '',
-          content: event.content || '',
-          tags: tags.filter(tag => tag[0] === 't').map(tag => tag[1]) || [],
-          publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
-          dTag: this.getTagValue(tags, 'd') || articleId,
-        });
+        this.applyArticleEventToDraft(record.event, articleId);
       } else {
         this.snackBar.open('Article not found', 'Close', { duration: 3000 });
         this.dialogRef?.close();
@@ -583,6 +584,25 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       this.isLoading.set(false);
       this.isLoadingArticle.set(false); // Clear the loading flag
     }
+  }
+
+  private applyArticleEventToDraft(event: NostrEvent, fallbackDTag: string): void {
+    const tags = event.tags;
+    const image = this.getTagValue(tags, 'image') || '';
+
+    this.article.set({
+      title: this.getTagValue(tags, 'title') || '',
+      summary: this.getTagValue(tags, 'summary') || '',
+      image,
+      content: event.content || '',
+      tags: tags.filter(tag => tag[0] === 't').map(tag => tag[1]) || [],
+      publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0', 10) || undefined,
+      dTag: this.getTagValue(tags, 'd') || fallbackDTag,
+      selectedImageFile: undefined,
+      imageUrl: image,
+    });
+
+    this.previewImage.set(image || null);
   }
 
   private getTagValue(tags: string[][], tagName: string): string | undefined {
@@ -680,14 +700,24 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       const art = this.article();
       const normalizedContent = normalizeMarkdownLinkDestinations(art.content);
 
-      // Handle image file upload if selected
-      let imageUrl = art.image;
-      if (art.selectedImageFile) {
+      // Handle image upload if selected file exists or image is base64 data URL
+      let imageUrl = art.image.trim();
+      if (art.selectedImageFile || this.isBase64ImageDataUrl(imageUrl)) {
         try {
+          let fileToUpload = art.selectedImageFile;
+          if (!fileToUpload) {
+            fileToUpload = this.dataUrlToFile(imageUrl);
+          }
+
+          const mediaServers = await this.getMediaServersForUpload();
+          if (mediaServers.length === 0) {
+            throw new Error('No media server configured. Please add a media server before publishing.');
+          }
+
           const uploadResult = await this.media.uploadFile(
-            art.selectedImageFile,
+            fileToUpload,
             false,
-            this.media.mediaServers()
+            mediaServers
           );
 
           if (!uploadResult.item) {
@@ -699,6 +729,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
           imageUrl = uploadResult.item.url;
           // Update the article with the uploaded URL
           this.article.update(a => ({ ...a, image: imageUrl, selectedImageFile: undefined }));
+          this.previewImage.set(imageUrl);
         } catch (error) {
           console.error('Error uploading image:', error);
           this.snackBar.open(
@@ -872,6 +903,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       tags: [],
       dTag: this.generateUniqueId(),
     });
+    this.previewImage.set(null);
+    this.showArticleImage.set(false);
 
     // Clear auto-draft from storage
     this.clearAutoDraft();
@@ -936,7 +969,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   // Handle file selection for article image
-  onFileSelected(event: Event): void {
+  async onFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
@@ -949,14 +982,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = e => {
-        const result = e.target?.result as string;
-        this.previewImage.set(result);
-        // Store the file for later upload
-        this.article.update(art => ({ ...art, selectedImageFile: file }));
-      };
-      reader.readAsDataURL(file);
+      await this.uploadFeaturedImageFile(file);
     }
   }
 
@@ -966,7 +992,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     if (url && url.trim() !== '') {
       this.previewImage.set(url);
       // Update the main image field immediately
-      this.article.update(art => ({ ...art, image: url }));
+      this.article.update(art => ({ ...art, image: url, selectedImageFile: undefined }));
     } else {
       this.previewImage.set(null);
     }
@@ -1065,7 +1091,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
     dialogRef.afterClosed().subscribe((url: string | undefined) => {
       if (url) {
-        this.article.update(art => ({ ...art, image: url }));
+        this.article.update(art => ({ ...art, image: url, selectedImageFile: undefined }));
+        this.previewImage.set(url);
         this.showArticleImage.set(true);
       }
     });
@@ -1109,7 +1136,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  onFeaturedImageSelected(event: Event): void {
+  async onFeaturedImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
@@ -1121,13 +1148,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = e => {
-        const result = e.target?.result as string;
-        this.article.update(art => ({ ...art, image: result, selectedImageFile: file }));
-        this.showArticleImage.set(true);
-      };
-      reader.readAsDataURL(file);
+      await this.uploadFeaturedImageFile(file);
     }
   }
 
@@ -1140,6 +1161,40 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     }));
     this.previewImage.set(null);
     this.showArticleImage.set(false);
+  }
+
+  private isBase64ImageDataUrl(value: string): boolean {
+    return this.base64ImageDataUrlRegex.test(value);
+  }
+
+  private dataUrlToFile(dataUrl: string): File {
+    const [metadata, base64Data] = dataUrl.split(',');
+    if (!metadata || !base64Data) {
+      throw new Error('Invalid base64 image data');
+    }
+
+    const mimeMatch = metadata.match(/data:([^;]+);base64/i);
+    const mimeType = mimeMatch?.[1] || 'image/png';
+    const extension = mimeType.split('/')[1] || 'png';
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index++) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new File([bytes], `featured-image.${extension}`, { type: mimeType });
+  }
+
+  private async getMediaServersForUpload(): Promise<string[]> {
+    let servers = this.media.mediaServers();
+    if (servers.length > 0) {
+      return servers;
+    }
+
+    await this.media.load();
+    servers = this.media.mediaServers();
+    return servers;
   }
 
   // Drag and drop handlers for featured image
@@ -1185,22 +1240,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         return;
       }
 
-      // Upload the dropped image
       try {
-        await this.media.load();
-        const result = await this.media.uploadFile(file, false, this.media.mediaServers());
-
-        if (result.status === 'success' && result.item) {
-          this.article.update(art => ({ ...art, image: result.item!.url }));
-          this.showArticleImage.set(true);
-          this.snackBar.open('Featured image uploaded successfully', 'Close', {
-            duration: 3000,
-          });
-        } else {
-          this.snackBar.open('Failed to upload image: ' + result.message, 'Close', {
-            duration: 5000,
-          });
-        }
+        await this.uploadFeaturedImageFile(file);
       } catch (error) {
         this.snackBar.open(
           'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
@@ -1209,6 +1250,34 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         );
       }
     }
+  }
+
+  private async uploadFeaturedImageFile(file: File): Promise<void> {
+    const mediaServers = await this.getMediaServersForUpload();
+    if (mediaServers.length === 0) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const result = await this.media.uploadFile(file, false, mediaServers);
+
+    if (result.status !== 'success' || !result.item) {
+      throw new Error(result.message || 'Failed to upload image');
+    }
+
+    const uploadedUrl = result.item.url;
+    this.previewImage.set(uploadedUrl);
+    this.article.update(art => ({
+      ...art,
+      image: uploadedUrl,
+      imageUrl: uploadedUrl,
+      selectedImageFile: undefined,
+    }));
+    this.showArticleImage.set(true);
+
+    this.snackBar.open('Featured image uploaded successfully', 'Close', {
+      duration: 3000,
+    });
   }
 
   togglePreview(): void {
@@ -1252,6 +1321,187 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         this.insertReferences(references);
       }
     });
+  }
+
+  async openImportArticleDialog(): Promise<void> {
+    const dialogRef = this.dialog.open(TextInputDialogComponent, {
+      data: {
+        title: 'Import Existing Article',
+        message: 'Paste an naddr, nostr:naddr URI, article URL (/a/npub/slug), or event JSON.',
+        label: 'Article event reference',
+        placeholder: 'naddr1... or https://nostria.app/a/npub.../slug',
+        required: true,
+      },
+      width: '640px',
+      maxWidth: '95vw',
+    });
+
+    const value = await dialogRef.afterClosed().toPromise();
+    const rawInput = typeof value === 'string' ? value.trim() : '';
+    if (!rawInput) {
+      return;
+    }
+
+    const hasCurrentContent = !!(
+      this.article().title.trim() ||
+      this.article().summary.trim() ||
+      this.article().content.trim() ||
+      this.article().image.trim() ||
+      this.article().tags.length > 0
+    );
+
+    if (hasCurrentContent) {
+      const confirmRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Replace Current Draft?',
+          message: 'Importing will replace your current article draft content.',
+          confirmText: 'Import',
+          cancelText: 'Cancel',
+        },
+      });
+
+      const confirmed = await confirmRef.afterClosed().toPromise();
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      this.isLoading.set(true);
+      const importedEvent = await this.resolveImportedArticleEvent(rawInput);
+
+      if (!importedEvent) {
+        this.snackBar.open('Could not resolve article event from input', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const importedDTag = this.getTagValue(importedEvent.tags, 'd') || this.generateUniqueId();
+      this.applyArticleEventToDraft(importedEvent, importedDTag);
+      this.isEditMode.set(false);
+      this.scheduleAutoSaveIfNeeded();
+
+      this.snackBar.open('Article imported into editor', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open(
+        `Failed to import article: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        { duration: 5000 }
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async resolveImportedArticleEvent(input: string): Promise<NostrEvent | null> {
+    const trimmed = input.trim();
+
+    const fromJson = this.tryParseArticleEventJson(trimmed);
+    if (fromJson) {
+      return fromJson;
+    }
+
+    const fromReference = this.parseArticleReference(trimmed);
+    if (!fromReference) {
+      return null;
+    }
+
+    const { pubkey, identifier, kind } = fromReference;
+
+    const primaryRecord = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+      pubkey,
+      kind,
+      identifier,
+      { save: true, cache: true }
+    );
+
+    if (primaryRecord?.event) {
+      return primaryRecord.event as NostrEvent;
+    }
+
+    const fallbackKind = kind === 30023 ? 30024 : 30023;
+    const fallbackRecord = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+      pubkey,
+      fallbackKind,
+      identifier,
+      { save: true, cache: true }
+    );
+
+    return (fallbackRecord?.event as NostrEvent | undefined) || null;
+  }
+
+  private tryParseArticleEventJson(input: string): NostrEvent | null {
+    if (!input.startsWith('{')) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(input) as Partial<NostrEvent>;
+      if (
+        parsed &&
+        typeof parsed.kind === 'number' &&
+        (parsed.kind === 30023 || parsed.kind === 30024) &&
+        typeof parsed.pubkey === 'string' &&
+        Array.isArray(parsed.tags) &&
+        typeof parsed.content === 'string'
+      ) {
+        return parsed as NostrEvent;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private parseArticleReference(input: string): { pubkey: string; identifier: string; kind: number } | null {
+    const normalized = input.replace(/^nostr:/i, '');
+
+    if (normalized.startsWith('naddr1')) {
+      const decoded = nip19.decode(normalized);
+      if (decoded.type === 'naddr') {
+        return {
+          pubkey: decoded.data.pubkey,
+          identifier: decoded.data.identifier,
+          kind: decoded.data.kind,
+        };
+      }
+      return null;
+    }
+
+    const articleUrlMatch = normalized.match(this.articleUrlPattern);
+    if (articleUrlMatch?.[1] && articleUrlMatch?.[2]) {
+      const npubDecode = nip19.decode(articleUrlMatch[1]);
+      if (npubDecode.type !== 'npub') {
+        return null;
+      }
+
+      return {
+        pubkey: npubDecode.data,
+        identifier: decodeURIComponent(articleUrlMatch[2]),
+        kind: 30023,
+      };
+    }
+
+    if (normalized.includes(':')) {
+      const parts = normalized.split(':');
+      const maybeKind = parseInt(parts[0], 10);
+      const maybePubkey = parts[1];
+      const identifier = parts.slice(2).join(':');
+
+      if (
+        (maybeKind === 30023 || maybeKind === 30024) &&
+        /^[0-9a-fA-F]{64}$/.test(maybePubkey || '') &&
+        !!identifier
+      ) {
+        return {
+          pubkey: maybePubkey,
+          identifier,
+          kind: maybeKind,
+        };
+      }
+    }
+
+    return null;
   }
 
   private insertReferences(references: string[]): void {

@@ -269,7 +269,7 @@ export class ArticlesListComponent {
       kind: kind,
     });
 
-    const dialogRef = await this.layout.createArticle(naddr);
+    const dialogRef = await this.layout.createArticle(naddr, targetEvent);
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
         this.loadArticles();

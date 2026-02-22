@@ -8,7 +8,7 @@
 
   @if (event()) {
   @if (isLongFormArticle() && accountState.isCurrentUser(authorPubkey())) {
-  <button mat-icon-button (click)="layout.createArticle(link)" matTooltip="Edit Article">
+  <button mat-icon-button (click)="layout.createArticle(link, event())" matTooltip="Edit Article">
     <mat-icon>edit</mat-icon>
   </button>
   }

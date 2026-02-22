@@ -4,7 +4,7 @@
   <div class="article-top-actions">
     <div class="top-actions-left">
       @if (accountState.isCurrentUser(authorPubkey())) {
-      <button mat-icon-button (click)="layout.createArticle(link())" title="Edit Article">
+      <button mat-icon-button (click)="layout.createArticle(link(), event())" title="Edit Article">
         <mat-icon>edit</mat-icon>
       </button>
       }
