@@ -161,6 +161,11 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.insertReferenceRequest.emit();
   }
 
+  preserveInsertionPoint(event: MouseEvent): void {
+    event.preventDefault();
+    this.captureInsertionPoint();
+  }
+
   insertMarkdownAtCursor(markdown: string): void {
     if (!markdown.trim()) {
       return;
@@ -564,24 +569,36 @@ export class RichTextEditorComponent implements AfterViewInit {
       // In rich text mode, insert at cursor or end
       const editor = this.editorContent.nativeElement;
       const selection = window.getSelection();
-      const activeRange =
-        selection && selection.rangeCount > 0
-          ? selection.getRangeAt(0)
-          : this.richTextInsertionRange;
+      let activeRange: Range | null = null;
+
+      if (selection && selection.rangeCount > 0) {
+        const currentRange = selection.getRangeAt(0);
+        if (this.isRangeInsideEditor(currentRange)) {
+          activeRange = currentRange;
+        }
+      }
+
+      if (!activeRange) {
+        activeRange = this.richTextInsertionRange;
+      }
 
       if (activeRange) {
-        const range = activeRange.cloneRange();
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = this.convertMarkdownToHtml(markdown);
-        range.deleteContents();
-        range.insertNode(tempDiv.firstChild || document.createTextNode(markdown));
+        try {
+          const range = activeRange.cloneRange();
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = this.convertMarkdownToHtml(markdown);
+          range.deleteContents();
+          range.insertNode(tempDiv.firstChild || document.createTextNode(markdown));
 
-        range.collapse(false);
-        this.richTextInsertionRange = range.cloneRange();
+          range.collapse(false);
+          this.richTextInsertionRange = range.cloneRange();
 
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        } catch {
+          editor.innerHTML += this.convertMarkdownToHtml(markdown);
         }
       } else {
         editor.innerHTML += this.convertMarkdownToHtml(markdown);

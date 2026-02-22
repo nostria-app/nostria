@@ -46,8 +46,8 @@
         </mat-menu>
         }
 
-        <button mat-icon-button type="button" (click)="requestInsertReference()" [disabled]="actionsDisabled()"
-          matTooltip="Insert reference">
+        <button mat-icon-button type="button" (mousedown)="preserveInsertionPoint($event)"
+          (click)="requestInsertReference()" [disabled]="actionsDisabled()" matTooltip="Insert reference">
           <mat-icon>bookmarks</mat-icon>
         </button>
 
