@@ -4,62 +4,144 @@
   <input #fileInput type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
     (change)="onFileSelected($event)" class="hidden-file-input" aria-label="Upload files" title="Upload files" />
 
-  <div class="editor-toolbar" [class.collapsed]="!showToolbar()">
-    <div class="toolbar-content" [attr.inert]="!showToolbar() ? '' : null" [attr.aria-hidden]="!showToolbar()">
+  @if (!previewActive() || splitViewActive()) {
+  <div class="editor-toolbar">
+    <div class="toolbar-content">
       <div class="editor-actions">
-        <button mat-icon-button (click)="applyBold()" [disabled]="!isRichTextMode()" matTooltip="Bold">
+        @if (showArticleActions()) {
+        <button mat-icon-button type="button" (click)="requestTogglePreview()" [disabled]="actionsDisabled()"
+          [matTooltip]="previewActive() ? 'Edit' : 'Preview'">
+          <mat-icon>{{ previewActive() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+
+        @if (canUseSplitView()) {
+        <button mat-icon-button type="button" (click)="requestToggleSplitView()" [disabled]="actionsDisabled()"
+          matTooltip="Split view">
+          <mat-icon>{{ splitViewActive() ? 'right_panel_open' : 'right_panel_close' }}</mat-icon>
+        </button>
+        }
+
+        @if (showFeaturedImageAction() && !hasFeaturedImage()) {
+        <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" type="button" [disabled]="actionsDisabled()"
+          matTooltip="Add featured image">
+          <mat-icon>add_photo_alternate</mat-icon>
+        </button>
+        <mat-menu #featuredImageMenu="matMenu">
+          <button mat-menu-item (click)="requestFeaturedImageUpload()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload Image</span>
+          </button>
+          <button mat-menu-item (click)="requestFeaturedImageLibrary()">
+            <mat-icon>photo_library</mat-icon>
+            <span>Choose from library</span>
+          </button>
+          <button mat-menu-item (click)="requestFeaturedImageUrl()">
+            <mat-icon>link</mat-icon>
+            <span>Image from URL</span>
+          </button>
+        </mat-menu>
+        }
+
+        <button mat-icon-button type="button" (click)="requestInsertReference()" [disabled]="actionsDisabled()"
+          matTooltip="Insert reference">
+          <mat-icon>bookmarks</mat-icon>
+        </button>
+
+        <button mat-icon-button [matMenuTriggerFor]="aiMenu" [disabled]="actionsDisabled()" matTooltip="AI Tools">
+          <mat-icon>psychology</mat-icon>
+        </button>
+        <mat-menu #aiMenu="matMenu">
+          <button mat-menu-item (click)="requestAiAction('generate')" disabled matTooltip="Temporarily disabled">
+            <mat-icon>auto_awesome</mat-icon>
+            <span>Generate Text</span>
+          </button>
+          <button mat-menu-item (click)="requestAiAction('translate')">
+            <mat-icon>translate</mat-icon>
+            <span>Translate</span>
+          </button>
+          <button mat-menu-item (click)="requestAiAction('sentiment')">
+            <mat-icon>mood</mat-icon>
+            <span>Sentiment Analysis</span>
+          </button>
+        </mat-menu>
+
+        <button mat-icon-button type="button" (click)="requestToggleRecording()"
+          [disabled]="actionsDisabled() || transcribing()" matTooltip="Dictate content">
+          @if (transcribing()) {
+          <mat-icon class="spinning">sync</mat-icon>
+          } @else {
+          <mat-icon>{{ recording() ? 'mic_off' : 'mic' }}</mat-icon>
+          }
+        </button>
+
+        <mat-divider [vertical]="true"></mat-divider>
+        }
+
+        <button mat-icon-button (click)="applyBold()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Bold">
           <mat-icon>format_bold</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyItalic()" [disabled]="!isRichTextMode()" matTooltip="Italic">
+        <button mat-icon-button (click)="applyItalic()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Italic">
           <mat-icon>format_italic</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyHeading(1)" [disabled]="!isRichTextMode()" matTooltip="Heading 1">
+        <button mat-icon-button (click)="applyHeading(1)" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Heading 1">
           <mat-icon>looks_one</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyHeading(2)" [disabled]="!isRichTextMode()" matTooltip="Heading 2">
+        <button mat-icon-button (click)="applyHeading(2)" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Heading 2">
           <mat-icon>looks_two</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyHeading(3)" [disabled]="!isRichTextMode()" matTooltip="Heading 3">
+        <button mat-icon-button (click)="applyHeading(3)" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Heading 3">
           <mat-icon>looks_3</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyQuote()" [disabled]="!isRichTextMode()" matTooltip="Quote">
+        <button mat-icon-button (click)="applyQuote()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Quote">
           <mat-icon>format_quote</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyUnorderedList()" [disabled]="!isRichTextMode()" matTooltip="Bullet List">
+        <button mat-icon-button (click)="applyUnorderedList()"
+          [disabled]="!isRichTextMode() || disableAdvancedActions()" matTooltip="Bullet List">
           <mat-icon>format_list_bulleted</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyOrderedList()" [disabled]="!isRichTextMode()" matTooltip="Numbered List">
+        <button mat-icon-button (click)="applyOrderedList()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Numbered List">
           <mat-icon>format_list_numbered</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyLink()" [disabled]="!isRichTextMode()" matTooltip="Insert Link">
+        <button mat-icon-button (click)="applyLink()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Insert Link">
           <mat-icon>link</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="insertCode()" [disabled]="!isRichTextMode()" matTooltip="Format as Code">
+        <button mat-icon-button (click)="insertCode()" [disabled]="!isRichTextMode() || disableAdvancedActions()"
+          matTooltip="Format as Code">
           <mat-icon>code</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="!isRichTextMode()" matTooltip="Divider">
+        <button mat-icon-button (click)="insertHorizontalRule()"
+          [disabled]="!isRichTextMode() || disableAdvancedActions()" matTooltip="Divider">
           <mat-icon>horizontal_rule</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading()" matTooltip="Insert Media">
+        <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading() || disableAdvancedActions()"
+          matTooltip="Insert Media">
           @if (isUploading()) {
           <mat-icon>hourglass_empty</mat-icon>
           } @else {
@@ -82,29 +164,28 @@
           </button>
         </mat-menu>
 
-        <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading()" matTooltip="Upload File">
+        <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading() || disableAdvancedActions()"
+          matTooltip="Upload File">
           <mat-icon>attach_file</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="insertLoremIpsum()" matTooltip="Insert Lorem Ipsum paragraph">
-          <mat-icon>text_snippet</mat-icon>
-        </button>
-
-        <button mat-icon-button (click)="toggleEditorMode()"
-          [matTooltip]="isRichTextMode() ? 'Switch to Markdown editor' : 'Switch to Rich Text editor'">
-          <mat-icon>{{ isRichTextMode() ? 'code' : 'wysiwyg' }}</mat-icon>
-        </button>
+        <div class="editor-mode-toggle" role="group" aria-label="Editor mode">
+          <!-- <span class="toggle-label">Mode</span> -->
+          <button mat-stroked-button type="button" class="mode-button" [class.active]="isRichTextMode()"
+            (click)="setEditorMode(true)">
+            Rich text
+          </button>
+          <button mat-stroked-button type="button" class="mode-button" [class.active]="!isRichTextMode()"
+            (click)="setEditorMode(false)">
+            Markdown
+          </button>
+        </div>
       </div>
     </div>
-    <button mat-icon-button class="toolbar-collapse-button" (click)="toggleToolbarVisibility()"
-      [matTooltip]="showToolbar() ? 'Zen mode (collapse toolbar)' : 'Show formatting toolbar'">
-      <mat-icon class="toolbar-collapse-icon" [class.is-collapsed]="!showToolbar()">
-        {{ showToolbar() ? 'chevron_right' : 'chevron_left' }}
-      </mat-icon>
-    </button>
   </div>
+  }
 
-  <div class="editor-content-area">
+  <div class="editor-content-area" [class.content-hidden]="!showEditorContent()">
     @if (isUploading()) {
     <div class="upload-progress">
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -123,11 +204,13 @@
 
     @if (isRichTextMode()) {
     <div #editorContent class="rich-text-content" contenteditable="true" (input)="onRichTextContentChange()"
-      (mouseup)="onTextSelection()" (keyup)="onTextSelection()" [attr.placeholder]="'Start writing...'">
+      (mouseup)="onTextSelection()" (keyup)="onTextSelection()" [attr.placeholder]="'Start writing...'"
+      (focus)="onEditorFocus()" (blur)="onEditorBlur()">
     </div>
     } @else {
     <textarea #markdownTextarea class="markdown-content" [value]="markdownContent()"
-      (input)="onMarkdownContentChange($event)" placeholder="Start writing your article content in Markdown...">
+      (input)="onMarkdownContentChange($event)" placeholder="Start writing your article content in Markdown..."
+      (focus)="onEditorFocus()" (blur)="onEditorBlur()">
       </textarea>
     }
   </div>

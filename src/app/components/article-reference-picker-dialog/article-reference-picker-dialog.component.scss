@@ -1,0 +1,83 @@
+.article-reference-picker-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .reference-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--mat-sys-surface);
+    padding-top: 4px;
+
+    .search-field {
+      width: 100%;
+    }
+  }
+
+  .tab-content {
+    max-height: 52dvh;
+    overflow: auto;
+    padding: 8px 2px;
+  }
+
+  .paste-tab {
+    .tab-description {
+      margin: 4px 0 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .full-width {
+      width: 100%;
+    }
+
+    .paste-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  .list-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .list-content {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .list-title {
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .list-subtitle {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .loading-state,
+  .empty-state {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.actions-row {
+  display: flex;
+  justify-content: flex-end;
+}

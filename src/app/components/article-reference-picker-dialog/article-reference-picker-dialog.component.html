@@ -1,0 +1,112 @@
+<div dialog-content class="article-reference-picker-dialog">
+  <div class="reference-toolbar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="query()" (ngModelChange)="query.set($event)"
+        placeholder="Search cached profiles and events" />
+    </mat-form-field>
+  </div>
+
+  <mat-tab-group>
+    <mat-tab label="Paste">
+      <div class="tab-content paste-tab">
+        <p class="tab-description">Paste npub, nevent, or naddr (with or without nostr: prefix).</p>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Reference</mat-label>
+          <input matInput [ngModel]="pastedReference()" (ngModelChange)="pastedReference.set($event)"
+            placeholder="npub1..., nevent1..., naddr1..." />
+        </mat-form-field>
+
+        <div class="paste-actions">
+          <button mat-flat-button type="button" (click)="addPastedReference()" [disabled]="!pastedReference().trim()">
+            Insert reference
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Profiles">
+      <div class="tab-content">
+        @if (loading()) {
+        <div class="loading-state">
+          <mat-spinner diameter="28"></mat-spinner>
+        </div>
+        } @else if (filteredProfiles().length === 0) {
+        <div class="empty-state">No cached profiles matched your search.</div>
+        } @else {
+        <mat-list>
+          @for (profile of filteredProfiles(); track profile.id) {
+          <mat-list-item>
+            <div class="list-row">
+              <div class="list-content">
+                <div class="list-title">{{ getProfileDisplayName(profile) }}</div>
+                <div class="list-subtitle">{{ getProfileSubtitle(profile) }}</div>
+              </div>
+              <button mat-button type="button" (click)="insertProfileReference(profile.pubkey)">
+                Insert
+              </button>
+            </div>
+          </mat-list-item>
+          }
+        </mat-list>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Events">
+      <div class="tab-content">
+        @if (loading()) {
+        <div class="loading-state">
+          <mat-spinner diameter="28"></mat-spinner>
+        </div>
+        } @else if (filteredEvents().length === 0) {
+        <div class="empty-state">No cached events matched your search.</div>
+        } @else {
+        <mat-list>
+          @for (event of filteredEvents(); track event.id) {
+          <mat-list-item>
+            <div class="list-row">
+              <div class="list-content">
+                <div class="list-title">{{ getEventTitle(event) }}</div>
+                <div class="list-subtitle">Kind {{ event.kind }} · {{ event.id.slice(0, 16) }}...</div>
+              </div>
+              <button mat-button type="button" (click)="insertEventReference(event)">
+                Insert
+              </button>
+            </div>
+          </mat-list-item>
+          }
+        </mat-list>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Bookmark Lists">
+      <div class="tab-content">
+        @if (bookmarkLists().length === 0) {
+        <div class="empty-state">No bookmark lists available.</div>
+        } @else {
+        <mat-list>
+          @for (list of bookmarkLists(); track list.id) {
+          <mat-list-item>
+            <div class="list-row">
+              <div class="list-content">
+                <div class="list-title">{{ list.name }}</div>
+                <div class="list-subtitle">Insert all references from this list</div>
+              </div>
+              <button mat-button type="button" (click)="insertBookmarkListReferences(list)">
+                Insert all
+              </button>
+            </div>
+          </mat-list-item>
+          }
+        </mat-list>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+
+<div dialog-actions class="actions-row">
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+</div>

@@ -3,6 +3,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   AfterViewInit,
   ViewChild,
   ElementRef,
@@ -58,8 +59,28 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   readonly richTextMode = input(true);
   readonly richTextModeChange = output<boolean>();
-  readonly showToolbar = input(true);
-  readonly showToolbarChange = output<boolean>();
+  readonly disableAdvancedActions = input(false);
+  readonly showArticleActions = input(false);
+  readonly showFeaturedImageAction = input(false);
+  readonly hasFeaturedImage = input(false);
+  readonly previewActive = input(false);
+  readonly splitViewActive = input(false);
+  readonly canUseSplitView = input(false);
+  readonly showEditorContent = input(true);
+  readonly actionsDisabled = input(false);
+  readonly recording = input(false);
+  readonly transcribing = input(false);
+  readonly requireContentFocusForActions = input(true);
+
+  readonly insertReferenceRequest = output<void>();
+  readonly aiActionRequest = output<'generate' | 'translate' | 'sentiment'>();
+  readonly toggleRecordingRequest = output<void>();
+  readonly togglePreviewRequest = output<void>();
+  readonly toggleSplitViewRequest = output<void>();
+  readonly contentFocusChange = output<boolean>();
+  readonly featuredImageUploadRequest = output<void>();
+  readonly featuredImageLibraryRequest = output<void>();
+  readonly featuredImageUrlRequest = output<void>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -71,9 +92,14 @@ export class RichTextEditorComponent implements AfterViewInit {
   isDragOver = signal(false);
   showFloatingToolbar = signal(false);
   floatingToolbarPosition = signal<FloatingToolbarPosition>({ top: 0, left: 0 });
+  isContentFocused = signal(false);
+  disableContextActions = computed(() =>
+    this.requireContentFocusForActions() && !this.isContentFocused()
+  );
   private dragCounter = 0;
   private isInternalChange = false; // Flag to track internal vs external changes
   private viewInitialized = false;
+  private focusBlurTimeout?: ReturnType<typeof setTimeout>;
 
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
@@ -109,6 +135,54 @@ export class RichTextEditorComponent implements AfterViewInit {
 
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
+  }
+
+  onEditorFocus(): void {
+    if (this.focusBlurTimeout) {
+      clearTimeout(this.focusBlurTimeout);
+      this.focusBlurTimeout = undefined;
+    }
+    this.isContentFocused.set(true);
+    this.contentFocusChange.emit(true);
+  }
+
+  onEditorBlur(): void {
+    this.focusBlurTimeout = setTimeout(() => {
+      this.isContentFocused.set(false);
+      this.contentFocusChange.emit(false);
+    }, 60);
+  }
+
+  requestInsertReference(): void {
+    this.insertReferenceRequest.emit();
+  }
+
+  requestAiAction(action: 'generate' | 'translate' | 'sentiment'): void {
+    this.aiActionRequest.emit(action);
+  }
+
+  requestToggleRecording(): void {
+    this.toggleRecordingRequest.emit();
+  }
+
+  requestTogglePreview(): void {
+    this.togglePreviewRequest.emit();
+  }
+
+  requestToggleSplitView(): void {
+    this.toggleSplitViewRequest.emit();
+  }
+
+  requestFeaturedImageUpload(): void {
+    this.featuredImageUploadRequest.emit();
+  }
+
+  requestFeaturedImageLibrary(): void {
+    this.featuredImageLibraryRequest.emit();
+  }
+
+  requestFeaturedImageUrl(): void {
+    this.featuredImageUrlRequest.emit();
   }
 
   setContent(content: string) {
@@ -156,6 +230,14 @@ export class RichTextEditorComponent implements AfterViewInit {
     }, 100);
   }
 
+  setEditorMode(richTextMode: boolean): void {
+    if (this.isRichTextMode() === richTextMode) {
+      return;
+    }
+
+    this.toggleEditorMode();
+  }
+
   onMarkdownContentChange(event: Event) {
     const value = (event.target as HTMLTextAreaElement).value;
     // Mark this as an internal change to prevent re-rendering
@@ -172,10 +254,6 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.isInternalChange = true;
     this.markdownContent.set(markdown);
     this.contentChange.emit(markdown);
-  }
-
-  toggleToolbarVisibility() {
-    this.showToolbarChange.emit(!this.showToolbar());
   }
 
   private renderMarkdownToEditor(markdown: string) {
@@ -450,27 +528,6 @@ export class RichTextEditorComponent implements AfterViewInit {
   openAnyFileDialog(): void {
     this.fileInput.nativeElement.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar';
     this.fileInput.nativeElement.click();
-  }
-
-  insertLoremIpsum(): void {
-    const loremIpsumParagraphs = [
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-      'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-      'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
-      'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.',
-      'At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa.',
-    ];
-
-    // Pick a random paragraph
-    const randomParagraph = loremIpsumParagraphs[Math.floor(Math.random() * loremIpsumParagraphs.length)];
-
-    // Insert as a paragraph
-    const markdown = `\n${randomParagraph}\n\n`;
-    this.insertMarkdown(markdown);
-
-    this.snackBar.open('Lorem Ipsum paragraph inserted', 'Dismiss', {
-      duration: 2000,
-    });
   }
 
   insertImageFromUrl(): void {

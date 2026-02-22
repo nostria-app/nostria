@@ -9,76 +9,6 @@
   <div class="editor-content-wrapper" [class.split-view-active]="showSplitView()">
     <!-- Medium-style Editor -->
     <div class="medium-editor">
-      <!-- Top Action Buttons -->
-      <div class="top-action-buttons">
-        <div class="left-buttons">
-          @if (!article().image) {
-          <div class="featured-image-drop-zone" [class.drag-over]="isFeaturedImageDragOver()"
-            (dragenter)="onFeaturedImageDragEnter($event)" (dragover)="onFeaturedImageDragOver($event)"
-            (dragleave)="onFeaturedImageDragLeave($event)" (drop)="onFeaturedImageDrop($event)">
-            <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
-              <mat-icon>add_photo_alternate</mat-icon>
-            </button>
-            @if (isFeaturedImageDragOver()) {
-            <span class="drop-hint">Drop image here</span>
-            }
-          </div>
-          <mat-menu #featuredImageMenu="matMenu">
-            <button mat-menu-item (click)="openFeaturedImageUpload()">
-              <mat-icon>upload</mat-icon>
-              <span>Upload Image</span>
-            </button>
-            <button mat-menu-item (click)="openFeaturedImageChooser()">
-              <mat-icon>photo_library</mat-icon>
-              <span>Choose from library</span>
-            </button>
-            <button mat-menu-item (click)="openFeaturedImageUrl()">
-              <mat-icon>link</mat-icon>
-              <span>Image from URL</span>
-            </button>
-          </mat-menu>
-          }
-        </div>
-        <div class="right-buttons">
-          <button mat-icon-button [matMenuTriggerFor]="aiMenu" matTooltip="AI Tools">
-            <mat-icon>psychology</mat-icon>
-          </button>
-          <mat-menu #aiMenu="matMenu">
-            <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
-              <mat-icon>auto_awesome</mat-icon>
-              <span>Generate Text</span>
-            </button>
-            <button mat-menu-item (click)="openAiDialog('translate')">
-              <mat-icon>translate</mat-icon>
-              <span>Translate</span>
-            </button>
-            <button mat-menu-item (click)="openAiDialog('sentiment')">
-              <mat-icon>mood</mat-icon>
-              <span>Sentiment Analysis</span>
-            </button>
-          </mat-menu>
-          <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
-            [disabled]="isPublishing() || (showPreview() && !showSplitView()) || isTranscribing()"
-            matTooltip="Dictate content">
-            @if (isTranscribing()) {
-            <mat-icon class="spinning">sync</mat-icon>
-            } @else {
-            <mat-icon>mic</mat-icon>
-            }
-          </button>
-          @if (!showSplitView()) {
-          <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'">
-            <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          }
-          @if (canUseSplitView()) {
-          <button mat-icon-button (click)="toggleSplitView()" matTooltip="Split view">
-            <mat-icon>{{ showSplitView() ? 'right_panel_open' : 'right_panel_close' }}</mat-icon>
-          </button>
-          }
-        </div>
-      </div>
-
       <div class="editor-layout" [class.split-view]="showSplitView()">
         <div class="editor-pane">
 
@@ -104,17 +34,30 @@
           }
 
           <!-- Content Editor or Preview -->
-          @if (!showPreview() || showSplitView()) {
-          <!-- Write Mode -->
           <div class="write-tab">
             <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
               [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)"
-              [showToolbar]="showEditorToolbar()" (showToolbarChange)="setEditorToolbarVisible($event)">
+              [disableAdvancedActions]="false" [showArticleActions]="true" [showFeaturedImageAction]="true"
+              [hasFeaturedImage]="!!article().image" [previewActive]="showPreview()" [splitViewActive]="showSplitView()"
+              [canUseSplitView]="canUseSplitView()" [showEditorContent]="!showPreview() || showSplitView()"
+              [actionsDisabled]="isPublishing()" [recording]="isRecording()" [transcribing]="isTranscribing()"
+              [requireContentFocusForActions]="false" (featuredImageUploadRequest)="openFeaturedImageUpload()"
+              (featuredImageLibraryRequest)="openFeaturedImageChooser()"
+              (featuredImageUrlRequest)="openFeaturedImageUrl()" (insertReferenceRequest)="openReferencePicker()"
+              (aiActionRequest)="openAiDialog($event)" (toggleRecordingRequest)="toggleRecording()"
+              (togglePreviewRequest)="togglePreview()" (toggleSplitViewRequest)="toggleSplitView()">
             </app-rich-text-editor>
           </div>
-          } @else {
+
+          @if (showPreview() && !showSplitView()) {
           <!-- Preview Mode -->
           <div class="editor-container article-preview-wrapper">
+            <div class="preview-mode-header">
+              <button mat-button type="button" (click)="togglePreview()">
+                <mat-icon>edit</mat-icon>
+                Back to editor
+              </button>
+            </div>
             <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
           </div>
           }

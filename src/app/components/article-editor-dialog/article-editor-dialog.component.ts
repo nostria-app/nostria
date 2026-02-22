@@ -51,8 +51,8 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
-import { LocalSettingsService } from '../../services/local-settings.service';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
+import { ArticleReferencePickerResult } from '../article-reference-picker-dialog/article-reference-picker-dialog.component';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -126,7 +126,6 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
-  private localSettings = inject(LocalSettingsService);
   private customDialog = inject(CustomDialogService);
   private cache = inject(Cache);
   private readonly DEFAULT_DIALOG_WIDTH = '920px';
@@ -248,7 +247,6 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   showArticleImage = signal(false);
   showPreview = signal(false);
   showSplitView = signal(false);
-  showEditorToolbar = computed(() => this.localSettings.articleEditorShowToolbar());
   isLargeScreen = signal(false);
   canUseSplitView = computed(() => this.isLargeScreen());
 
@@ -273,6 +271,12 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     effect(() => {
       const isSplitEnabled = this.showSplitView();
       this.updateDialogWidth(isSplitEnabled);
+    });
+
+    effect(() => {
+      this.article().title;
+      this.isEditMode();
+      this.syncDialogTitle();
     });
 
     // Check if we're editing an existing article
@@ -323,6 +327,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     setTimeout(() => {
       this.titleInput?.nativeElement.focus();
     }, 0);
+
+    this.syncDialogTitle();
   }
 
   ngOnDestroy() {
@@ -879,9 +885,21 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
   updateTitle(value: string): void {
     this.article.update(art => ({ ...art, title: value }));
+    this.syncDialogTitle();
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
+  }
+
+  private syncDialogTitle(): void {
+    if (!this.dialogRef) {
+      return;
+    }
+
+    const title = this.article().title.trim();
+    const baseTitle = this.isEditMode() ? 'Edit Article' : 'New Article';
+    const dialogTitle = title ? `${baseTitle} · ${title}` : baseTitle;
+    this.dialogRef.updateTitle(dialogTitle);
   }
 
   onTitleKeyDown(event: KeyboardEvent): void {
@@ -1213,8 +1231,49 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     this.showSplitView.update(show => !show);
   }
 
-  setEditorToolbarVisible(visible: boolean): void {
-    this.localSettings.setArticleEditorShowToolbar(visible);
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleReferencePickerDialogComponent.prototype,
+      ArticleReferencePickerResult
+    >(ArticleReferencePickerDialogComponent, {
+      title: 'Insert Reference',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const references = result?.references ?? [];
+      if (references.length > 0) {
+        this.insertReferences(references);
+      }
+    });
+  }
+
+  private insertReferences(references: string[]): void {
+    const uniqueReferences = Array.from(new Set(references.filter(reference => !!reference?.trim())));
+    if (uniqueReferences.length === 0) {
+      return;
+    }
+
+    const currentContent = this.article().content;
+    const separator = !currentContent.trim()
+      ? ''
+      : currentContent.endsWith('\n')
+        ? '\n'
+        : '\n\n';
+
+    this.updateContent(`${currentContent}${separator}${uniqueReferences.join('\n')}`);
+
+    this.snackBar.open(
+      uniqueReferences.length === 1 ? 'Reference inserted' : `${uniqueReferences.length} references inserted`,
+      'Close',
+      { duration: 2500 }
+    );
   }
 
   onEditorModeChange(isRichTextMode: boolean): void {
