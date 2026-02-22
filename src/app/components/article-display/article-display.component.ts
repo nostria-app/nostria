@@ -19,7 +19,6 @@ import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
-import { ZapChipsComponent } from '../zap-chips/zap-chips.component';
 import { ReactionSummaryComponent, type ZapInfo } from '../event/reaction-summary/reaction-summary.component';
 import { type ReactionEvents } from '../../services/event';
 import { type NostrRecord } from '../../interfaces';
@@ -52,11 +51,6 @@ export interface ArticleData {
   jsonData: Record<string, unknown> | unknown[] | null;
 }
 
-interface TopZapper {
-  pubkey: string;
-  amount: number;
-}
-
 @Component({
   selector: 'app-article-display',
   imports: [
@@ -75,7 +69,6 @@ interface TopZapper {
     EventMenuComponent,
     MentionHoverDirective,
     CommentsListComponent,
-    ZapChipsComponent,
     ReactionSummaryComponent
   ],
   templateUrl: './article-display.component.html',
@@ -224,7 +217,6 @@ export class ArticleDisplayComponent {
   commentCount = signal<number>(0);
   zapTotal = signal<number>(0);
   zapCountInternal = signal<number>(0);
-  topZappers = signal<TopZapper[]>([]);
   engagementLoading = signal<boolean>(false);
   internalReactions = signal<ReactionEvents>({ events: [], data: new Map() });
   internalZaps = signal<ZapInfo[]>([]);
@@ -303,6 +295,7 @@ export class ArticleDisplayComponent {
   shareCount = computed<number>(() => this.repostCount() + this.quoteCount());
 
   // Reactions summary panel state
+  showTopReactionsSummary = signal<boolean>(false);
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
   isFollowingAuthor = signal<boolean>(false);
@@ -426,7 +419,6 @@ export class ArticleDisplayComponent {
       this.zapTotal.set(zapData.total);
       this.zapCountInternal.set(zapData.count);
       this.internalZaps.set(zapData.zaps);
-      this.topZappers.set(zapData.topZappers);
     } catch (err) {
       this.logger.error('Failed to load engagement metrics:', err);
     } finally {
@@ -464,11 +456,10 @@ export class ArticleDisplayComponent {
     }
   }
 
-  private async loadZaps(event: Event): Promise<{ total: number; count: number; topZappers: TopZapper[]; zaps: ZapInfo[] }> {
+  private async loadZaps(event: Event): Promise<{ total: number; count: number; zaps: ZapInfo[] }> {
     try {
       const zapReceipts = await this.zapService.getZapsForEvent(event.id);
       let total = 0;
-      const zapperAmounts = new Map<string, number>();
       const zaps: ZapInfo[] = [];
 
       for (const receipt of zapReceipts) {
@@ -478,10 +469,6 @@ export class ArticleDisplayComponent {
 
           // Track zapper amounts
           if (zapRequest) {
-            const zapperPubkey = zapRequest.pubkey;
-            const current = zapperAmounts.get(zapperPubkey) || 0;
-            zapperAmounts.set(zapperPubkey, current + amount);
-
             zaps.push({
               receipt,
               zapRequest,
@@ -494,16 +481,10 @@ export class ArticleDisplayComponent {
         }
       }
 
-      // Get top 3 zappers
-      const topZappers = Array.from(zapperAmounts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([pubkey, amount]) => ({ pubkey, amount }));
-
-      return { total, count: zapReceipts.length, topZappers, zaps };
+      return { total, count: zapReceipts.length, zaps };
     } catch (err) {
       this.logger.error('Failed to load zaps for article:', err);
-      return { total: 0, count: 0, topZappers: [], zaps: [] };
+      return { total: 0, count: 0, zaps: [] };
     }
   }
 
@@ -783,16 +764,22 @@ export class ArticleDisplayComponent {
   /**
    * Toggle the reactions summary panel visibility
    */
-  toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions') {
-    const isCurrentlyVisible = this.showReactionsSummary();
+  toggleReactionsSummary(
+    tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions',
+    location: 'top' | 'bottom' = 'bottom'
+  ) {
+    const panelVisibleSignal = location === 'top' ? this.showTopReactionsSummary : this.showReactionsSummary;
+    const otherPanelVisibleSignal = location === 'top' ? this.showReactionsSummary : this.showTopReactionsSummary;
+    const isCurrentlyVisible = panelVisibleSignal();
     const resolvedTab = this.resolveTabWithData(tab);
     const currentTab = this.reactionsSummaryTab();
 
     if (isCurrentlyVisible && currentTab === resolvedTab) {
-      this.showReactionsSummary.set(false);
+      panelVisibleSignal.set(false);
     } else {
       this.reactionsSummaryTab.set(resolvedTab);
-      this.showReactionsSummary.set(true);
+      panelVisibleSignal.set(true);
+      otherPanelVisibleSignal.set(false);
     }
   }
 

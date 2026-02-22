@@ -159,34 +159,14 @@
       line-height: 1.6;
       color: var(--mat-sys-on-surface);
       margin-bottom: 24px;
-      padding: 20px 24px;
-      background: linear-gradient(135deg,
-          var(--mat-sys-surface-container) 0%,
-          var(--mat-sys-surface-container-high) 100%);
-      border-radius: 12px;
-      border-left: 4px solid var(--mat-sys-primary);
-      box-shadow: var(--mat-sys-level1);
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg,
-            transparent 0%,
-            var(--mat-sys-primary) 50%,
-            transparent 100%);
-        opacity: 0.6;
-      }
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      border-left: none;
+      box-shadow: none;
 
       @media (max-width: 768px) {
-        padding: 16px 20px;
         font-size: 1.125rem;
-        border-radius: 8px;
       }
     }
 
@@ -215,47 +195,16 @@
           width: 16px;
           height: 16px;
         }
-      }
 
-      .engagement-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-
-        .engagement-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--mat-sys-on-surface-variant);
-          font-size: 0.875rem;
-
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-          }
-
-          .count {
-            color: var(--mat-sys-on-surface);
-          }
-        }
-
-        .engagement-button {
-          min-width: auto;
-          padding: 4px 8px;
-          border-radius: 16px;
-          cursor: pointer;
-          transition: background-color 0.2s;
-
-          &:hover {
-            background-color: var(--mat-sys-surface-container-high);
-          }
+        ::ng-deep .date-ago {
+          font-size: inherit;
+          line-height: inherit;
+          color: inherit;
         }
       }
 
-      .top-zappers {
-        margin-top: 4px;
+      .top-actions-row {
+        width: 100%;
       }
     }
   }
@@ -862,8 +811,7 @@
 
   .article-top-actions,
   .article-tts-controls,
-  .engagement-row,
-  .top-zappers,
+  .top-actions-row,
   .article-footer,
   .reactions-summary-container,
   .article-tagged-users-warning {

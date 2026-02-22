@@ -53,28 +53,82 @@
           </div>
         </div>
 
-        <!-- Engagement Metrics Row - clickable to open reactions dialog -->
-        <div class="engagement-row">
-          <button class="engagement-item engagement-button" mat-button (click)="openReactionsDialog('likes')">
-            <mat-icon>thumb_up</mat-icon>
-            <span class="count">{{ reactionCount() }}</span>
-          </button>
-          <button class="engagement-item engagement-button" mat-button (click)="scrollToComments()">
-            <mat-icon>chat_bubble</mat-icon>
-            <span class="count">{{ commentCount() }}</span>
-          </button>
-          <button class="engagement-item engagement-button" mat-button (click)="openReactionsDialog('zaps')">
-            <mat-icon>bolt</mat-icon>
-            <span class="count">{{ formatZapAmount(zapTotal()) }}</span>
-          </button>
-        </div>
+        <div class="top-actions-row">
+          <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()">
+            <div class="action-button like-action like-hover-container"
+              (click)="topReactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+              <app-reaction-button class="action-icon" #topReactionBtn [event]="event()!"
+                [reactionsFromParent]="effectiveReactions()" (reactionChanged)="onReactionChanged()"
+                view="icon"></app-reaction-button>
+              @if (likes().length > 0) {
+              <span class="action-count">{{ likes().length }}</span>
+              }
+              <span class="action-text">Like</span>
+            </div>
 
-        <!-- Top Zappers -->
-        @if (topZappers().length > 0) {
-        <div class="top-zappers">
-          <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
+            <div class="action-button comment-action" role="button"
+              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="replyClick.emit($event)">
+              <mat-icon class="action-icon">mode_comment</mat-icon>
+              @if (effectiveReplyCount() > 0) {
+              <span class="action-count">{{ effectiveReplyCount() }}</span>
+              }
+              <span class="action-text">Reply</span>
+            </div>
+
+            <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+              (click)="share.emit(); $event.stopPropagation()">
+              <mat-icon class="action-icon">share</mat-icon>
+              @if (shareCount() > 0) {
+              <span class="action-count">{{ shareCount() }}</span>
+              }
+              <span class="action-text">Share</span>
+            </div>
+
+            <div class="action-button zap-action" (click)="topZapBtn.onClick($event); $event.stopPropagation()">
+              <app-zap-button class="action-icon" #topZapBtn [event]="event()!" [recipientPubkey]="event()!.pubkey"
+                (zapSent)="onZapSent($event)">
+              </app-zap-button>
+              @if (totalZapAmount() > 0) {
+              <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
+              }
+              <span class="action-text">Zap</span>
+            </div>
+
+            <div class="action-button bookmark-action" role="button"
+              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="bookmarkClick.emit($event)">
+              <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
+              <span class="action-text">Bookmark</span>
+            </div>
+
+            @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
+            <div class="emoji-indicators"
+              (click)="toggleReactionsSummary('reactions', 'top'); $event.stopPropagation()">
+              @if (topEmojis().length > 0) {
+              <span class="aggregated-emojis">
+                @for (emoji of topEmojis(); track emoji.emoji) {
+                @if (emoji.url) {
+                <img [src]="emoji.url" [alt]="emoji.emoji" title="Custom emoji" class="emoji-item custom-emoji" />
+                } @else {
+                <span class="emoji-item">{{ emoji.emoji }}</span>
+                }
+                }
+              </span>
+              }
+              <mat-icon class="emoji-more">{{ showTopReactionsSummary() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </div>
+            }
+          </div>
+
+          @if (showTopReactionsSummary()) {
+          <div class="reactions-summary-container" [@expandCollapse]>
+            <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
+              [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="effectiveZaps()"
+              [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
+              [hideTabs]="false">
+            </app-reaction-summary>
+          </div>
+          }
         </div>
-        }
         }
 
         <!-- Text-to-Speech Controls (Header) - only in full mode -->
@@ -333,7 +387,7 @@
     @if (showReactionsSummary()) {
     <div class="reactions-summary-container" [@expandCollapse]>
       <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
-        [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="zapsInput()"
+        [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="effectiveZaps()"
         [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
         [hideTabs]="false">
       </app-reaction-summary>
