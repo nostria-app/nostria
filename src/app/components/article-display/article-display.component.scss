@@ -289,9 +289,35 @@
   border-radius: 12px;
   border: 1px solid var(--mat-sys-outline-variant);
 
+  .article-author-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    app-user-profile {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  .author-follow-indicator {
+    border-color: var(--mat-sys-outline-variant);
+    color: var(--mat-sys-on-surface-variant);
+    background: transparent;
+    min-width: 0;
+    opacity: 1;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
   @media (max-width: 768px) {
     margin-bottom: 24px;
     padding: 16px;
+
+    .article-author-row {
+      gap: 8px;
+    }
   }
 }
 

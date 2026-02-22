@@ -157,6 +157,10 @@ export class RichTextEditorComponent implements AfterViewInit {
     }, 60);
   }
 
+  onEditorKeyDown(event: KeyboardEvent): void {
+    event.stopPropagation();
+  }
+
   requestInsertReference(): void {
     this.captureInsertionPoint();
     this.insertReferenceRequest.emit();
@@ -1089,9 +1093,7 @@ export class RichTextEditorComponent implements AfterViewInit {
     const imageFiles: File[] = [];
 
     // First pass: check for image files
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-
+    for (const item of items) {
       if (item.kind === 'file') {
         const file = item.getAsFile();
         if (file && this.isImageFile(file)) {
@@ -1126,7 +1128,7 @@ export class RichTextEditorComponent implements AfterViewInit {
                 newRange.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(newRange);
-              } catch (e) {
+              } catch {
                 // If restoring cursor position fails, just focus the editor
                 this.editorContent.nativeElement.focus();
               }

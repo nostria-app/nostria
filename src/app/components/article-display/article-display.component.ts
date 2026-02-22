@@ -32,7 +32,6 @@ import { ZapService } from '../../services/zap.service';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
-import { DataService } from '../../services/data.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
@@ -306,6 +305,7 @@ export class ArticleDisplayComponent {
   // Reactions summary panel state
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
+  isFollowingAuthor = signal<boolean>(false);
 
   // Computed properties for convenience
   event = computed(() => this.article().event);
@@ -317,6 +317,18 @@ export class ArticleDisplayComponent {
   // Deduplicated hashtags to avoid Angular track key errors
   uniqueHashtags = computed(() => [...new Set(this.article().hashtags)]);
   authorPubkey = computed(() => this.article().authorPubkey);
+  authorCanBeFollowed = computed(() => {
+    const pubkey = this.authorPubkey();
+    return !!pubkey && !this.accountState.isCurrentUser(pubkey);
+  });
+  authorIsFollowed = computed(() => {
+    const pubkey = this.authorPubkey();
+    if (!this.authorCanBeFollowed()) {
+      return false;
+    }
+
+    return this.accountState.isFollowing()(pubkey);
+  });
   publishedAtTimestamp = computed(() => this.article().publishedAtTimestamp);
   link = computed(() => this.article().link);
   id = computed(() => this.article().id);
@@ -748,6 +760,24 @@ export class ArticleDisplayComponent {
     this.router.navigate(['/f'], {
       queryParams: { t: hashtag },
     });
+  }
+
+  async followAuthor(event?: MouseEvent): Promise<void> {
+    event?.stopPropagation();
+
+    const pubkey = this.authorPubkey();
+    if (!pubkey || !this.authorCanBeFollowed() || this.authorIsFollowed() || this.isFollowingAuthor()) {
+      return;
+    }
+
+    this.isFollowingAuthor.set(true);
+    try {
+      await this.accountState.follow(pubkey);
+    } catch (error) {
+      this.logger.error('Failed to follow article author:', error);
+    } finally {
+      this.isFollowingAuthor.set(false);
+    }
   }
 
   /**

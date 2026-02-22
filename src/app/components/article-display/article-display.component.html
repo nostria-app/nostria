@@ -175,7 +175,20 @@
   <!-- Author Section (only in full mode) -->
   @if (mode() === 'full') {
   <section class="article-author">
-    <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+    <div class="article-author-row">
+      <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+
+      @if (authorCanBeFollowed()) {
+      <button mat-stroked-button type="button" class="author-follow-indicator" (click)="followAuthor($event)"
+        [disabled]="authorIsFollowed() || isFollowingAuthor()">
+        @if (authorIsFollowed()) {
+        Following
+        } @else {
+        Follow
+        }
+      </button>
+      }
+    </div>
   </section>
   }
 

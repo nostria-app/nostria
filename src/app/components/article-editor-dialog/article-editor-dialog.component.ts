@@ -25,8 +25,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { DomSanitizer } from '@angular/platform-browser';
-import { marked } from 'marked';
+import { SafeHtml } from '@angular/platform-browser';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
@@ -38,8 +37,6 @@ import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.co
 import { nip19, type Event as NostrEvent } from 'nostr-tools';
 import { DecodedNaddr } from 'nostr-tools/nip19';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { Cache } from '../../services/cache';
-import { NostrRecord } from '../../interfaces';
 import { MediaService } from '../../services/media.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
@@ -51,6 +48,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
+import { FormatService } from '../../services/format/format.service';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 import { ArticleReferencePickerResult } from '../article-reference-picker-dialog/article-reference-picker-dialog.component';
 import { TextInputDialogComponent } from '../text-input-dialog/text-input-dialog.component';
@@ -125,12 +123,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private aiService = inject(AiService);
-  private sanitizer = inject(DomSanitizer);
+  private formatService = inject(FormatService);
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private customDialog = inject(CustomDialogService);
-  private cache = inject(Cache);
   private readonly DEFAULT_DIALOG_WIDTH = '920px';
   private readonly SPLIT_DIALOG_WIDTH = '1840px';
 
@@ -193,32 +190,8 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     );
   });
 
-  // Markdown preview with nostr: reference handling
-  markdownHtml = computed(() => {
-    const content = normalizeMarkdownLinkDestinations(this.article().content);
-    if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('');
-
-    try {
-      // Configure marked with the same options used throughout the app
-      marked.use({
-        gfm: true,
-        breaks: true, // Enable line breaks for consistency
-        pedantic: false,
-      });
-
-      // First, parse markdown to HTML
-      let html = marked.parse(content) as string;
-
-      // Then, process nostr: references to create clickable links with profile names
-      // Note: This is synchronous, so we use cached profiles only
-      html = this.processNostrReferences(html);
-
-      return this.sanitizer.bypassSecurityTrustHtml(html);
-    } catch (error) {
-      console.error('Error parsing markdown:', error);
-      return this.sanitizer.bypassSecurityTrustHtml('<p>Error parsing markdown</p>');
-    }
-  });
+  // Markdown preview rendered through shared formatter (supports embeds and async preview updates)
+  markdownHtml = signal<SafeHtml>('');
 
   // Computed property for preview - creates ArticleData from current draft
   previewArticleData = computed<ArticleData>(() => {
@@ -283,6 +256,19 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       this.article().title;
       this.isEditMode();
       this.syncDialogTitle();
+    });
+
+    effect(() => {
+      const content = normalizeMarkdownLinkDestinations(this.article().content);
+      if (!content.trim()) {
+        this.markdownHtml.set('');
+        return;
+      }
+
+      const initialHtml = this.formatService.markdownToHtmlNonBlocking(content, updatedHtml => {
+        this.markdownHtml.set(updatedHtml);
+      });
+      this.markdownHtml.set(initialHtml);
     });
 
     // Check if we're editing an existing article
@@ -1613,96 +1599,6 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
       }
     }
-  }
-
-  /**
-   * Process nostr: references in HTML content to create clickable links with profile names
-   * This enhances the preview to show profile display names for npub/nprofile references
-   * Uses nostr-mention class and data attributes for hover card functionality
-   */
-  private processNostrReferences(html: string): string {
-    // Match nostr: URIs in the HTML content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
-
-    return html.replace(nostrUriPattern, (match, prefix, identifier) => {
-      const fullIdentifier = prefix + identifier;
-
-      try {
-        const decoded = nip19.decode(fullIdentifier);
-        const decodedType = decoded.type as string;
-
-        if (decodedType === 'npub') {
-          // For npub references, create profile link with hover card support
-          const pubkey = decoded.data as unknown as string;
-          const npubIdentifier = nip19.npubEncode(pubkey);
-
-          // Get display name from cache (synchronous)
-          const displayName = this.getCachedDisplayName(pubkey);
-
-          return `<a href="/p/${npubIdentifier}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="${match}">@${displayName}</a>`;
-        } else if (decodedType === 'nprofile') {
-          // For nprofile references, create profile link with hover card support
-          const profileData = decoded.data as unknown as { pubkey: string; relays?: string[] };
-          const pubkey = profileData.pubkey;
-          const npubIdentifier = nip19.npubEncode(pubkey);
-
-          // Get display name from cache (synchronous)
-          const displayName = this.getCachedDisplayName(pubkey);
-
-          return `<a href="/p/${npubIdentifier}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="${match}">@${displayName}</a>`;
-        } else if (decodedType === 'note') {
-          // For note references, show as a link
-          const eventId = decoded.data as unknown as string;
-          const neventIdentifier = nip19.neventEncode({ id: eventId });
-          return `<a href="/e/${neventIdentifier}" class="nostr-event-link" title="${match}">📝 Note</a>`;
-        } else if (decodedType === 'nevent') {
-          // For nevent references, show as a link
-          const neventIdentifier = fullIdentifier;
-          return `<a href="/e/${neventIdentifier}" class="nostr-event-link" title="${match}">📝 Note</a>`;
-        } else if (decodedType === 'naddr') {
-          // For addressable events, show as a link
-          const addrData = decoded.data as unknown as {
-            identifier: string;
-            pubkey: string;
-            kind: number;
-            relays?: string[];
-          };
-          const npubIdentifier = nip19.npubEncode(addrData.pubkey);
-          return `<a href="/a/${npubIdentifier}/${addrData.identifier}" class="nostr-addr-link" title="${match}">📄 Article</a>`;
-        }
-
-        return match;
-      } catch (error) {
-        // If decoding fails, just return the original match
-        console.warn('Failed to decode nostr reference in preview:', fullIdentifier, error);
-        return match;
-      }
-    });
-  }
-
-  /**
-   * Get cached profile display name synchronously
-   * Uses the same cache as DataService to avoid async operations in computed properties
-   * Uses untracked() to prevent cache stats from triggering computed recalculation
-   */
-  private getCachedDisplayName(pubkey: string): string {
-    // Use untracked to avoid creating reactive dependency on cache stats
-    return untracked(() => {
-      const cacheKey = `metadata-${pubkey}`;
-      const record = this.cache.get<NostrRecord>(cacheKey);
-
-      if (record?.data) {
-        // Same priority as ParsingService: display_name > name > truncated npub
-        return (
-          record.data.display_name ||
-          record.data.name ||
-          `${nip19.npubEncode(pubkey).substring(0, 12)}...`
-        );
-      }
-
-      // Fallback to truncated npub if not cached
-      return `${nip19.npubEncode(pubkey).substring(0, 12)}...`;
-    });
   }
 
   openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {

@@ -89,14 +89,14 @@
         (click)="onProfileClick($event)">
         <div class="user-profile-npub">
           @if (nip05Cached(); as nip05) {
-            @if (nip05.valid) {
-            <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
-            } @else {
-            <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
-            }
-            <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ aliasOrNpub() }}</span>
+          @if (nip05.valid) {
+          <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
           } @else {
-            {{ aliasOrNpub() }}
+          <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
+          }
+          <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ aliasOrNpub() }}</span>
+          } @else {
+          <span [title]="aliasOrNpub()">{{ aliasOrNpub() }}</span>
           }
         </div>
       </a>
@@ -112,14 +112,14 @@
       <div class="user-profile-details">
         NIP-05:
         @if (nip05Cached(); as nip05) {
-          @if (nip05.valid) {
-          <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
-          } @else {
-          <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
-          }
-          <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ profile().data.nip05 }}</span>
+        @if (nip05.valid) {
+        <mat-icon class="nip05-icon nip05-valid">verified</mat-icon>
         } @else {
-          {{ profile().data.nip05 }}
+        <mat-icon class="nip05-icon nip05-invalid">verified_off</mat-icon>
+        }
+        <span [class.strikethrough]="!nip05.valid" [title]="nip05.status">{{ profile().data.nip05 }}</span>
+        } @else {
+        {{ profile().data.nip05 }}
         }
       </div>
       }
