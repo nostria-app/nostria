@@ -59,7 +59,7 @@
             <app-user-profile [pubkey]="article.pubkey" view="compact" [showRank]="false"></app-user-profile>
             <span class="article-date">{{ article.created_at | ago }}</span>
           </div>
-          <app-article-event [event]="article" [showAuthor]="false"></app-article-event>
+          <app-article-event [event]="article" [showAuthor]="false" [enableImagePreview]="false"></app-article-event>
         </mat-card-content>
       </mat-card>
       }

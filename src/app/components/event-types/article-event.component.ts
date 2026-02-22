@@ -37,6 +37,7 @@ export class ArticleEventComponent {
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
+  enableImagePreview = input<boolean>(true);
 
   // Article title
   title = computed(() => {
@@ -240,7 +241,7 @@ export class ArticleEventComponent {
   });
 
   openFullArticle(interactionEvent?: MouseEvent | KeyboardEvent): void {
-    if (interactionEvent instanceof MouseEvent) {
+    if (this.enableImagePreview() && interactionEvent instanceof MouseEvent) {
       const target = interactionEvent.target as HTMLElement;
       const imageElement = target.closest('img');
       const imageSource = imageElement?.getAttribute('src');

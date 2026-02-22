@@ -12,14 +12,6 @@
     <mat-icon>edit</mat-icon>
   </button>
   }
-  <button mat-icon-button (click)="bookmarkArticle()"
-    [matTooltip]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
-    <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
-  </button>
-  <button mat-icon-button (click)="shareArticle()" matTooltip="Share Event">
-    <mat-icon>share</mat-icon>
-  </button>
-  <app-zap-button [event]="event()!"></app-zap-button>
   <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
   }
 </div>

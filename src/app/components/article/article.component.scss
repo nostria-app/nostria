@@ -45,13 +45,45 @@
         overflow: hidden;
       }
 
-      .article-meta {
+      .article-meta-row {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
 
+        app-user-profile {
+          min-width: 0;
+
+          ::ng-deep .user-profile.compact app-profile-display-name,
+          ::ng-deep .user-profile.compact .user-profile-name,
+          ::ng-deep .user-profile.compact .profile-link {
+            line-height: 1.2;
+          }
+        }
+      }
+
+      .article-meta {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        white-space: nowrap;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.875rem;
+        line-height: 1.2;
+
+        .meta-separator {
+          opacity: 0.7;
+        }
+
+        ::ng-deep .date-ago {
+          color: inherit;
+          font-size: inherit;
+          line-height: 1.2;
+        }
+
         mat-chip-set {
+          margin-left: 8px;
+
           mat-chip {
             font-size: 0.75rem;
             height: 24px;
@@ -151,13 +183,31 @@
           min-width: 0;
           overflow: hidden;
         }
+
+        &.without-author {
+          justify-content: flex-start;
+        }
       }
 
       .card-meta {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
         flex-shrink: 0;
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         color: var(--mat-sys-on-surface-variant);
         white-space: nowrap;
+        line-height: 1.2;
+
+        .meta-separator {
+          opacity: 0.7;
+        }
+
+        ::ng-deep .date-ago {
+          color: inherit;
+          font-size: inherit;
+          line-height: 1.2;
+        }
       }
 
       .card-tags {

@@ -119,6 +119,25 @@ export class ArticleComponent {
     return ev.created_at;
   });
 
+  readTime = computed(() => {
+    const content = this.event()?.content;
+    if (!content) {
+      return 1;
+    }
+
+    const plainText = content
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`[^`]*`/g, ' ')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+      .replace(/\[[^\]]*\]\([^)]*\)/g, ' ')
+      .replace(/[#>*_~\-]+/g, ' ')
+      .trim();
+
+    const words = plainText.split(/\s+/).filter(word => word.length > 0);
+    const minutes = Math.ceil(words.length / 200);
+    return Math.max(1, minutes);
+  });
+
   authorPubkey = computed(() => {
     const ev = this.event();
     return ev?.pubkey || '';

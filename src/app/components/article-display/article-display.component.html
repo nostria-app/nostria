@@ -43,13 +43,24 @@
       <div class="article-meta">
         @if (mode() === 'full') {
         <div class="meta-row">
-          <div class="publish-date">
-            <mat-icon>schedule</mat-icon>
-            <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
-          </div>
-          <div class="read-time">
-            <mat-icon>timer</mat-icon>
-            <span>{{ readTime() }} min read</span>
+          <div class="author-meta">
+            <app-user-profile [pubkey]="authorPubkey()" [view]="'compact'" [showRank]="false"
+              [hostWidthAuto]="true"></app-user-profile>
+
+            @if (authorCanBeFollowed() && !authorIsFollowed()) {
+            <button mat-stroked-button type="button" class="author-follow-indicator" (click)="followAuthor($event)"
+              [disabled]="isFollowingAuthor()">
+              Follow
+            </button>
+            }
+
+            <div class="meta-details">
+              <span class="read-time">{{ readTime() }} min read</span>
+              <span class="meta-separator">•</span>
+              <span class="publish-date">
+                <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -225,26 +236,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Author Section (only in full mode) -->
-  @if (mode() === 'full') {
-  <section class="article-author">
-    <div class="article-author-row">
-      <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
-
-      @if (authorCanBeFollowed()) {
-      <button mat-stroked-button type="button" class="author-follow-indicator" (click)="followAuthor($event)"
-        [disabled]="authorIsFollowed() || isFollowingAuthor()">
-        @if (authorIsFollowed()) {
-        Following
-        } @else {
-        Follow
-        }
-      </button>
-      }
-    </div>
-  </section>
-  }
 
   <!-- Article Content -->
   <main class="article-content">

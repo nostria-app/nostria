@@ -404,18 +404,19 @@
           [class.has-right-content]="hasRightContent()" [class.mobile-layout]="panelNav.isMobile()"
           [class.left-collapsed]="leftPanelCollapsed() && hasRightContent()">
 
-          <!-- Left Panel Collapse Toggle (shown when right panel has content) -->
-          @if (hasRightContent() && !panelNav.isMobile()) {
-          <button mat-icon-button class="left-panel-toggle" (click)="toggleLeftPanelCollapse()"
-            [class.animating]="toggleButtonAnimating()"
-            [matTooltip]="leftPanelCollapsed() ? 'Show left panel' : 'Hide left panel'">
-            <mat-icon>{{ leftPanelCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-          </button>
-          }
-
           <!-- Left Panel: Feeds or list/root views - takes 50% or 100% width, scrollbar at panel edge -->
           <div class="left-panel" [class.has-content]="panelNav.hasLeftContent()"
             [class.hidden-mobile]="hasRightContent() && panelNav.isMobile()" (scroll)="onLeftPanelScroll($event)">
+
+            <!-- Toggle to hide left panel - sticky at top-right of left panel, overlays the header area -->
+            @if (hasRightContent() && !panelNav.isMobile() && !leftPanelCollapsed()) {
+            <div class="left-panel-toggle-wrapper">
+              <button mat-icon-button class="left-panel-toggle expanded-toggle" (click)="toggleLeftPanelCollapse()"
+                matTooltip="Hide left panel">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+            }
 
             <!-- Feeds - Persistent, positioned directly in left-panel for scrollbar at panel edge -->
             <div class="feeds-container" [class.feeds-active]="panelNav.showFeeds()"
@@ -461,6 +462,14 @@
               </div>
             </div>
           </div>
+
+          <!-- Floating toggle to show left panel when collapsed - positioned at top-left -->
+          @if (hasRightContent() && !panelNav.isMobile() && leftPanelCollapsed()) {
+          <button mat-icon-button class="left-panel-toggle collapsed-toggle" (click)="toggleLeftPanelCollapse()"
+            matTooltip="Show left panel">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          }
         </div>
 
         <!-- Right sidebar - mini apps panel (shoutout, favorites, future mini apps) -->

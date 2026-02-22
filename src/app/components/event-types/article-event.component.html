@@ -5,8 +5,9 @@
 </div>
 }
 
-<article class="article-container clickable-card" (click)="openFullArticle($event)" (keydown.enter)="openFullArticle()"
-  (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Read article: ' + title()">
+<article class="article-container clickable-card" [class.image-preview-enabled]="enableImagePreview()"
+  (click)="openFullArticle($event)" (keydown.enter)="openFullArticle()" (keydown.space)="openFullArticle()" tabindex="0"
+  role="button" [attr.aria-label]="'Read article: ' + title()">
   @if (title()) {
   <h3 class="article-title">
     {{ title() }}

@@ -10,17 +10,24 @@
   <div class="article-compact" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
     [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
     (keydown.space)="openArticle()">
-    @if (showAuthor()) {
-    <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
-    }
     <div class="article-content">
       <h3 class="article-title">{{ title() || 'Untitled Article' }}</h3>
       @if (summary()) {
       <p class="article-summary">{{ summary() }}</p>
       }
       @if (showMetadata()) {
-      <div class="article-meta">
-        <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+      <div class="article-meta-row">
+        @if (showAuthor()) {
+        <app-user-profile [pubkey]="authorPubkey()" [view]="'compact'" [showRank]="false"
+          [hostWidthAuto]="true"></app-user-profile>
+        }
+
+        <div class="article-meta">
+          <span class="read-time">{{ readTime() }} min read</span>
+          <span class="meta-separator">•</span>
+          <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+        </div>
+
         @if (hashtags().length > 0) {
         <mat-chip-set>
           @for (hashtag of hashtags().slice(0, 3); track hashtag) {
@@ -45,12 +52,15 @@
         @if (summary()) {
         <p class="card-summary">{{ summary() }}</p>
         }
-        <div class="card-footer">
+        <div class="card-footer" [class.without-author]="!showAuthor()">
           @if (showAuthor()) {
-          <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+          <app-user-profile [pubkey]="authorPubkey()" [view]="'compact'" [showRank]="false"
+            [hostWidthAuto]="true"></app-user-profile>
           }
           @if (showMetadata()) {
           <div class="card-meta">
+            <span class="read-time">{{ readTime() }} min read</span>
+            <span class="meta-separator">•</span>
             <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
           </div>
           }

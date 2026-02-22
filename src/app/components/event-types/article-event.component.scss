@@ -66,7 +66,7 @@
   border-radius: 8px;
   overflow: hidden;
   background-color: var(--mat-sys-surface-variant);
-  cursor: zoom-in;
+  cursor: inherit;
 
   .article-image {
     width: 100%;
@@ -74,7 +74,7 @@
     display: block;
     object-fit: cover;
     max-height: 400px;
-    cursor: zoom-in;
+    cursor: inherit;
   }
 }
 
@@ -101,6 +101,16 @@
 
 :host ::ng-deep .markdown-content img,
 :host ::ng-deep .markdown-content a img {
+  cursor: inherit !important;
+}
+
+.article-container.image-preview-enabled .article-image-container,
+.article-container.image-preview-enabled .article-image-container .article-image {
+  cursor: zoom-in;
+}
+
+:host ::ng-deep .article-container.image-preview-enabled .markdown-content img,
+:host ::ng-deep .article-container.image-preview-enabled .markdown-content a img {
   cursor: zoom-in !important;
 }
 

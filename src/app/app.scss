@@ -963,9 +963,6 @@ mat-sidenav-content {
   overflow: hidden;
   justify-content: center;
   position: relative;
-  // Enable 3D perspective for collapse animation
-  perspective: 1500px;
-  perspective-origin: center center;
 
   // When feeds should be centered (both panels empty)
   &.feeds-centered {
@@ -1057,6 +1054,12 @@ mat-sidenav-content {
         margin-left: auto;
         margin-right: 0;
       }
+
+      // Extra right padding on left panel headers to make room for the toggle button
+      // Targets OLD approach headers rendered directly in component templates
+      ::ng-deep .panel-header {
+        padding-right: 40px;
+      }
     }
 
     .right-panel {
@@ -1117,12 +1120,7 @@ mat-sidenav-content {
       width: 0;
       min-width: 0;
       max-width: 0;
-      transform: scale(0.88) translateY(30px);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 0;
-      filter: blur(2px);
-      overflow: hidden;
+      display: none;
     }
 
     .right-panel {
@@ -1131,7 +1129,6 @@ mat-sidenav-content {
       max-width: 100%;
       z-index: 10;
       position: relative;
-      box-shadow: -12px 0 40px rgba(0, 0, 0, 0.25);
 
       .panel-content-wrapper {
         max-width: 700px;
@@ -1233,26 +1230,12 @@ mat-sidenav-content {
   overflow-x: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  // Base transform for expanded state
-  transform: scale(1) translateY(0);
-  filter: blur(0);
-  // Smooth transitions for collapse animation
-  transition:
-    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    filter 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    z-index 0s linear 0.2s;
+  // No transitions - instant collapse/expand
 
   // Disable panel scrolling when virtual-scroll components are present
   // These components manage their own scrolling
   &:has(app-notifications) {
     overflow-y: hidden;
-    transition: none;
-    transform: none;
-    filter: none;
   }
 
   // Disable panel scrolling when feeds are visible
@@ -1325,41 +1308,43 @@ mat-sidenav-content {
     min-height: 0; // Required for flex children to shrink properly
   }
 
-  // When animating, ensure smooth transition
-  &.animating {
-    will-change: transform, opacity;
+}
+
+// Left Panel Toggle Wrapper - sticky container that doesn't take layout space
+// Sits inside .left-panel as the first child, overlays the header area
+.left-panel-toggle-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 51; // Above panel-header (z-index: 50)
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  display: flex;
+  justify-content: flex-end;
+
+  .left-panel-toggle {
+    pointer-events: auto;
   }
 }
 
-// Left Panel Toggle Button - positioned between left and right panels
+// Left Panel Toggle Button
 .left-panel-toggle {
-  position: absolute;
-  // Position at the edge between left and right panels
-  // The panels are centered with justify-content: center, so calculate from center
-  // When panels are 700+700, center is between them at 50%
-  // When panels shrink to 50%+50%, center is still at 50%
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   z-index: 100;
   background-color: var(--mat-sys-surface-container);
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
   width: 24px;
-  height: 48px;
+  height: 36px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 1;
-  // Opacity fades out quickly, then back in with a delay after position settles
+  opacity: 0.7;
+  flex-shrink: 0;
   transition:
     background-color 0.2s ease,
-    transform 0.2s ease,
-    left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.3s ease-out;
+    opacity 0.2s ease;
 
   // Hide on tablet (below 1023px) - mobile mode takes over
   @media (max-width: 1023px) {
@@ -1368,40 +1353,28 @@ mat-sidenav-content {
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
-    transform: translate(-50%, -50%) scale(1.05);
-  }
-
-  // When animating, fade out the button
-  &.animating {
-    opacity: 0;
-    pointer-events: none;
-    // Quick fade out, no delay
-    transition:
-      background-color 0.2s ease,
-      transform 0.2s ease,
-      left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-      margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-      opacity 0.2s ease-out;
+    opacity: 1;
   }
 
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
-    transition: transform 0.2s ease;
   }
-}
 
-// When left panel is collapsed, move toggle to left edge of centered right panel
-.dual-panel-layout.left-collapsed .left-panel-toggle {
-  // Right panel takes 100% but content is centered at max 700px
-  // Position toggle at the left edge of the content
-  left: calc(50% - 350px);
-  margin-left: -12px; // Offset for toggle width
-  transform: translateY(-50%);
+  // When expanded, positioned at top-right inside the left panel header area
+  &.expanded-toggle {
+    margin-top: 10px; // (56 - 36) / 2 = 10px to center in 56px header
+    margin-right: 4px;
+  }
 
-  mat-icon {
-    transform: rotate(180deg);
+  // When collapsed, position near the left edge of the right panel's centered content
+  // Right panel content is max-width: 700px, centered, so left edge is at calc(50% - 350px)
+  &.collapsed-toggle {
+    position: absolute;
+    top: 10px;
+    left: max(4px, calc(50% - 350px - 32px)); // Clamp to at least 4px from edge
+    opacity: 1;
   }
 }
 
@@ -1423,14 +1396,7 @@ mat-sidenav-content {
   overflow-x: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  // Smooth transitions for layout changes
-  transition:
-    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    z-index 0s linear;
+  // No transitions - instant collapse/expand
 
   &.active {
     // Use block layout instead of flex to allow sticky positioning to work properly
@@ -1592,6 +1558,7 @@ mat-sidenav-content {
       max-width: 700px;
       margin-left: auto;
       margin-right: 0;
+      padding-right: 40px; // Extra space for the panel toggle button
     }
 
     // Right panel: align to left (towards center)
