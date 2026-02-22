@@ -1,0 +1,117 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+
+  @if (viewingProfile(); as profile) {
+  @if (profile.data?.picture) {
+  <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" />
+  }
+  <h2 class="panel-title title-font">{{ getProfileDisplayName() }}'s Followers</h2>
+  } @else {
+  <h2 class="panel-title title-font">Followers</h2>
+  }
+
+  <span class="panel-header-spacer"></span>
+
+  <div class="header-controls">
+    <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort options">
+      <mat-icon>sort</mat-icon>
+    </button>
+
+    <mat-menu #sortMenu="matMenu" class="sort-menu" [overlapTrigger]="false">
+      <div class="filter-menu-header">
+        <span>Sort By</span>
+      </div>
+      <mat-divider></mat-divider>
+
+      <div class="filter-section">
+        <mat-radio-group [value]="sortOption()" (change)="changeSortOption($event.value)">
+          <mat-radio-button value="default">
+            Default
+          </mat-radio-button>
+          <mat-radio-button value="reverse">
+            Reverse
+          </mat-radio-button>
+          <mat-radio-button value="name-asc">
+            Name (A to Z)
+          </mat-radio-button>
+          <mat-radio-button value="name-desc">
+            Name (Z to A)
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </mat-menu>
+
+    <div class="search-container">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Filter..." [value]="searchTerm()"
+        (input)="updateSearch($any($event.target).value)" />
+      @if (searchTerm()) {
+      <button mat-icon-button (click)="updateSearch('')" class="clear-search">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+    </div>
+  </div>
+</div>
+
+<mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)"
+  animationDuration="300ms">
+  <mat-tab class="following-tab" label="Followers">
+    <div class="following-content">
+      @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading followers list...</p>
+      </div>
+      } @else if (error()) {
+      <div class="error-container">
+        <mat-icon>error</mat-icon>
+        <p>{{ error() }}</p>
+        <button mat-button><mat-icon>refresh</mat-icon> Try Again</button>
+      </div>
+      } @else if (filteredFollowersList().length === 0) {
+      <div class="empty-list">
+        @if (searchTerm()) {
+        <mat-icon>search_off</mat-icon>
+        <p>No results for "{{ searchTerm() }}"</p>
+        <button mat-button (click)="updateSearch('')">Clear search</button>
+        } @else {
+        <mat-icon>people_outline</mat-icon>
+        <p>This user has no followers.</p>
+        }
+      </div>
+      } @else {
+      <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+        [maxBufferPx]="maxBufferPx">
+        <mat-list class="full-width-list">
+          @for (user of filteredFollowersList(); track user.id) {
+          <app-user-profile [pubkey]="user.id"></app-user-profile>
+          }
+        </mat-list>
+      </cdk-virtual-scroll-viewport>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab class="following-tab" label="Mutual Connections">
+    <div class="following-content">
+      @if (mutualConnectionsList().length === 0) {
+      <div class="empty-list">
+        <mat-icon>people_alt</mat-icon>
+        <p>No mutual connections found.</p>
+      </div>
+      } @else {
+      <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+        [maxBufferPx]="maxBufferPx">
+        <mat-list class="full-width-list">
+          @for (user of mutualConnectionsList(); track user.id) {
+          <app-user-profile [pubkey]="user.id"></app-user-profile>
+          }
+        </mat-list>
+      </cdk-virtual-scroll-viewport>
+      }
+    </div>
+  </mat-tab>
+</mat-tab-group>

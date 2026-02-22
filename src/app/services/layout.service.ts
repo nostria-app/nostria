@@ -1639,6 +1639,24 @@ export class LayoutService implements OnDestroy {
     this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
   }
 
+  openFollowersPage(pubkeyOrNpub: string, followersList?: string[], forceQuery = false): void {
+    if (followersList && followersList.length > 0 && !forceQuery) {
+      this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
+        state: { followersList },
+      });
+      return;
+    }
+
+    if (forceQuery) {
+      this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
+        state: { forceQuery: true },
+      });
+      return;
+    }
+
+    this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`);
+  }
+
   openRelaysPage(pubkeyOrNpub: string, relayList?: string[]): void {
     if (relayList && relayList.length > 0) {
       this.navigateToRightPanel(`user-relays/${pubkeyOrNpub}`, {

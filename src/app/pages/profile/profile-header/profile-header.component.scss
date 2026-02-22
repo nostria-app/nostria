@@ -389,6 +389,16 @@
       display: none;
       margin-left: 2px;
     }
+
+    &.followers-loading {
+      cursor: default;
+      gap: 6px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .followers-loading-spinner {
+      flex-shrink: 0;
+    }
   }
 
   @container (max-width: 460px) {

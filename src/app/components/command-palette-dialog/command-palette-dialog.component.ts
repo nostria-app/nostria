@@ -274,6 +274,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['profile', 'me', 'account', 'user', 'my profile']
     },
     {
+      id: 'nav-profile-followers',
+      label: 'Open My Followers',
+      icon: 'group',
+      action: () => this.layoutService.openFollowersPage(this.accountState.pubkey()),
+      keywords: ['followers', 'my followers', 'people who follow me']
+    },
+    {
       id: 'nav-profile-edit',
       label: 'Edit Profile',
       icon: 'edit',

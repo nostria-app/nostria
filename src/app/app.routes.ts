@@ -852,6 +852,13 @@ export const routes: Routes = [
     title: 'Following',
   },
   {
+    path: 'user-followers/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/user-followers/user-followers.component').then(m => m.UserFollowersComponent),
+    title: 'Followers',
+  },
+  {
     path: 'user-relays/:pubkey',
     outlet: 'right',
     loadComponent: () =>
