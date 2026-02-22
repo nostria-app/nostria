@@ -340,8 +340,14 @@ export class VideoControlsComponent implements OnDestroy {
 
     // Only handle keys if our component or video is focused
     const activeElement = document.activeElement;
-    const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
-    if (isInputFocused) return;
+    const isEditableElement =
+      activeElement instanceof HTMLElement &&
+      (activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.isContentEditable ||
+        !!activeElement.closest('[contenteditable="true"]'));
+    if (isEditableElement) return;
 
     switch (event.key) {
       case ' ':
