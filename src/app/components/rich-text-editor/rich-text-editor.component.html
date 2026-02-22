@@ -86,63 +86,59 @@
         <mat-divider [vertical]="true"></mat-divider>
         }
 
-        <button mat-icon-button (click)="applyBold()" [disabled]="disableAdvancedActions()" matTooltip="Bold">
+        <button mat-icon-button (click)="applyBold()" [disabled]="actionsDisabled()" matTooltip="Bold">
           <mat-icon>format_bold</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyItalic()" [disabled]="disableAdvancedActions()" matTooltip="Italic">
+        <button mat-icon-button (click)="applyItalic()" [disabled]="actionsDisabled()" matTooltip="Italic">
           <mat-icon>format_italic</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyHeading(1)" [disabled]="disableAdvancedActions()" matTooltip="Heading 1">
+        <button mat-icon-button (click)="applyHeading(1)" [disabled]="actionsDisabled()" matTooltip="Heading 1">
           <mat-icon>looks_one</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyHeading(2)" [disabled]="disableAdvancedActions()" matTooltip="Heading 2">
+        <button mat-icon-button (click)="applyHeading(2)" [disabled]="actionsDisabled()" matTooltip="Heading 2">
           <mat-icon>looks_two</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyHeading(3)" [disabled]="disableAdvancedActions()" matTooltip="Heading 3">
+        <button mat-icon-button (click)="applyHeading(3)" [disabled]="actionsDisabled()" matTooltip="Heading 3">
           <mat-icon>looks_3</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyQuote()" [disabled]="disableAdvancedActions()" matTooltip="Quote">
+        <button mat-icon-button (click)="applyQuote()" [disabled]="actionsDisabled()" matTooltip="Quote">
           <mat-icon>format_quote</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyUnorderedList()" [disabled]="disableAdvancedActions()"
-          matTooltip="Bullet List">
+        <button mat-icon-button (click)="applyUnorderedList()" [disabled]="actionsDisabled()" matTooltip="Bullet List">
           <mat-icon>format_list_bulleted</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="applyOrderedList()" [disabled]="disableAdvancedActions()"
-          matTooltip="Numbered List">
+        <button mat-icon-button (click)="applyOrderedList()" [disabled]="actionsDisabled()" matTooltip="Numbered List">
           <mat-icon>format_list_numbered</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button (click)="applyLink()" [disabled]="disableAdvancedActions()" matTooltip="Insert Link">
+        <button mat-icon-button (click)="applyLink()" [disabled]="actionsDisabled()" matTooltip="Insert Link">
           <mat-icon>link</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="insertCode()" [disabled]="disableAdvancedActions()"
-          matTooltip="Format as Code">
+        <button mat-icon-button (click)="insertCode()" [disabled]="actionsDisabled()" matTooltip="Format as Code">
           <mat-icon>code</mat-icon>
         </button>
 
-        <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="disableAdvancedActions()"
-          matTooltip="Divider">
+        <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="actionsDisabled()" matTooltip="Divider">
           <mat-icon>horizontal_rule</mat-icon>
         </button>
 
         <mat-divider [vertical]="true"></mat-divider>
 
-        <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading() || disableAdvancedActions()"
+        <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading() || actionsDisabled()"
           matTooltip="Insert Media">
           @if (isUploading()) {
           <mat-icon>hourglass_empty</mat-icon>
@@ -166,7 +162,7 @@
           </button>
         </mat-menu>
 
-        <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading() || disableAdvancedActions()"
+        <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading() || actionsDisabled()"
           matTooltip="Upload File">
           <mat-icon>attach_file</mat-icon>
         </button>
