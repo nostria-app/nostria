@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,7 +34,7 @@ export interface ArticleReferencePickerResult {
   styleUrl: './article-reference-picker-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ArticleReferencePickerDialogComponent implements OnInit {
+export class ArticleReferencePickerDialogComponent {
   dialogRef?: CustomDialogRef<ArticleReferencePickerDialogComponent, ArticleReferencePickerResult>;
 
   private readonly database = inject(DatabaseService);
@@ -43,101 +43,173 @@ export class ArticleReferencePickerDialogComponent implements OnInit {
 
   readonly query = signal('');
   readonly pastedReference = signal('');
-  readonly loading = signal(true);
+  readonly activeTabIndex = signal(0);
+  readonly profilesLoading = signal(false);
+  readonly eventsLoading = signal(false);
 
-  private readonly allProfileEvents = signal<Event[]>([]);
-  private readonly allNonProfileEvents = signal<Event[]>([]);
+  private readonly profileSearchResults = signal<Event[]>([]);
+  private readonly eventSearchResults = signal<Event[]>([]);
+  private readonly SEARCH_DEBOUNCE_MS = 250;
+  private readonly MAX_SEARCH_RESULTS = 200;
+  private searchDebounceTimer?: ReturnType<typeof setTimeout>;
+  private activeSearchToken = 0;
 
   readonly bookmarkLists = this.bookmarkService.allBookmarkLists;
 
-  readonly filteredProfiles = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const profiles = this.allProfileEvents();
-    if (!q) {
-      return profiles;
-    }
+  readonly filteredProfiles = computed(() => this.profileSearchResults());
 
-    return profiles.filter((event) => {
-      const metadata = this.parseProfileMetadata(event.content);
-      return (
-        event.pubkey.toLowerCase().includes(q) ||
-        (metadata.name || '').toLowerCase().includes(q) ||
-        (metadata.display_name || '').toLowerCase().includes(q) ||
-        (metadata.nip05 || '').toLowerCase().includes(q) ||
-        (metadata.about || '').toLowerCase().includes(q)
-      );
-    });
-  });
+  readonly filteredEvents = computed(() => this.eventSearchResults());
 
-  readonly filteredEvents = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const events = this.allNonProfileEvents();
-    if (!q) {
-      return events;
-    }
-
-    return events.filter((event) => {
-      const title = this.getEventTitle(event).toLowerCase();
-      const kind = String(event.kind);
-      const id = event.id.toLowerCase();
-      const pubkey = event.pubkey.toLowerCase();
-      const content = (event.content || '').slice(0, 500).toLowerCase();
-      return (
-        title.includes(q) ||
-        kind.includes(q) ||
-        id.includes(q) ||
-        pubkey.includes(q) ||
-        content.includes(q)
-      );
-    });
-  });
-
-  async ngOnInit(): Promise<void> {
-    await this.loadCachedData();
+  onSearchQueryChange(value: string): void {
+    this.query.set(value);
+    this.scheduleSearchForActiveTab();
   }
 
-  private async loadCachedData(): Promise<void> {
-    this.loading.set(true);
-    try {
-      const [profileEvents, allEvents] = await Promise.all([
-        this.database.getEventsByKind(0),
-        this.database.getAllEvents(),
-      ]);
+  onTabIndexChange(index: number): void {
+    this.activeTabIndex.set(index);
+    this.scheduleSearchForActiveTab();
+  }
 
-      const latestProfilesByPubkey = new Map<string, Event>();
-      for (const event of profileEvents) {
-        const current = latestProfilesByPubkey.get(event.pubkey);
-        if (!current || event.created_at > current.created_at) {
-          latestProfilesByPubkey.set(event.pubkey, event);
-        }
-      }
-
-      const deduplicatedEventsById = new Map<string, Event>();
-      for (const event of allEvents) {
-        if (!event || !event.id) {
-          continue;
-        }
-
-        const existing = deduplicatedEventsById.get(event.id);
-        if (!existing || event.created_at > existing.created_at) {
-          deduplicatedEventsById.set(event.id, event);
-        }
-      }
-
-      this.allProfileEvents.set(
-        Array.from(latestProfilesByPubkey.values()).sort((a, b) => b.created_at - a.created_at)
-      );
-      this.allNonProfileEvents.set(
-        Array.from(deduplicatedEventsById.values())
-          .filter((event) => event.kind !== 0)
-          .sort((a, b) => b.created_at - a.created_at)
-      );
-    } catch (error) {
-      this.snackBar.open('Failed to load cached references', 'Close', { duration: 3000 });
-      console.error('Failed to load cached references:', error);
-    } finally {
-      this.loading.set(false);
+  private scheduleSearchForActiveTab(): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = undefined;
     }
+
+    const tabIndex = this.activeTabIndex();
+    const q = this.query().trim();
+
+    if (tabIndex !== 1 && tabIndex !== 2) {
+      return;
+    }
+
+    if (!q) {
+      if (tabIndex === 1) {
+        this.profileSearchResults.set([]);
+        this.profilesLoading.set(false);
+      }
+      if (tabIndex === 2) {
+        this.eventSearchResults.set([]);
+        this.eventsLoading.set(false);
+      }
+      return;
+    }
+
+    this.searchDebounceTimer = setTimeout(() => {
+      void this.searchActiveTab(q, tabIndex);
+    }, this.SEARCH_DEBOUNCE_MS);
+  }
+
+  private async searchActiveTab(query: string, tabIndex: number): Promise<void> {
+    const token = ++this.activeSearchToken;
+
+    if (tabIndex === 1) {
+      this.profilesLoading.set(true);
+
+      try {
+        const profileEvents = await this.database.getEventsByKind(0);
+        if (token !== this.activeSearchToken) {
+          return;
+        }
+
+        this.profileSearchResults.set(this.filterProfiles(profileEvents, query));
+      } catch (error) {
+        if (token === this.activeSearchToken) {
+          this.profileSearchResults.set([]);
+          this.snackBar.open('Failed to search cached profiles', 'Close', { duration: 3000 });
+          console.error('Failed to search cached profiles:', error);
+        }
+      } finally {
+        if (token === this.activeSearchToken) {
+          this.profilesLoading.set(false);
+        }
+      }
+      return;
+    }
+
+    if (tabIndex === 2) {
+      this.eventsLoading.set(true);
+
+      try {
+        const allEvents = await this.database.getAllEvents();
+        if (token !== this.activeSearchToken) {
+          return;
+        }
+
+        this.eventSearchResults.set(this.filterEvents(allEvents, query));
+      } catch (error) {
+        if (token === this.activeSearchToken) {
+          this.eventSearchResults.set([]);
+          this.snackBar.open('Failed to search cached events', 'Close', { duration: 3000 });
+          console.error('Failed to search cached events:', error);
+        }
+      } finally {
+        if (token === this.activeSearchToken) {
+          this.eventsLoading.set(false);
+        }
+      }
+    }
+  }
+
+  private filterProfiles(events: Event[], query: string): Event[] {
+    const q = query.trim().toLowerCase();
+    const latestProfilesByPubkey = new Map<string, Event>();
+
+    for (const event of events) {
+      const current = latestProfilesByPubkey.get(event.pubkey);
+      if (!current || event.created_at > current.created_at) {
+        latestProfilesByPubkey.set(event.pubkey, event);
+      }
+    }
+
+    return Array.from(latestProfilesByPubkey.values())
+      .filter((event) => {
+        const metadata = this.parseProfileMetadata(event.content);
+        return (
+          event.pubkey.toLowerCase().includes(q) ||
+          (metadata.name || '').toLowerCase().includes(q) ||
+          (metadata.display_name || '').toLowerCase().includes(q) ||
+          (metadata.nip05 || '').toLowerCase().includes(q) ||
+          (metadata.about || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, this.MAX_SEARCH_RESULTS);
+  }
+
+  private filterEvents(events: Event[], query: string): Event[] {
+    const q = query.trim().toLowerCase();
+    const deduplicatedEventsById = new Map<string, Event>();
+
+    for (const event of events) {
+      if (!event || !event.id) {
+        continue;
+      }
+
+      const existing = deduplicatedEventsById.get(event.id);
+      if (!existing || event.created_at > existing.created_at) {
+        deduplicatedEventsById.set(event.id, event);
+      }
+    }
+
+    return Array.from(deduplicatedEventsById.values())
+      .filter((event) => event.kind !== 0)
+      .filter((event) => {
+        const title = this.getEventTitle(event).toLowerCase();
+        const kind = String(event.kind);
+        const id = event.id.toLowerCase();
+        const pubkey = event.pubkey.toLowerCase();
+        const content = (event.content || '').slice(0, 500).toLowerCase();
+        return (
+          title.includes(q) ||
+          kind.includes(q) ||
+          id.includes(q) ||
+          pubkey.includes(q) ||
+          content.includes(q)
+        );
+      })
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, this.MAX_SEARCH_RESULTS);
   }
 
   addPastedReference(): void {

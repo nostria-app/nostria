@@ -2,12 +2,12 @@
   <div class="reference-toolbar">
     <mat-form-field appearance="outline" class="search-field">
       <mat-icon matPrefix>search</mat-icon>
-      <input matInput [ngModel]="query()" (ngModelChange)="query.set($event)"
+      <input matInput [ngModel]="query()" (ngModelChange)="onSearchQueryChange($event)"
         placeholder="Search cached profiles and events" />
     </mat-form-field>
   </div>
 
-  <mat-tab-group>
+  <mat-tab-group (selectedIndexChange)="onTabIndexChange($event)">
     <mat-tab label="Paste">
       <div class="tab-content paste-tab">
         <p class="tab-description">Paste npub, nevent, or naddr (with or without nostr: prefix).</p>
@@ -27,7 +27,9 @@
 
     <mat-tab label="Profiles">
       <div class="tab-content">
-        @if (loading()) {
+        @if (!query().trim()) {
+        <div class="empty-state">Type in search to find cached profiles.</div>
+        } @else if (profilesLoading()) {
         <div class="loading-state">
           <mat-spinner diameter="28"></mat-spinner>
         </div>
@@ -55,7 +57,9 @@
 
     <mat-tab label="Events">
       <div class="tab-content">
-        @if (loading()) {
+        @if (!query().trim()) {
+        <div class="empty-state">Type in search to find cached events.</div>
+        } @else if (eventsLoading()) {
         <div class="loading-state">
           <mat-spinner diameter="28"></mat-spinner>
         </div>

@@ -11,10 +11,12 @@
     <div class="toolbar-content">
       <div class="editor-actions">
         @if (showArticleActions()) {
+        @if (!splitViewActive()) {
         <button mat-icon-button type="button" (click)="requestTogglePreview()" [disabled]="actionsDisabled()"
           [matTooltip]="previewActive() ? 'Edit' : 'Preview'">
           <mat-icon>{{ previewActive() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
+        }
 
         @if (canUseSplitView()) {
         <button mat-icon-button type="button" (click)="requestToggleSplitView()" [disabled]="actionsDisabled()"
