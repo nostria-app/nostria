@@ -78,7 +78,7 @@
         }
 
         <!-- Text-to-Speech Controls (Header) - only in full mode -->
-        @if (mode() === 'full') {
+        <!-- @if (mode() === 'full') {
         <div class="article-tts-controls">
           <button mat-icon-button [matMenuTriggerFor]="translateMenu" title="Translate Article"
             [disabled]="isTranslating()">
@@ -100,7 +100,6 @@
             <button mat-menu-item (click)="translate.emit('jpn_Jpan')">Japanese</button>
           </mat-menu>
 
-          <!-- Playback Speed Menu -->
           <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Playback Speed">
             <mat-icon>speed</mat-icon>
           </button>
@@ -114,7 +113,6 @@
             }
           </mat-menu>
 
-          <!-- Voice Selection Menu -->
           <button mat-icon-button [matMenuTriggerFor]="voiceMenu" matTooltip="Voice Settings">
             <mat-icon>settings_voice</mat-icon>
           </button>
@@ -169,7 +167,7 @@
           </button>
           }
         </div>
-        }
+        } -->
       </div>
     </div>
   </header>

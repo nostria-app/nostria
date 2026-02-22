@@ -102,6 +102,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   private viewInitialized = false;
   private focusBlurTimeout?: ReturnType<typeof setTimeout>;
   private markdownInsertionCursorPosition: number | null = null;
+  private richTextInsertionRange: Range | null = null;
 
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
@@ -156,7 +157,16 @@ export class RichTextEditorComponent implements AfterViewInit {
   }
 
   requestInsertReference(): void {
+    this.captureInsertionPoint();
     this.insertReferenceRequest.emit();
+  }
+
+  insertMarkdownAtCursor(markdown: string): void {
+    if (!markdown.trim()) {
+      return;
+    }
+
+    this.insertMarkdown(markdown);
   }
 
   requestAiAction(action: 'generate' | 'translate' | 'sentiment'): void {
@@ -554,12 +564,25 @@ export class RichTextEditorComponent implements AfterViewInit {
       // In rich text mode, insert at cursor or end
       const editor = this.editorContent.nativeElement;
       const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
+      const activeRange =
+        selection && selection.rangeCount > 0
+          ? selection.getRangeAt(0)
+          : this.richTextInsertionRange;
+
+      if (activeRange) {
+        const range = activeRange.cloneRange();
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = this.convertMarkdownToHtml(markdown);
         range.deleteContents();
         range.insertNode(tempDiv.firstChild || document.createTextNode(markdown));
+
+        range.collapse(false);
+        this.richTextInsertionRange = range.cloneRange();
+
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
       } else {
         editor.innerHTML += this.convertMarkdownToHtml(markdown);
       }
@@ -567,19 +590,49 @@ export class RichTextEditorComponent implements AfterViewInit {
     } else {
       // In markdown mode, insert at cursor position
       const textarea = this.markdownTextarea.nativeElement;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
+      const rememberedCursor = this.markdownInsertionCursorPosition;
+      const start = rememberedCursor ?? textarea.selectionStart;
+      const end = rememberedCursor ?? textarea.selectionEnd;
       const currentValue = this.markdownContent();
       const newValue = currentValue.substring(0, start) + markdown + currentValue.substring(end);
       this.markdownContent.set(newValue);
       textarea.value = newValue;
       this.contentChange.emit(newValue);
+      this.markdownInsertionCursorPosition = start + markdown.length;
       // Set cursor position after inserted content
       setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+        const cursorPosition = this.markdownInsertionCursorPosition ?? start + markdown.length;
+        textarea.selectionStart = textarea.selectionEnd = cursorPosition;
         textarea.focus();
       });
     }
+  }
+
+  private captureInsertionPoint(): void {
+    if (this.isRichTextMode()) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (this.isRangeInsideEditor(range)) {
+          this.richTextInsertionRange = range.cloneRange();
+        }
+      }
+      return;
+    }
+
+    if (this.markdownTextarea) {
+      const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
+      this.markdownInsertionCursorPosition = textarea.selectionStart;
+    }
+  }
+
+  private isRangeInsideEditor(range: Range): boolean {
+    if (!this.editorContent) {
+      return false;
+    }
+
+    const editor = this.editorContent.nativeElement as HTMLElement;
+    return editor.contains(range.startContainer);
   }
 
   onDragEnter(event: DragEvent): void {
@@ -941,7 +994,17 @@ export class RichTextEditorComponent implements AfterViewInit {
     }
 
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (!selection || selection.rangeCount === 0) {
+      this.showFloatingToolbar.set(false);
+      return;
+    }
+
+    const selectionRange = selection.getRangeAt(0);
+    if (this.isRangeInsideEditor(selectionRange)) {
+      this.richTextInsertionRange = selectionRange.cloneRange();
+    }
+
+    if (selection.isCollapsed) {
       this.showFloatingToolbar.set(false);
       return;
     }
@@ -953,7 +1016,7 @@ export class RichTextEditorComponent implements AfterViewInit {
     }
 
     // Get the position of the selection
-    const range = selection.getRangeAt(0);
+    const range = selectionRange;
     const rect = range.getBoundingClientRect();
 
     // Position the toolbar above the selection

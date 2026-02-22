@@ -110,6 +110,7 @@ interface ArticleAutoDraft {
 })
 export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('contentEditor') contentEditor?: RichTextEditorComponent;
 
   dialogRef?: CustomDialogRef<ArticleEditorDialogComponent>;
   data: ArticleEditorDialogData = {};
@@ -1510,14 +1511,18 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    const currentContent = this.article().content;
-    const separator = !currentContent.trim()
-      ? ''
-      : currentContent.endsWith('\n')
-        ? '\n'
-        : '\n\n';
-
-    this.updateContent(`${currentContent}${separator}${uniqueReferences.join('\n')}`);
+    const insertionText = uniqueReferences.join('\n');
+    if (this.contentEditor) {
+      this.contentEditor.insertMarkdownAtCursor(insertionText);
+    } else {
+      const currentContent = this.article().content;
+      const separator = !currentContent.trim()
+        ? ''
+        : currentContent.endsWith('\n')
+          ? '\n'
+          : '\n\n';
+      this.updateContent(`${currentContent}${separator}${insertionText}`);
+    }
 
     this.snackBar.open(
       uniqueReferences.length === 1 ? 'Reference inserted' : `${uniqueReferences.length} references inserted`,
