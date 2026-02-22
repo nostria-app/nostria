@@ -811,16 +811,16 @@
 
       <!-- Bookmark (inline) -->
       <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="onBookmarkClick($event)">
+        (click)="onBookmarkClick($event)" (contextmenu)="onActionsDisplayModeToggle($event)"
+        (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
+        (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ getBookmarkIcon(targetItem.event) }}</mat-icon>
         <span class="action-text">Bookmark</span>
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
       @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0)) {
-      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
-        (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
-        (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()">
         @if (topEmojis().length > 0) {
         <span class="aggregated-emojis">
           @for (emoji of topEmojis(); track emoji.emoji) {
