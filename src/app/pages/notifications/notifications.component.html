@@ -59,9 +59,9 @@
     (backdropClick)="closeFilterPanel()">
     <app-notifications-filter-panel [filters]="notificationFilters()"
       [showSystemNotifications]="showSystemNotifications()" [showUnreadOnly]="showUnreadOnly()"
-      (filtersChanged)="onFiltersChanged($event)"
+      [wotFilterLevel]="wotFilterLevel()" (filtersChanged)="onFiltersChanged($event)"
       (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
-      (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)">
+      (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)" (wotFilterLevelChanged)="onWotFilterLevelChanged($event)">
     </app-notifications-filter-panel>
   </ng-template>
 
