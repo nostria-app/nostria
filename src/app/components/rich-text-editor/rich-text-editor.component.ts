@@ -102,6 +102,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   private viewInitialized = false;
   private focusBlurTimeout?: ReturnType<typeof setTimeout>;
   private markdownInsertionCursorPosition: number | null = null;
+  private markdownSelectionEnd: number | null = null;
   private richTextInsertionRange: Range | null = null;
 
   private sanitizer = inject(DomSanitizer);
@@ -260,13 +261,20 @@ export class RichTextEditorComponent implements AfterViewInit {
   }
 
   onMarkdownContentChange(event: Event) {
-    const value = (event.target as HTMLTextAreaElement).value;
+    const textarea = event.target as HTMLTextAreaElement;
+    const value = textarea.value;
     // Mark this as an internal change to prevent re-rendering
     this.isInternalChange = true;
     // Update the stored markdown content
     this.markdownContent.set(value);
     // Emit the change event with the raw markdown
     this.contentChange.emit(value);
+    this.updateMarkdownSelectionFromTextarea(textarea);
+  }
+
+  onMarkdownSelectionChange(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    this.updateMarkdownSelectionFromTextarea(textarea);
   }
 
   onRichTextContentChange() {
@@ -326,6 +334,9 @@ export class RichTextEditorComponent implements AfterViewInit {
 
     // Convert HTML to Markdown with proper line break handling
     let markdown = html
+      // Handle horizontal rules
+      .replace(/<hr\s*\/?>/gi, '\n\n---\n\n')
+
       // Handle images BEFORE links (images have similar syntax)
       .replace(/<img[^>]+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
       .replace(/<img[^>]+alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)')
@@ -416,37 +427,70 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   // Rich text formatting methods
   applyBold() {
+    if (!this.isRichTextMode()) {
+      this.wrapMarkdownSelection('**', '**', 'bold text');
+      return;
+    }
     this.execCommand('bold');
   }
 
   applyItalic() {
+    if (!this.isRichTextMode()) {
+      this.wrapMarkdownSelection('*', '*', 'italic text');
+      return;
+    }
     this.execCommand('italic');
   }
 
   applyHeading(level: number) {
+    if (!this.isRichTextMode()) {
+      this.applyMarkdownLinePrefix('#'.repeat(level) + ' ');
+      return;
+    }
     this.execCommand('formatBlock', `h${level}`);
   }
 
   applyQuote() {
+    if (!this.isRichTextMode()) {
+      this.applyMarkdownLinePrefix('> ');
+      return;
+    }
     this.execCommand('formatBlock', 'blockquote');
   }
 
   applyUnorderedList() {
+    if (!this.isRichTextMode()) {
+      this.applyMarkdownLinePrefix('- ');
+      return;
+    }
     this.execCommand('insertUnorderedList');
   }
 
   applyOrderedList() {
+    if (!this.isRichTextMode()) {
+      this.applyMarkdownOrderedList();
+      return;
+    }
     this.execCommand('insertOrderedList');
   }
 
   applyLink() {
     const url = prompt('Enter link URL:', 'https://');
     if (url) {
+      if (!this.isRichTextMode()) {
+        this.applyMarkdownLink(url);
+        return;
+      }
       this.execCommand('createLink', url);
     }
   }
 
   insertCode() {
+    if (!this.isRichTextMode()) {
+      this.wrapMarkdownSelection('`', '`', 'code');
+      return;
+    }
+
     const selection = window.getSelection();
 
     if (selection && selection.rangeCount > 0) {
@@ -460,6 +504,10 @@ export class RichTextEditorComponent implements AfterViewInit {
   }
 
   insertHorizontalRule() {
+    if (!this.isRichTextMode()) {
+      this.insertMarkdown('\n\n---\n\n');
+      return;
+    }
     this.execCommand('insertHorizontalRule');
   }
 
@@ -639,8 +687,159 @@ export class RichTextEditorComponent implements AfterViewInit {
 
     if (this.markdownTextarea) {
       const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
-      this.markdownInsertionCursorPosition = textarea.selectionStart;
+      this.updateMarkdownSelectionFromTextarea(textarea);
     }
+  }
+
+  private updateMarkdownSelectionFromTextarea(textarea: HTMLTextAreaElement): void {
+    this.markdownInsertionCursorPosition = textarea.selectionStart;
+    this.markdownSelectionEnd = textarea.selectionEnd;
+  }
+
+  private getMarkdownSelectionState(): {
+    value: string;
+    start: number;
+    end: number;
+    selectedText: string;
+  } | null {
+    if (!this.markdownTextarea) {
+      return null;
+    }
+
+    const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
+    const value = this.markdownContent();
+    const start = this.markdownInsertionCursorPosition ?? textarea.selectionStart;
+    const end = this.markdownSelectionEnd ?? textarea.selectionEnd;
+    return {
+      value,
+      start,
+      end,
+      selectedText: value.substring(start, end),
+    };
+  }
+
+  private updateMarkdownContentAndSelection(content: string, selectionStart: number, selectionEnd: number): void {
+    this.isInternalChange = true;
+    this.markdownContent.set(content);
+    this.contentChange.emit(content);
+    this.markdownInsertionCursorPosition = selectionStart;
+    this.markdownSelectionEnd = selectionEnd;
+
+    if (!this.markdownTextarea) {
+      return;
+    }
+
+    const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
+    textarea.value = content;
+    setTimeout(() => {
+      textarea.selectionStart = selectionStart;
+      textarea.selectionEnd = selectionEnd;
+      textarea.focus();
+    });
+  }
+
+  private wrapMarkdownSelection(prefix: string, suffix: string, placeholder: string): void {
+    const state = this.getMarkdownSelectionState();
+    if (!state) {
+      return;
+    }
+
+    const hasSelection = state.end > state.start;
+    const inner = hasSelection ? state.selectedText : placeholder;
+    const replacement = `${prefix}${inner}${suffix}`;
+    const content =
+      state.value.substring(0, state.start) + replacement + state.value.substring(state.end);
+
+    if (hasSelection) {
+      const start = state.start + prefix.length;
+      const end = start + inner.length;
+      this.updateMarkdownContentAndSelection(content, start, end);
+    } else {
+      const start = state.start + prefix.length;
+      const end = start + placeholder.length;
+      this.updateMarkdownContentAndSelection(content, start, end);
+    }
+  }
+
+  private applyMarkdownLinePrefix(prefix: string): void {
+    const state = this.getMarkdownSelectionState();
+    if (!state) {
+      return;
+    }
+
+    const lineStart = state.value.lastIndexOf('\n', state.start - 1) + 1;
+    const lineEndSearch = state.value.indexOf('\n', state.end);
+    const lineEnd = lineEndSearch === -1 ? state.value.length : lineEndSearch;
+    const block = state.value.substring(lineStart, lineEnd);
+
+    const prefixed = block
+      .split('\n')
+      .map(line => {
+        if (!line.trim()) {
+          return line;
+        }
+
+        const stripped = line
+          .replace(/^#{1,6}\s+/, '')
+          .replace(/^>\s+/, '')
+          .replace(/^[-*+]\s+/, '')
+          .replace(/^\d+\.\s+/, '');
+        return `${prefix}${stripped}`;
+      })
+      .join('\n');
+
+    const content = state.value.substring(0, lineStart) + prefixed + state.value.substring(lineEnd);
+    this.updateMarkdownContentAndSelection(content, lineStart, lineStart + prefixed.length);
+  }
+
+  private applyMarkdownOrderedList(): void {
+    const state = this.getMarkdownSelectionState();
+    if (!state) {
+      return;
+    }
+
+    const lineStart = state.value.lastIndexOf('\n', state.start - 1) + 1;
+    const lineEndSearch = state.value.indexOf('\n', state.end);
+    const lineEnd = lineEndSearch === -1 ? state.value.length : lineEndSearch;
+    const block = state.value.substring(lineStart, lineEnd);
+
+    let index = 1;
+    const numbered = block
+      .split('\n')
+      .map(line => {
+        if (!line.trim()) {
+          return line;
+        }
+
+        const stripped = line
+          .replace(/^#{1,6}\s+/, '')
+          .replace(/^>\s+/, '')
+          .replace(/^[-*+]\s+/, '')
+          .replace(/^\d+\.\s+/, '');
+        const result = `${index}. ${stripped}`;
+        index += 1;
+        return result;
+      })
+      .join('\n');
+
+    const content = state.value.substring(0, lineStart) + numbered + state.value.substring(lineEnd);
+    this.updateMarkdownContentAndSelection(content, lineStart, lineStart + numbered.length);
+  }
+
+  private applyMarkdownLink(url: string): void {
+    const state = this.getMarkdownSelectionState();
+    if (!state) {
+      return;
+    }
+
+    const linkText = state.selectedText || 'link text';
+    const replacement = `[${linkText}](${url})`;
+    const content =
+      state.value.substring(0, state.start) + replacement + state.value.substring(state.end);
+
+    const textStart = state.start + 1;
+    const textEnd = textStart + linkText.length;
+    this.updateMarkdownContentAndSelection(content, textStart, textEnd);
   }
 
   private isRangeInsideEditor(range: Range): boolean {
