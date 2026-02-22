@@ -644,7 +644,20 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
 
       try {
-        const followers = await this.discoverFollowers(profilePubkey, this.FOLLOWERS_MAX_RESULTS);
+        const followers = await this.discoverFollowers(
+          profilePubkey,
+          this.FOLLOWERS_MAX_RESULTS,
+          (progressFollowers, isCapped) => {
+            if (this.pubkey() !== profilePubkey) {
+              return;
+            }
+
+            untracked(() => {
+              this.followersPubkeys.set(progressFollowers);
+              this.hasReachedFollowersCap.set(isCapped);
+            });
+          },
+        );
 
         // Ensure profile didn't change while querying.
         if (this.pubkey() !== profilePubkey) {
@@ -745,7 +758,11 @@ export class ProfileHeaderComponent implements OnDestroy {
    * IMPORTANT: this method never persists follower events and does not retain
    * full events in component state. Only unique follower pubkeys are kept.
    */
-  private async discoverFollowers(profilePubkey: string, maxResults: number): Promise<string[]> {
+  private async discoverFollowers(
+    profilePubkey: string,
+    maxResults: number,
+    onProgress?: (followers: string[], isCapped: boolean) => void,
+  ): Promise<string[]> {
     await this.userRelayService.ensureRelaysForPubkey(profilePubkey);
     const relayUrls = this.userRelayService.getRelaysForPubkey(profilePubkey);
 
@@ -788,6 +805,8 @@ export class ProfileHeaderComponent implements OnDestroy {
       // Explicitly discard large events from memory once pubkeys are extracted.
       followerEvents.length = 0;
 
+      onProgress?.(Array.from(followerPubkeys), followerPubkeys.size >= maxResults);
+
       if (followerPubkeys.size >= maxResults || oldestCreatedAt === Number.MAX_SAFE_INTEGER) {
         break;
       }
@@ -798,6 +817,8 @@ export class ProfileHeaderComponent implements OnDestroy {
 
       until = oldestCreatedAt - 1;
     }
+
+    onProgress?.(Array.from(followerPubkeys), followerPubkeys.size >= maxResults);
 
     return Array.from(followerPubkeys);
   }

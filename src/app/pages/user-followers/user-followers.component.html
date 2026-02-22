@@ -58,12 +58,13 @@
 
 <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)"
   animationDuration="300ms">
-  <mat-tab class="following-tab" label="Followers">
+  <mat-tab class="following-tab" [label]="followersTabLabel()">
     <div class="following-content">
-      @if (isLoading()) {
+      @if (isLoading() && filteredFollowersList().length === 0) {
       <div class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
         <p>Loading followers list...</p>
+        <p>{{ formatCompactCount(loadingFollowersCount()) }} found</p>
       </div>
       } @else if (error()) {
       <div class="error-container">
@@ -71,7 +72,7 @@
         <p>{{ error() }}</p>
         <button mat-button><mat-icon>refresh</mat-icon> Try Again</button>
       </div>
-      } @else if (filteredFollowersList().length === 0) {
+      } @else if (!isLoading() && filteredFollowersList().length === 0) {
       <div class="empty-list">
         @if (searchTerm()) {
         <mat-icon>search_off</mat-icon>
@@ -83,6 +84,12 @@
         }
       </div>
       } @else {
+      @if (isLoading()) {
+      <div class="loading-inline">
+        <mat-spinner diameter="18"></mat-spinner>
+        <span>Loading followers... {{ formatCompactCount(loadingFollowersCount()) }} found</span>
+      </div>
+      }
       <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
         [maxBufferPx]="maxBufferPx">
         <mat-list class="full-width-list">

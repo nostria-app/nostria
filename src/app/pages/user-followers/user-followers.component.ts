@@ -82,6 +82,7 @@ export class UserFollowersComponent {
   isLoading = signal(true);
   error = signal<string | null>(null);
   followersList = signal<UserProfile[]>([]);
+  loadingFollowersCount = signal(0);
 
   viewingPubkey = signal<string>('');
   viewingProfile = signal<NostrRecord | undefined>(undefined);
@@ -124,6 +125,13 @@ export class UserFollowersComponent {
     }
 
     return this.applySorting(list, sort);
+  });
+
+  followersTabLabel = computed(() => {
+    const count = this.isLoading()
+      ? this.loadingFollowersCount()
+      : this.followersList().length;
+    return `Followers (${this.formatCompactCount(count)})`;
   });
 
   mutualConnectionsList = computed(() => {
@@ -203,14 +211,23 @@ export class UserFollowersComponent {
       if (!this.hasInitialFollowers()) {
         this.isLoading.set(true);
       }
+      this.loadingFollowersCount.set(0);
       this.error.set(null);
 
       const profile = await this.dataService.getProfile(pubkey);
       this.viewingProfile.set(profile);
 
       if (!this.hasInitialFollowers() || this.forceQuery()) {
-        const followerPubkeys = await this.discoverFollowers(pubkey, this.FOLLOWERS_MAX_RESULTS);
+        const followerPubkeys = await this.discoverFollowers(
+          pubkey,
+          this.FOLLOWERS_MAX_RESULTS,
+          (progressFollowers) => {
+            this.loadFollowersList(progressFollowers);
+            this.loadingFollowersCount.set(progressFollowers.length);
+          },
+        );
         this.loadFollowersList(followerPubkeys);
+        this.loadingFollowersCount.set(followerPubkeys.length);
 
         // Consume force-query once we've fetched.
         if (this.forceQuery()) {
@@ -236,7 +253,11 @@ export class UserFollowersComponent {
     }
   }
 
-  private async discoverFollowers(profilePubkey: string, maxResults: number): Promise<string[]> {
+  private async discoverFollowers(
+    profilePubkey: string,
+    maxResults: number,
+    onProgress?: (followers: string[]) => void,
+  ): Promise<string[]> {
     await this.userRelayService.ensureRelaysForPubkey(profilePubkey);
     const relayUrls = this.userRelayService.getRelaysForPubkey(profilePubkey);
 
@@ -278,6 +299,8 @@ export class UserFollowersComponent {
 
       followerEvents.length = 0;
 
+      onProgress?.(Array.from(followerPubkeys));
+
       if (followerPubkeys.size >= maxResults || oldestCreatedAt === Number.MAX_SAFE_INTEGER) {
         break;
       }
@@ -289,7 +312,17 @@ export class UserFollowersComponent {
       until = oldestCreatedAt - 1;
     }
 
+    onProgress?.(Array.from(followerPubkeys));
+
     return Array.from(followerPubkeys);
+  }
+
+  formatCompactCount(count: number): string {
+    const safeCount = Math.max(0, Math.floor(count));
+    if (safeCount >= 1000) {
+      return `${(safeCount / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    return `${safeCount}`;
   }
 
   private loadFollowersList(pubkeys: string[]): void {
