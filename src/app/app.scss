@@ -969,6 +969,7 @@ mat-sidenav-content {
     justify-content: center;
 
     .left-panel {
+      --panel-header-content-max-width: var(--left-column-width, 700px);
       // Take 100% width for scrollbar positioning, content will be centered inside
       width: 100%;
       min-width: 0;
@@ -988,6 +989,7 @@ mat-sidenav-content {
   // Wide left mode (e.g., Music without detail open)
   &.wide-left:not(.has-right-content) {
     .left-panel {
+      --panel-header-content-max-width: var(--left-column-width, 1400px);
       width: 100%;
       min-width: 0;
       max-width: 100%;
@@ -1009,6 +1011,7 @@ mat-sidenav-content {
     justify-content: center;
 
     .left-panel {
+      --panel-header-content-max-width: var(--left-column-width, 700px);
       // Take 100% width for scrollbar at edge, content centered inside
       width: 100%;
       min-width: 0;
@@ -1042,6 +1045,7 @@ mat-sidenav-content {
 
     // Both panels take 50% width for proper scrollbar positioning
     .left-panel {
+      --panel-header-content-max-width: 700px;
       width: 50%;
       min-width: 0;
       max-width: 50%;
@@ -1063,6 +1067,7 @@ mat-sidenav-content {
     }
 
     .right-panel {
+      --panel-header-content-max-width: 700px;
       width: 50%;
       min-width: 0;
       max-width: 50%;
@@ -1078,6 +1083,7 @@ mat-sidenav-content {
     // At tablet breakpoint (below 1024px), switch to overlay mode
     @media (max-width: 1023px) {
       .left-panel {
+        --panel-header-content-max-width: 700px;
         width: 100%;
         min-width: 100%;
         max-width: 100%;
@@ -1094,6 +1100,7 @@ mat-sidenav-content {
       }
 
       .right-panel {
+        --panel-header-content-max-width: 700px;
         position: fixed;
         top: 0;
         left: 0;
@@ -1124,6 +1131,7 @@ mat-sidenav-content {
     }
 
     .right-panel {
+      --panel-header-content-max-width: 700px;
       width: 100%;
       min-width: 0;
       max-width: 100%;
@@ -1147,6 +1155,7 @@ mat-sidenav-content {
     }
 
     .right-panel {
+      --panel-header-content-max-width: none;
       flex: 1;
       max-width: none;
 
@@ -1159,6 +1168,7 @@ mat-sidenav-content {
   // Mobile layout - panels overlay
   &.mobile-layout {
     .left-panel {
+      --panel-header-content-max-width: 700px;
       width: 100%;
       min-width: 100%;
       max-width: 100%;
@@ -1176,6 +1186,7 @@ mat-sidenav-content {
       }
 
       .right-panel {
+        --panel-header-content-max-width: 700px;
         position: fixed;
         top: 0;
         left: 0;
@@ -1215,6 +1226,7 @@ mat-sidenav-content {
 // Left Panel - takes 50% or 100% of viewport, content constrained inside
 // Each panel is its own scroll container with scrollbar at panel edge
 .left-panel {
+  --panel-header-content-max-width: 700px;
   // Default width - will be overridden by dual-panel-layout context
   width: 100%;
   min-width: 0;
@@ -1224,6 +1236,7 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   position: relative;
+  container-type: inline-size;
   z-index: 1;
   // This panel is its own scroll container
   overflow-y: auto;
@@ -1381,6 +1394,7 @@ mat-sidenav-content {
 // Right Panel - takes 50% of viewport, content constrained inside
 // Each panel is its own scroll container with scrollbar at panel edge
 .right-panel {
+  --panel-header-content-max-width: 700px;
   // Default width - will be overridden by dual-panel-layout context
   width: 50%;
   min-width: 0;
@@ -1388,6 +1402,7 @@ mat-sidenav-content {
   min-height: 0;
   display: none;
   position: relative;
+  container-type: inline-size;
   z-index: 5;
   // Transparent background - content renders behind main toolbar
   background-color: transparent;
@@ -1675,6 +1690,19 @@ mat-sidenav-content {
     gap: 4px;
     flex-shrink: 0;
   }
+}
+
+// Force pane toolbars to always span full panel width.
+// This overrides legacy per-page max-width constraints (700px/1400px)
+// so left and right panel headers are consistent across all routes.
+.left-panel .panel-header,
+.right-panel .panel-header,
+.left-panel .panel-header-wrapper ::ng-deep .panel-header,
+.right-panel .panel-header-wrapper ::ng-deep .panel-header {
+  width: 100%;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 :host-context(.dark) .panel-header {

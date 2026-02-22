@@ -1,7 +1,5 @@
 :host {
   display: block;
-  container-type: inline-size;
-  container-name: playlist;
 }
 
 .panel-header {
@@ -40,6 +38,8 @@
   max-width: 1200px;
   margin: 0 auto;
   padding-bottom: 120px;
+  container-type: inline-size;
+  container-name: playlist;
 }
 
 .header-actions {

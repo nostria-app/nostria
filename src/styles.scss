@@ -442,6 +442,59 @@ h6 {
   font-size: var(--text-base);
 }
 
+// Pane toolbars must always span full pane width.
+// Most routed pages render .panel-header inside a max-width-centered wrapper,
+// so this makes headers full-bleed to pane edges using pane container units.
+.left-panel .panel-content>router-outlet+*>.panel-header,
+.right-panel .panel-content>router-outlet+*>.panel-header,
+.right-panel .panel-content app-right-panel-container>*>.panel-header,
+.left-panel .panel-header-wrapper .panel-header,
+.right-panel .panel-header-wrapper .panel-header {
+  width: 100cqw !important;
+  max-width: none !important;
+  margin-left: calc((100% - 100cqw) / 2) !important;
+  margin-right: 0 !important;
+  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+}
+
+// Two-pane mode: left pane content is right-aligned (towards center).
+.dual-panel-layout.has-right-content .left-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.has-right-content .left-panel .panel-header-wrapper .panel-header {
+  margin-left: calc(100% - 100cqw) !important;
+  padding-left: max(16px, calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)) !important;
+  padding-right: 56px !important;
+}
+
+// Two-pane mode: right pane content is left-aligned (towards center).
+.dual-panel-layout.has-right-content .right-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.has-right-content .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.has-right-content .right-panel .panel-header-wrapper .panel-header {
+  margin-left: 0 !important;
+  padding-left: 16px !important;
+  padding-right: max(16px, calc(100cqw - var(--panel-header-content-max-width, 700px) + 16px)) !important;
+}
+
+// Right panel becomes centered again when left panel is collapsed.
+.dual-panel-layout.left-collapsed .right-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.left-collapsed .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.left-collapsed .right-panel .panel-header-wrapper .panel-header {
+  margin-left: calc((100% - 100cqw) / 2) !important;
+  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+}
+
+// Mobile/overlay layouts center content wrappers in both panes.
+.dual-panel-layout.mobile-layout .left-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.mobile-layout .right-panel .panel-content>router-outlet+*>.panel-header,
+.dual-panel-layout.mobile-layout .right-panel .panel-content app-right-panel-container>*>.panel-header,
+.dual-panel-layout.mobile-layout .left-panel .panel-header-wrapper .panel-header,
+.dual-panel-layout.mobile-layout .right-panel .panel-header-wrapper .panel-header {
+  margin-left: calc((100% - 100cqw) / 2) !important;
+  padding-left: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+  padding-right: max(16px, calc((100cqw - var(--panel-header-content-max-width, 700px)) / 2 + 16px)) !important;
+}
+
 a:hover {
   transition: text-decoration 250ms ease;
   transition: color 250ms ease;
