@@ -164,20 +164,36 @@ export class MediaComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const uploadParam = params.get('upload');
       const filterParam = params.get('filter');
+      const tabParam = params.get('tab');
+      const serversParam = params.get('servers');
+      const openServers = tabParam === 'servers' || serversParam === 'true';
 
       if (filterParam && ['all', 'images', 'videos', 'audio', 'files'].includes(filterParam)) {
         this.mediaFilter.set(filterParam as MediaFilter);
       }
 
-      if (uploadParam === 'true') {
+      if (openServers || uploadParam === 'true') {
         this.router.navigate([], {
           relativeTo: this.route,
-          queryParams: {},
+          queryParams: {
+            upload: null,
+            tab: null,
+            servers: null,
+          },
+          queryParamsHandling: 'merge',
           replaceUrl: true,
         });
+      }
 
+      if (uploadParam === 'true') {
         setTimeout(() => {
           this.openUploadDialog();
+        }, 100);
+      }
+
+      if (openServers) {
+        setTimeout(() => {
+          this.openServersDialog();
         }, 100);
       }
     });

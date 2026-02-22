@@ -309,6 +309,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['general settings', 'language', 'theme', 'dark mode', 'media']
     },
     {
+      id: 'nav-settings-media-servers',
+      label: 'Settings: Media Servers',
+      icon: 'cloud_upload',
+      action: () => this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } }),
+      keywords: ['media servers', 'upload server', 'fallback server', 'nip-96', 'blossom', 'media upload', 'file hosting']
+    },
+    {
       id: 'nav-settings-algorithm',
       label: 'Settings: Algorithm',
       icon: 'model_training',

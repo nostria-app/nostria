@@ -146,6 +146,18 @@ export class SettingsRegistryService {
       popular: true,
     },
     {
+      id: 'media-servers',
+      title: $localize`:@@settings.media-servers.title:Media Servers`,
+      description: $localize`:@@settings.media-servers.description:Manage your upload and fallback media servers`,
+      keywords: ['media servers', 'upload server', 'fallback server', 'nip-96', 'blossom', 'media upload', 'file hosting'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'cloud_upload',
+      route: '/collections/media?tab=servers',
+      priority: 6,
+      popular: true,
+    },
+    {
       id: 'placeholder-algorithm',
       title: $localize`:@@settings.media.placeholder-algorithm:Placeholder Algorithm`,
       description: $localize`:@@settings.media.placeholder.thumbhash.description:Use Thumbhash for image placeholders`,

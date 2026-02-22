@@ -80,7 +80,11 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
                         <p class="item-description">{{ result.item.description }}</p>
                         <button mat-stroked-button (click)="navigateToItem(result.item)">
                           <mat-icon>open_in_new</mat-icon>
-                          <span i18n="@@settings.home.open-settings">Open Settings</span>
+                          @if (result.item.id === 'media-servers') {
+                            <span>Manage Servers</span>
+                          } @else {
+                            <span i18n="@@settings.home.open-settings">Open Settings</span>
+                          }
                         </button>
                       </div>
                     }
@@ -376,7 +380,11 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
     const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
     if (sectionMatch && sectionMatch[1]) {
       await this.openSectionInRightPanel(sectionMatch[1]);
+      return;
     }
+
+    this.rightPanel.close();
+    await this.router.navigateByUrl(item.route);
   }
 
   async navigateToSection(section: SettingsSection): Promise<void> {
