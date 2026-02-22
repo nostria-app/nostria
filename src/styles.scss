@@ -97,6 +97,9 @@ body {
   font-family: var(--nostria-font-family);
   overscroll-behavior: none;
   overflow: hidden;
+  // Prevent iOS Safari from auto-adjusting font size on orientation change
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 // ============================================
