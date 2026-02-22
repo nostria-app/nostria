@@ -52,6 +52,8 @@ import type { Event as NostrEvent } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../../components/create-list-dialog/create-list-dialog.component';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { TrustMetrics } from '../../../services/database.service';
 
 interface MutualFollowProfile {
   pubkey: string;
@@ -78,6 +80,9 @@ interface MutualFollowProfile {
   styleUrl: './profile-header.component.scss',
 })
 export class ProfileHeaderComponent implements OnDestroy {
+  private readonly FOLLOWERS_BATCH_LIMIT = 500;
+  private readonly FOLLOWERS_MAX_RESULTS = 5000;
+
   profile = input<NostrRecord | undefined>(undefined);
   pubkey = input<string>(''); // Add pubkey input for cases where no profile exists
   layout = inject(LayoutService);
@@ -104,12 +109,27 @@ export class ProfileHeaderComponent implements OnDestroy {
   private nip05Service = inject(Nip05VerificationService);
   private followSetsService = inject(FollowSetsService);
   private dataService = inject(DataService);
+  private relayPool = inject(RelayPoolService);
   private imageCacheService = inject(ImageCacheService);
   readonly settingsService = inject(SettingsService);
 
   // Mutual followers ("Followers you know")
   mutualFollowing = signal<string[]>([]);
   mutualFollowingProfiles = signal<MutualFollowProfile[]>([]);
+
+  // Followers (kind 3 events where this profile appears in #p tags)
+  followersPubkeys = signal<string[]>([]);
+  isLoadingFollowers = signal<boolean>(false);
+  trustFollowersCount = signal<number | null>(null);
+  hasReachedFollowersCap = signal<boolean>(false);
+  followersCount = computed(() => {
+    const trustCount = this.trustFollowersCount();
+    if (typeof trustCount === 'number' && trustCount >= 0) {
+      return trustCount;
+    }
+    return this.followersPubkeys().length;
+  });
+  followersCountText = computed(() => this.formatFollowersCount(this.followersCount(), this.hasReachedFollowersCap()));
 
   mutualFollowingText = computed(() => {
     const count = this.mutualFollowing().length;
@@ -575,10 +595,12 @@ export class ProfileHeaderComponent implements OnDestroy {
         const metrics = await this.trustService.fetchMetrics(currentPubkey);
         untracked(() => {
           this.trustRank.set(metrics?.rank);
+          this.trustFollowersCount.set(this.getFollowersCountFromMetrics(metrics));
         });
       } else {
         untracked(() => {
           this.trustRank.set(undefined);
+          this.trustFollowersCount.set(null);
         });
       }
     });
@@ -590,6 +612,71 @@ export class ProfileHeaderComponent implements OnDestroy {
       // Reset favicon fallback states when profile changes
       this.faviconTriedPng.set(false);
       this.faviconFailed.set(false);
+    });
+
+    // Load followers count using kind 3 #p query on the viewed profile's own relays.
+    // DEFERRED: this is intentionally delayed to run after other profile queries.
+    effect(async () => {
+      const profilePubkey = this.pubkey();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
+      const trustFollowersCount = this.trustFollowersCount();
+
+      untracked(() => {
+        this.followersPubkeys.set([]);
+        this.hasReachedFollowersCap.set(false);
+        this.isLoadingFollowers.set(false);
+      });
+
+      if (!profilePubkey || !cachedLoaded || trustFollowersCount !== null) {
+        return;
+      }
+
+      // Keep followers as the last profile query.
+      await new Promise(resolve => setTimeout(resolve, 900));
+
+      // Ensure profile didn't change while waiting.
+      if (this.pubkey() !== profilePubkey || this.trustFollowersCount() !== null) {
+        return;
+      }
+
+      untracked(() => {
+        this.isLoadingFollowers.set(true);
+      });
+
+      try {
+        const followers = await this.discoverFollowers(
+          profilePubkey,
+          this.FOLLOWERS_MAX_RESULTS,
+          (progressFollowers, isCapped) => {
+            if (this.pubkey() !== profilePubkey) {
+              return;
+            }
+
+            untracked(() => {
+              this.followersPubkeys.set(progressFollowers);
+              this.hasReachedFollowersCap.set(isCapped);
+            });
+          },
+        );
+
+        // Ensure profile didn't change while querying.
+        if (this.pubkey() !== profilePubkey) {
+          return;
+        }
+
+        untracked(() => {
+          this.followersPubkeys.set(followers);
+          this.hasReachedFollowersCap.set(followers.length >= this.FOLLOWERS_MAX_RESULTS);
+        });
+      } catch (error) {
+        this.logger.debug('Error discovering followers for profile:', error);
+      } finally {
+        if (this.pubkey() === profilePubkey) {
+          untracked(() => {
+            this.isLoadingFollowers.set(false);
+          });
+        }
+      }
     });
 
     // Load mutual followers ("Followers you know") when profile's following list is available
@@ -662,6 +749,117 @@ export class ProfileHeaderComponent implements OnDestroy {
     } catch (error) {
       this.logger.debug('Error computing mutual following:', error);
     }
+  }
+
+  /**
+   * Discover follower pubkeys by querying kind 3 events with #p=<profile pubkey>
+   * across the viewed profile's relay list.
+   *
+   * IMPORTANT: this method never persists follower events and does not retain
+   * full events in component state. Only unique follower pubkeys are kept.
+   */
+  private async discoverFollowers(
+    profilePubkey: string,
+    maxResults: number,
+    onProgress?: (followers: string[], isCapped: boolean) => void,
+  ): Promise<string[]> {
+    await this.userRelayService.ensureRelaysForPubkey(profilePubkey);
+    const relayUrls = this.userRelayService.getRelaysForPubkey(profilePubkey);
+
+    if (!relayUrls || relayUrls.length === 0) {
+      return [];
+    }
+    const followerPubkeys = new Set<string>();
+
+    let until: number | undefined;
+    while (followerPubkeys.size < maxResults) {
+      const followerEvents = await this.relayPool.query(
+        relayUrls,
+        {
+          kinds: [kinds.Contacts],
+          '#p': [profilePubkey],
+          limit: this.FOLLOWERS_BATCH_LIMIT,
+          ...(until !== undefined ? { until } : {}),
+        },
+        12000,
+      );
+
+      if (followerEvents.length === 0) {
+        break;
+      }
+
+      let oldestCreatedAt = Number.MAX_SAFE_INTEGER;
+      for (const event of followerEvents) {
+        if (this.utilities.isValidHexPubkey(event.pubkey)) {
+          followerPubkeys.add(event.pubkey);
+          if (followerPubkeys.size >= maxResults) {
+            break;
+          }
+        }
+
+        if (event.created_at > 0 && event.created_at < oldestCreatedAt) {
+          oldestCreatedAt = event.created_at;
+        }
+      }
+
+      // Explicitly discard large events from memory once pubkeys are extracted.
+      followerEvents.length = 0;
+
+      onProgress?.(Array.from(followerPubkeys), followerPubkeys.size >= maxResults);
+
+      if (followerPubkeys.size >= maxResults || oldestCreatedAt === Number.MAX_SAFE_INTEGER) {
+        break;
+      }
+
+      if (until !== undefined && oldestCreatedAt - 1 >= until) {
+        break;
+      }
+
+      until = oldestCreatedAt - 1;
+    }
+
+    onProgress?.(Array.from(followerPubkeys), followerPubkeys.size >= maxResults);
+
+    return Array.from(followerPubkeys);
+  }
+
+  private getFollowersCountFromMetrics(metrics: TrustMetrics | null): number | null {
+    if (!metrics) {
+      return null;
+    }
+
+    if (
+      typeof metrics.followers === 'number' &&
+      Number.isFinite(metrics.followers) &&
+      metrics.followers >= 0
+    ) {
+      return metrics.followers;
+    }
+
+    if (
+      typeof metrics.verifiedFollowerCount === 'number' &&
+      Number.isFinite(metrics.verifiedFollowerCount) &&
+      metrics.verifiedFollowerCount >= 0
+    ) {
+      return metrics.verifiedFollowerCount;
+    }
+
+    return null;
+  }
+
+  private formatFollowersCount(count: number, capped: boolean): string {
+    const safeCount = Math.max(0, Math.floor(count));
+
+    if (capped || safeCount >= this.FOLLOWERS_MAX_RESULTS) {
+      return '5K+';
+    }
+
+    if (safeCount >= 1000) {
+      const compact = (safeCount / 1000).toFixed(1).replace(/\.0$/, '');
+      return `${compact}K`;
+    }
+
+    return `${safeCount}`;
   }
 
   getOptimizedImageUrl(url: string): string {
@@ -1343,6 +1541,21 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     if (currentPubkey) {
       this.layout.openFollowingPage(currentPubkey, this.profileState.followingList());
+    }
+  }
+
+  /**
+   * Navigate to followers page in right panel
+   */
+  navigateToFollowers(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentPubkey = this.pubkey();
+
+    if (currentPubkey) {
+      const shouldForceQuery = this.trustFollowersCount() !== null;
+      this.layout.openFollowersPage(currentPubkey, this.followersPubkeys(), shouldForceQuery);
     }
   }
 

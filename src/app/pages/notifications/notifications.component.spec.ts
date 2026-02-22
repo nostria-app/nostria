@@ -13,6 +13,7 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { TrustService } from '../../services/trust.service';
 import { NotificationType, Notification, ContentNotification } from '../../services/database.service';
 
 describe('NotificationsComponent', () => {
@@ -81,6 +82,10 @@ describe('NotificationsComponent', () => {
     const mockTwoColumnLayout = {
       setSplitView: jasmine.createSpy('setSplitView'),
     };
+    const mockTrustService = {
+      isEnabled: () => false,
+      fetchMetricsBatch: jasmine.createSpy('fetchMetricsBatch').and.returnValue(Promise.resolve(new Map())),
+    };
 
     await TestBed.configureTestingModule({
       imports: [NotificationsComponent, NoopAnimationsModule],
@@ -97,6 +102,7 @@ describe('NotificationsComponent', () => {
         { provide: LayoutService, useValue: mockLayout },
         { provide: LoggerService, useValue: mockLogger },
         { provide: TwoColumnLayoutService, useValue: mockTwoColumnLayout },
+        { provide: TrustService, useValue: mockTrustService },
       ],
     }).compileComponents();
 

@@ -36,9 +36,10 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { NotificationsFilterPanelComponent } from './notifications-filter-panel/notifications-filter-panel.component';
+import { NotificationsFilterPanelComponent, WotFilterLevel } from './notifications-filter-panel/notifications-filter-panel.component';
 import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
+import { TrustService } from '../../services/trust.service';
 import { Subscription } from 'rxjs';
 
 /**
@@ -87,6 +88,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private trustService = inject(TrustService);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport)
@@ -120,6 +122,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   showSystemNotifications = signal(false);
   // Whether to show only unread notifications
   showUnreadOnly = signal(false);
+  // Web of Trust rank filter level
+  wotFilterLevel = signal<WotFilterLevel>('off');
   notificationType = NotificationType;
 
   // Filter panel state
@@ -142,7 +146,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.ZAP,
     ];
     // Return true if any content filter is disabled OR if showing system notifications OR if showing unread only
-    return contentTypes.some(type => !filters[type]) || this.showSystemNotifications() || this.showUnreadOnly();
+    return contentTypes.some(type => !filters[type])
+      || this.showSystemNotifications()
+      || this.showUnreadOnly()
+      || this.wotFilterLevel() !== 'off';
   });
 
   // State for loading older notifications
@@ -179,6 +186,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   // Cache for prefetched profiles - updated when batch loading completes
   private prefetchedProfiles = signal<Map<string, NostrRecord>>(new Map());
+  // Cache for prefetched trust ranks (null means no rank found)
+  private authorTrustRanks = signal<Map<string, number | null>>(new Map());
+  private trustRanksRequestId = 0;
 
   private readonly defaultNotificationFilters: Record<NotificationType, boolean> = {
     [NotificationType.NEW_FOLLOWER]: true,
@@ -205,6 +215,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           filters,
           showSystemNotifications: this.showSystemNotifications(),
           showUnreadOnly: this.showUnreadOnly(),
+          wotFilterLevel: this.wotFilterLevel(),
         })
       );
     });
@@ -218,6 +229,30 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       // Use untracked to avoid circular dependency with prefetchedProfiles
       untracked(() => {
         this.batchPreloadProfiles(notifications as ContentNotification[]);
+      });
+    });
+
+    effect(() => {
+      const level = this.wotFilterLevel();
+      const notifications = this.notifications();
+
+      if (level === 'off' || !this.trustService.isEnabled()) {
+        return;
+      }
+
+      const pubkeys = [...new Set(
+        notifications
+          .filter(n => this.isContentNotification(n.type))
+          .map(n => (n as ContentNotification).authorPubkey)
+          .filter((pubkey): pubkey is string => !!pubkey)
+      )];
+
+      if (pubkeys.length === 0) {
+        return;
+      }
+
+      untracked(() => {
+        this.batchPreloadTrustRanks(pubkeys);
       });
     });
 
@@ -267,6 +302,29 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Update the prefetched profiles signal to trigger UI updates
     this.prefetchedProfiles.set(profiles);
+  }
+
+  private async batchPreloadTrustRanks(pubkeys: string[]): Promise<void> {
+    const requestId = ++this.trustRanksRequestId;
+
+    try {
+      const metricsMap = await this.trustService.fetchMetricsBatch(pubkeys);
+
+      if (requestId !== this.trustRanksRequestId) {
+        return;
+      }
+
+      this.authorTrustRanks.update(current => {
+        const next = new Map(current);
+        for (const pubkey of pubkeys) {
+          const rank = metricsMap.get(pubkey)?.rank;
+          next.set(pubkey, typeof rank === 'number' ? rank : null);
+        }
+        return next;
+      });
+    } catch (error) {
+      this.logger.error('[Notifications] Failed to batch preload trust ranks', error);
+    }
   }
 
   /**
@@ -362,6 +420,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const mutedAccountsSet = new Set(mutedAccounts);
     const query = this.searchQuery().toLowerCase().trim();
     const unreadOnly = this.showUnreadOnly();
+    const wotLevel = this.wotFilterLevel();
+    const trustRanks = this.authorTrustRanks();
 
     return this.notifications()
       .filter(n => {
@@ -381,6 +441,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           return false;
         }
 
+        if (contentNotif.authorPubkey && !this.passesWotRankFilter(trustRanks.get(contentNotif.authorPubkey), wotLevel)) {
+          return false;
+        }
+
         // Apply search filter if query exists
         if (query) {
           if (!this.matchesSearchQuery(contentNotif, query)) {
@@ -392,6 +456,27 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       })
       .sort((a, b) => b.timestamp - a.timestamp);
   });
+
+  private passesWotRankFilter(rank: number | null | undefined, level: WotFilterLevel): boolean {
+    if (level === 'off') {
+      return true;
+    }
+
+    if (level === 'low') {
+      // Low should filter out rank 0 and 1, and also hide missing ranks.
+      return typeof rank === 'number' && !Number.isNaN(rank) && rank > 1;
+    }
+
+    if (typeof rank !== 'number' || Number.isNaN(rank)) {
+      return false;
+    }
+
+    if (level === 'medium') {
+      return rank >= 20;
+    }
+
+    return rank >= 80;
+  }
 
   // Count unread content notifications
   newNotificationCount = computed(() => {
@@ -472,6 +557,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           });
           this.showSystemNotifications.set(parsed.showSystemNotifications ?? false);
           this.showUnreadOnly.set(parsed.showUnreadOnly ?? false);
+          this.wotFilterLevel.set(this.isWotFilterLevel(parsed.wotFilterLevel) ? parsed.wotFilterLevel : 'off');
           return;
         }
 
@@ -494,12 +580,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     filters: Record<NotificationType, boolean>;
     showSystemNotifications?: boolean;
     showUnreadOnly?: boolean;
+    wotFilterLevel?: WotFilterLevel;
   } {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return false;
     }
 
     return 'filters' in value && typeof (value as { filters?: unknown }).filters === 'object';
+  }
+
+  private isWotFilterLevel(value: unknown): value is WotFilterLevel {
+    return value === 'off' || value === 'low' || value === 'medium' || value === 'high';
   }
 
   /**
@@ -1136,5 +1227,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    */
   onUnreadOnlyChanged(show: boolean): void {
     this.showUnreadOnly.set(show);
+  }
+
+  /**
+   * Handle Web of Trust filter level from the filter panel
+   */
+  onWotFilterLevelChanged(level: WotFilterLevel): void {
+    this.wotFilterLevel.set(level);
   }
 }

@@ -848,8 +848,15 @@ export const routes: Routes = [
     path: 'user-following/:pubkey',
     outlet: 'right',
     loadComponent: () =>
-      import('./pages/user-following/user-following.component').then(m => m.UserFollowingComponent),
+      import('./pages/user-followers/user-followers.component').then(m => m.UserFollowersComponent),
     title: 'Following',
+  },
+  {
+    path: 'user-followers/:pubkey',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/user-followers/user-followers.component').then(m => m.UserFollowersComponent),
+    title: 'Followers',
   },
   {
     path: 'user-relays/:pubkey',
