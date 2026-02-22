@@ -1630,31 +1630,48 @@ export class LayoutService implements OnDestroy {
 
   openFollowingPage(pubkeyOrNpub: string, followingList?: string[]): void {
     if (followingList && followingList.length > 0) {
-      this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`, {
-        state: { followingList },
+      this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
+        state: {
+          followingList,
+          initialTab: 'following',
+        },
       });
       return;
     }
 
-    this.navigateToRightPanel(`user-following/${pubkeyOrNpub}`);
+    this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
+      state: {
+        initialTab: 'following',
+      },
+    });
   }
 
   openFollowersPage(pubkeyOrNpub: string, followersList?: string[], forceQuery = false): void {
     if (followersList && followersList.length > 0 && !forceQuery) {
       this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
-        state: { followersList },
+        state: {
+          followersList,
+          initialTab: 'followers',
+        },
       });
       return;
     }
 
     if (forceQuery) {
       this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
-        state: { forceQuery: true },
+        state: {
+          forceQuery: true,
+          initialTab: 'followers',
+        },
       });
       return;
     }
 
-    this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`);
+    this.navigateToRightPanel(`user-followers/${pubkeyOrNpub}`, {
+      state: {
+        initialTab: 'followers',
+      },
+    });
   }
 
   openRelaysPage(pubkeyOrNpub: string, relayList?: string[]): void {

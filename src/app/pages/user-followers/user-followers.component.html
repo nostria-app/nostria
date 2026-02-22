@@ -58,21 +58,57 @@
 
 <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)"
   animationDuration="300ms">
-  <mat-tab class="following-tab" [label]="followersTabLabel()">
+  <mat-tab class="following-tab" label="Following">
     <div class="following-content">
-      @if (isLoading() && filteredFollowersList().length === 0) {
+      @if (isLoadingFollowing() && filteredFollowingList().length === 0) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading following list...</p>
+      </div>
+      } @else if (errorFollowing()) {
+      <div class="error-container">
+        <mat-icon>error</mat-icon>
+        <p>{{ errorFollowing() }}</p>
+      </div>
+      } @else if (!isLoadingFollowing() && filteredFollowingList().length === 0) {
+      <div class="empty-list">
+        @if (searchTerm()) {
+        <mat-icon>search_off</mat-icon>
+        <p>No results for "{{ searchTerm() }}"</p>
+        <button mat-button (click)="updateSearch('')">Clear search</button>
+        } @else {
+        <mat-icon>people_outline</mat-icon>
+        <p>This user is not following anyone.</p>
+        }
+      </div>
+      } @else {
+      <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+        [maxBufferPx]="maxBufferPx">
+        <mat-list class="full-width-list">
+          @for (user of filteredFollowingList(); track user.id) {
+          <app-user-profile [pubkey]="user.id"></app-user-profile>
+          }
+        </mat-list>
+      </cdk-virtual-scroll-viewport>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab class="following-tab" label="Followers">
+    <div class="following-content">
+      @if (isLoadingFollowers() && filteredFollowersList().length === 0) {
       <div class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
         <p>Loading followers list...</p>
         <p>{{ formatCompactCount(loadingFollowersCount()) }} found</p>
       </div>
-      } @else if (error()) {
+      } @else if (errorFollowers()) {
       <div class="error-container">
         <mat-icon>error</mat-icon>
-        <p>{{ error() }}</p>
+        <p>{{ errorFollowers() }}</p>
         <button mat-button><mat-icon>refresh</mat-icon> Try Again</button>
       </div>
-      } @else if (!isLoading() && filteredFollowersList().length === 0) {
+      } @else if (!isLoadingFollowers() && filteredFollowersList().length === 0) {
       <div class="empty-list">
         @if (searchTerm()) {
         <mat-icon>search_off</mat-icon>
@@ -84,7 +120,7 @@
         }
       </div>
       } @else {
-      @if (isLoading()) {
+      @if (isLoadingFollowers()) {
       <div class="loading-inline">
         <mat-spinner diameter="18"></mat-spinner>
         <span>Loading followers... {{ formatCompactCount(loadingFollowersCount()) }} found</span>
@@ -102,18 +138,38 @@
     </div>
   </mat-tab>
 
-  <mat-tab class="following-tab" label="Mutual Connections">
+  <mat-tab class="following-tab" label="Following you know">
     <div class="following-content">
-      @if (mutualConnectionsList().length === 0) {
+      @if (followingYouKnowList().length === 0) {
       <div class="empty-list">
         <mat-icon>people_alt</mat-icon>
-        <p>No mutual connections found.</p>
+        <p>No following connections you know found.</p>
       </div>
       } @else {
       <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
         [maxBufferPx]="maxBufferPx">
         <mat-list class="full-width-list">
-          @for (user of mutualConnectionsList(); track user.id) {
+          @for (user of followingYouKnowList(); track user.id) {
+          <app-user-profile [pubkey]="user.id"></app-user-profile>
+          }
+        </mat-list>
+      </cdk-virtual-scroll-viewport>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab class="following-tab" label="Followers you know">
+    <div class="following-content">
+      @if (followersYouKnowList().length === 0) {
+      <div class="empty-list">
+        <mat-icon>people_alt</mat-icon>
+        <p>No follower connections you know found.</p>
+      </div>
+      } @else {
+      <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+        [maxBufferPx]="maxBufferPx">
+        <mat-list class="full-width-list">
+          @for (user of followersYouKnowList(); track user.id) {
           <app-user-profile [pubkey]="user.id"></app-user-profile>
           }
         </mat-list>

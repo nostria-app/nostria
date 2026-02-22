@@ -62,6 +62,7 @@ export class UserFollowersComponent {
   private readonly FOLLOWERS_BATCH_LIMIT = 500;
   private readonly FOLLOWERS_MAX_RESULTS = 5000;
   private static readonly followersCache = new Map<string, {
+    followingList: UserProfile[];
     followersList: UserProfile[];
     viewingProfile?: NostrRecord;
   }>();
@@ -79,15 +80,21 @@ export class UserFollowersComponent {
   private relayPool = inject(RelayPoolService);
   private destroyRef = inject(DestroyRef);
 
-  isLoading = signal(true);
-  error = signal<string | null>(null);
+  isLoadingFollowing = signal(true);
+  isLoadingFollowers = signal(true);
+  errorFollowing = signal<string | null>(null);
+  errorFollowers = signal<string | null>(null);
+  followingList = signal<UserProfile[]>([]);
   followersList = signal<UserProfile[]>([]);
   loadingFollowersCount = signal(0);
 
+  private hasInitialFollowing = signal(false);
   viewingPubkey = signal<string>('');
   viewingProfile = signal<NostrRecord | undefined>(undefined);
   private hasInitialFollowers = signal(false);
   private forceQuery = signal(false);
+  private loadedFollowingPubkey = signal<string | null>(null);
+  private hasLoadedFollowing = signal(false);
   private loadedFollowersPubkey = signal<string | null>(null);
   private hasLoadedFollowers = signal(false);
 
@@ -95,53 +102,41 @@ export class UserFollowersComponent {
   private searchChanged = new Subject<string>();
   sortOption = signal<SortOption>('default');
 
+  filteredFollowingList = computed(() => {
+    return this.filterAndSort(this.followingList(), this.searchTerm(), this.sortOption());
+  });
+
   filteredFollowersList = computed(() => {
-    let list = this.followersList();
-    const search = this.searchTerm().toLowerCase().trim();
-    const sort = this.sortOption();
-
-    if (search) {
-      list = list.filter(user => {
-        if (user.id.toLowerCase().includes(search) || user.npub.toLowerCase().includes(search)) {
-          return true;
-        }
-
-        const profile = this.accountState.getCachedProfile(user.id);
-        const profileData = profile?.data;
-        if (profileData?.name?.toLowerCase().includes(search)) {
-          return true;
-        }
-        if (profileData?.display_name?.toLowerCase().includes(search)) {
-          return true;
-        }
-        const nip05Value = profileData?.nip05;
-        const nip05 = Array.isArray(nip05Value) ? nip05Value[0] : nip05Value;
-        if (nip05?.toLowerCase().includes(search)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return this.applySorting(list, sort);
+    return this.filterAndSort(this.followersList(), this.searchTerm(), this.sortOption());
   });
 
   followersTabLabel = computed(() => {
-    const count = this.isLoading()
+    const count = this.isLoadingFollowers()
       ? this.loadingFollowersCount()
       : this.followersList().length;
     return `Followers (${this.formatCompactCount(count)})`;
   });
 
-  mutualConnectionsList = computed(() => {
+  followingTabLabel = computed(() => {
+    const count = this.followingList().length;
+    return `Following (${this.formatCompactCount(count)})`;
+  });
+
+  followingYouKnowList = computed(() => {
+    const currentUserFollowing = this.accountState.followingList();
+    const viewedUserFollowing = this.filteredFollowingList();
+    const currentUserFollowingSet = new Set(currentUserFollowing);
+    return viewedUserFollowing.filter(user => currentUserFollowingSet.has(user.id));
+  });
+
+  followersYouKnowList = computed(() => {
     const currentUserFollowing = this.accountState.followingList();
     const profileFollowers = this.filteredFollowersList();
     const currentUserFollowingSet = new Set(currentUserFollowing);
     return profileFollowers.filter(user => currentUserFollowingSet.has(user.id));
   });
 
-  selectedTabIndex = signal(0);
+  selectedTabIndex = signal(1);
 
   readonly itemSize = 44;
   readonly minBufferPx = 200;
@@ -163,12 +158,27 @@ export class UserFollowersComponent {
 
     const historyState = typeof window !== 'undefined' ? history.state : null;
     const navState = (this.router.getCurrentNavigation()?.extras.state ?? historyState) as {
+      followingList?: unknown;
       followersList?: unknown;
       forceQuery?: unknown;
+      initialTab?: unknown;
     } | null;
 
     const forceQuery = navState?.forceQuery === true;
     this.forceQuery.set(forceQuery);
+
+    const initialTab = navState?.initialTab === 'following' ? 0 : 1;
+    this.selectedTabIndex.set(initialTab);
+
+    const preloadedFollowingList = Array.isArray(navState?.followingList)
+      ? navState.followingList.filter((pubkey): pubkey is string => typeof pubkey === 'string' && pubkey.trim() !== '')
+      : [];
+
+    if (preloadedFollowingList.length > 0) {
+      this.hasInitialFollowing.set(true);
+      this.loadFollowingList(preloadedFollowingList);
+      this.isLoadingFollowing.set(false);
+    }
 
     const preloadedFollowersList = Array.isArray(navState?.followersList)
       ? navState.followersList.filter((pubkey): pubkey is string => typeof pubkey === 'string' && pubkey.trim() !== '')
@@ -177,17 +187,22 @@ export class UserFollowersComponent {
     if (preloadedFollowersList.length > 0 && !forceQuery) {
       this.hasInitialFollowers.set(true);
       this.loadFollowersList(preloadedFollowersList);
-      this.isLoading.set(false);
+      this.isLoadingFollowers.set(false);
     }
 
     const cachedState = UserFollowersComponent.followersCache.get(this.viewingPubkey());
     if (cachedState && !forceQuery) {
+      this.followingList.set(cachedState.followingList);
       this.followersList.set(cachedState.followersList);
       this.viewingProfile.set(cachedState.viewingProfile);
+      this.hasInitialFollowing.set(true);
       this.hasInitialFollowers.set(true);
+      this.loadedFollowingPubkey.set(this.viewingPubkey());
+      this.hasLoadedFollowing.set(true);
       this.loadedFollowersPubkey.set(this.viewingPubkey());
       this.hasLoadedFollowers.set(true);
-      this.isLoading.set(false);
+      this.isLoadingFollowing.set(false);
+      this.isLoadingFollowers.set(false);
     }
 
     effect(() => {
@@ -200,22 +215,47 @@ export class UserFollowersComponent {
 
   private async loadData(pubkey: string): Promise<void> {
     try {
+      const alreadyLoadedFollowingForPubkey =
+        this.loadedFollowingPubkey() === pubkey && this.hasLoadedFollowing();
+
       const alreadyLoadedForPubkey =
         this.loadedFollowersPubkey() === pubkey && this.hasLoadedFollowers();
 
-      if (alreadyLoadedForPubkey) {
-        this.isLoading.set(false);
+      if (alreadyLoadedForPubkey && alreadyLoadedFollowingForPubkey) {
+        this.isLoadingFollowing.set(false);
+        this.isLoadingFollowers.set(false);
         return;
       }
 
+      if (!this.hasInitialFollowing()) {
+        this.isLoadingFollowing.set(true);
+      }
       if (!this.hasInitialFollowers()) {
-        this.isLoading.set(true);
+        this.isLoadingFollowers.set(true);
       }
       this.loadingFollowersCount.set(0);
-      this.error.set(null);
+      this.errorFollowing.set(null);
+      this.errorFollowers.set(null);
 
       const profile = await this.dataService.getProfile(pubkey);
       this.viewingProfile.set(profile);
+
+      if (!this.hasInitialFollowing()) {
+        try {
+          const contactsEvent = await this.dataService.getContactsEvent(pubkey);
+          const followingPubkeys = contactsEvent
+            ? contactsEvent.tags
+              .filter(tag => tag[0] === 'p' && tag[1])
+              .map(tag => tag[1])
+            : [];
+          this.loadFollowingList(followingPubkeys);
+          this.isLoadingFollowing.set(false);
+        } catch (followingError) {
+          this.errorFollowing.set('Failed to load following list');
+          this.logger.error('Error loading following data', followingError);
+          this.isLoadingFollowing.set(false);
+        }
+      }
 
       if (!this.hasInitialFollowers() || this.forceQuery()) {
         const followerPubkeys = await this.discoverFollowers(
@@ -237,18 +277,21 @@ export class UserFollowersComponent {
 
       this.loadedFollowersPubkey.set(pubkey);
       this.hasLoadedFollowers.set(true);
+      this.loadedFollowingPubkey.set(pubkey);
+      this.hasLoadedFollowing.set(true);
 
       UserFollowersComponent.followersCache.set(pubkey, {
+        followingList: this.followingList(),
         followersList: this.followersList(),
         viewingProfile: this.viewingProfile(),
       });
 
-      this.isLoading.set(false);
+      this.isLoadingFollowers.set(false);
     } catch (err) {
       if (!this.hasInitialFollowers()) {
-        this.error.set('Failed to load followers list');
+        this.errorFollowers.set('Failed to load followers list');
       }
-      this.isLoading.set(false);
+      this.isLoadingFollowers.set(false);
       this.logger.error('Error loading followers data', err);
     }
   }
@@ -355,6 +398,30 @@ export class UserFollowersComponent {
     this.followersList.set(followerProfiles);
   }
 
+  private loadFollowingList(pubkeys: string[]): void {
+    if (!pubkeys || pubkeys.length === 0) {
+      this.followingList.set([]);
+      return;
+    }
+
+    const normalizedPubkeys: string[] = [];
+    for (const pubkey of pubkeys) {
+      const hexPubkey = this.utilities.getPubkeyFromNpub(pubkey);
+      if (hexPubkey && this.utilities.isValidHexPubkey(hexPubkey)) {
+        normalizedPubkeys.push(hexPubkey);
+      }
+    }
+
+    const followingProfiles = normalizedPubkeys.map(pubkey => ({
+      id: pubkey,
+      npub: this.utilities.getNpubFromPubkey(pubkey) || pubkey,
+      name: '',
+      picture: null,
+    }));
+
+    this.followingList.set(followingProfiles);
+  }
+
   getProfileDisplayName(): string {
     const profile = this.viewingProfile();
     if (!profile) return 'User';
@@ -375,6 +442,37 @@ export class UserFollowersComponent {
 
   changeSortOption(option: SortOption): void {
     this.sortOption.set(option);
+  }
+
+  private filterAndSort(list: UserProfile[], searchTerm: string, sortOption: SortOption): UserProfile[] {
+    let filteredList = list;
+    const search = searchTerm.toLowerCase().trim();
+
+    if (search) {
+      filteredList = filteredList.filter(user => {
+        if (user.id.toLowerCase().includes(search) || user.npub.toLowerCase().includes(search)) {
+          return true;
+        }
+
+        const profile = this.accountState.getCachedProfile(user.id);
+        const profileData = profile?.data;
+        if (profileData?.name?.toLowerCase().includes(search)) {
+          return true;
+        }
+        if (profileData?.display_name?.toLowerCase().includes(search)) {
+          return true;
+        }
+        const nip05Value = profileData?.nip05;
+        const nip05 = Array.isArray(nip05Value) ? nip05Value[0] : nip05Value;
+        if (nip05?.toLowerCase().includes(search)) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return this.applySorting(filteredList, sortOption);
   }
 
   private applySorting(list: UserProfile[], sortOption: SortOption): UserProfile[] {
