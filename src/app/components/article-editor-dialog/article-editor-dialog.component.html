@@ -34,7 +34,7 @@
           }
 
           <!-- Content Editor or Preview -->
-          <div class="write-tab">
+          <div class="write-tab" [class.preview-only]="showPreview() && !showSplitView()">
             <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
               [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)"
               [disableAdvancedActions]="false" [showArticleActions]="true" [showFeaturedImageAction]="true"

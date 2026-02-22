@@ -9,6 +9,10 @@
   min-height: 400px;
   transition: border-color 0.2s ease;
 
+  &.preview-hidden {
+    min-height: 0;
+  }
+
   &.drag-over {
     border-color: var(--mat-sys-primary);
     border-width: 1px;

@@ -139,6 +139,10 @@
 
     .write-tab {
       min-height: 300px;
+
+      &.preview-only {
+        min-height: 0;
+      }
     }
 
     .preview-mode-header {

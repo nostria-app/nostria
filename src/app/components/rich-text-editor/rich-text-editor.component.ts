@@ -101,6 +101,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   private isInternalChange = false; // Flag to track internal vs external changes
   private viewInitialized = false;
   private focusBlurTimeout?: ReturnType<typeof setTimeout>;
+  private markdownInsertionCursorPosition: number | null = null;
 
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
@@ -765,14 +766,35 @@ export class RichTextEditorComponent implements AfterViewInit {
 
     const beforeCursor = currentContent.substring(0, cursorPosition);
     const afterCursor = currentContent.substring(cursorPosition);
+    const insertedContent = markdown + '\n\n';
 
-    const newContent = beforeCursor + markdown + '\n\n' + afterCursor;
+    const newContent = beforeCursor + insertedContent + afterCursor;
     this.markdownContent.set(newContent);
     this.contentChange.emit(newContent);
+
+    const newCursorPosition = cursorPosition + insertedContent.length;
+    this.markdownInsertionCursorPosition = newCursorPosition;
+
+    if (this.markdownTextarea) {
+      const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
+      textarea.value = newContent;
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = newCursorPosition;
+        textarea.focus();
+      });
+    }
   }
 
   private getCursorPositionInTextarea(): number {
-    // For now, append to end. In a real implementation, you'd track cursor position
+    if (this.markdownInsertionCursorPosition !== null) {
+      return this.markdownInsertionCursorPosition;
+    }
+
+    if (this.markdownTextarea) {
+      const textarea = this.markdownTextarea.nativeElement as HTMLTextAreaElement;
+      return textarea.selectionStart;
+    }
+
     return this.markdownContent().length;
   }
 
@@ -845,8 +867,15 @@ export class RichTextEditorComponent implements AfterViewInit {
           this.uploadFiles(imageFiles);
         }
       } else {
-        // For markdown mode, just upload without cursor management
-        this.uploadFiles(imageFiles);
+        const target = event.target;
+        if (target instanceof HTMLTextAreaElement) {
+          this.markdownInsertionCursorPosition = target.selectionStart;
+        }
+
+        // For markdown mode, upload files and insert links at captured cursor position
+        this.uploadFiles(imageFiles).finally(() => {
+          this.markdownInsertionCursorPosition = null;
+        });
       }
 
       return;

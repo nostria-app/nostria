@@ -1,5 +1,7 @@
-<div class="rich-editor-container" [class.drag-over]="isDragOver()" (dragenter)="onDragEnter($event)"
-  (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+<div class="rich-editor-container" [class.drag-over]="isDragOver()"
+  [class.preview-hidden]="previewActive() && !splitViewActive() && !showEditorContent()"
+  (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)">
   <!-- Hidden file input -->
   <input #fileInput type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
     (change)="onFileSelected($event)" class="hidden-file-input" aria-label="Upload files" title="Upload files" />
