@@ -71,10 +71,15 @@
     .featured-image-preview {
       position: relative;
       margin-bottom: 32px;
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
-      max-height: 400px;
+      aspect-ratio: 16 / 9;
       background-color: var(--mat-sys-surface-variant);
+      box-shadow: var(--mat-sys-level2);
+
+      @media (max-width: 768px) {
+        border-radius: 8px;
+      }
 
       img {
         width: 100%;
