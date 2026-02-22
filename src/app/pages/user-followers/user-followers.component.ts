@@ -167,7 +167,8 @@ export class UserFollowersComponent {
     const forceQuery = navState?.forceQuery === true;
     this.forceQuery.set(forceQuery);
 
-    const initialTab = navState?.initialTab === 'following' ? 0 : 1;
+    const openedFromLegacyFollowingRoute = this.route.snapshot.routeConfig?.path === 'user-following/:pubkey';
+    const initialTab = navState?.initialTab === 'following' || openedFromLegacyFollowingRoute ? 0 : 1;
     this.selectedTabIndex.set(initialTab);
 
     const preloadedFollowingList = Array.isArray(navState?.followingList)
