@@ -156,6 +156,20 @@ export class UserFollowersComponent {
       this.viewingPubkey.set(pubkeyParam);
     }
 
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        let routePubkey = params.get('pubkey');
+        if (!routePubkey) {
+          return;
+        }
+
+        routePubkey = this.utilities.safeGetHexPubkey(routePubkey) || routePubkey;
+        if (routePubkey !== this.viewingPubkey()) {
+          this.viewingPubkey.set(routePubkey);
+        }
+      });
+
     const historyState = typeof window !== 'undefined' ? history.state : null;
     const navState = (this.router.getCurrentNavigation()?.extras.state ?? historyState) as {
       followingList?: unknown;
@@ -228,10 +242,10 @@ export class UserFollowersComponent {
         return;
       }
 
-      if (!this.hasInitialFollowing()) {
+      if (!alreadyLoadedFollowingForPubkey) {
         this.isLoadingFollowing.set(true);
       }
-      if (!this.hasInitialFollowers()) {
+      if (!alreadyLoadedForPubkey) {
         this.isLoadingFollowers.set(true);
       }
       this.loadingFollowersCount.set(0);
@@ -241,7 +255,7 @@ export class UserFollowersComponent {
       const profile = await this.dataService.getProfile(pubkey);
       this.viewingProfile.set(profile);
 
-      if (!this.hasInitialFollowing()) {
+      if (!alreadyLoadedFollowingForPubkey) {
         try {
           const contactsEvent = await this.dataService.getContactsEvent(pubkey);
           const followingPubkeys = contactsEvent
@@ -258,7 +272,7 @@ export class UserFollowersComponent {
         }
       }
 
-      if (!this.hasInitialFollowers() || this.forceQuery()) {
+      if (!alreadyLoadedForPubkey || this.forceQuery()) {
         const followerPubkeys = await this.discoverFollowers(
           pubkey,
           this.FOLLOWERS_MAX_RESULTS,
