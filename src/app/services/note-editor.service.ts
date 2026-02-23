@@ -237,6 +237,22 @@ export class NoteEditorService {
     const addedQuoteEventIds = new Set(tags.filter(tag => tag[0] === 'q').map(tag => tag[1]));
     const addedPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
 
+    const upsertQuoteTag = (target: string, relay: string, pubkey: string): void => {
+      const existingQTag = tags.find(tag => tag[0] === 'q' && tag[1] === target);
+      if (existingQTag) {
+        if (relay && !existingQTag[2]) {
+          existingQTag[2] = relay;
+        }
+        if (pubkey && !existingQTag[3]) {
+          existingQTag[3] = pubkey;
+        }
+        return;
+      }
+
+      tags.push(['q', target, relay, pubkey]);
+      addedQuoteEventIds.add(target);
+    };
+
     for (const match of matches) {
       const fullIdentifier = match[1] + match[2];
 
@@ -246,18 +262,12 @@ export class NoteEditorService {
         switch (decoded.type) {
           case 'note':
             if (!addedQuoteEventIds.has(decoded.data)) {
-              tags.push(['q', decoded.data, '', '']);
-              addedQuoteEventIds.add(decoded.data);
+              upsertQuoteTag(decoded.data, '', '');
             }
             break;
 
           case 'nevent':
-            if (!addedQuoteEventIds.has(decoded.data.id)) {
-              const relay = decoded.data.relays?.[0] || '';
-              const pubkey = decoded.data.author || '';
-              tags.push(['q', decoded.data.id, relay, pubkey]);
-              addedQuoteEventIds.add(decoded.data.id);
-            }
+            upsertQuoteTag(decoded.data.id, decoded.data.relays?.[0] || '', decoded.data.author || '');
             if (decoded.data.author && !addedPubkeys.has(decoded.data.author)) {
               tags.push(['p', decoded.data.author, '']);
               addedPubkeys.add(decoded.data.author);
@@ -280,8 +290,7 @@ export class NoteEditorService {
 
           case 'naddr': {
             const aTagValue = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
-            const relay = decoded.data.relays?.[0] || '';
-            tags.push(['q', aTagValue, relay, decoded.data.pubkey]);
+            upsertQuoteTag(aTagValue, decoded.data.relays?.[0] || '', decoded.data.pubkey);
             if (!addedPubkeys.has(decoded.data.pubkey)) {
               tags.push(['p', decoded.data.pubkey, '']);
               addedPubkeys.add(decoded.data.pubkey);

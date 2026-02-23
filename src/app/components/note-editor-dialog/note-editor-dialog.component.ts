@@ -1629,6 +1629,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const addedQuoteEventIds = new Set(tags.filter(tag => tag[0] === 'q').map(tag => tag[1]));
     const addedPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
 
+    const upsertQuoteTag = (target: string, relay: string, pubkey: string): void => {
+      const existingQTag = tags.find(tag => tag[0] === 'q' && tag[1] === target);
+      if (existingQTag) {
+        if (relay && !existingQTag[2]) {
+          existingQTag[2] = relay;
+        }
+        if (pubkey && !existingQTag[3]) {
+          existingQTag[3] = pubkey;
+        }
+        return;
+      }
+
+      tags.push(['q', target, relay, pubkey]);
+      addedQuoteEventIds.add(target);
+    };
+
     for (const match of matches) {
       const fullIdentifier = match[1] + match[2];
 
@@ -1639,22 +1655,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           case 'note':
             // NIP-18: Add q tag for quote reference (NOT e tag which is for thread participation)
             if (!addedQuoteEventIds.has(decoded.data)) {
-              // Format: ["q", "<event-id>", "<relay-url>", "<pubkey>"]
-              // We don't have pubkey for note format, so leave it empty
-              tags.push(['q', decoded.data, '', '']);
-              addedQuoteEventIds.add(decoded.data);
+              upsertQuoteTag(decoded.data, '', '');
             }
             break;
 
           case 'nevent':
             // NIP-18: Add q tag for quote reference (NOT e tag which is for thread participation)
-            if (!addedQuoteEventIds.has(decoded.data.id)) {
-              const relay = decoded.data.relays?.[0] || '';
-              const pubkey = decoded.data.author || '';
-              // Format: ["q", "<event-id>", "<relay-url>", "<pubkey>"]
-              tags.push(['q', decoded.data.id, relay, pubkey]);
-              addedQuoteEventIds.add(decoded.data.id);
-            }
+            upsertQuoteTag(decoded.data.id, decoded.data.relays?.[0] || '', decoded.data.author || '');
             // Also add p tag for the author if available (for notifications)
             if (decoded.data.author && !addedPubkeys.has(decoded.data.author)) {
               tags.push(['p', decoded.data.author, '']);
@@ -1681,9 +1688,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           case 'naddr': {
             // NIP-18: For addressable events, use q tag with the event address
             const aTagValue = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
-            const relay = decoded.data.relays?.[0] || '';
-            // Format: ["q", "<event-address>", "<relay-url>", "<pubkey>"]
-            tags.push(['q', aTagValue, relay, decoded.data.pubkey]);
+            upsertQuoteTag(aTagValue, decoded.data.relays?.[0] || '', decoded.data.pubkey);
             // Also add p tag for the author (for notifications)
             if (!addedPubkeys.has(decoded.data.pubkey)) {
               tags.push(['p', decoded.data.pubkey, '']);
