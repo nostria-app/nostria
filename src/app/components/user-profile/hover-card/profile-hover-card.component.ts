@@ -359,8 +359,8 @@ export class ProfileHoverCardComponent {
         }
       }
 
-      await this.reportingService.muteUser(pubkey);
-      this.layout.toast('User blocked');
+      const success = await this.reportingService.muteUser(pubkey);
+      this.layout.toast(success ? 'User blocked' : 'Failed to block user — please try again');
     } catch (error) {
       console.error('Failed to block user:', error);
       this.layout.toast('Failed to block user', 3000, 'error-snackbar');

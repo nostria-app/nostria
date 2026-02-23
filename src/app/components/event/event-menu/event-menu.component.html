@@ -88,9 +88,9 @@
     Report Content
   </button>
   @if (event().pubkey !== accountState.pubkey()) {
-  <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
-    <mat-icon>block</mat-icon>
-    <span>Block User</span>
+  <button mat-menu-item (click)="blockUser()">
+    <mat-icon>{{ isAuthorBlocked() ? 'check_circle' : 'block' }}</mat-icon>
+    <span>{{ isAuthorBlocked() ? 'Unblock User' : 'Block User' }}</span>
   </button>
   }
 

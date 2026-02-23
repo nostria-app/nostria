@@ -1,5 +1,5 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, CdkDrag, CdkDropList, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
@@ -70,6 +70,7 @@ const DEFAULT_MENU_IDS = [
   imports: [
     CdkDropList,
     CdkDrag,
+    CdkDragHandle,
     MatIconModule,
     MatButtonModule,
     MatListModule,
@@ -232,7 +233,8 @@ const DEFAULT_MENU_IDS = [
       background: var(--mat-sys-surface-container-high);
       border-radius: 8px;
       margin-bottom: 4px;
-      cursor: grab;
+      cursor: default;
+      touch-action: pan-y;
       transition: background-color 0.2s, box-shadow 0.2s;
 
       &:hover {
@@ -260,6 +262,7 @@ const DEFAULT_MENU_IDS = [
     .drag-handle {
       color: var(--mat-sys-on-surface-variant);
       cursor: grab;
+      touch-action: none;
       display: flex;
       align-items: center;
 

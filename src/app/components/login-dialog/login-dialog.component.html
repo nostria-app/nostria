@@ -207,7 +207,7 @@
         <mat-label>Private Key (nsec) or Recovery Phrase</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
           autocomplete="off" autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
-          onfocus="this.removeAttribute('readonly');" />
+          onfocus="this.removeAttribute('readonly');" (keydown.enter)="loginWithNsec()" />
       </mat-form-field>
 
       <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code">

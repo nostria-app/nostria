@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SwPush } from '@angular/service-worker';
@@ -16,6 +17,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AccountStateService } from '../../../services/account-state.service';
 import { RouterModule } from '@angular/router';
+import { PanelHeaderComponent } from '../../../components/panel-header/panel-header.component';
 
 @Component({
   selector: 'app-settings',
@@ -26,14 +28,16 @@ import { RouterModule } from '@angular/router';
     MatDividerModule,
     MatListModule,
     MatIconModule,
-    MatButtonModule,
     MatProgressSpinnerModule,
     RouterModule,
+    PanelHeaderComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationSettingsComponent {
+  private readonly location = inject(Location);
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
@@ -42,6 +46,10 @@ export class NotificationSettingsComponent {
   snackBar = inject(MatSnackBar);
   dialog = inject(MatDialog);
   logger = inject(LoggerService);
+
+  goBack(): void {
+    this.location.back();
+  }
 
   // Use devices from WebPushService
   devices = this.webPush.deviceList;

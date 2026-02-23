@@ -25,7 +25,7 @@ import {
   type EventDetailsDialogData,
 } from '../../event-details-dialog/event-details-dialog.component';
 import { LayoutService } from '../../../services/layout.service';
-import type { ReportTarget } from '../../../services/reporting.service';
+import { ReportingService, type ReportTarget } from '../../../services/reporting.service';
 
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
@@ -80,6 +80,7 @@ export class EventMenuComponent {
   favoritesService = inject(FavoritesService);
   followSetsService = inject(FollowSetsService);
   eventService = inject(EventService);
+  private reportingService = inject(ReportingService);
   private router = inject(Router);
   private userRelaysService = inject(UserRelaysService);
   private eventImageService = inject(EventImageService);
@@ -474,6 +475,42 @@ export class EventMenuComponent {
 
     this.layout.showReportDialog(reportTarget);
   }
+
+  isAuthorBlocked = computed<boolean>(() => {
+    const event = this.event();
+    if (!event?.pubkey) return false;
+    return this.reportingService.isUserBlocked(event.pubkey);
+  });
+
+  async blockUser(): Promise<void> {
+    const event = this.event();
+    if (!event?.pubkey) return;
+
+    if (!(await this.ensureRealAccount())) return;
+
+    if (this.isAuthorBlocked()) {
+      const success = await this.reportingService.unblockUser(event.pubkey);
+      this.layout.toast(success ? 'User unblocked' : 'Failed to unblock user');
+    } else {
+      if (this.isAuthorFollowed()) {
+        const confirmed = await firstValueFrom(
+          this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+            data: {
+              title: 'Block User',
+              message: 'You are currently following this user. Do you want to unfollow and block them?',
+              confirmText: 'Unfollow and Block',
+              cancelText: 'Cancel',
+            },
+          }).afterClosed()
+        );
+        if (!confirmed) return;
+        await this.accountState.unfollow(event.pubkey);
+      }
+      const success = await this.reportingService.muteUser(event.pubkey);
+      this.layout.toast(success ? 'User blocked' : 'Failed to block user');
+    }
+  }
+
 
   async onPinClick(event: MouseEvent) {
     event.stopPropagation();

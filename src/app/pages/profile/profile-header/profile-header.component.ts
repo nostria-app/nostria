@@ -888,7 +888,8 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     if (this.isUserBlocked()) {
       // User is already blocked, so unblock them
-      this.reportingService.unblockUser(pubkey);
+      const success = await this.reportingService.unblockUser(pubkey);
+      this.logger.debug(success ? 'User unblocked' : 'Failed to unblock user');
     } else {
       // Check if we're currently following this user
       const isFollowing = this.isFollowing();
@@ -917,7 +918,8 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
 
       // User is not blocked, so block them
-      await this.reportingService.muteUser(pubkey);
+      const success = await this.reportingService.muteUser(pubkey);
+      this.logger.debug(success ? 'User blocked' : 'Failed to block user — signing was cancelled or failed');
     }
   }
 

@@ -400,27 +400,34 @@ export class ReportingService {
 
   /**
    * Mute a user (adds to mute list)
+   * Returns true if the operation succeeded (event was signed and published),
+   * false if signing failed (e.g. user dismissed PIN/extension dialog).
    */
-  async muteUser(pubkey: string): Promise<void> {
+  async muteUser(pubkey: string): Promise<boolean> {
     // Create a fresh mute list event with the user
     const freshMuteList = await this.createFreshMuteListEvent('user', pubkey);
     if (freshMuteList) {
       // Publish the already-signed mute list to account relays
       await this.publishService.publish(freshMuteList);
       this.logger.debug('Blocked user and published mute list:', pubkey);
+      return true;
     }
+    return false;
   }
 
   /**
    * Unblock a user (removes from mute list)
+   * Returns true if the operation succeeded, false if signing failed.
    */
-  async unblockUser(pubkey: string): Promise<void> {
+  async unblockUser(pubkey: string): Promise<boolean> {
     // Create a fresh mute list event without the user
     const freshMuteList = await this.createFreshMuteListWithoutUser(pubkey);
     if (freshMuteList) {
       // Publish the already-signed mute list to account relays
       await this.publishService.publish(freshMuteList);
+      return true;
     }
+    return false;
   }
 
   /**

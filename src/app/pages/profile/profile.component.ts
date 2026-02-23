@@ -956,7 +956,9 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
     if (this.isUserBlocked()) {
       // User is already blocked, so unblock them
-      this.reportingService.unblockUser(pubkey);
+      const success = await this.reportingService.unblockUser(pubkey);
+      // TODO: show toast feedback once layout service is available here
+      this.logger.debug(success ? 'User unblocked' : 'Failed to unblock user');
     } else {
       // Check if we're currently following this user
       const isFollowing = this.isFollowing();
@@ -985,7 +987,8 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       }
 
       // User is not blocked, so block them
-      await this.reportingService.muteUser(pubkey);
+      const success = await this.reportingService.muteUser(pubkey);
+      this.logger.debug(success ? 'User blocked' : 'Failed to block user — signing was cancelled or failed');
     }
   }
 

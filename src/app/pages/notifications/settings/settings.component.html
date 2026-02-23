@@ -1,7 +1,9 @@
 <div class="notifications-page content-small">
-  <div class="page-header">
-    <h1>Notifications settings</h1>
-  </div>
+  <app-panel-header
+    title="Notification Settings"
+    [showBack]="true"
+    (backClick)="goBack()"
+  />
 
   <!-- Loading indicator -->
   @if (isLoading()) {
