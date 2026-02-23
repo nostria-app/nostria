@@ -81,6 +81,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '[class.visible]': 'controlsVisible()',
     '[class.is-paused]': 'paused()',
     '[class.native-fullscreen]': 'nativeFullscreen()',
+    'tabindex': '0',
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'onMouseLeave()',
     '(mousemove)': 'onMouseMove()',
@@ -338,16 +339,9 @@ export class VideoControlsComponent implements OnDestroy {
     // Don't intercept keyboard shortcuts with modifier keys (Ctrl+F, Cmd+F, etc.)
     if (event.ctrlKey || event.altKey || event.metaKey) return;
 
-    // Only handle keys if our component or video is focused
     const activeElement = document.activeElement;
-    const isEditableElement =
-      activeElement instanceof HTMLElement &&
-      (activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT' ||
-        activeElement.isContentEditable ||
-        !!activeElement.closest('[contenteditable="true"]'));
-    if (isEditableElement) return;
+    if (this.isEditableElement(activeElement)) return;
+    if (!this.isKeyboardControlContext(activeElement, video)) return;
 
     switch (event.key) {
       case ' ':
@@ -386,6 +380,31 @@ export class VideoControlsComponent implements OnDestroy {
         this.onFullscreenToggle();
         break;
     }
+  }
+
+  private isEditableElement(element: Element | null): boolean {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    return element.tagName === 'INPUT' ||
+      element.tagName === 'TEXTAREA' ||
+      element.tagName === 'SELECT' ||
+      element.isContentEditable ||
+      !!element.closest('[contenteditable="true"]');
+  }
+
+  private isKeyboardControlContext(activeElement: Element | null, video: HTMLVideoElement): boolean {
+    if (this.nativeFullscreen()) {
+      return true;
+    }
+
+    if (!(activeElement instanceof HTMLElement)) {
+      return false;
+    }
+
+    const host = this.hostElement.nativeElement as HTMLElement;
+    return host.contains(activeElement) || activeElement === video;
   }
 
   onMouseEnter(): void {
@@ -447,6 +466,7 @@ export class VideoControlsComponent implements OnDestroy {
   onOverlayClick(event: MouseEvent): void {
     // Don't toggle if click was on controls-bar or center play button (they stop propagation)
     // This method is only reached when clicking on the overlay area
+    (this.hostElement.nativeElement as HTMLElement).focus();
     this.playPause.emit();
   }
 

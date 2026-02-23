@@ -32,6 +32,11 @@ describe('VideoControlsComponent', () => {
     return video;
   }
 
+  function focusControlsHost(): void {
+    const host = fixture.nativeElement as HTMLElement;
+    host.focus();
+  }
+
   beforeEach(() => {
     createComponent();
   });
@@ -50,6 +55,7 @@ describe('VideoControlsComponent', () => {
     it('should emit playPause on Space key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.playPause, 'emit');
       document.dispatchEvent(createKeyboardEvent(' '));
@@ -59,6 +65,7 @@ describe('VideoControlsComponent', () => {
     it('should emit playPause on k key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.playPause, 'emit');
       document.dispatchEvent(createKeyboardEvent('k'));
@@ -68,6 +75,7 @@ describe('VideoControlsComponent', () => {
     it('should emit seek on ArrowLeft key (seek back 5s)', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.seek, 'emit');
       document.dispatchEvent(createKeyboardEvent('ArrowLeft'));
@@ -77,6 +85,7 @@ describe('VideoControlsComponent', () => {
     it('should emit seek on ArrowRight key (seek forward 5s)', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.seek, 'emit');
       document.dispatchEvent(createKeyboardEvent('ArrowRight'));
@@ -86,6 +95,7 @@ describe('VideoControlsComponent', () => {
     it('should emit volumeChange on ArrowUp key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.volumeChange, 'emit');
       document.dispatchEvent(createKeyboardEvent('ArrowUp'));
@@ -95,6 +105,7 @@ describe('VideoControlsComponent', () => {
     it('should emit volumeChange on ArrowDown key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.volumeChange, 'emit');
       document.dispatchEvent(createKeyboardEvent('ArrowDown'));
@@ -104,6 +115,7 @@ describe('VideoControlsComponent', () => {
     it('should emit muteToggle on m key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.muteToggle, 'emit');
       document.dispatchEvent(createKeyboardEvent('m'));
@@ -113,10 +125,26 @@ describe('VideoControlsComponent', () => {
     it('should emit fullscreenToggle on f key', async () => {
       fixture.componentRef.setInput('videoElement', createMockVideo());
       await fixture.whenStable();
+      focusControlsHost();
 
       spyOn(component.fullscreenToggle, 'emit');
       document.dispatchEvent(createKeyboardEvent('f'));
       expect(component.fullscreenToggle.emit).toHaveBeenCalled();
+    });
+
+    it('should ignore keys when focus is outside video controls context', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      const outsideButton = document.createElement('button');
+      document.body.appendChild(outsideButton);
+      outsideButton.focus();
+
+      spyOn(component.fullscreenToggle, 'emit');
+      document.dispatchEvent(createKeyboardEvent('f'));
+      expect(component.fullscreenToggle.emit).not.toHaveBeenCalled();
+
+      document.body.removeChild(outsideButton);
     });
 
     it('should ignore keys with ctrlKey modifier', async () => {
