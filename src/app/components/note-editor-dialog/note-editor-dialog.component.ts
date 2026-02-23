@@ -2795,25 +2795,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const items = event.clipboardData?.items;
     if (!items) return;
 
-    let hasImageFile = false;
-    const imageFiles: File[] = [];
+    let hasMediaFile = false;
+    const mediaFiles: File[] = [];
 
-    // Check for image files in clipboard
+    // Check for media files (images and videos) in clipboard
     for (const item of Array.from(items)) {
       if (item.kind === 'file') {
         const file = item.getAsFile();
-        if (file && this.isImageFile(file)) {
-          hasImageFile = true;
-          imageFiles.push(file);
+        if (file && this.isMediaFile(file)) {
+          hasMediaFile = true;
+          mediaFiles.push(file);
         }
       }
     }
 
-    // If we found image files, prevent default behavior and upload them
-    if (hasImageFile && imageFiles.length > 0) {
+    // If we found media files, prevent default behavior and upload them
+    if (hasMediaFile && mediaFiles.length > 0) {
       event.preventDefault();
       event.stopPropagation();
-      this.uploadFiles(imageFiles);
+      this.uploadFiles(mediaFiles);
       return;
     }
 
@@ -2843,18 +2843,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     }
 
-    // If no image files or NIP-19 identifiers, allow normal text pasting
+    // If no media files or NIP-19 identifiers, allow normal text pasting
   }
 
-  private isImageFile(file: File): boolean {
-    // Check if the file is an image by MIME type
-    if (file.type.startsWith('image/')) {
+  private isMediaFile(file: File): boolean {
+    // Check by MIME type first
+    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
       return true;
     }
 
     // Additional check by file extension as fallback
-    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
-    return imageExtensions.test(file.name);
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif|mp4|webm|mov|avi|mkv|m4v)$/i;
+    return mediaExtensions.test(file.name);
   }
 
   /**
