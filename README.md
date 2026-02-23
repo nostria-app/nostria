@@ -66,13 +66,13 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-36: Sensitive Content](https://github.com/nostria-app/nips/blob/master/36.md)
 - [x] [NIP-40: Expiration Timestamp](https://github.com/nostria-app/nips/blob/master/40.md)
 - [x] [NIP-42: Authentication of clients to relays](https://github.com/nostria-app/nips/blob/master/42.md)
-- [x] [NIP-50: Keywords filter](https://github.com/nostria-app/nips/blob/master/50.md)
 - [x] [NIP-46: Nostr Remote Signing](https://github.com/nostria-app/nips/blob/master/46.md)
 - [x] [NIP-47: Nostr Wallet Connect](https://github.com/nostria-app/nips/blob/master/47.md)
+- [x] [NIP-50: Keywords filter](https://github.com/nostria-app/nips/blob/master/50.md)
 - [x] [NIP-51: Lists](https://github.com/nostria-app/nips/blob/master/51.md)
 - [x] [NIP-52: Calendar Events](https://github.com/nostria-app/nips/blob/master/52.md)
-- [x] [NIP-56: Reporting](https://github.com/nostria-app/nips/blob/master/56.md)
 - [x] [NIP-55: Android Signer Application](https://github.com/nostria-app/nips/blob/master/55.md)
+- [x] [NIP-56: Reporting](https://github.com/nostria-app/nips/blob/master/56.md)
 - [x] [NIP-57: Lightning Zaps](https://github.com/nostria-app/nips/blob/master/57.md)
 - [x] [NIP-58: Badges](https://github.com/nostria-app/nips/blob/master/58.md)
 - [x] [NIP-65: Relay List Metadata](https://github.com/nostria-app/nips/blob/master/65.md)
@@ -162,7 +162,9 @@ bubblewrap build
 ```
 # Make sure the signing method is added to the .env file
 
-./zapstore publish
+go install github.com/zapstore/zsp@latest
+
+./zsp publish
 
 # Preview using a local web browser.
 # Verify the events before publishing.

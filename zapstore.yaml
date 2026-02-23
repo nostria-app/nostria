@@ -1,11 +1,66 @@
 repository: https://github.com/nostria-app/nostria
-assets:
-  - .*.apk
+description: See your friends again. Nostria is social without the noise.
+summary: Your Social Network
+tags:
+    - nostria
+    - long-form
+    - streaming
+    - music
+    - articles
+    - clips
+    - videos
+license: MIT
+website: https://www.nostria.app/
 images:
-  - public/screenshots/2025-12-12-login.webp
-  - public/screenshots/2025-12-12-profile.webp
-  - public/screenshots/2025-12-12-feed.webp
-  - public/screenshots/2025-12-12-thread.webp
-  - public/screenshots/2025-12-12-people.webp
-  - public/screenshots/2025-12-12-streams.webp
-  - public/screenshots/2025-12-12-stream.webp
+    - public/screenshots/2025-02-13-home-mobile-dark.webp
+    - public/screenshots/2025-02-13-profile-mobile-dark.webp
+    - public/screenshots/2025-02-13-profile-dark.webp
+    - public/screenshots/2025-02-13-notifications-mobile-dark.webp
+    - public/screenshots/2025-02-13-thread-mobile-dark.webp
+    - public/screenshots/2025-02-13-music-mobile-dark.webp
+    - public/screenshots/2025-02-13-music-track-dark.webp
+    - public/screenshots/2025-02-13-music-player-mobile.webp
+    - public/screenshots/2025-02-13-home-mobile-light.webp
+supported_nips:
+    - "01"
+    - "02"
+    - "04"
+    - "05"
+    - "07"
+    - "09"
+    - "10"
+    - "11"
+    - "13"
+    - "17"
+    - "18"
+    - "19"
+    - "21"
+    - "22"
+    - "23"
+    - "24"
+    - "25"
+    - "26"
+    - "27"
+    - "30"
+    - "36"
+    - "40"
+    - "42"
+    - "46"
+    - "47"
+    - "50"
+    - "51"
+    - "52"
+    - "55"
+    - "56"
+    - "57"
+    - "58"
+    - "65"
+    - "68"
+    - "70"
+    - "71"
+    - "75"
+    - "85"
+    - "88"
+metadata_sources:
+    - github
+    - playstore
