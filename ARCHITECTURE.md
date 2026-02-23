@@ -35,6 +35,8 @@ Nostria is a decentralized social media client built on the Nostr protocol. It p
 
 ### Core Principles
 
+IMPORTANT: Make sure that in the UI for users, you don't call things for "events", but for "posts". For code it's good to call it "event" and "events", but user-facing texts should say "post" and "posts".
+
 - **Decentralization**: No central server dependency; users control their data and relay connections
 - **User Sovereignty**: Full control over identity, data, and social graph
 - **Performance First**: Optimized rendering, lazy loading, and efficient resource management, including local database caching and retrieval.
