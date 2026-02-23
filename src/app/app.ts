@@ -320,6 +320,10 @@ export class App implements OnInit, OnDestroy {
   // Once mounted, keep it mounted to preserve existing feed state behavior.
   feedsMounted = signal(false);
 
+  // Lazy-mount search results only when search is first used.
+  // Keep mounted afterward to preserve interaction behavior and state.
+  searchResultsMounted = signal(false);
+
   // Feed edit dialog state
   showFeedEditDialog = signal(false);
   editingFeed = signal<FeedConfig | undefined>(undefined);
@@ -889,6 +893,14 @@ export class App implements OnInit, OnDestroy {
     effect(() => {
       if (this.panelNav.showFeeds() && !this.feedsMounted()) {
         this.feedsMounted.set(true);
+      }
+    });
+
+    // Mount search results lazily when search is first activated or has content/results.
+    effect(() => {
+      const hasSearchInput = !!this.layout.searchInput?.length;
+      if ((this.layout.search() || hasSearchInput || this.search.hasVisibleResults()) && !this.searchResultsMounted()) {
+        this.searchResultsMounted.set(true);
       }
     });
 

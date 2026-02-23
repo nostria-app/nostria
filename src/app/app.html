@@ -313,7 +313,9 @@
               i18n-matTooltip="@@app.search.command-palette" matTooltip="Command palette (Ctrl+K)">
               <mat-icon>terminal</mat-icon>
             </button>
+            @if (searchResultsMounted()) {
             <app-search-results></app-search-results>
+            }
           </div>
         </div>
 
