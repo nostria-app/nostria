@@ -114,6 +114,7 @@ export class MediaPlayerService implements OnInitialized {
   // YouTube Player API reference
   private youtubePlayer?: YouTubePlayer;
   private youtubeApiReady = false;
+  private youtubeApiLoadingPromise: Promise<void> | null = null;
 
   // Throttling for podcast position saves
   private lastPodcastPositionSave = 0;
@@ -135,9 +136,6 @@ export class MediaPlayerService implements OnInitialized {
     if (!this.app.isBrowser()) {
       return;
     }
-
-    // Load YouTube IFrame API
-    this.loadYouTubeAPI();
 
     effect(() => {
       if (this.app.initialized()) {
@@ -265,24 +263,55 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
-  private loadYouTubeAPI(): void {
-    // Check if API is already loaded
-    if ((window as unknown as { YT?: unknown }).YT) {
+  private async ensureYouTubeAPIReady(): Promise<void> {
+    if (this.youtubeApiReady) {
+      return;
+    }
+
+    const windowWithYouTube = window as unknown as {
+      YT?: unknown;
+      onYouTubeIframeAPIReady?: () => void;
+    };
+
+    if (windowWithYouTube.YT) {
       this.youtubeApiReady = true;
       return;
     }
 
-    // Create script tag to load YouTube IFrame API
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    if (this.youtubeApiLoadingPromise) {
+      await this.youtubeApiLoadingPromise;
+      return;
+    }
 
-    // Set up callback for when API is ready
-    (window as unknown as { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = () => {
-      this.youtubeApiReady = true;
-      console.log('YouTube IFrame API ready');
-    };
+    this.youtubeApiLoadingPromise = new Promise<void>((resolve, reject) => {
+      const existingReadyCallback = windowWithYouTube.onYouTubeIframeAPIReady;
+
+      windowWithYouTube.onYouTubeIframeAPIReady = () => {
+        existingReadyCallback?.();
+        this.youtubeApiReady = true;
+        this.youtubeApiLoadingPromise = null;
+        console.log('YouTube IFrame API ready');
+        resolve();
+      };
+
+      const scriptSrc = 'https://www.youtube.com/iframe_api';
+      const existingScript = document.querySelector(`script[src="${scriptSrc}"]`) as HTMLScriptElement | null;
+
+      if (existingScript) {
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = scriptSrc;
+      script.onerror = () => {
+        this.youtubeApiLoadingPromise = null;
+        reject(new Error('Failed to load YouTube IFrame API'));
+      };
+
+      document.head.appendChild(script);
+    });
+
+    await this.youtubeApiLoadingPromise;
   }
 
   private initYouTubePlayer(): void {
@@ -1044,11 +1073,17 @@ export class MediaPlayerService implements OnInitialized {
       this.youtubeUrl.set(youTubeUrl);
       this._isPaused.set(false); // YouTube autoplays
 
-      // Initialize YouTube player to detect when video ends
-      // Use small initial delay, then poll for iframe readiness
-      setTimeout(() => {
-        this.initYouTubePlayer();
-      }, 200);
+      // Lazily load YouTube API and initialize player only when needed.
+      this.ensureYouTubeAPIReady()
+        .then(() => {
+          // Use small initial delay, then poll for iframe readiness
+          setTimeout(() => {
+            this.initYouTubePlayer();
+          }, 200);
+        })
+        .catch(error => {
+          console.warn('Failed to initialize YouTube API:', error);
+        });
     } else if (file.type === 'Video' || file.type === 'HLS') {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
