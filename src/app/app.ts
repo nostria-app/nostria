@@ -316,6 +316,10 @@ export class App implements OnInit, OnDestroy {
   // Signal to track if accounts list is expanded in sidenav
   accountsExpanded = signal(false);
 
+  // Lazy-mount feeds component only when first needed to reduce initial render cost.
+  // Once mounted, keep it mounted to preserve existing feed state behavior.
+  feedsMounted = signal(false);
+
   // Feed edit dialog state
   showFeedEditDialog = signal(false);
   editingFeed = signal<FeedConfig | undefined>(undefined);
@@ -878,6 +882,13 @@ export class App implements OnInit, OnDestroy {
             this.sidenav.close();
           }
         }
+      }
+    });
+
+    // Mount feeds component lazily when the feeds panel is first shown.
+    effect(() => {
+      if (this.panelNav.showFeeds() && !this.feedsMounted()) {
+        this.feedsMounted.set(true);
       }
     });
 
