@@ -1,6 +1,11 @@
 @use '@angular/material' as mat;
 @use './theme.scss' as nostria-theme;
 @use './app/components/whats-new-dialog/whats-new-dialog-global.scss';
+@import 'material-symbols/outlined.css';
+@import '@fontsource/protest-strike/index.css';
+@import '@fontsource/roboto/index.css';
+@import '@fontsource/inter/index.css';
+@import '@fontsource/sora/index.css';
 
 html {
   // Ensure browser/system font size is respected (accessibility)

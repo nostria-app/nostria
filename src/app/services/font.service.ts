@@ -12,7 +12,6 @@ export interface FontConfig {
   id: FontOption;
   label: string;
   fontFamily: string;
-  googleFontUrl?: string;
 }
 
 export const FONT_OPTIONS: FontConfig[] = [
@@ -32,13 +31,11 @@ export const FONT_OPTIONS: FontConfig[] = [
     id: 'sora',
     label: 'Sora',
     fontFamily: 'Sora, "Helvetica Neue", sans-serif',
-    googleFontUrl: 'https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap',
   },
   {
     id: 'inter',
     label: 'Inter',
     fontFamily: 'Inter, "Helvetica Neue", sans-serif',
-    googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap',
   },
 ];
 
@@ -50,7 +47,6 @@ export const DEFAULT_FONT: FontOption = 'roboto';
  *
  * How it works:
  * - Sets a CSS custom property `--nostria-font-family` on the document root
- * - Dynamically loads Google Fonts when needed
  * - Saves preference to localStorage for persistence
  */
 @Injectable({
@@ -64,9 +60,6 @@ export class FontService {
   private readonly document = inject(DOCUMENT);
   private readonly logger = inject(LoggerService);
   private readonly localStorage = inject(LocalStorageService);
-
-  /** Set of loaded font URLs to avoid duplicate loads */
-  private loadedFonts = new Set<string>();
 
   /** Current font option */
   font = signal<FontOption>(this.getInitialFont());
@@ -137,43 +130,14 @@ export class FontService {
   }
 
   /**
-   * Apply the font by setting CSS custom property and loading font if needed
+   * Apply the font by setting CSS custom property
    */
   private applyFont(config: FontConfig): void {
     if (!isPlatformBrowser(this.platformId)) {
       return; // Don't modify DOM during SSR
     }
 
-    // Load Google Font if needed
-    if (config.googleFontUrl && !this.loadedFonts.has(config.googleFontUrl)) {
-      this.loadGoogleFont(config.googleFontUrl);
-    }
-
     // Set CSS custom property
     this.document.documentElement.style.setProperty(this.CSS_PROPERTY, config.fontFamily);
-  }
-
-  /**
-   * Dynamically load a Google Font stylesheet
-   */
-  private loadGoogleFont(url: string): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    // Check if already loaded
-    if (this.loadedFonts.has(url)) {
-      return;
-    }
-
-    this.logger.debug(`Loading Google Font: ${url}`);
-
-    const link = this.document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = url;
-    link.setAttribute('data-font-loader', 'nostria');
-
-    this.document.head.appendChild(link);
-    this.loadedFonts.add(url);
   }
 }
