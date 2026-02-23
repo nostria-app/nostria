@@ -1,6 +1,6 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()" [class.has-right-content]="hasRightContent()"
   [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
-  [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">
+  [style.background-color]="themeService.darkMode() ? '#0a0a0a' : '#efefef'">
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">
@@ -18,8 +18,9 @@
   }
   @if (!app.initialized()) {
   <!-- Loading state while services initialize - inline styles ensure visibility before CSS loads -->
-  <div class="app-initializing" [style.background-color]="themeService.darkMode() ? '#121212' : '#fafafa'">
+  <div class="app-initializing" [style.background-color]="themeService.darkMode() ? '#0a0a0a' : '#efefef'">
     <div class="initializing-content">
+      <img ngSrc="/icons/nostria.png" width="96" height="96" alt="Nostria" class="initializing-logo" />
       <div class="initializing-spinner"
         [style.border-color]="themeService.darkMode() ? 'rgba(255, 185, 97, 0.2)' : 'rgba(253, 161, 0, 0.2)'"
         [style.border-top-color]="themeService.darkMode() ? '#ffb961' : '#FDA100'"></div>

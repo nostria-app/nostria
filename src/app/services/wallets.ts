@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, Injector, signal, runInInjectionC
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { AccountLocalStateService, AccountWallet } from './account-local-state.service';
+import { LoggerService } from './logger.service';
 
 // Re-export Wallet type for backwards compatibility
 export type Wallet = AccountWallet;
@@ -17,6 +18,7 @@ export class Wallets {
   private readonly appState = inject(ApplicationStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly injector = inject(Injector);
+  private readonly logger = inject(LoggerService);
 
   // Cached reference to avoid repeated lookups
   private _accountState: AccountStateServiceType | null = null;
@@ -59,7 +61,7 @@ export class Wallets {
     if (this.effectInitialized) return;
     this.effectInitialized = true;
 
-    console.log('[Wallets] Initializing wallet service...');
+    this.logger.debug('[Wallets] Initializing wallet service...');
 
     // Perform one-time migration of global wallets to all accounts
     this.migrateGlobalWalletsToAllAccounts();
@@ -71,7 +73,7 @@ export class Wallets {
         const accountPubkey = accountState.pubkey();
         const previousPubkey = this.currentAccountPubkey();
 
-        console.log('[Wallets] Account change detected:', {
+        this.logger.debug('[Wallets] Account change detected:', {
           accountPubkey: accountPubkey ? accountPubkey.substring(0, 8) + '...' : 'none',
           previousPubkey: previousPubkey ? previousPubkey.substring(0, 8) + '...' : 'none'
         });
@@ -95,7 +97,7 @@ export class Wallets {
 
     if (!globalWallets || Object.keys(globalWallets).length === 0) {
       // No global wallets to migrate
-      console.log('[Wallets] No global wallets to migrate');
+      this.logger.debug('[Wallets] No global wallets to migrate');
       return;
     }
 
@@ -104,11 +106,11 @@ export class Wallets {
     const accountPubkeys = Object.keys(allStates);
 
     if (accountPubkeys.length === 0) {
-      console.log('[Wallets] No accounts in nostria-state, keeping global wallets for later');
+      this.logger.debug('[Wallets] No accounts in nostria-state, keeping global wallets for later');
       return;
     }
 
-    console.log(`[Wallets] Migrating ${Object.keys(globalWallets).length} wallet(s) to ${accountPubkeys.length} account(s)...`);
+    this.logger.debug(`[Wallets] Migrating ${Object.keys(globalWallets).length} wallet(s) to ${accountPubkeys.length} account(s)...`);
 
     // Copy wallets to each account that doesn't already have wallets
     for (const pubkey of accountPubkeys) {
@@ -116,15 +118,15 @@ export class Wallets {
 
       if (!existingWallets || Object.keys(existingWallets).length === 0) {
         this.accountLocalState.setWallets(pubkey, globalWallets);
-        console.log(`[Wallets] Copied wallets to account ${pubkey.substring(0, 8)}...`);
+        this.logger.debug(`[Wallets] Copied wallets to account ${pubkey.substring(0, 8)}...`);
       } else {
-        console.log(`[Wallets] Account ${pubkey.substring(0, 8)}... already has wallets, skipping`);
+        this.logger.debug(`[Wallets] Account ${pubkey.substring(0, 8)}... already has wallets, skipping`);
       }
     }
 
     // Remove the old global storage key
     this.localStorage.removeItem(this.appState.WALLETS_KEY);
-    console.log('[Wallets] Migration complete - removed old "nostria-wallets" storage');
+    this.logger.debug('[Wallets] Migration complete - removed old "nostria-wallets" storage');
   }
 
   /**
@@ -133,7 +135,7 @@ export class Wallets {
   private loadWalletsForAccount(accountPubkey: string | null): void {
     if (!accountPubkey) {
       // No account logged in, clear wallets
-      console.log('[Wallets] No account, clearing wallets');
+      this.logger.debug('[Wallets] No account, clearing wallets');
       this.wallets.set({});
       return;
     }
@@ -141,7 +143,7 @@ export class Wallets {
     const storedWallets = this.accountLocalState.getWallets(accountPubkey);
     const migratedWallets = this.migrateCorruptedWallets(storedWallets, accountPubkey);
 
-    console.log('[Wallets] Loading wallets for account:', {
+    this.logger.debug('[Wallets] Loading wallets for account:', {
       accountPubkey: accountPubkey.substring(0, 8) + '...',
       walletCount: Object.keys(migratedWallets).length
     });
@@ -176,7 +178,7 @@ export class Wallets {
     if (needsSave) {
       // Save the migrated wallets
       this.accountLocalState.setWallets(accountPubkey, migratedWallets);
-      console.log('[Wallets] Corrupted wallet migration complete');
+      this.logger.debug('[Wallets] Corrupted wallet migration complete');
     }
 
     return migratedWallets;

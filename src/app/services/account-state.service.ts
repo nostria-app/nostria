@@ -17,6 +17,7 @@ import { Cache } from './cache';
 import { AccountRelayService } from './relays/account-relay';
 import { PublishService } from './publish.service';
 import { EventFocusService } from './event-focus.service';
+import { LoggerService } from './logger.service';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -49,6 +50,7 @@ export class AccountStateService implements OnDestroy {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly publishService = inject(PublishService);
   private readonly eventFocus = inject(EventFocusService);
+  private readonly logger = inject(LoggerService);
 
   private destroy$ = new Subject<void>();
 
@@ -107,6 +109,10 @@ export class AccountStateService implements OnDestroy {
   private isPreloadingProfiles = false;
   // Track the last set of account pubkeys we preloaded for
   private lastPreloadedAccountPubkeys = new Set<string>();
+  // Track pending preload scheduling to avoid duplicate timer/idle callback work
+  private pendingPreloadAccountKey: string | null = null;
+  private pendingPreloadTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pendingPreloadIdleCallbackId: number | null = null;
   // Track pending background profile loads to prevent duplicate requests
   private pendingProfileBackgroundLoads = new Set<string>();
 
@@ -200,11 +206,6 @@ export class AccountStateService implements OnDestroy {
   }
 
   private scheduleAccountProfilePreload(accounts: NostrUser[]): void {
-    if (this.eventFocus.isEventFocused()) {
-      setTimeout(() => this.scheduleAccountProfilePreload(accounts), 2000);
-      return;
-    }
-
     const maxPreloadAccounts = 3;
     const activePubkey = this.account()?.pubkey;
     const prioritized = activePubkey
@@ -215,14 +216,47 @@ export class AccountStateService implements OnDestroy {
       : accounts;
 
     const accountsToPreload = prioritized.slice(0, maxPreloadAccounts);
-    const runPreload = () => this.preloadAccountProfiles(accountsToPreload);
+    const preloadKey = accountsToPreload.map(account => account.pubkey).join(',');
 
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      window.requestIdleCallback(() => runPreload(), { timeout: 2000 });
+    if (this.pendingPreloadAccountKey === preloadKey) {
       return;
     }
 
-    setTimeout(() => runPreload(), 2000);
+    this.clearPendingProfilePreloadSchedule();
+    this.pendingPreloadAccountKey = preloadKey;
+
+    if (this.eventFocus.isEventFocused()) {
+      this.pendingPreloadTimeout = setTimeout(() => this.scheduleAccountProfilePreload(accounts), 2000);
+      return;
+    }
+
+    const runPreload = () => {
+      this.pendingPreloadAccountKey = null;
+      this.pendingPreloadTimeout = null;
+      this.pendingPreloadIdleCallbackId = null;
+      void this.preloadAccountProfiles(accountsToPreload);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      this.pendingPreloadIdleCallbackId = window.requestIdleCallback(() => runPreload(), { timeout: 2000 });
+      return;
+    }
+
+    this.pendingPreloadTimeout = setTimeout(() => runPreload(), 2000);
+  }
+
+  private clearPendingProfilePreloadSchedule(): void {
+    if (this.pendingPreloadTimeout) {
+      clearTimeout(this.pendingPreloadTimeout);
+      this.pendingPreloadTimeout = null;
+    }
+
+    if (typeof window !== 'undefined' && 'cancelIdleCallback' in window && this.pendingPreloadIdleCallbackId !== null) {
+      window.cancelIdleCallback(this.pendingPreloadIdleCallbackId);
+      this.pendingPreloadIdleCallbackId = null;
+    }
+
+    this.pendingPreloadAccountKey = null;
   }
 
   hasFeature(feature: Feature): boolean {
@@ -698,7 +732,7 @@ export class AccountStateService implements OnDestroy {
     }
 
     this.isPreloadingProfiles = true;
-    console.log('Pre-loading profiles for', accounts.length, 'accounts');
+    this.logger.debug('[AccountStateService] Pre-loading account profiles', { count: accounts.length });
 
     try {
       for (const account of accounts) {
@@ -718,10 +752,15 @@ export class AccountStateService implements OnDestroy {
               newProfiles.set(account.pubkey, profile);
               return newProfiles;
             });
-            console.log('Pre-loaded profile for account:', account.pubkey);
+            this.logger.debug('[AccountStateService] Pre-loaded profile for account', {
+              pubkey: account.pubkey,
+            });
           }
         } catch (error) {
-          console.warn('Failed to pre-load profile for account:', account.pubkey, error);
+          this.logger.warn('[AccountStateService] Failed to pre-load profile for account', {
+            pubkey: account.pubkey,
+            error,
+          });
         }
       }
 

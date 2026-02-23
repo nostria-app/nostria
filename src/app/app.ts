@@ -23,7 +23,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
@@ -146,6 +146,7 @@ interface NavItem {
     MatSidenavModule,
     MatListModule,
     CommonModule,
+    NgOptimizedImage,
     NgTemplateOutlet,
     MatTooltipModule,
     MatDialogModule,

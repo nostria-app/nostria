@@ -2481,6 +2481,13 @@ mat-sidenav-content {
     gap: 16px;
   }
 
+  .initializing-logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 20%;
+    object-fit: cover;
+  }
+
   .initializing-spinner {
     width: 48px;
     height: 48px;

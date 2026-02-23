@@ -4,6 +4,7 @@ import { Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from 
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { PanelActionsService } from './panel-actions.service';
+import { LoggerService } from './logger.service';
 
 /**
  * Panel position - which side the content renders on
@@ -67,6 +68,7 @@ export class PanelNavigationService {
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
   private panelActions = inject(PanelActionsService);
+  private logger = inject(LoggerService);
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -464,7 +466,7 @@ export class PanelNavigationService {
       // Clear the page title when left panel route actually changes (not just when right panel opens)
       // Components that want a custom title will set it in their ngOnInit
       const leftPathActuallyChanged = !currentLeft || currentLeft.path !== leftPath;
-      console.log('[PanelNav] leftPathActuallyChanged:', leftPathActuallyChanged, 'currentLeft:', currentLeft?.path, 'leftPath:', leftPath, 'rightPath:', rightPath);
+      this.logger.debug('[PanelNav] leftPathActuallyChanged:', leftPathActuallyChanged, 'currentLeft:', currentLeft?.path, 'leftPath:', leftPath, 'rightPath:', rightPath);
       if (leftPathActuallyChanged) {
         this.panelActions.clearPageTitle();
         this.panelActions.clearLeftPanelActions();
@@ -473,7 +475,7 @@ export class PanelNavigationService {
         // Feeds route ('/f') should preserve scroll position as users navigate feeds
         const isFeedsRoute = leftPath === 'f' || leftPath === '/f';
         if (!this._isBackNavigation && !isFeedsRoute) {
-          console.log('[PanelNav] Scrolling left panel to top');
+          this.logger.debug('[PanelNav] Scrolling left panel to top');
           this.scrollLeftPanelToTop();
         }
       }
