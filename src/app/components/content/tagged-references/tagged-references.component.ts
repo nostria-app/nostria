@@ -72,6 +72,8 @@ export class TaggedReferencesComponent {
   private router = inject(Router);
 
   private clipsRelayUrlsPromise: Promise<string[]> | null = null;
+  private readonly MARKDOWN_IMAGE_REGEX = /!\[.*?\]\((https?:\/\/[^\s)]+(?:\?[^\s)]*)?)\)/i;
+  private readonly STANDALONE_IMAGE_REGEX = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|avif|svg)(\?[^\s]*)?/i;
 
   event = input<Event | null>(null);
 
@@ -178,28 +180,9 @@ export class TaggedReferencesComponent {
       // Cache image, title, and description in the article object
       if (eventData?.event) {
         const event = eventData.event;
+        article.image = this.extractArticleImage(event) ?? undefined;
 
-        // Look for image in event tags
-        const imageTag = event.tags?.find(tag => tag[0] === 'image');
-        const bannerTag = event.tags?.find(tag => tag[0] === 'banner');
-        const pictureTag = event.tags?.find(tag => tag[0] === 'picture');
-        const thumbTag = event.tags?.find(tag => tag[0] === 'thumb');
-
-        const imetaTag = event.tags?.find(tag => tag[0] === 'imeta');
-        const parsedImeta = imetaTag ? this.utilities.parseImetaTag(imetaTag, true) : null;
-        const imetaImage = parsedImeta?.['image'] || null;
-
-        if (thumbTag?.[1]) {
-          article.image = thumbTag[1];
-        } else if (imetaImage) {
-          article.image = imetaImage;
-        } else if (imageTag?.[1]) {
-          article.image = imageTag[1];
-        } else if (bannerTag?.[1]) {
-          article.image = bannerTag[1];
-        } else if (pictureTag?.[1]) {
-          article.image = pictureTag[1];
-        }        // Look for title
+        // Look for title
         const titleTag = event.tags?.find(tag => tag[0] === 'title');
         if (titleTag?.[1]) {
           article.title = titleTag[1];
@@ -352,40 +335,69 @@ export class TaggedReferencesComponent {
     const eventData = this.articleData().get(key);
 
     if (eventData?.event) {
-      // Try to get thumb from tags (for live events)
-      const thumbTag = eventData.event.tags.find(tag => tag[0] === 'thumb');
-      if (thumbTag?.[1]) {
-        return thumbTag[1];
+      return this.extractArticleImage(eventData.event);
+    }
+
+    return null;
+  }
+
+  private extractArticleImage(event: Event): string | null {
+    const thumbTag = event.tags.find(tag => tag[0] === 'thumb')?.[1];
+    if (thumbTag) {
+      return thumbTag;
+    }
+
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+    for (const imetaTag of imetaTags) {
+      const parsedImeta = this.utilities.parseImetaTag(imetaTag, true);
+      const imetaImage = parsedImeta['image'];
+      if (imetaImage) {
+        return imetaImage;
       }
 
-      const imetaTag = eventData.event.tags.find(tag => tag[0] === 'imeta');
-      if (imetaTag) {
-        const parsedImeta = this.utilities.parseImetaTag(imetaTag, true);
-        if (parsedImeta['image']) {
-          return parsedImeta['image'];
-        }
+      const imetaUrl = parsedImeta['url'];
+      if (imetaUrl && this.isLikelyImageUrl(imetaUrl)) {
+        return imetaUrl;
+      }
+    }
+
+    const imageTag = event.tags.find(tag => tag[0] === 'image')?.[1];
+    if (imageTag) {
+      return imageTag;
+    }
+
+    const coverTag = event.tags.find(tag => tag[0] === 'cover')?.[1];
+    if (coverTag) {
+      return coverTag;
+    }
+
+    const bannerTag = event.tags.find(tag => tag[0] === 'banner')?.[1];
+    if (bannerTag) {
+      return bannerTag;
+    }
+
+    const pictureTag = event.tags.find(tag => tag[0] === 'picture')?.[1];
+    if (pictureTag) {
+      return pictureTag;
+    }
+
+    if (event.content) {
+      const markdownImageMatch = event.content.match(this.MARKDOWN_IMAGE_REGEX);
+      if (markdownImageMatch?.[1]) {
+        return markdownImageMatch[1];
       }
 
-      // Try to get image from tags
-      const imageTag = eventData.event.tags.find(tag => tag[0] === 'image');
-      if (imageTag?.[1]) {
-        return imageTag[1];
-      }
-
-      // Try to get banner from tags (for articles)
-      const bannerTag = eventData.event.tags.find(tag => tag[0] === 'banner');
-      if (bannerTag?.[1]) {
-        return bannerTag[1];
-      }
-
-      // Try to get picture from tags
-      const pictureTag = eventData.event.tags.find(tag => tag[0] === 'picture');
-      if (pictureTag?.[1]) {
-        return pictureTag[1];
+      const standaloneImageMatch = event.content.match(this.STANDALONE_IMAGE_REGEX);
+      if (standaloneImageMatch?.[0]) {
+        return standaloneImageMatch[0];
       }
     }
 
     return null;
+  }
+
+  private isLikelyImageUrl(url: string): boolean {
+    return this.STANDALONE_IMAGE_REGEX.test(url);
   }
 
   getArticleIcon(kind: number): string {

@@ -10,6 +10,11 @@
   <div class="article-compact" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
     [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
     (keydown.space)="openArticle()">
+    @if (image()) {
+    <div class="article-image-container">
+      <img [src]="image()" alt="Article image" title="Article image" loading="lazy" class="article-image" />
+    </div>
+    }
     <div class="article-content">
       <h3 class="article-title">{{ title() || 'Untitled Article' }}</h3>
       @if (summary()) {
