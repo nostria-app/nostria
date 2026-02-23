@@ -112,7 +112,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   effectivePoster = computed(() => this.poster() || this.generatedPoster() || undefined);
 
-  effectivePreload = computed<'metadata' | 'auto'>(() => this.effectivePoster() ? 'metadata' : 'auto');
+  effectivePreload = computed<'metadata'>(() => 'metadata');
 
   effectiveControlsConfig = computed<VideoControlsConfig>(() => ({
     ...DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG,

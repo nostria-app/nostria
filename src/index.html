@@ -27,6 +27,7 @@
     content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control." />
   <meta name="twitter:image" content="/assets/nostria-social.jpg" />
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preload" as="image" href="/icons/nostria.png" fetchpriority="high" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180-maskable.png">
   <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192-maskable.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512-maskable.png">
@@ -228,6 +229,14 @@
           border-top-color: #ffb961;
         }
 
+        .app-loading-logo {
+          width: 96px;
+          height: 96px;
+          margin-bottom: 20px;
+          border-radius: 20%;
+          object-fit: cover;
+        }
+
         .app-loading-text {
           margin-top: 16px;
           font-size: 16px;
@@ -288,6 +297,7 @@
           background: #ffddb8;
         }
       </style>
+      <img src="/icons/nostria.png" width="96" height="96" alt="Nostria" class="app-loading-logo" />
       <div class="app-loading-spinner"></div>
       <div class="app-loading-text">Loading Nostria...</div>
       <div id="app-loading-reload" class="app-loading-reload">
