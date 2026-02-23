@@ -56,11 +56,13 @@
     } @else {
     <div class="quotes-list">
       @for (quote of sortedQuotes(); track quote.event.id) {
-      <div class="quote-item">
+      <div class="quote-item" (click)="onQuoteClick(quote, $event)">
         <app-event-header [event]="quote.event" [compact]="true"></app-event-header>
-        <div class="quote-content">
-          <app-content [content]="quote.event.content" [event]="quote.event"></app-content>
-        </div>
+        @if (getQuoteDisplayText(quote.event.content); as quoteText) {
+        <div class="quote-content-minimal">{{ quoteText }}</div>
+        } @else {
+        <div class="quote-content-minimal quote-content-empty">Quoted event reference</div>
+        }
       </div>
       }
     </div>

@@ -1,11 +1,11 @@
-import { Component, ChangeDetectionStrategy, input, computed, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed, signal, effect, inject } from '@angular/core';
 import { MatRippleModule } from '@angular/material/core';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../../interfaces';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
-import { ContentComponent } from '../../content/content.component';
 import { EventHeaderComponent } from '../header/header.component';
+import { LayoutService } from '../../../services/layout.service';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -25,7 +25,6 @@ export interface ZapInfo {
     MatRippleModule,
     UserProfileComponent,
     AgoPipe,
-    ContentComponent,
     EventHeaderComponent,
   ],
   templateUrl: './reaction-summary.component.html',
@@ -33,6 +32,8 @@ export interface ZapInfo {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReactionSummaryComponent {
+  private layout = inject(LayoutService);
+
   reactions = input<NostrRecord[]>([]);
   replyCount = input<number>(0);
   repostCount = input<number>(0);
@@ -142,5 +143,22 @@ export class ReactionSummaryComponent {
   formatAmount(amount: number | null): string {
     if (!amount) return '0';
     return amount.toLocaleString();
+  }
+
+  getQuoteDisplayText(content: string): string {
+    if (!content) {
+      return '';
+    }
+
+    return content
+      .replace(/nostr:(?:note|nevent|naddr)1[a-z0-9]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  onQuoteClick(quote: NostrRecord, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.layout.openGenericEvent(quote.event.id, quote.event);
   }
 }
