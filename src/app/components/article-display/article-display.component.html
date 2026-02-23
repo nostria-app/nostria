@@ -390,7 +390,7 @@
   <!-- Comments Section (only in full mode) -->
   @if (mode() === 'full' && event()) {
   <section class="article-comments" id="article-comments">
-    <app-comments-list [event]="event()!"></app-comments-list>
+    <app-comments-list [event]="event()!" [autoExpand]="commentsAutoExpand()"></app-comments-list>
   </section>
   }
 </div>

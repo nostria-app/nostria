@@ -81,6 +81,7 @@ export class CommentsListComponent implements AfterViewInit {
 
         // Reload comments if auto-expanded
         if (autoExpand && event) {
+          this.isExpanded.set(true);
           this.loadComments();
         }
       });

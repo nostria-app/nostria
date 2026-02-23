@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect, untracked, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -88,6 +89,7 @@ export interface ArticleData {
 })
 export class ArticleDisplayComponent {
   private router = inject(Router);
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // Input for article data
   article = input.required<ArticleData>();
@@ -328,6 +330,42 @@ export class ArticleDisplayComponent {
   contentLoading = computed(() => this.article().contentLoading);
   isJsonContent = computed(() => this.article().isJsonContent);
   jsonData = computed(() => this.article().jsonData);
+
+  // Automatically expand comments after the article content has fully loaded,
+  // with a short delay to let the article render settle first.
+  commentsAutoExpand = signal<boolean>(false);
+  private _commentsAutoExpandTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    effect(() => {
+      const loading = this.contentLoading();
+      untracked(() => {
+        if (this._commentsAutoExpandTimer) {
+          clearTimeout(this._commentsAutoExpandTimer);
+          this._commentsAutoExpandTimer = null;
+        }
+        if (!loading && this.isBrowser) {
+          this._commentsAutoExpandTimer = setTimeout(() => {
+            this.commentsAutoExpand.set(true);
+          }, 1500);
+        }
+      });
+    });
+
+    // Load engagement metrics when article changes
+    effect(() => {
+      const article = this.article();
+      const currentMode = this.mode();
+
+      // Only load engagement in full mode
+      if (currentMode === 'full' && article.event) {
+        untracked(() => {
+          this.loadEngagementMetrics(article.event!);
+        });
+      }
+    });
+  }
+
   readonly taggedUsersSpamThreshold = 50;
 
   taggedUsersCount = computed<number>(() => {
@@ -386,21 +424,6 @@ export class ArticleDisplayComponent {
     const minutes = Math.ceil(wordCount / 200);
     return Math.max(1, minutes); // At least 1 minute
   });
-
-  constructor() {
-    // Load engagement metrics when article changes
-    effect(() => {
-      const article = this.article();
-      const currentMode = this.mode();
-
-      // Only load engagement in full mode
-      if (currentMode === 'full' && article.event) {
-        untracked(() => {
-          this.loadEngagementMetrics(article.event!);
-        });
-      }
-    });
-  }
 
   private async loadEngagementMetrics(event: Event): Promise<void> {
     this.engagementLoading.set(true);
