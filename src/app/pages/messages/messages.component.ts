@@ -637,12 +637,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     effect(() => {
       // Read the signal to track changes
       this.newMessageText();
-      
+
       // Use untracked to avoid infinite loops and schedule after DOM updates
       untracked(() => {
         setTimeout(() => {
           const textarea = this.messageInput?.nativeElement;
           if (textarea) {
+            // Auto-resize textarea for iOS Safari which doesn't support field-sizing: content
+            this.autoResizeTextarea();
+
             // Only scroll if we're not already at the bottom
             // This avoids unnecessary DOM operations on every keystroke
             const isAtBottom = textarea.scrollHeight - textarea.scrollTop <= textarea.clientHeight + 5;
@@ -1136,6 +1139,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   stopVoiceRecording(): void {
     this.speechService.stopRecording();
+  }
+
+  /**
+   * Auto-resize the message textarea to fit its content.
+   * This is a fallback for iOS Safari which does not support the CSS
+   * `field-sizing: content` property.
+   */
+  autoResizeTextarea(): void {
+    const textarea = this.messageInput?.nativeElement;
+    if (!textarea) return;
+    // Reset to auto so shrinking works correctly, then set to scrollHeight
+    textarea.style.height = 'auto';
+    const newHeight = Math.min(textarea.scrollHeight, 150); // matches CSS max-height
+    textarea.style.height = newHeight + 'px';
   }
 
   /**
