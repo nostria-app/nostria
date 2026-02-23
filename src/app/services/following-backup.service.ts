@@ -32,6 +32,10 @@ export class FollowingBackupService {
 
   private readonly BACKUP_KEY = 'nostria-following-history';
   private readonly MAX_BACKUPS = 10;
+  private readonly MISSING_KIND3_BACKOFF_MS = 30000;
+
+  // Backoff repeated kind 3 lookups when the event is not present yet for an account.
+  private readonly missingKind3BackoffUntil = new Map<string, number>();
 
   /** Reactive signal for backups list */
   readonly backups = signal<FollowingBackup[]>([]);
@@ -48,9 +52,12 @@ export class FollowingBackupService {
     // Automatically backup when following list changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      const followingList = this.accountState.followingList();
+      void this.accountState.followingList();
+      const followingListLoaded = this.accountState.followingListLoaded();
 
-      if (pubkey) {
+      // Only run backups when following list state has been loaded for this account.
+      // This avoids noisy startup checks before contacts are available.
+      if (pubkey && followingListLoaded) {
         // Schedule backup asynchronously to not block the effect
         // Backup even if following list is empty - user may have intentionally cleared it
         queueMicrotask(() => {
@@ -160,18 +167,27 @@ export class FollowingBackupService {
   async createBackup(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      this.logger.warn('[FollowingBackupService] Cannot create backup - no account');
+      this.logger.debug('[FollowingBackupService] Cannot create backup - no account');
       return;
     }
 
     try {
+      const backoffUntil = this.missingKind3BackoffUntil.get(pubkey) ?? 0;
+      if (Date.now() < backoffUntil) {
+        return;
+      }
+
       // Get the current kind 3 event from database
       const event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
       if (!event) {
-        this.logger.warn('[FollowingBackupService] No kind 3 event found, cannot backup');
+        this.missingKind3BackoffUntil.set(pubkey, Date.now() + this.MISSING_KIND3_BACKOFF_MS);
+        this.logger.debug('[FollowingBackupService] No kind 3 event found, skipping backup for now');
         return;
       }
+
+      // We found the event, clear any prior missing-event backoff for this account.
+      this.missingKind3BackoffUntil.delete(pubkey);
 
       // Extract pubkeys from the event's "p" tags - this is the source of truth
       const pubkeysFromEvent = event.tags
