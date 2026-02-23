@@ -406,18 +406,15 @@ export class LoginDialogComponent implements OnDestroy {
       await this.nostrService.loginWithNsec(this.nsecKey.trim());
       this.logger.debug('Login with nsec successful');
 
-      // Check if the user has relay configuration
+      // Close quickly after successful authentication.
+      // Relay discovery/setup checks can continue in the background.
       const currentAccount = this.accountState.account();
-      if (currentAccount) {
-        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
-
-        if (!hasRelays) {
-          this.logger.info('No relay configuration found, showing setup dialog');
-          await this.showSetupNewAccountDialog(currentAccount);
-        }
-      }
-
+      this.loading.set(false);
       this.closeDialog();
+
+      if (currentAccount) {
+        void this.checkRelayConfigurationInBackground(currentAccount);
+      }
     } catch (err) {
       this.logger.error('Login with nsec failed', err);
       this.loading.set(false);
@@ -484,6 +481,26 @@ export class LoginDialogComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Performs relay configuration checks after login without blocking dialog close.
+   * Uses a short timeout so slow relay discovery does not degrade login UX.
+   */
+  private async checkRelayConfigurationInBackground(user: NostrUser): Promise<void> {
+    try {
+      const hasRelays = await Promise.race([
+        this.nostrService.hasRelayConfiguration(user.pubkey),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(true), 2500)),
+      ]);
+
+      if (!hasRelays) {
+        this.logger.info('No relay configuration found, showing setup dialog');
+        await this.showSetupNewAccountDialog(user);
+      }
+    } catch (error) {
+      this.logger.warn('Relay configuration check failed after login', error);
+    }
+  }
+
   loadCredentialsFromFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) {
@@ -525,23 +542,18 @@ export class LoginDialogComponent implements OnDestroy {
           await this.nostrService.loginWithNsec(credentials.nsec.trim());
           this.logger.debug('Login with loaded nsec successful');
 
-          // Check if the user has relay configuration
-          const currentAccount = this.accountState.account();
-          if (currentAccount) {
-            const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
-
-            if (!hasRelays) {
-              this.logger.info('No relay configuration found, showing setup dialog');
-              await this.showSetupNewAccountDialog(currentAccount);
-            }
-          }
-
           this.snackBar.open('Login successful', 'Dismiss', {
             duration: 2000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
           });
+
+          const currentAccount = this.accountState.account();
           this.closeDialog();
+
+          if (currentAccount) {
+            void this.checkRelayConfigurationInBackground(currentAccount);
+          }
         } catch (loginError) {
           this.logger.error('Login with loaded nsec failed', loginError);
           // Fallback: set the nsec in the input field if login fails

@@ -105,7 +105,18 @@ export abstract class RelayServiceBase {
       this.logger.warn(`[${this.constructor.name}] Filtered out ${filtered} insecure ws:// relay(s) - secure context requires wss://`);
     }
 
-    const urlsChanged = this.relayUrls.length !== secureUrls.length || this.relayUrls.some((u, i) => u !== secureUrls[i]);
+    // Normalize + dedupe to prevent nostr-tools "duplicate url" errors.
+    // This also canonicalizes equivalent forms like trailing slash differences.
+    const normalizedUniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(secureUrls);
+
+    if (normalizedUniqueUrls.length < secureUrls.length) {
+      const deduped = secureUrls.length - normalizedUniqueUrls.length;
+      this.logger.debug(`[${this.constructor.name}] Removed ${deduped} duplicate relay URL(s) during init`);
+    }
+
+    const urlsChanged =
+      this.relayUrls.length !== normalizedUniqueUrls.length ||
+      this.relayUrls.some((u, i) => u !== normalizedUniqueUrls[i]);
 
     // Decide whether to recreate pool
     const shouldRecreate = forceRecreate || !this.#pool || this._destroyed || urlsChanged;
@@ -126,7 +137,7 @@ export abstract class RelayServiceBase {
       this.logger.debug(`[${this.constructor.name}] Created new SimplePool with ping and reconnect enabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
-    this.relayUrls = secureUrls;
+    this.relayUrls = normalizedUniqueUrls;
     this.updateRelaysSignal();
     this.notifyRelaysModified();
   }

@@ -64,8 +64,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
           }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NSEC_LOGIN) {
             <button mat-flat-button (click)="loginComponent.loginWithNsec()" [disabled]="!loginComponent.isNsecKeyValid() || loginComponent.loading()">
-              <mat-icon>login</mat-icon>
-              <span>Login</span>
+              @if (loginComponent.loading()) {
+                <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                <span>Signing in...</span>
+              } @else {
+                <span>Login</span>
+              }
             </button>
           }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NOSTR_CONNECT) {
