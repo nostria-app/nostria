@@ -8,7 +8,6 @@ import {
   AfterViewInit,
   OnDestroy,
   DestroyRef,
-  afterNextRender,
   input,
   output,
   ChangeDetectionStrategy,
@@ -37,6 +36,7 @@ import { Subscription } from 'rxjs';
 import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { NoteEditorService, ReplyToInfo } from '../../services/note-editor.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
@@ -80,6 +80,7 @@ interface MediaMetadata {
     MatMenuModule,
     MentionAutocompleteComponent,
     UserProfileComponent,
+    EmojiPickerComponent,
   ],
   templateUrl: './inline-reply-editor.component.html',
   styleUrl: './inline-reply-editor.component.scss',
@@ -111,8 +112,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   isDragOver = signal(false);
   dragCounter = 0;
   mediaMetadata = signal<MediaMetadata[]>([]);
-  recordingHistory: string[] = [];
-  private expandedAt = 0;
+  recordingHistory = signal<string[]>([]);
   private lastEventId: string | null = null;
 
   // Maps for mention handling
@@ -130,7 +130,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   mediaService = inject(MediaService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
-  private layout = inject(LayoutService);
+  layout = inject(LayoutService);
   private publishEventBus = inject(PublishEventBus);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
@@ -148,22 +148,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('contentTextarea') contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
-
-  // Bound reference for document-level mousedown listener
-  private onDocumentClick = (event: MouseEvent): void => {
-    if (!this.isExpanded()) return;
-    // Ignore clicks within 100ms of expansion to prevent immediate collapse
-    if (Date.now() - this.expandedAt < 100) return;
-    if (this.isPublishing() || this.isUploading() || this.content().trim()) return;
-
-    const clickedInside = this.elementRef.nativeElement.contains(event.target);
-    const mentionAutocomplete = document.querySelector('app-mention-autocomplete');
-    const clickedOnMentionAutocomplete = mentionAutocomplete?.contains(event.target as Node);
-
-    if (!clickedInside && !clickedOnMentionAutocomplete) {
-      this.isExpanded.set(false);
-    }
-  };
 
   // Computed properties
   currentAccountPubkey = computed(() => this.accountState.pubkey());
@@ -183,15 +167,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // Register document-level event listener (SSR-safe)
-    afterNextRender(() => {
-      document.addEventListener('mousedown', this.onDocumentClick);
-
-      this.destroyRef.onDestroy(() => {
-        document.removeEventListener('mousedown', this.onDocumentClick);
-      });
-    });
-
     // React to replyToEvent changes (when navigating between events)
     effect(() => {
       const event = this.replyToEvent();
@@ -237,17 +212,10 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       this.snackBar.open('Please log in to reply', 'Close', { duration: 3000 });
       return;
     }
-    this.expandedAt = Date.now();
     this.isExpanded.set(true);
     setTimeout(() => {
       this.contentTextarea?.nativeElement?.focus();
     }, 50);
-  }
-
-  collapseEditor(): void {
-    if (!this.content().trim() && !this.isPublishing() && !this.isUploading()) {
-      this.isExpanded.set(false);
-    }
   }
 
   // ===============================
@@ -271,6 +239,17 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
     textarea.style.height = `${newHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }
+
+  /**
+   * Synchronise the DOM textarea value with the content signal.
+   * Necessary when content is updated programmatically (e.g. mention/media removal)
+   * so that the visible text stays in sync with the signal state.
+   */
+  private syncTextareaValue(value: string): void {
+    if (this.contentTextarea) {
+      this.contentTextarea.nativeElement.value = value;
+    }
   }
 
   private syncMentionsWithContent(currentContent: string): void {
@@ -479,6 +458,53 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     this.mentionConfig.set(null);
   }
 
+  // ===============================
+  // Emoji Methods
+  // ===============================
+
+  /**
+   * Insert an emoji at the current cursor position in the textarea
+   */
+  insertEmoji(emoji: string): void {
+    const textarea = this.contentTextarea?.nativeElement;
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentContent = this.content();
+      const newContent = currentContent.substring(0, start) + emoji + currentContent.substring(end);
+      this.content.set(newContent);
+      textarea.value = newContent;
+
+      // Restore cursor position after emoji
+      setTimeout(() => {
+        const newPos = start + emoji.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+      });
+    } else {
+      this.content.update(text => text + emoji);
+    }
+  }
+
+  /**
+   * Open emoji picker in a fullscreen dialog on small screens
+   */
+  async openEmojiPickerDialog(): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
+    type EmojiPickerDialogResult = string;
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, EmojiPickerDialogResult>(EmojiPickerDialogComponent, {
+      title: 'Emoji',
+      width: '400px',
+      panelClass: 'emoji-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertEmoji(result.result);
+      }
+    });
+  }
+
   addMention(pubkey: string): void {
     const currentMentions = this.mentions();
     if (!currentMentions.includes(pubkey)) {
@@ -510,10 +536,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
 
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/^ +| +$/gm, '').trim();
       this.content.set(currentContent);
-
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.syncTextareaValue(currentContent);
 
       this.pubkeyToNameMap.delete(pubkey);
     }
@@ -584,6 +607,24 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
     let dialogClosed = false;
     let publishedEventId: string | undefined;
+    let relayTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+    // Clean up any previous subscription that may have leaked
+    if (this.publishSubscription) {
+      this.publishSubscription.unsubscribe();
+      this.publishSubscription = undefined;
+    }
+
+    const cleanup = (): void => {
+      if (relayTimeoutHandle !== undefined) {
+        clearTimeout(relayTimeoutHandle);
+        relayTimeoutHandle = undefined;
+      }
+      if (this.publishSubscription) {
+        this.publishSubscription.unsubscribe();
+        this.publishSubscription = undefined;
+      }
+    };
 
     this.publishSubscription = this.publishEventBus.on('relay-result').subscribe((event) => {
       if (!dialogClosed && event.type === 'relay-result') {
@@ -595,6 +636,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
         if (isOurEvent && relayEvent.success) {
           dialogClosed = true;
           publishedEventId = relayEvent.event.id;
+          cleanup();
 
           this.snackBar.open('Reply published!', 'Close', { duration: 3000 });
 
@@ -612,11 +654,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
             kind: signedEvent.kind,
           });
           this.layout.openGenericEvent(nevent, signedEvent);
-
-          if (this.publishSubscription) {
-            this.publishSubscription.unsubscribe();
-            this.publishSubscription = undefined;
-          }
         }
       }
     });
@@ -627,8 +664,23 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       publishedEventId = result.event.id;
     }
 
-    if (!dialogClosed && (!result.success || !result.event)) {
+    if (!result.success || !result.event) {
+      cleanup();
       throw new Error('Failed to publish reply');
+    }
+
+    if (!dialogClosed) {
+      // Relay confirmation not yet received — set a timeout so isPublishing doesn't get
+      // stuck forever if no relay-result event ever fires (e.g. all relays time out).
+      relayTimeoutHandle = setTimeout(() => {
+        if (!dialogClosed) {
+          cleanup();
+          // Reset publishing state so the user isn't stuck
+          this.isPublishing.set(false);
+          this.publishInitiated.set(false);
+          this.snackBar.open('Reply sent (no relay confirmation received)', 'Close', { duration: 5000 });
+        }
+      }, 30000);
     }
   }
 
@@ -1006,10 +1058,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       currentContent = currentContent.replace(new RegExp('\\s*' + escapedUrl + '\\s*', 'g'), ' ');
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
       this.content.set(currentContent);
-
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.syncTextareaValue(currentContent);
     }
   }
 
@@ -1125,6 +1174,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       currentContent.substring(cursorPosition);
 
     this.content.set(newContent);
+    // Keep the DOM textarea in sync synchronously to avoid visual flicker
+    textarea.value = newContent;
 
     // Restore cursor position after the inserted text
     setTimeout(() => {
@@ -1149,6 +1200,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       currentContent.substring(cursorPosition);
 
     this.content.set(newContent);
+    // Keep the DOM textarea in sync synchronously to avoid visual flicker
+    textarea.value = newContent;
 
     // Restore cursor position after the inserted text
     setTimeout(() => {
@@ -1181,7 +1234,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
         },
         onTranscription: (text) => {
           if (text) {
-            this.recordingHistory.push(this.content());
+            this.recordingHistory.update(h => [...h, this.content()]);
             const currentContent = this.content();
             const separator = currentContent.trim() ? ' ' : '';
             this.content.set(currentContent + separator + text);
@@ -1200,8 +1253,10 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   undoLastRecording(): void {
-    if (this.recordingHistory.length > 0) {
-      const previousContent = this.recordingHistory.pop()!;
+    const history = this.recordingHistory();
+    if (history.length > 0) {
+      const previousContent = history[history.length - 1];
+      this.recordingHistory.update(h => h.slice(0, -1));
       this.content.set(previousContent);
     }
   }

@@ -178,7 +178,7 @@
       </button>
 
       <!-- Undo recording button -->
-      @if (recordingHistory.length > 0) {
+      @if (recordingHistory().length > 0) {
       <button mat-icon-button type="button"
         (click)="undoLastRecording()"
         [disabled]="isUploading() || isPublishing() || isTranscribing()"
@@ -204,10 +204,35 @@
           <span>Choose from library</span>
         </button>
       </mat-menu>
+
+      <!-- Emoji picker button -->
+      @if (layout.isHandset()) {
+      <button mat-icon-button type="button"
+        [disabled]="isUploading() || isPublishing()"
+        matTooltip="Emoji"
+        (click)="openEmojiPickerDialog()">
+        <mat-icon>sentiment_satisfied</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button type="button"
+        [matMenuTriggerFor]="emojiMenu"
+        [disabled]="isUploading() || isPublishing()"
+        matTooltip="Emoji">
+        <mat-icon>sentiment_satisfied</mat-icon>
+      </button>
+      <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
+        <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
+      </mat-menu>
+      }
     </div>
 
     <!-- Right side: Primary actions -->
     <div class="right-actions">
+      <button mat-button
+        (click)="cancel()"
+        [disabled]="isPublishing()">
+        Cancel
+      </button>
       <button mat-flat-button
         (click)="publishReply()"
         [disabled]="!canPublish() || isPublishing()"
