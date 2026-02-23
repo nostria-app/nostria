@@ -33,9 +33,11 @@ export class FollowingBackupService {
   private readonly BACKUP_KEY = 'nostria-following-history';
   private readonly MAX_BACKUPS = 10;
   private readonly MISSING_KIND3_BACKOFF_MS = 30000;
+  private readonly AUTO_BACKUP_DEBOUNCE_MS = 750;
 
   // Backoff repeated kind 3 lookups when the event is not present yet for an account.
   private readonly missingKind3BackoffUntil = new Map<string, number>();
+  private backupScheduleHandle: ReturnType<typeof setTimeout> | null = null;
 
   /** Reactive signal for backups list */
   readonly backups = signal<FollowingBackup[]>([]);
@@ -58,15 +60,24 @@ export class FollowingBackupService {
       // Only run backups when following list state has been loaded for this account.
       // This avoids noisy startup checks before contacts are available.
       if (pubkey && followingListLoaded) {
-        // Schedule backup asynchronously to not block the effect
-        // Backup even if following list is empty - user may have intentionally cleared it
-        queueMicrotask(() => {
-          this.createBackup().catch(err => {
-            this.logger.error('[FollowingBackupService] Failed to create automatic backup', err);
-          });
-        });
+        // Backup even if following list is empty - user may have intentionally cleared it.
+        // Debounce to collapse rapid follow/unfollow bursts into a single backup attempt.
+        this.scheduleAutomaticBackup();
       }
     });
+  }
+
+  private scheduleAutomaticBackup(): void {
+    if (this.backupScheduleHandle) {
+      clearTimeout(this.backupScheduleHandle);
+    }
+
+    this.backupScheduleHandle = setTimeout(() => {
+      this.backupScheduleHandle = null;
+      this.createBackup().catch(err => {
+        this.logger.error('[FollowingBackupService] Failed to create automatic backup', err);
+      });
+    }, this.AUTO_BACKUP_DEBOUNCE_MS);
   }
 
   /**
