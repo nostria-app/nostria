@@ -926,8 +926,16 @@ export class NoteContentComponent implements OnDestroy {
         const identifier = nostrUri.replace('nostr:', '');
         try {
           const decoded = nip19.decode(identifier);
-          if (decoded.type === 'naddr' && decoded.data.kind === 30023) {
-            this.layout.openArticle(identifier);
+          if (decoded.type === 'naddr') {
+            if (decoded.data.kind === 30023) {
+              this.layout.openArticle(identifier);
+            } else if (decoded.data.kind === 36787) {
+              this.layout.openSongDetail(nip19.npubEncode(decoded.data.pubkey), decoded.data.identifier);
+            } else if (decoded.data.kind === 34139) {
+              this.layout.openMusicPlaylist(nip19.npubEncode(decoded.data.pubkey), decoded.data.identifier);
+            } else {
+              this.layout.openGenericEvent(identifier);
+            }
           } else {
             this.layout.openGenericEvent(identifier);
           }
@@ -957,8 +965,16 @@ export class NoteContentComponent implements OnDestroy {
         const encoded = this.parsing.extractNostrUriIdentifier(token.content);
         try {
           const decoded = nip19.decode(encoded);
-          if (decoded.type === 'naddr' && decoded.data.kind === 30023) {
-            this.layout.openArticle(encoded);
+          if (decoded.type === 'naddr') {
+            if (decoded.data.kind === 30023) {
+              this.layout.openArticle(encoded);
+            } else if (decoded.data.kind === 36787) {
+              this.layout.openSongDetail(nip19.npubEncode(decoded.data.pubkey), decoded.data.identifier);
+            } else if (decoded.data.kind === 34139) {
+              this.layout.openMusicPlaylist(nip19.npubEncode(decoded.data.pubkey), decoded.data.identifier);
+            } else {
+              this.layout.openGenericEvent(encoded);
+            }
           } else {
             this.layout.openGenericEvent(encoded);
           }

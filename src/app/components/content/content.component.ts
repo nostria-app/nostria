@@ -440,6 +440,26 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
         if (kind === 30023) {
           this.layoutService.openArticle(encoded);
+        } else if (kind === 36787) {
+          // Music track - open song detail page
+          const addrRecord = data as Record<string, unknown>;
+          const pubkey = String(addrRecord['pubkey'] || '');
+          const identifier = String(addrRecord['identifier'] || '');
+          if (pubkey && identifier) {
+            this.layoutService.openSongDetail(nip19.npubEncode(pubkey), identifier);
+          } else {
+            this.layoutService.openGenericEvent(encoded);
+          }
+        } else if (kind === 34139) {
+          // Music/Nostr playlist - open playlist page
+          const addrRecord = data as Record<string, unknown>;
+          const pubkey = String(addrRecord['pubkey'] || '');
+          const identifier = String(addrRecord['identifier'] || '');
+          if (pubkey && identifier) {
+            this.layoutService.openMusicPlaylist(nip19.npubEncode(pubkey), identifier);
+          } else {
+            this.layoutService.openGenericEvent(encoded);
+          }
         } else {
           this.layoutService.openGenericEvent(encoded);
         }

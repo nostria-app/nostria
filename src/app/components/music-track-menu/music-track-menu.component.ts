@@ -21,6 +21,7 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { LoggerService } from '../../services/logger.service';
+import { ReactionService } from '../../services/reaction.service';
 
 const MUSIC_KIND = 36787;
 
@@ -64,6 +65,12 @@ const MUSIC_KIND = 36787;
         <mat-icon>share</mat-icon>
         <span>Share</span>
       </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
+          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+        </button>
+      }
       <button mat-menu-item (click)="publishEvent()">
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
@@ -152,6 +159,11 @@ export class MusicTrackMenuComponent {
   private eventService = inject(EventService);
   private userRelaysService = inject(UserRelaysService);
   private logger = inject(LoggerService);
+  private reactionService = inject(ReactionService);
+
+  // Like state
+  isLiked = signal(false);
+  isLiking = signal(false);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -393,5 +405,23 @@ export class MusicTrackMenuComponent {
       this.logger.error('Error adding to playlist:', error);
       this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
     }
+  }
+
+  likeTrack(): void {
+    if (this.isLiked() || this.isLiking()) return;
+
+    const ev = this.track();
+    if (!ev) return;
+
+    this.isLiking.set(true);
+    this.reactionService.addLike(ev).then(result => {
+      this.isLiking.set(false);
+      if (result.success) {
+        this.isLiked.set(true);
+        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      }
+    });
   }
 }

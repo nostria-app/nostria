@@ -1347,6 +1347,23 @@ export class LayoutService implements OnDestroy {
     }
 
     const relayHints = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+
+    // Route content-specific kinds to their dedicated pages
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    const npub = nip19.npubEncode(event.pubkey);
+
+    // Music tracks (kind 36787)
+    if (event.kind === 36787) {
+      this.openSongDetail(npub, dTag, event);
+      return;
+    }
+
+    // Music/Nostr playlists (kind 34139)
+    if (event.kind === 34139) {
+      this.openMusicPlaylist(npub, dTag, event);
+      return;
+    }
+
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
     if (encoded.startsWith('naddr')) {
@@ -1359,6 +1376,24 @@ export class LayoutService implements OnDestroy {
 
   openGenericEvent(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
     if (eventId.startsWith('naddr')) {
+      // Decode the naddr to check kind and route to content-specific pages
+      try {
+        const decoded = nip19.decode(eventId);
+        if (decoded.type === 'naddr') {
+          const { kind, pubkey, identifier } = decoded.data;
+          const npub = nip19.npubEncode(pubkey);
+          if (kind === 36787) {
+            this.openSongDetail(npub, identifier, event);
+            return;
+          }
+          if (kind === 34139) {
+            this.openMusicPlaylist(npub, identifier, event);
+            return;
+          }
+        }
+      } catch {
+        // Ignore decode errors, fallback to article route
+      }
       this.openArticle(eventId, event);
       return;
     }
@@ -1374,6 +1409,24 @@ export class LayoutService implements OnDestroy {
    */
   openEventAsPrimary(eventId: string, event?: Event, trustedByPubkey?: string, options?: OpenEventOptions): void {
     if (eventId.startsWith('naddr')) {
+      // Decode the naddr to check kind and route to content-specific pages
+      try {
+        const decoded = nip19.decode(eventId);
+        if (decoded.type === 'naddr') {
+          const { kind, pubkey, identifier } = decoded.data;
+          const npub = nip19.npubEncode(pubkey);
+          if (kind === 36787) {
+            this.openSongDetail(npub, identifier, event);
+            return;
+          }
+          if (kind === 34139) {
+            this.openMusicPlaylist(npub, identifier, event);
+            return;
+          }
+        }
+      } catch {
+        // Ignore decode errors, fallback to article route
+      }
       this.openArticleAsPrimary(eventId, event);
       return;
     }

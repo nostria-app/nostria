@@ -583,10 +583,23 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Check if this event card should be clickable (only kind 1)
+  // Event kinds that should be navigable when clicked on the card.
+  // These open their content-specific pages (articles, songs, playlists, streams, etc.)
+  // or the generic thread view (kind 1).
+  private readonly NAVIGABLE_KINDS = new Set([
+    1,      // Short text note (kind 1) - opens thread
+    30023,  // Long-form article (kind 30023) - opens article page
+    30311,  // Live event (kind 30311) - opens stream page
+    32100,  // M3U Playlist (kind 32100) - opens event page
+    34139,  // Nostr/Music Playlist (kind 34139) - opens playlist page
+    36787,  // Music track (kind 36787) - opens song detail page
+    1311,   // Live event comment (kind 1311) - opens referenced stream
+  ]);
+
   isCardClickable = computed<boolean>(() => {
     // Use targetRecord to get the actual event (reposted event for reposts)
     const targetEvent = this.targetRecord()?.event;
-    if (targetEvent?.kind !== 1) return false;
+    if (!targetEvent || !this.NAVIGABLE_KINDS.has(targetEvent.kind)) return false;
 
     // For reposts, the reposted content should always be clickable to navigate to it
     // even when viewing the repost directly
@@ -597,16 +610,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return !this.isCurrentlySelected();
   });
 
-  // Check if root event card should be clickable (only kind 1)
+  // Check if root event card should be clickable
   isRootCardClickable = computed<boolean>(() => {
     const rootRecordData = this.rootRecord();
-    return rootRecordData?.event.kind === 1;
+    return !!rootRecordData && this.NAVIGABLE_KINDS.has(rootRecordData.event.kind);
   });
 
-  // Check if parent event card should be clickable (only kind 1)
+  // Check if parent event card should be clickable
   isParentCardClickable = computed<boolean>(() => {
     const parentRecordData = this.parentRecord();
-    return parentRecordData?.event.kind === 1;
+    return !!parentRecordData && this.NAVIGABLE_KINDS.has(parentRecordData.event.kind);
   });
 
   // Event kinds that support reactions (NIP-25)
@@ -2632,8 +2645,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetRecordData = this.targetRecord();
     const targetEvent = targetRecordData?.event;
 
-    // Only handle clicks for kind 1 events (text notes)
-    if (!targetEvent || targetEvent.kind !== 1) {
+    // Only handle clicks for navigable event kinds
+    if (!targetEvent || !this.NAVIGABLE_KINDS.has(targetEvent.kind)) {
       return;
     }
 
@@ -2682,14 +2695,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   /**
    * Handle clicks on the root event card
-   * Only opens thread dialog for kind 1 (text note) events
+   * Opens thread dialog for text notes, or navigates to content-specific pages for other kinds
    */
   onRootEventClick(event: MouseEvent) {
     event.stopPropagation(); // Prevent the main card click handler
 
-    // Navigate to the root event (only kind 1)
+    // Navigate to the root event (only navigable kinds)
     const rootRecordData = this.rootRecord();
-    if (!rootRecordData || rootRecordData.event.kind !== 1) {
+    if (!rootRecordData || !this.NAVIGABLE_KINDS.has(rootRecordData.event.kind)) {
       return;
     }
 
@@ -2716,14 +2729,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   /**
    * Handle clicks on the parent event card
-   * Only opens thread dialog for kind 1 (text note) events
+   * Opens thread dialog for text notes, or navigates to content-specific pages for other kinds
    */
   onParentEventClick(event: MouseEvent) {
     event.stopPropagation(); // Prevent the main card click handler
 
-    // Navigate to the parent event (only kind 1)
+    // Navigate to the parent event (only navigable kinds)
     const parentRecordData = this.parentRecord();
-    if (!parentRecordData || parentRecordData.event.kind !== 1) {
+    if (!parentRecordData || !this.NAVIGABLE_KINDS.has(parentRecordData.event.kind)) {
       return;
     }
 

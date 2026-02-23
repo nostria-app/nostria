@@ -259,6 +259,19 @@ function extractYouTubeId(text: string): string | null {
   return null;
 }
 
+/**
+ * Extract profile picture URL from a kind 0 profile event.
+ */
+function extractProfilePictureFromEvent(profileEvent: Event): string | undefined {
+  try {
+    const profileContent = JSON.parse(profileEvent.content);
+    const picture = profileContent.picture || profileContent.image;
+    return typeof picture === 'string' && picture.trim() ? picture : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface EventData {
   title: string;
   description: string;
@@ -415,12 +428,18 @@ export class DataResolver implements Resolve<EventData | null> {
         }
       }
 
-      // For profile pages, also fetch the profile directly from relays
+      // Fetch profile directly from relays when possible.
+      // This is used for:
+      // - profile pages (npub/nprofile/hex)
+      // - event pages when the event pointer includes author pubkey
+      // so we can quickly use avatar as social image fallback if event has no image.
       let profileRelayFetchPromise: Promise<Event | null> | null = null;
       if (profileInfo) {
         profileRelayFetchPromise = fetchProfileFromRelays(profileInfo.pubkey, profileInfo.relays);
       } else if (isHexPubkey) {
         profileRelayFetchPromise = fetchProfileFromRelays(id);
+      } else if (eventPointer?.author) {
+        profileRelayFetchPromise = fetchProfileFromRelays(eventPointer.author, eventPointer.relays);
       }
 
       try {
@@ -437,6 +456,7 @@ export class DataResolver implements Resolve<EventData | null> {
         let metadata;
         let directEvent: Event | null = null;
         let profileEvent: Event | null = null;
+        let relayProfilePicture: string | undefined;
 
         if (directRelayFetchPromise || profileRelayFetchPromise) {
           // Run all fetches in parallel — use whichever gives us content
@@ -451,6 +471,10 @@ export class DataResolver implements Resolve<EventData | null> {
           profileEvent = profileResult;
         } else {
           metadata = await metadataPromise;
+        }
+
+        if (profileEvent) {
+          relayProfilePicture = extractProfilePictureFromEvent(profileEvent);
         }
 
         // --- Profile pages: merge relay-fetched profile into metadata ---
@@ -503,9 +527,24 @@ export class DataResolver implements Resolve<EventData | null> {
           }
         }
 
+        if (metadata?.author?.profile && !metadata.author.profile.picture && relayProfilePicture) {
+          metadata.author.profile.picture = relayProfilePicture;
+        }
+
         // Determine the best source for content
         // Prefer metadata API if it has content, otherwise use direct relay fetch
         if (metadata && metadata.content) {
+          // If metadata API already set default image and event has no media image,
+          // override it with relay-fetched profile avatar when available.
+          const metadataEventWithoutAuthorImage = {
+            tags: metadata.tags || [],
+            content: metadata.content || '',
+          } as Event;
+          const metadataMediaImage = extractImageFromEvent(metadataEventWithoutAuthorImage);
+          if (!metadataMediaImage && relayProfilePicture) {
+            this.metaService.updateSocialMetadata({ image: relayProfilePicture });
+          }
+
           const { author, ...metadataWithoutAuthor } = metadata;
           data.event = metadataWithoutAuthor;
           // Only overwrite metadata if we don't already have relay-fetched profile
@@ -523,7 +562,8 @@ export class DataResolver implements Resolve<EventData | null> {
 
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
-          const eventImage = extractImageFromEvent(directEvent, metadata?.author?.profile?.picture);
+          const authorPicture = relayProfilePicture || metadata?.author?.profile?.picture;
+          const eventImage = extractImageFromEvent(directEvent, authorPicture);
 
           this.metaService.updateSocialMetadata({
             title,

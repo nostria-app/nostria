@@ -16,6 +16,8 @@ import { IgdbService, GameData } from '../../services/igdb.service';
 import { GameHoverCardService } from '../../services/game-hover-card.service';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { LayoutService } from '../../services/layout.service';
+import { UtilitiesService } from '../../services/utilities.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
 
 @Component({
   selector: 'app-live-event',
@@ -45,6 +47,8 @@ export class LiveEventComponent {
   private snackBar = inject(MatSnackBar);
   private igdbService = inject(IgdbService);
   private gameHoverCardService = inject(GameHoverCardService);
+  private utilities = inject(UtilitiesService);
+  private userRelaysService = inject(UserRelaysService);
 
   // Track thumbnail load errors
   thumbnailError = signal(false);
@@ -345,6 +349,21 @@ export class LiveEventComponent {
     if (event) {
       this.clipboard.copy(JSON.stringify(event, null, 2));
       this.snackBar.open('Event data copied to clipboard', 'Close', {
+        duration: 3000,
+      });
+    }
+  }
+
+  // Copy shareable stream URL to clipboard
+  copyEventUrl(): void {
+    const liveEvent = this.event();
+    if (liveEvent) {
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
+      const relayHint = authorRelays[0];
+      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
+      this.clipboard.copy(`https://nostria.app/stream/${encoded}`);
+      this.snackBar.open('Stream URL copied to clipboard', 'Close', {
         duration: 3000,
       });
     }

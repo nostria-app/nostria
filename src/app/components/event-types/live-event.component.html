@@ -13,6 +13,10 @@
   </button>
 
   <mat-menu #contextMenu="matMenu">
+    <button mat-menu-item (click)="copyEventUrl()">
+      <mat-icon>link</mat-icon>
+      <span>Copy Stream URL</span>
+    </button>
     <button mat-menu-item (click)="copyEventData()">
       <mat-icon>content_copy</mat-icon>
       <span>Copy Event Data</span>

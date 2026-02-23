@@ -1,8 +1,10 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()"
+  [class.footer-expanded-mode]="footer() && layout.expandedMediaPlayer()"
   [class.chat-visible]="chatVisible() && !footer()" [class.cursor-hidden]="cursorHidden()">
   <!-- Single video element - always present, positioned via CSS -->
   @if (!isLiveKit() && !isExternal()) {
   <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
+    [class.expanded]="footer() && layout.expandedMediaPlayer()"
     [class.chat-open]="chatVisible()" (mouseenter)="onVideoContainerMouseEnter()"
     (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
     <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
@@ -34,7 +36,8 @@
     }
   </div>
   } @else if (isLiveKit()) {
-  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
+    [class.expanded]="footer() && layout.expandedMediaPlayer()">
     @if (!footer()) {
     <!-- Stream controls overlay -->
     <div class="stream-controls-overlay visible">
@@ -69,7 +72,8 @@
     </div>
   </div>
   } @else if (isExternal()) {
-  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
+    [class.expanded]="footer() && layout.expandedMediaPlayer()">
     @if (!footer()) {
     <!-- Stream controls overlay -->
     <div class="stream-controls-overlay visible">
@@ -105,7 +109,7 @@
 
   @if (footer()) {
   <!-- Footer mode - compact controls with video preview -->
-  <div class="stream-footer-content">
+  <div class="stream-footer-content" [class.expanded-mode]="layout.expandedMediaPlayer()">
 
     <div class="playback-controls">
       <div class="stream-info-footer">
