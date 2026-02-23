@@ -201,14 +201,12 @@ export class App implements OnInit, OnDestroy {
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
-  relaysService = inject(RelaysService);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
   layout = inject(LayoutService);
   router = inject(Router);
   route = inject(ActivatedRoute);
   notificationService = inject(NotificationService);
-  contentNotificationService = inject(ContentNotificationService);
   bottomSheet = inject(MatBottomSheet);
   logger = inject(LoggerService);
   search = inject(SearchService);
@@ -226,11 +224,9 @@ export class App implements OnInit, OnDestroy {
   feedsCollectionService = inject(FeedsCollectionService);
   routeDataService = inject(RouteDataService);
   installService = inject(InstallService);
-  cacheCleanup = inject(CacheCleanupService);
   ai = inject(AiService);
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
-  metricsTracking = inject(MetricsTrackingService);
   protected readonly wallets = inject(Wallets);
   private readonly nwcService = inject(NwcService);
   private readonly platform = inject(PLATFORM_ID);
@@ -1134,7 +1130,8 @@ export class App implements OnInit, OnDestroy {
 
       // Persist relay statistics that were added during initialization
       try {
-        await this.relaysService.persistInitialRelayStats();
+        const relaysService = this.injector.get(RelaysService);
+        await relaysService.persistInitialRelayStats();
         this.logger.info('[App] Initial relay statistics persisted successfully');
       } catch (error) {
         this.logger.warn('[App] Failed to persist initial relay statistics:', error);
@@ -1166,7 +1163,8 @@ export class App implements OnInit, OnDestroy {
       // Initialize content notification service
       // This also starts periodic polling for new notifications with visibility awareness
       this.logger.info('[App] Initializing content notification service');
-      await this.contentNotificationService.initialize();
+      const contentNotificationService = this.injector.get(ContentNotificationService);
+      await contentNotificationService.initialize();
       this.logger.info('[App] Content notification service initialized successfully');
       // Note: Periodic polling is now handled internally by ContentNotificationService
       // with visibility awareness (pauses when hidden, checks immediately when visible)
@@ -1174,13 +1172,15 @@ export class App implements OnInit, OnDestroy {
 
     this.deferStartupTask('metrics tracking', () => {
       this.logger.info('[App] Initializing metrics tracking service');
-      this.metricsTracking.initialize();
+      const metricsTracking = this.injector.get(MetricsTrackingService);
+      metricsTracking.initialize();
       this.logger.info('[App] Metrics tracking service initialized successfully');
     });
 
     this.deferStartupTask('cache cleanup', () => {
       this.logger.info('[App] Starting cache cleanup service');
-      this.cacheCleanup.start();
+      const cacheCleanup = this.injector.get(CacheCleanupService);
+      cacheCleanup.start();
       this.logger.info('[App] Cache cleanup service started successfully');
     });
 
