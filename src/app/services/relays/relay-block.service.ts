@@ -282,10 +282,14 @@ export class RelayBlockService {
   private isConnectionFailureReason(reason: string): boolean {
     const normalized = reason.toLowerCase();
     return normalized.includes('websocket closed') ||
+      normalized.includes('websocket error') ||
       normalized.includes('relay connection closed') ||
       normalized.includes('relay connection errored') ||
       normalized.includes('failed to connect') ||
-      normalized.includes('connection refused');
+      normalized.includes('connection refused') ||
+      normalized.includes('err_name_not_resolved') ||
+      normalized.includes('name_not_resolved') ||
+      normalized.includes('dns');
   }
 
   private isIgnorableReason(reason: string): boolean {

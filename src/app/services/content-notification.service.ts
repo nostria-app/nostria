@@ -441,7 +441,7 @@ export class ContentNotificationService implements OnDestroy {
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      this.logger.warn('No active account, skipping notification check');
+      this.logger.debug('No active account, skipping notification check');
       return;
     }
 
@@ -1043,7 +1043,7 @@ export class ContentNotificationService implements OnDestroy {
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
-        this.logger.warn('No pubkey available, returning 0 for last check timestamp');
+        this.logger.debug('No pubkey available, returning 0 for last check timestamp');
         return 0;
       }
 

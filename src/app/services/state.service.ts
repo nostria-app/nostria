@@ -248,11 +248,11 @@ export class StateService implements NostriaService {
           // Save to database
           await this.discoveryRelay.saveEvent(signedEvent);
 
-          // Publish to account relays and discovery relays
-          // Using Promise.allSettled to not fail if publishing fails
+          // Publish to account relays only.
+          // Some discovery/indexer relays reject non-10002 events and create avoidable console noise.
+          // Using allSettled keeps this non-blocking for startup.
           await Promise.allSettled([
             this.accountRelay.publish(signedEvent),
-            this.discoveryRelay.publish(signedEvent),
           ]);
 
           this.logger.info('[StateService] Successfully published default discovery relays (kind 10086)');
