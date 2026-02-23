@@ -8,9 +8,9 @@ import { LocalStorageService } from './local-storage.service';
  * 1.0 = 100% (default, respects system settings)
  * Values below 1.0 make text smaller, above 1.0 make text larger
  */
-export type TextScaleValue = 0.85 | 0.9 | 0.95 | 1.0 | 1.05 | 1.1 | 1.15 | 1.2 | 1.25 | 1.3;
+export type TextScaleValue = 0.85 | 0.9 | 0.95 | 1.0 | 1.05 | 1.1 | 1.15 | 1.2 | 1.25 | 1.3 | 1.35 | 1.4 | 1.45 | 1.5 | 1.55 | 1.6 | 1.65 | 1.7 | 1.75 | 1.8 | 1.85 | 1.9 | 1.95 | 2.0;
 
-export const TEXT_SCALE_OPTIONS: TextScaleValue[] = [0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3];
+export const TEXT_SCALE_OPTIONS: TextScaleValue[] = [0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55, 1.6, 1.65, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95, 2.0];
 
 export const DEFAULT_TEXT_SCALE: TextScaleValue = 1.0;
 
@@ -54,7 +54,7 @@ export class TextScaleService {
 
   /**
    * Set the text scale value
-   * @param scale - Scale value between 0.85 and 1.3
+   * @param scale - Scale value between 0.85 and 2.0
    */
   setTextScale(scale: number): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -63,7 +63,7 @@ export class TextScaleService {
     }
 
     // Clamp to valid range
-    const clampedScale = Math.max(0.85, Math.min(1.3, scale));
+    const clampedScale = Math.max(0.85, Math.min(2.0, scale));
 
     this.logger.info(`Setting text scale to: ${clampedScale * 100}%`);
     this.textScale.set(clampedScale);
@@ -108,7 +108,7 @@ export class TextScaleService {
     const savedScale = this.localStorage.getItem(this.STORAGE_KEY);
     if (savedScale) {
       const parsed = parseFloat(savedScale);
-      if (!isNaN(parsed) && parsed >= 0.85 && parsed <= 1.3) {
+      if (!isNaN(parsed) && parsed >= 0.85 && parsed <= 2.0) {
         this.logger.debug(`Using saved text scale: ${parsed * 100}%`);
         return parsed;
       }

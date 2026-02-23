@@ -115,6 +115,7 @@ import { RightPanelHeaderService } from './services/right-panel-header.service';
 import { LeftPanelHeaderService } from './services/left-panel-header.service';
 import { EventFocusService } from './services/event-focus.service';
 import { RunesSettingsService } from './services/runes-settings.service';
+import { TextScaleService } from './services/text-scale.service';
 
 interface NavItem {
   path: string;
@@ -241,6 +242,7 @@ export class App implements OnInit, OnDestroy {
   private readonly followSetsService = inject(FollowSetsService);
   private readonly platformService = inject(PlatformService);
   private readonly eventFocus = inject(EventFocusService);
+  private readonly textScale = inject(TextScaleService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);

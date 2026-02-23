@@ -34,8 +34,9 @@
 
 html {
   // Ensure browser/system font size is respected (accessibility)
-  // This is the foundation for text scaling - DO NOT set a fixed px value here
-  font-size: 100%;
+  // Text scale multiplier is applied here so ALL rem-based sizes scale automatically
+  // This includes Angular Material components, custom styles, and everything using rem units
+  font-size: calc(100% * var(--nostria-text-scale, 1));
 
   scroll-behavior: smooth;
   --mat-success-color: #4caf50;
@@ -61,21 +62,22 @@ html {
   // Text scale multiplier - controlled by TextScaleService
   // Default 1.0 = 100%, respects system/browser font settings
   // Users can adjust via Settings > Layout > Text Size
+  // The scale is applied to the html font-size above, so all rem-based values
+  // (including these variables and Angular Material components) scale automatically
   --nostria-text-scale: 1;
 
-  // Typography scale using calc() for text scale support
-  // These values multiply with both system font size AND user's text scale preference
-  // Usage: font-size: var(--text-sm); instead of font-size: 14px;
-  --text-2xs: calc(0.625rem * var(--nostria-text-scale)); // 10px at default
-  --text-xs: calc(0.75rem * var(--nostria-text-scale)); // 12px at default
-  --text-sm: calc(0.875rem * var(--nostria-text-scale)); // 14px at default
-  --text-base: calc(1rem * var(--nostria-text-scale)); // 16px at default
-  --text-lg: calc(1.125rem * var(--nostria-text-scale)); // 18px at default
-  --text-xl: calc(1.25rem * var(--nostria-text-scale)); // 20px at default
-  --text-2xl: calc(1.5rem * var(--nostria-text-scale)); // 24px at default
-  --text-3xl: calc(1.875rem * var(--nostria-text-scale)); // 30px at default
-  --text-4xl: calc(2.25rem * var(--nostria-text-scale)); // 36px at default
-  --text-5xl: calc(3rem * var(--nostria-text-scale)); // 48px at default
+  // Typography scale - named size tokens for consistent typography
+  // These are plain rem values that scale automatically via the html font-size
+  --text-2xs: 0.625rem; // 10px at default
+  --text-xs: 0.75rem; // 12px at default
+  --text-sm: 0.875rem; // 14px at default
+  --text-base: 1rem; // 16px at default
+  --text-lg: 1.125rem; // 18px at default
+  --text-xl: 1.25rem; // 20px at default
+  --text-2xl: 1.5rem; // 24px at default
+  --text-3xl: 1.875rem; // 30px at default
+  --text-4xl: 2.25rem; // 36px at default
+  --text-5xl: 3rem; // 48px at default
 
   // Safe area inset with fallback for Android devices
   // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
