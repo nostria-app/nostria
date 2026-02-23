@@ -184,6 +184,10 @@ Sizes: 16, 32, 48, 180, 192, 512
 
 Extract PNG from ICO: https://cloudconvert.com/ico-to-png
 
+### Chrome MCP
+
+https://vscode.dev/redirect/mcp/install?name=io.github.ChromeDevTools%2Fchrome-devtools-mcp&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22chrome-devtools-mcp%22%5D%2C%22env%22%3A%7B%7D%7D
+
 ## Token for Loop
 
 https://github.com/settings/personal-access-tokens
