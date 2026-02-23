@@ -62,7 +62,7 @@ nav {
 
 // Dark mode toolbar
 :host-context(.dark) .app-toolbar {
-  background-color: rgba(18, 18, 18, 0.9);
+  background-color: rgba(26, 26, 26, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -370,7 +370,7 @@ nav {
 
 // Dark mode - glass toolbar background maintained
 :host-context(.dark) .app-toolbar {
-  background-color: rgba(18, 18, 18, 0.9);
+  background-color: rgba(26, 26, 26, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -468,7 +468,7 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .sidenav {
-  background-color: rgba(18, 18, 18, 0.85) !important;
+  background-color: rgba(26, 26, 26, 0.85) !important;
 }
 
 // Close button row at top of sidenav
@@ -1706,7 +1706,7 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .panel-header {
-  background-color: rgba(18, 18, 18, 0.92);
+  background-color: rgba(26, 26, 26, 0.92);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
   &.transparent {

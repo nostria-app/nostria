@@ -116,9 +116,21 @@ html {
       ),
     ));
 
-  // Darker app background so content cards pop out more
-  --mat-app-background-color: #0a0a0a;
-  --mat-sidenav-content-background-color: #0a0a0a;
+  // Inverted surface hierarchy: background is lighter gray, cards/containers are darker
+  // This makes cards appear "inset" against a softer dark background
+  @include mat.theme-overrides((
+    surface: #1a1a1a,
+    surface-dim: #141414,
+    surface-bright: #242424,
+    surface-container-lowest: #080808,
+    surface-container-low: #0d0d0d,
+    surface-container: #111111,
+    surface-container-high: #0a0a0a,
+    surface-container-highest: #080808,
+  ));
+
+  --mat-app-background-color: #1a1a1a;
+  --mat-sidenav-content-background-color: #1a1a1a;
 }
 
 // Global styles

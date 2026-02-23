@@ -850,10 +850,10 @@
 :host-context(.dark) .message-bubble-container {
   .message-bubble {
     // Glass effect for incoming messages - dark mode
-    background-color: rgba(50, 50, 50, 0.6);
+    background-color: rgba(30, 30, 30, 0.7);
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.03),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 0 8px 2px rgba(255, 255, 255, 0.02),
       0px 2px 8px rgba(0, 0, 0, 0.3),
       0px 4px 16px rgba(0, 0, 0, 0.25);
 

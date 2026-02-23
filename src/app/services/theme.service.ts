@@ -18,7 +18,7 @@ export class ThemeService {
 
   // Theme colors for PWA - clean neutral colors
   private readonly LIGHT_THEME_COLOR = '#fafafa';
-  private readonly DARK_THEME_COLOR = '#303030';
+  private readonly DARK_THEME_COLOR = '#1a1a1a';
 
   darkMode = signal<boolean>(this.getInitialThemePreference());
 

@@ -1543,14 +1543,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Handle right-click context menu on desktop
+   * Handle right-click context menu on desktop.
+   * On desktop, allow the native browser context menu so users can copy text.
+   * On touch devices, the long-press handler (onMessageTouchStart) handles the custom menu.
    */
   onMessageContextMenu(event: MouseEvent, message: DirectMessage): void {
-    // Only show custom context menu for messages without failed status
-    if (!message.failed) {
-      event.preventDefault();
-      this.showMessageContextMenu(message, event);
-    }
+    // Only intercept for touch-originated context menus (long-press).
+    // Regular mouse right-clicks should pass through to the native context menu
+    // so users can select/copy text normally.
   }
 
   /**
