@@ -937,6 +937,19 @@
   }
 }
 
+.tile-more-player {
+  background: linear-gradient(160deg, var(--mat-sys-surface-container) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .tile-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
 .tile-more-install {
   background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
   border: 1px solid rgba(33, 150, 243, 0.15);

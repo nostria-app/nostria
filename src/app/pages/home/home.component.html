@@ -319,6 +319,10 @@
         <mat-icon class="tile-icon">publish</mat-icon>
         <span i18n="@@home.publish-event">Publish Event</span>
       </button>
+      <button class="bento-tile tile-more-player tile-section-small" mat-ripple (click)="openMediaPlayer()">
+        <mat-icon class="tile-icon">queue_music</mat-icon>
+        <span i18n="@@home.media-player">Media Player</span>
+      </button>
       @if (shouldShowInstallOption()) {
       <button class="bento-tile tile-more-install tile-section-small" mat-ripple (click)="openInstallDialog()">
         <mat-icon class="tile-icon">download</mat-icon>

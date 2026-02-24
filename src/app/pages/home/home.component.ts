@@ -7,6 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatRippleModule } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { ApplicationService } from '../../services/application.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
@@ -18,6 +19,7 @@ import { SettingsService } from '../../services/settings.service';
 import { InstallService } from '../../services/install.service';
 import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats-new-dialog.component';
 import { Introduction } from '../../components/introduction/introduction';
+import { MediaPlayerService } from '../../services/media-player.service';
 
 /**
  * Home component - Serves as the landing page and navigation hub.
@@ -52,8 +54,10 @@ export class HomeComponent {
   layout = inject(LayoutService);
   settings = inject(SettingsService);
   installService = inject(InstallService);
+  media = inject(MediaPlayerService);
   private bottomSheet = inject(MatBottomSheet);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   /**
    * Greeting based on time of day - signal for better change detection.
@@ -116,5 +120,17 @@ export class HomeComponent {
 
   openTermsOfUse(): void {
     this.layout.openTermsOfUse();
+  }
+
+  async openMediaPlayer(): Promise<void> {
+    if (!this.media.hasQueue()) {
+      this.snackBar.open($localize`:@@home.media-player.empty-queue:Media queue is empty`, 'Close', {
+        duration: 2500,
+      });
+      return;
+    }
+
+    this.layout.showMediaPlayer.set(true);
+    await this.media.resume();
   }
 }

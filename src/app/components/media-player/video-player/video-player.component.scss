@@ -258,11 +258,13 @@
 .footer-content {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
   max-width: 100%;
   height: 100%;
   gap: 16px;
   padding-left: 80px; // Leave space for video preview
+  padding-right: 8px;
   background: transparent;
   overflow: hidden;
 
@@ -287,15 +289,36 @@
 
 .media-info {
   flex: 0 1 250px;
+  max-width: 250px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+}
+
+.media-info-text {
+  flex: 0 1 174px;
+  max-width: 174px;
+  min-width: 0;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    flex: 1 1 auto;
+    max-width: none;
+  }
 }
 
 .media-title {
   font-size: 0.875rem;
   color: var(--mat-sys-on-surface);
+  margin-bottom: 4px;
+  padding-right: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -313,6 +336,7 @@
 .media-artist {
   font-size: 0.75rem;
   color: var(--mat-sys-on-surface-variant);
+  padding-right: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -324,6 +348,13 @@
       color: var(--mat-sys-primary);
       text-decoration: underline;
     }
+  }
+
+  app-user-profile {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 100%;
+    overflow: hidden;
   }
 }
 

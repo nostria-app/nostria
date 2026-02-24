@@ -106,17 +106,20 @@
   } @else {
   <div class="footer-content" [class.expanded-mode]="layout.expandedMediaPlayer()">
     <div class="media-info">
-      <div class="media-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{ media.current()?.title
-        || 'Video' }}</div>
-      @if (media.current()?.artist) {
-      <div class="media-artist clickable" (click)="goToArtist()" [class.has-link]="hasArtistLink()">
-        @if (isNpubArtist(media.current()?.artist)) {
-        <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
-        } @else {
-        {{ media.current()?.artist }}
+      <div class="media-info-text">
+        <div class="media-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{
+          media.current()?.title
+          || 'Video' }}</div>
+        @if (media.current()?.artist) {
+        <div class="media-artist clickable" (click)="goToArtist()" [class.has-link]="hasArtistLink()">
+          @if (isNpubArtist(media.current()?.artist)) {
+          <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
+          } @else {
+          {{ media.current()?.artist }}
+          }
+        </div>
         }
       </div>
-      }
     </div>
 
     <div class="media-controls">

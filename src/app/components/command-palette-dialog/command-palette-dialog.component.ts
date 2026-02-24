@@ -16,6 +16,7 @@ import { SpeechService } from '../../services/speech.service';
 import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
 import { MetricsDialogComponent } from '../metrics-dialog/metrics-dialog.component';
 import { RunesSettingsService } from '../../services/runes-settings.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 
 export interface Command {
   id: string;
@@ -49,6 +50,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private customDialog = inject(CustomDialogService);
   private runesSettings = inject(RunesSettingsService);
+  private mediaPlayer = inject(MediaPlayerService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -205,6 +207,21 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'queue_music',
       action: () => this.router.navigate(['/queue']),
       keywords: ['queue', 'media queue', 'watch later', 'play queue']
+    },
+    {
+      id: 'nav-media-player',
+      label: 'Open Media Player',
+      icon: 'play_circle',
+      action: () => {
+        if (!this.mediaPlayer.hasQueue()) {
+          this.snackBar.open('Media queue is empty', 'Close', { duration: 2500 });
+          return;
+        }
+
+        this.layoutService.showMediaPlayer.set(true);
+        void this.mediaPlayer.resume();
+      },
+      keywords: ['media player', 'music player', 'now playing', 'resume queue']
     },
     {
       id: 'nav-youtube',
