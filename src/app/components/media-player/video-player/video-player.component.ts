@@ -28,6 +28,7 @@ import { VolumeGestureDirective } from '../../../directives/volume-gesture.direc
 import { nip19 } from 'nostr-tools';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
+import { formatDuration } from '../../../utils/format-duration';
 
 @Component({
   selector: 'app-video-player',
@@ -73,6 +74,7 @@ export class VideoPlayerComponent implements OnDestroy {
   private touchInteractionTimeout: ReturnType<typeof setTimeout> | null = null;
   private boundNativeFullscreenMouseMove = this.onNativeFullscreenMouseMove.bind(this);
   private boundNativeFullscreenTouchStart = this.onNativeFullscreenTouchStart.bind(this);
+  formatLabel = formatDuration;
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;

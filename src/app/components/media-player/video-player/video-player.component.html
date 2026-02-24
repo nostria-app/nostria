@@ -5,7 +5,7 @@
   <!-- Fullscreen Mode - Full video interface -->
   <div class="video-wrapper" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
     (mousemove)="onVideoContainerMouseMove()" (touchstart)="onVideoContainerTouchStart()">
-    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
+    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
       (error)="onVideoError($event)" (click)="onPlayPause()"></video>
 
     <app-video-controls [videoElement]="videoElement"
@@ -47,7 +47,7 @@
   <!-- Footer Mode - Single video area (compact/expanded via CSS) -->
   <div class="video-preview" [class.expanded]="layout.expandedMediaPlayer()" (mouseenter)="onVideoContainerMouseEnter()"
     (mouseleave)="onVideoContainerMouseLeave()">
-    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
+    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
       (error)="onVideoError($event)"></video>
     <div class="video-preview-overlay" [class.hidden]="layout.expandedMediaPlayer()">
       <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
@@ -118,6 +118,19 @@
       </button>
     </div>
   </div>
+
+  @if (layout.expandedMediaPlayer()) {
+  <div class="video-timeline">
+    <span class="time-label">{{ formatLabel(media.currentTimeSig()) }}</span>
+    <div class="custom-slider">
+      <input type="range" [min]="0" [max]="media.durationSig() || 0" [value]="media.currentTimeSig()"
+        (input)="onSeek($any($event.target).valueAsNumber)" class="slider-input"
+        [style.background-size]="(media.currentTimeSig() / (media.durationSig() || 1)) * 100 + '% 100%'"
+        aria-label="Seek slider" />
+    </div>
+    <span class="time-label">{{ formatLabel(media.durationSig()) }}</span>
+  </div>
+  }
   }
 </div>
 

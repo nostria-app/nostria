@@ -884,6 +884,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
       this.videoElement.removeEventListener('play', this.handleVideoPlay);
       this.videoElement.removeEventListener('pause', this.handleVideoPause);
+      this.videoElement.removeEventListener('timeupdate', this.handleVideoTimeUpdate);
+      this.videoElement.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
       this.videoElement.removeEventListener('volumechange', this.handleVolumeChange);
     }
 
@@ -894,6 +896,8 @@ export class MediaPlayerService implements OnInitialized {
       videoElement.addEventListener('ended', this.handleMediaEnded);
       videoElement.addEventListener('play', this.handleVideoPlay);
       videoElement.addEventListener('pause', this.handleVideoPause);
+      videoElement.addEventListener('timeupdate', this.handleVideoTimeUpdate);
+      videoElement.addEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
 
       // Restore saved volume settings
       this.restoreVolumeSettings(videoElement);
@@ -913,13 +917,27 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   private handleVideoPlay = () => {
+    this._isPaused.set(false);
     console.log('[MediaPlayer] Video playing, enabling wake lock');
     this.wakeLockService.enable();
   };
 
   private handleVideoPause = () => {
+    this._isPaused.set(true);
     console.log('[MediaPlayer] Video paused, disabling wake lock');
     this.wakeLockService.disable();
+  };
+
+  private handleVideoTimeUpdate = () => {
+    if (this.videoElement) {
+      this.currentTimeSig.set(this.videoElement.currentTime);
+    }
+  };
+
+  private handleVideoLoadedMetadata = () => {
+    if (this.videoElement) {
+      this.durationSig.set(this.videoElement.duration);
+    }
   };
 
   private handleVolumeChange = () => {
@@ -1494,6 +1512,11 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
+      this.videoElement.removeEventListener('play', this.handleVideoPlay);
+      this.videoElement.removeEventListener('pause', this.handleVideoPause);
+      this.videoElement.removeEventListener('timeupdate', this.handleVideoTimeUpdate);
+      this.videoElement.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
+      this.videoElement.removeEventListener('volumechange', this.handleVolumeChange);
     }
 
     // Stop YouTube player (it will be destroyed and recreated for next video)
