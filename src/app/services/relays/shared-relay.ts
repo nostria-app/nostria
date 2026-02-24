@@ -46,14 +46,14 @@ export class SharedRelayService {
    * Only uses the filter for metadata requests since that's what we're actually querying
    * The pubkey parameter is only used for relay selection and shouldn't affect dedup
    */
-  private createCacheKey(pubkey: string, filter: any, timeout: number): string {
+  private createCacheKey(pubkey: string, filter: any, timeout: number, mode: 'single' | 'many' = 'single'): string {
     // For metadata requests (kind 0), only use the author being queried
     // This ensures we deduplicate even if called from different contexts
     if (filter.kinds?.includes(0) && filter.authors?.length === 1) {
-      return `metadata-${filter.authors[0]}`;
+      return `metadata-${mode}-${filter.authors[0]}`;
     }
     // For other requests, include all parameters
-    return JSON.stringify({ filter, timeout });
+    return JSON.stringify({ mode, filter, timeout });
   }
 
   /**
@@ -178,7 +178,7 @@ export class SharedRelayService {
     const timeout = options.timeout || 5000;
 
     // Create cache key for request deduplication
-    const cacheKey = this.createCacheKey(pubkey, filter, timeout);
+    const cacheKey = this.createCacheKey(pubkey, filter, timeout, 'single');
 
     // CRITICAL: Check cache synchronously before any async work
     if (this.requestCache.has(cacheKey)) {
@@ -281,7 +281,7 @@ export class SharedRelayService {
     const timeout = options.timeout || 5000;
 
     // Create cache key for request deduplication
-    const cacheKey = this.createCacheKey(pubkey + '_many', filter, timeout);
+    const cacheKey = this.createCacheKey(pubkey, filter, timeout, 'many');
 
     // Check if we already have a pending request for the same parameters
     if (this.requestCache.has(cacheKey)) {

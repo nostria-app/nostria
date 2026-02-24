@@ -1177,6 +1177,8 @@ mat-sidenav-content {
       width: 100%;
       min-width: 100%;
       max-width: 100%;
+      padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+      box-sizing: border-box;
 
       .panel-content-wrapper {
         max-width: 700px;
@@ -1202,6 +1204,8 @@ mat-sidenav-content {
         z-index: 500;
         background-color: var(--mat-app-background-color);
         overflow-y: auto;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+        box-sizing: border-box;
       }
     }
   }
