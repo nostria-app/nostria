@@ -982,15 +982,22 @@
 
   .retry-button,
   .more-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0.7;
     transition: opacity 0.2s ease;
     width: 32px;
     height: 32px;
+    padding: 0;
+    line-height: 1;
 
     mat-icon {
+      display: block;
       font-size: 18px;
       width: 18px;
       height: 18px;
+      line-height: 18px;
     }
 
     &:hover {
