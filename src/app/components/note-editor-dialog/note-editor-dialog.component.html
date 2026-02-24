@@ -125,6 +125,20 @@
           <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
         </mat-form-field>
 
+        <!-- Mentions (kept directly below text input) -->
+        @if (visibleMentions().length > 0 && !showAdvancedOptions()) {
+        <div class="mentions-section">
+          <mat-chip-set class="mentions-chips">
+            @for (mention of visibleMentions(); track mention) {
+            <mat-chip [removable]="true" (removed)="removeMention(mention)">
+              {{ getMentionDisplayName(mention) }}
+              <mat-icon matChipRemove>cancel</mat-icon>
+            </mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+        }
+
         <!-- Mention Autocomplete positioned relative to textarea -->
         @if (mentionConfig()) {
         <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
@@ -311,20 +325,6 @@
       <app-content class="preview-content" [content]="previewContent()"
         [preloadedEvents]="previewEventsMap()"></app-content>
       <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
-    </div>
-    }
-
-    <!-- Mentions -->
-    @if (visibleMentions().length > 0 && !showAdvancedOptions()) {
-    <div class="mentions-section">
-      <mat-chip-set class="mentions-chips">
-        @for (mention of visibleMentions(); track mention) {
-        <mat-chip [removable]="true" (removed)="removeMention(mention)">
-          {{ getMentionDisplayName(mention) }}
-          <mat-icon matChipRemove>cancel</mat-icon>
-        </mat-chip>
-        }
-      </mat-chip-set>
     </div>
     }
 
