@@ -118,6 +118,7 @@ export class RunesSidebarComponent implements OnDestroy {
   private readonly RUNE_PREVIEW_ESTIMATED_HEIGHT_PX = 420;
   private readonly SETTINGS_PREVIEW_ESTIMATED_HEIGHT_PX = 520;
   private readonly WEATHER_REFRESH_INTERVAL_MS = 15 * 60_000;
+  private readonly BITCOIN_REFRESH_INTERVAL_MS = 60_000;
 
   private readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
@@ -972,14 +973,19 @@ export class RunesSidebarComponent implements OnDestroy {
       const data = await response.json() as { bitcoin?: { usd?: number; eur?: number } };
       const usd = data.bitcoin?.usd ?? null;
       const eur = data.bitcoin?.eur ?? null;
+      const updatedAt = Math.floor(Date.now() / 1000);
 
       this.bitcoinPrice.set({
         usd,
         eur,
-        updatedAt: Math.floor(Date.now() / 1000),
+        updatedAt,
         loading: false,
         error: usd === null ? 'No price in response' : null,
       });
+
+      if (usd !== null && eur !== null) {
+        this.runesSettings.setCachedBitcoinPrice({ usd, eur, updatedAt });
+      }
     } catch {
       this.bitcoinPrice.update(state => ({
         ...state,

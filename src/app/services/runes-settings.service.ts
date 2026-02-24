@@ -233,6 +233,19 @@ export class RunesSettingsService {
     this.persist();
   }
 
+  getCachedBitcoinPrice(): CachedBitcoinPrice | null {
+    const cached = this.localStorage.getObject<CachedBitcoinPrice>(BITCOIN_PRICE_CACHE_KEY);
+    if (!cached || typeof cached.usd !== 'number' || typeof cached.eur !== 'number' || typeof cached.updatedAt !== 'number') {
+      return null;
+    }
+
+    return cached;
+  }
+
+  setCachedBitcoinPrice(price: CachedBitcoinPrice): void {
+    this.localStorage.setObject(BITCOIN_PRICE_CACHE_KEY, price);
+  }
+
   private loadSettings(): RunesSettings {
     const stored = this.localStorage.getObject<Partial<RunesSettings> & { pinnedRuneId?: RuneId | null }>(STORAGE_KEY);
     if (!stored) {
