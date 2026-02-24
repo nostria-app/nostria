@@ -1,4 +1,5 @@
-<div class="cards-player">
+<div class="cards-player" appSwipeGesture [threshold]="60" [trackProgress]="true" [horizontalSwipe]="true"
+  [verticalSwipe]="true" (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
   <!-- Pull down indicator -->
   <button class="pull-indicator" (click)="openQueue.emit(); $event.stopPropagation()"
     (mousedown)="$event.stopPropagation()" aria-label="Open queue">

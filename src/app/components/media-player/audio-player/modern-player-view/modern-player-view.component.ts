@@ -15,6 +15,7 @@ import { MediaPlayerService } from '../../../../services/media-player.service';
 import { formatDuration } from '../../../../utils/format-duration';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
+import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 
 @Component({
   selector: 'app-modern-player-view',
@@ -25,6 +26,7 @@ import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
     MatTooltipModule,
     MatSliderModule,
     LyricsViewComponent,
+    SwipeGestureDirective,
   ],
   templateUrl: './modern-player-view.component.html',
   styleUrl: './modern-player-view.component.scss',
@@ -142,5 +144,33 @@ export class ModernPlayerViewComponent {
       case 'all': return 'Repeat: All';
       case 'one': return 'Repeat: One';
     }
+  }
+
+  onSwipe(event: SwipeEvent): void {
+    if (this.showLyrics()) return;
+
+    switch (event.direction) {
+      case 'left':
+        if (this.media.canNext()) this.media.next();
+        break;
+      case 'right':
+        if (this.media.canPrevious()) this.media.previous();
+        break;
+      case 'down':
+        this.openQueue.emit();
+        break;
+    }
+  }
+
+  onSwipeProgress(event: SwipeProgressEvent): void {
+    if (this.showLyrics()) return;
+
+    if (event.direction === 'vertical' && event.deltaY > 0) {
+      this.queueDragProgress.emit(event.deltaY);
+    }
+  }
+
+  onSwipeEnd(): void {
+    this.queueDragEnd.emit();
   }
 }

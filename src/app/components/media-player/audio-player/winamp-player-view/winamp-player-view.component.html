@@ -1,4 +1,5 @@
-<div class="winamp-player">
+<div class="winamp-player" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+  (touchend)="onTouchEnd($event)">
   <div class="winamp-content" [class.double-size]="doubleSize()">
     <!-- Main player window -->
     <div class="winamp-main">

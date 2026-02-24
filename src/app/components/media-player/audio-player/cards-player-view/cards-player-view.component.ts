@@ -17,6 +17,7 @@ import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { CircularProgressComponent } from '../circular-progress/circular-progress.component';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
+import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 
 @Component({
   selector: 'app-cards-player-view',
@@ -27,6 +28,7 @@ import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
     MatTooltipModule,
     CircularProgressComponent,
     LyricsViewComponent,
+    SwipeGestureDirective,
   ],
   templateUrl: './cards-player-view.component.html',
   styleUrl: './cards-player-view.component.scss',
@@ -259,5 +261,39 @@ export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
       case 'all': return 'Repeat: All';
       case 'one': return 'Repeat: One';
     }
+  }
+
+  onSwipe(event: SwipeEvent): void {
+    if (this.showLyrics()) return;
+
+    switch (event.direction) {
+      case 'left':
+        if (this.media.canNext()) this.media.next();
+        break;
+      case 'right':
+        if (this.media.canPrevious()) this.media.previous();
+        break;
+      case 'down':
+        this.openQueue.emit();
+        break;
+    }
+  }
+
+  onSwipeProgress(event: SwipeProgressEvent): void {
+    if (this.showLyrics()) return;
+
+    if (event.direction === 'horizontal') {
+      this.swipeOffset.set(event.deltaX * 0.5);
+      return;
+    }
+
+    if (event.direction === 'vertical' && event.deltaY > 0) {
+      this.queueDragProgress.emit(event.deltaY);
+    }
+  }
+
+  onSwipeEnd(): void {
+    this.swipeOffset.set(0);
+    this.queueDragEnd.emit();
   }
 }

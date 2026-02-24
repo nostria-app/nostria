@@ -15,7 +15,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
-import { SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
 // EQ Frequency bands (in Hz) matching WinAmp
@@ -118,6 +117,13 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   private scrollPosition = 0;
   private scrollInterval: number | null = null;
 
+  // Swipe gesture state for fullscreen winamp mode
+  private swipeStartX = 0;
+  private swipeStartY = 0;
+  private swipeTracking = false;
+  private swipeLockedDirection: 'horizontal' | 'vertical' | null = null;
+  private readonly swipeThreshold = 60;
+
   // Lyrics view toggle
   showLyrics = signal(false);
   canShowLyrics = computed(() => {
@@ -209,34 +215,97 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     return this.media.audio ? Math.round(this.media.audio.volume * 100) : 100;
   }
 
-  onSwipe(event: SwipeEvent): void {
-    // Disable gestures when lyrics are showing to prevent interference while scrolling
-    if (this.showLyrics()) return;
-
-    switch (event.direction) {
-      case 'left':
-        if (this.media.canNext()) this.media.next();
-        break;
-      case 'right':
-        if (this.media.canPrevious()) this.media.previous();
-        break;
-      case 'down':
-        this.openQueue.emit();
-        break;
-    }
-  }
-
-  onSwipeProgress(event: SwipeProgressEvent): void {
-    // Disable gestures when lyrics are showing
-    if (this.showLyrics()) return;
-
-    if (event.direction === 'vertical' && event.deltaY > 0) {
-      this.queueDragProgress.emit(event.deltaY);
-    }
-  }
-
   onSwipeEnd(): void {
     this.queueDragEnd.emit();
+  }
+
+  onTouchStart(event: TouchEvent): void {
+    if (this.showLyrics()) return;
+    if (event.touches.length !== 1) return;
+    if (this.isInteractiveElement(event.target as HTMLElement)) return;
+
+    const touch = event.touches[0];
+    this.swipeStartX = touch.clientX;
+    this.swipeStartY = touch.clientY;
+    this.swipeTracking = true;
+    this.swipeLockedDirection = null;
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    if (!this.swipeTracking || this.showLyrics()) return;
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - this.swipeStartX;
+    const deltaY = touch.clientY - this.swipeStartY;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+
+    if (!this.swipeLockedDirection && (absDeltaX > 10 || absDeltaY > 10)) {
+      this.swipeLockedDirection = absDeltaX > absDeltaY ? 'horizontal' : 'vertical';
+    }
+
+    if (this.swipeLockedDirection === 'vertical' && deltaY > 0) {
+      this.queueDragProgress.emit(deltaY);
+      event.preventDefault();
+    }
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (!this.swipeTracking) return;
+    this.swipeTracking = false;
+
+    if (this.showLyrics()) {
+      this.swipeLockedDirection = null;
+      this.onSwipeEnd();
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      this.swipeLockedDirection = null;
+      this.onSwipeEnd();
+      return;
+    }
+
+    const deltaX = touch.clientX - this.swipeStartX;
+    const deltaY = touch.clientY - this.swipeStartY;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+
+    if (absDeltaX >= this.swipeThreshold && absDeltaX > absDeltaY) {
+      if (deltaX < 0 && this.media.canNext()) {
+        this.media.next();
+      } else if (deltaX > 0 && this.media.canPrevious()) {
+        this.media.previous();
+      }
+    } else if (absDeltaY >= this.swipeThreshold && absDeltaY > absDeltaX && deltaY > 0) {
+      this.openQueue.emit();
+    }
+
+    this.swipeLockedDirection = null;
+    this.onSwipeEnd();
+  }
+
+  private isInteractiveElement(element: HTMLElement | null): boolean {
+    while (element) {
+      const tagName = element.tagName.toLowerCase();
+      if (
+        tagName === 'button' ||
+        tagName === 'a' ||
+        tagName === 'input' ||
+        tagName === 'select' ||
+        tagName === 'textarea' ||
+        element.getAttribute('role') === 'button' ||
+        element.hasAttribute('mat-button') ||
+        element.hasAttribute('mat-icon-button') ||
+        element.hasAttribute('mat-fab')
+      ) {
+        return true;
+      }
+      element = element.parentElement;
+    }
+    return false;
   }
 
   // Initialize Web Audio API equalizer
