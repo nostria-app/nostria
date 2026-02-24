@@ -324,6 +324,21 @@ export class MediaPlayerComponent implements OnDestroy {
       return;
     }
 
+    const willCollapse = !this.miniCollapsed();
+    if (this.isBrowser) {
+      const el = document.querySelector('app-media-player') as HTMLElement | null;
+      if (el) {
+        const currentWidth = el.getBoundingClientRect().width;
+        const collapsedWidth = this.isPodcast() ? 84 : 64;
+        const expandedWidth = Math.max(collapsedWidth, Math.min(600, window.innerWidth - 32));
+        const targetWidth = willCollapse ? collapsedWidth : expandedWidth;
+        const delta = (targetWidth - currentWidth) / 2;
+        const clamped = this.clampOffsets(this.footerOffsetX() + delta, this.footerOffsetY());
+        this.footerOffsetX.set(clamped.x);
+        this.footerOffsetY.set(clamped.y);
+      }
+    }
+
     this.miniCollapsed.update(value => !value);
 
     if (this.miniCollapsed()) {
