@@ -1920,24 +1920,6 @@ mat-sidenav-content {
   opacity: 0.7;
 }
 
-.fab-container {
-  position: relative;
-  width: 56px;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 4px;
-}
-
-.create-fab {
-  z-index: 11;
-  box-shadow: var(--mat-sys-level4);
-  scale: 1.1;
-}
-
-
-
 .sidenav-labels {
   width: 240px;
 }
