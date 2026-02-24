@@ -116,6 +116,7 @@
   border-radius: 32px 0 0 32px;
   object-fit: cover;
   flex-shrink: 0;
+  pointer-events: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 
   :host-context(.podcast-mode) & {
@@ -838,4 +839,8 @@
   object-fit: contain;
   border-radius: var(--mat-sys-corner-medium);
   background: var(--mat-sys-surface-container-lowest);
+}
+
+.album-art-video {
+  pointer-events: auto;
 }

@@ -1,20 +1,33 @@
 @if (media.hasQueue()) {
+@if (footer() && miniCollapsed()) {
+<button class="mini-collapsed-widget" aria-label="Expand mini player" (mousedown)="onFooterMouseDown($event)"
+  (dblclick)="onMiniMediaDoubleClick($event)">
+  @if (widgetArtwork()) {
+  <img class="mini-collapsed-art" [src]="widgetArtwork()!" alt="Now playing artwork" />
+  } @else {
+  <span class="mini-collapsed-fallback" aria-hidden="true">
+    <mat-icon>{{ isVideo() ? 'ondemand_video' : 'music_note' }}</mat-icon>
+  </span>
+  }
+</button>
+} @else {
 <!-- Footer controls (always visible in footer mode; stays visible for video/YouTube/streams in fullscreen to preserve media instance) -->
 <div class="footer-drag-zone" [class.hidden]="!footer() && !isYouTube() && !isLiveStream() && !isVideo()"
-  (mousedown)="onFooterMouseDown($event)">
+  (mousedown)="onFooterMouseDown($event)" (dblclick)="onMiniMediaDoubleClick($event)">
   @if (isLiveStream()) {
   <app-live-stream-player [footer]="footer()" />
   } @else if (isYouTube()) {
   <app-youtube-player [footer]="true" />
   } @else if (isVideo()) {
-  <app-video-player [footer]="footer()" />
+  <app-video-player [footer]="footer()" (miniMediaToggleRequested)="onMiniMediaDoubleClick($event)" />
   } @else if (isAudio()) {
-  <app-audio-player [footer]="footer()" />
+  <app-audio-player [footer]="footer()" (miniMediaToggleRequested)="onMiniMediaDoubleClick($event)" />
   }
 </div>
+}
 
 <!-- Resize handle (bottom-right corner, footer mode only) -->
-@if (footer() && layout.expandedMediaPlayer()) {
+@if (footer() && layout.expandedMediaPlayer() && !miniCollapsed()) {
 <div class="resize-handle" (mousedown)="onResizeMouseDown($event)"></div>
 }
 

@@ -19,14 +19,12 @@ import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { BITCOIN_PRICE_API } from '../../services/runes-settings.service';
 import { environment } from '../../../environments/environment';
 
 // Hardcoded Nostria Premium receiver
 const NOSTRIA_PREMIUM_PUBKEY = '3e5b8d197f4a9279278fd61d9d033058e13d62f6652e3f868dcab54fac8c9658';
 const NOSTRIA_PREMIUM_LIGHTNING_ADDRESS = 'nostriapayment@coinos.io';
-
-// Bitcoin price API
-const BITCOIN_PRICE_API = 'https://pay.ariton.app/price';
 
 // Development mode pricing multiplier (10x cheaper in dev mode)
 // const PRICE_MULTIPLIER = environment.production ? 1 : 0.1;

@@ -4,6 +4,7 @@ import {
   computed,
   signal,
   input,
+  output,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +67,7 @@ export class AudioPlayerComponent {
   private imageCache = inject(ImageCacheService);
 
   footer = input<boolean>(false);
+  miniMediaToggleRequested = output<MouseEvent>();
 
   // Player view state
   currentView = signal<PlayerViewType>(this.loadSavedView());
@@ -280,5 +282,15 @@ export class AudioPlayerComponent {
         }
         break;
     }
+  }
+
+  onMiniArtworkDoubleClick(event: MouseEvent): void {
+    if (!this.footer()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.miniMediaToggleRequested.emit(event);
   }
 }

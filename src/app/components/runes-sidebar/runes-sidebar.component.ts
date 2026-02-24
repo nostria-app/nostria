@@ -12,7 +12,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LoggerService } from '../../services/logger.service';
-import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference } from '../../services/runes-settings.service';
+import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference, BITCOIN_PRICE_API } from '../../services/runes-settings.service';
 import { Playlist } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 
@@ -118,7 +118,7 @@ export class RunesSidebarComponent implements OnDestroy {
   private readonly RUNE_PREVIEW_ESTIMATED_HEIGHT_PX = 420;
   private readonly SETTINGS_PREVIEW_ESTIMATED_HEIGHT_PX = 520;
   private readonly WEATHER_REFRESH_INTERVAL_MS = 15 * 60_000;
-  private readonly BITCOIN_REFRESH_INTERVAL_MS = 60_000;
+  private readonly BITCOIN_REFRESH_INTERVAL_MS = 5 * 60_000;
 
   private readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
@@ -989,14 +989,14 @@ export class RunesSidebarComponent implements OnDestroy {
     }));
 
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,eur');
+      const response = await fetch(BITCOIN_PRICE_API);
       if (!response.ok) {
         throw new Error(`Price request failed (${response.status})`);
       }
 
-      const data = await response.json() as { bitcoin?: { usd?: number; eur?: number } };
-      const usd = data.bitcoin?.usd ?? null;
-      const eur = data.bitcoin?.eur ?? null;
+      const data = await response.json() as { usd?: number; eur?: number };
+      const usd = data.usd ?? null;
+      const eur = data.eur ?? null;
       const updatedAt = Math.floor(Date.now() / 1000);
 
       this.bitcoinPrice.set({

@@ -6,6 +6,7 @@ import {
   afterNextRender,
   OnDestroy,
   input,
+  output,
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -60,6 +61,7 @@ export class VideoPlayerComponent implements OnDestroy {
   private readonly overlayContainer = inject(OverlayContainer);
 
   footer = input<boolean>(false);
+  miniMediaToggleRequested = output<MouseEvent>();
   cursorHidden = signal(false);
   isHoveringControlsBar = signal(false);
   isNativeFullscreen = signal(false);
@@ -217,6 +219,16 @@ export class VideoPlayerComponent implements OnDestroy {
       this.clearAutoHideTimeout();
       this.showCursor();
     }
+  }
+
+  onMiniPreviewDoubleClick(event: MouseEvent): void {
+    if (!this.footer() || this.layout.expandedMediaPlayer()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.miniMediaToggleRequested.emit(event);
   }
 
   async pictureInPicture(): Promise<void> {

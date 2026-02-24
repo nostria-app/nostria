@@ -4,7 +4,7 @@
   <div class="video-wrapper" [class.footer-preview]="footer()"
     [class.footer-expanded]="footer() && layout.expandedMediaPlayer()" (mouseenter)="onVideoContainerMouseEnter()"
     (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()"
-    (touchstart)="onVideoContainerTouchStart()">
+    (touchstart)="onVideoContainerTouchStart()" (dblclick)="onMiniPreviewDoubleClick($event)">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
       (error)="onVideoError($event)" (click)="onPlayPause()"></video>
 

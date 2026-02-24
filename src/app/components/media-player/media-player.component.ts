@@ -37,6 +37,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
     '[class.expanded-mode]': 'layout.expandedMediaPlayer()',
     '[class.podcast-mode]': 'isPodcast()',
     '[class.footer-dragging]': 'isFooterDragging() || isResizing()',
+    '[class.mini-collapsed]': 'miniCollapsed() && footer()',
   },
 })
 export class MediaPlayerComponent implements OnDestroy {
@@ -68,6 +69,11 @@ export class MediaPlayerComponent implements OnDestroy {
 
   // Footer mode is when NOT in fullscreen
   footer = computed(() => !this.layout.fullscreenMediaPlayer());
+
+  // Collapsed mini-player widget state (footer mode only)
+  readonly miniCollapsed = signal(false);
+
+  widgetArtwork = computed(() => this.media.current()?.artwork ?? null);
 
   // Computed signals to determine which player to show
   isLiveStream = computed(() => (this.media.current()?.type === 'HLS' || this.media.current()?.type === 'LiveKit' || this.media.current()?.type === 'External') && this.media.current()?.isLiveStream);
@@ -115,6 +121,15 @@ export class MediaPlayerComponent implements OnDestroy {
         this.layout.expandedMediaPlayer(); // track signal
         this.resizeWidth.set(null);
         this.resizeHeight.set(null);
+      });
+
+      // Ensure collapsed widget state is only active in footer mode
+      effect(() => {
+        const inFooterMode = this.footer();
+        const hasQueue = this.media.hasQueue();
+        if (!inFooterMode || !hasQueue) {
+          this.miniCollapsed.set(false);
+        }
       });
     }
   }
@@ -187,8 +202,18 @@ export class MediaPlayerComponent implements OnDestroy {
   }
 
   onFooterMouseDown(event: MouseEvent): void {
+    // Handle double-click anywhere on the mini player before drag starts
+    if (event.detail >= 2) {
+      this.onMiniMediaDoubleClick(event);
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    const isCollapsedWidget = !!target.closest('.mini-collapsed-widget');
+
     // Don't start drag if clicking on a button or interactive element
-    if ((event.target as HTMLElement).closest('button, a, input, mat-slider, [mattooltip]')) {
+    // except the dedicated collapsed widget, which should remain draggable.
+    if (!isCollapsedWidget && target.closest('button, a, input, mat-slider, [mattooltip]')) {
       return;
     }
 
@@ -289,5 +314,20 @@ export class MediaPlayerComponent implements OnDestroy {
     this.isResizing.set(false);
     document.removeEventListener('mousemove', this.boundResizeMove);
     document.removeEventListener('mouseup', this.boundResizeUp);
+  }
+
+  onMiniMediaDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.footer()) {
+      return;
+    }
+
+    this.miniCollapsed.update(value => !value);
+
+    if (this.miniCollapsed()) {
+      this.layout.expandedMediaPlayer.set(false);
+    }
   }
 }
