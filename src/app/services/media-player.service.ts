@@ -562,11 +562,8 @@ export class MediaPlayerService implements OnInitialized {
 
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
-
-    // Auto-expand for video content to show the video area above controls
-    if (this.shouldAutoExpandForVideo(file)) {
-      this.layout.expandedMediaPlayer.set(true);
-    }
+    // Keep expanded state in sync with media type (music/podcast must stay mini)
+    this.layout.expandedMediaPlayer.set(this.shouldAutoExpandForVideo(file));
 
     // Add the file to the queue
     this.media.update(files => [...files, file]);
@@ -1062,9 +1059,7 @@ export class MediaPlayerService implements OnInitialized {
     this.videoPlaybackInitialized = false;
 
     this.layout.showMediaPlayer.set(true);
-    if (this.shouldAutoExpandForVideo(file)) {
-      this.layout.expandedMediaPlayer.set(true);
-    }
+    this.layout.expandedMediaPlayer.set(this.shouldAutoExpandForVideo(file));
 
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
@@ -1734,6 +1729,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Also turn off fullscreen media player mode so it doesn't auto-open next time
     this.layout.fullscreenMediaPlayer.set(false);
+    this.layout.expandedMediaPlayer.set(false);
 
     // Clear media queue
     this.media.set([]);
