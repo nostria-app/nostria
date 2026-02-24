@@ -1514,10 +1514,10 @@ mat-sidenav-content {
   width: 100%;
 
   // Glass effect background using Material 3 surface color
-  background-color: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(1.85);
+  backdrop-filter: blur(26px) saturate(1.85);
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent);
 
   // Inner .panel-header should not have its own sticky/background
   // Also set default max-width and centering (can be overridden by layout contexts)
@@ -1657,13 +1657,13 @@ mat-sidenav-content {
   padding: 0 16px;
   flex-shrink: 0;
 
-  // Glass effect - clean neutral
-  background-color: rgba(250, 250, 250, 0.92);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
+  // Glass effect
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(1.85);
+  backdrop-filter: blur(26px) saturate(1.85);
 
   // Subtle bottom border
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent);
 
   &.transparent {
     background-color: transparent;
@@ -1711,8 +1711,8 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .panel-header {
-  background-color: rgba(26, 26, 26, 0.92);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 30%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 46%, transparent);
 
   &.transparent {
     background-color: transparent;

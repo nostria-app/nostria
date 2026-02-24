@@ -1791,6 +1791,36 @@ app-media-queue {
   flex: 1;
 }
 
+// Force a single shared glass style for pane toolbars across all routed views
+// (feeds, articles, streams, summary, music, etc.).
+.left-panel .panel-header,
+.right-panel .panel-header {
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.85) !important;
+  backdrop-filter: blur(26px) saturate(1.85) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent) !important;
+}
+
+.dark .left-panel .panel-header,
+.dark .right-panel .panel-header {
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 30%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 46%, transparent) !important;
+}
+
+.left-panel .panel-header-wrapper,
+.right-panel .panel-header-wrapper {
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.85) !important;
+  backdrop-filter: blur(26px) saturate(1.85) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent) !important;
+}
+
+.dark .left-panel .panel-header-wrapper,
+.dark .right-panel .panel-header-wrapper {
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 30%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 46%, transparent) !important;
+}
+
 // Android-specific safe area fix for mobile navigation
 // Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
 html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
