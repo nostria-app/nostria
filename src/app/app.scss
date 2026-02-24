@@ -449,6 +449,11 @@ mat-sidenav-content {
   // On mobile (over mode), ensure proper z-index
   @media (max-width: 599px) {
     z-index: 100 !important;
+
+    &.mobile-glass-menu {
+      border: 1px solid var(--mat-sys-outline-variant);
+      box-shadow: var(--mat-sys-level3);
+    }
   }
 
   @media (min-width: 599px) {
@@ -1792,16 +1797,12 @@ mat-sidenav-content {
 
   border-radius: 28px;
 
-  // Glass effect - clean neutral
-  background-color: rgba(255, 255, 255, 0.85);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-
-  border: none;
-
-  box-shadow:
-    0px 4px 16px rgba(0, 0, 0, 0.08),
-    0px 8px 24px rgba(0, 0, 0, 0.08);
+  // Glass effect
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 62%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 75%, transparent);
+  box-shadow: var(--mat-sys-level2);
 
   /* Smooth transition for hide/show on scroll */
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1827,19 +1828,17 @@ mat-sidenav-content {
 
 .mobile-nav a,
 .mobile-nav button {
-  color: #666;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 :host-context(.dark) .mobile-nav {
-  background-color: rgba(26, 26, 26, 0.9);
-
-  box-shadow:
-    0px 4px 16px rgba(0, 0, 0, 0.3),
-    0px 8px 24px rgba(0, 0, 0, 0.3);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 68%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 85%, transparent);
+  box-shadow: var(--mat-sys-level2);
 
   a,
   button {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 
