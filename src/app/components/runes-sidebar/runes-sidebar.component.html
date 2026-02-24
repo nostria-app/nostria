@@ -33,7 +33,18 @@
   [style.right.px]="hoverPreviewPosition()?.right" (mouseenter)="onFlyoutEnter(previewRuneId)"
   (mouseleave)="onFlyoutLeave(previewRuneId)">
   @if (previewRuneId === 'bitcoin-price' || previewRuneId === 'weather') {
-  <div class="flyout-meta-row">
+  <div class="flyout-meta-row" [class.has-reload]="previewRuneId === 'bitcoin-price' || previewRuneId === 'weather'">
+    @if (previewRuneId === 'bitcoin-price') {
+    <button mat-icon-button class="rune-header-action-button" [disabled]="bitcoinPrice().loading"
+      (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
+      <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+    </button>
+    } @else if (previewRuneId === 'weather') {
+    <button mat-icon-button class="rune-header-action-button" [disabled]="weather().loading" (click)="reloadWeather()"
+      aria-label="Reload weather">
+      <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+    </button>
+    }
     <span class="flyout-updated">
       Updated: {{ formatUpdatedAt(previewRuneId === 'bitcoin-price' ? bitcoinPrice().updatedAt : weather().updatedAt) }}
     </span>
@@ -55,12 +66,6 @@
         {{ formatRoundedCurrency(bitcoinPrice().eur, '€') }}
       </span>
     </div>
-    <div class="btc-meta-row">
-      <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
-        (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
-        <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
-      </button>
-    </div>
     @if (bitcoinPrice().error) {
     <div class="rune-error">{{ bitcoinPrice().error }}</div>
     }
@@ -80,10 +85,6 @@
         <div class="weather-condition">{{ weatherConditionLabel() }}</div>
         <div class="weather-location">{{ weather().locationLabel }}</div>
       </div>
-      <button mat-icon-button class="weather-reload-button" [disabled]="weather().loading" (click)="reloadWeather()"
-        aria-label="Reload weather">
-        <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
-      </button>
     </div>
 
     <div class="weather-metrics">
@@ -207,7 +208,19 @@
     (mouseenter)="onFlyoutEnter(activeRuneIdValue)" (mouseleave)="onFlyoutLeave(activeRuneIdValue)">
     @if (openRunes().includes(activeRuneIdValue) || activeRuneIdValue === 'bitcoin-price' || activeRuneIdValue ===
     'weather') {
-    <div class="flyout-meta-row" [class.has-close]="openRunes().includes(activeRuneIdValue)">
+    <div class="flyout-meta-row" [class.has-close]="openRunes().includes(activeRuneIdValue)"
+      [class.has-reload]="activeRuneIdValue === 'bitcoin-price' || activeRuneIdValue === 'weather'">
+      @if (activeRuneIdValue === 'bitcoin-price') {
+      <button mat-icon-button class="rune-header-action-button" [disabled]="bitcoinPrice().loading"
+        (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
+        <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+      </button>
+      } @else if (activeRuneIdValue === 'weather') {
+      <button mat-icon-button class="rune-header-action-button" [disabled]="weather().loading" (click)="reloadWeather()"
+        aria-label="Reload weather">
+        <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
+      </button>
+      }
       @if (activeRuneIdValue === 'bitcoin-price' || activeRuneIdValue === 'weather') {
       <span class="flyout-updated">
         Updated: {{ formatUpdatedAt(activeRuneIdValue === 'bitcoin-price' ? bitcoinPrice().updatedAt :
@@ -237,12 +250,6 @@
           {{ formatRoundedCurrency(bitcoinPrice().eur, '€') }}
         </span>
       </div>
-      <div class="btc-meta-row">
-        <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
-          (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
-          <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
-        </button>
-      </div>
       @if (bitcoinPrice().error) {
       <div class="rune-error">{{ bitcoinPrice().error }}</div>
       }
@@ -262,10 +269,6 @@
           <div class="weather-condition">{{ weatherConditionLabel() }}</div>
           <div class="weather-location">{{ weather().locationLabel }}</div>
         </div>
-        <button mat-icon-button class="weather-reload-button" [disabled]="weather().loading" (click)="reloadWeather()"
-          aria-label="Reload weather">
-          <mat-icon>{{ weather().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
-        </button>
       </div>
 
       <div class="weather-metrics">
@@ -384,7 +387,6 @@
 
   @if (settingsPreviewVisible()) {
   <div class="rune-flyout" [class.pinned]="settingsOpen()" [class.rune-hover-preview]="!settingsOpen()"
-    [class.rune-settings-preview]="!settingsOpen()"
     [style.top.px]="settingsOpen() ? null : settingsPreviewPosition()?.top"
     [style.right.px]="settingsOpen() ? null : settingsPreviewPosition()?.right" (mouseenter)="onSettingsFlyoutEnter()"
     (mouseleave)="onSettingsFlyoutLeave()">

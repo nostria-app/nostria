@@ -531,6 +531,10 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected closeRune(runeId: RuneId): void {
     this.runesSettings.setRuneOpen(runeId, false);
+    this.clearHoverHideTimer();
+    this.isFlyoutHovered.set(false);
+    this.hoveredRuneId.set(null);
+    this.hoverPreviewPosition.set(null);
   }
 
   protected isRuneActive(runeId: RuneId): boolean {
