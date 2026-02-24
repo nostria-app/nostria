@@ -454,7 +454,7 @@
   @media (max-width: 699px) {
     padding-left: 4px;
     padding-right: 4px;
-    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
   }
 
   // Android standalone PWA - add extra bottom padding for navigation bar
@@ -464,7 +464,7 @@
     }
 
     :host-context(html:not([data-platform="android"])) & {
-      padding-bottom: 88px;
+      padding-bottom: 80px;
     }
   }
 }
