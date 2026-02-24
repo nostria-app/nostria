@@ -152,11 +152,15 @@
                 <mat-icon>queue_music</mat-icon>
                 <span>Queue</span>
               </button>
+              @if (isMusicTrack()) {
               <button mat-menu-item (click)="toggleExpanded()">
-                <mat-icon>{{ isMusicTrack() ? (layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less') :
-                  'open_in_full' }}</mat-icon>
-                <span>{{ isMusicTrack() ? (layout.expandedMediaPlayer() ? 'Collapse playlist' : 'Expand playlist') :
-                  'Fullscreen' }}</span>
+                <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
+                <span>{{ layout.expandedMediaPlayer() ? 'Collapse playlist' : 'Expand playlist' }}</span>
+              </button>
+              }
+              <button mat-menu-item (click)="toggleFullscreen()">
+                <mat-icon>open_in_full</mat-icon>
+                <span>Fullscreen</span>
               </button>
               <button mat-menu-item (click)="media.exit()">
                 <mat-icon>close</mat-icon>
@@ -213,6 +217,16 @@
           <button mat-menu-item routerLink="/queue">
             <mat-icon>queue_music</mat-icon>
             <span>Queue</span>
+          </button>
+          @if (isMusicTrack()) {
+          <button mat-menu-item (click)="toggleExpanded()">
+            <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
+            <span>{{ layout.expandedMediaPlayer() ? 'Collapse playlist' : 'Expand playlist' }}</span>
+          </button>
+          }
+          <button mat-menu-item (click)="toggleFullscreen()">
+            <mat-icon>open_in_full</mat-icon>
+            <span>Fullscreen</span>
           </button>
 
           <mat-menu #speedMenuDesktop="matMenu">

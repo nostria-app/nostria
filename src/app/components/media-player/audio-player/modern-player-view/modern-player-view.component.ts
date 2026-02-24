@@ -126,36 +126,6 @@ export class ModernPlayerViewComponent {
     }
   }
 
-  onSwipe(event: SwipeEvent): void {
-    // Disable gestures when lyrics are showing to prevent interference while scrolling
-    if (this.showLyrics()) return;
-
-    switch (event.direction) {
-      case 'left':
-        if (this.media.canNext()) this.media.next();
-        break;
-      case 'right':
-        if (this.media.canPrevious()) this.media.previous();
-        break;
-      case 'down':
-        this.openQueue.emit();
-        break;
-    }
-  }
-
-  onSwipeProgress(event: SwipeProgressEvent): void {
-    // Disable gestures when lyrics are showing
-    if (this.showLyrics()) return;
-
-    if (event.direction === 'vertical' && event.deltaY > 0) {
-      this.queueDragProgress.emit(event.deltaY);
-    }
-  }
-
-  onSwipeEnd(): void {
-    this.queueDragEnd.emit();
-  }
-
   onVolumeChange(value: number): void {
     if (this.media.audio) {
       this.media.audio.volume = value / 100;
