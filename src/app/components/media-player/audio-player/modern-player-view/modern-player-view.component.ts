@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
+import { PlatformService } from '../../../../services/platform.service';
 import { formatDuration } from '../../../../utils/format-duration';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
@@ -47,10 +48,12 @@ import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../../
 })
 export class ModernPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
+  private readonly platform = inject(PlatformService);
 
   openQueue = output<void>();
   queueDragProgress = output<number>();
   queueDragEnd = output<void>();
+  isIosSafeEffects = computed(() => this.platform.isIOS());
 
   // Track change animation state
   contentState = signal<'visible' | 'hidden'>('visible');
@@ -82,6 +85,16 @@ export class ModernPlayerViewComponent {
       const lastId = this.lastTrackId();
 
       if (lastId !== null && currentId !== lastId) {
+        if (this.isIosSafeEffects()) {
+          this.lastTrackId.set(currentId);
+          this.displayedArtwork.set(current?.artwork);
+          this.displayedTitle.set(current?.title || 'Unknown Track');
+          this.displayedArtist.set(current?.artist || 'Unknown Artist');
+          this.backgroundState.set('visible');
+          this.contentState.set('visible');
+          return;
+        }
+
         // Track changed - trigger fade animation
         this.contentState.set('hidden');
         this.backgroundState.set('hidden');

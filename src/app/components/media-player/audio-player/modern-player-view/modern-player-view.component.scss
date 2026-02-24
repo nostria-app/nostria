@@ -452,3 +452,30 @@
     letter-spacing: 1px;
   }
 }
+
+.modern-player.ios-safe-effects {
+  .background-glow {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+
+    .glow-image {
+      filter: none;
+      transform: none;
+      opacity: 0.2;
+      transition: none;
+    }
+  }
+
+  .album-container {
+    .album-glow-ring {
+      opacity: 0;
+      animation: none;
+      filter: none;
+    }
+
+    .album-art {
+      animation: none;
+    }
+  }
+}

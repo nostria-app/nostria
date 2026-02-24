@@ -1,5 +1,6 @@
-<div class="modern-player" appSwipeGesture [threshold]="60" [trackProgress]="true" [horizontalSwipe]="true"
-  [verticalSwipe]="true" (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
+<div class="modern-player" [class.ios-safe-effects]="isIosSafeEffects()" appSwipeGesture [threshold]="60"
+  [trackProgress]="true" [horizontalSwipe]="true" [verticalSwipe]="true" (swipe)="onSwipe($event)"
+  (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
   <!-- Blurred background glow -->
   @if (displayedArtwork()) {
   <div class="background-glow" [@fadeBackground]="backgroundState()">
