@@ -138,18 +138,6 @@
         <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button matTooltip="Next">
           <mat-icon>skip_next</mat-icon>
         </button>
-
-        @if (media.muted) {
-        <button matTooltip="Unmute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-          (volumeChange)="onVolumeChange($event)">
-          <mat-icon>volume_off</mat-icon>
-        </button>
-        } @else {
-        <button matTooltip="Mute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-          (volumeChange)="onVolumeChange($event)">
-          <mat-icon>volume_up</mat-icon>
-        </button>
-        }
       </div>
 
       <div class="media-timeline">

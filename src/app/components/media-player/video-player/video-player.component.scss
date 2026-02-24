@@ -376,15 +376,34 @@
 }
 
 .media-audio-controls {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
-  flex-shrink: 0;
-  margin-left: auto;
-  margin-right: 1rem;
+
+  @media (max-width: 1024px) {
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
-.media-timeline,
+.media-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 600px;
+  height: 20px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
 .video-timeline {
   display: flex;
   align-items: center;
