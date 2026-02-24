@@ -197,7 +197,11 @@
 }
 
 .chat-list {
-  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
+
+  @media (max-width: 699px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 
   // Ensure list items don't overflow
   ::ng-deep .mdc-list-item__content {
@@ -459,7 +463,13 @@
 
   // Android standalone PWA - add extra bottom padding for navigation bar
   @media (max-width: 699px) and (display-mode: standalone) {
-    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    :host-context(html[data-platform="android"]) & {
+      padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    }
+
+    :host-context(html:not([data-platform="android"])) & {
+      padding-bottom: 120px;
+    }
   }
 }
 
@@ -502,7 +512,13 @@
 
   // Android standalone PWA - add extra bottom padding for navigation bar
   @media (max-width: 699px) and (display-mode: standalone) {
-    bottom: max(32px, calc(8px + env(safe-area-inset-bottom, 0px)));
+    :host-context(html[data-platform="android"]) & {
+      bottom: max(32px, calc(8px + env(safe-area-inset-bottom, 0px)));
+    }
+
+    :host-context(html:not([data-platform="android"])) & {
+      bottom: 16px;
+    }
   }
 
   // When the keyboard is open (textarea focused), remove extra standalone lift

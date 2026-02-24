@@ -1835,6 +1835,17 @@ html[data-display-mode="standalone"]:not([data-platform="android"]) .mobile-nav 
   bottom: 16px !important;
 }
 
+// iOS standalone/PWA: align chat composer with the same bottom anchor as mobile nav.
+@media (max-width: 699px) {
+  html[data-display-mode="standalone"]:not([data-platform="android"]) app-messages .message-input-container {
+    bottom: 16px !important;
+  }
+
+  html[data-display-mode="standalone"]:not([data-platform="android"]) app-messages .message-list {
+    padding-bottom: 120px !important;
+  }
+}
+
 // Messages chat list - fix user-profile overflow in chat items
 app-messages {
   .chat-item .user-profile-custom-content {
