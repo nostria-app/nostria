@@ -552,93 +552,93 @@
 
 // Tiny tiles colors
 .tile-find-people {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid transparent;
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(156, 39, 176, 0.15);
 
   mat-icon {
     color: #9C27B0;
   }
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    border-color: rgba(156, 39, 176, 0.35);
   }
 }
 
 .tile-lists {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid transparent;
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.15);
 
   mat-icon {
     color: #2196F3;
   }
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    border-color: rgba(33, 150, 243, 0.35);
   }
 }
 
 .tile-polls {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid transparent;
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.15);
 
   mat-icon {
     color: #4CAF50;
   }
 
   &:hover {
-    background-color: var(--mat-sys-surface-container-high);
+    border-color: rgba(76, 175, 80, 0.35);
   }
 }
 
 .tile-playlists {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid rgba(156, 39, 176, 0.1);
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(156, 39, 176, 0.15);
 
   .tile-icon {
     color: #9C27B0;
   }
 
   &:hover {
-    border-color: rgba(156, 39, 176, 0.3);
+    border-color: rgba(156, 39, 176, 0.35);
   }
 }
 
 .tile-queue {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid rgba(63, 81, 181, 0.1);
+  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(63, 81, 181, 0.15);
 
   .tile-icon {
     color: #3F51B5;
   }
 
   &:hover {
-    border-color: rgba(63, 81, 181, 0.3);
+    border-color: rgba(63, 81, 181, 0.35);
   }
 }
 
 .tile-my-articles {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid rgba(96, 125, 139, 0.1);
+  background: linear-gradient(160deg, rgba(96, 125, 139, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(96, 125, 139, 0.15);
 
   .tile-icon {
     color: #607D8B;
   }
 
   &:hover {
-    border-color: rgba(96, 125, 139, 0.3);
+    border-color: rgba(96, 125, 139, 0.35);
   }
 }
 
 .tile-meetings {
-  background-color: var(--mat-sys-surface);
-  border: 1px solid rgba(76, 175, 80, 0.1);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.15);
 
   .tile-icon {
     color: #4CAF50;
   }
 
   &:hover {
-    border-color: rgba(76, 175, 80, 0.3);
+    border-color: rgba(76, 175, 80, 0.35);
   }
 }
 
