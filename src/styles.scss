@@ -79,6 +79,13 @@ html {
   --text-4xl: 2.25rem; // 36px at default
   --text-5xl: 3rem; // 48px at default
 
+  // Capped typography tokens for compact/fixed-size UI controls
+  // Use these for elements that cannot grow indefinitely (e.g. mobile nav labels)
+  // while still honoring user text scaling up to a safe maximum.
+  --text-2xs-capped-ui: min(var(--text-2xs), 12px);
+  --text-xs-capped-ui: min(var(--text-xs), 13px);
+  --text-sm-capped-ui: min(var(--text-sm), 14px);
+
   // Safe area inset with fallback for Android devices
   // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);

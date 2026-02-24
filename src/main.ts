@@ -70,6 +70,8 @@ async function getLocaleModule(locale: string) {
       return await import('@angular/common/locales/es');
     case 'fr':
       return await import('@angular/common/locales/fr');
+    case 'it':
+      return await import('@angular/common/locales/it');
     case 'fa':
       return await import('@angular/common/locales/fa');
     case 'ru':

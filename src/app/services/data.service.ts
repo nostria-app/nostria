@@ -111,6 +111,16 @@ export class DataService implements OnDestroy {
   }
 
   private asValidNostrEvent(event: unknown, context: string): Event | null {
+    // Defensive fallback: some relay wrapper paths may occasionally return [event]
+    // when a single event is expected.
+    if (Array.isArray(event)) {
+      const first = event[0];
+      if (event.length === 1 && this.isValidNostrEvent(first)) {
+        this.logger.debug(`[DataService] Received singleton event array in ${context}, unwrapping`);
+        return first;
+      }
+    }
+
     if (!this.isValidNostrEvent(event)) {
       this.logger.warn(`[DataService] Ignoring malformed event in ${context}:`, event);
       return null;

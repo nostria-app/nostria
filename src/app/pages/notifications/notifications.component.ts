@@ -41,6 +41,7 @@ import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
 import { TrustService } from '../../services/trust.service';
 import { Subscription } from 'rxjs';
+import { UserRelayService } from '../../services/relays/user-relay';
 
 /**
  * Local storage key for notification filter preferences
@@ -89,6 +90,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private trustService = inject(TrustService);
+  private userRelayService = inject(UserRelayService);
 
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
   @ViewChild(CdkVirtualScrollViewport)
@@ -408,8 +410,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   contentNotifications = computed(() => {
     const filters = this.notificationFilters();
     const mutedAccounts = this.accountState.mutedAccounts();
+    const followingList = this.accountState.followingList();
     // Convert to Set for O(1) lookups instead of O(n) array.includes()
     const mutedAccountsSet = new Set(mutedAccounts);
+    const followingAccountsSet = new Set(followingList);
     const query = this.searchQuery().toLowerCase().trim();
     const unreadOnly = this.showUnreadOnly();
     const wotLevel = this.wotFilterLevel();
@@ -433,7 +437,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           return false;
         }
 
-        if (contentNotif.authorPubkey && !this.passesWotRankFilter(trustRanks.get(contentNotif.authorPubkey), wotLevel)) {
+        if (
+          contentNotif.authorPubkey
+          && !this.passesWotRankFilter(
+            trustRanks.get(contentNotif.authorPubkey),
+            wotLevel,
+            followingAccountsSet.has(contentNotif.authorPubkey)
+          )
+        ) {
           return false;
         }
 
@@ -449,8 +460,16 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
-  private passesWotRankFilter(rank: number | null | undefined, level: WotFilterLevel): boolean {
+  private passesWotRankFilter(
+    rank: number | null | undefined,
+    level: WotFilterLevel,
+    isFollowingAuthor = false
+  ): boolean {
     if (level === 'off') {
+      return true;
+    }
+
+    if ((rank === null || rank === undefined || Number.isNaN(rank)) && isFollowingAuthor) {
       return true;
     }
 
@@ -795,7 +814,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   /**
      * Navigate to the event details page
      */
-  viewEvent(notification: Notification): void {
+  async viewEvent(notification: Notification): Promise<void> {
     const contentNotif = notification as ContentNotification;
 
     // Mark notification as read
@@ -829,10 +848,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         eventAuthor = contentNotif.authorPubkey;
       }
 
+      const relayHints = await this.getRelayHintsForNotification(contentNotif, eventAuthor);
+
       const neventId = nip19.neventEncode({
         id: contentNotif.eventId,
         author: eventAuthor,
         kind: contentNotif.kind,
+        relays: relayHints,
       });
 
       // Open event in right panel
@@ -847,6 +869,47 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // For profile zaps without zapReceiptId (legacy), navigate to recipient's profile
     if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
       this.layout.openProfile(contentNotif.metadata.recipientPubkey);
+    }
+  }
+
+  private async getRelayHintsForNotification(
+    notification: ContentNotification,
+    eventAuthor: string | undefined
+  ): Promise<string[] | undefined> {
+    const metadataRelayHints = notification.metadata?.relayHints;
+
+    if (Array.isArray(metadataRelayHints) && metadataRelayHints.length > 0) {
+      return metadataRelayHints.slice(0, 3);
+    }
+
+    if (!eventAuthor) {
+      return undefined;
+    }
+
+    try {
+      await this.userRelayService.ensureRelaysForPubkey(eventAuthor);
+      const relays = this.userRelayService.getRelaysForPubkey(eventAuthor).slice(0, 3);
+      return relays.length > 0 ? relays : undefined;
+    } catch (error) {
+      this.logger.debug('[Notifications] Failed to resolve relay hints for event navigation', error);
+      return undefined;
+    }
+  }
+
+  getRelayHintLabel(notification: Notification): string | undefined {
+    if (!this.isContentNotificationWithData(notification)) {
+      return undefined;
+    }
+
+    const relayHint = (notification as ContentNotification).metadata?.relayHints?.[0];
+    if (!relayHint) {
+      return undefined;
+    }
+
+    try {
+      return new URL(relayHint).hostname;
+    } catch {
+      return relayHint;
     }
   }
 

@@ -226,6 +226,10 @@
           <div class="notification-meta">
             <mat-icon class="time-icon">schedule</mat-icon>
             <span class="notification-time">{{ (notification.timestamp / 1000) | ago }}</span>
+            @if (getRelayHintLabel(notification); as relayHint) {
+            <mat-icon class="time-icon">dns</mat-icon>
+            <span class="notification-time">{{ relayHint }}</span>
+            }
           </div>
         </div>
 

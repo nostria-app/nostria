@@ -474,7 +474,9 @@
         }
         }
       </div>
-      <div class="message-input-container" [class.has-reply]="replyingToMessage()">
+      <div class="message-input-container" [class.has-reply]="replyingToMessage()"
+        [class.drag-over]="isDragOverMessageInput()" (dragover)="onMessageDragOver($event)"
+        (dragleave)="onMessageDragLeave($event)" (drop)="onMessageDrop($event)">
         @if (replyingToMessage()) {
         <div class="reply-preview">
           <div class="reply-preview-content">
@@ -553,7 +555,8 @@
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
-            (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" rows="1"></textarea>
+            (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)"
+            rows="1"></textarea>
           @if (isVoiceListening()) {
           <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
             [disabled]="isSending()" matTooltip="Stop recording">

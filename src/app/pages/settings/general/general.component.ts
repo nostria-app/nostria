@@ -92,6 +92,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     { code: 'es', name: 'Español' },
     { code: 'fa', name: 'فارسی' },
     { code: 'fr', name: 'Français' },
+    { code: 'it', name: 'Italiano' },
     { code: 'no', name: 'Norsk' },
     { code: 'ru', name: 'Русский' },
     { code: 'sw', name: 'Kiswahili' },

@@ -9,6 +9,7 @@ import { kinds, nip19, nip57, Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
+import { UserRelayService } from './relays/user-relay';
 
 /**
  * Query limits for fetching notifications from relays
@@ -46,6 +47,7 @@ export class ContentNotificationService implements OnDestroy {
   private database = inject(DatabaseService);
   private platformId = inject(PLATFORM_ID);
   private localSettings = inject(LocalSettingsService);
+  private userRelayService = inject(UserRelayService);
 
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -554,6 +556,7 @@ export class ContentNotificationService implements OnDestroy {
       recipientPubkey: pubkey,
       eventId: event.id,
       kind: 3,
+      sourceEvent: event,
       timestamp: event.created_at * 1000,
     });
 
@@ -605,6 +608,7 @@ export class ContentNotificationService implements OnDestroy {
             recipientPubkey: pubkey,
             eventId: event.id,
             kind: 1,
+            sourceEvent: event,
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
@@ -659,6 +663,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: event.id,
           kind: 6,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
         });
       }
@@ -718,6 +723,7 @@ export class ContentNotificationService implements OnDestroy {
             recipientPubkey: pubkey,
             eventId: event.id,
             kind: 1,
+            sourceEvent: event,
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
@@ -826,6 +832,7 @@ export class ContentNotificationService implements OnDestroy {
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId, // Use the event being reacted to, not the reaction event
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
             reactionContent,
@@ -929,6 +936,7 @@ export class ContentNotificationService implements OnDestroy {
           authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
           recipientPubkey: pubkey, // The account that received this zap
           eventId: zapRequestEventId, // Use the zapped event ID (undefined for profile zaps)
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
             zapAmount,
@@ -955,12 +963,14 @@ export class ContentNotificationService implements OnDestroy {
     recipientPubkey: string; // The account that received this notification
     eventId?: string;
     kind?: number;
+    sourceEvent?: Event;
     timestamp: number;
     metadata?: {
       content?: string;
       reactionContent?: string;
       reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
       customEmojiUrl?: string; // For reactions, the custom emoji image URL (NIP-30)
+      relayHints?: string[];
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)
@@ -1014,6 +1024,8 @@ export class ContentNotificationService implements OnDestroy {
       return;
     }
 
+    const relayHints = await this.getRelayHintsForAuthor(data.authorPubkey);
+
     const notification: ContentNotification = {
       id: notificationId,
       type: data.type,
@@ -1025,14 +1037,37 @@ export class ContentNotificationService implements OnDestroy {
       authorPubkey: data.authorPubkey,
       eventId: data.eventId,
       kind: data.kind,
-      metadata: data.metadata,
+      metadata: {
+        ...data.metadata,
+        relayHints: data.metadata?.relayHints ?? relayHints,
+      },
     };
+
+    // Persist the source event so notification clicks can resolve immediately from local storage.
+    if (data.sourceEvent) {
+      try {
+        await this.database.saveEvent(data.sourceEvent);
+      } catch (error) {
+        this.logger.debug('Failed to persist source event for notification', error);
+      }
+    }
 
     // Add to notification service (which handles storage)
     this.notificationService.addNotification(notification);
     await this.notificationService.persistNotificationToStorage(notification);
 
     this.logger.debug(`Created content notification: ${notification.id}`);
+  }
+
+  private async getRelayHintsForAuthor(pubkey: string): Promise<string[] | undefined> {
+    try {
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+      const relays = this.userRelayService.getRelaysForPubkey(pubkey).slice(0, 3);
+      return relays.length > 0 ? relays : undefined;
+    } catch (error) {
+      this.logger.debug('Failed to resolve relay hints for notification author', error);
+      return undefined;
+    }
   }
 
   /**
@@ -1223,6 +1258,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: event.id,
           kind: 1,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
         });
       }
@@ -1263,6 +1299,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: eTag?.[1] || event.id,
           kind: event.kind,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
         });
       }
@@ -1307,6 +1344,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: replyToTag?.[1] || event.id,
           kind: 1,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
         });
       }
@@ -1399,6 +1437,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: reactedEventId || event.id,
           kind: 7,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
             reactionContent,
@@ -1479,6 +1518,7 @@ export class ContentNotificationService implements OnDestroy {
           recipientPubkey: pubkey,
           eventId: zapRequestEventId,
           kind: 9735,
+          sourceEvent: event,
           timestamp: event.created_at * 1000,
           metadata: {
             zapAmount,
