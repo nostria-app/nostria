@@ -10,6 +10,12 @@ export interface WeatherLocationPreference {
   label: string;
 }
 
+export interface CachedBitcoinPrice {
+  usd: number;
+  eur: number;
+  updatedAt: number;
+}
+
 export interface RunesSettings {
   runeOrder: RuneId[];
   enabledRunes: RuneId[];
@@ -20,6 +26,7 @@ export interface RunesSettings {
 }
 
 const STORAGE_KEY = 'nostria-runes-settings-v1';
+const BITCOIN_PRICE_CACHE_KEY = 'nostria-bitcoin-price-cache';
 
 const ALL_RUNES: RuneId[] = ['bitcoin-price', 'weather', 'nostr-swiss-knife', 'music-favorites'];
 const ALL_SIDEBAR_WIDGETS: SidebarWidgetId[] = ['favorites', 'runes'];

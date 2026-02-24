@@ -105,4 +105,19 @@ describe('MediaPlayerService expanded state switching', () => {
 
     expect(layoutMock.expandedMediaPlayer()).toBe(true);
   });
+
+  it('uses anonymous CORS for same-origin audio sources', () => {
+    const shouldUseCors = (service as any).shouldUseAnonymousCorsForAudio('/assets/track.mp3');
+    expect(shouldUseCors).toBe(true);
+  });
+
+  it('does not use anonymous CORS for external-origin audio sources', () => {
+    const shouldUseCors = (service as any).shouldUseAnonymousCorsForAudio('https://example.com/track.mp3');
+    expect(shouldUseCors).toBe(false);
+  });
+
+  it('does not use anonymous CORS for blob audio sources', () => {
+    const shouldUseCors = (service as any).shouldUseAnonymousCorsForAudio('blob:https://nostria.app/1234');
+    expect(shouldUseCors).toBe(false);
+  });
 });

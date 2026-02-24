@@ -44,6 +44,8 @@ export class MediaPlayerService implements OnInitialized {
   private podcastPositions = signal<Record<string, PodcastProgress>>({});
   // Track current blob URL for cleanup to prevent memory leaks
   private currentBlobUrl?: string;
+  // Track sources where we've already retried without CORS to avoid loops
+  private audioCorsFallbackRetriedSources = new Set<string>();
   // make index a signal-backed property so computed signals can react to changes
   private _index = signal<number>(0);
   get index(): number {
@@ -979,6 +981,102 @@ export class MediaPlayerService implements OnInitialized {
     }
   };
 
+  private shouldUseAnonymousCorsForAudio(source: string): boolean {
+    if (!source) return false;
+
+    const normalizedSource = source.toLowerCase();
+
+    if (
+      normalizedSource.startsWith('blob:')
+      || normalizedSource.startsWith('data:')
+      || normalizedSource.startsWith('file:')
+    ) {
+      return false;
+    }
+
+    if (!(normalizedSource.startsWith('http://') || normalizedSource.startsWith('https://') || normalizedSource.startsWith('/'))) {
+      return false;
+    }
+
+    if (!this.app.isBrowser()) {
+      return false;
+    }
+
+    try {
+      const resolved = new URL(source, window.location.origin);
+      return resolved.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  private setAudioCrossOrigin(audioElement: HTMLAudioElement, source: string, preferAnonymousCors = true): void {
+    if (preferAnonymousCors && this.shouldUseAnonymousCorsForAudio(source)) {
+      audioElement.crossOrigin = 'anonymous';
+      return;
+    }
+
+    audioElement.crossOrigin = null;
+  }
+
+  private shouldResolveAudioUrlViaFetch(source: string): boolean {
+    if (!source || !this.app.isBrowser()) {
+      return false;
+    }
+
+    const normalizedSource = source.toLowerCase();
+    if (
+      normalizedSource.startsWith('blob:')
+      || normalizedSource.startsWith('data:')
+      || normalizedSource.startsWith('file:')
+    ) {
+      return false;
+    }
+
+    try {
+      const resolved = new URL(source, window.location.origin);
+      return resolved.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  private handleAudioError = async (event: Event): Promise<void> => {
+    if (!this.audio) {
+      return;
+    }
+
+    const currentSource = this.audio.src;
+
+    console.error('Audio playback error:', event);
+    console.error('Audio error code:', this.audio.error?.code);
+    console.error('Audio error message:', this.audio.error?.message);
+    console.error('Audio source:', currentSource);
+
+    const canRetryWithoutCors = this.audio.crossOrigin === 'anonymous'
+      && this.shouldUseAnonymousCorsForAudio(currentSource)
+      && !this.audioCorsFallbackRetriedSources.has(currentSource);
+
+    if (!canRetryWithoutCors) {
+      return;
+    }
+
+    this.audioCorsFallbackRetriedSources.add(currentSource);
+    console.warn('Retrying audio playback without CORS mode for source:', currentSource);
+
+    try {
+      this.audio.pause();
+      this.setAudioCrossOrigin(this.audio, currentSource, false);
+      this.audio.src = '';
+      this.audio.src = currentSource;
+      this.audio.load();
+      await this.audio.play();
+      this._isPaused.set(false);
+    } catch (retryError) {
+      console.error('Audio retry without CORS mode failed:', retryError);
+    }
+  };
+
   private handleTimeUpdate = () => {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
@@ -1118,6 +1216,7 @@ export class MediaPlayerService implements OnInitialized {
       // Remove event listeners from previous audio element
       if (this.audio) {
         this.audio.removeEventListener('ended', this.handleMediaEnded);
+        this.audio.removeEventListener('error', this.handleAudioError);
       }
 
       // Check if this track is available offline and use cached URL if so
@@ -1136,17 +1235,18 @@ export class MediaPlayerService implements OnInitialized {
       // For podcasts and other audio, resolve redirects and get actual content-type
       // This fixes issues where URLs redirect to files with generic extensions like .bin
       if (file.type === 'Podcast' || file.type === 'Music') {
-        try {
-          audioSource = await this.resolveAudioUrl(audioSource);
-        } catch (err) {
-          console.warn('Failed to resolve audio URL, using original source:', err);
+        if (this.shouldResolveAudioUrlViaFetch(audioSource)) {
+          try {
+            audioSource = await this.resolveAudioUrl(audioSource);
+          } catch (err) {
+            console.warn('Failed to resolve audio URL, using original source:', err);
+          }
         }
       }
 
       if (!this.audio) {
         this.audio = new Audio();
-        // Set crossOrigin BEFORE setting src to allow Web Audio API (equalizer) to process the audio
-        this.audio.crossOrigin = 'anonymous';
+        this.setAudioCrossOrigin(this.audio, audioSource);
         this.audio.src = audioSource;
         this.audio.addEventListener('ratechange', () => {
           if (this.audio) {
@@ -1154,10 +1254,11 @@ export class MediaPlayerService implements OnInitialized {
           }
         });
       } else {
-        // crossOrigin must be set before src for CORS to work properly
-        this.audio.crossOrigin = 'anonymous';
+        this.setAudioCrossOrigin(this.audio, audioSource);
         this.audio.src = audioSource;
       }
+
+      this.audioCorsFallbackRetriedSources.delete(this.audio.src);
 
       // Sync signal
       this.playbackRate.set(this.audio.playbackRate);
@@ -1166,12 +1267,7 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.addEventListener('ended', this.handleMediaEnded);
       this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
       this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
-      this.audio.addEventListener('error', (e) => {
-        console.error('Audio playback error:', e);
-        console.error('Audio error code:', this.audio?.error?.code);
-        console.error('Audio error message:', this.audio?.error?.message);
-        console.error('Audio source:', this.audio?.src);
-      });
+      this.audio.addEventListener('error', this.handleAudioError);
 
       console.log('Starting audio playback for:', file.source);
       await this.audio.play();
@@ -1368,6 +1464,7 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.removeEventListener('ended', this.handleMediaEnded);
       this.audio.removeEventListener('timeupdate', this.handleTimeUpdate);
       this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
+      this.audio.removeEventListener('error', this.handleAudioError);
     }
 
     // Cleanup HLS instance
@@ -1720,6 +1817,7 @@ export class MediaPlayerService implements OnInitialized {
     // Reset audio
     if (this.audio) {
       this.audio.removeEventListener('ended', this.handleMediaEnded);
+      this.audio.removeEventListener('error', this.handleAudioError);
       this.audio.pause();
       this.audio.src = '';
       this.audio = undefined;
