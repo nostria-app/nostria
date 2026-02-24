@@ -115,12 +115,12 @@
 
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
-          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your mind?") }}</mat-label>
+          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your
+            mind?") }}</mat-label>
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
             (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
             [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
-            [rows]="inlineMode() ? 3 : 4" class="content-textarea"
-            #contentTextarea>
+            [rows]="inlineMode() ? 3 : 4" class="content-textarea" #contentTextarea>
           </textarea>
           <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
         </mat-form-field>
@@ -317,7 +317,6 @@
     <!-- Mentions -->
     @if (visibleMentions().length > 0 && !showAdvancedOptions()) {
     <div class="mentions-section">
-      <span class="mentions-label">Mentioning:</span>
       <mat-chip-set class="mentions-chips">
         @for (mention of visibleMentions(); track mention) {
         <mat-chip [removable]="true" (removed)="removeMention(mention)">
@@ -371,11 +370,12 @@
     <div class="left-actions">
       @if (!inlineMode()) {
       <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
+        [disabled]="showAdvancedOptions()" [class.button-disabled-visible]="showAdvancedOptions()"
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty()"
-        [class.button-disabled-visible]="!isDirty()" matTooltip="Clear draft">
+      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty() || showAdvancedOptions()"
+        [class.button-disabled-visible]="!isDirty() || showAdvancedOptions()" matTooltip="Clear draft">
         <mat-icon>delete_sweep</mat-icon>
       </button>
       }
@@ -401,15 +401,14 @@
       @if (layout.isHandset()) {
       <button mat-icon-button type="button"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()"
-        matTooltip="Emoji" (click)="openEmojiPickerDialog()">
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji"
+        (click)="openEmojiPickerDialog()">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       } @else {
       <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()"
-        matTooltip="Emoji">
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
@@ -420,6 +419,7 @@
       <!-- Dictation button (shown in both dialog and inline modes) -->
       <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
         @if (isTranscribing()) {
         <mat-icon class="spinning">sync</mat-icon>
@@ -432,6 +432,7 @@
       @if (recordingHistory.length > 0) {
       <button mat-icon-button type="button" (click)="undoLastRecording()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         matTooltip="Undo last recording">
         <mat-icon>undo</mat-icon>
       </button>

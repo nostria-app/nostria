@@ -236,6 +236,7 @@
     }
 
     ::ng-deep {
+
       // Ensure all wrapper elements are full width
       .mat-mdc-text-field-wrapper {
         overflow: visible;
@@ -299,7 +300,6 @@
     .content-textarea {
       resize: none;
       overflow-y: auto;
-      min-height: 200px;
       max-height: 500px;
       height: auto;
       width: 100% !important;
@@ -320,34 +320,18 @@
   .mentions-section {
     position: relative;
     z-index: 1;
-    margin-top: 8px;
+    margin-top: 4px;
     margin-bottom: 16px;
 
     @media (max-width: 600px),
     (max-height: 700px) {
       margin-bottom: 12px;
-      margin-top: 6px;
+      margin-top: 2px;
     }
 
     @media (max-width: 400px) {
       margin-bottom: 8px;
-      margin-top: 4px;
-    }
-
-    .mentions-label {
-      display: block;
-      font-size: 12px;
-      color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 8px;
-
-      @media (max-width: 600px),
-      (max-height: 700px) {
-        margin-bottom: 6px;
-      }
-
-      @media (max-width: 400px) {
-        margin-bottom: 4px;
-      }
+      margin-top: 2px;
     }
 
     .mentions-chips {
@@ -439,9 +423,7 @@
 
     .dialog-content {
       .content-field {
-        .content-textarea {
-          min-height: 60px;
-        }
+        .content-textarea {}
       }
 
       .upload-actions {
@@ -608,6 +590,7 @@
 
       // Ensure all Material form field internals are full width
       ::ng-deep {
+
         .mat-mdc-text-field-wrapper,
         .mat-mdc-form-field-flex,
         .mat-mdc-form-field-infix {
@@ -1183,6 +1166,7 @@
       width: 100% !important;
 
       ::ng-deep {
+
         .mat-mdc-text-field-wrapper,
         .mat-mdc-form-field-flex,
         .mat-mdc-form-field-infix,
@@ -1272,7 +1256,7 @@
   .mentions-section,
   .hashtags-section {
     margin-bottom: 4px;
-    
+
     .mentions-label,
     .hashtags-label {
       font-size: 11px;

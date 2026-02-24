@@ -1891,7 +1891,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Get computed style for min/max height
     const computedStyle = window.getComputedStyle(textarea);
-    const minHeight = parseInt(computedStyle.minHeight, 10) || 200;
+    const cssMinHeight = Number.parseFloat(computedStyle.minHeight);
+    const minHeight = Number.isFinite(cssMinHeight) && cssMinHeight > 0
+      ? cssMinHeight
+      : (this.inlineMode() ? 60 : 96);
     const maxHeight = this.inlineMode() ? 200 : 500; // Max height for inline vs dialog mode
 
     // Calculate the new height based on scrollHeight
