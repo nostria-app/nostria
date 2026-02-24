@@ -722,7 +722,7 @@
   gap: 4px;
   margin-left: auto;
   flex: 0 0 auto;
-  padding: 4px 8px;
+  padding: 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -787,6 +787,22 @@
 
   .bookmark-action {
     display: none;
+  }
+
+  .emoji-indicators {
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
+    align-self: center;
+    margin-right: -2px;
+  }
+
+  .emoji-indicators .emoji-more {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
   }
 }
 
