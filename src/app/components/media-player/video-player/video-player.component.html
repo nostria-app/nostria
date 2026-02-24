@@ -1,9 +1,10 @@
 <div class="video-player-container" [class.footer-mode]="footer()" [class.fullscreen-mode]="!footer()"
   [class.footer-expanded-mode]="footer() && layout.expandedMediaPlayer()" [class.cursor-hidden]="cursorHidden()">
 
-  <div class="video-wrapper" [class.footer-preview]="footer()" [class.footer-expanded]="footer() && layout.expandedMediaPlayer()"
-    (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
-    (mousemove)="onVideoContainerMouseMove()" (touchstart)="onVideoContainerTouchStart()">
+  <div class="video-wrapper" [class.footer-preview]="footer()"
+    [class.footer-expanded]="footer() && layout.expandedMediaPlayer()" (mouseenter)="onVideoContainerMouseEnter()"
+    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()"
+    (touchstart)="onVideoContainerTouchStart()">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
       (error)="onVideoError($event)" (click)="onPlayPause()"></video>
 
@@ -20,7 +21,8 @@
   <!-- Header overlay -->
   <div class="video-header">
     <div class="video-info">
-      <h2 class="video-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{ media.current()?.title || 'Video' }}</h2>
+      <h2 class="video-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{ media.current()?.title
+        || 'Video' }}</h2>
       @if (media.current()?.artist) {
       <div class="video-artist clickable" (click)="goToArtist()" [class.has-link]="hasArtistLink()">
         @if (isNpubArtist(media.current()?.artist)) {
@@ -76,18 +78,6 @@
       <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button matTooltip="Next">
         <mat-icon>skip_next</mat-icon>
       </button>
-
-      @if (media.muted) {
-      <button matTooltip="Unmute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-        (volumeChange)="onVolumeChange($event)">
-        <mat-icon>volume_off</mat-icon>
-      </button>
-      } @else {
-      <button matTooltip="Mute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-        (volumeChange)="onVolumeChange($event)">
-        <mat-icon>volume_up</mat-icon>
-      </button>
-      }
     </div>
 
     <div class="control-actions">
@@ -116,7 +106,8 @@
   } @else {
   <div class="footer-content" [class.expanded-mode]="layout.expandedMediaPlayer()">
     <div class="media-info">
-      <div class="media-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{ media.current()?.title || 'Video' }}</div>
+      <div class="media-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{ media.current()?.title
+        || 'Video' }}</div>
       @if (media.current()?.artist) {
       <div class="media-artist clickable" (click)="goToArtist()" [class.has-link]="hasArtistLink()">
         @if (isNpubArtist(media.current()?.artist)) {
@@ -181,10 +172,7 @@
         (click)="toggleExpand()">
         <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
       </button>
-      <button class="hide-small" mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
-        <mat-icon>open_in_full</mat-icon>
-      </button>
-      <button class="hide-small" mat-icon-button matTooltip="Close" (click)="media.exit()">
+      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
