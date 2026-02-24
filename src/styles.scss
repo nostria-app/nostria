@@ -189,13 +189,9 @@ mat-nav-list,
 // Android PWA safe area - ensure content doesn't overlap system navigation
 // Uses padding-bottom on html to push all content up
 @media all and (display-mode: standalone) {
-  html {
-    // Add bottom padding for Android gesture navigation bar (~48px typical height)
-    // This ensures the app renders above the system nav bar
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
 
-  // For Android specifically where env() returns 0
+  // Android specifically: gesture navigation can overlap fixed UI,
+  // and some devices report env(safe-area-inset-bottom) as 0.
   html[data-platform="android"] {
     padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
   }
