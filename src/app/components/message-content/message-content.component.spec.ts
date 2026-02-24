@@ -136,5 +136,17 @@ describe('MessageContentComponent', () => {
       const inlinePlayer = fixture.nativeElement.querySelector('app-inline-video-player');
       expect(inlinePlayer).toBeTruthy();
     });
+
+    it('should render image and trailing text when URL is followed by blank line', () => {
+      hostComponent.content = 'https://example.com/image.webp\n\nHello after image';
+      fixture.detectChanges();
+
+      const image = fixture.nativeElement.querySelector('.message-image');
+      expect(image).toBeTruthy();
+
+      const textNodes = Array.from(fixture.nativeElement.querySelectorAll('.text-content')) as HTMLElement[];
+      const hasTrailingText = textNodes.some(node => node.textContent?.includes('Hello after image'));
+      expect(hasTrailingText).toBeTrue();
+    });
   });
 });

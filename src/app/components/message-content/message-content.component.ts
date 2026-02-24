@@ -533,19 +533,16 @@ export class MessageContentComponent {
 
     const parts: ContentPart[] = [];
 
-    // First, replace line breaks with a placeholder
-    const textWithLinebreaks = text.replace(/\n/g, '##LINEBREAK##');
-
     // Split by nostr URIs and URLs
     const combinedRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
 
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
-    while ((match = combinedRegex.exec(textWithLinebreaks)) !== null) {
+    while ((match = combinedRegex.exec(text)) !== null) {
       // Add text before this match (may contain linebreaks)
       if (match.index > lastIndex) {
-        const textBefore = textWithLinebreaks.substring(lastIndex, match.index);
+        const textBefore = text.substring(lastIndex, match.index);
         this.addTextWithLinebreaks(parts, textBefore);
       }
 
@@ -594,8 +591,8 @@ export class MessageContentComponent {
     }
 
     // Add remaining text (may contain linebreaks)
-    if (lastIndex < textWithLinebreaks.length) {
-      const remainingText = textWithLinebreaks.substring(lastIndex);
+    if (lastIndex < text.length) {
+      const remainingText = text.substring(lastIndex);
       this.addTextWithLinebreaks(parts, remainingText);
     }
 
@@ -603,8 +600,8 @@ export class MessageContentComponent {
   });
 
   private addTextWithLinebreaks(parts: ContentPart[], text: string): void {
-    // Split by linebreak placeholder and add parts
-    const segments = text.split('##LINEBREAK##');
+    // Split by linebreaks and add parts
+    const segments = text.split(/\r?\n/);
     for (let i = 0; i < segments.length; i++) {
       if (segments[i]) {
         parts.push({
