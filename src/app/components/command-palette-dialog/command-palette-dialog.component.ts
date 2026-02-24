@@ -214,7 +214,9 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'play_circle',
       action: () => {
         if (!this.mediaPlayer.hasQueue()) {
-          this.snackBar.open('Media queue is empty', 'Close', { duration: 2500 });
+          this.snackBar.open($localize`:@@commandPalette.mediaPlayer.emptyQueue:Media queue is empty`, 'Close', {
+            duration: 2500,
+          });
           return;
         }
 
