@@ -54,7 +54,7 @@
       var textScale = localStorage.getItem('nostria-text-scale');
       if (textScale) {
         var scale = parseFloat(textScale);
-        if (!isNaN(scale) && scale >= 0.85 && scale <= 1.3) {
+        if (!isNaN(scale) && scale >= 1.0 && scale <= 2.0) {
           document.documentElement.style.setProperty('--nostria-text-scale', scale);
         }
       }

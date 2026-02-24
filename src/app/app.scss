@@ -1186,6 +1186,12 @@ mat-sidenav-content {
         padding-bottom: 0;
       }
 
+      // Messages manages its own mobile bottom spacing for list/composer.
+      // Avoid panel-level bottom padding to prevent large empty area.
+      &:has(app-messages) {
+        padding-bottom: 0;
+      }
+
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;

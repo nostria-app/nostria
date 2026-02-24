@@ -199,10 +199,6 @@
 .chat-list {
   padding-bottom: 0;
 
-  @media (max-width: 699px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
-
   // Ensure list items don't overflow
   ::ng-deep .mdc-list-item__content {
     overflow: hidden;
@@ -451,7 +447,7 @@
   overflow-x: hidden;
   padding: 0 6px;
   padding-top: 88px; // Space for floating header
-  padding-bottom: 80px; // Space for floating input
+  padding-bottom: 64px; // Space for floating input (desktop)
   min-height: 0;
 
   // On smaller screens, add padding for the fixed input at the bottom (where mobile nav would be)
@@ -468,7 +464,7 @@
     }
 
     :host-context(html:not([data-platform="android"])) & {
-      padding-bottom: 120px;
+      padding-bottom: 88px;
     }
   }
 }
