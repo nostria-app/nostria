@@ -177,9 +177,12 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background-color: var(--mat-sys-primary);
+    background: linear-gradient(140deg, var(--mat-sys-primary) 0%, var(--mat-sys-primary-container) 100%);
     color: var(--mat-sys-on-primary);
     box-shadow: var(--mat-sys-level3);
+    border: 1px solid var(--mat-sys-outline-variant);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 
     &:hover:not(:disabled) {
