@@ -1436,15 +1436,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Handle keyboard events in the message input
-   * Desktop: Enter sends message, Shift+Enter adds newline
+   * Desktop: Enter (or Ctrl+Enter) sends message, Shift+Enter adds newline
    * Mobile: Enter adds newline (must use send button to send)
    */
   onMessageKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
-      // Check if this is a mobile/touch device
-      const isTouchDevice = this.layout.isHandset() || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      // Use layout handset detection only. Touch-capable desktops should still use desktop key behavior.
+      const isMobile = this.layout.isHandset();
 
-      if (isTouchDevice) {
+      if (isMobile) {
         // On mobile, Enter always creates a newline (let default behavior happen)
         // User must use the send button to send
         return;
