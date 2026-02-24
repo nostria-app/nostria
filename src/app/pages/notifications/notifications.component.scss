@@ -154,7 +154,7 @@
   flex: 1;
   min-height: 0; // Required for flex child to shrink properly
   width: 100%;
-  padding-bottom: 80px; // Space for mobile navigation menu
+  --notification-viewport-bottom-padding: 0px;
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
@@ -162,6 +162,8 @@
     margin: 0 auto;
     // Add padding at top for spacing
     padding-top: 16px;
+    // Keep bottom spacing inside scrollable content (not on viewport container)
+    padding-bottom: var(--notification-viewport-bottom-padding);
   }
 
   // Fixed height for virtual scrolling items only (94px content + 8px margin-bottom)
@@ -461,7 +463,7 @@
 
   // Read notifications - hide the accent bar, significantly muted
   &.read {
-    background: var(--mat-sys-surface-container);
+    background: inherit;
     border-color: transparent;
 
     &::before {
@@ -854,7 +856,7 @@
 
   // Adjust viewport for mobile - use flex sizing, add extra bottom padding
   .notification-viewport {
-    padding-bottom: 120px; // Extra space for mobile navigation menu
+    --notification-viewport-bottom-padding: calc(100px + env(safe-area-inset-bottom, 0px)); // Space for mobile navigation menu
   }
 
   .notification-list {
@@ -1043,7 +1045,7 @@
 
     // Read notifications in dark mode - much darker/more muted
     &.read {
-      background: var(--mat-sys-surface-container-lowest);
+      background: inherit;
       border-color: transparent;
     }
   }

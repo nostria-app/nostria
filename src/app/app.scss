@@ -1180,6 +1180,12 @@ mat-sidenav-content {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
       box-sizing: border-box;
 
+      // Notifications handles mobile menu spacing inside its own virtual scroll.
+      // Avoid adding panel-level bottom padding to prevent duplicate bottom gap.
+      &:has(app-notifications) {
+        padding-bottom: 0;
+      }
+
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;
@@ -1206,6 +1212,12 @@ mat-sidenav-content {
         overflow-y: auto;
         padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
         box-sizing: border-box;
+
+        // Notifications handles mobile menu spacing inside its own virtual scroll.
+        // Avoid adding panel-level bottom padding to prevent duplicate bottom gap.
+        &:has(app-notifications) {
+          padding-bottom: 0;
+        }
       }
     }
   }
