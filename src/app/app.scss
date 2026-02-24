@@ -1515,8 +1515,8 @@ mat-sidenav-content {
 
   // Glass effect background using Material 3 surface color
   background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent);
-  -webkit-backdrop-filter: blur(26px) saturate(1.85);
-  backdrop-filter: blur(26px) saturate(1.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent);
 
   // Inner .panel-header should not have its own sticky/background
@@ -1659,8 +1659,8 @@ mat-sidenav-content {
 
   // Glass effect
   background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent);
-  -webkit-backdrop-filter: blur(26px) saturate(1.85);
-  backdrop-filter: blur(26px) saturate(1.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
 
   // Subtle bottom border
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent);
@@ -1798,10 +1798,10 @@ mat-sidenav-content {
   border-radius: 28px;
 
   // Glass effect
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 42%, transparent);
-  -webkit-backdrop-filter: blur(22px) saturate(1.8);
-  backdrop-filter: blur(22px) saturate(1.8);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 58%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 34%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.9);
+  backdrop-filter: blur(28px) saturate(1.9);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
   box-shadow: var(--mat-sys-level1);
 
   /* Smooth transition for hide/show on scroll */
@@ -1832,8 +1832,8 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-nav {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 48%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 66%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 40%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
   box-shadow: var(--mat-sys-level1);
 
   a,

@@ -118,16 +118,15 @@ html {
 
   // Inverted surface hierarchy: background is lighter gray, cards/containers are darker
   // This makes cards appear "inset" against a softer dark background
-  @include mat.theme-overrides((
-    surface: #1a1a1a,
-    surface-dim: #141414,
-    surface-bright: #242424,
-    surface-container-lowest: #080808,
-    surface-container-low: #0d0d0d,
-    surface-container: #111111,
-    surface-container-high: #0a0a0a,
-    surface-container-highest: #080808,
-  ));
+  @include mat.theme-overrides((surface: #1a1a1a,
+      surface-dim: #141414,
+      surface-bright: #242424,
+      surface-container-lowest: #080808,
+      surface-container-low: #0d0d0d,
+      surface-container: #111111,
+      surface-container-high: #0a0a0a,
+      surface-container-highest: #080808,
+    ));
 
   --mat-app-background-color: #1a1a1a;
   --mat-sidenav-content-background-color: #1a1a1a;
@@ -1796,8 +1795,8 @@ app-media-queue {
 .left-panel .panel-header,
 .right-panel .panel-header {
   background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent) !important;
-  -webkit-backdrop-filter: blur(26px) saturate(1.85) !important;
-  backdrop-filter: blur(26px) saturate(1.85) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.8) !important;
+  backdrop-filter: blur(20px) saturate(1.8) !important;
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent) !important;
 }
 
@@ -1810,8 +1809,8 @@ app-media-queue {
 .left-panel .panel-header-wrapper,
 .right-panel .panel-header-wrapper {
   background-color: color-mix(in srgb, var(--mat-sys-surface) 32%, transparent) !important;
-  -webkit-backdrop-filter: blur(26px) saturate(1.85) !important;
-  backdrop-filter: blur(26px) saturate(1.85) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.8) !important;
+  backdrop-filter: blur(20px) saturate(1.8) !important;
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 48%, transparent) !important;
 }
 
