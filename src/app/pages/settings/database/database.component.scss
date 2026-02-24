@@ -4,7 +4,7 @@
 
 .content-medium {
   @media (max-width: 768px) {
-    padding-bottom: 80px;
+    padding-bottom: 64px;
   }
 }
 
@@ -207,7 +207,7 @@
     margin-top: 2px;
   }
 
-  > div {
+  >div {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -251,7 +251,7 @@
     border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
 
-  > div {
+  >div {
     flex: 1;
   }
 

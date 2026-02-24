@@ -157,6 +157,10 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
       padding: 16px;
       width: 100%;
       box-sizing: border-box;
+
+      @media (max-width: 768px) {
+        padding-bottom: 72px;
+      }
     }
 
     .search-section {
