@@ -57,7 +57,11 @@
     &.expanded-mode {
       // Video area height (~16:9 ratio for max-width 600px) + footer controls
       height: 400px;
-      border-radius: 16px;
+      border-radius: 16px 16px 32px 32px;
+
+      &.podcast-mode {
+        border-radius: 16px 16px 42px 42px;
+      }
 
       @media (max-width: 480px) {
         height: 320px;
@@ -752,7 +756,7 @@ app-stream-info-bar {
   height: 20px;
   cursor: nwse-resize;
   z-index: 10;
-  border-radius: 0 0 16px 0;
+  border-radius: 0 0 32px 0;
 
   &::after {
     content: '';

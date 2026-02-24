@@ -50,6 +50,14 @@
     :host-context(.podcast-mode) .audio-player-footer {
       height: 84px;
     }
+
+    .album-art {
+      border-radius: 0 0 0 32px;
+
+      :host-context(.podcast-mode) & {
+        border-radius: 0 0 0 42px;
+      }
+    }
   }
 }
 
@@ -692,7 +700,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 8px 0;
+  padding: 8px 8px 0 16px;
 }
 
 .expanded-queue-title {
