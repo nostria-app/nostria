@@ -19,15 +19,16 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { SwipeGestureDirective, SwipeEvent } from '../../../directives/swipe-gesture.directive';
 import { ModernPlayerViewComponent } from './modern-player-view/modern-player-view.component';
 import { CardsPlayerViewComponent } from './cards-player-view/cards-player-view.component';
 import { WinampPlayerViewComponent } from './winamp-player-view/winamp-player-view.component';
 import { PlaylistDrawerComponent } from './playlist-drawer/playlist-drawer.component';
 import { nip19 } from 'nostr-tools';
 import { formatDuration } from '../../../utils/format-duration';
+import { MediaItem } from '../../../interfaces';
 
 export type PlayerViewType = 'modern' | 'cards' | 'winamp';
+type TrackEntry = { track: MediaItem; index: number };
 
 @Component({
   selector: 'app-audio-player',
@@ -41,7 +42,6 @@ export type PlayerViewType = 'modern' | 'cards' | 'winamp';
     FormsModule,
     RouterModule,
     UserProfileComponent,
-    SwipeGestureDirective,
     ModernPlayerViewComponent,
     CardsPlayerViewComponent,
     WinampPlayerViewComponent,
@@ -128,7 +128,13 @@ export class AudioPlayerComponent {
   currentTime = computed(() => this.media.currentTimeSig());
   duration = computed(() => this.media.durationSig());
   isPodcast = computed(() => this.media.current()?.type === 'Podcast');
-  
+  isMusicTrack = computed(() => this.media.current()?.type === 'Music');
+  queue = computed(() => this.media.media());
+  currentIndex = computed(() => this.media.index);
+  playlistExpanded = computed(() => this.footer() && this.isMusicTrack() && this.layout.expandedMediaPlayer());
+  queueTrackEntries = computed<TrackEntry[]>(() => this.queue().map((track, index) => ({ track, index })));
+  visibleTrackEntries = computed(() => this.queueTrackEntries());
+
   // Proxied artwork for footer/minimized mode (smaller size for performance)
   footerArtwork = computed(() => {
     const artwork = this.media.current()?.artwork;
@@ -138,6 +144,8 @@ export class AudioPlayerComponent {
   });
 
   formatLabel = formatDuration;
+
+  constructor() { }
 
   onTimeChange(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -164,7 +172,32 @@ export class AudioPlayerComponent {
   }
 
   toggleExpanded(): void {
-    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+    if (!this.footer() || !this.isMusicTrack()) {
+      this.toggleFullscreen();
+      return;
+    }
+
+    this.layout.expandedMediaPlayer.set(!this.layout.expandedMediaPlayer());
+  }
+
+  playTrackFromQueue(index: number): void {
+    this.media.index = index;
+    void this.media.start();
+  }
+
+  removeTrackFromQueue(index: number, event: Event): void {
+    event.stopPropagation();
+
+    const queue = this.queue();
+    if (index < 0 || index >= queue.length) {
+      return;
+    }
+
+    this.media.dequeue(queue[index]);
+  }
+
+  clearEntireQueue(): void {
+    this.media.clearQueue();
   }
 
   close(): void {
@@ -212,17 +245,6 @@ export class AudioPlayerComponent {
     const current = this.media.current();
     if (current?.eventPubkey) {
       this.router.navigate(['/music/artist', current.eventPubkey]);
-    }
-  }
-
-  // Footer mode swipe handler
-  onFooterSwipe(event: SwipeEvent): void {
-    if (event.direction === 'up') {
-      this.toggleFullscreen();
-    } else if (event.direction === 'left' && this.media.canNext()) {
-      this.media.next();
-    } else if (event.direction === 'right' && this.media.canPrevious()) {
-      this.media.previous();
     }
   }
 

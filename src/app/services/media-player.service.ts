@@ -560,10 +560,22 @@ export class MediaPlayerService implements OnInitialized {
     return ['YouTube', 'Video', 'HLS', 'LiveKit', 'External'].includes(file.type);
   }
 
+  private resolveExpandedPlayerState(nextFile: MediaItem, previousFile?: MediaItem): boolean {
+    if (this.shouldAutoExpandForVideo(nextFile)) {
+      return true;
+    }
+
+    if (nextFile.type === 'Music') {
+      return this.layout.expandedMediaPlayer() && previousFile?.type === 'Music';
+    }
+
+    return false;
+  }
+
   play(file: MediaItem) {
+    const previousFile = this.current();
     this.layout.showMediaPlayer.set(true);
-    // Keep expanded state in sync with media type (music/podcast must stay mini)
-    this.layout.expandedMediaPlayer.set(this.shouldAutoExpandForVideo(file));
+    this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(file, previousFile));
 
     // Add the file to the queue
     this.media.update(files => [...files, file]);
@@ -1053,13 +1065,14 @@ export class MediaPlayerService implements OnInitialized {
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
+    const previousFile = this.current();
     this.current.set(file);
 
     // Reset video playback initialization flag for new media
     this.videoPlaybackInitialized = false;
 
     this.layout.showMediaPlayer.set(true);
-    this.layout.expandedMediaPlayer.set(this.shouldAutoExpandForVideo(file));
+    this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(file, previousFile));
 
     if (file.type === 'YouTube') {
       this.videoMode.set(true);

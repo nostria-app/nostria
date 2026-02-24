@@ -1,5 +1,4 @@
-<div class="winamp-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [trackProgress]="true"
-  (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
+<div class="winamp-player">
   <div class="winamp-content" [class.double-size]="doubleSize()">
     <!-- Main player window -->
     <div class="winamp-main">
@@ -200,7 +199,7 @@
           <div class="eq-band">
             <div class="slider-track">
               <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
-                (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
+                (input)="updateEqBand(i, $event)" orient="vertical" aria-label="Equalizer band"
                 [title]="freq + ' Hz: ' + (eqBands()[i] - 50 > 0 ? '+' : '') + ((eqBands()[i] - 50) / 50 * 12).toFixed(1) + ' dB'"
                 [class.disabled]="!eqEnabled()" />
               <div class="slider-fill" [style.height.%]="eqBands()[i]" [class.disabled]="!eqEnabled()"></div>

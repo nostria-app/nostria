@@ -15,7 +15,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
-import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { CircularProgressComponent } from '../circular-progress/circular-progress.component';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
@@ -26,7 +25,6 @@ import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    SwipeGestureDirective,
     CircularProgressComponent,
     LyricsViewComponent,
   ],

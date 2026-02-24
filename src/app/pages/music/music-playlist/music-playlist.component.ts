@@ -489,9 +489,20 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.tracks.set(orderedTracks);
   }
 
+  private getCurrentPlaylistSourceKey(): string | undefined {
+    const event = this.playlist();
+    if (!event) return undefined;
+
+    const playlistIdentifier = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!playlistIdentifier) return undefined;
+
+    return `${event.pubkey}:${playlistIdentifier}`;
+  }
+
   playAll(): void {
     const allTracks = this.tracks();
     if (allTracks.length === 0) return;
+    const playlistSourceKey = this.getCurrentPlaylistSourceKey();
 
     // Create media items for all tracks and play the first one
     for (let i = 0; i < allTracks.length; i++) {
@@ -510,6 +521,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
         type: 'Music',
+        playlistSourceKey,
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
         lyrics: this.utilities.extractLyricsFromEvent(track),
@@ -843,6 +855,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   playTrack(index: number): void {
     const allTracks = this.tracks();
     if (index < 0 || index >= allTracks.length) return;
+    const playlistSourceKey = this.getCurrentPlaylistSourceKey();
 
     // Play from this track and queue the rest
     for (let i = index; i < allTracks.length; i++) {
@@ -861,6 +874,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
         type: 'Music',
+        playlistSourceKey,
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
         lyrics: this.utilities.extractLyricsFromEvent(track),
@@ -882,6 +896,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const titleTag = track.tags.find(t => t[0] === 'title');
     const imageTag = track.tags.find(t => t[0] === 'image');
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+    const playlistSourceKey = this.getCurrentPlaylistSourceKey();
 
     const mediaItem: MediaItem = {
       source: url,
@@ -889,6 +904,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       artist: this.getTrackArtist(track),
       artwork: imageTag?.[1] || '/icons/icon-192x192.png',
       type: 'Music',
+      playlistSourceKey,
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
       lyrics: this.utilities.extractLyricsFromEvent(track),

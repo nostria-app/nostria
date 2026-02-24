@@ -15,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { formatDuration } from '../../../../utils/format-duration';
 import { MediaPlayerService } from '../../../../services/media-player.service';
-import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
+import { SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
 // EQ Frequency bands (in Hz) matching WinAmp
@@ -52,7 +52,6 @@ const EQ_PRESETS: Record<string, { preamp: number; bands: number[] }> = {
     MatIconModule,
     MatTooltipModule,
     MatMenuModule,
-    SwipeGestureDirective,
     LyricsViewComponent,
   ],
   templateUrl: './winamp-player-view.component.html',

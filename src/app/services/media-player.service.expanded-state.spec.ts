@@ -60,8 +60,13 @@ describe('MediaPlayerService expanded state switching', () => {
     spyOn(service, 'start').and.returnValue(Promise.resolve());
   });
 
-  it('collapses to mini when playing music after expanded media', () => {
+  it('collapses to mini when playing music after expanded video', () => {
     layoutMock.expandedMediaPlayer.set(true);
+    service.current.set({
+      ...baseItem,
+      type: 'Video',
+      source: 'https://example.com/previous-video.mp4',
+    });
 
     service.play({
       ...baseItem,
@@ -79,6 +84,23 @@ describe('MediaPlayerService expanded state switching', () => {
       ...baseItem,
       type: 'Video',
       source: 'https://example.com/video.mp4',
+    });
+
+    expect(layoutMock.expandedMediaPlayer()).toBe(true);
+  });
+
+  it('keeps expanded mode when moving between music tracks in expanded playlist', () => {
+    layoutMock.expandedMediaPlayer.set(true);
+    service.current.set({
+      ...baseItem,
+      type: 'Music',
+      source: 'https://example.com/track-1.mp3',
+    });
+
+    service.play({
+      ...baseItem,
+      type: 'Music',
+      source: 'https://example.com/track-2.mp3',
     });
 
     expect(layoutMock.expandedMediaPlayer()).toBe(true);
