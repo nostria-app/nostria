@@ -1798,10 +1798,10 @@ mat-sidenav-content {
   border-radius: 28px;
 
   // Glass effect
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 48%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 42%, transparent);
   -webkit-backdrop-filter: blur(22px) saturate(1.8);
   backdrop-filter: blur(22px) saturate(1.8);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 58%, transparent);
   box-shadow: var(--mat-sys-level1);
 
   /* Smooth transition for hide/show on scroll */
@@ -1832,8 +1832,8 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-nav {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 54%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 48%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 66%, transparent);
   box-shadow: var(--mat-sys-level1);
 
   a,
