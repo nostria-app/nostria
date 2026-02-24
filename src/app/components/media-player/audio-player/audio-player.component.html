@@ -97,9 +97,9 @@
 
           <!-- Mobile Controls -->
           <div class="mobile-controls">
-            <!-- <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
-            <mat-icon>skip_previous</mat-icon>
-          </button> -->
+            <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+              <mat-icon>skip_previous</mat-icon>
+            </button>
 
             @if (media.paused) {
             <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button" tabindex="-1">
