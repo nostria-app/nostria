@@ -357,6 +357,18 @@ export class EventPageComponent {
 
     return result;
   });
+
+  /**
+   * True when any parent in the thread chain is collapsed.
+   * In that state, descendant content (main event, inline reply editor, and replies)
+   * should stay hidden until the parent chain is expanded again.
+   */
+  isMainThreadHiddenByCollapsedParent = computed<boolean>(() => {
+    const collapsed = this.collapsedThreads();
+    const parents = this.parentEvents();
+    return parents.some(parent => collapsed.has(parent.id));
+  });
+
   private titleService = inject(Title);
   localSettings = inject(LocalSettingsService);
 

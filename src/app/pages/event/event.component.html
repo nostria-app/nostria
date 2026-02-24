@@ -55,7 +55,7 @@
   }
 
   <!-- Main event - indented when there are parents -->
-  @if (event()) {
+  @if (event() && !isMainThreadHiddenByCollapsedParent()) {
   <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="(parentEvents().length + 1) * 16">
     <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
       [trustedByPubkey]="trustedByPubkey()" [replyCountFromParent]="totalReplyCount()"></app-event>
@@ -68,7 +68,7 @@
   }
 
   <!-- Unified loading indicator for thread context (parents/replies) -->
-  @if (isLoadingParents() || isLoadingReplies()) {
+  @if (!isMainThreadHiddenByCollapsedParent() && (isLoadingParents() || isLoadingReplies())) {
   <div class="loading-status" [style.margin-left.px]="(parentEvents().length + 1) * 16">
     <mat-spinner diameter="14"></mat-spinner>
     <span>Loading thread...</span>
@@ -122,6 +122,7 @@
   </div>
   }
 
+  @if (!isMainThreadHiddenByCollapsedParent()) {
   <div class="replies-section" [style.margin-left.px]="parentEvents().length * 16">
     <!-- Filter indicator when filter is active -->
     @if (isReplyFilterActive() && !isLoadingReplies()) {
@@ -150,6 +151,7 @@
     </div>
     }
   </div>
+  }
   }
 </div>
 
