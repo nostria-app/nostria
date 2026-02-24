@@ -10,6 +10,7 @@ export interface NostrRecord {
 
 export interface MediaItem {
   artwork: string;
+  video?: string;
   title: string;
   artist: string;
   source: string;

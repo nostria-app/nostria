@@ -819,3 +819,23 @@
   color: var(--mat-sys-on-surface-variant);
   padding: 12px;
 }
+
+.album-art-video {
+  display: block;
+  background: var(--mat-sys-surface-container-lowest);
+}
+
+.expanded-track-video-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.expanded-track-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container-lowest);
+}

@@ -1,7 +1,7 @@
 <div class="audio-player-container">
   @if (footer()) {
   <div class="audio-player-footer-stack" [class.playlist-expanded]="playlistExpanded()">
-    @if (playlistExpanded()) {
+    @if (showExpandedQueue()) {
     <div class="expanded-track-list-shell">
       <div class="expanded-queue-header">
         <div class="expanded-queue-title">Media queue</div>
@@ -39,12 +39,20 @@
         }
       </div>
     </div>
+    } @else if (showExpandedVideo()) {
+    <div class="expanded-track-list-shell expanded-track-video-shell">
+      <video class="expanded-track-video" [src]="currentTrackVideo()" muted autoplay loop preload="metadata"
+        aria-label="Track video preview"></video>
+    </div>
     }
 
     <!-- Footer mode - full player with album art -->
     <div class="audio-player-footer">
-      <div class="media-info" [class.no-artwork]="!media.current()?.artwork">
-        @if (footerArtwork()) {
+      <div class="media-info" [class.no-artwork]="!media.current()?.artwork && !currentTrackVideo()">
+        @if (currentTrackVideo()) {
+        <video class="album-art album-art-video" [src]="currentTrackVideo()" muted autoplay loop preload="metadata"
+          aria-label="Track video preview"></video>
+        } @else if (footerArtwork()) {
         <img class="album-art" [src]="footerArtwork()" alt="{{ media.current()?.title || 'Album artwork' }}" />
         }
         <div class="media-info-text">

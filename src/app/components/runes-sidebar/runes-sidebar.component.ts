@@ -392,7 +392,7 @@ export class RunesSidebarComponent implements OnDestroy {
     if (this.runesSettings.isRuneEnabled('bitcoin-price')) {
       void this.loadBitcoinPrice();
     }
-  }, 60_000);
+  }, this.BITCOIN_REFRESH_INTERVAL_MS);
 
   private readonly weatherRefreshTimer = setInterval(() => {
     if (this.runesSettings.isRuneEnabled('weather')) {
@@ -402,7 +402,7 @@ export class RunesSidebarComponent implements OnDestroy {
 
   constructor() {
     if (this.runesSettings.isRuneEnabled('bitcoin-price')) {
-      void this.loadBitcoinPrice();
+      this.loadBitcoinPriceWithCache();
     }
 
     if (this.runesSettings.isRuneEnabled('weather')) {
@@ -553,7 +553,7 @@ export class RunesSidebarComponent implements OnDestroy {
     }
 
     if (runeId === 'bitcoin-price') {
-      void this.loadBitcoinPrice();
+      this.loadBitcoinPriceWithCache();
       return;
     }
 
@@ -953,6 +953,25 @@ export class RunesSidebarComponent implements OnDestroy {
     void this.loadWeather();
   }
 
+  private loadBitcoinPriceWithCache(): void {
+    const cached = this.runesSettings.getCachedBitcoinPrice();
+    const now = Math.floor(Date.now() / 1000);
+    const refreshIntervalSec = this.BITCOIN_REFRESH_INTERVAL_MS / 1000;
+
+    if (cached && (now - cached.updatedAt) < refreshIntervalSec) {
+      this.bitcoinPrice.set({
+        usd: cached.usd,
+        eur: cached.eur,
+        updatedAt: cached.updatedAt,
+        loading: false,
+        error: null,
+      });
+      return;
+    }
+
+    void this.loadBitcoinPrice();
+  }
+
   private async loadBitcoinPrice(): Promise<void> {
     if (!this.runesSettings.isRuneEnabled('bitcoin-price')) {
       return;
@@ -1305,6 +1324,7 @@ export class RunesSidebarComponent implements OnDestroy {
     title: string;
     artist: string;
     artwork: string;
+    video?: string;
     type: 'Music';
     eventPubkey: string;
     eventIdentifier: string;
@@ -1317,6 +1337,7 @@ export class RunesSidebarComponent implements OnDestroy {
 
     const title = track.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Track';
     const image = track.tags.find(tag => tag[0] === 'image')?.[1] || '';
+    const video = track.tags.find(tag => tag[0] === 'video')?.[1] || undefined;
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
 
     let artist = track.tags.find(tag => tag[0] === 'artist')?.[1] || 'Unknown Artist';
@@ -1334,6 +1355,7 @@ export class RunesSidebarComponent implements OnDestroy {
       title,
       artist,
       artwork: image,
+      video,
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,

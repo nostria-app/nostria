@@ -654,6 +654,7 @@ export class MusicPlaylistCardComponent {
 
         const titleTag = track.tags.find(t => t[0] === 'title');
         const imageTag = track.tags.find(t => t[0] === 'image');
+        const videoTag = track.tags.find(t => t[0] === 'video');
         const trackDTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
         const mediaItem: MediaItem = {
@@ -661,6 +662,7 @@ export class MusicPlaylistCardComponent {
           title: titleTag?.[1] || 'Untitled Track',
           artist: artistName,
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+          video: videoTag?.[1] || undefined,
           type: 'Music',
           eventPubkey: track.pubkey,
           eventIdentifier: trackDTag,

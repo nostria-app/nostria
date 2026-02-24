@@ -392,6 +392,12 @@ export class MusicEmbedComponent {
     return this.utilities.getTagValues('url', ev.tags)[0] || '';
   });
 
+  videoUrl = computed(() => {
+    const ev = this.event();
+    if (!ev || !this.isTrack()) return '';
+    return this.utilities.getTagValues('video', ev.tags)[0] || '';
+  });
+
   artistName = computed(() => {
     const ev = this.event();
     if (!ev) return '';
@@ -555,6 +561,7 @@ export class MusicEmbedComponent {
       title: this.title(),
       artist: this.artistName() || 'Unknown Artist',
       artwork: this.coverImage() || '/icons/icon-192x192.png',
+      video: this.videoUrl() || undefined,
       type: 'Music',
       eventPubkey: npub,
       eventIdentifier: this.identifier(),
@@ -579,6 +586,7 @@ export class MusicEmbedComponent {
       title: this.title(),
       artist: this.artistName() || 'Unknown Artist',
       artwork: this.coverImage() || '/icons/icon-192x192.png',
+      video: this.videoUrl() || undefined,
       type: 'Music',
       eventPubkey: npub,
       eventIdentifier: this.identifier(),
@@ -717,6 +725,7 @@ export class MusicEmbedComponent {
         const titleTag = track.tags.find(t => t[0] === 'title');
         const artistTag = track.tags.find(t => t[0] === 'artist');
         const imageTag = track.tags.find(t => t[0] === 'image');
+        const videoTag = track.tags.find(t => t[0] === 'video');
         const dTag = track.tags.find(t => t[0] === 'd');
 
         if (!urlTag?.[1]) return null;
@@ -726,6 +735,7 @@ export class MusicEmbedComponent {
           title: titleTag?.[1] || 'Untitled',
           artist: artistTag?.[1] || 'Unknown Artist',
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+          video: videoTag?.[1] || undefined,
           type: 'Music',
           eventPubkey: nip19.npubEncode(track.pubkey),
           eventIdentifier: dTag?.[1] || '',

@@ -661,6 +661,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       // Get artist name
@@ -675,6 +676,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         title: titleTag?.[1] || 'Untitled Track',
         artist: artistName,
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        video: videoTag?.[1] || undefined,
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,

@@ -1048,6 +1048,7 @@ export class MusicComponent implements OnDestroy {
 
         const titleTag = track.tags.find(t => t[0] === 'title');
         const imageTag = track.tags.find(t => t[0] === 'image');
+        const videoTag = track.tags.find(t => t[0] === 'video');
         const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
         // Get artist name from profile
@@ -1066,6 +1067,7 @@ export class MusicComponent implements OnDestroy {
           title: titleTag?.[1] || 'Untitled Track',
           artist: artistName,
           artwork: imageTag?.[1] || '',
+          video: videoTag?.[1] || undefined,
           type: 'Music',
           eventPubkey: track.pubkey,
           eventIdentifier: dTag,

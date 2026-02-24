@@ -290,6 +290,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       const title = titleTag?.[1] || track.content?.substring(0, 50) || 'Unknown Track';
       const streamUrl = track.tags.find(t => t[0] === 'url')?.[1] || '';
       const coverTag = track.tags.find(t => t[0] === 'image' || t[0] === 'cover' || t[0] === 'thumb');
+      const videoTag = track.tags.find(t => t[0] === 'video');
       const cover = coverTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png';
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
@@ -298,6 +299,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         artist: artistName,
         source: streamUrl,
         artwork: cover,
+        video: videoTag?.[1] || undefined,
         type: 'Music' as const,
         eventPubkey: this.artistNpub(),
         eventIdentifier: dTag,
@@ -383,6 +385,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
@@ -390,6 +393,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         title: titleTag?.[1] || 'Untitled Track',
         artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+        video: videoTag?.[1] || undefined,
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
@@ -411,6 +415,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
     const titleTag = track.tags.find(t => t[0] === 'title');
     const imageTag = track.tags.find(t => t[0] === 'image');
+    const videoTag = track.tags.find(t => t[0] === 'video');
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
 
@@ -419,6 +424,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       title: titleTag?.[1] || 'Untitled Track',
       artist: this.getTrackArtist(track),
       artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+      video: videoTag?.[1] || undefined,
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,

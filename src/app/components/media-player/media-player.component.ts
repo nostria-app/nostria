@@ -72,8 +72,10 @@ export class MediaPlayerComponent implements OnDestroy {
   // Computed signals to determine which player to show
   isLiveStream = computed(() => (this.media.current()?.type === 'HLS' || this.media.current()?.type === 'LiveKit' || this.media.current()?.type === 'External') && this.media.current()?.isLiveStream);
   isYouTube = computed(() => this.media.current()?.type === 'YouTube');
-  isVideo = computed(() => this.media.current()?.type === 'Video' || (this.media.current()?.type === 'HLS' && !this.media.current()?.isLiveStream));
-  isAudio = computed(() => this.media.current()?.type === 'Music' || this.media.current()?.type === 'Podcast');
+  isVideo = computed(() => this.media.current()?.type === 'Video'
+    || (this.media.current()?.type === 'HLS' && !this.media.current()?.isLiveStream)
+    || (this.media.current()?.type === 'Music' && !!this.media.current()?.video));
+  isAudio = computed(() => (this.media.current()?.type === 'Music' && !this.media.current()?.video) || this.media.current()?.type === 'Podcast');
   isPodcast = computed(() => this.media.current()?.type === 'Podcast');
 
   constructor() {

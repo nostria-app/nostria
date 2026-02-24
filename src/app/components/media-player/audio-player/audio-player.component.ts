@@ -132,6 +132,9 @@ export class AudioPlayerComponent {
   queue = computed(() => this.media.media());
   currentIndex = computed(() => this.media.index);
   playlistExpanded = computed(() => this.footer() && this.isMusicTrack() && this.layout.expandedMediaPlayer());
+  currentTrackVideo = computed(() => this.media.current()?.video?.trim() || '');
+  showExpandedVideo = computed(() => this.playlistExpanded() && !!this.currentTrackVideo());
+  showExpandedQueue = computed(() => this.playlistExpanded() && !this.currentTrackVideo());
   queueTrackEntries = computed<TrackEntry[]>(() => this.queue().map((track, index) => ({ track, index })));
   visibleTrackEntries = computed(() => this.queueTrackEntries());
 

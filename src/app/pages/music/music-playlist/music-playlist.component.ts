@@ -513,6 +513,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
@@ -520,6 +521,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         title: titleTag?.[1] || 'Untitled Track',
         artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        video: videoTag?.[1] || undefined,
         type: 'Music',
         playlistSourceKey,
         eventPubkey: track.pubkey,
@@ -866,6 +868,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
@@ -873,6 +876,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         title: titleTag?.[1] || 'Untitled Track',
         artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        video: videoTag?.[1] || undefined,
         type: 'Music',
         playlistSourceKey,
         eventPubkey: track.pubkey,
@@ -895,6 +899,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     const titleTag = track.tags.find(t => t[0] === 'title');
     const imageTag = track.tags.find(t => t[0] === 'image');
+    const videoTag = track.tags.find(t => t[0] === 'video');
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
     const playlistSourceKey = this.getCurrentPlaylistSourceKey();
 
@@ -903,6 +908,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       title: titleTag?.[1] || 'Untitled Track',
       artist: this.getTrackArtist(track),
       artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+      video: videoTag?.[1] || undefined,
       type: 'Music',
       playlistSourceKey,
       eventPubkey: track.pubkey,

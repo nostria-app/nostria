@@ -166,6 +166,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return match ? match[0] : '';
   });
 
+  videoUrl = computed(() => {
+    const event = this.song();
+    if (!event) return '';
+    const videoTag = event.tags.find(t => t[0] === 'video');
+    return videoTag?.[1] || '';
+  });
+
   image = computed(() => {
     const event = this.song();
     if (!event) return null;
@@ -621,6 +628,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       title: this.title(),
       artist: this.artistName(),
       artwork: this.image() || '/icons/icon-192x192.png',
+      video: this.videoUrl() || undefined,
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
@@ -714,6 +722,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       title: this.title(),
       artist: this.artistName(),
       artwork: this.image() || '/icons/icon-192x192.png',
+      video: this.videoUrl() || undefined,
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),

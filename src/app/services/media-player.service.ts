@@ -1172,6 +1172,8 @@ export class MediaPlayerService implements OnInitialized {
     this.layout.showMediaPlayer.set(true);
     this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(file, previousFile));
 
+    const musicVideoSource = file.type === 'Music' ? file.video?.trim() : undefined;
+
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
@@ -1190,7 +1192,15 @@ export class MediaPlayerService implements OnInitialized {
         .catch(error => {
           console.warn('Failed to initialize YouTube API:', error);
         });
-    } else if (file.type === 'Video' || file.type === 'HLS') {
+    } else if (file.type === 'Video' || file.type === 'HLS' || !!musicVideoSource) {
+      const videoPlaybackItem: MediaItem = musicVideoSource
+        ? {
+          ...file,
+          source: musicVideoSource,
+          type: 'Video',
+        }
+        : file;
+
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
 
@@ -1198,14 +1208,14 @@ export class MediaPlayerService implements OnInitialized {
 
       // If video element is available, handle playback immediately
       if (this.videoElement) {
-        this.setupVideoPlayback(file);
+        this.setupVideoPlayback(videoPlaybackItem);
       } else {
         // Video element not available yet - it will be set up when registerVideoElement is called
         console.log('Video element will be set up when it becomes available');
 
         // For regular video, set the URL so the video element can load it
-        if (file.type === 'Video') {
-          this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
+        if (videoPlaybackItem.type === 'Video') {
+          this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(videoPlaybackItem.source));
         }
       }
     } else {
@@ -1511,7 +1521,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Normal resume behavior for non-live content
     if (this.videoMode()) {
-      if (currentItem?.type === 'Video' && this.videoElement) {
+      if (this.videoElement && currentItem?.type !== 'YouTube') {
         try {
           await this.videoElement.play();
           this._isPaused.set(false);
@@ -1573,7 +1583,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Normal pause behavior for non-live content
     if (this.videoMode()) {
-      if (currentItem?.type === 'Video' && this.videoElement) {
+      if (this.videoElement && currentItem?.type !== 'YouTube') {
         this.videoElement.pause();
       } else {
         this.pausedYouTubeUrl.set(this.youtubeUrl());
