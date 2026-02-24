@@ -229,7 +229,7 @@
     <!-- Comments Section -->
     @if (song(); as songEvent) {
     <div class="comments-section">
-      <app-comments-list [event]="songEvent" [autoExpand]="false" label="Comments" singularLabel="Comment"
+      <app-comments-list [event]="songEvent" [autoExpand]="true" label="Comments" singularLabel="Comment"
         [allowedKinds]="[1111]">
       </app-comments-list>
     </div>

@@ -137,13 +137,6 @@
       (shareClick)="openShareDialog()">
     </app-event-actions-toolbar>
 
-    <!-- Comments Section -->
-    <div class="comments-section">
-      <app-comments-list [event]="playlist()!" [autoExpand]="false" label="Comments" singularLabel="Comment"
-        [allowedKinds]="[1111]">
-      </app-comments-list>
-    </div>
-
     <!-- Tracks Table -->
     <div class="tracks-section">
       @if (loadingTracks()) {
@@ -205,6 +198,13 @@
         }
       </div>
       }
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+      <app-comments-list [event]="playlist()!" [autoExpand]="true" label="Comments" singularLabel="Comment"
+        [allowedKinds]="[1111]">
+      </app-comments-list>
     </div>
   </div>
   }
