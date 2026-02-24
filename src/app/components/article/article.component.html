@@ -8,8 +8,8 @@
 <div class="article-container" [class]="'mode-' + mode()">
   @if (mode() === 'compact') {
   <div class="article-compact" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
-    [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
-    (keydown.space)="openArticle()">
+    [attr.role]="clickable() ? 'button' : null" (click)="openArticle($event)" (keydown.enter)="openArticle($event)"
+    (keydown.space)="openArticle($event)">
     @if (image()) {
     <div class="article-image-container">
       <img [src]="image()" alt="Article image" title="Article image" loading="lazy" class="article-image" />
@@ -45,7 +45,7 @@
     </div>
   </div>
   } @else if (mode() === 'card') {
-  <mat-card class="article-card" [class.clickable]="clickable()" (click)="openArticle()">
+  <mat-card class="article-card" [class.clickable]="clickable()" (click)="openArticle($event)">
     <div class="card-layout">
       @if (image()) {
       <div class="card-image">
@@ -82,8 +82,8 @@
   </mat-card>
   } @else {
   <div class="article-content" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
-    [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
-    (keydown.space)="openArticle()">
+    [attr.role]="clickable() ? 'button' : null" (click)="openArticle($event)" (keydown.enter)="openArticle($event)"
+    (keydown.space)="openArticle($event)">
     @if (showAuthor()) {
     <app-user-profile [pubkey]="authorPubkey()"></app-user-profile>
     }

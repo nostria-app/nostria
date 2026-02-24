@@ -100,6 +100,7 @@ const FILTER_OPTIONS: FilterOption[] = [
         [value]="wotFilterLevel()"
         (valueChange)="onWotFilterLevelChange($event)"
         class="wot-toggle-group"
+        hideSingleSelectionIndicator
         aria-label="Web of Trust filter level">
         <mat-button-toggle value="off">Off</mat-button-toggle>
         <mat-button-toggle value="low">Low</mat-button-toggle>

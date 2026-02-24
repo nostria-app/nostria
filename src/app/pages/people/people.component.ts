@@ -9,7 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { PeopleFilterPanelComponent } from './people-filter-panel/people-filter-panel.component';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
@@ -68,7 +68,7 @@ const CACHED_PROFILES_D_TAG = 'nostria-cached-profiles';
     MatRadioModule,
     RouterModule,
     UserProfileComponent,
-    OverlayModule,
+    FilterButtonComponent,
     PeopleFilterPanelComponent,
   ],
   templateUrl: './people.component.html',
@@ -150,14 +150,6 @@ export class PeopleComponent implements OnDestroy {
 
   // View mode
   viewMode = signal<ViewModeType>('medium');
-
-  // Filter panel state
-  filterPanelOpen = signal(false);
-  filterPanelPositions: ConnectedPosition[] = [
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
-    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
-    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
-  ];
 
   // Filter options
   filters = signal<FilterOptions>({
@@ -608,20 +600,6 @@ export class PeopleComponent implements OnDestroy {
         return 'view_module';
     }
   });
-
-  /**
-   * Toggle filter panel visibility
-   */
-  toggleFilterPanel(): void {
-    this.filterPanelOpen.update(v => !v);
-  }
-
-  /**
-   * Close filter panel
-   */
-  closeFilterPanel(): void {
-    this.filterPanelOpen.set(false);
-  }
 
   /**
    * Handle filter changes from filter panel

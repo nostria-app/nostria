@@ -10,10 +10,14 @@
       <mat-icon>search</mat-icon>
     </button>
     <!-- Filter button with overlay panel -->
-    <button mat-icon-button cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" (click)="toggleFilterPanel()"
-      [matTooltip]="'Filter'" [class.active-filters]="hasActiveFilters()">
-      <mat-icon>tune</mat-icon>
-    </button>
+    <app-filter-button [active]="hasActiveFilters()" tooltip="Filter">
+      <app-notifications-filter-panel [filters]="notificationFilters()"
+        [showSystemNotifications]="showSystemNotifications()" [showUnreadOnly]="showUnreadOnly()"
+        [wotFilterLevel]="wotFilterLevel()" (filtersChanged)="onFiltersChanged($event)"
+        (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
+        (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)" (wotFilterLevelChanged)="onWotFilterLevelChanged($event)">
+      </app-notifications-filter-panel>
+    </app-filter-button>
     @if (notifications().length > 0) {
     <button mat-icon-button (click)="markAllAsRead()" matTooltip="Mark all as read">
       <mat-icon>done_all</mat-icon>
@@ -52,18 +56,6 @@
     </mat-menu>
   </div>
 
-  <!-- Filter Panel Overlay -->
-  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
-    [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayPositions]="filterPanelPositions"
-    [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
-    (backdropClick)="closeFilterPanel()">
-    <app-notifications-filter-panel [filters]="notificationFilters()"
-      [showSystemNotifications]="showSystemNotifications()" [showUnreadOnly]="showUnreadOnly()"
-      [wotFilterLevel]="wotFilterLevel()" (filtersChanged)="onFiltersChanged($event)"
-      (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
-      (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)" (wotFilterLevelChanged)="onWotFilterLevelChanged($event)">
-    </app-notifications-filter-panel>
-  </ng-template>
 
   <!-- Search Input (toggled by global search button) -->
   @if (showSearch()) {

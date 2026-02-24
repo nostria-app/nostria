@@ -238,8 +238,11 @@ export class ArticleComponent {
     }
   }
 
-  openArticle(): void {
+  openArticle(event?: Event): void {
     if (!this.clickable()) return;
+
+    // Stop propagation to prevent parent event card from opening
+    event?.stopPropagation();
 
     const naddr = nip19.naddrEncode({
       identifier: this.slug(),

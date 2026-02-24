@@ -241,6 +241,9 @@ export class ArticleEventComponent {
   });
 
   openFullArticle(interactionEvent?: MouseEvent | KeyboardEvent): void {
+    // Stop propagation to prevent parent event card from also navigating
+    interactionEvent?.stopPropagation();
+
     if (this.enableImagePreview() && interactionEvent instanceof MouseEvent) {
       const target = interactionEvent.target as HTMLElement;
       const imageElement = target.closest('img');

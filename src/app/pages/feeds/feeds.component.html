@@ -84,21 +84,13 @@
 
         <!-- Filter button with overlay panel - only for authenticated users -->
         @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
-        <button mat-icon-button cdkOverlayOrigin #filterTrigger="cdkOverlayOrigin" (click)="toggleFilterPanel()"
-          matTooltip="Filter content">
-          <mat-icon>tune</mat-icon>
-        </button>
-
-        <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterTrigger"
-          [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
-          [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'" (backdropClick)="closeFilterPanel()"
-          [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true">
+        <app-filter-button [active]="hasActiveFilters()" tooltip="Filter content">
           <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
             [mentionedMode]="listMentionedMode()" (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)"
             (mentionedModeChanged)="onMentionedModeChanged($event)">
           </app-feed-filter-panel>
-        </ng-template>
+        </app-filter-button>
         }
 
         <!-- Feed menu with all actions - only for authenticated users -->

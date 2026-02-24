@@ -23,7 +23,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { LocalSettingsService } from '../../services/local-settings.service';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 
@@ -59,7 +59,7 @@ import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.compon
 import { ListFeedMenuComponent, ListFeedSelection, InterestFeedSelection } from './list-feed-menu/list-feed-menu.component';
 import { ListColumnComponent, ListFeedData } from './list-column/list-column.component';
 import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
-import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { formatDuration } from '../../utils/format-duration';
@@ -90,7 +90,7 @@ import { formatDuration } from '../../utils/format-duration';
     ListFeedMenuComponent,
     ListColumnComponent,
     FeedFilterPanelComponent,
-    OverlayModule,
+    FilterButtonComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -223,13 +223,24 @@ export class FeedsComponent implements OnDestroy {
   dynamicFeed = signal<FeedConfig | null>(null);
   showDynamicFeed = computed(() => !!this.dynamicFeed());
 
-  // Filter panel state
-  filterPanelOpen = signal(false);
-  filterPanelPositions: ConnectedPosition[] = [
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
-    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
-    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
-  ];
+  // Whether the content filter has been modified from defaults
+  hasActiveFilters = computed(() => {
+    const feed = this.activeFeed();
+    if (feed) {
+      // Per-feed filter: check if kinds differ from the feed type's default
+      const kinds = feed.kinds || [];
+      const defaultKinds = DEFAULT_CONTENT_FILTER.kinds;
+      const kindsMatch = kinds.length === defaultKinds.length && kinds.every(k => defaultKinds.includes(k));
+      const showReplies = feed.showReplies ?? false;
+      const showReposts = feed.showReposts ?? true;
+      return !kindsMatch || showReplies !== DEFAULT_CONTENT_FILTER.showReplies || showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+    }
+    // Global filter
+    const filter = this.localSettings.contentFilter();
+    const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
+      && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
+    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+  });
 
   // Horizontal scrollbar tracking
   hasHorizontalOverflow = signal(false);
@@ -1669,20 +1680,6 @@ export class FeedsComponent implements OnDestroy {
     });
   }
   // scrollToColumn method removed - no longer needed without column navigation
-
-  /**
-   * Toggle filter panel visibility
-   */
-  toggleFilterPanel(): void {
-    this.filterPanelOpen.update(v => !v);
-  }
-
-  /**
-   * Close filter panel
-   */
-  closeFilterPanel(): void {
-    this.filterPanelOpen.set(false);
-  }
 
   /**
    * Handle kinds changed from filter panel

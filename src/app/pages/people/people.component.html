@@ -112,10 +112,12 @@
   </button>
 
   <!-- Filter button with overlay panel -->
-  <button mat-icon-button #filterTrigger cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" (click)="toggleFilterPanel()"
-    [matTooltip]="'Filter & Sort'" [class.active-filters]="hasActiveFilters()">
-    <mat-icon>tune</mat-icon>
-  </button>
+  <app-filter-button [active]="hasActiveFilters()" tooltip="Filter & Sort">
+    <app-people-filter-panel [filters]="filters()" [sortOption]="sortOption()"
+      [isCachedListSelected]="isCachedListSelected()" (filtersChanged)="onFiltersChanged($event)"
+      (sortOptionChanged)="onSortOptionChanged($event)" (refreshTrustRanks)="onRefreshTrustRanks()">
+    </app-people-filter-panel>
+  </app-filter-button>
 
   <!-- More options menu - shown only on small screens -->
   <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
@@ -180,16 +182,7 @@
     </button>
   </mat-menu>
 
-  <!-- Filter Panel Overlay -->
-  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
-    [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayPositions]="filterPanelPositions"
-    [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="filter-panel-backdrop"
-    (backdropClick)="closeFilterPanel()">
-    <app-people-filter-panel [filters]="filters()" [sortOption]="sortOption()"
-      [isCachedListSelected]="isCachedListSelected()" (filtersChanged)="onFiltersChanged($event)"
-      (sortOptionChanged)="onSortOptionChanged($event)" (refreshTrustRanks)="onRefreshTrustRanks()">
-    </app-people-filter-panel>
-  </ng-template>
+
 </div>
 
 <div class="people-page">

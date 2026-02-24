@@ -12,12 +12,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { FilterButtonComponent } from '../filter-button/filter-button.component';
 
 export type ListFilterValue = 'all' | 'following' | string;
 
@@ -27,142 +26,167 @@ export type ListFilterValue = 'all' | 'following' | string;
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
-    MatTooltipModule,
     MatDividerModule,
+    FilterButtonComponent,
   ],
   template: `
-    <button mat-icon-button [matMenuTriggerFor]="listFilterMenu" [matTooltip]="'Filter by: ' + filterTitle()">
-      <mat-icon>{{ menuIcon() }}</mat-icon>
-    </button>
+    <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
+      <div class="filter-panel" (click)="$event.stopPropagation()">
+        <!-- Filter Options -->
+        @if (showPublicOption()) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'all'"
+          (click)="selectFilter('all')">
+          <mat-icon class="chip-icon">public</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Public</span>
+            <span class="chip-description">All public content</span>
+          </div>
+        </button>
+        }
 
-    <mat-menu #listFilterMenu="matMenu" class="list-filter-menu">
-      <div class="menu-section-header" role="presentation">
-        <mat-icon>filter_list</mat-icon>
-        <span>Filter</span>
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'following'"
+          (click)="selectFilter('following')">
+          <mat-icon class="chip-icon">people</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Following</span>
+            <span class="chip-description">People you follow</span>
+          </div>
+        </button>
+
+        @if (favoritesSet(); as favorites) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'nostria-favorites'"
+          (click)="selectFilter('nostria-favorites')">
+          <mat-icon class="chip-icon">star</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Favorites</span>
+            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+
+        @if (otherFollowSets().length > 0) {
+        <mat-divider></mat-divider>
+        @for (set of otherFollowSets(); track set.id) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === set.dTag"
+          (click)="selectFilter(set.dTag)">
+          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">{{ set.title }}</span>
+            <span class="chip-description">{{ set.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+        }
+
+        <!-- Actions Row -->
+        <div class="actions-row">
+          <button mat-stroked-button class="action-btn" (click)="selectFilter(defaultFilter())">
+            Reset
+          </button>
+        </div>
       </div>
-      <mat-divider></mat-divider>
-      
-      @if (showPublicOption()) {
-      <button mat-menu-item (click)="selectFilter('all')" [class.active]="selectedFilter() === 'all'">
-        <mat-icon>public</mat-icon>
-        <span class="menu-item-label">Public</span>
-      </button>
-      }
-      
-      <button mat-menu-item (click)="selectFilter('following')" [class.active]="selectedFilter() === 'following'">
-        <mat-icon>people</mat-icon>
-        <span class="menu-item-label">Following</span>
-      </button>
-      
-      @if (favoritesSet(); as favorites) {
-      <button mat-menu-item (click)="selectFilter('nostria-favorites')" [class.active]="selectedFilter() === 'nostria-favorites'">
-        <mat-icon>star</mat-icon>
-        <span class="menu-item-label">Favorites</span>
-        <span class="menu-item-count">{{ favorites.pubkeys.length }}</span>
-      </button>
-      }
-      
-      @if (otherFollowSets().length > 0) {
-      <mat-divider></mat-divider>
-      @for (set of otherFollowSets(); track set.id) {
-      <button mat-menu-item (click)="selectFilter(set.dTag)" [class.active]="selectedFilter() === set.dTag">
-        <mat-icon>{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
-        <span class="menu-item-label">{{ set.title }}</span>
-        <span class="menu-item-count">{{ set.pubkeys.length }}</span>
-      </button>
-      }
-      }
-    </mat-menu>
+    </app-filter-button>
   `,
   styles: [`
-    ::ng-deep .list-filter-menu {
-      min-width: 240px;
+    .filter-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem;
+      width: calc(100vw - 2rem);
+      max-width: 300px;
       max-height: 400px;
+      overflow-y: auto;
+      background: var(--mat-sys-surface-container);
+      border-radius: 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      box-sizing: border-box;
+    }
 
-      .menu-section-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background-color: var(--mat-sys-surface-container-low);
-        cursor: default;
+    .filter-option-chip {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+      width: 100%;
+    }
 
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-          color: var(--mat-sys-primary);
-        }
+    .filter-option-chip:hover {
+      background: var(--mat-sys-surface-container-high);
+      border-color: var(--mat-sys-outline);
+    }
 
-        span {
-          font-size: 0.875rem;
-          color: var(--mat-sys-on-surface);
-        }
-      }
+    .filter-option-chip.selected {
+      background: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
+    }
 
-      .mat-mdc-menu-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        min-height: 40px;
+    .chip-icon {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      flex-shrink: 0;
+    }
 
-        .mdc-list-item__primary-text,
-        .mat-mdc-menu-item-text {
-          display: flex !important;
-          flex-direction: row !important;
-          align-items: center !important;
-          gap: 8px !important;
-          width: 100% !important;
-        }
+    .filter-option-chip.selected .chip-icon {
+      color: var(--mat-sys-on-primary-container);
+    }
 
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-          color: var(--mat-sys-on-surface-variant);
-          flex-shrink: 0;
-        }
+    .chip-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      min-width: 0;
+    }
 
-        .menu-item-label {
-          flex: 1;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
+    .chip-label {
+      color: var(--mat-sys-on-surface);
+      font-size: 0.875rem;
+    }
 
-        .menu-item-count {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 22px;
-          height: 18px;
-          padding: 0 6px;
-          border-radius: 9px;
-          background-color: var(--mat-sys-surface-container-highest);
-          font-size: 0.7rem;
-          color: var(--mat-sys-on-surface-variant);
-          flex-shrink: 0;
-        }
+    .filter-option-chip.selected .chip-label {
+      color: var(--mat-sys-on-primary-container);
+    }
 
-        &.active {
-          background-color: var(--mat-sys-primary-container);
+    .chip-description {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+    }
 
-          mat-icon {
-            color: var(--mat-sys-primary);
-          }
+    .filter-option-chip.selected .chip-description {
+      color: var(--mat-sys-on-primary-container);
+      opacity: 0.8;
+    }
 
-          .menu-item-label {
-            color: var(--mat-sys-on-primary-container);
-          }
+    mat-divider {
+      margin: 0.25rem 0;
+    }
 
-          .menu-item-count {
-            background-color: var(--mat-sys-primary);
-            color: var(--mat-sys-on-primary);
-          }
-        }
-      }
+    .actions-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .action-btn {
+      flex: 1;
+      font-size: 0.8125rem;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -207,15 +231,9 @@ export class ListFilterMenuComponent implements OnInit {
     return this.allFollowSets().find(set => set.dTag === filter) || null;
   });
 
-  // Computed: menu icon
-  menuIcon = computed(() => {
-    const followSet = this.selectedFollowSet();
-    if (followSet?.isPrivate) return 'lock';
-    const filter = this.selectedFilter();
-    if (filter === 'all') return 'public';
-    if (filter === 'following') return 'people';
-    if (filter === 'nostria-favorites') return 'star';
-    return 'group';
+  // Computed: whether filter is active (different from default)
+  isFilterActive = computed(() => {
+    return this.selectedFilter() !== this.defaultFilter();
   });
 
   // Computed: filter title for tooltip

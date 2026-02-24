@@ -817,12 +817,3 @@
   display: none;
 }
 
-// Filter panel backdrop
-::ng-deep .filter-panel-backdrop {
-  background-color: transparent;
-}
-
-// Active filters indicator
-.active-filters {
-  color: var(--mat-sys-primary) !important;
-}

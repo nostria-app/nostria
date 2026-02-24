@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -66,7 +66,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     UserProfileComponent,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    OverlayModule,
+    FilterButtonComponent,
     NotificationsFilterPanelComponent,
     ResolveNostrPipe
   ],
@@ -125,14 +125,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Web of Trust rank filter level
   wotFilterLevel = signal<WotFilterLevel>('off');
   notificationType = NotificationType;
-
-  // Filter panel state
-  filterPanelOpen = signal(false);
-  filterPanelPositions: ConnectedPosition[] = [
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
-    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
-    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
-  ];
 
   // Check if any filters are active (not all enabled)
   hasActiveFilters = computed(() => {
@@ -1192,20 +1184,6 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoadingMore.set(false);
     }
-  }
-
-  /**
-   * Toggle the filter panel visibility
-   */
-  toggleFilterPanel(): void {
-    this.filterPanelOpen.update(v => !v);
-  }
-
-  /**
-   * Close the filter panel
-   */
-  closeFilterPanel(): void {
-    this.filterPanelOpen.set(false);
   }
 
   /**

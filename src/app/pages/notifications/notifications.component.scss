@@ -11,16 +11,6 @@
   padding-top: 0 !important;
 }
 
-// Filter panel backdrop
-::ng-deep .filter-panel-backdrop {
-  background-color: transparent;
-}
-
-// Active filters indicator on button
-.active-filters {
-  color: var(--mat-sys-primary) !important;
-}
-
 // Panel header styles - fixed at top
 .panel-header {
   position: sticky;
