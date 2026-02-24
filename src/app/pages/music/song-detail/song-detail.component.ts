@@ -41,6 +41,8 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
+import { BookmarkService } from '../../../services/bookmark.service';
 
 interface TopZapper {
   pubkey: string;
@@ -65,6 +67,7 @@ const MUSIC_KIND = 36787;
     CommentsListComponent,
     MusicTrackDialogComponent,
     CreateMusicPlaylistDialogComponent,
+    EventActionsToolbarComponent,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -95,6 +98,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private customDialog = inject(CustomDialogService);
   private clipboard = inject(Clipboard);
   private userRelaysService = inject(UserRelaysService);
+  private bookmarkService = inject(BookmarkService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -792,6 +796,21 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  scrollToComments(): void {
+    const commentsSection = document.querySelector('.comments-section');
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  toggleBookmark(): void {
+    const ev = this.song();
+    if (!ev) return;
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const aId = `${ev.kind}:${ev.pubkey}:${dTag}`;
+    this.bookmarkService.toggleBookmark(aId, 'a');
   }
 
   publishTrack(): void {

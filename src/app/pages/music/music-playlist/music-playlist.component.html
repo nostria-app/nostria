@@ -121,22 +121,27 @@
       <button mat-fab class="play-fab" (click)="playAll()" [disabled]="tracks().length === 0" aria-label="Play all">
         <mat-icon>play_arrow</mat-icon>
       </button>
-      <button mat-icon-button class="like-btn" (click)="likePlaylist()" [disabled]="isLiked() || isLiking()"
-        [class.liked]="isLiked()" aria-label="Like playlist">
-        @if (isLiking()) {
-        <mat-icon>hourglass_empty</mat-icon>
-        } @else {
-        <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-        }
-      </button>
-      <button mat-icon-button (click)="zapPlaylist()" aria-label="Zap playlist">
-        <mat-icon>bolt</mat-icon>
-      </button>
       @if (isOwnPlaylist()) {
       <button mat-icon-button (click)="editPlaylist()" aria-label="Edit playlist">
         <mat-icon>edit</mat-icon>
       </button>
       }
+    </div>
+
+    <!-- Event Actions Toolbar -->
+    <app-event-actions-toolbar
+      [event]="playlist()!"
+      [bookmarkType]="'a'"
+      (replyClick)="scrollToComments()"
+      (bookmarkClick)="toggleBookmark()"
+      (shareClick)="openShareDialog()">
+    </app-event-actions-toolbar>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+      <app-comments-list [event]="playlist()!" [autoExpand]="false" label="Comments" singularLabel="Comment"
+        [allowedKinds]="[1111]">
+      </app-comments-list>
     </div>
 
     <!-- Tracks Table -->

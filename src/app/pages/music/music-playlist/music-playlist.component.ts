@@ -37,6 +37,9 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
+import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
+import { BookmarkService } from '../../../services/bookmark.service';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -54,6 +57,8 @@ const MUSIC_PLAYLIST_KIND = 34139;
     EditMusicPlaylistDialogComponent,
     MusicTrackMenuComponent,
     MusicTrackDialogComponent,
+    EventActionsToolbarComponent,
+    CommentsListComponent,
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
@@ -80,6 +85,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private zapService = inject(ZapService);
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
+  private bookmarkService = inject(BookmarkService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -626,6 +632,21 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  scrollToComments(): void {
+    const commentsSection = document.querySelector('.comments-section');
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  toggleBookmark(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const aId = `${ev.kind}:${ev.pubkey}:${dTag}`;
+    this.bookmarkService.toggleBookmark(aId, 'a');
   }
 
   publishPlaylist(): void {

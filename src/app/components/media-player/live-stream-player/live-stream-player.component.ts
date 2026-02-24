@@ -317,16 +317,15 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
       const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       this.location.replaceState(`/stream/${encoded}`);
-    } else if (!isExpanding) {
-      // Minimizing - exit native fullscreen if active
-      if (isInFullscreen(this.videoElement?.nativeElement)) {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        }
+    } else if (!isExpanding && isInFullscreen(this.videoElement?.nativeElement)) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
       }
-      // Navigate to streams page to show content
-      this.router.navigate(['/streams'], { replaceUrl: true });
     }
+  }
+
+  toggleExpand(): void {
+    this.layout.expandedMediaPlayer.update(value => !value);
   }
 
   toggleChatVisibility(): void {

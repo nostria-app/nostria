@@ -1044,7 +1044,7 @@
 // Dark mode for chat items
 :host-context(.dark) .chat-item {
   &.active {
-    background-color: var(--mat-sys-primary-container) !important;
+    background-color: color-mix(in srgb, var(--mat-sys-primary-container) 60%, black) !important;
   }
 
   &:hover:not(.active) {

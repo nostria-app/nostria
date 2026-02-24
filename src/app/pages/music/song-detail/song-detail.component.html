@@ -138,39 +138,7 @@
           }
         </div>
 
-        <!-- Engagement Metrics Row -->
-        <div class="engagement-row">
-          <span class="engagement-item">
-            <mat-icon>thumb_up</mat-icon>
-            <span class="count">{{ reactionCount() }}</span>
-          </span>
-          <span class="engagement-item">
-            <mat-icon>chat_bubble</mat-icon>
-            <span class="count">{{ commentCount() }}</span>
-          </span>
-          <span class="engagement-item">
-            <mat-icon>bolt</mat-icon>
-            <span class="count">{{ formatZapAmount(zapTotal()) }}</span>
-          </span>
-        </div>
-
-        <!-- Top Zappers -->
-        @if (topZappers().length > 0) {
-        <div class="top-zappers">
-          <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
-        </div>
-        }
-
         <div class="action-buttons">
-          <button mat-flat-button (click)="likeTrack()" [disabled]="isLiked() || isLiking()" [class.liked]="isLiked()"
-            aria-label="Like track">
-            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-            {{ isLiked() ? 'Liked' : 'Like' }}
-          </button>
-          <button mat-stroked-button (click)="zapArtist()" aria-label="Zap artist">
-            <mat-icon>bolt</mat-icon>
-            Zap
-          </button>
           <button mat-stroked-button (click)="downloadTrack()" [disabled]="!audioUrl() || isDownloading()"
             aria-label="Download track">
             @if (isDownloading()) {
@@ -215,6 +183,22 @@
         }
       </div>
     </div>
+
+    <!-- Event Actions Toolbar (full width below header) -->
+    <app-event-actions-toolbar
+      [event]="song()!"
+      [bookmarkType]="'a'"
+      (replyClick)="scrollToComments()"
+      (bookmarkClick)="toggleBookmark()"
+      (shareClick)="shareTrack()">
+    </app-event-actions-toolbar>
+
+    <!-- Top Zappers -->
+    @if (topZappers().length > 0) {
+    <div class="top-zappers">
+      <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
+    </div>
+    }
 
     @for (section of contentSections(); track section.title) {
     <mat-card class="content-section-card">

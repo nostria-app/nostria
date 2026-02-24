@@ -148,7 +148,11 @@
         <button mat-icon-button [matMenuTriggerFor]="footerStreamMenu" matTooltip="More options">
           <mat-icon>more_vert</mat-icon>
         </button>
-        <button class="hide-small" mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+        <button mat-icon-button [matTooltip]="layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video'"
+          (click)="toggleExpand()">
+          <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
+        </button>
+        <button class="hide-small" mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
           <mat-icon>open_in_full</mat-icon>
         </button>
         <button class="hide-small" mat-icon-button matTooltip="Close stream" (click)="exitStream()">
@@ -213,6 +217,10 @@
     <span>Picture-in-Picture</span>
   </button>
   }
+  <button mat-menu-item (click)="toggleExpand()">
+    <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
+    <span>{{ layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video' }}</span>
+  </button>
   <button mat-menu-item (click)="toggleFullscreen()">
     <mat-icon>open_in_full</mat-icon>
     <span>Fullscreen</span>
