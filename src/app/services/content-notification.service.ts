@@ -57,10 +57,10 @@ export class ContentNotificationService implements OnDestroy {
   private isPollingEnabled = false;
 
   /**
-   * Regex to match nostr: URI identifiers in content
+   * Regex to match nostr: URI identifiers and bare NIP-19 identifiers in content
    * These can be quite long (100-200+ chars for nprofile with relay hints)
    */
-  private readonly nostrUriRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
+  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);

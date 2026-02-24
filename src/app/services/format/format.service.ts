@@ -295,7 +295,7 @@ export class FormatService {
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
     const nostrRegex =
-      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
     const matches = Array.from(content.matchAll(nostrRegex));
@@ -437,7 +437,7 @@ export class FormatService {
     onPreviewLoaded?: (original: string, replacement: string) => void
   ): string {
     const nostrRegex =
-      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
     const matches = Array.from(content.matchAll(nostrRegex));

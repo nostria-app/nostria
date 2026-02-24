@@ -21,9 +21,9 @@ export class ResolveNostrPipe implements PipeTransform {
   transform(text: string): string {
     if (!text) return '';
 
-    // Regex to match nostr: identifiers
-    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent)1[a-zA-Z0-9]+)/g;
-    
+    // Regex to match nostr: identifiers and bare NIP-19 identifiers
+    const nostrRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent)1[a-zA-Z0-9]+)/g;
+
     // Use replace with a function to handle all occurrences
     return text.replace(nostrRegex, (match) => {
       return this.resolveNostrUri(match);
@@ -39,20 +39,20 @@ export class ResolveNostrPipe implements PipeTransform {
       switch (decoded.type) {
         case 'npub':
         case 'nprofile': {
-          const pubkey = decoded.type === 'npub' 
-            ? decoded.data as string 
+          const pubkey = decoded.type === 'npub'
+            ? decoded.data as string
             : (decoded.data as nip19.ProfilePointer).pubkey;
-          
+
           // Try to get cached profile synchronously
           const profile = this.dataService.getCachedProfile(pubkey);
-          
+
           if (profile?.data) {
             const displayName = profile.data.display_name || profile.data.name;
             if (displayName) {
               return `@${displayName}`;
             }
           }
-          
+
           // If not cached, trigger async load for next render
           // Use queueMicrotask to avoid triggering during change detection
           queueMicrotask(() => {
@@ -60,7 +60,7 @@ export class ResolveNostrPipe implements PipeTransform {
               // Ignore errors - profile will just show as truncated npub
             });
           });
-          
+
           // Return truncated npub as fallback
           // Convert pubkey to npub format for truncation
           try {
@@ -74,10 +74,10 @@ export class ResolveNostrPipe implements PipeTransform {
 
         case 'note':
         case 'nevent': {
-          const eventId = decoded.type === 'note' 
-            ? decoded.data as string 
+          const eventId = decoded.type === 'note'
+            ? decoded.data as string
             : (decoded.data as nip19.EventPointer).id;
-          
+
           // For events, just show a truncated ID
           // Full event preview would be too complex for notifications
           return `note:${eventId.substring(0, 8)}...`;

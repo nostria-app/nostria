@@ -188,8 +188,9 @@ export class ParsingService implements OnDestroy {
     uri: string
   ): Promise<{ type: string; data: any; displayName: string } | null> {
     try {
+      const normalizedUri = uri.startsWith('nostr:') ? uri : `nostr:${uri}`;
       // Use the proper nip19 function for decoding nostr URIs
-      const decoded = nip19.decodeNostrURI(uri);
+      const decoded = nip19.decodeNostrURI(normalizedUri);
 
       if (!decoded) {
         this.logger.debug(`Failed to decode nostr URI: ${uri}`);
@@ -255,7 +256,7 @@ export class ParsingService implements OnDestroy {
   }
 
   isNostrUri(text: string): boolean {
-    return text.startsWith('nostr:') && text.length > 6;
+    return /^(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+$/.test(text);
   }
 
   extractNostrUriIdentifier(uri: string): string {
