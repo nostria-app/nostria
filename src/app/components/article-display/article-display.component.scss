@@ -2,6 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 24px 0;
+  container-type: inline-size;
 
   @media (max-width: 768px) {
     padding: 16px 0;
@@ -768,6 +769,24 @@
     .action-text {
       display: none;
     }
+  }
+}
+
+@container (max-width: 480px) {
+  .action-button {
+    .action-text {
+      display: none;
+    }
+  }
+}
+
+@container (max-width: 380px) {
+  .emoji-indicators .aggregated-emojis {
+    display: none;
+  }
+
+  .bookmark-action {
+    display: none;
   }
 }
 
