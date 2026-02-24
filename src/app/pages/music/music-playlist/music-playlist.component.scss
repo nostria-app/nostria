@@ -114,6 +114,7 @@
 }
 
 .cover-section {
+  position: relative;
   flex-shrink: 0;
 
   .cover-image,
@@ -154,6 +155,38 @@
     mat-icon {
       color: var(--mat-sys-on-tertiary-container);
       opacity: 0.5;
+    }
+  }
+
+  .play-fab {
+    position: absolute;
+    bottom: -0.5rem;
+    right: -0.5rem;
+    z-index: 2;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(140deg, var(--mat-sys-primary) 0%, var(--mat-sys-primary-container) 100%);
+    color: var(--mat-sys-on-primary);
+    box-shadow: var(--mat-sys-level3);
+    border: 1px solid var(--mat-sys-outline-variant);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: var(--mat-sys-level4);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+
+    mat-icon {
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
     }
   }
 }
@@ -253,49 +286,6 @@
 
   .artist-name {
     color: var(--mat-sys-on-surface);
-  }
-}
-
-// Action row (play button, like, etc.)
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-
-  .play-fab {
-    background-color: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
-    transition: transform 0.2s ease;
-
-    &:hover:not(:disabled) {
-      transform: scale(1.05);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-    }
-
-    mat-icon {
-      font-size: 2rem;
-      width: 2rem;
-      height: 2rem;
-    }
-  }
-
-  .like-btn {
-    width: 40px;
-    height: 40px;
-
-    mat-icon {
-      font-size: 1.75rem;
-      width: 1.75rem;
-      height: 1.75rem;
-    }
-
-    &.liked mat-icon {
-      color: #ff6b6b;
-    }
   }
 }
 
