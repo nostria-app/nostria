@@ -486,7 +486,7 @@ export class MediaPlayerService implements OnInitialized {
       source: track.url,
       title: track.title || `Track ${index + 1}`,
       artist: track.artist || 'Unknown Artist',
-      artwork: '/icons/icon-192x192.png', // Default artwork
+      artwork: track.artwork || '/icons/icon-192x192.png',
       type: this.getMediaType(track.url),
     }));
 
@@ -514,7 +514,7 @@ export class MediaPlayerService implements OnInitialized {
       source: track.url,
       title: track.title || `Track ${index + 1}`,
       artist: track.artist || 'Unknown Artist',
-      artwork: '/icons/icon-192x192.png', // Default artwork
+      artwork: track.artwork || '/icons/icon-192x192.png',
       type: this.getMediaType(track.url),
     }));
 

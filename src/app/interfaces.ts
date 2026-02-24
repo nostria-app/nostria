@@ -40,6 +40,7 @@ export interface PlaylistTrack {
   title?: string;
   artist?: string;
   duration?: string;
+  artwork?: string;
 }
 
 export interface PlaylistMetadata {

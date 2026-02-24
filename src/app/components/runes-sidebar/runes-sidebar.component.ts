@@ -705,6 +705,7 @@ export class RunesSidebarComponent implements OnDestroy {
           title: track.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Track',
           artist: track.tags.find(tag => tag[0] === 'artist')?.[1] || 'Unknown Artist',
           duration: track.tags.find(tag => tag[0] === 'duration')?.[1],
+          artwork: track.tags.find(tag => tag[0] === 'image')?.[1],
         })).filter(track => !!track.url),
       };
 
