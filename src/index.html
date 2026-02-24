@@ -70,6 +70,7 @@
         };
         if (fontFamilies[savedFont]) {
           document.documentElement.style.setProperty('--nostria-font-family', fontFamilies[savedFont]);
+          document.documentElement.setAttribute('data-font', savedFont);
         }
       }
 

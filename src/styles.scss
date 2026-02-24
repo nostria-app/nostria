@@ -36,7 +36,7 @@ html {
   // Ensure browser/system font size is respected (accessibility)
   // Text scale multiplier is applied here so ALL rem-based sizes scale automatically
   // This includes Angular Material components, custom styles, and everything using rem units
-  font-size: calc(100% * var(--nostria-text-scale, 1));
+  font-size: calc(100% * var(--nostria-text-scale, 1) * var(--nostria-font-scale, 1));
 
   scroll-behavior: smooth;
   --mat-success-color: #4caf50;
@@ -55,6 +55,9 @@ html {
   // Default is Roboto (best with Angular Material)
   // Users can change via Settings > Layout > Font
   --nostria-font-family: Roboto, 'Helvetica Neue', sans-serif;
+
+  // Font-specific visual scaling (Sora uses 90% to align perceived size with other fonts)
+  --nostria-font-scale: 1;
 
   // ============================================
   // TEXT SCALING SYSTEM
@@ -1856,5 +1859,25 @@ app-messages {
 
   .chat-item .user-profile-container {
     flex-wrap: nowrap;
+  }
+}
+
+html[data-font='sora'] {
+  --nostria-font-scale: 0.95;
+}
+
+// iOS Safari auto-zooms focused form fields when computed text size is below 16px.
+// Keep Sora at 90% app-wide while restoring effective form control text size on iOS only.
+@supports (-webkit-touch-callout: none) {
+
+  html[data-font='sora'] input,
+  html[data-font='sora'] textarea,
+  html[data-font='sora'] select,
+  html[data-font='sora'] .mat-mdc-input-element,
+  html[data-font='sora'] .mdc-text-field__input,
+  html[data-font='sora'] .mat-mdc-select,
+  html[data-font='sora'] .mat-mdc-select-value,
+  html[data-font='sora'] .mat-mdc-select-min-line {
+    font-size: calc(1rem / var(--nostria-font-scale, 1)) !important;
   }
 }

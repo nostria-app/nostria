@@ -139,5 +139,6 @@ export class FontService {
 
     // Set CSS custom property
     this.document.documentElement.style.setProperty(this.CSS_PROPERTY, config.fontFamily);
+    this.document.documentElement.setAttribute('data-font', config.id);
   }
 }
