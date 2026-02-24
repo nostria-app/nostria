@@ -2085,6 +2085,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         content: messageText, // Store decrypted content locally
         isOutgoing: true,
         tags: signedEvent.tags,
+        replyTo: replyToId,
         encryptionType: 'nip04',
       };
 
@@ -2207,6 +2208,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         content: messageText,
         isOutgoing: true,
         tags: unsignedMessage.tags,
+        replyTo: replyToId,
         encryptionType: 'nip44',
       };
 
