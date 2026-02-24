@@ -502,6 +502,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return this.isReply() && this.data?.replyTo?.pubkey === pubkey;
   }
 
+  // Show only user-added mentions in the chip list (hide automatic reply target mention)
+  visibleMentions = computed(() => this.mentions().filter(pubkey => !this.isReplyTargetMention(pubkey)));
+
   // Check if zap split is available (requires quote and logged in user)
   zapSplitAvailable = computed(() => this.isQuote() && !!this.currentAccountPubkey());
 

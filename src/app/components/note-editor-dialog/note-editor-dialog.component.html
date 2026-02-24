@@ -315,16 +315,14 @@
     }
 
     <!-- Mentions -->
-    @if (mentions().length > 0 && !showAdvancedOptions()) {
+    @if (visibleMentions().length > 0 && !showAdvancedOptions()) {
     <div class="mentions-section">
       <span class="mentions-label">Mentioning:</span>
       <mat-chip-set class="mentions-chips">
-        @for (mention of mentions(); track mention) {
-        <mat-chip [removable]="!isReplyTargetMention(mention)" (removed)="removeMention(mention)">
+        @for (mention of visibleMentions(); track mention) {
+        <mat-chip [removable]="true" (removed)="removeMention(mention)">
           {{ getMentionDisplayName(mention) }}
-          @if (!isReplyTargetMention(mention)) {
           <mat-icon matChipRemove>cancel</mat-icon>
-          }
         </mat-chip>
         }
       </mat-chip-set>
@@ -380,45 +378,6 @@
         [class.button-disabled-visible]="!isDirty()" matTooltip="Clear draft">
         <mat-icon>delete_sweep</mat-icon>
       </button>
-      <button mat-icon-button type="button" [matMenuTriggerFor]="aiMenu"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="AI Tools">
-        <mat-icon>psychology</mat-icon>
-      </button>
-      <mat-menu #aiMenu="matMenu">
-        <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
-          <mat-icon>auto_awesome</mat-icon>
-          <span>Generate Text</span>
-        </button>
-        <button mat-menu-item (click)="openAiDialog('translate')">
-          <mat-icon>translate</mat-icon>
-          <span>Translate</span>
-        </button>
-        <button mat-menu-item (click)="openAiDialog('sentiment')">
-          <mat-icon>mood</mat-icon>
-          <span>Sentiment Analysis</span>
-        </button>
-      </mat-menu>
-      }
-
-      <!-- Dictation button (shown in both dialog and inline modes) -->
-      <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
-        @if (isTranscribing()) {
-        <mat-icon class="spinning">sync</mat-icon>
-        } @else if (isRecording()) {
-        <mat-icon>stop</mat-icon>
-        } @else {
-        <mat-icon>mic</mat-icon>
-        }
-      </button>
-      @if (recordingHistory.length > 0) {
-      <button mat-icon-button type="button" (click)="undoLastRecording()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        matTooltip="Undo last recording">
-        <mat-icon>undo</mat-icon>
-      </button>
       }
 
       <!-- Media button (shown in both dialog and inline modes) -->
@@ -458,7 +417,47 @@
       </mat-menu>
       }
 
+      <!-- Dictation button (shown in both dialog and inline modes) -->
+      <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
+        @if (isTranscribing()) {
+        <mat-icon class="spinning">sync</mat-icon>
+        } @else if (isRecording()) {
+        <mat-icon>stop</mat-icon>
+        } @else {
+        <mat-icon>mic</mat-icon>
+        }
+      </button>
+      @if (recordingHistory.length > 0) {
+      <button mat-icon-button type="button" (click)="undoLastRecording()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        matTooltip="Undo last recording">
+        <mat-icon>undo</mat-icon>
+      </button>
+      }
+
       @if (!inlineMode()) {
+      <button mat-icon-button type="button" [matMenuTriggerFor]="aiMenu"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="AI Tools">
+        <mat-icon>psychology</mat-icon>
+      </button>
+      <mat-menu #aiMenu="matMenu">
+        <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
+          <mat-icon>auto_awesome</mat-icon>
+          <span>Generate Text</span>
+        </button>
+        <button mat-menu-item (click)="openAiDialog('translate')">
+          <mat-icon>translate</mat-icon>
+          <span>Translate</span>
+        </button>
+        <button mat-menu-item (click)="openAiDialog('sentiment')">
+          <mat-icon>mood</mat-icon>
+          <span>Sentiment Analysis</span>
+        </button>
+      </mat-menu>
+
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
         [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
         <mat-icon>settings</mat-icon>

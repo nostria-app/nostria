@@ -318,15 +318,20 @@
   }
 
   .mentions-section {
+    position: relative;
+    z-index: 1;
+    margin-top: 8px;
     margin-bottom: 16px;
 
     @media (max-width: 600px),
     (max-height: 700px) {
       margin-bottom: 12px;
+      margin-top: 6px;
     }
 
     @media (max-width: 400px) {
       margin-bottom: 8px;
+      margin-top: 4px;
     }
 
     .mentions-label {
@@ -626,7 +631,8 @@
         }
 
         ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-          margin-bottom: 0;
+          position: static;
+          margin-bottom: 4px;
         }
       }
     }
