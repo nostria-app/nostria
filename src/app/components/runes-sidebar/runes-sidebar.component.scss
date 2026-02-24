@@ -133,15 +133,49 @@
   z-index: 1010;
 }
 
-.flyout-header {
+.flyout-meta-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 0.75rem 0.5rem;
+  justify-content: center;
+  position: relative;
+  min-height: 24px;
+  padding: 0.2rem 0.35rem 0;
+}
 
-  h3 {
+.flyout-updated {
+  font-size: 0.68rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1;
+  text-align: center;
+}
+
+.flyout-meta-row.has-close {
+  padding-right: 1.75rem;
+}
+
+.rune-close-button {
+  --mdc-icon-button-state-layer-size: 24px;
+  --mat-icon-button-touch-target-size: 24px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  position: absolute;
+  right: 0.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+
+  .mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
     margin: 0;
-    font-size: 1rem;
+    display: block;
   }
 }
 
@@ -149,7 +183,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding: 0 0.75rem 0.9rem;
+  padding: 0 0.75rem 0.75rem;
 }
 
 .btc-row {
@@ -161,15 +195,10 @@
   padding: 0.5rem 0.6rem;
 }
 
-.btc-meta {
-  font-size: 0.8rem;
-  color: var(--mat-sys-on-surface-variant);
-}
-
 .btc-meta-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.4rem;
 }
 
@@ -194,7 +223,7 @@
 
 .rune-error {
   color: var(--mat-sys-error);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
 }
 
 .weather-card {
@@ -292,11 +321,6 @@
   }
 }
 
-.weather-meta {
-  font-size: 0.8rem;
-  color: var(--mat-sys-on-surface-variant);
-}
-
 .weather-location-controls {
   display: flex;
   flex-direction: column;
@@ -305,9 +329,39 @@
 
 .weather-location-input-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 0.35rem;
   align-items: center;
+}
+
+.weather-search-button {
+  --mdc-icon-button-state-layer-size: 36px;
+  --mat-icon-button-touch-target-size: 36px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container-low);
+
+  .mat-icon {
+    margin: 0;
+    display: block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    font-size: 18px;
+  }
+}
+
+.weather-auto-location-button {
+  min-height: 36px;
+  white-space: nowrap;
 }
 
 .weather-location-input {

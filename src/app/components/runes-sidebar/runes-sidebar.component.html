@@ -32,9 +32,13 @@
 <div class="rune-flyout rune-hover-preview" [style.top.px]="hoverPreviewPosition()?.top"
   [style.right.px]="hoverPreviewPosition()?.right" (mouseenter)="onFlyoutEnter(previewRuneId)"
   (mouseleave)="onFlyoutLeave(previewRuneId)">
-  <div class="flyout-header">
-    <h3>{{ runeById(previewRuneId)?.title }}</h3>
+  @if (previewRuneId === 'bitcoin-price' || previewRuneId === 'weather') {
+  <div class="flyout-meta-row">
+    <span class="flyout-updated">
+      Updated: {{ formatUpdatedAt(previewRuneId === 'bitcoin-price' ? bitcoinPrice().updatedAt : weather().updatedAt) }}
+    </span>
   </div>
+  }
 
   @switch (previewRuneId) {
   @case ('bitcoin-price') {
@@ -52,7 +56,6 @@
       </span>
     </div>
     <div class="btc-meta-row">
-      <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
       <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
         (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
         <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
@@ -107,19 +110,16 @@
         <input class="weather-location-input" type="text" placeholder="Search city" [value]="weatherLocationQuery()"
           (input)="updateWeatherLocationQuery($any($event.target).value)"
           (keydown.enter)="$event.preventDefault(); searchWeatherLocations()" />
-        <button mat-stroked-button [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()"
-          (click)="searchWeatherLocations()">
-          @if (weatherLocationSearching()) {
-          Searching…
-          } @else {
-          Search
-          }
+        <button mat-icon-button class="weather-search-button"
+          [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()" (click)="searchWeatherLocations()"
+          aria-label="Search weather location">
+          <mat-icon>{{ weatherLocationSearching() ? 'hourglass_top' : 'search' }}</mat-icon>
+        </button>
+        <button mat-stroked-button class="weather-auto-location-button" [disabled]="!weatherUsingManualLocation()"
+          (click)="useAutomaticWeatherLocation()">
+          Auto
         </button>
       </div>
-
-      <button mat-stroked-button [disabled]="!weatherUsingManualLocation()" (click)="useAutomaticWeatherLocation()">
-        Use Auto Location
-      </button>
 
       @if (weatherLocationResults().length > 0) {
       <div class="weather-location-results">
@@ -132,7 +132,6 @@
       }
     </div>
 
-    <div class="weather-meta">Updated: {{ formatUpdatedAt(weather().updatedAt) }}</div>
     @if (weather().error) {
     <div class="rune-error">{{ weather().error }}</div>
     }
@@ -206,14 +205,22 @@
   @for (activeRuneIdValue of activeRunes(); track activeRuneIdValue) {
   <div class="rune-flyout" [class.pinned]="openRunes().includes(activeRuneIdValue)"
     (mouseenter)="onFlyoutEnter(activeRuneIdValue)" (mouseleave)="onFlyoutLeave(activeRuneIdValue)">
-    <div class="flyout-header">
-      <h3>{{ runeById(activeRuneIdValue)?.title }}</h3>
+    @if (openRunes().includes(activeRuneIdValue) || activeRuneIdValue === 'bitcoin-price' || activeRuneIdValue ===
+    'weather') {
+    <div class="flyout-meta-row" [class.has-close]="openRunes().includes(activeRuneIdValue)">
+      @if (activeRuneIdValue === 'bitcoin-price' || activeRuneIdValue === 'weather') {
+      <span class="flyout-updated">
+        Updated: {{ formatUpdatedAt(activeRuneIdValue === 'bitcoin-price' ? bitcoinPrice().updatedAt :
+        weather().updatedAt) }}
+      </span>
+      }
       @if (openRunes().includes(activeRuneIdValue)) {
-      <button mat-icon-button (click)="closeRune(activeRuneIdValue)" aria-label="Close rune">
+      <button mat-icon-button class="rune-close-button" (click)="closeRune(activeRuneIdValue)" aria-label="Close rune">
         <mat-icon>close</mat-icon>
       </button>
       }
     </div>
+    }
 
     @switch (activeRuneIdValue) {
     @case ('bitcoin-price') {
@@ -231,7 +238,6 @@
         </span>
       </div>
       <div class="btc-meta-row">
-        <div class="btc-meta">Updated: {{ formatUpdatedAt(bitcoinPrice().updatedAt) }}</div>
         <button mat-icon-button class="btc-reload-button" [disabled]="bitcoinPrice().loading"
           (click)="reloadBitcoinPrice()" aria-label="Reload Bitcoin price">
           <mat-icon>{{ bitcoinPrice().loading ? 'hourglass_top' : 'refresh' }}</mat-icon>
@@ -286,19 +292,16 @@
           <input class="weather-location-input" type="text" placeholder="Search city" [value]="weatherLocationQuery()"
             (input)="updateWeatherLocationQuery($any($event.target).value)"
             (keydown.enter)="$event.preventDefault(); searchWeatherLocations()" />
-          <button mat-stroked-button [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()"
-            (click)="searchWeatherLocations()">
-            @if (weatherLocationSearching()) {
-            Searching…
-            } @else {
-            Search
-            }
+          <button mat-icon-button class="weather-search-button"
+            [disabled]="weatherLocationSearching() || !weatherLocationQuery().trim()" (click)="searchWeatherLocations()"
+            aria-label="Search weather location">
+            <mat-icon>{{ weatherLocationSearching() ? 'hourglass_top' : 'search' }}</mat-icon>
+          </button>
+          <button mat-stroked-button class="weather-auto-location-button" [disabled]="!weatherUsingManualLocation()"
+            (click)="useAutomaticWeatherLocation()">
+            Auto
           </button>
         </div>
-
-        <button mat-stroked-button [disabled]="!weatherUsingManualLocation()" (click)="useAutomaticWeatherLocation()">
-          Use Auto Location
-        </button>
 
         @if (weatherLocationResults().length > 0) {
         <div class="weather-location-results">
@@ -311,7 +314,6 @@
         }
       </div>
 
-      <div class="weather-meta">Updated: {{ formatUpdatedAt(weather().updatedAt) }}</div>
       @if (weather().error) {
       <div class="rune-error">{{ weather().error }}</div>
       }
@@ -386,14 +388,13 @@
     [style.top.px]="settingsOpen() ? null : settingsPreviewPosition()?.top"
     [style.right.px]="settingsOpen() ? null : settingsPreviewPosition()?.right" (mouseenter)="onSettingsFlyoutEnter()"
     (mouseleave)="onSettingsFlyoutLeave()">
-    <div class="flyout-header">
-      <h3>Runes</h3>
-      @if (settingsOpen()) {
-      <button mat-icon-button (click)="toggleSettings()" aria-label="Close runes settings">
+    @if (settingsOpen()) {
+    <div class="flyout-meta-row has-close">
+      <button mat-icon-button class="rune-close-button" (click)="toggleSettings()" aria-label="Close runes settings">
         <mat-icon>close</mat-icon>
       </button>
-      }
     </div>
+    }
 
     <div class="rune-content settings-list">
       <h4 class="settings-section-title">Sidebar Widgets</h4>
