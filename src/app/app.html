@@ -373,7 +373,8 @@
           @else {
           <button class="notification-toolbar" mat-icon-button (click)="navigateToNotifications()"
             i18n-matTooltip="@@app.notifications.tooltip" matTooltip="View notifications">
-            <mat-icon [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null"
+            <mat-icon
+              [matBadge]="unreadNotificationsCount() > 99 ? '99+' : (unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null)"
               aria-hidden="false">notifications</mat-icon>
           </button>
           }
