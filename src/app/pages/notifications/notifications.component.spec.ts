@@ -59,6 +59,7 @@ describe('NotificationsComponent', () => {
     const mockAccountState = {
       pubkey: signal('test-pubkey'),
       mutedAccounts: signal<string[]>([]),
+      followingList: signal<string[]>([]),
     };
     const mockAccountLocalState = {
       setNotificationLastCheck: jasmine.createSpy('setNotificationLastCheck'),
@@ -241,6 +242,41 @@ describe('NotificationsComponent', () => {
         prefix: 'reacted',
         suffix: ' to your note',
       });
+    });
+  });
+
+  describe('Web of Trust filtering', () => {
+    function createContentNotification(authorPubkey: string, id: string): ContentNotification {
+      return {
+        ...createMockNotification({ id, type: NotificationType.MENTION }),
+        authorPubkey,
+      } as ContentNotification;
+    }
+
+    it('should keep followed authors when WoT score is missing', () => {
+      const followedAuthor = 'followed-pubkey';
+      const nonFollowedAuthor = 'not-followed-pubkey';
+      const accountState = TestBed.inject(AccountStateService) as unknown as {
+        followingList: ReturnType<typeof signal<string[]>>;
+      };
+
+      accountState.followingList.set([followedAuthor]);
+      mockNotificationService.notifications.set([
+        createContentNotification(followedAuthor, 'followed-1'),
+        createContentNotification(nonFollowedAuthor, 'other-1'),
+      ]);
+
+      component.wotFilterLevel.set('low');
+      (component as unknown as {
+        authorTrustRanks: ReturnType<typeof signal<Map<string, number | null>>>;
+      }).authorTrustRanks.set(new Map([
+        [followedAuthor, null],
+        [nonFollowedAuthor, null],
+      ]));
+
+      const filtered = component.contentNotifications();
+
+      expect(filtered.map(n => (n as ContentNotification).authorPubkey)).toEqual([followedAuthor]);
     });
   });
 });

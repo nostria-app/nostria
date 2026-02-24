@@ -408,8 +408,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   contentNotifications = computed(() => {
     const filters = this.notificationFilters();
     const mutedAccounts = this.accountState.mutedAccounts();
+    const followingList = this.accountState.followingList();
     // Convert to Set for O(1) lookups instead of O(n) array.includes()
     const mutedAccountsSet = new Set(mutedAccounts);
+    const followingAccountsSet = new Set(followingList);
     const query = this.searchQuery().toLowerCase().trim();
     const unreadOnly = this.showUnreadOnly();
     const wotLevel = this.wotFilterLevel();
@@ -433,7 +435,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           return false;
         }
 
-        if (contentNotif.authorPubkey && !this.passesWotRankFilter(trustRanks.get(contentNotif.authorPubkey), wotLevel)) {
+        if (
+          contentNotif.authorPubkey
+          && !this.passesWotRankFilter(
+            trustRanks.get(contentNotif.authorPubkey),
+            wotLevel,
+            followingAccountsSet.has(contentNotif.authorPubkey)
+          )
+        ) {
           return false;
         }
 
@@ -449,8 +458,16 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
-  private passesWotRankFilter(rank: number | null | undefined, level: WotFilterLevel): boolean {
+  private passesWotRankFilter(
+    rank: number | null | undefined,
+    level: WotFilterLevel,
+    isFollowingAuthor = false
+  ): boolean {
     if (level === 'off') {
+      return true;
+    }
+
+    if ((rank === null || rank === undefined || Number.isNaN(rank)) && isFollowingAuthor) {
       return true;
     }
 
