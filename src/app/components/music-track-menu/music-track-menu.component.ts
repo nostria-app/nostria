@@ -22,6 +22,9 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-ar
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { LoggerService } from '../../services/logger.service';
 import { ReactionService } from '../../services/reaction.service';
+import { ZapService } from '../../services/zap.service';
+import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+import { DataService } from '../../services/data.service';
 
 const MUSIC_KIND = 36787;
 
@@ -53,6 +56,12 @@ const MUSIC_KIND = 36787;
         <mat-icon>queue_music</mat-icon>
         <span>Add to Queue</span>
       </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
+          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+        </button>
+      }
       <button mat-menu-item (click)="goToTrackDetails()">
         <mat-icon>info</mat-icon>
         <span>Track Details</span>
@@ -65,16 +74,16 @@ const MUSIC_KIND = 36787;
         <mat-icon>share</mat-icon>
         <span>Share</span>
       </button>
-      @if (isAuthenticated()) {
-        <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
-          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
-        </button>
-      }
       <button mat-menu-item (click)="publishEvent()">
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
       </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="zapCreator()">
+          <mat-icon>bolt</mat-icon>
+          <span>Zap Creator</span>
+        </button>
+      }
     </mat-menu>
     
     <mat-menu #copyMenu="matMenu">
@@ -88,7 +97,7 @@ const MUSIC_KIND = 36787;
       </button>
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
-        <span>Copy Event Data</span>
+        <span>Copy Data</span>
       </button>
     </mat-menu>
     
@@ -160,6 +169,8 @@ export class MusicTrackMenuComponent {
   private userRelaysService = inject(UserRelaysService);
   private logger = inject(LoggerService);
   private reactionService = inject(ReactionService);
+  private zapService = inject(ZapService);
+  private dataService = inject(DataService);
 
   // Like state
   isLiked = signal(false);
@@ -422,6 +433,39 @@ export class MusicTrackMenuComponent {
       } else {
         this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
       }
+    });
+  }
+
+  async zapCreator(): Promise<void> {
+    const ev = this.track();
+    if (!ev) return;
+
+    const dTag = this.getIdentifier();
+    const zapSplits = this.zapService.parseZapSplits(ev);
+
+    // Fetch author profile for the zap dialog
+    let recipientMetadata: Record<string, unknown> | undefined;
+    try {
+      const profile = await this.dataService.getProfile(ev.pubkey);
+      recipientMetadata = profile?.data;
+    } catch {
+      // Continue without metadata — dialog can still work with just pubkey
+    }
+
+    const data: ZapDialogData = {
+      recipientPubkey: ev.pubkey,
+      recipientMetadata,
+      eventId: ev.id,
+      eventKind: ev.kind,
+      eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
+      event: ev,
+      zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
     });
   }
 }

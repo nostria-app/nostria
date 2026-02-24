@@ -65,6 +65,7 @@ declare global {
   host: {
     '[class.fullscreen-mode]': 'layout.fullscreenMediaPlayer()',
     '[class.footer-mode]': 'footer()',
+    '[class.footer-expanded-mode]': 'footer() && layout.expandedMediaPlayer()',
   },
 })
 export class LiveStreamPlayerComponent implements OnDestroy {

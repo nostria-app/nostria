@@ -4,9 +4,9 @@
   <!-- Single video element - always present, positioned via CSS -->
   @if (!isLiveKit() && !isExternal()) {
   <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
-    [class.expanded]="footer() && layout.expandedMediaPlayer()"
-    [class.chat-open]="chatVisible()" (mouseenter)="onVideoContainerMouseEnter()"
-    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
+    [class.expanded]="footer() && layout.expandedMediaPlayer()" [class.chat-open]="chatVisible()"
+    (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
+    (mousemove)="onVideoContainerMouseMove()">
     <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)"></video>
     @if (!footer()) {

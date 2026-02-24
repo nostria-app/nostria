@@ -8,6 +8,10 @@
     height: 64px;
   }
 
+  &.footer-expanded-mode {
+    height: 100%;
+  }
+
   &.fullscreen-mode {
     position: fixed;
     top: 0;

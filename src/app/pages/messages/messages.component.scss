@@ -338,8 +338,8 @@
   align-items: center;
   position: relative;
   z-index: 10; // Ensure it appears above other content
-  background-color: var(--mat-sys-color-surface);
-  border-top: 1px solid var(--mat-sys-color-outline-variant);
+  background-color: var(--mat-sys-surface);
+  border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
 .load-more-chats {
@@ -690,7 +690,7 @@
 
 // Encryption warning styles
 .warning-hint {
-  color: var(--mat-sys-color-error) !important;
+  color: var(--mat-sys-error) !important;
 }
 
 .chat-tabs {
@@ -827,8 +827,8 @@
     0px 4px 16px rgba(17, 17, 26, 0.06);
 
     &.outgoing {
-      // Glass effect for outgoing messages - light mode (purple tint)
-      background-color: rgba(197, 192, 255, 0.85);
+      // Glass effect for outgoing messages - light mode (primary tint)
+      background-color: var(--mat-sys-primary-container);
       box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.4),
         inset 0 0 8px 2px rgba(255, 255, 255, 0.15),
@@ -859,8 +859,8 @@
     -webkit-backdrop-filter: none;
 
     &.outgoing {
-      // Glass effect for outgoing messages - dark mode (purple tint)
-      background-color: rgba(65, 59, 143, 0.7);
+      // Glass effect for outgoing messages - dark mode (primary tint)
+      background-color: color-mix(in srgb, var(--mat-sys-primary-container) 60%, black);
       box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.15),
         inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
@@ -1033,7 +1033,7 @@
 
   &.active {
     // Glass effect for active chat - light mode
-    background-color: rgba(197, 192, 255, 0.4) !important;
+    background-color: var(--mat-sys-primary-container) !important;
   }
 
   &:hover:not(.active) {
@@ -1044,7 +1044,7 @@
 // Dark mode for chat items
 :host-context(.dark) .chat-item {
   &.active {
-    background-color: rgba(65, 59, 143, 0.5) !important;
+    background-color: var(--mat-sys-primary-container) !important;
   }
 
   &:hover:not(.active) {
@@ -1115,7 +1115,7 @@
   height: 40px;
   min-width: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--mat-sys-secondary) 0%, var(--mat-sys-primary) 100%);
   color: white;
   margin-right: 12px;
 

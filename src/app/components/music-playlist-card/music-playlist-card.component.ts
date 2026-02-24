@@ -82,27 +82,31 @@ const MUSIC_KIND = 36787;
             <mat-icon>play_arrow</mat-icon>
             <span>Play All</span>
           </button>
+          <button mat-menu-item (click)="likePlaylist($event)" [disabled]="isLiked()">
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+          </button>
           @if (isOwnPlaylist()) {
             <button mat-menu-item (click)="editPlaylist()">
               <mat-icon>edit</mat-icon>
               <span>Edit Playlist</span>
             </button>
           }
-          <button mat-menu-item (click)="zapCreator($event)">
-            <mat-icon>bolt</mat-icon>
-            <span>Zap Creator</span>
-          </button>
           <button mat-menu-item (click)="sharePlaylist()">
             <mat-icon>share</mat-icon>
             <span>Share Playlist</span>
           </button>
           <button mat-menu-item (click)="copyEventLink()">
             <mat-icon>link</mat-icon>
-            <span>Copy Event Link</span>
+            <span>Copy Link</span>
           </button>
           <button mat-menu-item (click)="copyEventData()">
             <mat-icon>data_object</mat-icon>
-            <span>Copy Event Data</span>
+            <span>Copy Data</span>
+          </button>
+          <button mat-menu-item (click)="zapCreator($event)">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap Creator</span>
           </button>
         </mat-menu>
       </mat-card-content>

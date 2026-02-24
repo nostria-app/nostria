@@ -143,6 +143,12 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         <mat-icon>play_arrow</mat-icon>
         <span>Play Now</span>
       </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="likeTrack($any($event))" [disabled]="isLiked()">
+          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+        </button>
+      }
       <button mat-menu-item (click)="addToQueue()">
         <mat-icon>queue_music</mat-icon>
         <span>Add to Queue</span>
@@ -159,12 +165,18 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       }
       <button mat-menu-item (click)="copyEventLink()">
         <mat-icon>link</mat-icon>
-        <span>Copy Event Link</span>
+        <span>Copy Link</span>
       </button>
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
-        <span>Copy Event Data</span>
+        <span>Copy Data</span>
       </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="zapArtist($any($event))">
+          <mat-icon>bolt</mat-icon>
+          <span>Zap Creator</span>
+        </button>
+      }
     </mat-menu>
     <mat-menu #playlistMenu="matMenu">
       <button mat-menu-item (click)="createNewPlaylist()">
