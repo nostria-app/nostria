@@ -42,7 +42,6 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { LinkifyPipe } from '../../pipes/linkify.pipe';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import {
   StartChatDialogComponent,
@@ -136,7 +135,6 @@ interface MessageGroup {
     UserProfileComponent,
     TimestampPipe,
     AgoPipe,
-    LinkifyPipe,
     MessageContentComponent,
     NamePipe,
     EmojiPickerComponent,
@@ -178,6 +176,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isVoiceListening = signal<boolean>(false);
   isVoiceTranscribing = signal<boolean>(false);
   isUploading = signal<boolean>(false);
+  isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' }[]>([]);
   error = signal<string | null>(null);
@@ -1208,26 +1207,129 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   onMediaFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.uploadMediaFile(input.files[0]);
+      void this.uploadMediaFiles([input.files[0]]);
     }
     input.value = '';
   }
 
   /**
-   * Upload a media file and insert the URL into the message
+   * Handle paste events in the message input.
+   * If clipboard contains image/video files, upload and insert them into the message.
    */
-  private async uploadMediaFile(file: File): Promise<void> {
+  onMessagePaste(event: ClipboardEvent): void {
+    const mediaFiles = this.getClipboardMediaFiles(event);
+    if (mediaFiles.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void this.uploadMediaFiles(mediaFiles);
+  }
+
+  onMessageDragOver(event: DragEvent): void {
+    if (!this.hasFilePayload(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOverMessageInput.set(true);
+  }
+
+  onMessageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOverMessageInput.set(false);
+  }
+
+  onMessageDrop(event: DragEvent): void {
+    this.isDragOverMessageInput.set(false);
+
+    if (!this.hasFilePayload(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mediaFiles = this.getDroppedMediaFiles(event);
+    if (mediaFiles.length === 0) {
+      return;
+    }
+
+    void this.uploadMediaFiles(mediaFiles);
+  }
+
+  private hasFilePayload(event: DragEvent): boolean {
+    const transferTypes = event.dataTransfer?.types;
+    return !!transferTypes && Array.from(transferTypes).includes('Files');
+  }
+
+  private getDroppedMediaFiles(event: DragEvent): File[] {
+    const droppedFiles = event.dataTransfer?.files;
+    if (!droppedFiles || droppedFiles.length === 0) {
+      return [];
+    }
+
+    return Array.from(droppedFiles).filter(file => this.isMediaFile(file));
+  }
+
+  private getClipboardMediaFiles(event: ClipboardEvent): File[] {
+    const items = event.clipboardData?.items;
+    if (!items) {
+      return [];
+    }
+
+    const mediaFiles: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind !== 'file') {
+        continue;
+      }
+
+      const file = item.getAsFile();
+      if (file && this.isMediaFile(file)) {
+        mediaFiles.push(file);
+      }
+    }
+
+    return mediaFiles;
+  }
+
+  private isMediaFile(file: File): boolean {
+    return file.type.startsWith('image/') || file.type.startsWith('video/');
+  }
+
+  private async uploadMediaFiles(files: File[]): Promise<void> {
+    if (files.length === 0) {
+      return;
+    }
+
     if (!this.hasConfiguredMediaServers()) {
       this.showMediaServerWarning();
       return;
     }
 
     this.isUploading.set(true);
-    this.uploadStatus.set('Uploading...');
 
     try {
       await this.mediaService.load();
 
+      for (let index = 0; index < files.length; index++) {
+        this.uploadStatus.set(files.length > 1 ? `Uploading ${index + 1}/${files.length}...` : 'Uploading...');
+        await this.uploadMediaFile(files[index]);
+      }
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  /**
+   * Upload a media file and insert the URL into the message
+   */
+  private async uploadMediaFile(file: File): Promise<void> {
+    try {
       const result = await this.mediaService.uploadFile(
         file,
         false,
@@ -1242,9 +1344,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (err) {
       this.logger.error('Failed to upload media file', err);
       this.snackBar.open('Failed to upload media', 'Dismiss', { duration: 5000 });
-    } finally {
-      this.isUploading.set(false);
-      this.uploadStatus.set('');
     }
   }
 
