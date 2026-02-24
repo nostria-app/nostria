@@ -1829,6 +1829,12 @@ html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
   bottom: 8px !important;
 }
 
+// iOS standalone/PWA: some WebView wrappers report an inflated safe-area inset,
+// which pushes the fixed bottom nav too far up.
+html[data-display-mode="standalone"]:not([data-platform="android"]) .mobile-nav {
+  bottom: 6px !important;
+}
+
 // Messages chat list - fix user-profile overflow in chat items
 app-messages {
   .chat-item .user-profile-custom-content {
