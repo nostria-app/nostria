@@ -589,7 +589,6 @@
 
 .media-button,
 .emoji-button,
-.voice-button,
 .send-button {
   flex-shrink: 0;
   opacity: 0.7;
@@ -673,44 +672,6 @@
       width: 14px;
       height: 14px;
     }
-  }
-}
-
-.voice-button.recording {
-  opacity: 1;
-  color: var(--mat-sys-error);
-}
-
-// Pulse animation for recording state
-.pulse-icon {
-  animation: pulse 1s ease-in-out infinite;
-  color: var(--mat-sys-error);
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.4;
-  }
-}
-
-// Spinning animation for transcribing state
-.spinning-icon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
   }
 }
 

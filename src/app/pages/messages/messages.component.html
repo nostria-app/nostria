@@ -557,21 +557,6 @@
             (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
             (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)"
             rows="1"></textarea>
-          @if (isVoiceListening()) {
-          <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
-            [disabled]="isSending()" matTooltip="Stop recording">
-            <mat-icon class="pulse-icon">stop</mat-icon>
-          </button>
-          } @else {
-          <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
-            [disabled]="isVoiceTranscribing() || isSending()" matTooltip="Voice input">
-            @if (isVoiceTranscribing()) {
-            <mat-icon class="spinning-icon">sync</mat-icon>
-            } @else {
-            <mat-icon>mic</mat-icon>
-            }
-          </button>
-          }
           <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
             (click)="sendMessage()" matTooltip="Send message">
             @if (isSending()) {

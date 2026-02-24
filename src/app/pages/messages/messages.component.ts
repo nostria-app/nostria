@@ -71,8 +71,6 @@ import { UserRelayService } from '../../services/relays/user-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { SpeechService } from '../../services/speech.service';
-import { SettingsService } from '../../services/settings.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -163,8 +161,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   layout = inject(LayoutService); // UI state signals
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
-  private readonly speechService = inject(SpeechService);
-  private readonly settings = inject(SettingsService);
   readonly localSettings = inject(LocalSettingsService);
   readonly mediaService = inject(MediaService);
 
@@ -173,8 +169,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
-  isVoiceListening = signal<boolean>(false);
-  isVoiceTranscribing = signal<boolean>(false);
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
@@ -1096,48 +1090,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Call the messaging service to mark the chat as read
     // Messages are automatically updated via the computed signal
     await this.messaging.markChatAsRead(chatId);
-  }
-
-  /**
-   * Start voice input for message dictation
-   */
-  async startVoiceInput(): Promise<void> {
-    // Check if AI transcription is enabled first
-    if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
-      this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
-        .onAction().subscribe(() => {
-          this.router.navigate(['/ai/settings']);
-        });
-      return;
-    }
-
-    this.isVoiceListening.set(true);
-
-    await this.speechService.startRecording({
-      silenceDuration: 2000,
-      onRecordingStateChange: (isRecording) => {
-        this.isVoiceListening.set(isRecording);
-      },
-      onTranscribingStateChange: (isTranscribing) => {
-        this.isVoiceTranscribing.set(isTranscribing);
-      },
-      onTranscription: (text) => {
-        // Append transcribed text to existing message
-        const currentText = this.newMessageText();
-        const separator = currentText && !currentText.endsWith(' ') ? ' ' : '';
-        this.newMessageText.set(currentText + separator + text);
-
-        // Focus the input
-        this.messageInput?.nativeElement?.focus();
-      }
-    });
-  }
-
-  /**
-   * Stop voice recording
-   */
-  stopVoiceRecording(): void {
-    this.speechService.stopRecording();
   }
 
   /**
