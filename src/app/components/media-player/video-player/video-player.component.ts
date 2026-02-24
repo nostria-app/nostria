@@ -23,12 +23,12 @@ import {
   addFullscreenChangeListener,
 } from '../../../utils/fullscreen';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
 import { nip19 } from 'nostr-tools';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
 import { formatDuration } from '../../../utils/format-duration';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-video-player',
@@ -39,7 +39,6 @@ import { formatDuration } from '../../../utils/format-duration';
     MatTooltipModule,
     RouterModule,
     UserProfileComponent,
-    VideoControlsComponent,
     VolumeGestureDirective,
     MatMenuModule,
     MatSliderModule
@@ -56,6 +55,7 @@ export class VideoPlayerComponent implements OnDestroy {
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
   private readonly castService = inject(CastService);
+  private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
   private readonly overlayContainer = inject(OverlayContainer);
 
@@ -78,9 +78,6 @@ export class VideoPlayerComponent implements OnDestroy {
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
-
-  @ViewChild(VideoControlsComponent)
-  videoControlsRef?: VideoControlsComponent;
 
   constructor() {
     if (!this.utilities.isBrowser()) {
@@ -133,7 +130,6 @@ export class VideoPlayerComponent implements OnDestroy {
 
       // Reset hover state and start auto-hide timer when entering fullscreen
       this.isHoveringControlsBar.set(false);
-      this.videoControlsRef?.forceShowControlsAndStartTimer();
       this.forceStartAutoHideTimer();
 
       document.addEventListener('mousemove', this.boundNativeFullscreenMouseMove, true);
@@ -162,7 +158,6 @@ export class VideoPlayerComponent implements OnDestroy {
       return;
     }
 
-    this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
@@ -180,7 +175,6 @@ export class VideoPlayerComponent implements OnDestroy {
       this.lastInteractionWasTouch = false;
     }, 500);
 
-    this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
@@ -305,7 +299,6 @@ export class VideoPlayerComponent implements OnDestroy {
     // Ignore synthetic mouse events that follow touch events
     if (this.lastInteractionWasTouch) return;
     // Use showControlsAndStartTimer to ensure auto-hide continues
-    this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
@@ -317,7 +310,6 @@ export class VideoPlayerComponent implements OnDestroy {
     if (this.lastInteractionWasTouch) return;
     // Start auto-hide immediately when leaving the video area
     if (!this.media.paused) {
-      this.videoControlsRef?.showControlsAndStartTimer();
       this.startAutoHideTimer();
     }
   }
@@ -332,7 +324,6 @@ export class VideoPlayerComponent implements OnDestroy {
       this.showCursor();
       return;
     }
-    this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
@@ -357,7 +348,6 @@ export class VideoPlayerComponent implements OnDestroy {
     this.isHoveringControlsBar.set(false);
 
     // Show controls and start auto-hide timer on touch
-    this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
@@ -430,5 +420,36 @@ export class VideoPlayerComponent implements OnDestroy {
 
   get volume(): number {
     return this.videoElement?.nativeElement ? Math.round(this.videoElement.nativeElement.volume * 100) : 100;
+  }
+
+  private isMusicVideoTrack(): boolean {
+    const current = this.media.current();
+    return current?.type === 'Music' && !!current.video;
+  }
+
+  hasSongLink(): boolean {
+    if (!this.isMusicVideoTrack()) return false;
+    const current = this.media.current();
+    return !!(current?.eventPubkey && current?.eventIdentifier);
+  }
+
+  hasArtistLink(): boolean {
+    if (!this.isMusicVideoTrack()) return false;
+    const current = this.media.current();
+    return !!current?.eventPubkey;
+  }
+
+  goToSong(): void {
+    const current = this.media.current();
+    if (this.hasSongLink() && current?.eventPubkey && current?.eventIdentifier) {
+      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    }
+  }
+
+  goToArtist(): void {
+    const current = this.media.current();
+    if (this.hasArtistLink() && current?.eventPubkey) {
+      this.router.navigate(['/music/artist', current.eventPubkey]);
+    }
   }
 }
