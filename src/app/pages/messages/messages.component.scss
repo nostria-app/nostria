@@ -535,7 +535,7 @@
 
 .message-input-row {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.125rem;
   align-items: flex-end;
   width: 100%;
   min-height: 40px;
@@ -564,7 +564,7 @@
   border: none;
   outline: none;
   font-size: 1rem;
-  padding: 4px 12px;
+  padding: 4px 12px 4px 2px;
   color: inherit;
   min-width: 0;
   min-height: 36px;
@@ -605,6 +605,10 @@
   mat-spinner {
     margin: 0;
   }
+}
+
+.emoji-button {
+  margin-right: -2px;
 }
 
 .hidden-file-input {
