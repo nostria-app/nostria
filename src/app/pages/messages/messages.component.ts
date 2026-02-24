@@ -1496,11 +1496,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
 
-      // Restore focus to the input field after sending (desktop behavior)
-      setTimeout(() => {
-        this.messageInput?.nativeElement?.focus();
-      }, 0);
-
       // Determine which encryption to use based on chat and client capabilities
       const selectedChat = this.selectedChat()!;
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
@@ -1547,6 +1542,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Release the send button immediately - message is visible in the UI
       this.isSending.set(false);
+      this.focusMessageInput();
 
       // Publish to relays in the background (fire-and-forget from UI perspective)
       result.publish().catch(err => {
@@ -1559,6 +1555,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.pendingMessages.set([]);
 
       this.isSending.set(false);
+      this.focusMessageInput();
 
       this.notifications.addNotification({
         id: Date.now().toString(),
@@ -1569,6 +1566,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         read: false,
       });
     }
+  }
+
+  private focusMessageInput(): void {
+    setTimeout(() => {
+      this.messageInput?.nativeElement?.focus();
+    }, 0);
   }
 
   /**
