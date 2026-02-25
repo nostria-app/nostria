@@ -22,6 +22,12 @@ import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-previ
 
 const MUSIC_KIND = 36787;
 
+interface PlaylistTrackReference {
+  kind: number;
+  pubkey: string;
+  identifier: string;
+}
+
 @Component({
   selector: 'app-music-embed',
   imports: [
@@ -520,6 +526,7 @@ const MUSIC_KIND = 36787;
 })
 export class MusicEmbedComponent {
   private static readonly MAX_CONCURRENT_LOOKUPS = 4;
+  private static readonly PLAYLIST_TRACK_FALLBACK_CONCURRENCY = 6;
   private static activeLookups = 0;
   private static lookupQueue: (() => void)[] = [];
   private static lookupCache = new Map<string, NostrRecord | null>();
@@ -959,7 +966,7 @@ export class MusicEmbedComponent {
       console.log('[MusicEmbed] Loading playlist tracks from event:', ev.id, 'tags:', ev.tags);
 
       // Get track references from playlist tags
-      const trackRefs = ev.tags
+      const trackRefs: PlaylistTrackReference[] = ev.tags
         .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
         .map(t => {
           const parts = t[1].split(':');
@@ -996,25 +1003,85 @@ export class MusicEmbedComponent {
 
       console.log('[MusicEmbed] Using relays for track fetch:', allRelays);
 
-      // Fetch tracks
-      const tracks: Event[] = [];
-
+      const refsByKey = new Map<string, PlaylistTrackReference>();
       for (const ref of trackRefs) {
-        const filter: Filter = {
-          kinds: [ref.kind],
-          authors: [ref.pubkey],
-          '#d': [ref.identifier],
-        };
-
-        try {
-          const track = await this.relayPool.get(allRelays, filter, 5000);
-          if (track) {
-            tracks.push(track);
-          }
-        } catch {
-          // Skip failed tracks
-        }
+        refsByKey.set(this.getTrackRefKey(ref), ref);
       }
+
+      const batchedFilter: Filter = {
+        kinds: [...new Set(trackRefs.map(ref => ref.kind))],
+        authors: [...new Set(trackRefs.map(ref => ref.pubkey))],
+        '#d': [...new Set(trackRefs.map(ref => ref.identifier))],
+      };
+
+      const eventByKey = new Map<string, Event>();
+
+      try {
+        const batchedEvents = await this.relayPool.query(allRelays, batchedFilter, 5000);
+        for (const fetchedEvent of batchedEvents) {
+          const dTag = fetchedEvent.tags.find(tag => tag[0] === 'd')?.[1];
+          if (!dTag) {
+            continue;
+          }
+
+          const key = this.getTrackRefKey({
+            kind: fetchedEvent.kind,
+            pubkey: fetchedEvent.pubkey,
+            identifier: dTag,
+          });
+
+          if (!refsByKey.has(key)) {
+            continue;
+          }
+
+          if (!eventByKey.has(key)) {
+            eventByKey.set(key, fetchedEvent);
+          }
+        }
+      } catch {
+        // Continue with fallback per-track fetches below
+      }
+
+      const missingRefs = trackRefs.filter(ref => !eventByKey.has(this.getTrackRefKey(ref)));
+
+      if (missingRefs.length > 0) {
+        let nextRefIndex = 0;
+        const workerCount = Math.min(
+          MusicEmbedComponent.PLAYLIST_TRACK_FALLBACK_CONCURRENCY,
+          missingRefs.length
+        );
+
+        const workers = Array.from({ length: workerCount }, async () => {
+          while (nextRefIndex < missingRefs.length) {
+            const currentIndex = nextRefIndex;
+            nextRefIndex += 1;
+
+            const ref = missingRefs[currentIndex];
+            const key = this.getTrackRefKey(ref);
+
+            const filter: Filter = {
+              kinds: [ref.kind],
+              authors: [ref.pubkey],
+              '#d': [ref.identifier],
+            };
+
+            try {
+              const track = await this.relayPool.get(allRelays, filter, 3500);
+              if (track && !eventByKey.has(key)) {
+                eventByKey.set(key, track);
+              }
+            } catch {
+              // Skip failed tracks
+            }
+          }
+        });
+
+        await Promise.all(workers);
+      }
+
+      const tracks = trackRefs
+        .map(ref => eventByKey.get(this.getTrackRefKey(ref)) || null)
+        .filter((track): track is Event => track !== null);
 
       console.log('[MusicEmbed] Loaded tracks:', tracks.length);
       this.tracksCache.set(tracks);
@@ -1022,6 +1089,10 @@ export class MusicEmbedComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private getTrackRefKey(ref: PlaylistTrackReference): string {
+    return `${ref.kind}:${ref.pubkey}:${ref.identifier}`;
   }
 
   private async ensureExpandedPlaylistTracksLoaded(): Promise<void> {
