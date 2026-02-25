@@ -1,13 +1,11 @@
-<div class="actions-row"
-  [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
+<div class="actions-row" [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
   [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
   [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
   <!-- Like with count -->
   <div class="action-button like-action like-hover-container"
     (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
-    <app-reaction-button class="action-icon" #reactionBtn [event]="event()"
-      [reactionsFromParent]="effectiveReactions()" (reactionChanged)="onReactionChanged()"
-      view="icon"></app-reaction-button>
+    <app-reaction-button class="action-icon" #reactionBtn [event]="event()" [reactionsFromParent]="effectiveReactions()"
+      (reactionChanged)="onReactionChanged()" view="icon"></app-reaction-button>
     @if (likes().length > 0) {
     <span class="action-count">{{ likes().length }}</span>
     }
@@ -15,8 +13,7 @@
   </div>
 
   <!-- Reply -->
-  <div class="action-button comment-action" role="button" tabindex="0"
-    (click)="replyClick.emit($event)">
+  <div class="action-button comment-action" role="button" tabindex="0" (click)="replyClick.emit($event)">
     <mat-icon class="action-icon">mode_comment</mat-icon>
     @if (effectiveReplyCount() > 0) {
     <span class="action-count">{{ effectiveReplyCount() }}</span>
@@ -46,13 +43,10 @@
   </div>
 
   <!-- Bookmark -->
-  <div class="action-button bookmark-action" role="button" tabindex="0"
-    (click)="bookmarkClick.emit($event)"
-    (contextmenu)="onActionsDisplayModeToggle($event)"
-    (touchstart)="onBookmarkLongPressStart($event)"
-    (touchend)="onBookmarkLongPressEnd()"
-    (touchcancel)="onBookmarkLongPressEnd()">
-    <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), bookmarkType()) }}</mat-icon>
+  <div class="action-button bookmark-action" role="button" tabindex="0" (click)="bookmarkClick.emit($event)"
+    (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
+    (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
+    <mat-icon class="action-icon">{{ bookmarkIcon() }}</mat-icon>
     <span class="action-text">Bookmark</span>
   </div>
 
@@ -80,8 +74,7 @@
 <div class="reactions-summary-container" [@expandCollapse]>
   <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
     [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="effectiveZaps()"
-    [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-    [hideTabs]="false">
+    [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()" [hideTabs]="false">
   </app-reaction-summary>
 </div>
 }

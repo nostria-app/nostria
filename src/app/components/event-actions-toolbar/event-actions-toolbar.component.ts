@@ -233,6 +233,12 @@ export class EventActionsToolbarComponent {
     return ev.id;
   });
 
+  isBookmarked = computed(() => {
+    return this.bookmark.isBookmarkedInAnyList(this.id(), this.bookmarkType());
+  });
+
+  bookmarkIcon = computed(() => (this.isBookmarked() ? 'bookmark_remove' : 'bookmark_add'));
+
   // Reactions summary panel state
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');

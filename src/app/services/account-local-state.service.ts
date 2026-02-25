@@ -73,6 +73,8 @@ interface AccountLocalState {
   musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
   volumeLevel?: number; // Video volume level (0-1)
   volumeMuted?: boolean; // Whether video is muted
+  mediaPlayerVolumeLevel?: number; // Media player volume level (0-1), separate from inline/feed video volume
+  mediaPlayerMuted?: boolean; // Whether media player is muted (separate from inline/feed video mute)
   audioPlayerView?: string; // Audio player view preference (modern, cards, winamp)
   aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
   publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
@@ -1171,6 +1173,37 @@ export class AccountLocalStateService {
    */
   setVolumeMuted(pubkey: string, muted: boolean): void {
     this.updateAccountState(pubkey, { volumeMuted: muted });
+  }
+
+  /**
+   * Get media player volume level for an account
+   */
+  getMediaPlayerVolumeLevel(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.mediaPlayerVolumeLevel ?? 1; // Default to full volume
+  }
+
+  /**
+   * Set media player volume level for an account
+   */
+  setMediaPlayerVolumeLevel(pubkey: string, volume: number): void {
+    this.updateAccountState(pubkey, { mediaPlayerVolumeLevel: volume });
+  }
+
+  /**
+   * Get media player muted state for an account
+   * Defaults to false so music/video tracks in media player play with sound.
+   */
+  getMediaPlayerMuted(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.mediaPlayerMuted ?? false;
+  }
+
+  /**
+   * Set media player muted state for an account
+   */
+  setMediaPlayerMuted(pubkey: string, muted: boolean): void {
+    this.updateAccountState(pubkey, { mediaPlayerMuted: muted });
   }
 
   /**

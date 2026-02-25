@@ -950,16 +950,16 @@ export class MediaPlayerService implements OnInitialized {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    this.accountLocalState.setVolumeLevel(pubkey, volume);
-    this.accountLocalState.setVolumeMuted(pubkey, muted);
+    this.accountLocalState.setMediaPlayerVolumeLevel(pubkey, volume);
+    this.accountLocalState.setMediaPlayerMuted(pubkey, muted);
   }
 
   private restoreVolumeSettings(videoElement: HTMLVideoElement): void {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    const volume = this.accountLocalState.getVolumeLevel(pubkey);
-    const muted = this.accountLocalState.getVolumeMuted(pubkey);
+    const volume = this.accountLocalState.getMediaPlayerVolumeLevel(pubkey);
+    const muted = this.accountLocalState.getMediaPlayerMuted(pubkey);
 
     videoElement.volume = Math.max(0, Math.min(1, volume));
     videoElement.muted = muted;
