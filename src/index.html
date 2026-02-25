@@ -74,12 +74,16 @@
         }
       }
 
-      // Detect Android and set platform attribute for CSS targeting
+      // Detect platform and set platform attribute for CSS targeting
       var isAndroid = /android/i.test(navigator.userAgent);
+      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
         window.navigator.standalone === true;
       if (isAndroid) {
         document.documentElement.setAttribute('data-platform', 'android');
+      } else if (isIOS) {
+        document.documentElement.setAttribute('data-platform', 'ios');
       }
       if (isStandalone) {
         document.documentElement.setAttribute('data-display-mode', 'standalone');

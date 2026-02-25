@@ -1834,17 +1834,17 @@ html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
 
 // iOS standalone/PWA: some WebView wrappers report an inflated safe-area inset,
 // which pushes the fixed bottom nav too far up.
-html[data-display-mode="standalone"]:not([data-platform="android"]) .mobile-nav {
+html[data-platform="ios"][data-display-mode="standalone"] .mobile-nav {
   bottom: 22px !important;
 }
 
 // iOS standalone/PWA: align chat composer with the same bottom anchor as mobile nav.
 @media (max-width: 699px) {
-  html[data-display-mode="standalone"]:not([data-platform="android"]) app-messages .message-input-container {
+  html[data-platform="ios"][data-display-mode="standalone"] app-messages .message-input-container {
     bottom: 22px !important;
   }
 
-  html[data-display-mode="standalone"]:not([data-platform="android"]) app-messages .message-list {
+  html[data-platform="ios"][data-display-mode="standalone"] app-messages .message-list {
     padding-bottom: 80px !important;
   }
 }
