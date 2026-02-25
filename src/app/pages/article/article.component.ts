@@ -37,6 +37,7 @@ import { ZapButtonComponent } from '../../components/zap-button/zap-button.compo
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { EventComponent as NostrEventComponent } from '../../components/event/event.component';
+import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 
 @Component({
   selector: 'app-article-page',
@@ -85,6 +86,8 @@ export class ArticleComponent implements OnDestroy {
   error = signal<string | null>(null);
   parsedContent = signal<SafeHtml>('');
   contentLoading = signal(false);
+  private contentRenderVersion = 0;
+  private pendingContentUpdate: ReturnType<typeof setTimeout> | null = null;
 
   id = computed(() => {
     const ev = this.event();
@@ -209,11 +212,40 @@ export class ArticleComponent implements OnDestroy {
     });
   }
 
-  private async parseArticleContent(content: string): Promise<void> {
+  private parseArticleContent(content: string): void {
     this.contentLoading.set(true);
     try {
-      const html = await this.formatService.markdownToHtml(content);
-      this.parsedContent.set(html);
+      const normalizedContent = normalizeMarkdownLinkDestinations(content);
+      const renderVersion = ++this.contentRenderVersion;
+
+      if (this.pendingContentUpdate) {
+        clearTimeout(this.pendingContentUpdate);
+        this.pendingContentUpdate = null;
+      }
+
+      const initialHtml = this.formatService.markdownToHtmlNonBlocking(
+        normalizedContent,
+        updatedHtml => {
+          if (renderVersion !== this.contentRenderVersion) {
+            return;
+          }
+
+          if (this.pendingContentUpdate) {
+            clearTimeout(this.pendingContentUpdate);
+          }
+
+          this.pendingContentUpdate = setTimeout(() => {
+            if (renderVersion !== this.contentRenderVersion) {
+              return;
+            }
+
+            this.parsedContent.set(updatedHtml);
+            this.pendingContentUpdate = null;
+          }, 150);
+        }
+      );
+
+      this.parsedContent.set(initialHtml);
     } catch (error) {
       this.logger.error('Error parsing article content:', error);
       this.parsedContent.set('');
@@ -224,6 +256,10 @@ export class ArticleComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
+    if (this.pendingContentUpdate) {
+      clearTimeout(this.pendingContentUpdate);
+      this.pendingContentUpdate = null;
+    }
   }
 
   isInRightPanel(): boolean {
