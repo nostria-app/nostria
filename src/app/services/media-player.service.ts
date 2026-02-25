@@ -1534,6 +1534,85 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
+  /**
+   * Recreate the audio element to disconnect it from a Web Audio API graph.
+   * Once createMediaElementSource() is called on an HTMLAudioElement, audio
+   * only flows through the Web Audio graph — this is irreversible on that element.
+   * This method creates a fresh Audio element, transfers all playback state
+   * (src, currentTime, volume, playbackRate, muted), re-attaches event listeners,
+   * and resumes playback if it was playing.
+   */
+  async recreateAudioElement(): Promise<void> {
+    if (!this.audio) return;
+
+    const wasPlaying = !this._isPaused();
+    const oldSrc = this.audio.src;
+    const oldTime = this.audio.currentTime;
+    const oldVolume = this.audio.volume;
+    const oldMuted = this.audio.muted;
+    const oldRate = this.audio.playbackRate;
+
+    // Remove listeners from old element and stop it
+    this.audio.removeEventListener('ended', this.handleMediaEnded);
+    this.audio.removeEventListener('timeupdate', this.handleTimeUpdate);
+    this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
+    this.audio.removeEventListener('error', this.handleAudioError);
+    this.audio.pause();
+    this.audio.src = '';
+
+    // Create fresh audio element
+    this.audio = new Audio();
+    this.setAudioCrossOrigin(this.audio, oldSrc);
+    this.audio.src = oldSrc;
+    this.audio.volume = oldVolume;
+    this.audio.muted = oldMuted;
+    this.audio.playbackRate = oldRate;
+
+    this.audio.addEventListener('ratechange', () => {
+      if (this.audio) {
+        this.playbackRate.set(this.audio.playbackRate);
+      }
+    });
+
+    // Wait for enough data to seek
+    await new Promise<void>((resolve) => {
+      const onCanPlay = () => {
+        this.audio?.removeEventListener('canplay', onCanPlay);
+        resolve();
+      };
+      this.audio!.addEventListener('canplay', onCanPlay);
+      this.audio!.load();
+      // Timeout fallback in case canplay never fires
+      setTimeout(() => {
+        this.audio?.removeEventListener('canplay', onCanPlay);
+        resolve();
+      }, 3000);
+    });
+
+    // Restore position
+    if (oldTime > 0 && this.audio.duration && oldTime < this.audio.duration) {
+      this.audio.currentTime = oldTime;
+    }
+
+    // Re-attach event listeners
+    this.audio.addEventListener('ended', this.handleMediaEnded);
+    this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
+    this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
+    this.audio.addEventListener('error', this.handleAudioError);
+
+    // Resume if was playing
+    if (wasPlaying) {
+      try {
+        await this.audio.play();
+        this._isPaused.set(false);
+      } catch (err) {
+        console.error('Error resuming after audio element recreation:', err);
+      }
+    }
+
+    console.log('Audio element recreated to disconnect Web Audio API');
+  }
+
   async resume() {
     // For live streams, restart instead of resuming
     const currentItem = this.current();

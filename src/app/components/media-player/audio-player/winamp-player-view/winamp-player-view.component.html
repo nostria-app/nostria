@@ -155,7 +155,7 @@
           <span class="presets-label">PRESETS</span>
           <button class="preset-dropdown-btn" [matMenuTriggerFor]="presetMenu">
             {{ currentPreset() || 'Custom' }}
-            <span class="dropdown-arrow">▼</span>
+            <span class="dropdown-arrow">&#x25BC;</span>
           </button>
           <mat-menu #presetMenu="matMenu" class="winamp-preset-menu">
             @for (preset of eqPresets; track preset) {
@@ -166,6 +166,25 @@
           </mat-menu>
         </div>
       </div>
+
+      <!-- EQ activation banner -->
+      @if (!eqConnected()) {
+      <div class="eq-activate-banner">
+        <div class="eq-activate-info">
+          <span class="eq-activate-text">EQ is visual-only. Enable audio processing to hear changes.</span>
+          <span class="eq-activate-note">Audio will be reloaded when leaving this view.</span>
+        </div>
+        <button class="eq-activate-btn" (click)="enableEq()" [disabled]="!media.audio">
+          <mat-icon>graphic_eq</mat-icon>
+          ACTIVATE EQ
+        </button>
+      </div>
+      } @else {
+      <div class="eq-active-banner">
+        <mat-icon class="eq-active-icon">graphic_eq</mat-icon>
+        <span>EQ active &mdash; audio processing enabled</span>
+      </div>
+      }
 
       <!-- EQ Graph visualization showing current curve -->
       <div class="eq-graph">

@@ -7,7 +7,6 @@ import {
   output,
   OnInit,
   OnDestroy,
-  effect,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -66,14 +65,18 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   // Visualization data
   visualizerBars = signal<number[]>(Array(28).fill(0));
   private animationFrame: number | null = null;
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private source: MediaElementAudioSourceNode | null = null;
 
-  // Equalizer Web Audio API nodes
+  // Web Audio API state for real EQ processing
+  private audioContext: AudioContext | null = null;
   private eqFilters: BiquadFilterNode[] = [];
   private preampGain: GainNode | null = null;
+  private source: MediaElementAudioSourceNode | null = null;
   private audioSourceConnected = false;
+
+  // Whether the EQ is actively processing audio via Web Audio API.
+  // Once connected, audio only flows through the Web Audio graph.
+  // On leaving winamp view, the audio element is recreated to restore normal playback.
+  eqConnected = signal(false);
 
   // EQ State
   eqEnabled = signal(true);
@@ -90,19 +93,6 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   toggleDoubleSize(): void {
     this.doubleSize.update(v => !v);
   }
-
-  // Effect for watching when current track changes to connect equalizer
-  private audioWatchEffect = effect(() => {
-    // React to current track signal to know when audio changes
-    const currentTrack = this.media.current();
-    const audio = this.media.audio;
-
-    // When a new track starts and we have an audio element, connect the EQ
-    if (currentTrack && audio && !this.audioSourceConnected) {
-      // Small delay to ensure audio element is fully set up
-      setTimeout(() => this.connectAudioSource(this.media.audio!), 100);
-    }
-  });
 
   currentTime = computed(() => this.media.currentTimeSig());
   duration = computed(() => this.media.durationSig());
@@ -139,7 +129,6 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.startTitleScroll();
     this.initVisualizer();
-    this.initEqualizer();
     this.loadEqSettings();
   }
 
@@ -151,12 +140,160 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
       cancelAnimationFrame(this.animationFrame);
     }
     this.saveEqSettings();
-    // Don't close audioContext as it would break audio playback
+    this.disconnectEq();
+  }
+
+  /**
+   * User-initiated: connect the Web Audio API equalizer to the audio element.
+   * This enables real audio processing but locks audio to flow through the
+   * Web Audio graph. When leaving winamp view, the audio element is recreated.
+   */
+  async enableEq(): Promise<void> {
+    const audio = this.media.audio;
+    if (!audio || this.audioSourceConnected) return;
+
+    try {
+      // Ensure crossOrigin is set for Web Audio API access
+      // This must be done before the source is loaded
+      if (audio.crossOrigin !== 'anonymous') {
+        audio.crossOrigin = 'anonymous';
+        // Need to reload with the new CORS setting
+        const currentSrc = audio.src;
+        const currentTime = audio.currentTime;
+        const wasPlaying = !this.media.paused;
+
+        audio.src = '';
+        audio.src = currentSrc;
+        audio.load();
+
+        await new Promise<void>((resolve) => {
+          const onCanPlay = () => {
+            audio.removeEventListener('canplay', onCanPlay);
+            resolve();
+          };
+          audio.addEventListener('canplay', onCanPlay);
+          setTimeout(() => {
+            audio.removeEventListener('canplay', onCanPlay);
+            resolve();
+          }, 3000);
+        });
+
+        if (currentTime > 0 && audio.duration && currentTime < audio.duration) {
+          audio.currentTime = currentTime;
+        }
+
+        if (wasPlaying) {
+          await audio.play();
+        }
+      }
+
+      // Create audio context and EQ chain
+      this.audioContext = new AudioContext();
+      this.setupEqChain();
+
+      if (!this.preampGain) {
+        console.warn('EQ chain not ready');
+        this.audioContext.close();
+        this.audioContext = null;
+        return;
+      }
+
+      // Resume audio context if suspended (browsers require user gesture)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      // Route audio through the Web Audio API graph
+      this.source = this.audioContext.createMediaElementSource(audio);
+      this.source.connect(this.preampGain);
+      this.audioSourceConnected = true;
+      this.eqConnected.set(true);
+
+      // Apply current EQ state to the audio nodes
+      this.applyEqState();
+
+      console.log('Equalizer connected to audio source');
+    } catch (err) {
+      console.warn('Could not connect equalizer to audio:', err);
+      // Clean up partial state
+      if (this.audioContext) {
+        try { this.audioContext.close(); } catch { /* ignore */ }
+        this.audioContext = null;
+      }
+      this.eqFilters = [];
+      this.preampGain = null;
+      this.source = null;
+      this.audioSourceConnected = false;
+      this.eqConnected.set(false);
+    }
+  }
+
+  /**
+   * Disconnect the EQ by closing the AudioContext and recreating
+   * the audio element so playback works normally outside winamp view.
+   */
+  private disconnectEq(): void {
+    if (!this.audioSourceConnected) return;
+
+    // Close the audio context — this disconnects all nodes
+    if (this.audioContext) {
+      try { this.audioContext.close(); } catch { /* ignore */ }
+      this.audioContext = null;
+    }
+
+    this.eqFilters = [];
+    this.preampGain = null;
+    this.source = null;
+    this.audioSourceConnected = false;
+    this.eqConnected.set(false);
+
+    // Recreate the audio element so it's no longer tied to the Web Audio graph
+    this.media.recreateAudioElement();
+  }
+
+  private setupEqChain(): void {
+    if (!this.audioContext) return;
+
+    try {
+      // Create preamp gain node
+      this.preampGain = this.audioContext.createGain();
+      this.preampGain.gain.value = this.preampToGain(this.eqPreamp());
+
+      // Create biquad filters for each frequency band
+      this.eqFilters = EQ_FREQUENCIES.map((freq, index) => {
+        const filter = this.audioContext!.createBiquadFilter();
+        filter.type = 'peaking';
+        filter.frequency.value = freq;
+        filter.Q.value = 1.4; // Standard Q value for 10-band EQ
+        filter.gain.value = this.sliderToDb(this.eqBands()[index]);
+        return filter;
+      });
+
+      // Chain the filters: preamp -> filter1 -> filter2 -> ... -> destination
+      let previousNode: AudioNode = this.preampGain;
+      for (const filter of this.eqFilters) {
+        previousNode.connect(filter);
+        previousNode = filter;
+      }
+      previousNode.connect(this.audioContext.destination);
+    } catch (err) {
+      console.error('Failed to create EQ chain:', err);
+    }
+  }
+
+  // Convert slider value (0-100) to dB gain (-12 to +12)
+  private sliderToDb(value: number): number {
+    return ((value - 50) / 50) * 12;
+  }
+
+  // Convert preamp slider (0-100) to gain multiplier
+  private preampToGain(value: number): number {
+    const db = ((value - 50) / 50) * 12;
+    return Math.pow(10, db / 20);
   }
 
   private initVisualizer(): void {
     // Simple fake visualizer animation
-    // Real implementation would use Web Audio API with the actual audio element
     const animate = () => {
       if (!this.media.paused) {
         const bars = Array(28).fill(0).map(() =>
@@ -308,105 +445,20 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  // Initialize Web Audio API equalizer
-  private initEqualizer(): void {
-    // Equalizer will be initialized when audio element is available
-    // We need to wait for the audio element to exist
-  }
-
-  private setupEqChain(): void {
-    if (!this.audioContext) return;
-
-    try {
-      // Create preamp gain node
-      this.preampGain = this.audioContext.createGain();
-      this.preampGain.gain.value = this.preampToGain(this.eqPreamp());
-
-      // Create biquad filters for each frequency band
-      this.eqFilters = EQ_FREQUENCIES.map((freq, index) => {
-        const filter = this.audioContext!.createBiquadFilter();
-        filter.type = 'peaking';
-        filter.frequency.value = freq;
-        filter.Q.value = 1.4; // Standard Q value for 10-band EQ
-        filter.gain.value = this.sliderToDb(this.eqBands()[index]);
-        return filter;
-      });
-
-      // Chain the filters: preamp -> filter1 -> filter2 -> ... -> destination
-      let previousNode: AudioNode = this.preampGain;
-      for (const filter of this.eqFilters) {
-        previousNode.connect(filter);
-        previousNode = filter;
-      }
-      previousNode.connect(this.audioContext.destination);
-
-      console.log('EQ chain created with', this.eqFilters.length, 'bands');
-    } catch (err) {
-      console.error('Failed to create EQ chain:', err);
-    }
-  }
-
-  private connectAudioSource(audio: HTMLAudioElement): void {
-    if (this.audioSourceConnected) return;
-
-    try {
-      // Create audio context on first connection (must be after user interaction)
-      if (!this.audioContext) {
-        this.audioContext = new AudioContext();
-        this.setupEqChain();
-      }
-
-      if (!this.preampGain) {
-        console.warn('EQ chain not ready');
-        return;
-      }
-
-      // Resume audio context if suspended (browsers require user gesture)
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume();
-      }
-
-      // Create media element source - this routes audio through Web Audio API
-      // IMPORTANT: Once created, audio ONLY plays through the Web Audio graph
-      // Note: crossOrigin must be set on audio element BEFORE src is set (done in MediaPlayerService)
-      if (!this.source) {
-        this.source = this.audioContext.createMediaElementSource(audio);
-        // Connect source to preamp (start of EQ chain)
-        this.source.connect(this.preampGain);
-        this.audioSourceConnected = true;
-        console.log('Equalizer connected to audio source');
-      }
-    } catch (err) {
-      console.warn('Could not connect equalizer to audio:', err);
-      // If we can't connect (e.g., CORS issue), audio will still play normally
-    }
-  }
-
-  // Convert slider value (0-100) to dB gain (-12 to +12)
-  private sliderToDb(value: number): number {
-    // 0 = -12dB, 50 = 0dB, 100 = +12dB
-    return ((value - 50) / 50) * 12;
-  }
-
-  // Convert preamp slider (0-100) to gain multiplier
-  private preampToGain(value: number): number {
-    // 0 = -12dB, 50 = 0dB, 100 = +12dB
-    const db = ((value - 50) / 50) * 12;
-    return Math.pow(10, db / 20);
-  }
-
   // Toggle EQ on/off
   toggleEq(): void {
     this.eqEnabled.update(v => !v);
-    this.applyEqState();
+    if (this.eqConnected()) {
+      this.applyEqState();
+    }
   }
 
-  // Toggle Auto mode (future: could analyze audio and adjust EQ)
+  // Toggle Auto mode
   toggleEqAuto(): void {
     this.eqAuto.update(v => !v);
   }
 
-  // Apply EQ enabled/disabled state
+  // Apply EQ enabled/disabled state to audio nodes
   private applyEqState(): void {
     if (!this.eqFilters.length) return;
 
@@ -429,7 +481,7 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     this.eqPreamp.set(value);
     this.currentPreset.set(null);
 
-    if (this.preampGain && this.eqEnabled()) {
+    if (this.preampGain && this.eqEnabled() && this.eqConnected()) {
       this.preampGain.gain.value = this.preampToGain(value);
     }
   }
@@ -445,7 +497,7 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     });
     this.currentPreset.set(null);
 
-    if (this.eqFilters[index] && this.eqEnabled()) {
+    if (this.eqFilters[index] && this.eqEnabled() && this.eqConnected()) {
       this.eqFilters[index].gain.value = this.sliderToDb(value);
     }
   }
@@ -459,12 +511,10 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
     this.eqBands.set([...preset.bands]);
     this.currentPreset.set(presetName);
 
-    // Apply to audio nodes
-    if (this.preampGain && this.eqEnabled()) {
-      this.preampGain.gain.value = this.preampToGain(preset.preamp);
-    }
-
-    if (this.eqEnabled()) {
+    if (this.eqConnected() && this.eqEnabled()) {
+      if (this.preampGain) {
+        this.preampGain.gain.value = this.preampToGain(preset.preamp);
+      }
       for (let i = 0; i < this.eqFilters.length; i++) {
         this.eqFilters[i].gain.value = this.sliderToDb(preset.bands[i]);
       }
@@ -494,9 +544,6 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
           this.eqBands.set(settings.bands);
         }
         if (settings.preset) this.currentPreset.set(settings.preset);
-
-        // Apply loaded settings to audio nodes
-        this.applyEqState();
       }
     } catch (err) {
       console.warn('Failed to load EQ settings:', err);

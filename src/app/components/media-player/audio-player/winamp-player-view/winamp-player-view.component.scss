@@ -454,6 +454,83 @@ $winamp-button-pressed: #2a2a2a;
     }
   }
 
+  // EQ activation/status banners
+  .eq-activate-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 6px;
+    margin: 2px 4px;
+    background: linear-gradient(180deg, #2a2a1a, #1a1a10);
+    border: 1px solid #554400;
+    border-radius: 2px;
+
+    .eq-activate-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+
+      .eq-activate-text {
+        font-size: 7px;
+        color: $winamp-text;
+      }
+
+      .eq-activate-note {
+        font-size: 6px;
+        color: $winamp-text-dim;
+      }
+    }
+
+    .eq-activate-btn {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px 6px;
+      font-size: 7px;
+      background: linear-gradient(180deg, #5a5a2a, #3a3a1a);
+      border: 1px solid #887700;
+      color: $winamp-text;
+      cursor: pointer;
+      white-space: nowrap;
+
+      mat-icon {
+        font-size: 10px;
+        width: 10px;
+        height: 10px;
+      }
+
+      &:hover {
+        background: linear-gradient(180deg, #6a6a3a, #4a4a2a);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    }
+  }
+
+  .eq-active-banner {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    margin: 2px 4px;
+    background: linear-gradient(180deg, #1a2a1a, #102a10);
+    border: 1px solid #005500;
+    border-radius: 2px;
+    font-size: 7px;
+    color: $winamp-text;
+
+    .eq-active-icon {
+      font-size: 10px;
+      width: 10px;
+      height: 10px;
+      color: #00cc00;
+    }
+  }
+
   // EQ Graph showing current curve
   .eq-graph {
     background: #000;
