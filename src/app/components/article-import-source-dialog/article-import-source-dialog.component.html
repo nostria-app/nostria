@@ -14,7 +14,8 @@
     <span>or</span>
   </div>
 
-  <div class="zip-import-section">
+  <div class="zip-import-section" [class.drag-over]="isZipDragOver()" (dragenter)="onZipDragEnter($event)"
+    (dragover)="onZipDragOver($event)" (dragleave)="onZipDragLeave($event)" (drop)="onZipDrop($event, zipInput)">
     <input #zipInput type="file" accept=".zip,application/zip,application/x-zip-compressed" class="hidden-input"
       title="Select article zip package" aria-label="Select article zip package" (change)="onZipFileSelected($event)" />
 
@@ -22,6 +23,11 @@
       <mat-icon>folder_zip</mat-icon>
       Choose .zip Package
     </button>
+
+    <div class="drop-hint">
+      <mat-icon>upload_file</mat-icon>
+      <span>or drag and drop a .zip package here</span>
+    </div>
 
     @if (selectedZipFile()) {
     <div class="selected-zip">

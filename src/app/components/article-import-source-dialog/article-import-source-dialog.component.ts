@@ -26,6 +26,7 @@ export class ArticleImportSourceDialogComponent {
 
   readonly referenceInput = signal('');
   readonly selectedZipFile = signal<File | null>(null);
+  readonly isZipDragOver = signal(false);
 
   onReferenceInput(value: string): void {
     this.referenceInput.set(value);
@@ -33,6 +34,40 @@ export class ArticleImportSourceDialogComponent {
 
   openZipPicker(fileInput: HTMLInputElement): void {
     fileInput.click();
+  }
+
+  onZipDragEnter(event: DragEvent): void {
+    event.preventDefault();
+    this.isZipDragOver.set(true);
+  }
+
+  onZipDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isZipDragOver.set(true);
+  }
+
+  onZipDragLeave(event: DragEvent): void {
+    event.preventDefault();
+
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    const relatedTarget = event.relatedTarget as Node | null;
+    if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+      return;
+    }
+
+    this.isZipDragOver.set(false);
+  }
+
+  onZipDrop(event: DragEvent, fileInput: HTMLInputElement): void {
+    event.preventDefault();
+    this.isZipDragOver.set(false);
+
+    const droppedFile = event.dataTransfer?.files?.[0];
+    if (!droppedFile) {
+      return;
+    }
+
+    this.setZipFileIfValid(droppedFile, fileInput);
   }
 
   onZipFileSelected(event: Event): void {
@@ -43,21 +78,26 @@ export class ArticleImportSourceDialogComponent {
       return;
     }
 
+    this.setZipFileIfValid(file, input);
+  }
+
+  clearZipSelection(fileInput: HTMLInputElement): void {
+    this.selectedZipFile.set(null);
+    this.isZipDragOver.set(false);
+    fileInput.value = '';
+  }
+
+  private setZipFileIfValid(file: File, fileInput: HTMLInputElement): void {
     const isZipByType = file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
     const isZipByName = file.name.toLowerCase().endsWith('.zip');
 
     if (!isZipByType && !isZipByName) {
       this.selectedZipFile.set(null);
-      input.value = '';
+      fileInput.value = '';
       return;
     }
 
     this.selectedZipFile.set(file);
-  }
-
-  clearZipSelection(fileInput: HTMLInputElement): void {
-    this.selectedZipFile.set(null);
-    fileInput.value = '';
   }
 
   importReference(): void {
