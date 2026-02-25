@@ -523,6 +523,40 @@
   right: 0;
   bottom: 0;
   z-index: 20;
-  padding: 0 12px 8px 12px;
+  max-width: none;
+  padding: 0 16px 8px 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.fullscreen-playback-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .control-buttons {
+    button {
+      color: white;
+    }
+  }
 }

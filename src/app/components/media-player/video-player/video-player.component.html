@@ -40,31 +40,18 @@
     </div>
   </div>
 
-  <div class="footer-content expanded-mode fullscreen-controls">
-    <div class="media-info">
-      <div class="media-title">{{ media.current()?.title || 'Video' }}</div>
-      @if (media.current()?.artist) {
-      <div class="media-artist">
-        @if (isNpubArtist(media.current()?.artist)) {
-        <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
-        } @else {
-        {{ media.current()?.artist }}
-        }
-      </div>
-      }
-    </div>
-
-    <div class="playback-controls">
+  <div class="fullscreen-playback-controls" [class.visible]="!cursorHidden() || media.paused">
+    <div class="control-buttons">
       <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button matTooltip="Previous">
         <mat-icon>skip_previous</mat-icon>
       </button>
 
       @if (media.paused) {
-      <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
+      <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
         <mat-icon>play_arrow</mat-icon>
       </button>
       } @else {
-      <button matTooltip="Pause" (click)="media.pause()" mat-icon-button>
+      <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
         <mat-icon>pause</mat-icon>
       </button>
       }
@@ -73,21 +60,9 @@
         <mat-icon>skip_next</mat-icon>
       </button>
     </div>
-
-    <div class="control-actions">
-      <button mat-icon-button [matMenuTriggerFor]="expandedMenu" matTooltip="More options">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
-        <mat-icon>minimize</mat-icon>
-      </button>
-      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
   </div>
 
-  <div class="video-timeline fullscreen-timeline">
+  <div class="video-timeline fullscreen-timeline" [class.visible]="!cursorHidden() || media.paused">
     <span class="time-label">{{ formatLabel(media.currentTimeSig()) }}</span>
     <div class="custom-slider">
       <input type="range" [min]="0" [max]="media.durationSig() || 0" [value]="media.currentTimeSig()"
