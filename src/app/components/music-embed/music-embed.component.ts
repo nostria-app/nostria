@@ -57,18 +57,23 @@ const MUSIC_KIND = 36787;
           
           <!-- Info section -->
           <div class="embed-info">
-            <app-user-profile [pubkey]="authorPubkey()" view="compact"></app-user-profile>
-            <h4 class="embed-title">{{ title() }}</h4>
-            <div class="embed-meta">
-              <app-date-toggle [date]="createdAt()"></app-date-toggle>
-              @if (hashtags().length > 0) {
-                <mat-chip-set>
-                  @for (hashtag of hashtags().slice(0, 3); track hashtag) {
-                    <mat-chip>{{ hashtag }}</mat-chip>
-                  }
-                </mat-chip-set>
-              }
-            </div>
+            @if (isTrack()) {
+              <div class="embed-title">{{ title() }}</div>
+              <div class="embed-artist">{{ artistName() || 'Unknown Artist' }}</div>
+            } @else {
+              <app-user-profile [pubkey]="authorPubkey()" view="compact"></app-user-profile>
+              <div class="embed-title">{{ title() }}</div>
+              <div class="embed-meta">
+                <app-date-toggle [date]="createdAt()"></app-date-toggle>
+                @if (hashtags().length > 0) {
+                  <mat-chip-set>
+                    @for (hashtag of hashtags().slice(0, 3); track hashtag) {
+                      <mat-chip>{{ hashtag }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                }
+              </div>
+            }
           </div>
           
           <!-- Action buttons -->
@@ -115,6 +120,62 @@ const MUSIC_KIND = 36787;
       border-radius: 12px;
       background: var(--mat-sys-surface-container-low);
       overflow: hidden;
+    }
+
+    .music-embed.track {
+      margin: 0.35rem 0;
+      border-radius: 10px;
+
+      .embed-content {
+        padding: 6px 8px;
+        gap: 8px;
+      }
+
+      .embed-cover {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+
+        .cover-placeholder mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .embed-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        .embed-title {
+          font-size: 1rem;
+          line-height: 1.15;
+        }
+
+        .embed-artist {
+          margin-top: 2px;
+          font-size: 0.86rem;
+          color: var(--mat-sys-on-surface-variant);
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .embed-meta {
+          display: none;
+        }
+      }
+
+      .embed-actions {
+        .play-btn,
+        button[mat-icon-button] {
+          width: 32px;
+          height: 32px;
+          padding: 4px;
+        }
+      }
     }
 
     .loading-state,
@@ -198,6 +259,16 @@ const MUSIC_KIND = 36787;
       flex: 1;
       min-width: 0;
       overflow: hidden;
+
+      .embed-artist {
+        margin-top: 2px;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.85rem;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
       app-user-profile {
         margin-bottom: 4px;
