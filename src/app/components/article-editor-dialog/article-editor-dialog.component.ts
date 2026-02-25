@@ -98,6 +98,11 @@ interface ParsedArticleZipPackage {
   totalMediaBytes: number;
 }
 
+interface PackageImportFile {
+  relativePath: string;
+  file: File;
+}
+
 @Component({
   selector: 'app-article-editor-dialog',
   imports: [
@@ -1359,6 +1364,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
+    if (selection.type === 'folder') {
+      await this.importArticleFromFolderPackage(selection.files, selection.folderName);
+      return;
+    }
+
     await this.importArticleFromReference(selection.value);
   }
 
@@ -1493,6 +1503,74 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  private async importArticleFromFolderPackage(
+    files: { relativePath: string; file: File }[],
+    folderName: string
+  ): Promise<void> {
+    let parsedPackage: ParsedArticleZipPackage;
+
+    try {
+      this.isLoading.set(true);
+      parsedPackage = await this.parseArticleFolderPackage(files);
+    } catch (error) {
+      this.snackBar.open(
+        `Failed to read folder package: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        { duration: 6000 }
+      );
+      this.isLoading.set(false);
+      return;
+    }
+
+    const shouldReplaceDraft = await this.confirmReplaceCurrentDraft();
+    if (!shouldReplaceDraft) {
+      this.isLoading.set(false);
+      return;
+    }
+
+    const mediaServers = parsedPackage.mediaFiles.length > 0
+      ? await this.getMediaServersForUpload()
+      : [];
+
+    if (parsedPackage.mediaFiles.length > 0 && mediaServers.length === 0) {
+      this.isLoading.set(false);
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const confirmed = await this.confirmZipImportSummary(parsedPackage);
+    if (!confirmed) {
+      this.isLoading.set(false);
+      return;
+    }
+
+    try {
+      const uploadedUrlMap = await this.uploadZipMediaFiles(parsedPackage.mediaFiles, mediaServers);
+      const importedEvent = this.applyZipMediaUrlsToEvent(parsedPackage.event, parsedPackage.mediaFiles, uploadedUrlMap);
+
+      const importedDTag = this.getTagValue(importedEvent.tags, 'd') || this.generateUniqueId();
+      this.applyArticleEventToDraft(importedEvent, importedDTag);
+      this.isEditMode.set(false);
+      this.scheduleAutoSaveIfNeeded();
+
+      this.snackBar.open(
+        parsedPackage.mediaFiles.length > 0
+          ? `Article imported from ${folderName} (${parsedPackage.mediaFiles.length} media files uploaded)`
+          : `Article imported from ${folderName}`,
+        'Close',
+        { duration: 4500 }
+      );
+    } catch (error) {
+      this.snackBar.open(
+        `Failed to import folder package: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        { duration: 6000 }
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
   private async parseArticleZipPackage(zipFile: File): Promise<ParsedArticleZipPackage> {
     const zip = new JSZip();
     const zipData = await zip.loadAsync(zipFile);
@@ -1552,6 +1630,61 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     };
   }
 
+  private async parseArticleFolderPackage(files: PackageImportFile[]): Promise<ParsedArticleZipPackage> {
+    const normalizedFiles = files
+      .map(entry => ({
+        relativePath: this.normalizeZipPath(entry.relativePath),
+        file: entry.file,
+      }))
+      .filter(entry => !!entry.relativePath);
+
+    const eventFile = normalizedFiles.find(entry => entry.relativePath === 'event.json')
+      || normalizedFiles.find(entry => entry.relativePath.endsWith('/event.json'));
+
+    if (!eventFile) {
+      throw new Error('Missing event.json in folder package');
+    }
+
+    const eventContent = await eventFile.file.text();
+    const parsedEvent = this.tryParseArticleEventJson(eventContent.trim());
+    if (!parsedEvent) {
+      throw new Error('event.json is not a valid article event (kind 30023 or 30024)');
+    }
+
+    const mediaFiles: ZipMediaFileEntry[] = [];
+    for (const entry of normalizedFiles) {
+      if (entry.relativePath === eventFile.relativePath || entry.relativePath.startsWith('__macosx/')) {
+        continue;
+      }
+
+      if (!this.isZipMediaFile(entry.relativePath)) {
+        continue;
+      }
+
+      const baseName = entry.relativePath.split('/').pop() || entry.relativePath;
+      const mimeType = entry.file.type || this.inferMimeTypeFromFileName(baseName);
+      const file = entry.file.type ? entry.file : new File([entry.file], baseName, { type: mimeType });
+
+      mediaFiles.push({
+        zipPath: entry.relativePath,
+        normalizedPath: entry.relativePath.toLowerCase(),
+        baseName: baseName.toLowerCase(),
+        file,
+        size: file.size,
+        mimeType,
+      });
+    }
+
+    const totalMediaBytes = mediaFiles.reduce((total, item) => total + item.size, 0);
+
+    return {
+      event: parsedEvent,
+      eventPath: eventFile.relativePath,
+      mediaFiles,
+      totalMediaBytes,
+    };
+  }
+
   private async confirmZipImportSummary(parsedPackage: ParsedArticleZipPackage): Promise<boolean> {
     const { ArticleImportZipSummaryDialogComponent } = await import(
       '../article-import-zip-summary-dialog/article-import-zip-summary-dialog.component'
@@ -1577,7 +1710,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       typeof ArticleImportZipSummaryDialogComponent.prototype,
       boolean
     >(ArticleImportZipSummaryDialogComponent, {
-      title: 'Review ZIP Import',
+      title: 'Review Package Import',
       width: '760px',
       maxWidth: '96vw',
       showCloseButton: true,
