@@ -7,8 +7,8 @@
     (touchstart)="onVideoContainerTouchStart()" (dblclick)="onVideoWrapperDoubleClick($event)">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
       [disablePictureInPicture]="footer() && miniCollapsed()"
-      [attr.controlsList]="footer() && miniCollapsed() ? 'nopictureinpicture' : null"
-      [disableRemotePlayback]="true" (error)="onVideoError($event)"></video>
+      [attr.controlsList]="footer() && miniCollapsed() ? 'nopictureinpicture' : null" [disableRemotePlayback]="true"
+      (error)="onVideoError($event)"></video>
 
 
   </div>

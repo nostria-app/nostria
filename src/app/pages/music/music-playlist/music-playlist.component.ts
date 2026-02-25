@@ -881,6 +881,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (profile) {
       return profile.data?.name || profile.data?.display_name || 'Unknown Artist';
     }
+    const artistTag = track.tags.find(t => t[0] === 'artist');
+    if (artistTag?.[1]) {
+      return artistTag[1];
+    }
     return 'Unknown Artist';
   }
 
