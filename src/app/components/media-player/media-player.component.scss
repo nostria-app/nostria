@@ -83,6 +83,14 @@
         border-radius: 42px;
       }
     }
+
+    @media (max-width: 699px) {
+      cursor: default;
+
+      &.mini-collapsed {
+        cursor: default;
+      }
+    }
   }
 
   :host-context(.dark) &.footer-mode {
@@ -778,6 +786,10 @@ app-stream-info-bar {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  @media (max-width: 699px) {
+    cursor: default;
+  }
 }
 
 .mini-collapsed-art {

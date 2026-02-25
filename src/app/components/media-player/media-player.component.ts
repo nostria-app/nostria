@@ -45,6 +45,7 @@ export class MediaPlayerComponent implements OnDestroy {
   readonly media = inject(MediaPlayerService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+  readonly isSmallScreen = computed(() => this.layout.isHandset());
 
   // Footer drag state
   readonly isFooterDragging = signal(false);
@@ -131,6 +132,25 @@ export class MediaPlayerComponent implements OnDestroy {
           this.miniCollapsed.set(false);
         }
       });
+
+      // Keep footer player fixed and expanded on smaller screens
+      effect(() => {
+        const isSmallScreen = this.isSmallScreen();
+        if (!isSmallScreen) {
+          return;
+        }
+
+        if (this.footerOffsetX() !== 0) {
+          this.footerOffsetX.set(0);
+        }
+        if (this.footerOffsetY() !== 0) {
+          this.footerOffsetY.set(0);
+        }
+
+        if (this.miniCollapsed()) {
+          this.miniCollapsed.set(false);
+        }
+      });
     }
   }
 
@@ -202,6 +222,10 @@ export class MediaPlayerComponent implements OnDestroy {
   }
 
   onFooterMouseDown(event: MouseEvent): void {
+    if (this.isSmallScreen()) {
+      return;
+    }
+
     const target = event.target as HTMLElement;
     const isCollapsedWidget = !!target.closest('.mini-collapsed-widget');
 
@@ -268,6 +292,10 @@ export class MediaPlayerComponent implements OnDestroy {
   // --- Resize logic ---
 
   onResizeMouseDown(event: MouseEvent): void {
+    if (this.isSmallScreen()) {
+      return;
+    }
+
     const el = document.querySelector('app-media-player') as HTMLElement;
     if (!el) return;
 
@@ -313,6 +341,10 @@ export class MediaPlayerComponent implements OnDestroy {
   onMiniMediaDoubleClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+
+    if (this.isSmallScreen()) {
+      return;
+    }
 
     if (!this.footer()) {
       return;
