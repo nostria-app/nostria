@@ -202,12 +202,6 @@ export class MediaPlayerComponent implements OnDestroy {
   }
 
   onFooterMouseDown(event: MouseEvent): void {
-    // Handle double-click anywhere on the mini player before drag starts
-    if (event.detail >= 2) {
-      this.onMiniMediaDoubleClick(event);
-      return;
-    }
-
     const target = event.target as HTMLElement;
     const isCollapsedWidget = !!target.closest('.mini-collapsed-widget');
 

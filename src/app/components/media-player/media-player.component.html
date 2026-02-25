@@ -1,5 +1,25 @@
 @if (media.hasQueue()) {
+@if (isVideo()) {
+<!-- Keep video player mounted across mini-collapse toggles to preserve the same video element/playback state -->
+<div class="footer-drag-zone" [class.hidden]="!footer() && !isVideo()" (mousedown)="onFooterMouseDown($event)"
+  (dblclick)="onMiniMediaDoubleClick($event)">
+  <app-video-player [footer]="footer()" [miniCollapsed]="miniCollapsed()"
+    (miniMediaToggleRequested)="onMiniMediaDoubleClick($event)" />
+</div>
+
 @if (footer() && miniCollapsed()) {
+<button class="mini-collapsed-widget" aria-label="Expand mini player" (mousedown)="onFooterMouseDown($event)"
+  (dblclick)="onMiniMediaDoubleClick($event)">
+  @if (widgetArtwork()) {
+  <img class="mini-collapsed-art" [src]="widgetArtwork()!" alt="Now playing artwork" />
+  } @else {
+  <span class="mini-collapsed-fallback" aria-hidden="true">
+    <mat-icon>ondemand_video</mat-icon>
+  </span>
+  }
+</button>
+}
+} @else if (footer() && miniCollapsed()) {
 <button class="mini-collapsed-widget" aria-label="Expand mini player" (mousedown)="onFooterMouseDown($event)"
   (dblclick)="onMiniMediaDoubleClick($event)">
   @if (widgetArtwork()) {
@@ -11,15 +31,13 @@
   }
 </button>
 } @else {
-<!-- Footer controls (always visible in footer mode; stays visible for video/YouTube/streams in fullscreen to preserve media instance) -->
-<div class="footer-drag-zone" [class.hidden]="!footer() && !isYouTube() && !isLiveStream() && !isVideo()"
+<!-- Footer controls (always visible in footer mode; stays visible for YouTube/streams in fullscreen to preserve media instance) -->
+<div class="footer-drag-zone" [class.hidden]="!footer() && !isYouTube() && !isLiveStream()"
   (mousedown)="onFooterMouseDown($event)" (dblclick)="onMiniMediaDoubleClick($event)">
   @if (isLiveStream()) {
   <app-live-stream-player [footer]="footer()" />
   } @else if (isYouTube()) {
   <app-youtube-player [footer]="true" />
-  } @else if (isVideo()) {
-  <app-video-player [footer]="footer()" (miniMediaToggleRequested)="onMiniMediaDoubleClick($event)" />
   } @else if (isAudio()) {
   <app-audio-player [footer]="footer()" (miniMediaToggleRequested)="onMiniMediaDoubleClick($event)" />
   }

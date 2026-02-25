@@ -4,17 +4,11 @@
   <div class="video-wrapper" [class.footer-preview]="footer()"
     [class.footer-expanded]="footer() && layout.expandedMediaPlayer()" (mouseenter)="onVideoContainerMouseEnter()"
     (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()"
-    (touchstart)="onVideoContainerTouchStart()" (dblclick)="onMiniPreviewDoubleClick($event)">
+    (touchstart)="onVideoContainerTouchStart()" (dblclick)="onVideoWrapperDoubleClick($event)">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
-      (error)="onVideoError($event)"></video>
+      [disablePictureInPicture]="true" [disableRemotePlayback]="true" (error)="onVideoError($event)"></video>
 
-    @if (footer() && !layout.expandedMediaPlayer()) {
-    <div class="video-preview-overlay">
-      <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
-        <mat-icon>picture_in_picture_alt</mat-icon>
-      </button>
-    </div>
-    }
+
   </div>
 
   @if (!footer()) {

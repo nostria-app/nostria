@@ -59,6 +59,7 @@ export class VideoPlayerComponent implements OnDestroy {
   private readonly overlayContainer = inject(OverlayContainer);
 
   footer = input<boolean>(false);
+  miniCollapsed = input<boolean>(false);
   miniMediaToggleRequested = output<MouseEvent>();
   cursorHidden = signal(false);
   isHoveringControlsBar = signal(false);
@@ -227,6 +228,43 @@ export class VideoPlayerComponent implements OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     this.miniMediaToggleRequested.emit(event);
+  }
+
+  onVideoWrapperDoubleClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    const clickedVideoSurface = !!target?.closest('.video-element');
+
+    if (clickedVideoSurface) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.onVideoDoubleClick(event);
+      return;
+    }
+
+    this.onMiniPreviewDoubleClick(event);
+  }
+
+  async onVideoDoubleClick(event: MouseEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Only music tracks with a .video source should use double-click to open fullscreen.
+    if (!this.isMusicVideoTrack()) {
+      return;
+    }
+
+    // In footer small/tiny preview, double-click toggles between tiny and normal player.
+    if (this.footer() && !this.layout.expandedMediaPlayer()) {
+      this.miniMediaToggleRequested.emit(event);
+      return;
+    }
+
+    // Fullscreen via double-click is only allowed from expanded video view.
+    if (!(this.footer() && this.layout.expandedMediaPlayer())) {
+      return;
+    }
+
+    this.toggleFullscreen();
   }
 
   async pictureInPicture(): Promise<void> {
