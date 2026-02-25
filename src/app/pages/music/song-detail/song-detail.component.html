@@ -185,12 +185,8 @@
     </div>
 
     <!-- Event Actions Toolbar (full width below header) -->
-    <app-event-actions-toolbar
-      [event]="song()!"
-      [bookmarkType]="'a'"
-      (replyClick)="scrollToComments()"
-      (bookmarkClick)="toggleBookmark()"
-      (shareClick)="shareTrack()">
+    <app-event-actions-toolbar [event]="song()!" [bookmarkType]="'a'" (replyClick)="scrollToComments()"
+      (bookmarkClick)="onBookmarkClick($event)" (shareClick)="shareTrack()">
     </app-event-actions-toolbar>
 
     <!-- Top Zappers -->
@@ -243,5 +239,6 @@
 }
 
 @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
-<app-create-music-playlist-dialog [data]="createPlaylistDialogData()!" (closed)="onCreatePlaylistDialogClosed($event)" />
+<app-create-music-playlist-dialog [data]="createPlaylistDialogData()!"
+  (closed)="onCreatePlaylistDialogClosed($event)" />
 }

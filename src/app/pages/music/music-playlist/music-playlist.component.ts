@@ -39,7 +39,7 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../co
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
-import { BookmarkService } from '../../../services/bookmark.service';
+import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -85,7 +85,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private zapService = inject(ZapService);
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
-  private bookmarkService = inject(BookmarkService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -655,12 +654,30 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleBookmark(): void {
+  async onBookmarkClick(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
     const ev = this.playlist();
     if (!ev) return;
+
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const aId = `${ev.kind}:${ev.pubkey}:${dTag}`;
-    this.bookmarkService.toggleBookmark(aId, 'a');
+
+    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+    const relayHint = authorRelays[0] || undefined;
+
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: aId,
+        type: 'a',
+        eventKind: ev.kind,
+        pubkey: ev.pubkey,
+        relay: relayHint,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
   }
 
   publishPlaylist(): void {

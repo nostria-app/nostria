@@ -121,7 +121,7 @@
 
     <!-- Event Actions Toolbar -->
     <app-event-actions-toolbar [event]="playlist()!" [bookmarkType]="'a'" (replyClick)="scrollToComments()"
-      (bookmarkClick)="toggleBookmark()" (shareClick)="openShareDialog()">
+      (bookmarkClick)="onBookmarkClick($event)" (shareClick)="openShareDialog()">
     </app-event-actions-toolbar>
 
     <!-- Tracks Table -->

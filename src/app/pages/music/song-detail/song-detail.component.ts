@@ -42,7 +42,7 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
-import { BookmarkService } from '../../../services/bookmark.service';
+import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
 
 interface TopZapper {
   pubkey: string;
@@ -98,7 +98,6 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private customDialog = inject(CustomDialogService);
   private clipboard = inject(Clipboard);
   private userRelaysService = inject(UserRelaysService);
-  private bookmarkService = inject(BookmarkService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -814,12 +813,30 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleBookmark(): void {
+  async onBookmarkClick(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
     const ev = this.song();
     if (!ev) return;
+
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const aId = `${ev.kind}:${ev.pubkey}:${dTag}`;
-    this.bookmarkService.toggleBookmark(aId, 'a');
+
+    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+    const relayHint = authorRelays[0] || undefined;
+
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: aId,
+        type: 'a',
+        eventKind: ev.kind,
+        pubkey: ev.pubkey,
+        relay: relayHint,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
   }
 
   publishTrack(): void {
