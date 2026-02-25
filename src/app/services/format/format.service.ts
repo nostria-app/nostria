@@ -545,7 +545,23 @@ export class FormatService {
 
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
-    const normalizedContent = this.normalizeWrappedNostrIdentifiers(content);
+    // Skip Nostr token parsing inside markdown links
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const linkPlaceholders: string[] = [];
+    const contentWithLinksMasked = content.replace(linkRegex, (m) => {
+      linkPlaceholders.push(m);
+      return `##MDLINK${linkPlaceholders.length - 1}##`;
+    });
+
+    // Skip Nostr token parsing inside plain URLs
+    const urlRegex = /https?:\/\/[^\s<>()]+/g;
+    const urlPlaceholders: string[] = [];
+    const contentWithLinksAndUrlsMasked = contentWithLinksMasked.replace(urlRegex, (m) => {
+      urlPlaceholders.push(m);
+      return `##URL${urlPlaceholders.length - 1}##`;
+    });
+
+    const normalizedContent = this.normalizeWrappedNostrIdentifiers(contentWithLinksAndUrlsMasked);
     const nostrRegex =
       /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
@@ -681,6 +697,9 @@ export class FormatService {
       result = result.replace(replacement.original, replacement.replacement);
     }
 
+    // Restore plain URLs, then markdown links
+    result = result.replace(/##URL(\d+)##/g, (_, idx) => urlPlaceholders[Number(idx)]);
+    result = result.replace(/##MDLINK(\d+)##/g, (_, idx) => linkPlaceholders[Number(idx)]);
     return result;
   }
 
@@ -692,7 +711,23 @@ export class FormatService {
     content: string,
     onPreviewLoaded?: (tokenKey: string, replacement: string) => void
   ): string {
-    const normalizedContent = this.normalizeWrappedNostrIdentifiers(content);
+    // Skip Nostr token parsing inside markdown links
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const linkPlaceholders: string[] = [];
+    const contentWithLinksMasked = content.replace(linkRegex, (m) => {
+      linkPlaceholders.push(m);
+      return `##MDLINK${linkPlaceholders.length - 1}##`;
+    });
+
+    // Skip Nostr token parsing inside plain URLs
+    const urlRegex = /https?:\/\/[^\s<>()]+/g;
+    const urlPlaceholders: string[] = [];
+    const contentWithLinksAndUrlsMasked = contentWithLinksMasked.replace(urlRegex, (m) => {
+      urlPlaceholders.push(m);
+      return `##URL${urlPlaceholders.length - 1}##`;
+    });
+
+    const normalizedContent = this.normalizeWrappedNostrIdentifiers(contentWithLinksAndUrlsMasked);
     const nostrRegex =
       /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
@@ -819,6 +854,9 @@ export class FormatService {
       }
     }
 
+    // Restore plain URLs, then markdown links
+    result = result.replace(/##URL(\d+)##/g, (_, idx) => urlPlaceholders[Number(idx)]);
+    result = result.replace(/##MDLINK(\d+)##/g, (_, idx) => linkPlaceholders[Number(idx)]);
     return result;
   }
 
@@ -827,9 +865,8 @@ export class FormatService {
       // First, preprocess content to convert image URLs to markdown image syntax
       // Do this BEFORE any HTML sanitization since we're working with markdown
 
-      // First, process Nostr tokens
-      let content = await this.processNostrTokens(rawMarkdown);
-      content = await imageUrlsToMarkdown(content);
+      // Only process Nostr tokens outside markdown links at the HTML level
+      let content = await imageUrlsToMarkdown(rawMarkdown);
       content = urlsToMarkdownLinks(content);
 
       // Configure marked with custom renderer and options for modern marked.js
@@ -841,7 +878,10 @@ export class FormatService {
       });
 
       // Parse markdown to HTML (marked.parse returns string)
-      const htmlContent = marked.parse(content) as string;
+      let htmlContent = marked.parse(content) as string;
+
+      // Post-process HTML: replace Nostr tokens only outside <a> tags
+      htmlContent = await this.replaceNostrTokensOutsideLinks(htmlContent);
 
       // Now sanitize the resulting HTML to remove any malicious content
       const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
@@ -857,6 +897,45 @@ export class FormatService {
   }
 
   /**
+   * Replace Nostr tokens only outside <a> tags in HTML
+   */
+  private async replaceNostrTokensOutsideLinks(html: string): Promise<string> {
+    // Use a <div> element to parse HTML and walk the DOM tree
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    const promises: Promise<void>[] = [];
+
+    const tokenHintRegex = /(?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1/i;
+
+    // Recursively walk nodes, skipping <a> descendants
+    const walk = (node: Node, insideLink: boolean) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        const isLink = insideLink || el.tagName === 'A';
+        for (const child of Array.from(el.childNodes)) {
+          walk(child, isLink);
+        }
+      } else if (node.nodeType === Node.TEXT_NODE && !insideLink) {
+        const textNode = node as Text;
+        const original = textNode.nodeValue || '';
+        if (tokenHintRegex.test(original)) {
+          promises.push(
+            this.processNostrTokens(original).then(replaced => {
+              if (replaced !== original) {
+                textNode.nodeValue = replaced;
+              }
+            })
+          );
+        }
+      }
+    };
+    walk(container, false);
+    await Promise.all(promises);
+    return container.innerHTML;
+  }
+
+  /**
    * Non-blocking version of markdownToHtml that renders content immediately
    * and loads previews asynchronously in the background
    */
@@ -865,7 +944,6 @@ export class FormatService {
     onUpdate?: (html: SafeHtml) => void
   ): SafeHtml {
     try {
-      // Track updates for this specific content
       const updates = new Map<string, string>();
       let contentTemplate = rawMarkdown;
       let isTemplateReady = false;
@@ -890,7 +968,6 @@ export class FormatService {
         });
       };
 
-      // Callback for when previews are loaded
       const applyUpdates = (): string => {
         let updatedContent = contentTemplate;
         for (const [tokenKey, replacement] of updates.entries()) {
@@ -906,12 +983,10 @@ export class FormatService {
           return;
         }
 
-        // Reprocess content with all updates so far
         const updatedContent = applyUpdates();
         renderUpdatedContent(updatedContent);
       };
 
-      // Process Nostr tokens with non-blocking approach
       const initialContent = this.processNostrTokensNonBlocking(
         rawMarkdown,
         handlePreviewLoaded
@@ -920,10 +995,8 @@ export class FormatService {
       isTemplateReady = true;
       const initialResolvedContent = applyUpdates();
 
-      // Convert images to markdown and render immediately
       renderUpdatedContent(initialResolvedContent);
 
-      // Return initial content immediately (with placeholders)
       marked.use({
         renderer: markdownRenderer,
         gfm: true,
@@ -937,7 +1010,6 @@ export class FormatService {
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
-      // Fallback to plain text
       const sanitizedHtmlContent = DOMPurify.sanitize(rawMarkdown.replace(/\n/g, '<br>'));
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     }
