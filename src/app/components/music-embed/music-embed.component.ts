@@ -1,5 +1,4 @@
 import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
-import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -544,7 +543,6 @@ export class MusicEmbedComponent {
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
-  private router = inject(Router);
   private layout = inject(LayoutService);
 
   // State
@@ -1070,9 +1068,9 @@ export class MusicEmbedComponent {
 
   openItem(): void {
     if (this.isTrack()) {
-      this.router.navigate(['/music/song', nip19.npubEncode(this.pubkey()), this.identifier()]);
+      this.layout.openSongDetail(nip19.npubEncode(this.pubkey()), this.identifier(), this.event() || undefined);
     } else {
-      this.router.navigate(['/music/playlist', nip19.npubEncode(this.pubkey()), this.identifier()]);
+      this.layout.openMusicPlaylist(nip19.npubEncode(this.pubkey()), this.identifier(), this.event() || undefined);
     }
   }
 
