@@ -6,6 +6,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -18,6 +19,7 @@ import { NostrRecord, MediaItem } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { LayoutService } from '../../services/layout.service';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
 const MUSIC_KIND = 36787;
 
@@ -45,7 +47,9 @@ const MUSIC_KIND = 36787;
           tabindex="0" role="button" [attr.aria-label]="'Open ' + title()">
           
           <!-- Cover image/placeholder -->
-          <div class="embed-cover" [style.background]="gradient() || ''">
+          <button type="button" class="embed-cover" [style.background]="gradient() || ''"
+            (click)="openCoverImage($event)" [attr.aria-label]="'Open album art for ' + title()"
+            [disabled]="!coverImage()" title="Open album art">
             @if (coverImage() && !gradient()) {
               <img [src]="coverImage()" [alt]="title()" class="cover-image" loading="lazy" />
             } @else if (!gradient()) {
@@ -53,7 +57,7 @@ const MUSIC_KIND = 36787;
                 <mat-icon>{{ isTrack() ? 'music_note' : 'queue_music' }}</mat-icon>
               </div>
             }
-          </div>
+          </button>
           
           <!-- Info section -->
           <div class="embed-info">
@@ -78,6 +82,13 @@ const MUSIC_KIND = 36787;
           
           <!-- Action buttons -->
           <div class="embed-actions">
+            @if (!isTrack()) {
+              <button mat-icon-button class="expand-btn" (click)="togglePlaylistExpanded($event)"
+                [attr.aria-label]="playlistExpanded() ? 'Collapse playlist tracks' : 'Expand playlist tracks'"
+                [attr.aria-expanded]="playlistExpanded()" title="Toggle track list">
+                <mat-icon>{{ playlistExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            }
             <button mat-icon-button class="play-btn" (click)="playNow($event)" 
               [disabled]="isLoading()" aria-label="Play now" title="Play Now">
               @if (isLoading()) {
@@ -105,6 +116,42 @@ const MUSIC_KIND = 36787;
             </mat-menu>
           </div>
         </div>
+
+        @if (!isTrack() && playlistExpanded()) {
+          <div class="playlist-tracks" (click)="$event.stopPropagation()">
+            @if (playlistTracksLoading()) {
+              <div class="playlist-loading">
+                <mat-spinner diameter="18"></mat-spinner>
+                <span>Loading tracks...</span>
+              </div>
+            } @else if (playlistTracks().length === 0) {
+              <div class="playlist-empty">No tracks in playlist</div>
+            } @else {
+              @for (track of playlistTracks(); track track.id) {
+                <div class="playlist-track-row">
+                  <button type="button" class="track-cover" (click)="openTrackCoverImage(track, $event)"
+                    [disabled]="!getTrackImage(track)" [attr.aria-label]="'Open album art for ' + getTrackTitle(track)"
+                    title="Open album art">
+                    @if (getTrackImage(track)) {
+                      <img [src]="getTrackImage(track)" [alt]="getTrackTitle(track)" loading="lazy" />
+                    } @else {
+                      <mat-icon>music_note</mat-icon>
+                    }
+                  </button>
+                  <div class="track-info">
+                    <div class="track-title">{{ getTrackTitle(track) }}</div>
+                    <div class="track-artist">{{ getTrackArtist(track) }}</div>
+                  </div>
+                  <button mat-icon-button class="track-play-btn" (click)="playTrackFromPlaylist(track, $event)"
+                    [disabled]="!getTrackAudioUrl(track)" [attr.aria-label]="'Play ' + getTrackTitle(track)"
+                    title="Play track">
+                    <mat-icon>play_arrow</mat-icon>
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        }
       } @else {
         <div class="not-found-state">
           <mat-icon>music_off</mat-icon>
@@ -228,17 +275,24 @@ const MUSIC_KIND = 36787;
       height: 64px;
       min-width: 64px;
       border-radius: 8px;
+      border: none;
+      padding: 0;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
       flex-shrink: 0;
+      cursor: pointer;
 
       .cover-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+
+      &:disabled {
+        cursor: default;
       }
 
       .cover-placeholder {
@@ -369,6 +423,97 @@ const MUSIC_KIND = 36787;
       }
     }
 
+    .playlist-tracks {
+      border-top: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface-container-lowest);
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .playlist-loading,
+    .playlist-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--mat-sys-on-surface-variant);
+      padding: 10px 6px;
+    }
+
+    .playlist-track-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 8px;
+      padding: 4px;
+      background: var(--mat-sys-surface-container-low);
+    }
+
+    .track-cover {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      border-radius: 6px;
+      border: none;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface-variant);
+      cursor: pointer;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:disabled {
+        cursor: default;
+      }
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .track-title,
+    .track-artist {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .track-title {
+      color: var(--mat-sys-on-surface);
+      font-size: 0.88rem;
+    }
+
+    .track-artist {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.8rem;
+    }
+
+    .track-play-btn {
+      width: 30px;
+      height: 30px;
+    }
+
     :host-context(.dark) .music-embed {
       background: var(--mat-sys-surface-container-low);
     }
@@ -398,6 +543,7 @@ export class MusicEmbedComponent {
   private discoveryRelay = inject(DiscoveryRelayService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   private router = inject(Router);
   private layout = inject(LayoutService);
 
@@ -406,6 +552,9 @@ export class MusicEmbedComponent {
   loading = signal<boolean>(true);
   isLoading = signal<boolean>(false);
   private tracksCache = signal<Event[]>([]);
+  playlistExpanded = signal<boolean>(false);
+  playlistTracksLoading = signal<boolean>(false);
+  playlistTracks = signal<Event[]>([]);
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
     return Promise.race([
@@ -877,6 +1026,20 @@ export class MusicEmbedComponent {
     }
   }
 
+  private async ensureExpandedPlaylistTracksLoaded(): Promise<void> {
+    if (this.playlistTracks().length > 0) {
+      return;
+    }
+
+    this.playlistTracksLoading.set(true);
+    try {
+      const tracks = await this.loadPlaylistTracks();
+      this.playlistTracks.set(tracks);
+    } finally {
+      this.playlistTracksLoading.set(false);
+    }
+  }
+
   private tracksToMediaItems(tracks: Event[]): MediaItem[] {
     return tracks
       .map(track => {
@@ -921,5 +1084,114 @@ export class MusicEmbedComponent {
     untracked(() => {
       this.loadItem();
     });
+  }
+
+  async togglePlaylistExpanded(event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    if (this.isTrack()) {
+      return;
+    }
+
+    const next = !this.playlistExpanded();
+    this.playlistExpanded.set(next);
+
+    if (next) {
+      await this.ensureExpandedPlaylistTracksLoaded();
+    }
+  }
+
+  openCoverImage(event: MouseEvent): void {
+    event.stopPropagation();
+
+    const imageUrl = this.coverImage();
+    if (!imageUrl) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: imageUrl,
+        mediaType: 'image',
+        mediaTitle: this.title() || 'Album art',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
+  openTrackCoverImage(track: Event, event: MouseEvent): void {
+    event.stopPropagation();
+
+    const imageUrl = this.getTrackImage(track);
+    if (!imageUrl) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: imageUrl,
+        mediaType: 'image',
+        mediaTitle: this.getTrackTitle(track) || 'Album art',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
+  async playTrackFromPlaylist(track: Event, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    const mediaItem = this.trackToMediaItem(track);
+    if (!mediaItem) {
+      this.snackBar.open('No audio URL available', 'Close', { duration: 2000 });
+      return;
+    }
+
+    this.mediaPlayer.play(mediaItem);
+  }
+
+  getTrackTitle(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled';
+  }
+
+  getTrackArtist(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'artist')?.[1] || 'Unknown Artist';
+  }
+
+  getTrackImage(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'image')?.[1] || '';
+  }
+
+  getTrackAudioUrl(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'url')?.[1] || '';
+  }
+
+  private trackToMediaItem(track: Event): MediaItem | null {
+    const url = this.getTrackAudioUrl(track);
+    if (!url) {
+      return null;
+    }
+
+    const dTag = track.tags.find(t => t[0] === 'd');
+    const videoTag = track.tags.find(t => t[0] === 'video');
+
+    return {
+      source: url,
+      title: this.getTrackTitle(track),
+      artist: this.getTrackArtist(track),
+      artwork: this.getTrackImage(track) || '/icons/icon-192x192.png',
+      video: videoTag?.[1] || undefined,
+      type: 'Music',
+      eventPubkey: nip19.npubEncode(track.pubkey),
+      eventIdentifier: dTag?.[1] || '',
+      lyrics: this.utilities.extractLyricsFromEvent(track),
+    };
   }
 }
