@@ -90,13 +90,13 @@ export class EmojiSetsComponent implements OnInit {
       pubkey: '7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194',
       identifier: 'twitch',
       title: 'Twitch',
-      relayHints: ['wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.damus.io'],
+      relayHints: ['wss://nos.lol', 'wss://relay.damus.io'],
     },
     {
       pubkey: '01ddee289b1a2e90874ca3428a7a414764a6cad1abfaa985c201e7aada16d38c',
       identifier: 'Top collection',
       title: 'Top Collection',
-      relayHints: ['wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.damus.io'],
+      relayHints: ['wss://nos.lol', 'wss://relay.damus.io'],
     },
   ];
 

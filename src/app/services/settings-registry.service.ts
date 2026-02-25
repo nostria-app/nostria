@@ -452,7 +452,7 @@ export class SettingsRegistryService {
       id: 'search-relays',
       title: $localize`:@@settings.search.relays:Search Relays`,
       description: $localize`:@@settings.search.relays.description:Configure which relays to use for search`,
-      keywords: ['search', 'relay', 'query', 'find', 'nostr.band'],
+      keywords: ['search', 'relay', 'query', 'find'],
       section: 'search',
       sectionTitle: $localize`:@@settings.sections.search:Search`,
       icon: 'search',

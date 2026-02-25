@@ -26,7 +26,8 @@ export class UtilitiesService {
   private logger = inject(LoggerService);
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
-    'relay.nostr.band'
+    'relay.nostr.band',
+    'offchain.pub'
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
