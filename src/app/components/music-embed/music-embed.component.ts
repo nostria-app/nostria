@@ -109,6 +109,10 @@ const MUSIC_KIND = 36787;
         <div class="not-found-state">
           <mat-icon>music_off</mat-icon>
           <span>{{ isTrack() ? 'Track' : 'Playlist' }} not found</span>
+          <button mat-button type="button" (click)="retryLoad($event)" aria-label="Retry loading music item">
+            <mat-icon>refresh</mat-icon>
+            <span>Retry</span>
+          </button>
         </div>
       }
     </div>
@@ -189,6 +193,11 @@ const MUSIC_KIND = 36787;
 
     .not-found-state {
       justify-content: center;
+      flex-direction: column;
+
+      button[mat-button] {
+        margin-top: 4px;
+      }
     }
 
     .embed-content {
@@ -514,6 +523,11 @@ export class MusicEmbedComponent {
 
   private getLookupKey(): string {
     return `${this.pubkey()}:${this.kind()}:${this.identifier()}`;
+  }
+
+  private invalidateLookupCache(lookupKey: string): void {
+    MusicEmbedComponent.lookupCache.delete(lookupKey);
+    MusicEmbedComponent.inFlightLookups.delete(lookupKey);
   }
 
   private async runLookupWithLimit<T>(task: () => Promise<T>): Promise<T> {
@@ -897,5 +911,15 @@ export class MusicEmbedComponent {
     } else {
       this.router.navigate(['/music/playlist', nip19.npubEncode(this.pubkey()), this.identifier()]);
     }
+  }
+
+  retryLoad(event: MouseEvent): void {
+    event.stopPropagation();
+    const lookupKey = this.getLookupKey();
+    this.invalidateLookupCache(lookupKey);
+
+    untracked(() => {
+      this.loadItem();
+    });
   }
 }
