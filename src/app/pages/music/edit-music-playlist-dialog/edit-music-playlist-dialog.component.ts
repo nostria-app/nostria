@@ -30,6 +30,7 @@ const MUSIC_KIND = 36787;
 
 export interface EditMusicPlaylistDialogData {
   playlist: MusicPlaylist;
+  preloadedTrackEvents?: Event[];
 }
 
 export interface TrackItem {
@@ -280,53 +281,74 @@ export class EditMusicPlaylistDialogComponent {
     });
     this.tracks.set(initialTracks);
 
-    // Fetch track events
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-    if (relayUrls.length === 0) {
-      this.loadingTracks.set(false);
-      return;
-    }
-
     const trackKeys = initialTracks.map(t => ({ author: t.pubkey, dTag: t.dTag }));
-    const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
-    const uniqueDTags = [...new Set(trackKeys.map(k => k.dTag))];
-
-    const filter: Filter = {
-      kinds: [MUSIC_KIND],
-      authors: uniqueAuthors,
-      '#d': uniqueDTags,
-      limit: trackKeys.length * 2,
-    };
+    const trackKeySet = new Set(trackKeys.map(k => `${k.author}:${k.dTag}`));
 
     const trackMap = new Map<string, Event>();
 
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        resolve();
-      }, 5000);
+    // Seed map with already loaded track events (e.g. from playlist page)
+    const preloadedTrackEvents = this.data().preloadedTrackEvents || [];
+    for (const event of preloadedTrackEvents) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      const key = `${event.pubkey}:${dTag}`;
+      if (!trackKeySet.has(key)) {
+        continue;
+      }
 
-      const sub = this.pool.subscribe(relayUrls, filter, async (event: Event) => {
-        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-        const key = `${event.pubkey}:${dTag}`;
-        const existing = trackMap.get(key);
-        if (!existing || existing.created_at < event.created_at) {
-          trackMap.set(key, event);
-        }
+      const existing = trackMap.get(key);
+      if (!existing || existing.created_at < event.created_at) {
+        trackMap.set(key, event);
+      }
+    }
 
-        if (trackMap.size >= trackKeys.length) {
+    const missingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.author}:${k.dTag}`));
+
+    if (missingTrackKeys.length > 0) {
+      // Fetch only missing track events
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length === 0) {
+        this.loadingTracks.set(false);
+        return;
+      }
+
+      const uniqueAuthors = [...new Set(missingTrackKeys.map(k => k.author))];
+      const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
+
+      const filter: Filter = {
+        kinds: [MUSIC_KIND],
+        authors: uniqueAuthors,
+        '#d': uniqueDTags,
+        limit: missingTrackKeys.length * 2,
+      };
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve();
+        }, 5000);
+
+        const sub = this.pool.subscribe(relayUrls, filter, async (event: Event) => {
+          const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+          const key = `${event.pubkey}:${dTag}`;
+          const existing = trackMap.get(key);
+          if (!existing || existing.created_at < event.created_at) {
+            trackMap.set(key, event);
+          }
+
+          if (trackMap.size >= trackKeys.length) {
+            clearTimeout(timeout);
+            sub?.close();
+            resolve();
+          }
+        });
+
+        // Shorter timeout for initial load
+        setTimeout(() => {
           clearTimeout(timeout);
           sub?.close();
           resolve();
-        }
+        }, 3000);
       });
-
-      // Shorter timeout for initial load
-      setTimeout(() => {
-        clearTimeout(timeout);
-        sub?.close();
-        resolve();
-      }, 3000);
-    });
+    }
 
     // Update tracks with fetched data
     const updatedTracks = await Promise.all(

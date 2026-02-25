@@ -6,7 +6,9 @@
     (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()"
     (touchstart)="onVideoContainerTouchStart()" (dblclick)="onVideoWrapperDoubleClick($event)">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
-      [disablePictureInPicture]="true" [disableRemotePlayback]="true" (error)="onVideoError($event)"></video>
+      [disablePictureInPicture]="footer() && miniCollapsed()"
+      [attr.controlsList]="footer() && miniCollapsed() ? 'nopictureinpicture' : null"
+      [disableRemotePlayback]="true" (error)="onVideoError($event)"></video>
 
 
   </div>
@@ -153,10 +155,12 @@
     <mat-icon>queue_music</mat-icon>
     <span>View queue</span>
   </button>
+  @if (!miniCollapsed()) {
   <button mat-menu-item (click)="pictureInPicture()">
     <mat-icon>picture_in_picture</mat-icon>
     <span>Picture-in-Picture</span>
   </button>
+  }
   <button mat-menu-item (click)="toggleExpand()">
     <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
     <span>{{ layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video' }}</span>
@@ -177,10 +181,12 @@
     <mat-icon>queue_music</mat-icon>
     <span>View queue</span>
   </button>
+  @if (!miniCollapsed()) {
   <button mat-menu-item (click)="pictureInPicture()">
     <mat-icon>picture_in_picture</mat-icon>
     <span>Picture-in-Picture</span>
   </button>
+  }
   <button mat-menu-item (click)="requestNativeFullscreen()">
     <mat-icon>fullscreen</mat-icon>
     <span>Fullscreen</span>

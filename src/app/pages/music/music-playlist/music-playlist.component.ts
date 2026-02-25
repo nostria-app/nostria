@@ -116,6 +116,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private likeSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private currentPlaylistKey = ''; // Track current pubkey+dTag to detect changes
+  private currentTrackRefsKey = ''; // Track current playlist track refs to avoid redundant reloads
 
   // Store event from router state (must be captured in constructor before navigation ends)
   private routerStateEvent: Event | null = null;
@@ -267,7 +268,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const refs = this.trackRefs();
       const event = this.playlist();
       // Only load if we have refs and the playlist is loaded
-      if (refs.length > 0 && event) {
+      if (event) {
+        const refsKey = refs.join('|');
+        if (refsKey === this.currentTrackRefsKey) {
+          return;
+        }
+
+        this.currentTrackRefsKey = refsKey;
         untracked(() => {
           this.loadPlaylistTracks(refs);
         });
@@ -329,6 +336,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.isLiked.set(false);
     this.isLiking.set(false);
     this.trackMap.clear();
+    this.currentTrackRefsKey = '';
     this.artistProfiles.set(new Map());
     this.pendingArtistProfileFetches.clear();
 
@@ -395,15 +403,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   private loadPlaylistTracks(refs: string[]): void {
-    this.loadingTracks.set(true);
-    this.trackMap.clear();
-
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-    if (relayUrls.length === 0) {
-      this.logger.warn('No relays available to load playlist tracks');
-      this.loadingTracks.set(false);
-      return;
-    }
+    const requestedTrackKeys = new Set<string>();
 
     // Parse the a-tag references to get authors and d-tags
     const trackKeys: { author: string; dTag: string }[] = [];
@@ -413,24 +413,54 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         const author = parts[1];
         const dTag = parts.slice(2).join(':');
         trackKeys.push({ author, dTag });
+        requestedTrackKeys.add(`${author}:${dTag}`);
       }
     }
 
-    this.logger.debug('Loading playlist tracks', { refs, trackKeys });
-
     if (trackKeys.length === 0) {
+      this.trackMap.clear();
+      this.tracks.set([]);
       this.loadingTracks.set(false);
       return;
     }
 
+    // Remove tracks that are no longer referenced by the playlist
+    for (const key of Array.from(this.trackMap.keys())) {
+      if (!requestedTrackKeys.has(key)) {
+        this.trackMap.delete(key);
+      }
+    }
+
+    // Keep UI responsive by showing already loaded tracks immediately
+    this.updateTracks(refs);
+
+    const missingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+
+    if (missingTrackKeys.length === 0) {
+      this.loadingTracks.set(false);
+      return;
+    }
+
+    this.loadingTracks.set(true);
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) {
+      this.logger.warn('No relays available to load playlist tracks');
+      this.loadingTracks.set(false);
+      return;
+    }
+
+    this.logger.debug('Loading missing playlist tracks', { refs, missingTrackKeys });
+
     // Create a single filter with all authors and d-tags (deduplicated)
-    const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
-    const uniqueDTags = [...new Set(trackKeys.map(k => k.dTag))];
+    const uniqueAuthors = [...new Set(missingTrackKeys.map(k => k.author))];
+    const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
+    const missingKeysSet = new Set(missingTrackKeys.map(k => `${k.author}:${k.dTag}`));
     const filter: Filter = {
       kinds: [MUSIC_KIND],
       authors: uniqueAuthors,
       '#d': uniqueDTags,
-      limit: trackKeys.length * 2, // Allow for duplicates
+      limit: missingTrackKeys.length * 2, // Allow for duplicates
     };
 
     this.logger.debug('Playlist tracks filter', { filter, relayUrls });
@@ -452,8 +482,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       this.logger.debug('Received track event', { uniqueId, dTag, pubkey: event.pubkey });
 
-      // Check if this track is in our refs list
-      const isInPlaylist = trackKeys.some(k => k.author === event.pubkey && k.dTag === dTag);
+      // Check if this track is in our missing refs list
+      const isInPlaylist = missingKeysSet.has(uniqueId);
       if (!isInPlaylist) {
         this.logger.debug('Track not in playlist refs, skipping', { uniqueId });
         return;
@@ -466,8 +496,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         this.updateTracks(refs);
       }
 
-      // Check if we have all tracks
-      if (this.trackMap.size >= trackKeys.length) {
+      // Check if we have all missing tracks
+      const missingRemaining = missingTrackKeys.some(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+      if (!missingRemaining) {
         clearTimeout(timeout);
         this.loadingTracks.set(false);
       }
@@ -728,7 +759,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       event: ev,
     };
 
-    this.editDialogData.set({ playlist });
+    this.editDialogData.set({
+      playlist,
+      preloadedTrackEvents: this.tracks(),
+    } as EditMusicPlaylistDialogData);
     this.showEditDialog.set(true);
   }
 
@@ -737,13 +771,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.editDialogData.set(null);
 
     if (result?.updated && result?.playlist) {
-      // Reload the page to show updated data
-      const params = this.routeParams();
-      const pubkey = params?.get('pubkey') || this.pubkeyInput();
-      const identifier = params?.get('identifier') || this.dTagInput();
-      if (pubkey && identifier) {
-        // Reset state and reload using the proper method
-        this.resetAndLoadPlaylist(pubkey, identifier);
+      // Update playlist in place to preserve already loaded tracks
+      const updatedEvent = result.playlist.event;
+      if (updatedEvent) {
+        this.playlist.set(updatedEvent);
       }
     }
   }
