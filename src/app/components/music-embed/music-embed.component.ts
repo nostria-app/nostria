@@ -528,6 +528,18 @@ interface PlaylistTrackReference {
     .track-play-btn {
       width: 30px;
       height: 30px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+        margin-left: 1px;
+      }
     }
 
     :host-context(.dark) .music-embed {
