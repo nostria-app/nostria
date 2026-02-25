@@ -366,6 +366,12 @@ const MUSIC_KIND = 36787;
   `],
 })
 export class MusicEmbedComponent {
+  private static readonly MAX_CONCURRENT_LOOKUPS = 4;
+  private static activeLookups = 0;
+  private static lookupQueue: (() => void)[] = [];
+  private static lookupCache = new Map<string, NostrRecord | null>();
+  private static inFlightLookups = new Map<string, Promise<NostrRecord | null>>();
+
   // Required inputs
   identifier = input.required<string>();
   pubkey = input.required<string>();
@@ -506,109 +512,155 @@ export class MusicEmbedComponent {
     });
   }
 
+  private getLookupKey(): string {
+    return `${this.pubkey()}:${this.kind()}:${this.identifier()}`;
+  }
+
+  private async runLookupWithLimit<T>(task: () => Promise<T>): Promise<T> {
+    if (MusicEmbedComponent.activeLookups >= MusicEmbedComponent.MAX_CONCURRENT_LOOKUPS) {
+      await new Promise<void>(resolve => {
+        MusicEmbedComponent.lookupQueue.push(resolve);
+      });
+    }
+
+    MusicEmbedComponent.activeLookups++;
+    try {
+      return await task();
+    } finally {
+      MusicEmbedComponent.activeLookups = Math.max(0, MusicEmbedComponent.activeLookups - 1);
+      const next = MusicEmbedComponent.lookupQueue.shift();
+      next?.();
+    }
+  }
+
+  private async getOrLoadLookupResult(lookupKey: string): Promise<NostrRecord | null> {
+    if (MusicEmbedComponent.lookupCache.has(lookupKey)) {
+      return MusicEmbedComponent.lookupCache.get(lookupKey) ?? null;
+    }
+
+    const inFlight = MusicEmbedComponent.inFlightLookups.get(lookupKey);
+    if (inFlight) {
+      return await inFlight;
+    }
+
+    const lookupPromise = this.runLookupWithLimit(() => this.fetchAddressableEvent())
+      .finally(() => {
+        MusicEmbedComponent.inFlightLookups.delete(lookupKey);
+      });
+
+    MusicEmbedComponent.inFlightLookups.set(lookupKey, lookupPromise);
+
+    const result = await lookupPromise;
+    MusicEmbedComponent.lookupCache.set(lookupKey, result);
+    return result;
+  }
+
+  private async fetchAddressableEvent(): Promise<NostrRecord | null> {
+    let event: NostrRecord | null = null;
+
+    const validRelayHints = this.getValidRelayHints();
+    if (validRelayHints.length > 0) {
+      try {
+        const filter = {
+          authors: [this.pubkey()],
+          kinds: [this.kind()],
+          '#d': [this.identifier()],
+        };
+        const relayEvent = await this.withTimeout(
+          this.relayPool.get(validRelayHints, filter, 10000),
+          6000
+        );
+        if (relayEvent) {
+          event = this.data.toRecord(relayEvent);
+        }
+      } catch {
+        console.debug(`Relay hints fetch failed for music item ${this.identifier()}`);
+      }
+    }
+
+    if (!event) {
+      const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
+
+      if (isNotCurrentUser) {
+        event = await this.withTimeout(
+          this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+            this.pubkey(),
+            this.kind(),
+            this.identifier(),
+            { save: false, cache: false }
+          ),
+          5000
+        );
+      } else {
+        event = await this.withTimeout(
+          this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+            this.pubkey(),
+            this.kind(),
+            this.identifier(),
+            { save: false, cache: false }
+          ),
+          5000
+        );
+      }
+    }
+
+    if (!event) {
+      try {
+        const filter = {
+          authors: [this.pubkey()],
+          kinds: [this.kind()],
+          '#d': [this.identifier()],
+        };
+        const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+        if (discoveryRelayUrls.length > 0) {
+          const relayEvent = await this.withTimeout(
+            this.relayPool.get(discoveryRelayUrls, filter, 10000),
+            6000
+          );
+          if (relayEvent) {
+            event = this.data.toRecord(relayEvent);
+          }
+        }
+      } catch {
+        console.debug(`Discovery relay fetch failed for music item ${this.identifier()}`);
+      }
+    }
+
+    if (!event) {
+      try {
+        const filter = {
+          authors: [this.pubkey()],
+          kinds: [this.kind()],
+          '#d': [this.identifier()],
+        };
+        const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
+        if (preferredRelays.length > 0) {
+          const relayEvent = await this.withTimeout(
+            this.relayPool.get(preferredRelays, filter, 10000),
+            6000
+          );
+          if (relayEvent) {
+            event = this.data.toRecord(relayEvent);
+          }
+        }
+      } catch {
+        console.debug(`Preferred relay fetch failed for music item ${this.identifier()}`);
+      }
+    }
+
+    return event;
+  }
+
   private async loadItem(): Promise<void> {
     if (this.loading() && this.record()) {
       return;
     }
 
     this.loading.set(true);
+    const lookupKey = this.getLookupKey();
 
     try {
-      let event: NostrRecord | null = null;
-
-      // Try relay hints first
-      const validRelayHints = this.getValidRelayHints();
-      if (validRelayHints.length > 0) {
-        try {
-          const filter = {
-            authors: [this.pubkey()],
-            kinds: [this.kind()],
-            '#d': [this.identifier()],
-          };
-          const relayEvent = await this.withTimeout(
-            this.relayPool.get(validRelayHints, filter, 10000),
-            6000
-          );
-          if (relayEvent) {
-            event = this.data.toRecord(relayEvent);
-          }
-        } catch {
-          console.debug(`Relay hints fetch failed for music item ${this.identifier()}`);
-        }
-      }
-
-      // Try user's relays or current user's data service
-      if (!event) {
-        const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
-
-        if (isNotCurrentUser) {
-          event = await this.withTimeout(
-            this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
-              this.pubkey(),
-              this.kind(),
-              this.identifier(),
-              { save: false, cache: false }
-            ),
-            5000
-          );
-        } else {
-          event = await this.withTimeout(
-            this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-              this.pubkey(),
-              this.kind(),
-              this.identifier(),
-              { save: false, cache: false }
-            ),
-            5000
-          );
-        }
-      }
-
-      // Fallback: Try discovery relays directly
-      if (!event) {
-        try {
-          const filter = {
-            authors: [this.pubkey()],
-            kinds: [this.kind()],
-            '#d': [this.identifier()],
-          };
-          const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-          if (discoveryRelayUrls.length > 0) {
-            const relayEvent = await this.withTimeout(
-              this.relayPool.get(discoveryRelayUrls, filter, 10000),
-              6000
-            );
-            if (relayEvent) {
-              event = this.data.toRecord(relayEvent);
-            }
-          }
-        } catch {
-          console.debug(`Discovery relay fetch failed for music item ${this.identifier()}`);
-        }
-      }
-
-      // Final fallback: Try preferred relays (common public relays)
-      if (!event) {
-        try {
-          const filter = {
-            authors: [this.pubkey()],
-            kinds: [this.kind()],
-            '#d': [this.identifier()],
-          };
-          const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
-          if (preferredRelays.length > 0) {
-            const relayEvent = await this.withTimeout(
-              this.relayPool.get(preferredRelays, filter, 10000),
-              6000
-            );
-            if (relayEvent) {
-              event = this.data.toRecord(relayEvent);
-            }
-          }
-        } catch {
-          console.debug(`Preferred relay fetch failed for music item ${this.identifier()}`);
-        }
-      }
+      const event = await this.getOrLoadLookupResult(lookupKey);
 
       this.record.set(event);
     } catch (error) {

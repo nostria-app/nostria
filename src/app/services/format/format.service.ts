@@ -284,6 +284,111 @@ export class FormatService {
     return `/a/${naddrEncoded}`;
   }
 
+  private wrapEmbedBlock(html: string): string {
+    return `\n\n${html}\n\n`;
+  }
+
+  private buildProfileMentionFallback(identifier: string): string | null {
+    const normalized = identifier
+      .trim()
+      .replace(/^@/, '')
+      .replace(/^nostr:/i, '');
+
+    if (!(normalized.startsWith('npub1') || normalized.startsWith('nprofile1'))) {
+      return null;
+    }
+
+    try {
+      const decoded = nip19.decode(normalized);
+      let pubkey = '';
+
+      if (decoded.type === 'npub') {
+        pubkey = decoded.data;
+      } else if (decoded.type === 'nprofile') {
+        pubkey = decoded.data.pubkey;
+      }
+
+      if (!pubkey) {
+        return null;
+      }
+
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      const mentionText = `@${this.utilities.getTruncatedNpub(pubkey)}`;
+
+      return `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View profile">${mentionText}</a>`;
+    } catch {
+      return null;
+    }
+  }
+
+  private decodeNostrIdentifierFallback(
+    identifier: string
+  ): { type: string; data: unknown; displayName: string } | null {
+    const normalized = identifier
+      .trim()
+      .replace(/^@/, '')
+      .replace(/^nostr:/i, '');
+
+    if (!/^(npub|nprofile|note|nevent|naddr)1/i.test(normalized)) {
+      return null;
+    }
+
+    try {
+      const decoded = nip19.decode(normalized);
+
+      switch (decoded.type) {
+        case 'npub':
+          return {
+            type: 'npub',
+            data: decoded.data,
+            displayName: this.utilities.getTruncatedNpub(decoded.data),
+          };
+        case 'nprofile':
+          return {
+            type: 'nprofile',
+            data: decoded.data,
+            displayName: this.utilities.getTruncatedNpub(decoded.data.pubkey),
+          };
+        case 'note':
+          return {
+            type: 'note',
+            data: decoded.data,
+            displayName: `note${decoded.data.substring(0, 8)}`,
+          };
+        case 'nevent':
+          return {
+            type: 'nevent',
+            data: decoded.data,
+            displayName: `event${decoded.data.id.substring(0, 8)}`,
+          };
+        case 'naddr':
+          return {
+            type: 'naddr',
+            data: decoded.data,
+            displayName: `${decoded.data.kind}:${decoded.data.identifier?.substring(0, 8) || 'addr'}...`,
+          };
+        default:
+          return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeWrappedNostrIdentifiers(content: string): string {
+    let normalized = content;
+
+    const wrappedRegex =
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{16,})\s*\n\s*([qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{8,})/g;
+
+    while (wrappedRegex.test(normalized)) {
+      wrappedRegex.lastIndex = 0;
+      normalized = normalized.replace(wrappedRegex, '$1$2');
+    }
+
+    return normalized;
+  }
+
   private buildGenericNaddrPreview(
     naddrData: { kind?: number; pubkey?: string; identifier?: string; relays?: string[] },
     displayName?: string
@@ -301,7 +406,7 @@ export class FormatService {
     });
     const route = this.getAddressableRoute(kind, authorPubkey, identifier, naddrEncoded);
 
-    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
+    const html = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
                     <a href="${route}" class="nostr-embed-link">
                       <div class="nostr-embed-icon">
                         <span class="embed-icon">🔗</span>
@@ -312,6 +417,8 @@ export class FormatService {
                       </div>
                     </a>
                   </div>`;
+
+    return this.wrapEmbedBlock(html);
   }
 
   private buildMusicTrackNaddrPreview(event: Event, identifier: string, naddrEncoded: string): string {
@@ -320,7 +427,7 @@ export class FormatService {
     const hasVideo = !!this.getTagValue(event, 'video');
     const route = this.getAddressableRoute(event.kind, event.pubkey, identifier, naddrEncoded);
 
-    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}">
+    const html = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}">
                     <a href="${route}" class="nostr-embed-link">
                       <div class="nostr-embed-icon">
                         <span class="embed-icon">🎵</span>
@@ -332,6 +439,8 @@ export class FormatService {
                       </div>
                     </a>
                   </div>`;
+
+    return this.wrapEmbedBlock(html);
   }
 
   private buildMusicPlaylistNaddrPreview(event: Event, identifier: string, naddrEncoded: string): string {
@@ -343,7 +452,9 @@ export class FormatService {
       ? `<div class="nostr-embed-meta">${this.escapeHtml(description).replace(/\n/g, ' ')}</div>`
       : '';
 
-    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}"><a href="${route}" class="nostr-embed-link"><div class="nostr-embed-icon"><span class="embed-icon">🎼</span></div><div class="nostr-embed-content"><div class="nostr-embed-title">${this.escapeHtml(title)}</div><div class="nostr-embed-meta">Music Playlist · Kind ${event.kind}</div><div class="nostr-embed-meta">Tracks: ${trackCount}</div>${descriptionHtml}</div></a></div>`;
+    const html = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}"><a href="${route}" class="nostr-embed-link"><div class="nostr-embed-icon"><span class="embed-icon">🎼</span></div><div class="nostr-embed-content"><div class="nostr-embed-title">${this.escapeHtml(title)}</div><div class="nostr-embed-meta">Music Playlist · Kind ${event.kind}</div><div class="nostr-embed-meta">Tracks: ${trackCount}</div>${descriptionHtml}</div></a></div>`;
+
+    return this.wrapEmbedBlock(html);
   }
 
   private async resolveAddressableEvent(
@@ -434,17 +545,20 @@ export class FormatService {
 
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
+    const normalizedContent = this.normalizeWrappedNostrIdentifiers(content);
     const nostrRegex =
-      /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
-    const matches = Array.from(content.matchAll(nostrRegex));
+    const matches = Array.from(normalizedContent.matchAll(nostrRegex));
 
     // Process each match asynchronously
     const replacements = await Promise.all(
       matches.map(async (match: RegExpMatchArray) => {
         try {
-          const nostrData = await this.parsingService.parseNostrUri(match[0]);
+          const nostrData =
+            (await this.parsingService.parseNostrUri(match[0]))
+            || this.decodeNostrIdentifierFallback(match[0]);
 
           if (nostrData) {
             // Generate a user-friendly mention based on the Nostr data type
@@ -545,22 +659,24 @@ export class FormatService {
             }
           }
 
+          const fallbackMention = this.buildProfileMentionFallback(match[0]);
           return {
             original: match[0],
-            replacement: match[0],
+            replacement: fallbackMention || match[0],
           };
         } catch (error) {
           this.logger.error('Error parsing Nostr URI:', error);
+          const fallbackMention = this.buildProfileMentionFallback(match[0]);
           return {
             original: match[0],
-            replacement: match[0],
+            replacement: fallbackMention || match[0],
           };
         }
       })
     );
 
     // Apply all replacements to the content
-    let result = content;
+    let result = normalizedContent;
     for (const replacement of replacements) {
       result = result.replace(replacement.original, replacement.replacement);
     }
@@ -574,55 +690,70 @@ export class FormatService {
    */
   private processNostrTokensNonBlocking(
     content: string,
-    onPreviewLoaded?: (original: string, replacement: string) => void
+    onPreviewLoaded?: (tokenKey: string, replacement: string) => void
   ): string {
+    const normalizedContent = this.normalizeWrappedNostrIdentifiers(content);
     const nostrRegex =
-      /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
-    const matches = Array.from(content.matchAll(nostrRegex));
-    let result = content;
+    const matches = Array.from(normalizedContent.matchAll(nostrRegex));
+    let result = normalizedContent;
 
     // Process each match
-    for (const match of matches) {
+    for (const [index, match] of matches.entries()) {
+      const original = match[0];
+      const tokenKey = `##NOSTR_TOKEN_${index}##`;
+
+      result = result.replace(original, tokenKey);
+
+      const fallbackMention = this.buildProfileMentionFallback(original);
+      const initialReplacement = fallbackMention || `<span class="nostr-loading">${this.escapeHtml(original)}</span>`;
+
+      if (onPreviewLoaded) {
+        onPreviewLoaded(tokenKey, initialReplacement);
+      }
+
       try {
         // Parse Nostr URI synchronously (this is fast)
-        this.parsingService.parseNostrUri(match[0]).then(nostrData => {
-          if (nostrData) {
+        this.parsingService.parseNostrUri(original).then(nostrData => {
+          const resolvedNostrData = nostrData || this.decodeNostrIdentifierFallback(original);
+
+          if (resolvedNostrData) {
             let replacement = '';
 
             // Generate replacements based on type
-            switch (nostrData.type) {
+            switch (resolvedNostrData.type) {
               case 'npub':
               case 'nprofile': {
                 // For user profiles, create @username mention with proper link
-                const pubkey = nostrData.data?.pubkey || nostrData.data;
-                const username = nostrData.displayName;
+                const pubkey = resolvedNostrData.data?.pubkey || resolvedNostrData.data;
+                const username = resolvedNostrData.displayName;
                 const npub = this.utilities.getNpubFromPubkey(pubkey);
                 replacement = `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`;
                 if (onPreviewLoaded) {
-                  onPreviewLoaded(match[0], replacement);
+                  onPreviewLoaded(tokenKey, replacement);
                 }
                 break;
               }
 
               case 'note': {
                 // For notes, show placeholder first then fetch preview in background
-                const noteId = nostrData.data;
-                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
+                const noteId = resolvedNostrData.data;
+                const noteRef = resolvedNostrData.displayName || `note${noteId.substring(0, 8)}`;
                 // Use nevent with just id for immediate placeholder (will be replaced with full data in preview)
                 const neventEncoded = nip19.neventEncode({ id: noteId });
 
                 // Immediate fallback link
                 replacement = `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`;
                 if (onPreviewLoaded) {
-                  onPreviewLoaded(match[0], replacement);
+                  onPreviewLoaded(tokenKey, replacement);
                 }
 
                 // Fetch preview in background - this will have proper nevent with full event data
                 this.fetchEventPreview(noteId).then(preview => {
                   if (preview && onPreviewLoaded) {
-                    onPreviewLoaded(match[0], preview);
+                    onPreviewLoaded(tokenKey, preview);
                   }
                 });
                 break;
@@ -630,53 +761,59 @@ export class FormatService {
 
               case 'nevent': {
                 // For events, show placeholder first then fetch preview in background
-                const eventId = nostrData.data?.id || nostrData.data;
-                const authorPubkey = nostrData.data?.author || nostrData.data?.pubkey;
-                const relayHints = nostrData.data?.relays;
-                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
-                const neventEncoded = nip19.neventEncode(nostrData.data);
+                const eventId = resolvedNostrData.data?.id || resolvedNostrData.data;
+                const authorPubkey = resolvedNostrData.data?.author || resolvedNostrData.data?.pubkey;
+                const relayHints = resolvedNostrData.data?.relays;
+                const eventRef = resolvedNostrData.displayName || `event${eventId.substring(0, 8)}`;
+                const neventEncoded = nip19.neventEncode(resolvedNostrData.data);
 
                 // Immediate fallback link
                 replacement = `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`;
                 if (onPreviewLoaded) {
-                  onPreviewLoaded(match[0], replacement);
+                  onPreviewLoaded(tokenKey, replacement);
                 }
 
                 // Fetch preview in background
                 this.fetchEventPreview(eventId, authorPubkey, relayHints).then(preview => {
                   if (preview && onPreviewLoaded) {
-                    onPreviewLoaded(match[0], preview);
+                    onPreviewLoaded(tokenKey, preview);
                   }
                 });
                 break;
               }
 
               case 'naddr': {
-                replacement = this.buildGenericNaddrPreview(nostrData.data, nostrData.displayName);
+                replacement = this.buildGenericNaddrPreview(resolvedNostrData.data, resolvedNostrData.displayName);
                 if (onPreviewLoaded) {
-                  onPreviewLoaded(match[0], replacement);
+                  onPreviewLoaded(tokenKey, replacement);
                 }
 
-                this.buildNaddrPreview(nostrData.data, nostrData.displayName).then(preview => {
+                this.buildNaddrPreview(resolvedNostrData.data, resolvedNostrData.displayName).then(preview => {
                   if (preview !== replacement && onPreviewLoaded) {
-                    onPreviewLoaded(match[0], preview);
+                    onPreviewLoaded(tokenKey, preview);
                   }
                 });
                 break;
               }
 
               default:
-                replacement = `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`;
+                replacement = `<span class="nostr-mention" title="Nostr reference">${resolvedNostrData.displayName || match[0]}</span>`;
                 if (onPreviewLoaded) {
-                  onPreviewLoaded(match[0], replacement);
+                  onPreviewLoaded(tokenKey, replacement);
                 }
             }
+          } else {
+            const decodedFallbackMention = this.buildProfileMentionFallback(original);
+            if (decodedFallbackMention && onPreviewLoaded) {
+              onPreviewLoaded(tokenKey, decodedFallbackMention);
+            }
+          }
+        }).catch(() => {
+          const decodedFallbackMention = this.buildProfileMentionFallback(original);
+          if (decodedFallbackMention && onPreviewLoaded) {
+            onPreviewLoaded(tokenKey, decodedFallbackMention);
           }
         });
-
-        // Replace with placeholder immediately (the token itself as a link)
-        const placeholder = `<span class="nostr-loading">${this.escapeHtml(match[0])}</span>`;
-        result = result.replace(match[0], placeholder);
       } catch (error) {
         this.logger.error('Error parsing Nostr URI:', error);
       }
@@ -732,14 +869,21 @@ export class FormatService {
       const updates = new Map<string, string>();
 
       // Callback for when previews are loaded
-      const handlePreviewLoaded = (original: string, replacement: string) => {
-        updates.set(original, replacement);
+      let contentTemplate = rawMarkdown;
+
+      const applyUpdates = (): string => {
+        let updatedContent = contentTemplate;
+        for (const [tokenKey, replacement] of updates.entries()) {
+          updatedContent = updatedContent.replaceAll(tokenKey, replacement);
+        }
+        return updatedContent;
+      };
+
+      const handlePreviewLoaded = (tokenKey: string, replacement: string) => {
+        updates.set(tokenKey, replacement);
 
         // Reprocess content with all updates so far
-        let updatedContent = rawMarkdown;
-        for (const [orig, repl] of updates.entries()) {
-          updatedContent = updatedContent.replace(orig, repl);
-        }
+        const updatedContent = applyUpdates();
 
         // Convert to markdown and sanitize
         imageUrlsToMarkdown(updatedContent).then(content => {
@@ -766,9 +910,11 @@ export class FormatService {
         rawMarkdown,
         handlePreviewLoaded
       );
+      contentTemplate = initialContent;
+      const initialResolvedContent = applyUpdates();
 
       // Convert images to markdown and render immediately
-      imageUrlsToMarkdown(initialContent).then(content => {
+      imageUrlsToMarkdown(initialResolvedContent).then(content => {
         content = urlsToMarkdownLinks(content);
         marked.use({
           renderer: markdownRenderer,
@@ -794,7 +940,7 @@ export class FormatService {
         pedantic: false,
       });
 
-      const htmlContent = marked.parse(urlsToMarkdownLinks(initialContent)) as string;
+      const htmlContent = marked.parse(urlsToMarkdownLinks(initialResolvedContent)) as string;
       const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
 
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
