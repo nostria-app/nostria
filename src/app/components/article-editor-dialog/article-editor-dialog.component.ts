@@ -51,7 +51,7 @@ import { SpeechService } from '../../services/speech.service';
 import { FormatService } from '../../services/format/format.service';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 import { ArticleReferencePickerResult } from '../article-reference-picker-dialog/article-reference-picker-dialog.component';
-import { TextInputDialogComponent } from '../text-input-dialog/text-input-dialog.component';
+import JSZip from '@progress/jszip-esm';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -80,6 +80,22 @@ interface ArticleAutoDraft {
   dTag: string;
   lastModified: number;
   autoDTagEnabled: boolean;
+}
+
+interface ZipMediaFileEntry {
+  zipPath: string;
+  normalizedPath: string;
+  baseName: string;
+  file: File;
+  size: number;
+  mimeType: string;
+}
+
+interface ParsedArticleZipPackage {
+  event: NostrEvent;
+  eventPath: string;
+  mediaFiles: ZipMediaFileEntry[];
+  totalMediaBytes: number;
 }
 
 @Component({
@@ -243,6 +259,11 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private featuredImageDragCounter = 0;
   private readonly base64ImageDataUrlRegex = /^data:image\/[a-zA-Z0-9.+-]+;base64,/i;
   private readonly articleUrlPattern = /\/a\/(npub1[02-9ac-hj-np-z]+)\/([^/?#]+)/i;
+  private readonly zipMediaExtensions = new Set([
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'bmp', 'heic', 'heif',
+    'mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi', 'ogv',
+    'mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'
+  ]);
 
   constructor() {
     this.initializeSplitViewSupport();
@@ -1311,51 +1332,79 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   async openImportArticleDialog(): Promise<void> {
-    const dialogRef = this.dialog.open(TextInputDialogComponent, {
-      data: {
-        title: 'Import Existing Article',
-        message: 'Paste an naddr, nostr:naddr URI, article URL (/a/npub/slug), or event JSON.',
-        label: 'Article event reference',
-        placeholder: 'naddr1... or https://nostria.app/a/npub.../slug',
-        required: true,
-      },
-      width: '640px',
-      maxWidth: '95vw',
+    const { ArticleImportSourceDialogComponent } = await import(
+      '../article-import-source-dialog/article-import-source-dialog.component'
+    );
+    type ArticleImportSourceDialogResult = import(
+      '../article-import-source-dialog/article-import-source-dialog.component'
+    ).ArticleImportSourceDialogResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleImportSourceDialogComponent.prototype,
+      ArticleImportSourceDialogResult
+    >(ArticleImportSourceDialogComponent, {
+      title: 'Import Existing Article',
+      width: '700px',
+      maxWidth: '96vw',
+      showCloseButton: true,
     });
 
-    const value = await dialogRef.afterClosed().toPromise();
-    const rawInput = typeof value === 'string' ? value.trim() : '';
-    if (!rawInput) {
+    const selection = (await dialogRef.afterClosed$.toPromise())?.result;
+    if (!selection) {
       return;
     }
 
-    const hasCurrentContent = !!(
-      this.article().title.trim() ||
-      this.article().summary.trim() ||
-      this.article().content.trim() ||
-      this.article().image.trim() ||
-      this.article().tags.length > 0
+    if (selection.type === 'zip') {
+      await this.importArticleFromZipPackage(selection.file);
+      return;
+    }
+
+    await this.importArticleFromReference(selection.value);
+  }
+
+  private hasCurrentDraftContent(): boolean {
+    const current = this.article();
+    return !!(
+      current.title.trim() ||
+      current.summary.trim() ||
+      current.content.trim() ||
+      current.image.trim() ||
+      current.tags.length > 0
     );
+  }
 
-    if (hasCurrentContent) {
-      const confirmRef = this.dialog.open(ConfirmDialogComponent, {
-        data: {
-          title: 'Replace Current Draft?',
-          message: 'Importing will replace your current article draft content.',
-          confirmText: 'Import',
-          cancelText: 'Cancel',
-        },
-      });
+  private async confirmReplaceCurrentDraft(): Promise<boolean> {
+    if (!this.hasCurrentDraftContent()) {
+      return true;
+    }
 
-      const confirmed = await confirmRef.afterClosed().toPromise();
-      if (!confirmed) {
-        return;
-      }
+    const confirmRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Replace Current Draft?',
+        message: 'Importing will replace your current article draft content.',
+        confirmText: 'Import',
+        cancelText: 'Cancel',
+      },
+    });
+
+    const confirmed = await confirmRef.afterClosed().toPromise();
+    return !!confirmed;
+  }
+
+  private async importArticleFromReference(rawInput: string): Promise<void> {
+    const trimmedInput = rawInput.trim();
+    if (!trimmedInput) {
+      return;
+    }
+
+    const shouldReplaceDraft = await this.confirmReplaceCurrentDraft();
+    if (!shouldReplaceDraft) {
+      return;
     }
 
     try {
       this.isLoading.set(true);
-      const importedEvent = await this.resolveImportedArticleEvent(rawInput);
+      const importedEvent = await this.resolveImportedArticleEvent(trimmedInput);
 
       if (!importedEvent) {
         this.snackBar.open('Could not resolve article event from input', 'Close', { duration: 4000 });
@@ -1377,6 +1426,323 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async importArticleFromZipPackage(zipFile: File): Promise<void> {
+    let parsedPackage: ParsedArticleZipPackage;
+
+    try {
+      this.isLoading.set(true);
+      parsedPackage = await this.parseArticleZipPackage(zipFile);
+    } catch (error) {
+      this.snackBar.open(
+        `Failed to read ZIP package: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        { duration: 6000 }
+      );
+      this.isLoading.set(false);
+      return;
+    }
+
+    const shouldReplaceDraft = await this.confirmReplaceCurrentDraft();
+    if (!shouldReplaceDraft) {
+      this.isLoading.set(false);
+      return;
+    }
+
+    const mediaServers = parsedPackage.mediaFiles.length > 0
+      ? await this.getMediaServersForUpload()
+      : [];
+
+    if (parsedPackage.mediaFiles.length > 0 && mediaServers.length === 0) {
+      this.isLoading.set(false);
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const confirmed = await this.confirmZipImportSummary(parsedPackage);
+    if (!confirmed) {
+      this.isLoading.set(false);
+      return;
+    }
+
+    try {
+      const uploadedUrlMap = await this.uploadZipMediaFiles(parsedPackage.mediaFiles, mediaServers);
+      const importedEvent = this.applyZipMediaUrlsToEvent(parsedPackage.event, parsedPackage.mediaFiles, uploadedUrlMap);
+
+      const importedDTag = this.getTagValue(importedEvent.tags, 'd') || this.generateUniqueId();
+      this.applyArticleEventToDraft(importedEvent, importedDTag);
+      this.isEditMode.set(false);
+      this.scheduleAutoSaveIfNeeded();
+
+      this.snackBar.open(
+        parsedPackage.mediaFiles.length > 0
+          ? `Article imported (${parsedPackage.mediaFiles.length} media files uploaded)`
+          : 'Article imported into editor',
+        'Close',
+        { duration: 4000 }
+      );
+    } catch (error) {
+      this.snackBar.open(
+        `Failed to import ZIP package: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        { duration: 6000 }
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async parseArticleZipPackage(zipFile: File): Promise<ParsedArticleZipPackage> {
+    const zip = new JSZip();
+    const zipData = await zip.loadAsync(zipFile);
+    const allFiles = Object.values(zipData.files).filter(entry => !entry.dir);
+
+    const eventEntry = allFiles.find(entry => this.normalizeZipPath(entry.name) === 'event.json')
+      || allFiles.find(entry => this.normalizeZipPath(entry.name).endsWith('/event.json'));
+
+    if (!eventEntry) {
+      throw new Error('Missing event.json in ZIP package');
+    }
+
+    const eventContent = await eventEntry.async('string');
+    const parsedEvent = this.tryParseArticleEventJson(eventContent.trim());
+    if (!parsedEvent) {
+      throw new Error('event.json is not a valid article event (kind 30023 or 30024)');
+    }
+
+    const mediaFiles: ZipMediaFileEntry[] = [];
+
+    for (const entry of allFiles) {
+      if (entry.name === eventEntry.name) {
+        continue;
+      }
+
+      const zipPath = this.normalizeZipPath(entry.name);
+      if (!zipPath || zipPath.startsWith('__macosx/')) {
+        continue;
+      }
+
+      if (!this.isZipMediaFile(zipPath)) {
+        continue;
+      }
+
+      const blob = await entry.async('blob');
+      const baseName = zipPath.split('/').pop() || zipPath;
+      const mimeType = blob.type || this.inferMimeTypeFromFileName(baseName);
+      const file = new File([blob], baseName, { type: mimeType });
+
+      mediaFiles.push({
+        zipPath,
+        normalizedPath: zipPath.toLowerCase(),
+        baseName: baseName.toLowerCase(),
+        file,
+        size: file.size,
+        mimeType,
+      });
+    }
+
+    const totalMediaBytes = mediaFiles.reduce((total, item) => total + item.size, 0);
+
+    return {
+      event: parsedEvent,
+      eventPath: eventEntry.name,
+      mediaFiles,
+      totalMediaBytes,
+    };
+  }
+
+  private async confirmZipImportSummary(parsedPackage: ParsedArticleZipPackage): Promise<boolean> {
+    const { ArticleImportZipSummaryDialogComponent } = await import(
+      '../article-import-zip-summary-dialog/article-import-zip-summary-dialog.component'
+    );
+    type ArticleZipImportSummaryDialogData = import(
+      '../article-import-zip-summary-dialog/article-import-zip-summary-dialog.component'
+    ).ArticleZipImportSummaryDialogData;
+
+    const summaryData: ArticleZipImportSummaryDialogData = {
+      eventKind: parsedPackage.event.kind,
+      dTag: this.getTagValue(parsedPackage.event.tags, 'd') || '',
+      title: this.getTagValue(parsedPackage.event.tags, 'title') || '',
+      mediaCount: parsedPackage.mediaFiles.length,
+      totalMediaBytes: parsedPackage.totalMediaBytes,
+      mediaFiles: parsedPackage.mediaFiles.map(file => ({
+        path: file.zipPath,
+        size: file.size,
+        mimeType: file.mimeType,
+      })),
+    };
+
+    const summaryRef = this.customDialog.open<
+      typeof ArticleImportZipSummaryDialogComponent.prototype,
+      boolean
+    >(ArticleImportZipSummaryDialogComponent, {
+      title: 'Review ZIP Import',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+      data: summaryData,
+    });
+
+    return (await summaryRef.afterClosed$.toPromise())?.result === true;
+  }
+
+  private async uploadZipMediaFiles(
+    mediaFiles: ZipMediaFileEntry[],
+    mediaServers: string[]
+  ): Promise<Map<string, string>> {
+    const uploadedByPath = new Map<string, string>();
+
+    for (const mediaFile of mediaFiles) {
+      const uploadResult = await this.media.uploadFile(mediaFile.file, false, mediaServers);
+
+      if (uploadResult.status === 'error' || !uploadResult.item) {
+        throw new Error(uploadResult.message || `Failed to upload ${mediaFile.zipPath}`);
+      }
+
+      uploadedByPath.set(mediaFile.normalizedPath, uploadResult.item.url);
+    }
+
+    return uploadedByPath;
+  }
+
+  private applyZipMediaUrlsToEvent(
+    event: NostrEvent,
+    mediaFiles: ZipMediaFileEntry[],
+    uploadedByPath: Map<string, string>
+  ): NostrEvent {
+    const referenceMap = this.buildZipReferenceMap(mediaFiles, uploadedByPath);
+
+    let updatedContent = event.content || '';
+    referenceMap.forEach((uploadedUrl, reference) => {
+      updatedContent = this.replaceArticleContentReference(updatedContent, reference, uploadedUrl);
+    });
+
+    const updatedTags = event.tags.map(tag => [...tag]);
+    const imageTagIndex = updatedTags.findIndex(tag => tag[0] === 'image');
+    if (imageTagIndex >= 0) {
+      const currentImageValue = updatedTags[imageTagIndex]?.[1] || '';
+      const replacementImageUrl = this.resolveUploadedReferenceUrl(currentImageValue, referenceMap);
+      if (replacementImageUrl) {
+        updatedTags[imageTagIndex][1] = replacementImageUrl;
+      }
+    }
+
+    return {
+      ...event,
+      content: updatedContent,
+      tags: updatedTags,
+    };
+  }
+
+  private buildZipReferenceMap(
+    mediaFiles: ZipMediaFileEntry[],
+    uploadedByPath: Map<string, string>
+  ): Map<string, string> {
+    const baseNameCount = new Map<string, number>();
+    mediaFiles.forEach(mediaFile => {
+      baseNameCount.set(mediaFile.baseName, (baseNameCount.get(mediaFile.baseName) || 0) + 1);
+    });
+
+    const references = new Map<string, string>();
+
+    for (const mediaFile of mediaFiles) {
+      const uploadedUrl = uploadedByPath.get(mediaFile.normalizedPath);
+      if (!uploadedUrl) {
+        continue;
+      }
+
+      const candidates = new Set<string>();
+      candidates.add(mediaFile.zipPath);
+      candidates.add(`./${mediaFile.zipPath}`);
+      candidates.add(`/${mediaFile.zipPath}`);
+      candidates.add(encodeURI(mediaFile.zipPath));
+
+      if (baseNameCount.get(mediaFile.baseName) === 1) {
+        const originalBaseName = mediaFile.zipPath.split('/').pop() || mediaFile.zipPath;
+        candidates.add(originalBaseName);
+        candidates.add(encodeURI(originalBaseName));
+      }
+
+      candidates.forEach(reference => {
+        if (reference && !references.has(reference)) {
+          references.set(reference, uploadedUrl);
+        }
+      });
+    }
+
+    return references;
+  }
+
+  private replaceArticleContentReference(content: string, reference: string, uploadedUrl: string): string {
+    let updated = content;
+    updated = updated.split(`(${reference})`).join(`(${uploadedUrl})`);
+    updated = updated.split(`\"${reference}\"`).join(`\"${uploadedUrl}\"`);
+    updated = updated.split(`'${reference}'`).join(`'${uploadedUrl}'`);
+    return updated;
+  }
+
+  private resolveUploadedReferenceUrl(reference: string, referenceMap: Map<string, string>): string | null {
+    const direct = referenceMap.get(reference);
+    if (direct) {
+      return direct;
+    }
+
+    const normalized = this.normalizeZipPath(reference);
+    if (!normalized) {
+      return null;
+    }
+
+    const withDot = `./${normalized}`;
+    const withSlash = `/${normalized}`;
+    return referenceMap.get(normalized)
+      || referenceMap.get(withDot)
+      || referenceMap.get(withSlash)
+      || null;
+  }
+
+  private normalizeZipPath(path: string): string {
+    return path
+      .replace(/\\/g, '/')
+      .replace(/^\.\//, '')
+      .replace(/^\//, '')
+      .trim();
+  }
+
+  private isZipMediaFile(path: string): boolean {
+    const extension = path.split('.').pop()?.toLowerCase() || '';
+    return this.zipMediaExtensions.has(extension);
+  }
+
+  private inferMimeTypeFromFileName(fileName: string): string {
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    const extensionMimeMap: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      avif: 'image/avif',
+      svg: 'image/svg+xml',
+      bmp: 'image/bmp',
+      heic: 'image/heic',
+      heif: 'image/heif',
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      mov: 'video/quicktime',
+      m4v: 'video/x-m4v',
+      mkv: 'video/x-matroska',
+      avi: 'video/x-msvideo',
+      ogv: 'video/ogg',
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      flac: 'audio/flac',
+      oga: 'audio/ogg',
+    };
+
+    return extensionMimeMap[extension] || 'application/octet-stream';
   }
 
   private async resolveImportedArticleEvent(input: string): Promise<NostrEvent | null> {

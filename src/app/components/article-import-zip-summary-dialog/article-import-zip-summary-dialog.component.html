@@ -1,0 +1,50 @@
+<div dialog-content class="zip-summary-content">
+  <p class="summary-intro">
+    Importing this package uploads all listed media files to your configured media server(s), then updates the article
+    to use those uploaded URLs.
+  </p>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <span class="label">Article kind</span>
+      <span class="value">{{ data.eventKind }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">d tag</span>
+      <span class="value">{{ data.dTag || 'Missing d tag (will fallback)' }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Title</span>
+      <span class="value">{{ data.title || 'Untitled' }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Media files</span>
+      <span class="value">{{ data.mediaCount }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="label">Upload size</span>
+      <span class="value">{{ formatBytes(data.totalMediaBytes) }}</span>
+    </div>
+  </div>
+
+  @if (data.mediaFiles.length > 0) {
+  <div class="files-title">Files to upload</div>
+  <div class="files-list">
+    @for (file of previewFiles(); track file.path) {
+    <div class="file-item">
+      <mat-icon>attachment</mat-icon>
+      <span class="file-path" [matTooltip]="file.path">{{ file.path }}</span>
+      <span class="file-size">{{ formatBytes(file.size) }}</span>
+    </div>
+    }
+    @if (hiddenCount() > 0) {
+    <div class="more-files">+{{ hiddenCount() }} more files</div>
+    }
+  </div>
+  }
+</div>
+
+<div dialog-actions class="zip-summary-actions">
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="confirm()">Import and Upload</button>
+</div>

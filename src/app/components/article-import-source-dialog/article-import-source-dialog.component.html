@@ -1,0 +1,46 @@
+<div dialog-content class="import-source-content">
+  <p class="import-help">
+    Paste an naddr, nostr:naddr URI, article URL (/a/npub/slug), or raw event JSON.
+  </p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Article event reference</mat-label>
+    <input matInput [ngModel]="referenceInput()" (ngModelChange)="onReferenceInput($event)"
+      placeholder="naddr1... or https://nostria.app/a/npub.../slug" autocomplete="off"
+      (keyup.enter)="importReference()" />
+  </mat-form-field>
+
+  <div class="or-divider">
+    <span>or</span>
+  </div>
+
+  <div class="zip-import-section">
+    <input #zipInput type="file" accept=".zip,application/zip,application/x-zip-compressed" class="hidden-input"
+      title="Select article zip package" aria-label="Select article zip package" (change)="onZipFileSelected($event)" />
+
+    <button mat-stroked-button type="button" (click)="openZipPicker(zipInput)">
+      <mat-icon>folder_zip</mat-icon>
+      Choose .zip Package
+    </button>
+
+    @if (selectedZipFile()) {
+    <div class="selected-zip">
+      <mat-icon>description</mat-icon>
+      <span>{{ selectedZipFile()!.name }}</span>
+      <button mat-icon-button type="button" matTooltip="Clear selected package" (click)="clearZipSelection(zipInput)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    }
+  </div>
+</div>
+
+<div dialog-actions class="import-source-actions">
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="importReference()" [disabled]="!referenceInput().trim()">
+    Import from Reference
+  </button>
+  <button mat-flat-button type="button" (click)="importZip()" [disabled]="!selectedZipFile()">
+    Import ZIP Package
+  </button>
+</div>
