@@ -213,6 +213,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
   // Markdown preview rendered through shared formatter (supports embeds and async preview updates)
   markdownHtml = signal<SafeHtml>('');
+  private markdownRenderVersion = 0;
 
   // Computed property for preview - creates ArticleData from current draft
   previewArticleData = computed<ArticleData>(() => {
@@ -279,19 +280,25 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     });
 
     effect(() => {
-      this.article().title;
-      this.isEditMode();
+      void this.article().title;
+      void this.isEditMode();
       this.syncDialogTitle();
     });
 
     effect(() => {
       const content = normalizeMarkdownLinkDestinations(this.article().content);
+      const renderVersion = ++this.markdownRenderVersion;
+
       if (!content.trim()) {
         this.markdownHtml.set('');
         return;
       }
 
       const initialHtml = this.formatService.markdownToHtmlNonBlocking(content, updatedHtml => {
+        if (renderVersion !== this.markdownRenderVersion) {
+          return;
+        }
+
         this.markdownHtml.set(updatedHtml);
       });
       this.markdownHtml.set(initialHtml);
@@ -1810,7 +1817,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private replaceArticleContentReference(content: string, reference: string, uploadedUrl: string): string {
     let updated = content;
     updated = updated.split(`(${reference})`).join(`(${uploadedUrl})`);
-    updated = updated.split(`\"${reference}\"`).join(`\"${uploadedUrl}\"`);
+    updated = updated.split(`"${reference}"`).join(`"${uploadedUrl}"`);
     updated = updated.split(`'${reference}'`).join(`'${uploadedUrl}'`);
     return updated;
   }

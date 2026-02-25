@@ -236,6 +236,10 @@ export class ArticleDisplayComponent implements OnDestroy {
 
   @ViewChild('markdownContentHost') private markdownContentHost?: ElementRef<HTMLElement>;
   private musicEmbedRefs: ComponentRef<MusicEmbedComponent>[] = [];
+  private markdownObserver: MutationObserver | null = null;
+  private observedMarkdownContainer: HTMLElement | null = null;
+  private enhanceScheduled = false;
+  private pendingForceEnhance = false;
 
   // Engagement metrics signals
   reactionCount = signal<number>(0);
@@ -397,15 +401,67 @@ export class ArticleDisplayComponent implements OnDestroy {
           return;
         }
 
-        setTimeout(() => {
-          this.enhanceMusicEmbeds();
-        }, 0);
+        this.ensureMarkdownObserver();
+        this.scheduleEnhanceMusicEmbeds(true);
       });
     });
   }
 
   ngOnDestroy(): void {
+    this.disconnectMarkdownObserver();
     this.destroyMusicEmbeds();
+  }
+
+  private scheduleEnhanceMusicEmbeds(force = false): void {
+    this.pendingForceEnhance = this.pendingForceEnhance || force;
+
+    if (this.enhanceScheduled) {
+      return;
+    }
+
+    this.enhanceScheduled = true;
+
+    setTimeout(() => {
+      this.enhanceScheduled = false;
+      const shouldForceEnhance = this.pendingForceEnhance;
+      this.pendingForceEnhance = false;
+      this.enhanceMusicEmbeds(shouldForceEnhance);
+    }, 0);
+  }
+
+  private ensureMarkdownObserver(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    const container = this.markdownContentHost?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    if (this.observedMarkdownContainer === container && this.markdownObserver) {
+      return;
+    }
+
+    this.disconnectMarkdownObserver();
+
+    this.observedMarkdownContainer = container;
+    this.markdownObserver = new MutationObserver(() => {
+      this.scheduleEnhanceMusicEmbeds(false);
+    });
+
+    this.markdownObserver.observe(container, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private disconnectMarkdownObserver(): void {
+    if (this.markdownObserver) {
+      this.markdownObserver.disconnect();
+      this.markdownObserver = null;
+    }
+    this.observedMarkdownContainer = null;
   }
 
   private destroyMusicEmbeds(): void {
@@ -416,9 +472,7 @@ export class ArticleDisplayComponent implements OnDestroy {
     this.musicEmbedRefs = [];
   }
 
-  private enhanceMusicEmbeds(): void {
-    this.destroyMusicEmbeds();
-
+  private enhanceMusicEmbeds(force = false): void {
     const container = this.markdownContentHost?.nativeElement;
     if (!container) {
       return;
@@ -427,6 +481,16 @@ export class ArticleDisplayComponent implements OnDestroy {
     const placeholders = container.querySelectorAll<HTMLElement>(
       '.nostr-embed-preview[data-kind="36787"], .nostr-embed-preview[data-kind="34139"]'
     );
+
+    if (!force && placeholders.length === 0) {
+      return;
+    }
+
+    this.destroyMusicEmbeds();
+
+    if (placeholders.length === 0) {
+      return;
+    }
 
     for (const node of placeholders) {
       const identifier = node.dataset['identifier'];

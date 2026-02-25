@@ -867,25 +867,10 @@ export class FormatService {
     try {
       // Track updates for this specific content
       const updates = new Map<string, string>();
-
-      // Callback for when previews are loaded
       let contentTemplate = rawMarkdown;
+      let isTemplateReady = false;
 
-      const applyUpdates = (): string => {
-        let updatedContent = contentTemplate;
-        for (const [tokenKey, replacement] of updates.entries()) {
-          updatedContent = updatedContent.replaceAll(tokenKey, replacement);
-        }
-        return updatedContent;
-      };
-
-      const handlePreviewLoaded = (tokenKey: string, replacement: string) => {
-        updates.set(tokenKey, replacement);
-
-        // Reprocess content with all updates so far
-        const updatedContent = applyUpdates();
-
-        // Convert to markdown and sanitize
+      const renderUpdatedContent = (updatedContent: string): void => {
         imageUrlsToMarkdown(updatedContent).then(content => {
           content = urlsToMarkdownLinks(content);
           marked.use({
@@ -905,32 +890,38 @@ export class FormatService {
         });
       };
 
+      // Callback for when previews are loaded
+      const applyUpdates = (): string => {
+        let updatedContent = contentTemplate;
+        for (const [tokenKey, replacement] of updates.entries()) {
+          updatedContent = updatedContent.replaceAll(tokenKey, replacement);
+        }
+        return updatedContent;
+      };
+
+      const handlePreviewLoaded = (tokenKey: string, replacement: string) => {
+        updates.set(tokenKey, replacement);
+
+        if (!isTemplateReady) {
+          return;
+        }
+
+        // Reprocess content with all updates so far
+        const updatedContent = applyUpdates();
+        renderUpdatedContent(updatedContent);
+      };
+
       // Process Nostr tokens with non-blocking approach
       const initialContent = this.processNostrTokensNonBlocking(
         rawMarkdown,
         handlePreviewLoaded
       );
       contentTemplate = initialContent;
+      isTemplateReady = true;
       const initialResolvedContent = applyUpdates();
 
       // Convert images to markdown and render immediately
-      imageUrlsToMarkdown(initialResolvedContent).then(content => {
-        content = urlsToMarkdownLinks(content);
-        marked.use({
-          renderer: markdownRenderer,
-          gfm: true,
-          breaks: true,
-          pedantic: false,
-        });
-
-        const htmlContent = marked.parse(content) as string;
-        const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
-        const safeHtml = this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
-
-        if (onUpdate) {
-          onUpdate(safeHtml);
-        }
-      });
+      renderUpdatedContent(initialResolvedContent);
 
       // Return initial content immediately (with placeholders)
       marked.use({
