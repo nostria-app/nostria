@@ -24,7 +24,6 @@ import {
   addFullscreenChangeListener,
 } from '../../../utils/fullscreen';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
 import { nip19 } from 'nostr-tools';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
@@ -40,7 +39,6 @@ import { Router } from '@angular/router';
     MatTooltipModule,
     RouterModule,
     UserProfileComponent,
-    VolumeGestureDirective,
     MatMenuModule,
     MatSliderModule
   ],

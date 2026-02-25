@@ -6,7 +6,7 @@
     (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()"
     (touchstart)="onVideoContainerTouchStart()" (dblclick)="onMiniPreviewDoubleClick($event)">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay
-      (error)="onVideoError($event)" (click)="onPlayPause()"></video>
+      (error)="onVideoError($event)"></video>
 
     @if (footer() && !layout.expandedMediaPlayer()) {
     <div class="video-preview-overlay">
