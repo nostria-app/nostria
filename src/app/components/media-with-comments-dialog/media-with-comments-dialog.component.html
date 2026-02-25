@@ -1,9 +1,9 @@
 <div class="dialog-container" (keydown)="onKeyDown($event)" tabindex="0">
   <!-- Header with close and bookmark buttons -->
   <div class="dialog-header">
-    <button mat-icon-button class="bookmark-button" (click)="toggleBookmark($event)"
-      [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
-      <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
+    <button mat-icon-button class="bookmark-button" (click)="onBookmarkClick($event)"
+      [matTooltip]="bookmark.getBookmarkTooltip(bookmarkItemId(), bookmarkType())" matTooltipPosition="below">
+      <mat-icon>{{ bookmark.getBookmarkIcon(bookmarkItemId(), bookmarkType()) }}</mat-icon>
     </button>
 
     <!-- Navigation buttons for media items -->

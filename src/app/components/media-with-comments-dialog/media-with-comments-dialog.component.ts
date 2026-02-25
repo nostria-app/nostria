@@ -18,6 +18,8 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
+import { UserRelaysService } from '../../services/relays/user-relays';
 
 interface MediaWithCommentsDialogData {
   event: Event;
@@ -60,8 +62,24 @@ export class MediaWithCommentsDialogComponent {
   private accountState = inject(AccountStateService);
   private settings = inject(SettingsService);
   private utilities = inject(UtilitiesService);
+  private userRelaysService = inject(UserRelaysService);
   data: MediaWithCommentsDialogData = inject(MAT_DIALOG_DATA);
   bookmark = inject(BookmarkService);
+
+  bookmarkType = computed<'e' | 'a'>(() => {
+    const ev = this.event();
+    const dTag = ev.tags.find(tag => tag[0] === 'd')?.[1];
+    return ev.kind >= 30000 && !!dTag ? 'a' : 'e';
+  });
+
+  bookmarkItemId = computed(() => {
+    const ev = this.event();
+    if (this.bookmarkType() === 'a') {
+      const dTag = ev.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return `${ev.kind}:${ev.pubkey}:${dTag}`;
+    }
+    return ev.id;
+  });
 
   constructor() {
     // Close dialog on navigation (e.g., when clicking a profile)
@@ -229,12 +247,27 @@ export class MediaWithCommentsDialogComponent {
     this.dialogRef.close();
   }
 
-  async toggleBookmark(event: MouseEvent): Promise<void> {
+  async onBookmarkClick(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+
     const nostrEvent = this.event();
-    if (nostrEvent) {
-      await this.bookmark.toggleBookmark(nostrEvent.id);
-    }
+    if (!nostrEvent) return;
+
+    await this.userRelaysService.ensureRelaysForPubkey(nostrEvent.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(nostrEvent.pubkey);
+    const relayHint = authorRelays[0] || undefined;
+
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: this.bookmarkItemId(),
+        type: this.bookmarkType(),
+        eventKind: nostrEvent.kind,
+        pubkey: nostrEvent.pubkey,
+        relay: relayHint,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
   }
 
   openImagePreview(): void {
