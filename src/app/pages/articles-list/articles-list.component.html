@@ -3,12 +3,14 @@
   <div class="panel-header">
     <h2 class="panel-title title-font">My Articles</h2>
     <span class="panel-header-spacer"></span>
-    <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
-      <mat-icon>refresh</mat-icon>
-    </button>
-    <button mat-icon-button (click)="createNewArticle()" matTooltip="Create new article">
-      <mat-icon>add</mat-icon>
-    </button>
+    <div class="panel-actions">
+      <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button (click)="createNewArticle()" matTooltip="Create new article">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
   </div>
 
   <div class="articles-header">

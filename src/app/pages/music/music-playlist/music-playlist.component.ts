@@ -122,6 +122,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   // Cache for artist profiles
   private artistProfiles = signal<Map<string, NostrRecord>>(new Map());
+  private pendingArtistProfileFetches = new Set<string>();
 
   // Playlist data
   title = computed(() => {
@@ -273,6 +274,18 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Prefetch artist profiles for loaded tracks
+    effect(() => {
+      const loadedTracks = this.tracks();
+      if (loadedTracks.length === 0) {
+        return;
+      }
+
+      untracked(() => {
+        this.prefetchTrackArtistProfiles(loadedTracks);
+      });
+    });
+
     // Check if user has already liked this playlist
     effect(() => {
       const event = this.playlist();
@@ -317,6 +330,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.isLiking.set(false);
     this.trackMap.clear();
     this.artistProfiles.set(new Map());
+    this.pendingArtistProfileFetches.clear();
 
     // Check if we have the playlist from router state (instant rendering)
     if (this.routerStateEvent &&
@@ -836,22 +850,34 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (profile) {
       return profile.data?.name || profile.data?.display_name || 'Unknown Artist';
     }
-    // Trigger async fetch if not cached
-    this.fetchArtistProfile(track.pubkey);
     return 'Unknown Artist';
   }
 
-  private async fetchArtistProfile(pubkey: string): Promise<void> {
-    const profiles = this.artistProfiles();
-    if (profiles.has(pubkey)) return;
+  private prefetchTrackArtistProfiles(tracks: Event[]): void {
+    const pubkeys = [...new Set(tracks.map(track => track.pubkey))];
+    for (const pubkey of pubkeys) {
+      this.fetchArtistProfile(pubkey);
+    }
+  }
 
-    const profile = await this.data.getProfile(pubkey);
-    if (profile) {
-      this.artistProfiles.update(map => {
-        const newMap = new Map(map);
-        newMap.set(pubkey, profile);
-        return newMap;
-      });
+  private async fetchArtistProfile(pubkey: string): Promise<void> {
+    if (this.artistProfiles().has(pubkey) || this.pendingArtistProfileFetches.has(pubkey)) {
+      return;
+    }
+
+    this.pendingArtistProfileFetches.add(pubkey);
+
+    try {
+      const profile = await this.data.getProfile(pubkey);
+      if (profile) {
+        this.artistProfiles.update(map => {
+          const newMap = new Map(map);
+          newMap.set(pubkey, profile);
+          return newMap;
+        });
+      }
+    } finally {
+      this.pendingArtistProfileFetches.delete(pubkey);
     }
   }
 
