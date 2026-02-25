@@ -108,6 +108,7 @@ export class PerformanceMetricsService {
 
   /** Version counter that bumps whenever metrics change */
   private readonly _version = signal(0);
+  private versionBumpScheduled = false;
 
   /** Reactive snapshot - recomputed when version changes */
   readonly snapshot = computed<PerformanceSnapshot>(() => {
@@ -300,7 +301,15 @@ export class PerformanceMetricsService {
   // ─── Private helpers ───────────────────────────────────────────
 
   private bump(): void {
-    this._version.update(v => v + 1);
+    if (this.versionBumpScheduled) {
+      return;
+    }
+
+    this.versionBumpScheduled = true;
+    queueMicrotask(() => {
+      this.versionBumpScheduled = false;
+      this._version.update(v => v + 1);
+    });
   }
 
   private computeTimingStats(name: string, entries: TimingEntry[]): TimingStats {
