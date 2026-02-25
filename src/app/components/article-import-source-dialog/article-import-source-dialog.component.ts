@@ -104,11 +104,17 @@ export class ArticleImportSourceDialogComponent {
 
     if (droppedZip) {
       this.setZipFileIfValid(droppedZip, fileInput);
+      if (this.selectedZipFile()) {
+        this.importZip();
+      }
       return;
     }
 
     if (hasDirectory || droppedFiles.length > 1) {
       this.setFolderFilesFromDroppedFiles(droppedFiles, fileInput);
+      if (this.selectedFolderFiles().length > 0) {
+        this.importFolder();
+      }
       return;
     }
 
@@ -128,6 +134,9 @@ export class ArticleImportSourceDialogComponent {
     }
 
     this.setZipFileIfValid(file, input);
+    if (this.selectedZipFile()) {
+      this.importZip();
+    }
   }
 
   onFolderSelected(event: Event, zipInput: HTMLInputElement): void {
@@ -148,6 +157,8 @@ export class ArticleImportSourceDialogComponent {
     this.selectedZipFile.set(null);
     this.zipWarning.set(null);
     zipInput.value = '';
+
+    this.importFolder();
   }
 
   clearZipSelection(fileInput: HTMLInputElement): void {

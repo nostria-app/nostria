@@ -267,7 +267,8 @@
       }
     </div>
     } @else {
-    <div class="markdown-content" [innerHTML]="parsedContent()" appMentionHover (click)="handleContentClick($event)">
+    <div #markdownContentHost class="markdown-content" [innerHTML]="parsedContent()" appMentionHover
+      (click)="handleContentClick($event)">
     </div>
     }
   </main>

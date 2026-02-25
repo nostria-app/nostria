@@ -34,7 +34,7 @@ const MUSIC_KIND = 36787;
     DateToggleComponent,
   ],
   template: `
-    <div class="music-embed" (click)="$event.stopPropagation()" [class.track]="isTrack()" [class.playlist]="!isTrack()">
+    <div class="music-embed" [class.track]="isTrack()" [class.playlist]="!isTrack()">
       @if (loading()) {
         <div class="loading-state">
           <mat-spinner diameter="24"></mat-spinner>
@@ -321,6 +321,13 @@ export class MusicEmbedComponent {
   isLoading = signal<boolean>(false);
   private tracksCache = signal<Event[]>([]);
 
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
+    return Promise.race([
+      promise,
+      new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+  }
+
   constructor() {
     let lastLoadKey = '';
 
@@ -447,7 +454,10 @@ export class MusicEmbedComponent {
             kinds: [this.kind()],
             '#d': [this.identifier()],
           };
-          const relayEvent = await this.relayPool.get(validRelayHints, filter, 10000);
+          const relayEvent = await this.withTimeout(
+            this.relayPool.get(validRelayHints, filter, 10000),
+            6000
+          );
           if (relayEvent) {
             event = this.data.toRecord(relayEvent);
           }
@@ -461,18 +471,24 @@ export class MusicEmbedComponent {
         const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
 
         if (isNotCurrentUser) {
-          event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
-            this.pubkey(),
-            this.kind(),
-            this.identifier(),
-            { save: false, cache: false }
+          event = await this.withTimeout(
+            this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+              this.pubkey(),
+              this.kind(),
+              this.identifier(),
+              { save: false, cache: false }
+            ),
+            5000
           );
         } else {
-          event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-            this.pubkey(),
-            this.kind(),
-            this.identifier(),
-            { save: false, cache: false }
+          event = await this.withTimeout(
+            this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+              this.pubkey(),
+              this.kind(),
+              this.identifier(),
+              { save: false, cache: false }
+            ),
+            5000
           );
         }
       }
@@ -487,7 +503,10 @@ export class MusicEmbedComponent {
           };
           const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
           if (discoveryRelayUrls.length > 0) {
-            const relayEvent = await this.relayPool.get(discoveryRelayUrls, filter, 10000);
+            const relayEvent = await this.withTimeout(
+              this.relayPool.get(discoveryRelayUrls, filter, 10000),
+              6000
+            );
             if (relayEvent) {
               event = this.data.toRecord(relayEvent);
             }
@@ -507,7 +526,10 @@ export class MusicEmbedComponent {
           };
           const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
           if (preferredRelays.length > 0) {
-            const relayEvent = await this.relayPool.get(preferredRelays, filter, 10000);
+            const relayEvent = await this.withTimeout(
+              this.relayPool.get(preferredRelays, filter, 10000),
+              6000
+            );
             if (relayEvent) {
               event = this.data.toRecord(relayEvent);
             }

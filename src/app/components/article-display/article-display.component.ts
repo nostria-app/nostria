@@ -1,4 +1,21 @@
-import { Component, computed, inject, input, output, signal, effect, untracked, PLATFORM_ID } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  effect,
+  untracked,
+  PLATFORM_ID,
+  ElementRef,
+  ViewChild,
+  createComponent,
+  EnvironmentInjector,
+  ComponentRef,
+  OnDestroy,
+  ApplicationRef,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 
@@ -12,7 +29,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterModule, Router } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
@@ -34,6 +51,7 @@ import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmar
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 
 export interface ArticleData {
   event?: Event;
@@ -87,7 +105,7 @@ export interface ArticleData {
     ])
   ],
 })
-export class ArticleDisplayComponent {
+export class ArticleDisplayComponent implements OnDestroy {
   private router = inject(Router);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -213,6 +231,11 @@ export class ArticleDisplayComponent {
   private zapService = inject(ZapService);
   private logger = inject(LoggerService);
   private userRelaysService = inject(UserRelaysService);
+  private environmentInjector = inject(EnvironmentInjector);
+  private appRef = inject(ApplicationRef);
+
+  @ViewChild('markdownContentHost') private markdownContentHost?: ElementRef<HTMLElement>;
+  private musicEmbedRefs: ComponentRef<MusicEmbedComponent>[] = [];
 
   // Engagement metrics signals
   reactionCount = signal<number>(0);
@@ -364,6 +387,90 @@ export class ArticleDisplayComponent {
         });
       }
     });
+
+    effect(() => {
+      this.parsedContent();
+      this.contentLoading();
+
+      untracked(() => {
+        if (!this.isBrowser) {
+          return;
+        }
+
+        setTimeout(() => {
+          this.enhanceMusicEmbeds();
+        }, 0);
+      });
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroyMusicEmbeds();
+  }
+
+  private destroyMusicEmbeds(): void {
+    for (const ref of this.musicEmbedRefs) {
+      this.appRef.detachView(ref.hostView);
+      ref.destroy();
+    }
+    this.musicEmbedRefs = [];
+  }
+
+  private enhanceMusicEmbeds(): void {
+    this.destroyMusicEmbeds();
+
+    const container = this.markdownContentHost?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    const placeholders = container.querySelectorAll<HTMLElement>(
+      '.nostr-embed-preview[data-kind="36787"], .nostr-embed-preview[data-kind="34139"]'
+    );
+
+    for (const node of placeholders) {
+      const identifier = node.dataset['identifier'];
+      const pubkey = node.dataset['pubkey'];
+      const kindValue = Number(node.dataset['kind']);
+      const encodedNaddr = node.dataset['naddr'];
+      let relayHints: string[] | undefined;
+
+      if (encodedNaddr) {
+        try {
+          const decoded = nip19.decode(encodedNaddr);
+          if (decoded.type === 'naddr' && decoded.data.relays && decoded.data.relays.length > 0) {
+            relayHints = decoded.data.relays;
+          }
+        } catch {
+          relayHints = undefined;
+        }
+      }
+
+      if (!identifier || !pubkey || (kindValue !== 36787 && kindValue !== 34139)) {
+        continue;
+      }
+
+      const host = document.createElement('div');
+      host.className = 'article-music-embed';
+      node.replaceWith(host);
+
+      const componentRef = createComponent(MusicEmbedComponent, {
+        environmentInjector: this.environmentInjector,
+        hostElement: host,
+      });
+
+      this.appRef.attachView(componentRef.hostView);
+
+      componentRef.setInput('identifier', identifier);
+      componentRef.setInput('pubkey', pubkey);
+      componentRef.setInput('kind', kindValue);
+      if (relayHints && relayHints.length > 0) {
+        componentRef.setInput('relayHints', relayHints);
+      }
+      componentRef.changeDetectorRef.detectChanges();
+
+      this.musicEmbedRefs.push(componentRef);
+    }
   }
 
   readonly taggedUsersSpamThreshold = 50;
@@ -637,6 +744,20 @@ export class ArticleDisplayComponent {
         const slug = parts.length > 3 ? parts[3] : undefined;
 
         this.layout.openArticle(id, slug);
+      }
+    } else if (href.startsWith('/music/song/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      const parts = href.split('/').filter(Boolean);
+      if (parts.length >= 4) {
+        this.layout.openSongDetail(parts[2], decodeURIComponent(parts[3]));
+      }
+    } else if (href.startsWith('/music/playlist/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      const parts = href.split('/').filter(Boolean);
+      if (parts.length >= 4) {
+        this.layout.openMusicPlaylist(parts[2], decodeURIComponent(parts[3]));
       }
     }
   }

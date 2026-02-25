@@ -10,6 +10,12 @@
       (keyup.enter)="importReference()" />
   </mat-form-field>
 
+  <div class="reference-action-row">
+    <button mat-flat-button type="button" (click)="importReference()" [disabled]="!referenceInput().trim()">
+      Import from Reference
+    </button>
+  </div>
+
   <div class="or-divider">
     <span>or</span>
   </div>
@@ -72,13 +78,4 @@
 
 <div dialog-actions class="import-source-actions">
   <button mat-button type="button" (click)="cancel()">Cancel</button>
-  <button mat-flat-button type="button" (click)="importReference()" [disabled]="!referenceInput().trim()">
-    Import from Reference
-  </button>
-  <button mat-flat-button type="button" (click)="importZip()" [disabled]="!selectedZipFile()">
-    Import ZIP Package
-  </button>
-  <button mat-flat-button type="button" (click)="importFolder()" [disabled]="selectedFolderFiles().length === 0">
-    Import Folder Package
-  </button>
 </div>

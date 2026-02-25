@@ -2,7 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { nip19 } from 'nostr-tools';
+import { nip19, type Event } from 'nostr-tools';
+import type { Filter } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { ParsingService } from '../parsing.service';
 import { UtilitiesService } from '../utilities.service';
@@ -16,6 +17,9 @@ import { UserRelaysService } from '../relays/user-relays';
   providedIn: 'root',
 })
 export class FormatService {
+  private static readonly MUSIC_PLAYLIST_KIND = 34139;
+  private static readonly MUSIC_TRACK_KIND = 36787;
+
   private logger = inject(LoggerService);
   private parsingService = inject(ParsingService);
   private utilities = inject(UtilitiesService);
@@ -262,7 +266,25 @@ export class FormatService {
     return this.utilities.getRelativeTime(timestamp);
   }
 
-  private buildNaddrPreview(
+  private getTagValue(event: Event, tagName: string): string {
+    return event.tags.find(tag => tag[0] === tagName)?.[1] || '';
+  }
+
+  private getAddressableRoute(kind: number, pubkey: string, identifier: string, naddrEncoded: string): string {
+    const npub = this.utilities.getNpubFromPubkey(pubkey);
+
+    if (kind === FormatService.MUSIC_PLAYLIST_KIND) {
+      return `/music/playlist/${npub}/${encodeURIComponent(identifier)}`;
+    }
+
+    if (kind === FormatService.MUSIC_TRACK_KIND) {
+      return `/music/song/${npub}/${encodeURIComponent(identifier)}`;
+    }
+
+    return `/a/${naddrEncoded}`;
+  }
+
+  private buildGenericNaddrPreview(
     naddrData: { kind?: number; pubkey?: string; identifier?: string; relays?: string[] },
     displayName?: string
   ): string {
@@ -277,7 +299,7 @@ export class FormatService {
       identifier,
       relays: relayHints,
     });
-    const route = `/a/${naddrEncoded}`;
+    const route = this.getAddressableRoute(kind, authorPubkey, identifier, naddrEncoded);
 
     return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
                     <a href="${route}" class="nostr-embed-link">
@@ -290,6 +312,124 @@ export class FormatService {
                       </div>
                     </a>
                   </div>`;
+  }
+
+  private buildMusicTrackNaddrPreview(event: Event, identifier: string, naddrEncoded: string): string {
+    const title = this.getTagValue(event, 'title') || 'Untitled Track';
+    const artist = this.getTagValue(event, 'artist') || this.utilities.getTruncatedNpub(event.pubkey);
+    const hasVideo = !!this.getTagValue(event, 'video');
+    const route = this.getAddressableRoute(event.kind, event.pubkey, identifier, naddrEncoded);
+
+    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}">
+                    <a href="${route}" class="nostr-embed-link">
+                      <div class="nostr-embed-icon">
+                        <span class="embed-icon">🎵</span>
+                      </div>
+                      <div class="nostr-embed-content">
+                        <div class="nostr-embed-title">${this.escapeHtml(title)} — ${this.escapeHtml(artist)}</div>
+                        <div class="nostr-embed-meta">Music Track · Kind ${event.kind}</div>
+                        <div class="nostr-embed-meta">Video: ${hasVideo ? 'Yes' : 'No'}</div>
+                      </div>
+                    </a>
+                  </div>`;
+  }
+
+  private buildMusicPlaylistNaddrPreview(event: Event, identifier: string, naddrEncoded: string): string {
+    const title = this.getTagValue(event, 'title') || 'Untitled Playlist';
+    const description = this.getTagValue(event, 'description') || event.content || '';
+    const trackCount = event.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith(`${FormatService.MUSIC_TRACK_KIND}:`)).length;
+    const route = this.getAddressableRoute(event.kind, event.pubkey, identifier, naddrEncoded);
+    const descriptionHtml = description
+      ? `<div class="nostr-embed-meta">${this.escapeHtml(description).replace(/\n/g, ' ')}</div>`
+      : '';
+
+    return `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}"><a href="${route}" class="nostr-embed-link"><div class="nostr-embed-icon"><span class="embed-icon">🎼</span></div><div class="nostr-embed-content"><div class="nostr-embed-title">${this.escapeHtml(title)}</div><div class="nostr-embed-meta">Music Playlist · Kind ${event.kind}</div><div class="nostr-embed-meta">Tracks: ${trackCount}</div>${descriptionHtml}</div></a></div>`;
+  }
+
+  private async resolveAddressableEvent(
+    kind: number,
+    pubkey: string,
+    identifier: string,
+    relayHints?: string[]
+  ): Promise<Event | null> {
+    try {
+      const byRecord = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+        pubkey,
+        kind,
+        identifier,
+        { cache: true, save: true }
+      );
+
+      if (byRecord?.event) {
+        return byRecord.event;
+      }
+    } catch (error) {
+      this.logger.debug('[resolveAddressableEvent] DataService fetch failed:', error);
+    }
+
+    const filter: Filter = {
+      kinds: [kind],
+      authors: [pubkey],
+      '#d': [identifier],
+    };
+
+    try {
+      if (relayHints && relayHints.length > 0) {
+        const normalizedHints = this.utilities.normalizeRelayUrls(relayHints);
+        const hintedEvent = await this.relayPool.get(normalizedHints, filter, 3000);
+        if (hintedEvent) return hintedEvent;
+      }
+
+      await this.userRelaysService.ensureRelaysForPubkey(pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(pubkey) || [];
+
+      if (authorRelays.length > 0) {
+        const optimalRelays = this.utilities.pickOptimalRelays(authorRelays, 5);
+        const relayEvent = await this.relayPool.get(optimalRelays, filter, 3000);
+        if (relayEvent) return relayEvent;
+      }
+    } catch (error) {
+      this.logger.debug('[resolveAddressableEvent] Relay fetch failed:', error);
+    }
+
+    return null;
+  }
+
+  private async buildNaddrPreview(
+    naddrData: { kind?: number; pubkey?: string; identifier?: string; relays?: string[] },
+    displayName?: string
+  ): Promise<string> {
+    const kind = Number(naddrData.kind || 0);
+    const pubkey = naddrData.pubkey || '';
+    const identifier = naddrData.identifier || '';
+
+    if (!kind || !pubkey || !identifier) {
+      return this.buildGenericNaddrPreview(naddrData, displayName);
+    }
+
+    const fallbackPreview = this.buildGenericNaddrPreview(naddrData, displayName);
+    const event = await this.resolveAddressableEvent(kind, pubkey, identifier, naddrData.relays);
+
+    if (!event) {
+      return fallbackPreview;
+    }
+
+    const naddrEncoded = nip19.naddrEncode({
+      kind,
+      pubkey,
+      identifier,
+      relays: naddrData.relays,
+    });
+
+    if (kind === FormatService.MUSIC_TRACK_KIND) {
+      return this.buildMusicTrackNaddrPreview(event, identifier, naddrEncoded);
+    }
+
+    if (kind === FormatService.MUSIC_PLAYLIST_KIND) {
+      return this.buildMusicPlaylistNaddrPreview(event, identifier, naddrEncoded);
+    }
+
+    return fallbackPreview;
   }
 
   // Helper method to process Nostr tokens and replace them with @username
@@ -390,7 +530,7 @@ export class FormatService {
               }
 
               case 'naddr': {
-                const replacement = this.buildNaddrPreview(nostrData.data, nostrData.displayName);
+                const replacement = await this.buildNaddrPreview(nostrData.data, nostrData.displayName);
                 return {
                   original: match[0],
                   replacement,
@@ -512,10 +652,16 @@ export class FormatService {
               }
 
               case 'naddr': {
-                replacement = this.buildNaddrPreview(nostrData.data, nostrData.displayName);
+                replacement = this.buildGenericNaddrPreview(nostrData.data, nostrData.displayName);
                 if (onPreviewLoaded) {
                   onPreviewLoaded(match[0], replacement);
                 }
+
+                this.buildNaddrPreview(nostrData.data, nostrData.displayName).then(preview => {
+                  if (preview !== replacement && onPreviewLoaded) {
+                    onPreviewLoaded(match[0], preview);
+                  }
+                });
                 break;
               }
 
