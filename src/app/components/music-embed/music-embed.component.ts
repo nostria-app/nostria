@@ -124,6 +124,9 @@ interface PlaylistTrackReference {
 
         @if (!isTrack() && playlistExpanded()) {
           <div class="playlist-tracks" (click)="$event.stopPropagation()">
+            @if (playlistTracksLoading() && playlistTrackLoadTotal() > 0) {
+              <div class="playlist-load-indicator">Loaded {{ playlistTrackLoadCount() }}/{{ playlistTrackLoadTotal() }}</div>
+            }
             @if (playlistTracksLoading()) {
               <div class="playlist-loading">
                 <mat-spinner diameter="18"></mat-spinner>
@@ -447,6 +450,14 @@ interface PlaylistTrackReference {
       padding: 10px 6px;
     }
 
+    .playlist-load-indicator {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.72rem;
+      line-height: 1.1;
+      text-align: right;
+      padding: 0 2px;
+    }
+
     .playlist-track-row {
       display: flex;
       align-items: center;
@@ -560,6 +571,8 @@ export class MusicEmbedComponent {
   playlistExpanded = signal<boolean>(false);
   playlistTracksLoading = signal<boolean>(false);
   playlistTracks = signal<Event[]>([]);
+  playlistTrackLoadTotal = signal<number>(0);
+  playlistTrackLoadCount = signal<number>(0);
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
     return Promise.race([
@@ -979,6 +992,9 @@ export class MusicEmbedComponent {
 
       console.log('[MusicEmbed] Found track references:', trackRefs.length, trackRefs);
 
+      this.playlistTrackLoadTotal.set(trackRefs.length);
+      this.playlistTrackLoadCount.set(0);
+
       if (trackRefs.length === 0) {
         console.warn('[MusicEmbed] No track references found in playlist tags');
         return [];
@@ -1038,6 +1054,7 @@ export class MusicEmbedComponent {
             eventByKey.set(key, fetchedEvent);
           }
         }
+        this.playlistTrackLoadCount.set(eventByKey.size);
       } catch {
         // Continue with fallback per-track fetches below
       }
@@ -1069,6 +1086,7 @@ export class MusicEmbedComponent {
               const track = await this.relayPool.get(allRelays, filter, 3500);
               if (track && !eventByKey.has(key)) {
                 eventByKey.set(key, track);
+                this.playlistTrackLoadCount.set(eventByKey.size);
               }
             } catch {
               // Skip failed tracks
@@ -1082,6 +1100,8 @@ export class MusicEmbedComponent {
       const tracks = trackRefs
         .map(ref => eventByKey.get(this.getTrackRefKey(ref)) || null)
         .filter((track): track is Event => track !== null);
+
+      this.playlistTrackLoadCount.set(tracks.length);
 
       console.log('[MusicEmbed] Loaded tracks:', tracks.length);
       this.tracksCache.set(tracks);

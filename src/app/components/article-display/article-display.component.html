@@ -65,7 +65,10 @@
         </div>
 
         <div class="top-actions-row">
-          <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()">
+          <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()"
+            [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
+            [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
+            [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
             <div class="action-button like-action like-hover-container"
               (click)="topReactionBtn.sendDefaultReaction(); $event.stopPropagation()">
               <app-reaction-button class="action-icon" #topReactionBtn [event]="event()!"
@@ -106,7 +109,9 @@
             </div>
 
             <div class="action-button bookmark-action" role="button"
-              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="bookmarkClick.emit($event)">
+              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="bookmarkClick.emit($event)"
+              (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
+              (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
               <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
               <span class="action-text">Bookmark</span>
             </div>
@@ -305,7 +310,10 @@
     </div>
     }
 
-    <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()">
+    <div class="actions-row" [class.actions-locked]="requiresSpamConfirmation()"
+      [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
+      [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
+      [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
@@ -351,7 +359,9 @@
 
       <!-- Bookmark -->
       <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="bookmarkClick.emit($event)">
+        (click)="bookmarkClick.emit($event)" (contextmenu)="onActionsDisplayModeToggle($event)"
+        (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
+        (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
         <span class="action-text">Bookmark</span>
       </div>

@@ -50,6 +50,7 @@ import { LoggerService } from '../../services/logger.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 
@@ -231,6 +232,7 @@ export class ArticleDisplayComponent implements OnDestroy {
   private zapService = inject(ZapService);
   private logger = inject(LoggerService);
   private userRelaysService = inject(UserRelaysService);
+  private accountLocalState = inject(AccountLocalStateService);
   private environmentInjector = inject(EnvironmentInjector);
   private appRef = inject(ApplicationRef);
 
@@ -328,6 +330,16 @@ export class ArticleDisplayComponent implements OnDestroy {
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
   isFollowingAuthor = signal<boolean>(false);
+  private bookmarkLongPressTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  actionsDisplayMode = computed<string>(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return 'icons-and-labels';
+    }
+
+    return this.accountLocalState.getActionsDisplayMode(pubkey);
+  });
 
   // Computed properties for convenience
   event = computed(() => this.article().event);
@@ -410,6 +422,35 @@ export class ArticleDisplayComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.disconnectMarkdownObserver();
     this.destroyMusicEmbeds();
+    this.onBookmarkLongPressEnd();
+  }
+
+  onActionsDisplayModeToggle(event: globalThis.Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const modes = ['icons-and-labels', 'labels-only', 'icons-only'];
+    const currentMode = this.actionsDisplayMode();
+    const currentIndex = modes.indexOf(currentMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+
+    this.accountLocalState.setActionsDisplayMode(pubkey, nextMode);
+  }
+
+  onBookmarkLongPressStart(event: TouchEvent): void {
+    this.bookmarkLongPressTimeout = setTimeout(() => {
+      event.preventDefault();
+      this.onActionsDisplayModeToggle(event);
+    }, 500);
+  }
+
+  onBookmarkLongPressEnd(): void {
+    if (this.bookmarkLongPressTimeout) {
+      clearTimeout(this.bookmarkLongPressTimeout);
+      this.bookmarkLongPressTimeout = null;
+    }
   }
 
   private scheduleEnhanceMusicEmbeds(force = false): void {
