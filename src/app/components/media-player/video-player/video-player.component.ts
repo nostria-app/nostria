@@ -202,6 +202,16 @@ export class VideoPlayerComponent implements OnDestroy {
     const nextFullscreen = !this.layout.fullscreenMediaPlayer();
     this.layout.fullscreenMediaPlayer.set(nextFullscreen);
 
+    // Entering app fullscreen: show cursor and start idle auto-hide timer
+    // on next tick so the footer input has updated.
+    if (nextFullscreen) {
+      this.showCursor();
+      setTimeout(() => {
+        this.startAutoHideTimer();
+      }, 0);
+      return;
+    }
+
     // Leaving fullscreen: ensure cursor is visible and any pending hide timer is cleared
     if (!nextFullscreen) {
       this.clearAutoHideTimeout();
