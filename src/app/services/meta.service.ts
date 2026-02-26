@@ -137,6 +137,7 @@ export class MetaService {
     this.setFavicon(config.faviconUrl || '/favicon.ico');
 
     // Twitter Card - use explicit selector
+    this.meta.updateTag({ name: 'twitter:site', content: '@nostriaapp' }, 'name="twitter:site"');
     if (config.title) {
       this.meta.updateTag({ name: 'twitter:title', content: config.title }, 'name="twitter:title"');
     }

@@ -344,6 +344,59 @@ function extractProfilePictureFromEvent(profileEvent: Event): string | undefined
   }
 }
 
+function canonicalizeNevent(encoded: string): string {
+  try {
+    const decoded = nip19.decode(encoded);
+    if (decoded.type !== 'nevent') {
+      return encoded;
+    }
+
+    return nip19.neventEncode({
+      id: decoded.data.id,
+      author: decoded.data.author,
+      kind: decoded.data.kind,
+    });
+  } catch {
+    return encoded;
+  }
+}
+
+function canonicalizeNaddr(encoded: string): string {
+  try {
+    const decoded = nip19.decode(encoded);
+    if (decoded.type !== 'naddr') {
+      return encoded;
+    }
+
+    return nip19.naddrEncode({
+      kind: decoded.data.kind,
+      pubkey: decoded.data.pubkey,
+      identifier: decoded.data.identifier,
+    });
+  } catch {
+    return encoded;
+  }
+}
+
+function buildCanonicalUrl(routePath: string, id: string): string | undefined {
+  if (routePath.startsWith('e/')) {
+    const encoded = id.startsWith('nevent') ? canonicalizeNevent(id) : id;
+    return `https://nostria.app/e/${encoded}`;
+  }
+
+  if (routePath.startsWith('a/')) {
+    const encoded = id.startsWith('naddr') ? canonicalizeNaddr(id) : id;
+    return `https://nostria.app/a/${encoded}`;
+  }
+
+  if (routePath.startsWith('music/song') || routePath.startsWith('music/playlist')) {
+    const encoded = id.startsWith('naddr') ? canonicalizeNaddr(id) : id;
+    return `https://nostria.app/a/${encoded}`;
+  }
+
+  return undefined;
+}
+
 export interface EventData {
   title: string;
   description: string;
@@ -720,12 +773,20 @@ export class DataResolver implements Resolve<EventData | null> {
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
           const authorPicture = relayProfilePicture;
           const eventImage = extractImageFromEvent(directEvent, authorPicture);
+          const canonicalUrl = buildCanonicalUrl(routePath, id);
+          const shouldUseArticleType =
+            routePath.startsWith('e/') ||
+            routePath.startsWith('a/') ||
+            routePath.startsWith('music/song') ||
+            routePath.startsWith('music/playlist');
 
           this.metaService.updateSocialMetadata({
             title,
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
             publishedAtSeconds: directEvent.created_at,
+            url: canonicalUrl,
+            type: shouldUseArticleType ? 'article' : 'website',
           });
 
           data.event = {
