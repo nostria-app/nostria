@@ -33,6 +33,7 @@
     "demo:scenes": "node scripts/demo/run-scenes-from-markdown.mjs",
     "demo:scenes:dry": "node scripts/demo/run-scenes-from-markdown.mjs --dry-run",
     "demo:compose": "node scripts/demo/compose-demo-videos.mjs",
+    "gen:splash:ios": "powershell -ExecutionPolicy Bypass -File scripts/gen-ios-splash.ps1",
     "test:e2e:codegen": "playwright codegen http://localhost:4200",
     "tauri": "tauri",
     "get-version": "node -p \"require('./package.json').version\"",
