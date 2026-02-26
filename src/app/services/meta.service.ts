@@ -20,7 +20,7 @@ export interface MetadataResponse {
 
 // Timeout for metadata API requests (in milliseconds)
 // Social media bots typically have short timeouts, so we need to respond quickly
-const METADATA_REQUEST_TIMEOUT_MS = 2500;
+const METADATA_REQUEST_TIMEOUT_MS = 3500;
 
 @Injectable({
   providedIn: 'root',
