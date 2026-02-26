@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { nip19 } from 'nostr-tools';
 
 export interface MetadataResponse {
+  created_at?: number;
   author: {
     profile: {
       display_name?: string;
@@ -88,6 +89,8 @@ export class MetaService {
     url?: string;
     type?: string;
     author?: string;
+    publishedAtSeconds?: number;
+    faviconUrl?: string;
     twitterCard?: 'summary' | 'summary_large_image' | 'app' | 'player' | any;
   }): void {
     if (config.title) this.setTitle(config.title);
@@ -106,6 +109,32 @@ export class MetaService {
     if (config.url) {
       this.meta.updateTag({ property: 'og:url', content: config.url }, 'property="og:url"');
     }
+    if (config.type) {
+      this.meta.updateTag({ property: 'og:type', content: config.type }, 'property="og:type"');
+    }
+
+    this.meta.updateTag({ property: 'og:site_name', content: 'Nostria' }, 'property="og:site_name"');
+
+    if (config.publishedAtSeconds) {
+      const publishedIso = new Date(config.publishedAtSeconds * 1000).toISOString();
+      this.meta.updateTag({ property: 'article:published_time', content: publishedIso }, 'property="article:published_time"');
+      this.meta.updateTag({ property: 'article:modified_time', content: publishedIso }, 'property="article:modified_time"');
+      this.meta.updateTag({ name: 'twitter:label1', content: 'Published' }, 'name="twitter:label1"');
+      this.meta.updateTag(
+        {
+          name: 'twitter:data1',
+          content: new Date(config.publishedAtSeconds * 1000).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC',
+          }),
+        },
+        'name="twitter:data1"'
+      );
+    }
+
+    this.setFavicon(config.faviconUrl || '/favicon.ico');
 
     // Twitter Card - use explicit selector
     if (config.title) {
@@ -117,6 +146,33 @@ export class MetaService {
     if (config.image) {
       this.meta.updateTag({ name: 'twitter:image', content: config.image }, 'name="twitter:image"');
     }
+  }
+
+  private setFavicon(iconUrl: string): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    this.setLinkTag('icon', iconUrl, 'image/x-icon');
+    this.setLinkTag('shortcut icon', iconUrl, 'image/x-icon');
+  }
+
+  private setLinkTag(rel: string, href: string, type?: string): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    let link = document.querySelector(`link[rel='${rel}']`) as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', rel);
+      document.head.appendChild(link);
+    }
+
+    if (type) {
+      link.setAttribute('type', type);
+    }
+    link.setAttribute('href', href);
   }
 
   /**
@@ -255,11 +311,14 @@ export class MetaService {
     description =
       fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 
+    const publishedAt = this.extractPublishedAt(data);
+
     this.updateSocialMetadata({
       title: title,
       description: description,
       image: imageUrl || 'https://nostria.app/assets/nostria-social.jpg', // Use extracted image or fallback
       url: targetUrl,
+      publishedAtSeconds: publishedAt,
     });
 
     return data;
@@ -363,6 +422,28 @@ export class MetaService {
     const match = content.match(urlRegex);
 
     return match ? match[0] : null;
+  }
+
+  private extractPublishedAt(data: MetadataResponse): number | undefined {
+    const publishedTag = this.extractTagValue(data.tags, 'published_at');
+    const fromTag = this.parseNostrTimestamp(publishedTag);
+    if (fromTag) {
+      return fromTag;
+    }
+    return this.parseNostrTimestamp(data.created_at);
+  }
+
+  private parseNostrTimestamp(value: unknown): number | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    const asNumber = Number(value);
+    if (!Number.isFinite(asNumber) || asNumber <= 0) {
+      return undefined;
+    }
+
+    return Math.floor(asNumber);
   }
 
   /**

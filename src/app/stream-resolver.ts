@@ -122,6 +122,24 @@ function getCanonicalStreamUrl(encodedEvent: string): string {
   return `https://nostria.app/stream/${encodedEvent}`;
 }
 
+function parseNostrTimestamp(value: unknown): number | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  const asNumber = Number(value);
+  if (!Number.isFinite(asNumber) || asNumber <= 0) {
+    return undefined;
+  }
+
+  return Math.floor(asNumber);
+}
+
+function extractPublishedAtFromTags(tags: string[][]): number | undefined {
+  const publishedAtTag = tags.find((tag) => tag[0] === 'published_at');
+  return parseNostrTimestamp(publishedAtTag?.[1]);
+}
+
 export const streamResolver: ResolveFn<StreamData | null> = async (route: ActivatedRouteSnapshot): Promise<StreamData | null> => {
   const layout = inject(LayoutService);
   const transferState = inject(TransferState);
@@ -193,6 +211,8 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
             const description = summaryTag?.[1] || metadataResponse.content || 'Watch this live stream on Nostria';
             const image = imageTag?.[1];
             const streamUrl = streamingTag?.[1];
+            const publishedAtSeconds =
+              extractPublishedAtFromTags(tags) || parseNostrTimestamp(metadataResponse.created_at);
 
             data.title = title;
             data.description = description;
@@ -204,6 +224,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
               description,
               image: image || '/assets/nostria-social.jpg',
               url: getCanonicalStreamUrl(encodedEvent),
+              publishedAtSeconds,
             });
 
             return data;
@@ -246,6 +267,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         description,
         image: image || '/assets/nostria-social.jpg',
         url: getCanonicalStreamUrl(encodedEvent),
+        publishedAtSeconds: event.created_at,
       });
 
       return data;

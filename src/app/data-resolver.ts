@@ -569,6 +569,7 @@ export class DataResolver implements Resolve<EventData | null> {
             title,
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
+            publishedAtSeconds: directEvent.created_at,
           });
 
           data.event = {
