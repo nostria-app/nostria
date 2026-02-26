@@ -716,6 +716,10 @@ export class DataResolver implements Resolve<EventData | null> {
 
           const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
           const title = titleTag?.[1] || 'Nostr Post on Nostria';
+          const authorName =
+            data.metadata?.profile?.display_name ||
+            data.metadata?.profile?.name ||
+            undefined;
 
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
@@ -727,6 +731,7 @@ export class DataResolver implements Resolve<EventData | null> {
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
             publishedAtSeconds: directEvent.created_at,
+            author: authorName,
           });
 
           data.event = {

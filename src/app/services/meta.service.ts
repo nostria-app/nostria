@@ -117,6 +117,7 @@ export class MetaService {
       const publishedIso = new Date(config.publishedAtSeconds * 1000).toISOString();
       this.meta.updateTag({ property: 'article:published_time', content: publishedIso }, 'property="article:published_time"');
       this.meta.updateTag({ property: 'article:modified_time', content: publishedIso }, 'property="article:modified_time"');
+      this.meta.updateTag({ property: 'og:updated_time', content: publishedIso }, 'property="og:updated_time"');
       this.meta.updateTag({ name: 'twitter:label1', content: 'Published' }, 'name="twitter:label1"');
       this.meta.updateTag(
         {
@@ -132,7 +133,14 @@ export class MetaService {
       );
     }
 
-    this.setFavicon(config.faviconUrl || '/favicon.ico');
+    if (config.author) {
+      this.meta.updateTag({ property: 'article:author', content: config.author }, 'property="article:author"');
+      this.meta.updateTag({ name: 'author', content: config.author }, 'name="author"');
+      this.meta.updateTag({ name: 'twitter:label2', content: 'Author' }, 'name="twitter:label2"');
+      this.meta.updateTag({ name: 'twitter:data2', content: config.author }, 'name="twitter:data2"');
+    }
+
+    this.setFavicon(this.resolveFaviconUrl(config.faviconUrl, config.url));
 
     // Twitter Card - use explicit selector
     this.meta.updateTag({ name: 'twitter:site', content: '@nostriaapp' }, 'name="twitter:site"');
@@ -154,6 +162,22 @@ export class MetaService {
 
     this.setLinkTag('icon', iconUrl, 'image/x-icon');
     this.setLinkTag('shortcut icon', iconUrl, 'image/x-icon');
+  }
+
+  private resolveFaviconUrl(iconUrl?: string, pageUrl?: string): string {
+    if (iconUrl) {
+      return iconUrl;
+    }
+
+    if (pageUrl) {
+      try {
+        return new URL('/favicon.ico', pageUrl).toString();
+      } catch {
+        // Ignore and use default
+      }
+    }
+
+    return 'https://nostria.app/favicon.ico';
   }
 
   private setLinkTag(rel: string, href: string, type?: string): void {
