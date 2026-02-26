@@ -11,6 +11,7 @@ import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
+import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
 
 // Re-export CommentThread for recursive template usage
 export interface CommentThread {
@@ -46,6 +47,7 @@ interface CommentTags {
     ContentComponent,
     EventHeaderComponent,
     MatTooltipModule,
+    ReactionButtonComponent,
   ],
   templateUrl: './comment.component.html',
   styleUrl: './comment.component.scss',

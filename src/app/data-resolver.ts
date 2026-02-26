@@ -10,7 +10,10 @@ import { Event, kinds, nip05, nip19 } from 'nostr-tools';
 import { SSR_RELAY_FETCH_TIMEOUT_MS, SSR_TOTAL_RESOLVER_TIMEOUT_MS, buildRelayList } from './ssr-relays';
 
 export const EVENT_STATE_KEY = makeStateKey<any>('large-json-data');
-const SSR_DEBUG_LOGS = process.env['SSR_DEBUG_LOGS'] === 'true';
+const SSR_DEBUG_LOGS =
+  typeof process !== 'undefined' &&
+  typeof process.env !== 'undefined' &&
+  process.env['SSR_DEBUG_LOGS'] === 'true';
 
 function debugLog(message: string, ...args: unknown[]): void {
   if (!SSR_DEBUG_LOGS) {

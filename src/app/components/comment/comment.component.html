@@ -15,6 +15,7 @@
 
     <mat-card-actions>
       <div class="comment-actions">
+        <app-reaction-button [event]="event()" view="icon"></app-reaction-button>
         <button mat-icon-button [matTooltip]="'Reply to comment'" (click)="onReply()">
           <mat-icon>reply</mat-icon>
         </button>
