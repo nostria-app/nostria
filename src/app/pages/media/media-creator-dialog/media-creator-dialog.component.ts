@@ -194,8 +194,11 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     }
   });
 
-  // Accepted file types based on first media
+  // Accepted file types based on first media.
+  // When no media is selected yet, accept both image and video so that iOS
+  // media pickers display photos and videos (iOS hides non-matching files).
   acceptedFileTypes = computed(() => {
+    if (!this.hasMedia()) return 'image/*,video/*';
     const type = this.mediaType();
     return type === 'video' ? 'video/*' : 'image/*';
   });
