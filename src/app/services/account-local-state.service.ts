@@ -37,6 +37,7 @@ interface AccountLocalState {
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
   dismissedCredentialsBackupDialog?: boolean;
+  dismissedHiddenChatInfoNotification?: boolean;
   articlesActiveTab?: number;
   /**
    * @deprecated Use articlesShowFollowing and articlesShowPublic instead
@@ -628,6 +629,32 @@ export class AccountLocalStateService {
    */
   setDismissedCredentialsBackupDialog(pubkey: string, dismissed: boolean): void {
     this.updateAccountState(pubkey, { dismissedCredentialsBackupDialog: dismissed });
+  }
+
+  /**
+   * Get dismissed hidden chat info notification status for an account
+   */
+  getDismissedHiddenChatInfoNotification(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.dismissedHiddenChatInfoNotification || false;
+  }
+
+  /**
+   * Set dismissed hidden chat info notification status for an account
+   */
+  setDismissedHiddenChatInfoNotification(pubkey: string, dismissed: boolean): void {
+    this.updateAccountState(pubkey, { dismissedHiddenChatInfoNotification: dismissed });
+  }
+
+  /**
+   * Clear notification dismissal flags for an account
+   */
+  clearNotificationDismissals(pubkey: string): void {
+    this.updateAccountState(pubkey, {
+      dismissedPushNotificationDialog: undefined,
+      dismissedCredentialsBackupDialog: undefined,
+      dismissedHiddenChatInfoNotification: undefined,
+    });
   }
 
   /**

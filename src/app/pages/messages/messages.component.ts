@@ -28,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -75,6 +76,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -153,6 +155,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
   private appState = inject(ApplicationStateService);
   private snackBar = inject(MatSnackBar);
+  private bottomSheet = inject(MatBottomSheet);
   private readonly app = inject(ApplicationService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
@@ -1889,6 +1892,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
+    const hiddenChatInfoDismissed = this.accountLocalState.getDismissedHiddenChatInfoNotification(pubkey);
+
     // Add to hidden chats in local state
     this.accountLocalState.hideChat(pubkey, chat.id);
 
@@ -1896,6 +1901,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedChatId.set(null);
     this.showMobileList.set(true);
     this.showChatDetails.set(false);
+
+    if (!hiddenChatInfoDismissed) {
+      this.accountLocalState.setDismissedHiddenChatInfoNotification(pubkey, true);
+      this.bottomSheet.open(HiddenChatInfoPromptComponent, {
+        disableClose: false,
+        hasBackdrop: true,
+      });
+      return;
+    }
 
     this.snackBar.open('Chat hidden', 'Close', { duration: 3000 });
   }

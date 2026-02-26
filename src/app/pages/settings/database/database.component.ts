@@ -266,6 +266,35 @@ export class DatabaseSettingsComponent implements OnInit {
     }
   }
 
+  async clearSpecificState(stateType: string): Promise<void> {
+    if (this.isClearing()) return;
+    this.isClearing.set(true);
+
+    try {
+      let message = 'State cleared';
+
+      switch (stateType) {
+        case 'notification-dismissals': {
+          const pubkey = this.accountState.pubkey();
+          if (!pubkey) {
+            this.snackBar.open('No account state to clear', 'Close', { duration: 3000 });
+            return;
+          }
+          this.accountLocalState.clearNotificationDismissals(pubkey);
+          message = 'Notification dismissals cleared';
+          break;
+        }
+      }
+
+      this.snackBar.open(message, 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Error clearing state', error);
+      this.snackBar.open('Failed to clear state', 'Close', { duration: 3000 });
+    } finally {
+      this.isClearing.set(false);
+    }
+  }
+
   async clearAllCache(): Promise<void> {
     if (this.isClearing()) return;
     this.isClearing.set(true);

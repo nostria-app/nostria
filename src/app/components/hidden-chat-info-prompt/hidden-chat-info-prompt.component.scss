@@ -1,0 +1,51 @@
+.hidden-chat-info-prompt {
+  padding: 24px;
+}
+
+.prompt-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hidden-chat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--mat-sys-secondary);
+}
+
+.prompt-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.prompt-message {
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .hidden-chat-info-prompt {
+    padding: 16px;
+  }
+
+  .prompt-header h3 {
+    font-size: 18px;
+  }
+
+  .prompt-actions button {
+    width: 100%;
+  }
+}

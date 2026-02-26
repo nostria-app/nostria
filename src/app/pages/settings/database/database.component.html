@@ -2,7 +2,7 @@
   <button mat-icon-button (click)="goBack()" matTooltip="Back">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font">Database</h2>
+  <h2 class="panel-title title-font">Storage</h2>
   <span class="panel-header-spacer"></span>
   <button mat-icon-button (click)="refreshStats()" [disabled]="isLoading()" matTooltip="Refresh statistics">
     <mat-icon>refresh</mat-icon>
@@ -12,7 +12,7 @@
 <div class="content-medium">
 
   @if (isLoading() || isClearing()) {
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
 
   <!-- Overall Storage -->
@@ -59,13 +59,13 @@
 
     <div class="store-list">
       @for (store of sharedDbStats(); track store.storeName) {
-        <div class="store-item">
-          <div class="store-info">
-            <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
-            <span class="store-description">{{ formatStoreDescription(store.storeName, 'shared') }}</span>
-          </div>
-          <span class="store-count">{{ store.count }}</span>
+      <div class="store-item">
+        <div class="store-info">
+          <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
+          <span class="store-description">{{ formatStoreDescription(store.storeName, 'shared') }}</span>
         </div>
+        <span class="store-count">{{ store.count }}</span>
+      </div>
       }
     </div>
 
@@ -89,74 +89,74 @@
     </h2>
 
     @if (hasAccountDb()) {
-      <p class="section-description">
-        Stores data specific to the currently logged-in account: feed events, notifications, direct messages,
-        feed cache, and trust metrics.
-      </p>
-      <div class="db-name">
-        {{ accountDbName() }}
-        <span class="pubkey-badge">{{ accountDbPubkeyShort() }}</span>
-      </div>
+    <p class="section-description">
+      Stores data specific to the currently logged-in account: feed events, notifications, direct messages,
+      feed cache, and trust metrics.
+    </p>
+    <div class="db-name">
+      {{ accountDbName() }}
+      <span class="pubkey-badge">{{ accountDbPubkeyShort() }}</span>
+    </div>
 
-      <div class="store-list">
-        @for (store of accountDbStats(); track store.storeName) {
-          <div class="store-item">
-            <div class="store-info">
-              <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
-              <span class="store-description">{{ formatStoreDescription(store.storeName, 'account') }}</span>
-            </div>
-            <span class="store-count">{{ store.count }}</span>
-          </div>
-        }
+    <div class="store-list">
+      @for (store of accountDbStats(); track store.storeName) {
+      <div class="store-item">
+        <div class="store-info">
+          <span class="store-name">{{ formatStoreName(store.storeName) }}</span>
+          <span class="store-description">{{ formatStoreDescription(store.storeName, 'account') }}</span>
+        </div>
+        <span class="store-count">{{ store.count }}</span>
       </div>
+      }
+    </div>
 
-      <div class="section-summary">
-        <span>Total records: {{ accountDbTotalRecords() }}</span>
-      </div>
+    <div class="section-summary">
+      <span>Total records: {{ accountDbTotalRecords() }}</span>
+    </div>
 
-      <div class="section-actions">
-        <button mat-stroked-button [disabled]="isClearing()" (click)="clearAccountDataAction()">
-          <mat-icon>delete_outline</mat-icon>
-          Clear Account Data
-        </button>
-      </div>
+    <div class="section-actions">
+      <button mat-stroked-button [disabled]="isClearing()" (click)="clearAccountDataAction()">
+        <mat-icon>delete_outline</mat-icon>
+        Clear Account Data
+      </button>
+    </div>
     } @else {
-      <p class="section-description">
-        No account database is currently active. Sign in to view per-account database statistics.
-      </p>
+    <p class="section-description">
+      No account database is currently active. Sign in to view per-account database statistics.
+    </p>
     }
   </section>
 
   <!-- All Databases -->
   @if (allDatabases().length > 0) {
-    <section class="db-section">
-      <h2>
-        <mat-icon class="section-icon">dns</mat-icon>
-        All Databases
-      </h2>
-      <p class="section-description">
-        Complete list of IndexedDB databases managed by the application. Each account gets its own
-        isolated database for privacy and data separation.
-      </p>
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">dns</mat-icon>
+      All Databases
+    </h2>
+    <p class="section-description">
+      Complete list of IndexedDB databases managed by the application. Each account gets its own
+      isolated database for privacy and data separation.
+    </p>
 
-      <div class="store-list">
-        @for (db of allDatabases(); track db.name) {
-          <div class="store-item">
-            <div class="store-info">
-              <span class="store-name">{{ db.name }}</span>
-              <span class="store-description">
-                @switch (db.type) {
-                  @case ('shared') { Global shared data }
-                  @case ('account') { Per-account data }
-                  @case ('legacy') { Legacy (can be removed) }
-                }
-              </span>
-            </div>
-            <span class="db-type-badge" [class]="'badge-' + db.type">{{ db.type }}</span>
-          </div>
-        }
+    <div class="store-list">
+      @for (db of allDatabases(); track db.name) {
+      <div class="store-item">
+        <div class="store-info">
+          <span class="store-name">{{ db.name }}</span>
+          <span class="store-description">
+            @switch (db.type) {
+            @case ('shared') { Global shared data }
+            @case ('account') { Per-account data }
+            @case ('legacy') { Legacy (can be removed) }
+            }
+          </span>
+        </div>
+        <span class="db-type-badge" [class]="'badge-' + db.type">{{ db.type }}</span>
       </div>
-    </section>
+      }
+    </div>
+  </section>
   }
 
   <!-- Clear Specific Cache -->
@@ -189,7 +189,8 @@
             <span class="cache-action-desc">Clear cached notifications and re-fetch from relays</span>
           </div>
         </div>
-        <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('notifications')">Clear</button>
+        <button mat-stroked-button [disabled]="isClearing()"
+          (click)="clearSpecificCache('notifications')">Clear</button>
       </div>
 
       <div class="cache-action-item">
@@ -245,6 +246,32 @@
           </div>
         </div>
         <button mat-stroked-button [disabled]="isClearing()" (click)="clearSpecificCache('ai-models')">Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Clear Specific State -->
+  <section class="db-section">
+    <h2>
+      <mat-icon class="section-icon">tune</mat-icon>
+      Clear Specific State
+    </h2>
+    <p class="section-description">
+      Selectively clear specific UI and account state values without removing cached data.
+    </p>
+
+    <div class="cache-actions">
+      <div class="cache-action-item">
+        <div class="cache-action-info">
+          <mat-icon>notifications_off</mat-icon>
+          <div>
+            <span class="cache-action-title">Notification Dismissals</span>
+            <span class="cache-action-desc">Clear dismissed notification flags such as
+              dismissedHiddenChatInfoNotification</span>
+          </div>
+        </div>
+        <button mat-stroked-button [disabled]="isClearing()"
+          (click)="clearSpecificState('notification-dismissals')">Clear</button>
       </div>
     </div>
   </section>
