@@ -53,6 +53,10 @@
     "/^node scripts/ssr-batch-validate\\.js$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "/^node scripts/ssr-three-nevent-smoke\\.js$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

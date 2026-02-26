@@ -382,6 +382,7 @@ export class DataResolver implements Resolve<EventData | null> {
       let id = route.params['id'] || route.params['pubkey'];
       const identifier = route.params['identifier'];
       const slug = route.params['slug']; // For article routes like /a/:id/:slug
+      const routePath = route.routeConfig?.path || '';
 
       // For username routes, resolve the username to pubkey
       const username = route.params['username'];
@@ -391,7 +392,6 @@ export class DataResolver implements Resolve<EventData | null> {
 
       // For article routes with slug parameter (e.g., /a/npub.../slug or /a/nip05@domain/slug)
       if (id && slug) {
-        const routePath = route.routeConfig?.path || '';
 
         try {
           let pubkey: string | undefined;
@@ -432,7 +432,6 @@ export class DataResolver implements Resolve<EventData | null> {
 
       // For addressable events (tracks, playlists), create naddr from pubkey + identifier
       if (id && identifier) {
-        const routePath = route.routeConfig?.path || '';
         let kind: number | undefined;
 
         if (routePath.includes('music/song')) {
@@ -476,7 +475,7 @@ export class DataResolver implements Resolve<EventData | null> {
       }
 
       debugLog(`[SSR] DataResolver(${traceId}): Resolving route`, {
-        routePath: route.routeConfig?.path || '',
+        routePath,
         id,
         identifier,
         slug,
@@ -500,57 +499,30 @@ export class DataResolver implements Resolve<EventData | null> {
       // For profiles, we fetch the kind 0 metadata event directly from relays
       // because the outbox model is too slow for SSR social preview generation.
       const profileInfo = decodeProfileFromId(id);
-      const isHexPubkey = !profileInfo && this.utilities.isHex(id) && id.length === 64;
+      const isProfileRoute = routePath.startsWith('p/') || routePath.startsWith('u/') || routePath.startsWith('music/artist');
+      const isHexPubkey = !profileInfo && isProfileRoute && this.utilities.isHex(id) && id.length === 64;
+      const isHexEventId = !eventPointer && routePath.startsWith('e/') && this.utilities.isHex(id) && id.length === 64;
       const canFetchDirectRelayEvent =
-        !!eventPointer &&
-        ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id);
+        (!!eventPointer &&
+          ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id)) ||
+        isHexEventId;
       const canFetchRelayProfile = !!profileInfo || isHexPubkey || !!eventPointer?.author;
       const isNaddrId = id.startsWith('naddr');
       const shouldParallelPrefetch = canFetchDirectRelayEvent || canFetchRelayProfile;
 
       const fetchStatus: {
-        metadata: 'pending' | 'success' | 'empty' | 'error';
+        metadata: 'skipped';
         relayEvent: 'skipped' | 'pending' | 'success' | 'empty' | 'error';
         relayProfile: 'skipped' | 'pending' | 'success' | 'empty' | 'error';
       } = {
-        metadata: 'pending',
+        metadata: 'skipped',
         relayEvent: canFetchDirectRelayEvent ? 'pending' : 'skipped',
         relayProfile: canFetchRelayProfile ? 'pending' : 'skipped',
       };
 
       try {
-        // Start metadata API call
-        let metadataPromise;
-        if (this.utilities.isHex(id)) {
-          const npub = this.utilities.getNpubFromPubkey(id);
-          metadataPromise = this.metaService.loadSocialMetadata(npub);
-        } else {
-          metadataPromise = this.metaService.loadSocialMetadata(id);
-        }
+        debugLog(`[SSR] DataResolver(${traceId}): Relay-only SSR metadata mode`);
 
-        const metadataStart = Date.now();
-        metadataPromise = metadataPromise
-          .then((result) => {
-            fetchStatus.metadata = result ? 'success' : 'empty';
-            console.log(`[SSR] DataResolver(${traceId}): Metadata fetch completed in ${Date.now() - metadataStart}ms`);
-            if (result) {
-              debugLog(`[SSR] DataResolver(${traceId}): Metadata summary`, {
-                contentLength: result.content?.length || 0,
-                tagsCount: result.tags?.length || 0,
-                hasAuthorProfile: !!result.author?.profile,
-                authorName: result.author?.profile?.display_name || result.author?.profile?.name || null,
-              });
-            }
-            return result;
-          })
-          .catch((error) => {
-            fetchStatus.metadata = 'error';
-            console.error(`[SSR] DataResolver(${traceId}): Metadata fetch failed in ${Date.now() - metadataStart}ms:`, error);
-            throw error;
-          });
-
-        // Wait for metadata first; if it's sufficient, don't block on relay fallbacks.
-        let metadata;
         let directEvent: Event | null = null;
         let profileEvent: Event | null = null;
         let relayProfilePicture: string | undefined;
@@ -593,6 +565,19 @@ export class DataResolver implements Resolve<EventData | null> {
                   throw error;
                 });
             }
+          } else if (isHexEventId && !directRelayFetchPromise) {
+            const directStart = Date.now();
+            directRelayFetchPromise = fetchEventFromRelays(id, undefined, relayTimeoutMs)
+              .then((result) => {
+                fetchStatus.relayEvent = result ? 'success' : 'empty';
+                debugLog(`[SSR] DataResolver(${traceId}): Direct relay event fetch completed in ${Date.now() - directStart}ms`);
+                return result;
+              })
+              .catch((error) => {
+                fetchStatus.relayEvent = 'error';
+                console.error(`[SSR] DataResolver(${traceId}): Direct relay event fetch failed in ${Date.now() - directStart}ms:`, error);
+                throw error;
+              });
           }
 
           if (!profileRelayFetchPromise && profileInfo) {
@@ -640,53 +625,34 @@ export class DataResolver implements Resolve<EventData | null> {
         if (shouldParallelPrefetch) {
           startRelayFallbackFetches(SSR_RELAY_FETCH_TIMEOUT_MS);
           debugLog(
-            `[SSR] DataResolver(${traceId}): Started relay prefetch in parallel with metadata (route=${isNaddrId ? 'naddr' : 'standard'})`
+            `[SSR] DataResolver(${traceId}): Started relay prefetch (route=${isNaddrId ? 'naddr' : 'standard'})`
           );
         }
 
-        metadata = await metadataPromise.catch(() => null);
+        const elapsedMs = Date.now() - resolveStart;
+        const remainingBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedMs - 250;
+        const relayTimeoutMs = Math.max(500, Math.min(SSR_RELAY_FETCH_TIMEOUT_MS, remainingBudgetMs));
 
-        const metadataTags = metadata?.tags || [];
-        const metadataHasContent = !!metadata?.content?.trim();
-        const metadataHasTagTitle = !!metadataTags.find((tag: string[]) => tag[0] === 'title' && tag[1]?.trim());
-        const metadataHasTagSummary = !!metadataTags.find((tag: string[]) => tag[0] === 'summary' && tag[1]?.trim());
-        const metadataHasAuthorIdentity =
-          !!metadata?.author?.profile?.display_name ||
-          !!metadata?.author?.profile?.name ||
-          !!metadata?.author?.profile?.picture;
-        const canSkipRelayFallbacks = metadataHasContent || metadataHasTagTitle || metadataHasTagSummary || metadataHasAuthorIdentity;
-
-        if (canSkipRelayFallbacks) {
+        if (remainingBudgetMs <= 0) {
+          console.warn(`[SSR] DataResolver(${traceId}): No time budget left for relay fallback (elapsed=${elapsedMs}ms)`);
           fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
           fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
-          debugLog(`[SSR] DataResolver(${traceId}): Metadata was sufficient, skipping relay fallback wait`);
-        } else {
-          const elapsedMs = Date.now() - resolveStart;
-          const remainingBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedMs - 250;
-          const relayTimeoutMs = Math.max(500, Math.min(SSR_RELAY_FETCH_TIMEOUT_MS, remainingBudgetMs));
+        }
 
-          if (remainingBudgetMs <= 0) {
-            console.warn(`[SSR] DataResolver(${traceId}): No time budget left for relay fallback (elapsed=${elapsedMs}ms)`);
-            fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
-            fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
-          }
+        if (remainingBudgetMs > 0) {
+          startRelayFallbackFetches(relayTimeoutMs);
+        }
 
-          if (remainingBudgetMs > 0) {
-            startRelayFallbackFetches(relayTimeoutMs);
-          }
+        if (directRelayFetchPromise || profileRelayFetchPromise) {
+          const directPromise = directRelayFetchPromise as Promise<Event | null> | null;
+          const profilePromise = profileRelayFetchPromise as Promise<Event | null> | null;
+          const [relayResult, profileResult] = await Promise.all([
+            directPromise ? directPromise.catch(() => null) : Promise.resolve(null),
+            profilePromise ? profilePromise.catch(() => null) : Promise.resolve(null),
+          ]);
 
-          if (directRelayFetchPromise || profileRelayFetchPromise) {
-            // Metadata is missing details — wait for relay fallbacks
-            const directPromise = directRelayFetchPromise as Promise<Event | null> | null;
-            const profilePromise = profileRelayFetchPromise as Promise<Event | null> | null;
-            const [relayResult, profileResult] = await Promise.all([
-              directPromise ? directPromise.catch(() => null) : Promise.resolve(null),
-              profilePromise ? profilePromise.catch(() => null) : Promise.resolve(null),
-            ]);
-
-            directEvent = relayResult;
-            profileEvent = profileResult;
-          }
+          directEvent = relayResult;
+          profileEvent = profileResult;
         }
 
         debugLog(`[SSR] DataResolver(${traceId}): Fetch status summary`, fetchStatus);
@@ -713,8 +679,8 @@ export class DataResolver implements Resolve<EventData | null> {
               },
             };
 
-            if (!metadata?.author?.profile?.name && !metadata?.author?.profile?.display_name) {
-              // Metadata API returned no useful author info — use relay data
+            if (!data.metadata) {
+              // Use relay profile data when no profile metadata has been set yet
               console.log('[SSR] DataResolver: Using relay-fetched profile for', profileInfo?.pubkey || id);
 
               const displayName = relayProfile.profile.display_name || relayProfile.profile.name || 'Nostr User';
@@ -734,53 +700,25 @@ export class DataResolver implements Resolve<EventData | null> {
               });
 
               data.metadata = relayProfile;
-            } else if (metadata?.author) {
-              // Metadata API had info — fill in any gaps from relay data
-              if (!metadata.author.profile.picture && relayProfile.profile.picture) {
-                metadata.author.profile.picture = relayProfile.profile.picture;
-              }
             }
           } catch (e) {
             console.error('[SSR] DataResolver: Failed to parse relay profile:', e);
           }
         }
 
-        if (metadata?.author?.profile && !metadata.author.profile.picture && relayProfilePicture) {
-          metadata.author.profile.picture = relayProfilePicture;
-        }
-
         // Determine the best source for content
-        // Prefer metadata API if it has content, otherwise use direct relay fetch
-        if (metadata && metadata.content) {
-          // If metadata API already set default image and event has no media image,
-          // override it with relay-fetched profile avatar when available.
-          const metadataEventWithoutAuthorImage = {
-            tags: metadata.tags || [],
-            content: metadata.content || '',
-          } as Event;
-          const metadataMediaImage = extractImageFromEvent(metadataEventWithoutAuthorImage);
-          if (!metadataMediaImage && relayProfilePicture) {
-            this.metaService.updateSocialMetadata({ image: relayProfilePicture });
-          }
-
-          const { author, ...metadataWithoutAuthor } = metadata;
-          data.event = metadataWithoutAuthor;
-          // Only overwrite metadata if we don't already have relay-fetched profile
-          if (!data.metadata) {
-            data.metadata = metadata.author;
-          }
-        } else if (directEvent) {
+        if (directEvent) {
           // Use content from direct relay fetch
           const description = directEvent.content?.length > 200
             ? directEvent.content.substring(0, 200) + '...'
             : directEvent.content || 'Open this Nostr post on Nostria, the decentralized social app.';
 
           const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
-          const title = titleTag?.[1] || metadata?.author?.profile?.display_name || metadata?.author?.profile?.name || 'Nostr Post on Nostria';
+          const title = titleTag?.[1] || 'Nostr Post on Nostria';
 
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
-          const authorPicture = relayProfilePicture || metadata?.author?.profile?.picture;
+          const authorPicture = relayProfilePicture;
           const eventImage = extractImageFromEvent(directEvent, authorPicture);
 
           this.metaService.updateSocialMetadata({
@@ -794,16 +732,6 @@ export class DataResolver implements Resolve<EventData | null> {
             content: directEvent.content,
             tags: directEvent.tags,
           };
-          if (!data.metadata) {
-            data.metadata = metadata?.author;
-          }
-        } else if (metadata) {
-          // Metadata API returned but with no content, and no direct event
-          const { author, ...metadataWithoutAuthor } = metadata;
-          data.event = metadataWithoutAuthor;
-          if (!data.metadata) {
-            data.metadata = metadata.author;
-          }
         } else if (!data.metadata) {
           data.title = 'Nostr Post on Nostria';
           data.description = 'Open this content on Nostria, the decentralized social app.';

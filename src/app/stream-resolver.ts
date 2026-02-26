@@ -260,62 +260,11 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       if (canRelayPrefetch) {
         startRelayFetch(SSR_RELAY_FETCH_TIMEOUT_MS);
         debugLog(
-          `[SSR] StreamResolver(${traceId}): Started relay prefetch in parallel with metadata (route=${isNaddrRoute ? 'naddr' : 'standard'})`
+          `[SSR] StreamResolver(${traceId}): Started relay prefetch (route=${isNaddrRoute ? 'naddr' : 'standard'})`
         );
       }
 
-      let metadataResponse: Awaited<ReturnType<MetaService['loadSocialMetadata']>> | null = null;
-      const metadataStart = Date.now();
-
-      try {
-        metadataResponse = await metaService.loadSocialMetadata(encodedEvent);
-        debugLog(`[SSR] StreamResolver(${traceId}): Metadata fetch completed in ${Date.now() - metadataStart}ms`, {
-          contentLength: metadataResponse?.content?.length || 0,
-          tagsCount: metadataResponse?.tags?.length || 0,
-        });
-      } catch (apiError) {
-        console.error(`[SSR] StreamResolver(${traceId}): Metadata fetch failed in ${Date.now() - metadataStart}ms:`, apiError);
-      }
-
-      if (metadataResponse) {
-        const tags = metadataResponse.tags || [];
-        const titleTag = tags.find((tag: string[]) => tag[0] === 'title');
-        const summaryTag = tags.find((tag: string[]) => tag[0] === 'summary');
-        const imageTag = tags.find((tag: string[]) => tag[0] === 'image');
-        const streamingTag = tags.find((tag: string[]) => tag[0] === 'streaming');
-
-        const metadataHasUsefulData =
-          !!metadataResponse.content?.trim() ||
-          !!titleTag?.[1] ||
-          !!summaryTag?.[1] ||
-          !!streamingTag?.[1];
-
-        if (metadataHasUsefulData) {
-          const title = titleTag?.[1] || 'Live Stream';
-          const description = summaryTag?.[1] || metadataResponse.content || 'Watch this live stream on Nostria';
-          const image = imageTag?.[1];
-          const streamUrl = streamingTag?.[1];
-          const publishedAtSeconds =
-            extractPublishedAtFromTags(tags) || parseNostrTimestamp(metadataResponse.created_at);
-
-          data.title = title;
-          data.description = description;
-          data.image = image;
-          data.streamUrl = streamUrl;
-
-          metaService.updateSocialMetadata({
-            title,
-            description,
-            image: image || '/assets/nostria-social.jpg',
-            url: getCanonicalStreamUrl(encodedEvent),
-            publishedAtSeconds,
-          });
-
-          debugLog(`[SSR] StreamResolver(${traceId}): Metadata was sufficient, skipping relay fallback`);
-          console.log(`[SSR] StreamResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
-          return data;
-        }
-      }
+      debugLog(`[SSR] StreamResolver(${traceId}): Relay-only SSR metadata mode`);
 
       // Metadata was insufficient; fetch the event from relays with remaining budget.
       const elapsedMs = Date.now() - resolveStart;
@@ -345,39 +294,8 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         return data;
       }
 
-      // Fall back to metadata payload if relay fetch failed
+      // Fall back to default metadata if relay fetch failed
       if (!event) {
-        if (metadataResponse) {
-          const tags = metadataResponse.tags || [];
-          const titleTag = tags.find((tag: string[]) => tag[0] === 'title');
-          const summaryTag = tags.find((tag: string[]) => tag[0] === 'summary');
-          const imageTag = tags.find((tag: string[]) => tag[0] === 'image');
-          const streamingTag = tags.find((tag: string[]) => tag[0] === 'streaming');
-          const publishedAtSeconds =
-            extractPublishedAtFromTags(tags) || parseNostrTimestamp(metadataResponse.created_at);
-
-          const fallbackTitle = titleTag?.[1] || data.title;
-          const fallbackDescription = summaryTag?.[1] || metadataResponse.content || data.description;
-          const fallbackImage = imageTag?.[1] || data.image;
-
-          data.title = fallbackTitle;
-          data.description = fallbackDescription;
-          data.image = fallbackImage;
-          data.streamUrl = streamingTag?.[1] || data.streamUrl;
-
-          metaService.updateSocialMetadata({
-            title: fallbackTitle,
-            description: fallbackDescription,
-            image: fallbackImage || '/assets/nostria-social.jpg',
-            url: getCanonicalStreamUrl(encodedEvent),
-            publishedAtSeconds,
-          });
-
-          console.log(`[SSR] StreamResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
-          return data;
-        }
-
-        // If metadata API also failed, set default meta tags
         metaService.updateSocialMetadata({
           title: 'Live Stream - Nostria',
           description: 'Watch live streams on Nostria, your decentralized social network',

@@ -936,13 +936,22 @@ For bot requests, SSR responses are cached in memory to improve performance:
 
 Timeouts ensure fast responses for social media bots:
 
-| Component                     | Timeout   | Purpose                         |
-| ----------------------------- | --------- | ------------------------------- |
-| `METADATA_REQUEST_TIMEOUT_MS` | 4 seconds | API metadata fetch              |
-| `TOTAL_RESOLVER_TIMEOUT_MS`   | 6 seconds | Total resolver time             |
-| `RELAY_FETCH_TIMEOUT_MS`      | 3 seconds | Relay queries (stream resolver) |
+| Component                     | Timeout   | Purpose                          |
+| ----------------------------- | --------- | -------------------------------- |
+| `METADATA_REQUEST_TIMEOUT_MS` | 1.8 sec   | Optional external metadata fetch |
+| `TOTAL_RESOLVER_TIMEOUT_MS`   | 6 seconds | Total resolver time              |
+| `RELAY_FETCH_TIMEOUT_MS`      | 3 seconds | Relay queries (stream resolver)  |
 
 On timeout, default meta tags are returned so bots still get a valid response.
+
+### SSR Social Metadata Strategy
+
+SSR social metadata resolution is **local-first**:
+
+- `DataResolver` and `StreamResolver` fetch event/profile data directly from relays during SSR.
+- External metadata API calls are not used by SSR resolvers.
+
+This reduces dependency on `metadata.nostria.app` for first bot fetches (Discord/X/etc.) and improves preview reliability when upstream metadata API latency spikes.
 
 ### MetaService & Canonical URLs
 
