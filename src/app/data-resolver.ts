@@ -555,6 +555,12 @@ export class DataResolver implements Resolve<EventData | null> {
       const isProfileRoute = routePath.startsWith('p/') || routePath.startsWith('u/') || routePath.startsWith('music/artist');
       const isHexPubkey = !profileInfo && isProfileRoute && this.utilities.isHex(id) && id.length === 64;
       const isHexEventId = !eventPointer && routePath.startsWith('e/') && this.utilities.isHex(id) && id.length === 64;
+      const canonicalUrl = buildCanonicalUrl(routePath, id);
+      const shouldUseArticleType =
+        routePath.startsWith('e/') ||
+        routePath.startsWith('a/') ||
+        routePath.startsWith('music/song') ||
+        routePath.startsWith('music/playlist');
       const canFetchDirectRelayEvent =
         (!!eventPointer &&
           ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id)) ||
@@ -773,12 +779,6 @@ export class DataResolver implements Resolve<EventData | null> {
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
           const authorPicture = relayProfilePicture;
           const eventImage = extractImageFromEvent(directEvent, authorPicture);
-          const canonicalUrl = buildCanonicalUrl(routePath, id);
-          const shouldUseArticleType =
-            routePath.startsWith('e/') ||
-            routePath.startsWith('a/') ||
-            routePath.startsWith('music/song') ||
-            routePath.startsWith('music/playlist');
 
           this.metaService.updateSocialMetadata({
             title,
@@ -796,11 +796,27 @@ export class DataResolver implements Resolve<EventData | null> {
         } else if (!data.metadata) {
           data.title = 'Nostr Post on Nostria';
           data.description = 'Open this content on Nostria, the decentralized social app.';
+
+          this.metaService.updateSocialMetadata({
+            title: data.title,
+            description: data.description,
+            image: 'https://nostria.app/assets/nostria-social.jpg',
+            url: canonicalUrl,
+            type: shouldUseArticleType ? 'article' : 'website',
+          });
         }
       } catch (error) {
         console.error(`[SSR] DataResolver(${traceId}): Failed to load metadata:`, error);
         data.title = 'Nostr Post on Nostria';
         data.description = 'Open this content on Nostria, the decentralized social app.';
+
+        this.metaService.updateSocialMetadata({
+          title: data.title,
+          description: data.description,
+          image: 'https://nostria.app/assets/nostria-social.jpg',
+          url: canonicalUrl,
+          type: shouldUseArticleType ? 'article' : 'website',
+        });
       }
 
       console.log(`[SSR] DataResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
