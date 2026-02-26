@@ -63,6 +63,8 @@ interface TimelineEvent {
   tags?: string[][]; // For article d-tag
 }
 
+type GmFilterMode = 'all' | 'only' | 'exclude';
+
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 1; // 1 day lookback for first-time users
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -184,10 +186,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
   selectedPosters = signal<Set<string>>(new Set());
 
   // Whether filter mode is active
-  isFilterMode = computed(() => this.selectedPosters().size > 0 || this.gmFilterEnabled() || !!this.selectedList());
+  isFilterMode = computed(() => this.selectedPosters().size > 0 || this.gmFilterMode() !== 'all' || !!this.selectedList());
 
-  // GM/Pura Vida filter
-  gmFilterEnabled = signal(false);
+  // GM/Pura Vida filter mode
+  gmFilterMode = signal<GmFilterMode>('all');
 
   // Selected list filter (from FollowSetsService)
   selectedList = signal<FollowSet | null>(null);
@@ -293,9 +295,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
       allEvents = allEvents.filter(e => listPubkeys.has(e.pubkey));
     }
 
-    // Filter by GM/Pura Vida if enabled
-    if (this.gmFilterEnabled()) {
+    // Filter by GM/Pura Vida mode
+    const gmMode = this.gmFilterMode();
+    if (gmMode === 'only') {
       allEvents = allEvents.filter(e => this.isGmPuraVidaPost(e.content));
+    } else if (gmMode === 'exclude') {
+      allEvents = allEvents.filter(e => !this.isGmPuraVidaPost(e.content));
     }
 
     return allEvents;
@@ -774,8 +779,31 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   toggleGmFilter(): void {
-    this.gmFilterEnabled.update(v => !v);
+    this.gmFilterMode.update(mode => {
+      if (mode === 'all') return 'only';
+      if (mode === 'only') return 'exclude';
+      return 'all';
+    });
     this.timelinePage.set(1);
+  }
+
+  clearGmFilter(): void {
+    this.gmFilterMode.set('all');
+    this.timelinePage.set(1);
+  }
+
+  getGmFilterLabel(): string {
+    const mode = this.gmFilterMode();
+    if (mode === 'only') return 'GM / Pura Vida: Only';
+    if (mode === 'exclude') return 'GM / Pura Vida: Exclude';
+    return 'GM / Pura Vida';
+  }
+
+  getGmFilterTooltip(): string {
+    const mode = this.gmFilterMode();
+    if (mode === 'all') return 'Mode: Not selected. Click for only GM/PV posts.';
+    if (mode === 'only') return 'Mode: Showing only GM/PV. Click to filter out GM/PV.';
+    return 'Mode: Filtering out GM/PV. Click to clear this filter.';
   }
 
   /**

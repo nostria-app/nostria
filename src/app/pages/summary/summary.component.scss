@@ -1410,6 +1410,12 @@ mat-divider {
       color: var(--mat-sys-on-primary);
       border-color: var(--mat-sys-primary);
     }
+
+    &.exclude {
+      background-color: var(--mat-sys-secondary);
+      color: var(--mat-sys-on-secondary);
+      border-color: var(--mat-sys-secondary);
+    }
   }
 
   .clear-filter-btn {

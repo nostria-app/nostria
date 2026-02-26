@@ -116,7 +116,8 @@
             (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
             [attr.aria-checked]="isPosterSelected(poster.pubkey)">
             <div class="poster-avatar">
-              <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true"></app-user-profile>
+              <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"
+                [disableHoverCard]="true"></app-user-profile>
               @if (isPosterSelected(poster.pubkey)) {
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
@@ -287,13 +288,13 @@
         @if (timelineEvents().length > 0 || isFilterMode()) {
         <div class="section-header-with-actions">
           <div class="timeline-filter-actions">
-            <button mat-stroked-button (click)="toggleGmFilter()" [class.active]="gmFilterEnabled()"
-              matTooltip="Filter posts starting with GM, PV, or Pura Vida">
+            <button mat-stroked-button (click)="toggleGmFilter()" [class.active]="gmFilterMode() !== 'all'"
+              [class.exclude]="gmFilterMode() === 'exclude'" [matTooltip]="getGmFilterTooltip()">
               <mat-icon>wb_sunny</mat-icon>
-              GM / Pura Vida
+              {{ getGmFilterLabel() }}
             </button>
             @if (isFilterMode()) {
-            <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false); clearListFilter()"
+            <button mat-stroked-button (click)="clearPosterFilter(); clearGmFilter(); clearListFilter()"
               class="clear-filter-btn">
               <mat-icon>clear</mat-icon>
               Clear All Filters
