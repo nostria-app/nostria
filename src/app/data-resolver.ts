@@ -10,6 +10,14 @@ import { Event, kinds, nip05, nip19 } from 'nostr-tools';
 import { SSR_RELAY_FETCH_TIMEOUT_MS, SSR_TOTAL_RESOLVER_TIMEOUT_MS, buildRelayList } from './ssr-relays';
 
 export const EVENT_STATE_KEY = makeStateKey<any>('large-json-data');
+const SSR_DEBUG_LOGS = process.env['SSR_DEBUG_LOGS'] === 'true';
+
+function debugLog(message: string, ...args: unknown[]): void {
+  if (!SSR_DEBUG_LOGS) {
+    return;
+  }
+  console.log(message, ...args);
+}
 
 // Known addressable event kinds
 const MUSIC_KIND = 36787;
@@ -45,23 +53,42 @@ async function createSSRPool() {
 /**
  * Fetch event directly from relays by ID
  */
-async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Promise<Event | null> {
+async function fetchEventFromRelays(eventId: string, relayHints?: string[], timeoutMs = SSR_RELAY_FETCH_TIMEOUT_MS): Promise<Event | null> {
   const pool = await createSSRPool();
   const relays = buildRelayList(relayHints);
 
-  console.log('[SSR] DataResolver: Fetching event from', relays.length, 'relays (hints:', relayHints?.length || 0, ')');
+  const startedAt = Date.now();
+  let didTimeout = false;
+
+  debugLog('[SSR] DataResolver: Fetching event from relays', {
+    relayCount: relays.length,
+    relayHintsCount: relayHints?.length || 0,
+  });
 
   try {
     const event = await Promise.race([
       pool.get(relays, { ids: [eventId] }),
-      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), SSR_RELAY_FETCH_TIMEOUT_MS))
+      new Promise<Event | null>((resolve) => setTimeout(() => {
+        didTimeout = true;
+        resolve(null);
+      }, timeoutMs))
     ]);
 
     pool.close(relays);
 
+    const durationMs = Date.now() - startedAt;
+    if (didTimeout) {
+      console.warn(`[SSR] DataResolver: Event relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+    } else if (event) {
+      debugLog(`[SSR] DataResolver: Event relay fetch resolved in ${durationMs}ms`, { kind: event.kind, created_at: event.created_at });
+    } else {
+      console.warn(`[SSR] DataResolver: Event relay fetch returned null in ${durationMs}ms before timeout`);
+    }
+
     return event;
   } catch (error) {
-    console.error('[SSR] DataResolver: Error fetching from relays:', error);
+    const durationMs = Date.now() - startedAt;
+    console.error(`[SSR] DataResolver: Error fetching from relays after ${durationMs}ms:`, error);
     pool.close(relays);
     return null;
   }
@@ -70,11 +97,20 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
 /**
  * Fetch event directly from relays by address (kind, pubkey, identifier)
  */
-async function fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
+async function fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[], timeoutMs = SSR_RELAY_FETCH_TIMEOUT_MS): Promise<Event | null> {
   const pool = await createSSRPool();
   const relays = buildRelayList(relayHints);
 
-  console.log('[SSR] DataResolver: Fetching by address from', relays.length, 'relays (hints:', relayHints?.length || 0, ')');
+  const startedAt = Date.now();
+  let didTimeout = false;
+
+  debugLog('[SSR] DataResolver: Fetching by address from relays', {
+    relayCount: relays.length,
+    relayHintsCount: relayHints?.length || 0,
+    kind,
+    pubkey,
+    identifier,
+  });
 
   try {
     const event = await Promise.race([
@@ -83,14 +119,27 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
         authors: [pubkey],
         '#d': [identifier],
       }),
-      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), SSR_RELAY_FETCH_TIMEOUT_MS))
+      new Promise<Event | null>((resolve) => setTimeout(() => {
+        didTimeout = true;
+        resolve(null);
+      }, timeoutMs))
     ]);
 
     pool.close(relays);
 
+    const durationMs = Date.now() - startedAt;
+    if (didTimeout) {
+      console.warn(`[SSR] DataResolver: Address relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+    } else if (event) {
+      debugLog(`[SSR] DataResolver: Address relay fetch resolved in ${durationMs}ms`, { kind: event.kind, created_at: event.created_at });
+    } else {
+      console.warn(`[SSR] DataResolver: Address relay fetch returned null in ${durationMs}ms before timeout`);
+    }
+
     return event;
   } catch (error) {
-    console.error('[SSR] DataResolver: Error fetching by address:', error);
+    const durationMs = Date.now() - startedAt;
+    console.error(`[SSR] DataResolver: Error fetching by address after ${durationMs}ms:`, error);
     pool.close(relays);
     return null;
   }
@@ -101,11 +150,18 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
  * Used for profile pages (npub/nprofile) to get social preview data
  * without waiting for the outbox model discovery.
  */
-async function fetchProfileFromRelays(pubkey: string, relayHints?: string[]): Promise<Event | null> {
+async function fetchProfileFromRelays(pubkey: string, relayHints?: string[], timeoutMs = SSR_RELAY_FETCH_TIMEOUT_MS): Promise<Event | null> {
   const pool = await createSSRPool();
   const relays = buildRelayList(relayHints);
 
-  console.log('[SSR] DataResolver: Fetching profile from', relays.length, 'relays (hints:', relayHints?.length || 0, ')');
+  const startedAt = Date.now();
+  let didTimeout = false;
+
+  debugLog('[SSR] DataResolver: Fetching profile from relays', {
+    relayCount: relays.length,
+    relayHintsCount: relayHints?.length || 0,
+    pubkey,
+  });
 
   try {
     const event = await Promise.race([
@@ -113,14 +169,27 @@ async function fetchProfileFromRelays(pubkey: string, relayHints?: string[]): Pr
         kinds: [0],
         authors: [pubkey],
       }),
-      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), SSR_RELAY_FETCH_TIMEOUT_MS))
+      new Promise<Event | null>((resolve) => setTimeout(() => {
+        didTimeout = true;
+        resolve(null);
+      }, timeoutMs))
     ]);
 
     pool.close(relays);
 
+    const durationMs = Date.now() - startedAt;
+    if (didTimeout) {
+      console.warn(`[SSR] DataResolver: Profile relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+    } else if (event) {
+      debugLog(`[SSR] DataResolver: Profile relay fetch resolved in ${durationMs}ms`, { created_at: event.created_at });
+    } else {
+      console.warn(`[SSR] DataResolver: Profile relay fetch returned null in ${durationMs}ms before timeout`);
+    }
+
     return event;
   } catch (error) {
-    console.error('[SSR] DataResolver: Error fetching profile from relays:', error);
+    const durationMs = Date.now() - startedAt;
+    console.error(`[SSR] DataResolver: Error fetching profile from relays after ${durationMs}ms:`, error);
     pool.close(relays);
     return null;
   }
@@ -303,6 +372,8 @@ export class DataResolver implements Resolve<EventData | null> {
 
     // Wrap resolution in a timeout to ensure fast response for social bots
     const resolveData = async (): Promise<EventData> => {
+      const resolveStart = Date.now();
+      const traceId = `ssr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const data: EventData = { ...defaultData };
 
       let id = route.params['id'] || route.params['pubkey'];
@@ -397,8 +468,16 @@ export class DataResolver implements Resolve<EventData | null> {
 
       // If we don't have a valid id, return early
       if (!id || id === 'undefined' || !id.trim()) {
+        console.warn(`[SSR] DataResolver(${traceId}): Missing/invalid ID, returning default data`);
         return data;
       }
+
+      debugLog(`[SSR] DataResolver(${traceId}): Resolving route`, {
+        routePath: route.routeConfig?.path || '',
+        id,
+        identifier,
+        slug,
+      });
 
       // Parse relay hints from nevent/naddr for potential direct relay fetch
       let eventPointer: { id?: string; relays?: string[]; author?: string; kind?: number; identifier?: string } | null = null;
@@ -406,41 +485,34 @@ export class DataResolver implements Resolve<EventData | null> {
         eventPointer = this.utilities.decodeEventFromUrl(id);
       }
 
+      debugLog(`[SSR] DataResolver(${traceId}): Decoded pointers`, {
+        hasEventPointer: !!eventPointer,
+        eventPointerId: eventPointer?.id,
+        eventPointerKind: eventPointer?.kind,
+        eventPointerAuthor: eventPointer?.author,
+        relayHintsCount: eventPointer?.relays?.length || 0,
+      });
+
       // Check if this is a profile page (npub/nprofile/hex pubkey)
       // For profiles, we fetch the kind 0 metadata event directly from relays
       // because the outbox model is too slow for SSR social preview generation.
       const profileInfo = decodeProfileFromId(id);
       const isHexPubkey = !profileInfo && this.utilities.isHex(id) && id.length === 64;
 
-      // If we have relay hints, fetch from relays IN PARALLEL with the metadata API
-      // This ensures we get the event content quickly even if metadata API is slow
-      let directRelayFetchPromise: Promise<Event | null> | null = null;
-      if (eventPointer) {
-        if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
-          directRelayFetchPromise = fetchEventByAddress(
-            eventPointer.kind,
-            eventPointer.author,
-            eventPointer.identifier,
-            eventPointer.relays
-          );
-        } else if (eventPointer.id) {
-          directRelayFetchPromise = fetchEventFromRelays(eventPointer.id, eventPointer.relays);
-        }
-      }
+      const canFetchDirectRelayEvent =
+        !!eventPointer &&
+        ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id);
+      const canFetchRelayProfile = !!profileInfo || isHexPubkey || !!eventPointer?.author;
 
-      // Fetch profile directly from relays when possible.
-      // This is used for:
-      // - profile pages (npub/nprofile/hex)
-      // - event pages when the event pointer includes author pubkey
-      // so we can quickly use avatar as social image fallback if event has no image.
-      let profileRelayFetchPromise: Promise<Event | null> | null = null;
-      if (profileInfo) {
-        profileRelayFetchPromise = fetchProfileFromRelays(profileInfo.pubkey, profileInfo.relays);
-      } else if (isHexPubkey) {
-        profileRelayFetchPromise = fetchProfileFromRelays(id);
-      } else if (eventPointer?.author) {
-        profileRelayFetchPromise = fetchProfileFromRelays(eventPointer.author, eventPointer.relays);
-      }
+      const fetchStatus: {
+        metadata: 'pending' | 'success' | 'empty' | 'error';
+        relayEvent: 'skipped' | 'pending' | 'success' | 'empty' | 'error';
+        relayProfile: 'skipped' | 'pending' | 'success' | 'empty' | 'error';
+      } = {
+        metadata: 'pending',
+        relayEvent: canFetchDirectRelayEvent ? 'pending' : 'skipped',
+        relayProfile: canFetchRelayProfile ? 'pending' : 'skipped',
+      };
 
       try {
         // Start metadata API call
@@ -452,26 +524,150 @@ export class DataResolver implements Resolve<EventData | null> {
           metadataPromise = this.metaService.loadSocialMetadata(id);
         }
 
-        // Wait for both in parallel if we have a relay fetch running
+        const metadataStart = Date.now();
+        metadataPromise = metadataPromise
+          .then((result) => {
+            fetchStatus.metadata = result ? 'success' : 'empty';
+            console.log(`[SSR] DataResolver(${traceId}): Metadata fetch completed in ${Date.now() - metadataStart}ms`);
+            if (result) {
+              debugLog(`[SSR] DataResolver(${traceId}): Metadata summary`, {
+                contentLength: result.content?.length || 0,
+                tagsCount: result.tags?.length || 0,
+                hasAuthorProfile: !!result.author?.profile,
+                authorName: result.author?.profile?.display_name || result.author?.profile?.name || null,
+              });
+            }
+            return result;
+          })
+          .catch((error) => {
+            fetchStatus.metadata = 'error';
+            console.error(`[SSR] DataResolver(${traceId}): Metadata fetch failed in ${Date.now() - metadataStart}ms:`, error);
+            throw error;
+          });
+
+        // Wait for metadata first; if it's sufficient, don't block on relay fallbacks.
         let metadata;
         let directEvent: Event | null = null;
         let profileEvent: Event | null = null;
         let relayProfilePicture: string | undefined;
 
-        if (directRelayFetchPromise || profileRelayFetchPromise) {
-          // Run all fetches in parallel — use whichever gives us content
-          const [metadataResult, relayResult, profileResult] = await Promise.all([
-            metadataPromise.catch(() => null),
-            directRelayFetchPromise ? directRelayFetchPromise.catch(() => null) : Promise.resolve(null),
-            profileRelayFetchPromise ? profileRelayFetchPromise.catch(() => null) : Promise.resolve(null),
-          ]);
+        metadata = await metadataPromise.catch(() => null);
 
-          metadata = metadataResult;
-          directEvent = relayResult;
-          profileEvent = profileResult;
+        const metadataHasContent = !!metadata?.content?.trim();
+        const metadataHasAuthorIdentity =
+          !!metadata?.author?.profile?.display_name ||
+          !!metadata?.author?.profile?.name ||
+          !!metadata?.author?.profile?.picture;
+        const canSkipRelayFallbacks = metadataHasContent && metadataHasAuthorIdentity;
+
+        if (canSkipRelayFallbacks) {
+          fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
+          fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
+          debugLog(`[SSR] DataResolver(${traceId}): Metadata was sufficient, skipping relay fallback wait`);
         } else {
-          metadata = await metadataPromise;
+          const elapsedMs = Date.now() - resolveStart;
+          const remainingBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedMs - 250;
+          const relayTimeoutMs = Math.max(500, Math.min(SSR_RELAY_FETCH_TIMEOUT_MS, remainingBudgetMs));
+
+          if (remainingBudgetMs <= 0) {
+            console.warn(`[SSR] DataResolver(${traceId}): No time budget left for relay fallback (elapsed=${elapsedMs}ms)`);
+            fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
+            fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
+          }
+
+          let directRelayFetchPromise: Promise<Event | null> | null = null;
+          let profileRelayFetchPromise: Promise<Event | null> | null = null;
+
+          if (remainingBudgetMs > 0 && eventPointer) {
+            if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
+              const directStart = Date.now();
+              directRelayFetchPromise = fetchEventByAddress(
+                eventPointer.kind,
+                eventPointer.author,
+                eventPointer.identifier,
+                eventPointer.relays,
+                relayTimeoutMs,
+              )
+                .then((result) => {
+                  fetchStatus.relayEvent = result ? 'success' : 'empty';
+                  debugLog(`[SSR] DataResolver(${traceId}): Direct relay event fetch completed in ${Date.now() - directStart}ms`);
+                  return result;
+                })
+                .catch((error) => {
+                  fetchStatus.relayEvent = 'error';
+                  console.error(`[SSR] DataResolver(${traceId}): Direct relay event fetch failed in ${Date.now() - directStart}ms:`, error);
+                  throw error;
+                });
+            } else if (eventPointer.id) {
+              const directStart = Date.now();
+              directRelayFetchPromise = fetchEventFromRelays(eventPointer.id, eventPointer.relays, relayTimeoutMs)
+                .then((result) => {
+                  fetchStatus.relayEvent = result ? 'success' : 'empty';
+                  debugLog(`[SSR] DataResolver(${traceId}): Direct relay event fetch completed in ${Date.now() - directStart}ms`);
+                  return result;
+                })
+                .catch((error) => {
+                  fetchStatus.relayEvent = 'error';
+                  console.error(`[SSR] DataResolver(${traceId}): Direct relay event fetch failed in ${Date.now() - directStart}ms:`, error);
+                  throw error;
+                });
+            }
+          }
+
+          if (remainingBudgetMs > 0 && profileInfo) {
+            const profileStart = Date.now();
+            profileRelayFetchPromise = fetchProfileFromRelays(profileInfo.pubkey, profileInfo.relays, relayTimeoutMs)
+              .then((result) => {
+                fetchStatus.relayProfile = result ? 'success' : 'empty';
+                debugLog(`[SSR] DataResolver(${traceId}): Relay profile fetch completed in ${Date.now() - profileStart}ms`);
+                return result;
+              })
+              .catch((error) => {
+                fetchStatus.relayProfile = 'error';
+                console.error(`[SSR] DataResolver(${traceId}): Relay profile fetch failed in ${Date.now() - profileStart}ms:`, error);
+                throw error;
+              });
+          } else if (remainingBudgetMs > 0 && isHexPubkey) {
+            const profileStart = Date.now();
+            profileRelayFetchPromise = fetchProfileFromRelays(id, undefined, relayTimeoutMs)
+              .then((result) => {
+                fetchStatus.relayProfile = result ? 'success' : 'empty';
+                debugLog(`[SSR] DataResolver(${traceId}): Relay profile fetch completed in ${Date.now() - profileStart}ms`);
+                return result;
+              })
+              .catch((error) => {
+                fetchStatus.relayProfile = 'error';
+                console.error(`[SSR] DataResolver(${traceId}): Relay profile fetch failed in ${Date.now() - profileStart}ms:`, error);
+                throw error;
+              });
+          } else if (remainingBudgetMs > 0 && eventPointer?.author) {
+            const profileStart = Date.now();
+            profileRelayFetchPromise = fetchProfileFromRelays(eventPointer.author, eventPointer.relays, relayTimeoutMs)
+              .then((result) => {
+                fetchStatus.relayProfile = result ? 'success' : 'empty';
+                debugLog(`[SSR] DataResolver(${traceId}): Relay profile fetch completed in ${Date.now() - profileStart}ms`);
+                return result;
+              })
+              .catch((error) => {
+                fetchStatus.relayProfile = 'error';
+                console.error(`[SSR] DataResolver(${traceId}): Relay profile fetch failed in ${Date.now() - profileStart}ms:`, error);
+                throw error;
+              });
+          }
+
+          if (directRelayFetchPromise || profileRelayFetchPromise) {
+            // Metadata is missing details — wait for relay fallbacks
+            const [relayResult, profileResult] = await Promise.all([
+              directRelayFetchPromise ? directRelayFetchPromise.catch(() => null) : Promise.resolve(null),
+              profileRelayFetchPromise ? profileRelayFetchPromise.catch(() => null) : Promise.resolve(null),
+            ]);
+
+            directEvent = relayResult;
+            profileEvent = profileResult;
+          }
         }
+
+        debugLog(`[SSR] DataResolver(${traceId}): Fetch status summary`, fetchStatus);
 
         if (profileEvent) {
           relayProfilePicture = extractProfilePictureFromEvent(profileEvent);
@@ -591,25 +787,41 @@ export class DataResolver implements Resolve<EventData | null> {
           data.description = 'Content not available';
         }
       } catch (error) {
-        console.error('[SSR] Failed to load metadata:', error);
+        console.error(`[SSR] DataResolver(${traceId}): Failed to load metadata:`, error);
         data.title = 'Nostr Event (Error)';
         data.description = 'Error loading event content';
       }
+
+      console.log(`[SSR] DataResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
 
       return data;
     };
 
     // Race between the actual resolution and a timeout
     // This ensures we always return something quickly for social media bots
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let timeoutTriggered = false;
+
+    const timeoutPromise = new Promise<EventData>((resolve) => {
+      timeoutHandle = setTimeout(() => {
+        timeoutTriggered = true;
+        console.warn(`[SSR] DataResolver: Total timeout (${SSR_TOTAL_RESOLVER_TIMEOUT_MS}ms) reached, returning default data. Route params:`, route.params);
+        resolve(defaultData);
+      }, SSR_TOTAL_RESOLVER_TIMEOUT_MS);
+    });
+
     const result = await Promise.race([
       resolveData(),
-      new Promise<EventData>((resolve) => {
-        setTimeout(() => {
-          console.warn(`[SSR] DataResolver: Total timeout (${SSR_TOTAL_RESOLVER_TIMEOUT_MS}ms) reached, returning default data`);
-          resolve(defaultData);
-        }, SSR_TOTAL_RESOLVER_TIMEOUT_MS);
-      })
+      timeoutPromise,
     ]);
+
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+
+    if (!timeoutTriggered) {
+      debugLog('[SSR] DataResolver: Completed before total timeout');
+    }
 
     this.transferState.set(EVENT_STATE_KEY, result);
     return result;

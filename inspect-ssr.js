@@ -110,14 +110,21 @@ const req = http.request(options, (res) => {
     // Note: Using [\s\S]*? instead of .*? to match content that may contain newlines
     const metaTags = {
       title: /<title>([\s\S]*?)<\/title>/i.exec(data)?.[1],
+      favicon: /<link rel="icon"[^>]*href="([\s\S]*?)"/i.exec(data)?.[1],
+      'shortcut icon': /<link rel="shortcut icon"[^>]*href="([\s\S]*?)"/i.exec(data)?.[1],
+      'og:site_name': /<meta property="og:site_name" content="([\s\S]*?)"/.exec(data)?.[1],
       'og:title': /<meta property="og:title" content="([\s\S]*?)"/.exec(data)?.[1],
       'og:description': /<meta property="og:description" content="([\s\S]*?)"/.exec(data)?.[1],
       'og:image': /<meta property="og:image" content="([\s\S]*?)"/.exec(data)?.[1],
       'og:url': /<meta property="og:url" content="([\s\S]*?)"/.exec(data)?.[1],
+      'article:published_time': /<meta property="article:published_time" content="([\s\S]*?)"/.exec(data)?.[1],
+      'article:modified_time': /<meta property="article:modified_time" content="([\s\S]*?)"/.exec(data)?.[1],
       'twitter:card': /<meta name="twitter:card" content="([\s\S]*?)"/.exec(data)?.[1],
       'twitter:title': /<meta name="twitter:title" content="([\s\S]*?)"/.exec(data)?.[1],
       'twitter:description': /<meta name="twitter:description" content="([\s\S]*?)"/.exec(data)?.[1],
       'twitter:image': /<meta name="twitter:image" content="([\s\S]*?)"/.exec(data)?.[1],
+      'twitter:label1': /<meta name="twitter:label1" content="([\s\S]*?)"/.exec(data)?.[1],
+      'twitter:data1': /<meta name="twitter:data1" content="([\s\S]*?)"/.exec(data)?.[1],
     };
 
     console.log('Meta Tags Found:');
