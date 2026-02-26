@@ -294,8 +294,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isAiGenerated = computed(() => {
     const event = this.song();
     if (!event) return false;
-    const aiTag = event.tags.find(t => t[0] === 'ai_generated');
-    return aiTag?.[1] === 'true';
+    const aiTag = event.tags.find(t => t[0] === 'ai_generated' || t[0] === 'ai');
+    const hasAiTopic = event.tags.some(t => t[0] === 't' && t[1]?.toLowerCase() === 'ai_generated');
+    return aiTag?.[1] === 'true' || hasAiTopic;
   });
 
   artistName = computed(() => {
@@ -629,6 +630,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       artwork: this.image() || '/icons/icon-192x192.png',
       video: this.videoUrl() || undefined,
       type: 'Music',
+      isAiGenerated: this.isAiGenerated(),
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
       lyrics: this.lyrics() || undefined,
@@ -723,6 +725,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       artwork: this.image() || '/icons/icon-192x192.png',
       video: this.videoUrl() || undefined,
       type: 'Music',
+      isAiGenerated: this.isAiGenerated(),
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
       lyrics: this.lyrics() || undefined,

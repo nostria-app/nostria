@@ -15,6 +15,7 @@ export interface MediaItem {
   artist: string;
   source: string;
   type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit' | 'External';
+  isAiGenerated?: boolean;
   playlistSourceKey?: string; // source playlist identifier (pubkey:d-tag) for grouped playback
   isLiveStream?: boolean; // Flag for live streaming content
   participants?: { pubkey: string; role?: string }[]; // Live stream participants

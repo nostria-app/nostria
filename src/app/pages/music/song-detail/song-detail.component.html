@@ -98,6 +98,11 @@
   <div class="song-content">
     <div class="song-header">
       <div class="cover-section">
+        @if (isAiGenerated()) {
+        <div class="ai-art-badge" aria-label="AI generated artwork">
+          AI
+        </div>
+        }
         @if (image()) {
         <img [src]="image()" [alt]="title()" title="Track cover" class="cover-image" />
         } @else if (gradient()) {
@@ -131,10 +136,7 @@
         <div class="meta-row">
           <span class="date">{{ publishedDate() }}</span>
           @if (isAiGenerated()) {
-          <mat-chip class="ai-chip">
-            <mat-icon>smart_toy</mat-icon>
-            AI Generated
-          </mat-chip>
+          <span class="ai-badge">AI</span>
           }
         </div>
 

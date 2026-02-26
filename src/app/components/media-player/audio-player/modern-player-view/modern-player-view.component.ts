@@ -13,10 +13,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { PlatformService } from '../../../../services/platform.service';
+import { DataService } from '../../../../services/data.service';
 import { formatDuration } from '../../../../utils/format-duration';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
+import { MediaItem } from '../../../../interfaces';
+import { nip19 } from 'nostr-tools';
+
+const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-modern-player-view',
@@ -49,6 +54,7 @@ import { SwipeEvent, SwipeGestureDirective, SwipeProgressEvent } from '../../../
 export class ModernPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
   private readonly platform = inject(PlatformService);
+  private readonly data = inject(DataService);
 
   openQueue = output<void>();
   queueDragProgress = output<number>();
@@ -64,6 +70,8 @@ export class ModernPlayerViewComponent {
   displayedArtwork = signal<string | undefined>(undefined);
   displayedTitle = signal<string>('Unknown Track');
   displayedArtist = signal<string>('Unknown Artist');
+  displayedIsAi = signal(false);
+  private aiLookupRequestId = 0;
 
   // Lyrics view toggle
   showLyrics = signal(false);
@@ -90,6 +98,7 @@ export class ModernPlayerViewComponent {
           this.displayedArtwork.set(current?.artwork);
           this.displayedTitle.set(current?.title || 'Unknown Track');
           this.displayedArtist.set(current?.artist || 'Unknown Artist');
+          void this.updateDisplayedAiState(current);
           this.backgroundState.set('visible');
           this.contentState.set('visible');
           return;
@@ -106,6 +115,7 @@ export class ModernPlayerViewComponent {
           this.displayedArtwork.set(current?.artwork);
           this.displayedTitle.set(current?.title || 'Unknown Track');
           this.displayedArtist.set(current?.artist || 'Unknown Artist');
+          void this.updateDisplayedAiState(current);
 
           this.backgroundState.set('visible');
           // Stagger the content fade-in slightly
@@ -119,8 +129,79 @@ export class ModernPlayerViewComponent {
         this.displayedArtwork.set(current?.artwork);
         this.displayedTitle.set(current?.title || 'Unknown Track');
         this.displayedArtist.set(current?.artist || 'Unknown Artist');
+        void this.updateDisplayedAiState(current);
       }
     });
+  }
+
+  private async updateDisplayedAiState(current: MediaItem | undefined): Promise<void> {
+    const requestId = ++this.aiLookupRequestId;
+    const isAiGenerated = await this.resolveIsAiGenerated(current);
+
+    if (requestId !== this.aiLookupRequestId) {
+      return;
+    }
+
+    this.displayedIsAi.set(isAiGenerated);
+  }
+
+  private async resolveIsAiGenerated(current: MediaItem | undefined): Promise<boolean> {
+    if (!current || current.type !== 'Music') {
+      return false;
+    }
+
+    if (current.isAiGenerated) {
+      return true;
+    }
+
+    const eventPubkey = this.normalizePubkey(current.eventPubkey);
+    const eventIdentifier = current.eventIdentifier;
+
+    if (!eventPubkey || !eventIdentifier) {
+      return false;
+    }
+
+    try {
+      const record = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+        eventPubkey,
+        MUSIC_KIND,
+        eventIdentifier,
+        { save: true }
+      );
+
+      const trackEvent = record?.event;
+      if (!trackEvent) {
+        return false;
+      }
+
+      const aiTag = trackEvent.tags.find(t => t[0] === 'ai_generated' || t[0] === 'ai');
+      const hasAiTopic = trackEvent.tags.some(
+        t => t[0] === 't' && t[1]?.toLowerCase() === 'ai_generated'
+      );
+
+      return aiTag?.[1] === 'true' || hasAiTopic;
+    } catch {
+      return false;
+    }
+  }
+
+  private normalizePubkey(pubkey: string | undefined): string | null {
+    if (!pubkey) {
+      return null;
+    }
+
+    if (pubkey.startsWith('npub1')) {
+      try {
+        const decoded = nip19.decode(pubkey);
+        if (decoded.type === 'npub') {
+          return decoded.data;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return pubkey;
   }
 
   currentTime = computed(() => this.media.currentTimeSig());

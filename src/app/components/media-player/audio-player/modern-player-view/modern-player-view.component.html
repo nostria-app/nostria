@@ -19,6 +19,9 @@
     <!-- Album art with glow ring -->
     <div class="album-container" [@fadeContent]="contentState()">
       <div class="album-glow-ring"></div>
+      @if (displayedIsAi()) {
+      <div class="ai-art-badge" aria-label="AI generated artwork">AI</div>
+      }
       @if (displayedArtwork()) {
       <img class="album-art" [src]="displayedArtwork()" alt="{{ displayedTitle() }}" />
       } @else {

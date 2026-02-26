@@ -112,6 +112,20 @@
   position: relative;
   flex-shrink: 0;
 
+  .ai-art-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 2;
+  }
+
   .cover-image {
     width: 280px;
     height: 280px;
@@ -276,13 +290,15 @@
     font-size: 0.875rem;
   }
 
-  .ai-chip {
-    mat-icon {
-      font-size: 1rem;
-      width: 1rem;
-      height: 1rem;
-      margin-right: 0.25rem;
-    }
+  .ai-badge {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
   }
 }
 
