@@ -71,6 +71,36 @@ interface CachedResponse {
   timestamp: number;
 }
 
+function extractMetaContent(html: string, tag: string): string {
+  const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
+  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
+  return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
+}
+
+function isCacheableSsrPreviewHtml(html: string): boolean {
+  const ogTitle = extractMetaContent(html, 'og:title').trim();
+  const ogDescription = extractMetaContent(html, 'og:description').trim();
+  const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
+  const twitterDescription = extractMetaContent(html, 'twitter:description').trim();
+
+  const hasSocialTags = !!(ogTitle || ogDescription || twitterTitle || twitterDescription);
+  if (!hasSocialTags) {
+    return false;
+  }
+
+  const lowQualityMarkers = [
+    'loading nostr event content',
+    'content not available',
+    'error loading event content',
+    'could not load preview',
+    'loading...',
+  ];
+
+  const combined = `${ogTitle} ${ogDescription} ${twitterTitle} ${twitterDescription}`.toLowerCase();
+  return !lowQualityMarkers.some(marker => combined.includes(marker));
+}
+
 // Cache for SSR responses (keyed by URL path)
 const ssrCache = new Map<string, CachedResponse>();
 
@@ -347,16 +377,28 @@ app.use(async (req, res, next) => {
           headersToCache[key] = value;
         });
 
-        // Cache the response
-        ssrCache.set(path, {
-          html,
-          headers: headersToCache,
-          timestamp: Date.now(),
-        });
+        const isCacheableHtml = isCacheableSsrPreviewHtml(html);
+        if (isCacheableHtml) {
+          // Cache healthy SSR response for bots
+          ssrCache.set(path, {
+            html,
+            headers: headersToCache,
+            timestamp: Date.now(),
+          });
+        } else {
+          // Ensure degraded responses don't poison cache for retries
+          ssrCache.delete(path);
+          console.warn(`[SSR Cache] Skipping cache for degraded preview on ${path}`);
+        }
 
-        // Set Cache-Control headers for bots (allow CDN/proxy caching)
-        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
-        res.setHeader('X-SSR-Cache', 'MISS');
+        // Set Cache-Control headers for bots
+        res.setHeader(
+          'Cache-Control',
+          isCacheableHtml
+            ? 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400'
+            : 'no-store, max-age=0'
+        );
+        res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
         // Copy other headers from the original response

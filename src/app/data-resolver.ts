@@ -498,6 +498,7 @@ export class DataResolver implements Resolve<EventData | null> {
       // because the outbox model is too slow for SSR social preview generation.
       const profileInfo = decodeProfileFromId(id);
       const isHexPubkey = !profileInfo && this.utilities.isHex(id) && id.length === 64;
+      const isNaddrId = id.startsWith('naddr');
 
       const canFetchDirectRelayEvent =
         !!eventPointer &&
@@ -551,34 +552,11 @@ export class DataResolver implements Resolve<EventData | null> {
         let profileEvent: Event | null = null;
         let relayProfilePicture: string | undefined;
 
-        metadata = await metadataPromise.catch(() => null);
+        let directRelayFetchPromise: Promise<Event | null> | null = null;
+        let profileRelayFetchPromise: Promise<Event | null> | null = null;
 
-        const metadataHasContent = !!metadata?.content?.trim();
-        const metadataHasAuthorIdentity =
-          !!metadata?.author?.profile?.display_name ||
-          !!metadata?.author?.profile?.name ||
-          !!metadata?.author?.profile?.picture;
-        const canSkipRelayFallbacks = metadataHasContent && metadataHasAuthorIdentity;
-
-        if (canSkipRelayFallbacks) {
-          fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
-          fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
-          debugLog(`[SSR] DataResolver(${traceId}): Metadata was sufficient, skipping relay fallback wait`);
-        } else {
-          const elapsedMs = Date.now() - resolveStart;
-          const remainingBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedMs - 250;
-          const relayTimeoutMs = Math.max(500, Math.min(SSR_RELAY_FETCH_TIMEOUT_MS, remainingBudgetMs));
-
-          if (remainingBudgetMs <= 0) {
-            console.warn(`[SSR] DataResolver(${traceId}): No time budget left for relay fallback (elapsed=${elapsedMs}ms)`);
-            fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
-            fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
-          }
-
-          let directRelayFetchPromise: Promise<Event | null> | null = null;
-          let profileRelayFetchPromise: Promise<Event | null> | null = null;
-
-          if (remainingBudgetMs > 0 && eventPointer) {
+        const startRelayFallbackFetches = (relayTimeoutMs: number): void => {
+          if (eventPointer && !directRelayFetchPromise) {
             if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
               const directStart = Date.now();
               directRelayFetchPromise = fetchEventByAddress(
@@ -614,7 +592,7 @@ export class DataResolver implements Resolve<EventData | null> {
             }
           }
 
-          if (remainingBudgetMs > 0 && profileInfo) {
+          if (!profileRelayFetchPromise && profileInfo) {
             const profileStart = Date.now();
             profileRelayFetchPromise = fetchProfileFromRelays(profileInfo.pubkey, profileInfo.relays, relayTimeoutMs)
               .then((result) => {
@@ -627,7 +605,7 @@ export class DataResolver implements Resolve<EventData | null> {
                 console.error(`[SSR] DataResolver(${traceId}): Relay profile fetch failed in ${Date.now() - profileStart}ms:`, error);
                 throw error;
               });
-          } else if (remainingBudgetMs > 0 && isHexPubkey) {
+          } else if (!profileRelayFetchPromise && isHexPubkey) {
             const profileStart = Date.now();
             profileRelayFetchPromise = fetchProfileFromRelays(id, undefined, relayTimeoutMs)
               .then((result) => {
@@ -640,7 +618,7 @@ export class DataResolver implements Resolve<EventData | null> {
                 console.error(`[SSR] DataResolver(${traceId}): Relay profile fetch failed in ${Date.now() - profileStart}ms:`, error);
                 throw error;
               });
-          } else if (remainingBudgetMs > 0 && eventPointer?.author) {
+          } else if (!profileRelayFetchPromise && eventPointer?.author) {
             const profileStart = Date.now();
             profileRelayFetchPromise = fetchProfileFromRelays(eventPointer.author, eventPointer.relays, relayTimeoutMs)
               .then((result) => {
@@ -654,12 +632,48 @@ export class DataResolver implements Resolve<EventData | null> {
                 throw error;
               });
           }
+        };
+
+        if (isNaddrId) {
+          startRelayFallbackFetches(SSR_RELAY_FETCH_TIMEOUT_MS);
+          debugLog(`[SSR] DataResolver(${traceId}): Started naddr relay prefetch in parallel with metadata`);
+        }
+
+        metadata = await metadataPromise.catch(() => null);
+
+        const metadataHasContent = !!metadata?.content?.trim();
+        const metadataHasAuthorIdentity =
+          !!metadata?.author?.profile?.display_name ||
+          !!metadata?.author?.profile?.name ||
+          !!metadata?.author?.profile?.picture;
+        const canSkipRelayFallbacks = metadataHasContent && metadataHasAuthorIdentity;
+
+        if (canSkipRelayFallbacks) {
+          fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
+          fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
+          debugLog(`[SSR] DataResolver(${traceId}): Metadata was sufficient, skipping relay fallback wait`);
+        } else {
+          const elapsedMs = Date.now() - resolveStart;
+          const remainingBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedMs - 250;
+          const relayTimeoutMs = Math.max(500, Math.min(SSR_RELAY_FETCH_TIMEOUT_MS, remainingBudgetMs));
+
+          if (remainingBudgetMs <= 0) {
+            console.warn(`[SSR] DataResolver(${traceId}): No time budget left for relay fallback (elapsed=${elapsedMs}ms)`);
+            fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
+            fetchStatus.relayProfile = fetchStatus.relayProfile === 'pending' ? 'skipped' : fetchStatus.relayProfile;
+          }
+
+          if (remainingBudgetMs > 0) {
+            startRelayFallbackFetches(relayTimeoutMs);
+          }
 
           if (directRelayFetchPromise || profileRelayFetchPromise) {
             // Metadata is missing details — wait for relay fallbacks
+            const directPromise = directRelayFetchPromise as Promise<Event | null> | null;
+            const profilePromise = profileRelayFetchPromise as Promise<Event | null> | null;
             const [relayResult, profileResult] = await Promise.all([
-              directRelayFetchPromise ? directRelayFetchPromise.catch(() => null) : Promise.resolve(null),
-              profileRelayFetchPromise ? profileRelayFetchPromise.catch(() => null) : Promise.resolve(null),
+              directPromise ? directPromise.catch(() => null) : Promise.resolve(null),
+              profilePromise ? profilePromise.catch(() => null) : Promise.resolve(null),
             ]);
 
             directEvent = relayResult;

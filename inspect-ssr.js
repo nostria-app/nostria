@@ -89,14 +89,14 @@ const req = http.request(options, (res) => {
 
   res.on('end', () => {
     console.log(`Status: ${res.statusCode}`);
-    
+
     // Show cache-related headers
     const cacheHeaders = {
       'X-SSR-Cache': res.headers['x-ssr-cache'],
       'X-SSR-Cache-Age': res.headers['x-ssr-cache-age'],
       'Cache-Control': res.headers['cache-control'],
     };
-    
+
     console.log('\nResponse Headers:');
     console.log('=================\n');
     for (const [header, value] of Object.entries(cacheHeaders)) {
@@ -156,7 +156,7 @@ const req = http.request(options, (res) => {
     console.log('===============\n');
     if (transferState && transferState.length > 0) {
       console.log(`✓ Found (${transferState.length} bytes)\n`);
-      
+
       // Try to parse and show content preview
       try {
         const decoded = JSON.parse(decodeURIComponent(transferState));
@@ -197,7 +197,7 @@ const req = http.request(options, (res) => {
     // Bot-specific tips
     console.log('Bot-Specific Notes:');
     console.log('===================\n');
-    
+
     if (botType === 'discord') {
       console.log('Discord embeds use og:title, og:description, og:image');
       console.log('Discord has a strict timeout - make sure SSR responds quickly');

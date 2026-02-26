@@ -230,6 +230,34 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         relayHintsCount: eventPointer.relays?.length || 0,
       });
 
+      const isNaddrRoute = encodedEvent.startsWith('naddr');
+      let relayFetchPromise: Promise<Event | null> | null = null;
+      const startRelayFetch = (timeoutMs: number): void => {
+        if (relayFetchPromise) {
+          return;
+        }
+
+        if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
+          relayFetchPromise = fetchEventByAddress(
+            eventPointer.kind,
+            eventPointer.author,
+            eventPointer.identifier,
+            eventPointer.relays,
+            timeoutMs,
+          );
+          return;
+        }
+
+        if (eventPointer.id) {
+          relayFetchPromise = fetchEventFromRelays(eventPointer.id, eventPointer.relays, timeoutMs);
+        }
+      };
+
+      if (isNaddrRoute) {
+        startRelayFetch(SSR_RELAY_FETCH_TIMEOUT_MS);
+        debugLog(`[SSR] StreamResolver(${traceId}): Started naddr relay prefetch in parallel with metadata`);
+      }
+
       let metadataResponse: Awaited<ReturnType<MetaService['loadSocialMetadata']>> | null = null;
       const metadataStart = Date.now();
 
@@ -299,20 +327,13 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         return data;
       }
 
-      let event: Event | null;
+      if (!relayFetchPromise) {
+        startRelayFetch(relayTimeoutMs);
+      }
 
-      if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
-        // It's an naddr - fetch by kind, pubkey, and d-tag
-        event = await fetchEventByAddress(
-          eventPointer.kind,
-          eventPointer.author,
-          eventPointer.identifier,
-          eventPointer.relays,
-          relayTimeoutMs,
-        );
-      } else if (eventPointer.id) {
-        // It's a nevent - fetch by ID
-        event = await fetchEventFromRelays(eventPointer.id, eventPointer.relays, relayTimeoutMs);
+      let event: Event | null;
+      if (relayFetchPromise) {
+        event = await relayFetchPromise;
       } else {
         console.error('[SSR] StreamResolver: Invalid event pointer format');
         return data;
@@ -363,10 +384,11 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       }
 
       // Extract stream metadata from event tags
-      const titleTag = event.tags.find((tag: string[]) => tag[0] === 'title');
-      const summaryTag = event.tags.find((tag: string[]) => tag[0] === 'summary');
-      const imageTag = event.tags.find((tag: string[]) => tag[0] === 'image');
-      const streamingTag = event.tags.find((tag: string[]) => tag[0] === 'streaming');
+      const resolvedEvent = event as Event;
+      const titleTag = resolvedEvent.tags.find((tag: string[]) => tag[0] === 'title');
+      const summaryTag = resolvedEvent.tags.find((tag: string[]) => tag[0] === 'summary');
+      const imageTag = resolvedEvent.tags.find((tag: string[]) => tag[0] === 'image');
+      const streamingTag = resolvedEvent.tags.find((tag: string[]) => tag[0] === 'streaming');
 
       const title = titleTag?.[1] || 'Live Stream';
       const description = summaryTag?.[1] || 'Watch this live stream on Nostria';
@@ -377,7 +399,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       data.description = description;
       data.image = image;
       data.streamUrl = streamUrl;
-      data.event = event;
+      data.event = resolvedEvent;
 
       // Update meta tags for social sharing
       metaService.updateSocialMetadata({
@@ -385,7 +407,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         description,
         image: image || '/assets/nostria-social.jpg',
         url: getCanonicalStreamUrl(encodedEvent),
-        publishedAtSeconds: event.created_at,
+        publishedAtSeconds: resolvedEvent.created_at,
       });
 
       console.log(`[SSR] StreamResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
