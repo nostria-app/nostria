@@ -45,6 +45,14 @@
   ],
   "eslint.format.enable": true,
   "chat.tools.terminal.autoApprove": {
-    "dir": true
+    "dir": true,
+    "/^node dist/app/server/server\\.mjs$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^node scripts/ssr-batch-validate\\.js$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
   }
 }

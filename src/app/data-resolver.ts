@@ -78,7 +78,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[], time
 
     const durationMs = Date.now() - startedAt;
     if (didTimeout) {
-      console.warn(`[SSR] DataResolver: Event relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+      debugLog(`[SSR] DataResolver: Event relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
     } else if (event) {
       debugLog(`[SSR] DataResolver: Event relay fetch resolved in ${durationMs}ms`, { kind: event.kind, created_at: event.created_at });
     } else {
@@ -129,7 +129,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
 
     const durationMs = Date.now() - startedAt;
     if (didTimeout) {
-      console.warn(`[SSR] DataResolver: Address relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+      debugLog(`[SSR] DataResolver: Address relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
     } else if (event) {
       debugLog(`[SSR] DataResolver: Address relay fetch resolved in ${durationMs}ms`, { kind: event.kind, created_at: event.created_at });
     } else {
@@ -179,7 +179,7 @@ async function fetchProfileFromRelays(pubkey: string, relayHints?: string[], tim
 
     const durationMs = Date.now() - startedAt;
     if (didTimeout) {
-      console.warn(`[SSR] DataResolver: Profile relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+      debugLog(`[SSR] DataResolver: Profile relay fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
     } else if (event) {
       debugLog(`[SSR] DataResolver: Profile relay fetch resolved in ${durationMs}ms`, { created_at: event.created_at });
     } else {
@@ -498,12 +498,12 @@ export class DataResolver implements Resolve<EventData | null> {
       // because the outbox model is too slow for SSR social preview generation.
       const profileInfo = decodeProfileFromId(id);
       const isHexPubkey = !profileInfo && this.utilities.isHex(id) && id.length === 64;
-      const isNaddrId = id.startsWith('naddr');
-
       const canFetchDirectRelayEvent =
         !!eventPointer &&
         ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id);
       const canFetchRelayProfile = !!profileInfo || isHexPubkey || !!eventPointer?.author;
+      const isNaddrId = id.startsWith('naddr');
+      const shouldParallelPrefetch = canFetchDirectRelayEvent || canFetchRelayProfile;
 
       const fetchStatus: {
         metadata: 'pending' | 'success' | 'empty' | 'error';
@@ -634,9 +634,11 @@ export class DataResolver implements Resolve<EventData | null> {
           }
         };
 
-        if (isNaddrId) {
+        if (shouldParallelPrefetch) {
           startRelayFallbackFetches(SSR_RELAY_FETCH_TIMEOUT_MS);
-          debugLog(`[SSR] DataResolver(${traceId}): Started naddr relay prefetch in parallel with metadata`);
+          debugLog(
+            `[SSR] DataResolver(${traceId}): Started relay prefetch in parallel with metadata (route=${isNaddrId ? 'naddr' : 'standard'})`
+          );
         }
 
         metadata = await metadataPromise.catch(() => null);

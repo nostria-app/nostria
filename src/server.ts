@@ -92,13 +92,15 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
   const lowQualityMarkers = [
     'loading nostr event content',
     'content not available',
+    'no description available',
     'error loading event content',
     'could not load preview',
     'loading...',
   ];
 
   const combined = `${ogTitle} ${ogDescription} ${twitterTitle} ${twitterDescription}`.toLowerCase();
-  return !lowQualityMarkers.some(marker => combined.includes(marker));
+  const genericTitle = ogTitle.toLowerCase() === 'nostr event' || twitterTitle.toLowerCase() === 'nostr event';
+  return !genericTitle && !lowQualityMarkers.some(marker => combined.includes(marker));
 }
 
 // Cache for SSR responses (keyed by URL path)

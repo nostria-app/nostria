@@ -67,7 +67,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[], time
 
     const durationMs = Date.now() - startedAt;
     if (didTimeout) {
-      console.warn(`[SSR] StreamResolver: Relay event fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+      debugLog(`[SSR] StreamResolver: Relay event fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
     } else {
       debugLog('[SSR] StreamResolver: Relay event fetch completed', {
         durationMs,
@@ -122,7 +122,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
 
     const durationMs = Date.now() - startedAt;
     if (didTimeout) {
-      console.warn(`[SSR] StreamResolver: Relay address fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
+      debugLog(`[SSR] StreamResolver: Relay address fetch timed out after ${durationMs}ms (timeout ${timeoutMs}ms)`);
     } else {
       debugLog('[SSR] StreamResolver: Relay address fetch completed', {
         durationMs,
@@ -231,6 +231,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       });
 
       const isNaddrRoute = encodedEvent.startsWith('naddr');
+      const canRelayPrefetch = !!(eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) || !!eventPointer.id;
       let relayFetchPromise: Promise<Event | null> | null = null;
       const startRelayFetch = (timeoutMs: number): void => {
         if (relayFetchPromise) {
@@ -253,9 +254,11 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
         }
       };
 
-      if (isNaddrRoute) {
+      if (canRelayPrefetch) {
         startRelayFetch(SSR_RELAY_FETCH_TIMEOUT_MS);
-        debugLog(`[SSR] StreamResolver(${traceId}): Started naddr relay prefetch in parallel with metadata`);
+        debugLog(
+          `[SSR] StreamResolver(${traceId}): Started relay prefetch in parallel with metadata (route=${isNaddrRoute ? 'naddr' : 'standard'})`
+        );
       }
 
       let metadataResponse: Awaited<ReturnType<MetaService['loadSocialMetadata']>> | null = null;
