@@ -344,59 +344,6 @@ function extractProfilePictureFromEvent(profileEvent: Event): string | undefined
   }
 }
 
-function canonicalizeNevent(encoded: string): string {
-  try {
-    const decoded = nip19.decode(encoded);
-    if (decoded.type !== 'nevent') {
-      return encoded;
-    }
-
-    return nip19.neventEncode({
-      id: decoded.data.id,
-      author: decoded.data.author,
-      kind: decoded.data.kind,
-    });
-  } catch {
-    return encoded;
-  }
-}
-
-function canonicalizeNaddr(encoded: string): string {
-  try {
-    const decoded = nip19.decode(encoded);
-    if (decoded.type !== 'naddr') {
-      return encoded;
-    }
-
-    return nip19.naddrEncode({
-      kind: decoded.data.kind,
-      pubkey: decoded.data.pubkey,
-      identifier: decoded.data.identifier,
-    });
-  } catch {
-    return encoded;
-  }
-}
-
-function buildCanonicalUrl(routePath: string, id: string): string | undefined {
-  if (routePath.startsWith('e/')) {
-    const encoded = id.startsWith('nevent') ? canonicalizeNevent(id) : id;
-    return `https://nostria.app/e/${encoded}`;
-  }
-
-  if (routePath.startsWith('a/')) {
-    const encoded = id.startsWith('naddr') ? canonicalizeNaddr(id) : id;
-    return `https://nostria.app/a/${encoded}`;
-  }
-
-  if (routePath.startsWith('music/song') || routePath.startsWith('music/playlist')) {
-    const encoded = id.startsWith('naddr') ? canonicalizeNaddr(id) : id;
-    return `https://nostria.app/a/${encoded}`;
-  }
-
-  return undefined;
-}
-
 export interface EventData {
   title: string;
   description: string;
@@ -555,12 +502,6 @@ export class DataResolver implements Resolve<EventData | null> {
       const isProfileRoute = routePath.startsWith('p/') || routePath.startsWith('u/') || routePath.startsWith('music/artist');
       const isHexPubkey = !profileInfo && isProfileRoute && this.utilities.isHex(id) && id.length === 64;
       const isHexEventId = !eventPointer && routePath.startsWith('e/') && this.utilities.isHex(id) && id.length === 64;
-      const canonicalUrl = buildCanonicalUrl(routePath, id);
-      const shouldUseArticleType =
-        routePath.startsWith('e/') ||
-        routePath.startsWith('a/') ||
-        routePath.startsWith('music/song') ||
-        routePath.startsWith('music/playlist');
       const canFetchDirectRelayEvent =
         (!!eventPointer &&
           ((!!eventPointer.kind && eventPointer.identifier !== undefined && !!eventPointer.author) || !!eventPointer.id)) ||
@@ -740,16 +681,17 @@ export class DataResolver implements Resolve<EventData | null> {
 
             if (!data.metadata) {
               // Use relay profile data when no profile metadata has been set yet
-              console.log('[SSR] DataResolver: Using relay-fetched profile for', profileInfo?.pubkey || id);
+              const resolvedProfilePubkey = profileInfo?.pubkey || eventPointer?.author || (isHexPubkey ? id : undefined);
+              console.log('[SSR] DataResolver: Using relay-fetched profile for', resolvedProfilePubkey || id);
 
               const displayName = relayProfile.profile.display_name || relayProfile.profile.name || 'Nostr User';
               const about = relayProfile.profile.about || '';
               const description = about.length > 200 ? about.substring(0, 200) + '...' : about || 'Nostr profile';
 
               // Determine canonical URL for the profile
-              const pubkey = profileInfo?.pubkey || id;
-              const npub = nip19.npubEncode(pubkey);
-              const targetUrl = `https://nostria.app/p/${npub}`;
+              const targetUrl = resolvedProfilePubkey
+                ? `https://nostria.app/p/${nip19.npubEncode(resolvedProfilePubkey)}`
+                : undefined;
 
               this.metaService.updateSocialMetadata({
                 title: displayName,
@@ -785,8 +727,6 @@ export class DataResolver implements Resolve<EventData | null> {
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
             publishedAtSeconds: directEvent.created_at,
-            url: canonicalUrl,
-            type: shouldUseArticleType ? 'article' : 'website',
           });
 
           data.event = {
@@ -801,8 +741,6 @@ export class DataResolver implements Resolve<EventData | null> {
             title: data.title,
             description: data.description,
             image: 'https://nostria.app/assets/nostria-social.jpg',
-            url: canonicalUrl,
-            type: shouldUseArticleType ? 'article' : 'website',
           });
         }
       } catch (error) {
@@ -814,8 +752,6 @@ export class DataResolver implements Resolve<EventData | null> {
           title: data.title,
           description: data.description,
           image: 'https://nostria.app/assets/nostria-social.jpg',
-          url: canonicalUrl,
-          type: shouldUseArticleType ? 'article' : 'website',
         });
       }
 

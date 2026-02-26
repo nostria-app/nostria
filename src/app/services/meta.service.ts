@@ -109,9 +109,7 @@ export class MetaService {
     if (config.url) {
       this.meta.updateTag({ property: 'og:url', content: config.url }, 'property="og:url"');
     }
-    if (config.type) {
-      this.meta.updateTag({ property: 'og:type', content: config.type }, 'property="og:type"');
-    }
+    this.meta.updateTag({ property: 'og:type', content: config.type || 'article' }, 'property="og:type"');
 
     this.meta.updateTag({ property: 'og:site_name', content: 'Nostria' }, 'property="og:site_name"');
 

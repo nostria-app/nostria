@@ -438,6 +438,7 @@ app.use(async (req, res, next) => {
   <link rel="shortcut icon" type="image/x-icon" href="https://nostria.app/favicon.ico">
   <meta name="description" content="View this content on Nostria, your decentralized social network">
   <meta property="og:site_name" content="Nostria">
+  <meta property="og:type" content="article">
   <meta property="og:title" content="Nostria - Decentralized Social Network">
   <meta property="og:description" content="View this content on Nostria, your decentralized social network">
   <meta property="og:image" content="https://nostria.app/assets/nostria-social.jpg">
