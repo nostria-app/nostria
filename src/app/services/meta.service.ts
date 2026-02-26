@@ -19,8 +19,8 @@ export interface MetadataResponse {
 }
 
 // Timeout for metadata API requests (in milliseconds)
-// Social media bots typically have short timeouts, so we need to respond quickly
-const METADATA_REQUEST_TIMEOUT_MS = 3500;
+// Keep this low enough to allow relay fallback within SSR total budget.
+const METADATA_REQUEST_TIMEOUT_MS = 1800;
 
 @Injectable({
   providedIn: 'root',
@@ -193,6 +193,7 @@ export class MetaService {
     let imageUrl = '';
     let url = '';
     let targetUrl = '';
+    const fallbackCopy = this.getFallbackSocialCopy(addr);
 
     if (addr.startsWith('nevent')) {
       // This API will parse out the event ID and author from the Nostr event address.
@@ -255,6 +256,10 @@ export class MetaService {
       }
     }
 
+    if (!targetUrl) {
+      targetUrl = fallbackCopy.url;
+    }
+
     // Fetch metadata with timeout to ensure fast response for social media bots
     const data = await firstValueFrom(
       this.http.get<MetadataResponse>(url).pipe(
@@ -302,12 +307,12 @@ export class MetaService {
     if (eventTitle) {
       title = eventTitle;
     } else {
-      title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
+      title = data.author?.profile?.display_name || data.author?.profile?.name || fallbackCopy.title;
     }
 
     // Extract summary/description - prefer 'summary' tag (NIP-23 articles) over content
     const eventSummary = this.extractTagValue(data.tags, 'summary');
-    const fullDescription = eventSummary || data.content || 'No description available';
+    const fullDescription = eventSummary || data.content?.trim() || fallbackCopy.description;
     description =
       fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 
@@ -322,6 +327,38 @@ export class MetaService {
     });
 
     return data;
+  }
+
+  private getFallbackSocialCopy(addr: string): { title: string; description: string; url: string } {
+    if (addr.startsWith('nevent')) {
+      return {
+        title: 'Nostr Note on Nostria',
+        description: 'Open this Nostr note on Nostria, the decentralized social app.',
+        url: `https://nostria.app/e/${addr}`,
+      };
+    }
+
+    if (addr.startsWith('naddr')) {
+      return {
+        title: 'Nostr Article on Nostria',
+        description: 'Open this Nostr article on Nostria, the decentralized social app.',
+        url: `https://nostria.app/a/${addr}`,
+      };
+    }
+
+    if (addr.startsWith('nprofile') || addr.startsWith('npub')) {
+      return {
+        title: 'Nostr Profile on Nostria',
+        description: 'View this Nostr profile on Nostria, the decentralized social app.',
+        url: `https://nostria.app/p/${addr}`,
+      };
+    }
+
+    return {
+      title: 'Nostria - Decentralized Social',
+      description: 'Open this content on Nostria, the decentralized social app.',
+      url: 'https://nostria.app',
+    };
   }
 
   /**

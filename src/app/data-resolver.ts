@@ -369,8 +369,8 @@ export class DataResolver implements Resolve<EventData | null> {
     }
 
     const defaultData: EventData = {
-      title: 'Nostr Event',
-      description: 'Loading Nostr event content...',
+      title: 'Nostr Post on Nostria',
+      description: 'Open this content on Nostria, the decentralized social app.',
     };
 
     // Wrap resolution in a timeout to ensure fast response for social bots
@@ -646,12 +646,15 @@ export class DataResolver implements Resolve<EventData | null> {
 
         metadata = await metadataPromise.catch(() => null);
 
+        const metadataTags = metadata?.tags || [];
         const metadataHasContent = !!metadata?.content?.trim();
+        const metadataHasTagTitle = !!metadataTags.find((tag: string[]) => tag[0] === 'title' && tag[1]?.trim());
+        const metadataHasTagSummary = !!metadataTags.find((tag: string[]) => tag[0] === 'summary' && tag[1]?.trim());
         const metadataHasAuthorIdentity =
           !!metadata?.author?.profile?.display_name ||
           !!metadata?.author?.profile?.name ||
           !!metadata?.author?.profile?.picture;
-        const canSkipRelayFallbacks = metadataHasContent && metadataHasAuthorIdentity;
+        const canSkipRelayFallbacks = metadataHasContent || metadataHasTagTitle || metadataHasTagSummary || metadataHasAuthorIdentity;
 
         if (canSkipRelayFallbacks) {
           fetchStatus.relayEvent = fetchStatus.relayEvent === 'pending' ? 'skipped' : fetchStatus.relayEvent;
@@ -770,10 +773,10 @@ export class DataResolver implements Resolve<EventData | null> {
           // Use content from direct relay fetch
           const description = directEvent.content?.length > 200
             ? directEvent.content.substring(0, 200) + '...'
-            : directEvent.content || 'No description available';
+            : directEvent.content || 'Open this Nostr post on Nostria, the decentralized social app.';
 
           const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
-          const title = titleTag?.[1] || metadata?.author?.profile?.display_name || metadata?.author?.profile?.name || 'Nostr Event';
+          const title = titleTag?.[1] || metadata?.author?.profile?.display_name || metadata?.author?.profile?.name || 'Nostr Post on Nostria';
 
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
@@ -802,13 +805,13 @@ export class DataResolver implements Resolve<EventData | null> {
             data.metadata = metadata.author;
           }
         } else if (!data.metadata) {
-          data.title = 'Nostr Event';
-          data.description = 'Content not available';
+          data.title = 'Nostr Post on Nostria';
+          data.description = 'Open this content on Nostria, the decentralized social app.';
         }
       } catch (error) {
         console.error(`[SSR] DataResolver(${traceId}): Failed to load metadata:`, error);
-        data.title = 'Nostr Event (Error)';
-        data.description = 'Error loading event content';
+        data.title = 'Nostr Post on Nostria';
+        data.description = 'Open this content on Nostria, the decentralized social app.';
       }
 
       console.log(`[SSR] DataResolver(${traceId}): Resolve finished in ${Date.now() - resolveStart}ms`);
