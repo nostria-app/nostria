@@ -341,7 +341,7 @@ export class ReactionButtonComponent {
       this.openMenu();
       return;
     }
-    this.addReaction(defaultEmoji);
+    this.addReaction(defaultEmoji, false);
   }
 
   /**
@@ -563,9 +563,10 @@ export class ReactionButtonComponent {
     });
   }
 
-  async addReaction(emoji: string) {
-    // Close the menu immediately after selection
-    this.closeMenu();
+  async addReaction(emoji: string, closePicker = true) {
+    if (closePicker) {
+      this.closeMenu();
+    }
 
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
