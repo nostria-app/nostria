@@ -139,6 +139,20 @@
         </div>
         }
 
+        <!-- Hashtags -->
+        @if (hashtags().length > 0 && !showAdvancedOptions()) {
+        <div class="hashtags-section">
+          <span class="hashtags-label">Tags:</span>
+          <mat-chip-set class="hashtags-chips">
+            @for (hashtag of hashtags(); track hashtag) {
+            <mat-chip>
+              #{{ hashtag }}
+            </mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+        }
+
         <!-- Mention Autocomplete positioned relative to textarea -->
         @if (mentionConfig()) {
         <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
@@ -325,20 +339,6 @@
       <app-content class="preview-content" [content]="previewContent()"
         [preloadedEvents]="previewEventsMap()"></app-content>
       <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
-    </div>
-    }
-
-    <!-- Hashtags -->
-    @if (hashtags().length > 0 && !showAdvancedOptions()) {
-    <div class="hashtags-section">
-      <span class="hashtags-label">Tags:</span>
-      <mat-chip-set class="hashtags-chips">
-        @for (hashtag of hashtags(); track hashtag) {
-        <mat-chip>
-          #{{ hashtag }}
-        </mat-chip>
-        }
-      </mat-chip-set>
     </div>
     }
 

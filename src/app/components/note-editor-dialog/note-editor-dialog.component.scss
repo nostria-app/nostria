@@ -337,6 +337,10 @@
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
+
+      .mat-mdc-chip {
+        min-height: 26px;
+      }
     }
   }
 
@@ -372,6 +376,42 @@
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
+
+      .mat-mdc-chip {
+        min-height: 26px;
+      }
+    }
+  }
+
+  @media (max-height: 560px) {
+    .mentions-section {
+      margin-top: 4px;
+      margin-bottom: 6px;
+
+      .mentions-chips {
+        gap: 2px;
+
+        .mat-mdc-chip {
+          min-height: 22px;
+        }
+      }
+    }
+
+    .hashtags-section {
+      margin-bottom: 6px;
+
+      .hashtags-label {
+        margin-bottom: 2px;
+        font-size: 11px;
+      }
+
+      .hashtags-chips {
+        gap: 2px;
+
+        .mat-mdc-chip {
+          min-height: 22px;
+        }
+      }
     }
   }
 
