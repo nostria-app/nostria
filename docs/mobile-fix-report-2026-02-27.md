@@ -1,9 +1,11 @@
 # Mobile Fix Report — 2026-02-27
 
 ## Scope
+
 Deep authenticated mobile audit using iPhone viewport emulation (`390x844`) across core and deep flows.
 
 ## Deep Flows Audited
+
 - `/messages/1`
 - `/p/:id` timeline and profile tabs
 - `/settings/about`
@@ -17,11 +19,13 @@ Additional broader route sweep was also run in this session (`/`, `/discover`, `
 ## Key Fixes Applied
 
 ### Global / shared interaction fixes
+
 - Increased toolbar/search and shared navigation tap targets for mobile.
 - Improved home footer link tap areas.
 - Improved people filter input touch height.
 
 ### Deep-flow fixes from this pass
+
 - Event quick reaction/action ergonomics:
   - Mobile sizing for quick emoji buttons.
   - Mobile sizing for action icon containers (reaction/reply/zap internals).
@@ -40,6 +44,7 @@ Additional broader route sweep was also run in this session (`/`, `/discover`, `
   - Increased selection checkbox touch target.
 
 ## Files Updated (this full optimization run)
+
 - `src/app/app.scss`
 - `src/app/components/navigation/navigation.scss`
 - `src/app/pages/home/home.component.scss`
@@ -62,21 +67,26 @@ Additional broader route sweep was also run in this session (`/`, `/discover`, `
 - `src/app/pages/profile/profile-header/profile-header.component.scss`
 
 ## Screenshots Captured
+
 Saved under `test-results/` with names starting:
+
 - `mobile-audit-*`
 - `mobile-deep-*`
 
 Key deep-flow outputs include:
+
 - `mobile-deep-messages-thread.png`
 - `mobile-deep-profile-final-3.png`
 - `mobile-deep-settings-about-final.png`
 - `mobile-deep-article-create.png`
 
 ## Current Status
+
 - No horizontal overflow detected on audited routes after fixes.
 - No sub-40px interactive controls remain in audited deep flows, except one non-actionable compact metadata span detected by automated selector heuristics.
 
 ## Suggested Next Pass
+
 - Run on real devices (iOS Safari + Android Chrome) for gesture/keyboard behavior.
 - Validate modal/dialog and menu overlays with virtual keyboard open.
 - Add an automated Playwright assertion to catch sub-40px interactive controls in key routes.

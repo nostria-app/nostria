@@ -286,6 +286,7 @@
   }
 
   @media (max-width: 700px) {
+
     .user-profile-name-link,
     .user-profile-npub-link {
       min-height: 40px;
@@ -307,8 +308,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
-    -webkit-text-size-adjust: 100%; /* Prevent iOS Safari from auto-adjusting font size */
-    text-size-adjust: 100%; /* Standard property for other browsers */
+    -webkit-text-size-adjust: 100%;
+    /* Prevent iOS Safari from auto-adjusting font size */
+    text-size-adjust: 100%;
+    /* Standard property for other browsers */
   }
 
   .user-profile-npub>span,
@@ -345,8 +348,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    -webkit-text-size-adjust: 100%; /* Prevent iOS Safari from auto-adjusting font size */
-    text-size-adjust: 100%; /* Standard property for other browsers */
+    -webkit-text-size-adjust: 100%;
+    /* Prevent iOS Safari from auto-adjusting font size */
+    text-size-adjust: 100%;
+    /* Standard property for other browsers */
   }
 
   .user-profile-about {

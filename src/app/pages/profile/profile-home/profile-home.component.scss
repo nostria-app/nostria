@@ -17,6 +17,38 @@
   }
 }
 
+@media (max-width: 700px) {
+  .profile-tabs {
+    ::ng-deep .mat-mdc-tab-header-pagination {
+      display: none;
+    }
+
+    ::ng-deep .mat-mdc-tab-link-container {
+      overflow: visible;
+    }
+
+    ::ng-deep .mat-mdc-tab-list {
+      overflow: visible;
+    }
+
+    ::ng-deep .mat-mdc-tab-links {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      justify-content: stretch;
+      overflow: visible;
+    }
+
+    ::ng-deep .mat-mdc-tab-link {
+      flex: 1 1 25%;
+      min-width: 0;
+      justify-content: center;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+  }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
