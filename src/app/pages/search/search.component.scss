@@ -419,31 +419,43 @@ mat-divider {
 // Mobile styles
 @media (max-width: 599px) {
   .search-page {
-    padding: 16px;
+    padding: 8px;
   }
 
   .search-controls {
-    padding: 16px;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 12px;
   }
 
   .search-input-container {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'input clear'
+      'button button';
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
 
     .search-icon {
       display: none;
     }
 
     .search-input {
+      grid-area: input;
       width: 100%;
-      order: 1;
+      min-width: 0;
     }
 
     .clear-button {
-      order: 2;
+      grid-area: clear;
+      justify-self: end;
     }
 
     .search-button {
-      order: 3;
+      grid-area: button;
       width: 100%;
       margin-top: 8px;
     }
