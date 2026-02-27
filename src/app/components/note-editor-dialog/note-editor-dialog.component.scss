@@ -432,6 +432,61 @@
 
   // Note: .action-container styles moved to custom-dialog.component.scss
   // because they need to apply to projected content via ::ng-deep
+
+  .action-container {
+    .mobile-actions-trigger {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px),
+  (max-height: 700px) {
+    .action-container:not(.inline-actions) {
+      gap: 8px;
+      flex-wrap: nowrap;
+
+      .left-actions {
+        flex-wrap: nowrap;
+
+        .action-priority-low {
+          display: none;
+        }
+
+        .mobile-actions-trigger {
+          display: inline-flex;
+        }
+      }
+
+      .right-actions {
+        gap: 6px;
+
+        .publish-button {
+          .publish-note-word {
+            display: none;
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 500px),
+  (max-height: 620px) {
+    .action-container:not(.inline-actions) {
+      .left-actions {
+        .action-priority-medium {
+          display: none;
+        }
+      }
+    }
+  }
+
+  @media (max-height: 560px) {
+    .action-container:not(.inline-actions) {
+      .right-actions {
+        gap: 4px;
+      }
+    }
+  }
 }
 
 // Button disabled visibility enhancement

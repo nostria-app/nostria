@@ -369,19 +369,20 @@
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       @if (!inlineMode()) {
-      <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
-        [disabled]="showAdvancedOptions()" [class.button-disabled-visible]="showAdvancedOptions()"
-        matTooltip="Toggle preview">
+      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="togglePreview()"
+        [color]="showPreview() ? 'primary' : ''" [disabled]="showAdvancedOptions()"
+        [class.button-disabled-visible]="showAdvancedOptions()" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty() || showAdvancedOptions()"
+      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="clearDraft()"
+        [disabled]="!isDirty() || showAdvancedOptions()"
         [class.button-disabled-visible]="!isDirty() || showAdvancedOptions()" matTooltip="Clear draft">
         <mat-icon>delete_sweep</mat-icon>
       </button>
       }
 
       <!-- Media button (shown in both dialog and inline modes) -->
-      <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu"
+      <button mat-icon-button type="button" class="desktop-action action-priority-high" [matMenuTriggerFor]="mediaMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add media">
         <mat-icon>perm_media</mat-icon>
@@ -399,14 +400,14 @@
 
       <!-- Emoji picker button (shown in both dialog and inline modes) -->
       @if (layout.isHandset()) {
-      <button mat-icon-button type="button"
+      <button mat-icon-button type="button" class="desktop-action action-priority-high"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji"
         (click)="openEmojiPickerDialog()">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       } @else {
-      <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu"
+      <button mat-icon-button type="button" class="desktop-action action-priority-high" [matMenuTriggerFor]="emojiMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
@@ -417,7 +418,8 @@
       }
 
       <!-- Dictation button (shown in both dialog and inline modes) -->
-      <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium" (click)="toggleRecording()"
+        [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
@@ -430,7 +432,7 @@
         }
       </button>
       @if (recordingHistory.length > 0) {
-      <button mat-icon-button type="button" (click)="undoLastRecording()"
+      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         matTooltip="Undo last recording">
@@ -439,7 +441,7 @@
       }
 
       @if (!inlineMode()) {
-      <button mat-icon-button type="button" [matMenuTriggerFor]="aiMenu"
+      <button mat-icon-button type="button" class="desktop-action action-priority-low" [matMenuTriggerFor]="aiMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="AI Tools">
         <mat-icon>psychology</mat-icon>
@@ -459,10 +461,83 @@
         </button>
       </mat-menu>
 
-      <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
-        [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
+        (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
+        matTooltip="Advanced options">
         <mat-icon>settings</mat-icon>
       </button>
+
+      <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
+        [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
+        <mat-icon>more_horiz</mat-icon>
+      </button>
+
+      <mat-menu #mobileActionsMenu="matMenu">
+        <button mat-menu-item (click)="togglePreview()" [disabled]="showAdvancedOptions()">
+          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <span>{{ showPreview() ? 'Hide preview' : 'Show preview' }}</span>
+        </button>
+
+        <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty() || showAdvancedOptions()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Clear draft</span>
+        </button>
+
+        <button mat-menu-item (click)="openFileDialog()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>upload</mat-icon>
+          <span>Upload media</span>
+        </button>
+
+        <button mat-menu-item (click)="openMediaChooser()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>photo_library</mat-icon>
+          <span>Choose from library</span>
+        </button>
+
+        <button mat-menu-item (click)="openEmojiPickerDialog()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>sentiment_satisfied</mat-icon>
+          <span>Emoji</span>
+        </button>
+
+        <button mat-menu-item (click)="toggleRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
+            }}</mat-icon>
+          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
+        </button>
+
+        @if (recordingHistory.length > 0) {
+        <button mat-menu-item (click)="undoLastRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon>undo</mat-icon>
+          <span>Undo last recording</span>
+        </button>
+        }
+
+        <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
+          <mat-icon>auto_awesome</mat-icon>
+          <span>Generate Text</span>
+        </button>
+
+        <button mat-menu-item (click)="openAiDialog('translate')"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>translate</mat-icon>
+          <span>Translate</span>
+        </button>
+
+        <button mat-menu-item (click)="openAiDialog('sentiment')"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>mood</mat-icon>
+          <span>Sentiment Analysis</span>
+        </button>
+
+        <button mat-menu-item (click)="toggleAdvancedOptions()">
+          <mat-icon>settings</mat-icon>
+          <span>{{ showAdvancedOptions() ? 'Hide advanced options' : 'Advanced options' }}</span>
+        </button>
+      </mat-menu>
       }
     </div>
 
@@ -488,7 +563,12 @@
         </ng-container>
         } @else {
         <ng-container>
-          {{ inlineMode() ? 'Reply' : 'Publish Note' }}
+          @if (inlineMode()) {
+          Reply
+          } @else {
+          <span>Publish</span>
+          <span class="publish-note-word"> Note</span>
+          }
         </ng-container>
         }
       </button>
