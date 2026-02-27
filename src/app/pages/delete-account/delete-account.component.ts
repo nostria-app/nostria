@@ -11,7 +11,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatRadioModule } from '@angular/material/radio';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,7 +22,6 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DatabaseService } from '../../services/database.service';
 import { PublishService } from '../../services/publish.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { RelaysService } from '../../services/relays/relays';
 import { LoggerService } from '../../services/logger.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
@@ -38,8 +36,6 @@ interface EventKindInfo {
 
 type DeletionState = 'idle' | 'deleting' | 'completed' | 'vanishing';
 
-/** NIP-62 vanish scope: targeted (user's relays only) or global (ALL_RELAYS) */
-type VanishScope = 'targeted' | 'global';
 type DeleteAccountSource = 'accounts' | 'privacy';
 
 @Component({
@@ -55,7 +51,6 @@ type DeleteAccountSource = 'accounts' | 'privacy';
     MatDividerModule,
     MatProgressBarModule,
     MatDialogModule,
-    MatRadioModule,
     MatExpansionModule,
     NPubPipe,
     UserProfileComponent,
@@ -75,7 +70,6 @@ export class DeleteAccountComponent implements OnInit {
   private readonly databaseService = inject(DatabaseService);
   private readonly publishService = inject(PublishService);
   private readonly accountRelay = inject(AccountRelayService);
-  private readonly relaysService = inject(RelaysService);
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -96,7 +90,6 @@ export class DeleteAccountComponent implements OnInit {
   deletionState = signal<DeletionState>('idle');
 
   // NIP-62 vanish signals
-  vanishScope = signal<VanishScope>('global');
   vanishReason = signal('');
   vanishRelayCount = signal(0);
   vanishSuccessCount = signal(0);
@@ -370,10 +363,10 @@ export class DeleteAccountComponent implements OnInit {
   /**
    * NIP-62: Request to Vanish
    *
-   * Creates and publishes a kind 62 event requesting relays to delete all data
-   * from this pubkey. Supports two modes:
-   * - Targeted: sends to the user's configured relays only, tagging each relay URL
-   * - Global: tags `ALL_RELAYS` and broadcasts to as many relays as possible
+    * Creates and publishes a kind 62 event requesting relays to delete all data
+    * from this pubkey, using a global request tag:
+    * - tags: [["relay", "ALL_RELAYS"]]
+    * - publish targets: user's configured relays only
    */
   async requestToVanish() {
     const currentAccount = this.currentAccount();
@@ -392,14 +385,11 @@ export class DeleteAccountComponent implements OnInit {
       return;
     }
 
-    const scope = this.vanishScope();
-    const scopeLabel = scope === 'global' ? 'ALL relays (global)' : 'your configured relays';
-
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Request to Vanish (NIP-62)',
-        message: `This will broadcast a Request to Vanish event to ${scopeLabel}. ` +
+        message: 'This will send a Global Request to Vanish event (relay tag: ALL_RELAYS) to your configured relays. ' +
           'Compliant relays will permanently delete ALL your events and block re-broadcast. ' +
           'This is irreversible. Are you sure?',
         confirmText: 'Request to Vanish',
@@ -419,26 +409,13 @@ export class DeleteAccountComponent implements OnInit {
 
     try {
       const reason = this.vanishReason().trim();
-
-      // Build the relay tag list and determine broadcast targets
-      let relayTags: string[];
-      let broadcastRelayUrls: string[];
-
-      if (scope === 'global') {
-        // Global vanish: tag ALL_RELAYS, broadcast to every relay we know about
-        relayTags = ['ALL_RELAYS'];
-        broadcastRelayUrls = this.collectAllKnownRelayUrls();
-      } else {
-        // Targeted vanish: tag each of the user's configured relays, send only to those
-        const userRelays = this.accountRelay.getRelayUrls();
-        relayTags = userRelays;
-        broadcastRelayUrls = userRelays;
-      }
+      const relayTags = ['ALL_RELAYS'];
+      const broadcastRelayUrls = this.accountRelay.getRelayUrls();
 
       this.vanishRelayCount.set(broadcastRelayUrls.length);
 
       if (broadcastRelayUrls.length === 0) {
-        this.showMessage('No relays found to send the vanish request to');
+        this.showMessage('No configured relays found to send the vanish request to');
         this.deletionState.set('idle');
         return;
       }
@@ -494,26 +471,6 @@ export class DeleteAccountComponent implements OnInit {
     }
   }
 
-  /**
-   * Collect all relay URLs we know about: the user's relays + all relays with stats.
-   * Used for global vanish to maximize broadcast reach.
-   */
-  private collectAllKnownRelayUrls(): string[] {
-    const allUrls = new Set<string>();
-
-    // User's own configured relays
-    for (const url of this.accountRelay.getRelayUrls()) {
-      allUrls.add(url);
-    }
-
-    // All relays we've seen (from relay stats tracking)
-    for (const [url] of this.relaysService.getAllRelayStats()) {
-      allUrls.add(url);
-    }
-
-    return Array.from(allUrls);
-  }
-
   async signOut() {
     await this.nostrService.logout();
     this.router.navigate(['/']);
@@ -530,7 +487,6 @@ export class DeleteAccountComponent implements OnInit {
     this.vanishFailCount.set(0);
     this.vanishRelayCount.set(0);
     this.vanishReason.set('');
-    this.vanishScope.set('global');
     this.deleteForm.reset();
     this.scanUserEvents();
   }

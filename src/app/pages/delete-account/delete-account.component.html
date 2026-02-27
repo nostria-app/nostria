@@ -234,6 +234,11 @@
           and block future re-broadcasts. This is a stronger signal than individual NIP-09 deletions.
         </p>
 
+        <p class="section-description">
+          This always sends a global vanish request with relay tag <strong>ALL_RELAYS</strong> to your configured
+          relays only.
+        </p>
+
         <div class="warning-notice vanish-warning">
           <mat-icon class="warning-icon">warning</mat-icon>
           <div class="warning-content">
@@ -243,24 +248,6 @@
               re-broadcast. A kind 5 deletion event cannot undo a vanish request.
             </p>
           </div>
-        </div>
-
-        <div class="vanish-options">
-          <h4>Vanish Scope</h4>
-          <mat-radio-group [ngModel]="vanishScope()" (ngModelChange)="vanishScope.set($event)">
-            <mat-radio-button value="global" class="vanish-radio">
-              <div class="radio-label">
-                <span class="radio-title">Global (ALL_RELAYS)</span>
-                <span class="radio-description">Broadcast to all known relays for maximum reach</span>
-              </div>
-            </mat-radio-button>
-            <mat-radio-button value="targeted" class="vanish-radio">
-              <div class="radio-label">
-                <span class="radio-title">Targeted (Your Relays Only)</span>
-                <span class="radio-description">Send only to your configured relays</span>
-              </div>
-            </mat-radio-button>
-          </mat-radio-group>
         </div>
 
         <div class="vanish-reason">
