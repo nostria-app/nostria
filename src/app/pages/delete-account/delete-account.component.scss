@@ -45,35 +45,6 @@
     }
   }
 
-  .clear-local-section {
-    margin: 24px 0;
-
-    .section-header {
-      margin-bottom: 8px;
-
-      h3 {
-        margin: 0;
-        color: var(--mat-sys-on-surface);
-      }
-    }
-
-    .section-description {
-      color: var(--mat-sys-on-surface-variant);
-      margin: 0 0 16px 0;
-      line-height: 1.5;
-    }
-
-    button {
-      mat-icon {
-        margin-right: 8px;
-      }
-
-      .spinning {
-        animation: spin 1s linear infinite;
-      }
-    }
-  }
-
   .completion-section {
     text-align: center;
     padding: 32px 16px;
@@ -195,14 +166,18 @@
     }
 
     .events-by-kind {
-      h4 {
-        margin: 0 0 16px 0;
-        color: var(--mat-sys-on-surface);
+      background: var(--mat-sys-surface-container-low);
+      border-radius: 8px;
+      margin: 0;
+
+      .mat-expansion-panel-header-description {
+        justify-content: flex-end;
       }
 
       .kind-list {
         display: grid;
         gap: 8px;
+        padding-bottom: 8px;
 
         .kind-item {
           padding: 12px;
@@ -352,6 +327,16 @@
         .danger-button {
           --mdc-filled-button-container-color: var(--mat-sys-error);
           --mdc-filled-button-label-text-color: var(--mat-sys-on-error);
+
+          .button-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            mat-icon {
+              margin-right: 0;
+            }
+          }
         }
       }
     }
@@ -446,6 +431,14 @@
       }
     }
 
+    .vanish-confirmation {
+      margin-bottom: 16px;
+
+      .full-width {
+        width: 100%;
+      }
+    }
+
     .vanish-progress {
       display: flex;
       align-items: center;
@@ -468,6 +461,16 @@
       .danger-button {
         --mdc-filled-button-container-color: var(--mat-sys-error);
         --mdc-filled-button-label-text-color: var(--mat-sys-on-error);
+
+        .button-content {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+
+          mat-icon {
+            margin-right: 0;
+          }
+        }
 
         mat-icon {
           margin-right: 8px;

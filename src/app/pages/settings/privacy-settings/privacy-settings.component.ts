@@ -262,6 +262,6 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
   }
 
   navigateToDeleteAccountPage(): void {
-    this.router.navigate(['/delete-account']);
+    this.router.navigate(['/delete-account'], { state: { source: 'privacy' } });
   }
 }

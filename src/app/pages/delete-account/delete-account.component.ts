@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Location } from '@angular/common';
 
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { kinds } from 'nostr-tools';
@@ -33,10 +35,11 @@ interface EventKindInfo {
   count: number;
 }
 
-type DeletionState = 'idle' | 'deleting' | 'completed' | 'clearing-local' | 'vanishing';
+type DeletionState = 'idle' | 'deleting' | 'completed' | 'vanishing';
 
 /** NIP-62 vanish scope: targeted (user's relays only) or global (ALL_RELAYS) */
 type VanishScope = 'targeted' | 'global';
+type DeleteAccountSource = 'accounts' | 'privacy';
 
 @Component({
   selector: 'app-delete-account',
@@ -52,6 +55,7 @@ type VanishScope = 'targeted' | 'global';
     MatProgressBarModule,
     MatDialogModule,
     MatRadioModule,
+    MatExpansionModule,
     NPubPipe,
   ],
   templateUrl: './delete-account.component.html',
@@ -59,6 +63,9 @@ type VanishScope = 'targeted' | 'global';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeleteAccountComponent implements OnInit {
+  private readonly deleteConfirmationPhrase = 'DELETE MY ACCOUNT';
+  private readonly vanishConfirmationPhrase = 'REQUEST TO VANISH';
+
   private readonly fb = inject(FormBuilder);
   private readonly dataService = inject(DataService);
   private readonly nostrService = inject(NostrService);
@@ -71,6 +78,7 @@ export class DeleteAccountComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   // Form
   deleteForm!: FormGroup;
@@ -84,7 +92,6 @@ export class DeleteAccountComponent implements OnInit {
   deletedCount = signal(0);
   failedCount = signal(0);
   deletionState = signal<DeletionState>('idle');
-  localDataCleared = signal(false);
 
   // NIP-62 vanish signals
   vanishScope = signal<VanishScope>('global');
@@ -93,6 +100,7 @@ export class DeleteAccountComponent implements OnInit {
   vanishSuccessCount = signal(0);
   vanishFailCount = signal(0);
   vanishSent = signal(false);
+  source = signal<DeleteAccountSource | null>(null);
 
   // Computed values
   totalEventsCount = computed(() =>
@@ -104,6 +112,10 @@ export class DeleteAccountComponent implements OnInit {
   currentAccount = computed(() => this.accountStateService.account());
 
   ngOnInit() {
+    const navigation = this.router.getCurrentNavigation();
+    const navigationState = (navigation?.extras.state ?? history.state) as { source?: DeleteAccountSource };
+    this.source.set(navigationState.source ?? null);
+
     this.initializeForm();
     this.scanUserEvents();
   }
@@ -111,12 +123,24 @@ export class DeleteAccountComponent implements OnInit {
   private initializeForm() {
     this.deleteForm = this.fb.group({
       confirmationText: ['', [Validators.required, this.confirmationValidator.bind(this)]],
+      vanishConfirmationText: ['', [Validators.required, this.vanishConfirmationValidator.bind(this)]],
     });
   }
 
   private confirmationValidator(control: AbstractControl) {
-    const expectedText = 'DELETE MY ACCOUNT';
-    return control.value === expectedText ? null : { invalidConfirmation: true };
+    return control.value === this.deleteConfirmationPhrase ? null : { invalidConfirmation: true };
+  }
+
+  private vanishConfirmationValidator(control: AbstractControl) {
+    return control.value === this.vanishConfirmationPhrase ? null : { invalidVanishConfirmation: true };
+  }
+
+  isDeleteConfirmationValid(): boolean {
+    return this.deleteForm.get('confirmationText')?.valid ?? false;
+  }
+
+  isVanishConfirmationValid(): boolean {
+    return this.deleteForm.get('vanishConfirmationText')?.valid ?? false;
   }
 
   private async scanUserEvents() {
@@ -213,43 +237,6 @@ export class DeleteAccountComponent implements OnInit {
     return descriptions[kind] || 'Events of this type';
   }
 
-  async clearLocalDataOnly() {
-    const currentAccount = this.currentAccount();
-    if (!currentAccount) {
-      this.showMessage('No active account found');
-      return;
-    }
-
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Clear Local Data',
-        message: 'This will clear all locally cached data for your account (events, messages, notifications). Your data on relays will NOT be affected. Continue?',
-        confirmText: 'Clear Local Data',
-        cancelText: 'Cancel',
-      } as ConfirmDialogData,
-    });
-
-    const result = await dialogRef.afterClosed().toPromise();
-    if (!result) {
-      return;
-    }
-
-    this.deletionState.set('clearing-local');
-
-    try {
-      await this.databaseService.clearAllData();
-      this.localDataCleared.set(true);
-      this.eventKinds.set([]);
-      this.showMessage('Local data cleared successfully');
-      this.deletionState.set('completed');
-    } catch (error) {
-      console.error('Error clearing local data:', error);
-      this.showMessage('Error clearing local data');
-      this.deletionState.set('idle');
-    }
-  }
-
   async deleteAllEvents() {
     const currentAccount = this.currentAccount();
     if (!currentAccount) {
@@ -257,7 +244,7 @@ export class DeleteAccountComponent implements OnInit {
       return;
     }
 
-    if (!this.deleteForm.valid) {
+    if (!this.isDeleteConfirmationValid()) {
       this.showMessage('Please enter the confirmation text correctly');
       return;
     }
@@ -393,8 +380,13 @@ export class DeleteAccountComponent implements OnInit {
       return;
     }
 
-    if (!this.deleteForm.valid) {
+    if (!this.isDeleteConfirmationValid()) {
       this.showMessage('Please enter the confirmation text correctly');
+      return;
+    }
+
+    if (!this.isVanishConfirmationValid()) {
+      this.showMessage(`Please type "${this.vanishConfirmationPhrase}" to confirm vanish request`);
       return;
     }
 
@@ -487,7 +479,6 @@ export class DeleteAccountComponent implements OnInit {
       // Clear local data after vanish
       try {
         await this.databaseService.clearAllData();
-        this.localDataCleared.set(true);
         this.eventKinds.set([]);
       } catch (error) {
         this.logger.warn('[DeleteAccount] Failed to clear local data after vanish', error);
@@ -531,7 +522,6 @@ export class DeleteAccountComponent implements OnInit {
     this.deletionProgress.set(0);
     this.deletedCount.set(0);
     this.failedCount.set(0);
-    this.localDataCleared.set(false);
     // Reset NIP-62 vanish signals
     this.vanishSent.set(false);
     this.vanishSuccessCount.set(0);
@@ -544,7 +534,17 @@ export class DeleteAccountComponent implements OnInit {
   }
 
   navigateBack() {
-    this.router.navigate(['/settings/privacy']);
+    if (this.source() === 'accounts') {
+      this.router.navigate(['/accounts']);
+      return;
+    }
+
+    if (this.source() === 'privacy') {
+      this.router.navigate(['/settings/privacy']);
+      return;
+    }
+
+    this.location.back();
   }
 
   private showMessage(message: string) {

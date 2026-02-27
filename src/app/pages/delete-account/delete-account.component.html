@@ -1,3 +1,11 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="navigateBack()">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Delete Account Data</h2>
+  <span class="panel-header-spacer"></span>
+</div>
+
 <div class="delete-account-container">
   <mat-card class="main-card">
     <mat-card-header>
@@ -39,8 +47,6 @@
           Compliant relays will permanently delete all your events and prevent re-broadcast.
           Local data has also been cleared.
         </p>
-        } @else if (localDataCleared()) {
-        <p>Your local data has been cleared successfully.</p>
         } @else {
         <div class="completion-stats">
           <p>
@@ -86,30 +92,6 @@
 
       <mat-divider></mat-divider>
 
-      <!-- Clear Local Data Section -->
-      <div class="clear-local-section">
-        <div class="section-header">
-          <h3>Clear Local Data</h3>
-        </div>
-        <p class="section-description">
-          Remove all locally cached data (events, messages, notifications) without broadcasting
-          deletion requests to relays. Your data on relays will remain intact.
-        </p>
-        <button mat-stroked-button
-          (click)="clearLocalDataOnly()"
-          [disabled]="deletionState() === 'clearing-local' || deleting()">
-          @if (deletionState() === 'clearing-local') {
-          <mat-icon class="spinning">sync</mat-icon>
-          Clearing...
-          } @else {
-          <mat-icon>cleaning_services</mat-icon>
-          Clear Local Data Only
-          }
-        </button>
-      </div>
-
-      <mat-divider></mat-divider>
-
       <!-- Events Scan Section -->
       <div class="scan-section">
         <div class="section-header">
@@ -136,20 +118,26 @@
         </div>
 
         <!-- Events by Kind -->
-        <div class="events-by-kind">
-          <h4>Events by Type</h4>
-          <div class="kind-list">
-            @for (kindInfo of eventKinds(); track kindInfo.kind) {
-            <div class="kind-item">
-              <div class="kind-header">
-                <span class="kind-name">{{ kindInfo.name }}</span>
-                <span class="kind-count">{{ kindInfo.count }}</span>
+        <mat-accordion class="events-by-kind-accordion">
+          <mat-expansion-panel class="events-by-kind">
+            <mat-expansion-panel-header>
+              <mat-panel-title>Events by Type</mat-panel-title>
+              <mat-panel-description>{{ eventKinds().length }} types</mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="kind-list">
+              @for (kindInfo of eventKinds(); track kindInfo.kind) {
+              <div class="kind-item">
+                <div class="kind-header">
+                  <span class="kind-name">{{ kindInfo.name }}</span>
+                  <span class="kind-count">{{ kindInfo.count }}</span>
+                </div>
+                <div class="kind-description">{{ kindInfo.description }}</div>
               </div>
-              <div class="kind-description">{{ kindInfo.description }}</div>
+              }
             </div>
-            }
-          </div>
-        </div>
+          </mat-expansion-panel>
+        </mat-accordion>
         } @else {
         <div class="no-events">
           <mat-icon>check_circle</mat-icon>
@@ -215,8 +203,8 @@
             </button>
 
             <button mat-flat-button type="button" class="danger-button" (click)="deleteAllEvents()"
-              [disabled]="!deleteForm.valid || deleting()">
-              <span>
+              [disabled]="!isDeleteConfirmationValid() || deleting()">
+              <span class="button-content">
                 @if (deleting()) {
                 <mat-icon class="spinning">sync</mat-icon>
                 Deleting...
@@ -284,6 +272,20 @@
           </mat-form-field>
         </div>
 
+        <div class="vanish-confirmation">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Type "REQUEST TO VANISH" to confirm</mat-label>
+            <input matInput formControlName="vanishConfirmationText" placeholder="REQUEST TO VANISH"
+              [disabled]="deletionState() === 'vanishing' || deleting()" />
+            @if (deleteForm.get('vanishConfirmationText')?.hasError('required')) {
+            <mat-error>Vanish confirmation text is required</mat-error>
+            }
+            @if (deleteForm.get('vanishConfirmationText')?.hasError('invalidVanishConfirmation')) {
+            <mat-error>You must type "REQUEST TO VANISH" exactly</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
         @if (deletionState() === 'vanishing') {
         <div class="vanish-progress">
           <mat-icon class="spinning">sync</mat-icon>
@@ -294,14 +296,16 @@
         <div class="vanish-actions">
           <button mat-flat-button class="danger-button"
             (click)="requestToVanish()"
-            [disabled]="!deleteForm.valid || deletionState() === 'vanishing' || deleting()">
-            @if (deletionState() === 'vanishing') {
-            <mat-icon class="spinning">sync</mat-icon>
-            Sending Vanish Request...
-            } @else {
-            <mat-icon>delete_sweep</mat-icon>
-            Request to Vanish
-            }
+            [disabled]="!isDeleteConfirmationValid() || !isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
+            <span class="button-content">
+              @if (deletionState() === 'vanishing') {
+              <mat-icon class="spinning">sync</mat-icon>
+              Sending Vanish Request...
+              } @else {
+              <mat-icon>delete_sweep</mat-icon>
+              Request to Vanish
+              }
+            </span>
           </button>
         </div>
       </div>

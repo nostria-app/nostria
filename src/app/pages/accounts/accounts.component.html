@@ -116,7 +116,7 @@
       </button>
 
       <div class="delete-account-link">
-        <a mat-button routerLink="/delete-account" color="warn">
+        <a mat-button routerLink="/delete-account" [state]="{ source: 'accounts' }" color="warn">
           <mat-icon>delete_forever</mat-icon> Delete Account
         </a>
       </div>
