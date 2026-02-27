@@ -363,9 +363,9 @@ export class CustomDialogService {
     const subscription = dialogRef.instance.closed.subscribe(() => {
       // If the content component has a cancel method, call it
       // This allows components to handle cleanup before closing
-      const component = contentRef.instance as unknown as { cancel?: () => void };
+      const component = contentRef.instance as unknown as { cancel?: (forceCloseAttempt?: boolean) => void };
       if (typeof component.cancel === 'function') {
-        component.cancel();
+        component.cancel(true);
       } else {
         customDialogRef.close();
       }

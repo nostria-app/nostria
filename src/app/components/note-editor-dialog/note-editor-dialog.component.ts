@@ -2236,9 +2236,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mentionConfig.set(null);
   }
 
-  cancel(): void {
-    if (this.isPublishing()) {
+  cancel(forceCloseAttempt = false): void {
+    if (this.isPublishing() && !forceCloseAttempt) {
       return;
+    }
+
+    if (this.isPublishing() && forceCloseAttempt) {
+      this.snackBar.open('Closing editor while publish is still in progress', 'Dismiss', {
+        duration: 3000,
+      });
     }
 
     // Stop PoW if running
