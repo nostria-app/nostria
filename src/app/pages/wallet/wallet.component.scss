@@ -58,6 +58,52 @@
   }
 }
 
+@media (max-width: 700px) {
+  .wallet-tabs {
+    ::ng-deep {
+      .mat-mdc-tab-header-pagination {
+        display: none;
+      }
+
+      .mat-mdc-tab-label-container,
+      .mat-mdc-tab-list,
+      .mat-mdc-tab-labels {
+        overflow: visible;
+      }
+
+      .mat-mdc-tab-labels {
+        width: 100%;
+      }
+
+      .mat-mdc-tab {
+        min-width: 0;
+        flex: 1 1 33.333%;
+        padding-left: 8px;
+        padding-right: 8px;
+
+        .mdc-tab__content {
+          justify-content: center;
+          gap: 4px;
+        }
+
+        .mdc-tab__text-label {
+          display: inline;
+          font-size: 12px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
+          color: var(--mat-sys-on-surface);
+        }
+
+        mat-icon {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
 .tab-content {
   padding: 16px;
 }
