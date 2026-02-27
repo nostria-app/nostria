@@ -286,7 +286,7 @@
 
 // When container is narrow, hide text labels for icons-and-labels mode
 // Labels-only and icons-only modes are not affected by container width
-@container note-card (max-width: 480px) {
+@container note-card (max-width: 560px) {
   .actions-row.mode-icons-and-labels .action-button .action-text {
     display: none;
   }

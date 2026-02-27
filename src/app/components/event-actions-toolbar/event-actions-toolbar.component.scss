@@ -45,7 +45,7 @@
   }
 
   // Direct mat-icon children (Share, Reply, Bookmark)
-  > mat-icon {
+  >mat-icon {
     font-size: 22px;
     width: 22px;
     height: 22px;
@@ -182,7 +182,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -194,7 +194,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -232,7 +232,7 @@
   &:hover {
     color: var(--mat-sys-primary);
 
-    > mat-icon,
+    >mat-icon,
     .action-count,
     .action-text {
       color: var(--mat-sys-primary);
@@ -337,7 +337,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 680px) {
   .action-button {
     .action-text {
       display: none;
