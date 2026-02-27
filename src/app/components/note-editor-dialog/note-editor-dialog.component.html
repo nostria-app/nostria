@@ -369,7 +369,7 @@
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="togglePreview()"
+      <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
         [color]="showPreview() ? 'primary' : ''" [disabled]="showAdvancedOptions()"
         [class.button-disabled-visible]="showAdvancedOptions()" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -398,16 +398,25 @@
         </button>
       </mat-menu>
 
+      @if (!inlineMode()) {
+      <button mat-icon-button type="button" class="desktop-action action-priority-high"
+        (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
+        matTooltip="Advanced options">
+        <mat-icon>settings</mat-icon>
+      </button>
+      }
+
       <!-- Emoji picker button (shown in both dialog and inline modes) -->
       @if (layout.isHandset()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-high"
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji"
         (click)="openEmojiPickerDialog()">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       } @else {
-      <button mat-icon-button type="button" class="desktop-action action-priority-high" [matMenuTriggerFor]="emojiMenu"
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
+        [matMenuTriggerFor]="emojiMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
@@ -417,9 +426,10 @@
       </mat-menu>
       }
 
-      <!-- Dictation button (shown in both dialog and inline modes) -->
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium" (click)="toggleRecording()"
-        [color]="isRecording() ? 'warn' : ''"
+      <!-- Dictation button (hidden on smaller screens) -->
+      @if (!layout.isHandset()) {
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium dictation-action"
+        (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
@@ -431,6 +441,7 @@
         <mat-icon>mic</mat-icon>
         }
       </button>
+      }
       @if (recordingHistory.length > 0) {
       <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
@@ -460,12 +471,6 @@
           <span>Sentiment Analysis</span>
         </button>
       </mat-menu>
-
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
-        (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
-        matTooltip="Advanced options">
-        <mat-icon>settings</mat-icon>
-      </button>
 
       <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
         [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
@@ -501,12 +506,14 @@
           <span>Emoji</span>
         </button>
 
+        @if (!layout.isHandset()) {
         <button mat-menu-item (click)="toggleRecording()"
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
           <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
             }}</mat-icon>
           <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
         </button>
+        }
 
         @if (recordingHistory.length > 0) {
         <button mat-menu-item (click)="undoLastRecording()"

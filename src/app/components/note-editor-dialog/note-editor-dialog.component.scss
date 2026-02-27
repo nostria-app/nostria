@@ -448,6 +448,10 @@
       .left-actions {
         flex-wrap: nowrap;
 
+        .dictation-action {
+          display: none;
+        }
+
         .action-priority-low {
           display: none;
         }
@@ -467,11 +471,27 @@
         }
       }
     }
+
+    .action-container.inline-actions {
+      .left-actions {
+        .dictation-action {
+          display: none;
+        }
+      }
+    }
   }
 
   @media (max-width: 500px),
   (max-height: 620px) {
     .action-container:not(.inline-actions) {
+      .left-actions {
+        .action-priority-medium {
+          display: none;
+        }
+      }
+    }
+
+    .action-container.inline-actions {
       .left-actions {
         .action-priority-medium {
           display: none;
