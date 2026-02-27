@@ -196,6 +196,34 @@ export class VideoControlsComponent implements OnDestroy {
   // Playback rate options
   readonly playbackRates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+  // YouTube-style speed panel preset buttons
+  readonly speedPresets = [1.0, 1.25, 1.5, 2.0, 3.0];
+
+  // Speed panel state: 'closed' | 'main' | 'speed'
+  settingsPanel = signal<'closed' | 'main' | 'speed'>('closed');
+
+  // Speed slider range: 0.25 to 3.0, step 0.05
+  readonly speedMin = 0.25;
+  readonly speedMax = 3.0;
+  readonly speedStep = 0.05;
+
+  // Computed: current speed display text
+  speedDisplayText = computed(() => {
+    const rate = this.playbackRate();
+    return rate.toFixed(2).replace(/\.?0+$/, '') + 'x';
+  });
+
+  // Computed: slider percentage (0-100) for custom track rendering
+  speedSliderPercent = computed(() => {
+    const rate = this.playbackRate();
+    return ((rate - this.speedMin) / (this.speedMax - this.speedMin)) * 100;
+  });
+
+  // Computed: label for the preset button (e.g., "Normal" for 1.0)
+  speedPresetLabel(rate: number): string {
+    return rate === 1.0 ? 'Normal' : rate.toString();
+  }
+
   constructor() {
     // Initialize small screen detection
     if (this.isBrowser) {
@@ -466,6 +494,11 @@ export class VideoControlsComponent implements OnDestroy {
   onOverlayClick(event: MouseEvent): void {
     // Don't toggle if click was on controls-bar or center play button (they stop propagation)
     // This method is only reached when clicking on the overlay area
+    // If settings panel is open, close it instead of toggling play/pause
+    if (this.settingsPanel() !== 'closed') {
+      this.closeSettingsPanel();
+      return;
+    }
     (this.hostElement.nativeElement as HTMLElement).focus();
     this.playPause.emit();
   }
@@ -518,6 +551,10 @@ export class VideoControlsComponent implements OnDestroy {
   hideControls(): void {
     // Don't hide if hovering controls bar
     if (this.isHoveringControlsBar() || this.isSeeking()) {
+      return;
+    }
+    // Don't hide controls while settings panel is open
+    if (this.settingsPanel() !== 'closed') {
       return;
     }
     // In native fullscreen, just hide - parent controls timing
@@ -723,6 +760,51 @@ export class VideoControlsComponent implements OnDestroy {
   // Playback Rate
   onPlaybackRateChange(rate: number): void {
     this.playbackRateChange.emit(rate);
+  }
+
+  // Settings panel methods
+  openSettingsPanel(): void {
+    this.settingsPanel.set('main');
+  }
+
+  closeSettingsPanel(): void {
+    this.settingsPanel.set('closed');
+  }
+
+  openSpeedPanel(): void {
+    this.settingsPanel.set('speed');
+  }
+
+  backToSettingsMain(): void {
+    this.settingsPanel.set('main');
+  }
+
+  // Speed adjustment methods
+  decrementSpeed(): void {
+    const current = this.playbackRate();
+    const newRate = Math.max(this.speedMin, Math.round((current - this.speedStep) * 100) / 100);
+    this.playbackRateChange.emit(newRate);
+  }
+
+  incrementSpeed(): void {
+    const current = this.playbackRate();
+    const newRate = Math.min(this.speedMax, Math.round((current + this.speedStep) * 100) / 100);
+    this.playbackRateChange.emit(newRate);
+  }
+
+  onSpeedSliderInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = parseFloat(input.value);
+    this.playbackRateChange.emit(Math.round(value * 100) / 100);
+  }
+
+  setSpeedPreset(rate: number): void {
+    this.playbackRateChange.emit(rate);
+  }
+
+  /** Check if a preset is the closest match to current rate */
+  isActivePreset(preset: number): boolean {
+    return Math.abs(this.playbackRate() - preset) < 0.001;
   }
 
   // Fullscreen & PiP

@@ -446,6 +446,329 @@
   }
 }
 
+// Settings panel overlay (YouTube-style)
+.settings-panel-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.settings-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 12px;
+  background: rgba(28, 28, 28, 0.95);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  min-width: 280px;
+  max-width: 320px;
+  z-index: 21;
+  pointer-events: auto;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: settingsPanelIn 0.15s ease-out;
+
+  @media (max-width: 480px) {
+    right: 8px;
+    bottom: 50px;
+    min-width: 260px;
+  }
+}
+
+@keyframes settingsPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Main settings items
+.settings-panel-content {
+  padding: 4px 0;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  gap: 12px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  mat-icon {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .settings-item-label {
+    flex: 1;
+    text-align: left;
+  }
+
+  .settings-item-value {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+  }
+
+  .settings-item-arrow {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Speed panel (YouTube-style)
+.speed-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.speed-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 4px;
+}
+
+.speed-panel-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.speed-panel-title {
+  font-size: 14px;
+  color: white;
+}
+
+.speed-panel-body {
+  padding: 16px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+// Large speed display text
+.speed-display {
+  font-size: 24px;
+  color: white;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+// Slider row with +/- buttons
+.speed-slider-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.speed-adjust-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  &.disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// Custom range slider track
+.speed-slider-track-wrapper {
+  position: relative;
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.speed-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+
+  // Webkit (Chrome, Safari, Edge)
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    position: relative;
+    z-index: 3;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+  }
+
+  &::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  &::-webkit-slider-thumb:active {
+    transform: scale(1.3);
+  }
+
+  // Firefox
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  &::-moz-range-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
+    border: none;
+  }
+
+  &::-moz-range-progress {
+    height: 4px;
+    background: white;
+    border-radius: 2px;
+  }
+}
+
+// Fill track overlay (Webkit doesn't support ::-webkit-slider-runnable-track fill)
+.speed-slider-track-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  background: white;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+// Preset speed buttons
+.speed-presets {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  justify-content: center;
+}
+
+.speed-preset-btn {
+  flex: 1;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-align: center;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+  }
+
+  &.active {
+    background: var(--mat-sys-primary, #FDA100);
+    color: var(--mat-sys-on-primary, #000);
+    border-color: var(--mat-sys-primary, #FDA100);
+  }
+}
+
+// "Normal" label under presets
+.speed-presets-labels {
+  display: flex;
+  width: 100%;
+  padding: 0;
+
+  .speed-preset-sublabel {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    // Only show under the first preset (1.0)
+    &:first-child {
+      text-align: center;
+    }
+  }
+}
+
 // Responsive adjustments
 @media (max-width: 480px) {
   .controls-bar {
