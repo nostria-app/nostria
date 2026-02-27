@@ -1,0 +1,48 @@
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Debug</h2>
+  <span class="panel-header-spacer"></span>
+</div>
+
+<div class="content-medium">
+  <div class="debug-section">
+    <h3>Platform Simulation</h3>
+    <p class="setting-description">
+      Override the detected platform to test platform-specific payment flows and UI.
+      This only affects the current session and resets on reload.
+    </p>
+
+    <div class="detected-info">
+      <div class="info-row">
+        <span class="info-label">Detected platform:</span>
+        <span class="info-value">{{ platform.isIOS() ? 'iOS' : platform.isAndroid() ? 'Android' : platform.isMac() ? 'macOS' : platform.isWindows() ? 'Windows' : 'Linux' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Active app context:</span>
+        <code class="info-value highlight">{{ platform.appContext() }}</code>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Payment platform:</span>
+        <code class="info-value highlight">{{ platform.paymentPlatform() }}</code>
+      </div>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Simulate Platform</mat-label>
+      <mat-select [ngModel]="platform.simulatedAppContext()" (selectionChange)="setSimulatedPlatform($event.value)">
+        @for (option of platformOptions; track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (platform.simulatedAppContext() !== null) {
+    <div class="simulation-active">
+      <mat-icon>science</mat-icon>
+      <span>Simulating <strong>{{ platform.appContext() }}</strong> &mdash; payment via <strong>{{ platform.paymentPlatform() }}</strong></span>
+    </div>
+    }
+  </div>
+</div>

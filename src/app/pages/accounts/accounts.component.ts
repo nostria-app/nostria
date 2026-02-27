@@ -153,15 +153,17 @@ export class AccountsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Check for tab query parameter
+    // Check for tab from route data (used by /premium and /credentials routes)
+    const routeTab = this.route.snapshot.data['tab'];
+    if (routeTab) {
+      this.setTabByName(routeTab);
+    }
+
+    // Check for tab query parameter (used by router.navigate with queryParams)
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const tab = params['tab'];
-      if (tab === 'credentials') {
-        this.selectedTabIndex.set(1);
-      } else if (tab === 'premium') {
-        this.selectedTabIndex.set(2);
-      } else {
-        this.selectedTabIndex.set(0);
+      if (tab) {
+        this.setTabByName(tab);
       }
     });
 
@@ -173,6 +175,16 @@ export class AccountsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // ============ TAB NAVIGATION ============
+
+  private setTabByName(tab: string): void {
+    if (tab === 'credentials') {
+      this.selectedTabIndex.set(1);
+    } else if (tab === 'premium') {
+      this.selectedTabIndex.set(2);
+    }
   }
 
   // ============ ACCOUNTS TAB METHODS ============

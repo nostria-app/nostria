@@ -14,9 +14,10 @@ export type AppContext = 'web' | 'pwa' | 'native-android' | 'native-ios';
  * Available payment methods based on platform context.
  * - 'bitcoin': Lightning Network invoice (default for web/pwa)
  * - 'play-store': Google Play Billing (Android native apps)
- * - 'external-url': External URL redirect (iOS apps, due to Apple's restrictions)
+ * - 'app-store': Apple App Store / StoreKit (iOS native apps)
+ * - 'external-url': External URL redirect (fallback for any platform)
  */
-export type PaymentPlatform = 'bitcoin' | 'play-store' | 'external-url';
+export type PaymentPlatform = 'bitcoin' | 'play-store' | 'app-store' | 'external-url';
 
 /**
  * Service for detecting platform (OS) and providing platform-specific utilities.
@@ -42,8 +43,17 @@ export class PlatformService {
   readonly isNativeAndroid = signal(false);
   readonly isNativeIOS = signal(false);
 
+  /**
+   * Simulated app context for debugging platform-specific UI.
+   * When set to a non-null value, overrides the detected app context.
+   * Set to null to use real detection.
+   */
+  readonly simulatedAppContext = signal<AppContext | null>(null);
+
   /** The current app context (web, pwa, native-android, native-ios) */
   readonly appContext = computed<AppContext>(() => {
+    const simulated = this.simulatedAppContext();
+    if (simulated !== null) return simulated;
     if (this.isNativeIOS()) return 'native-ios';
     if (this.isNativeAndroid()) return 'native-android';
     if (this.isStandalone()) return 'pwa';
@@ -51,20 +61,24 @@ export class PlatformService {
   });
 
   /** Whether the app is running as a native mobile app (Android or iOS) */
-  readonly isNativeApp = computed(() => this.isNativeAndroid() || this.isNativeIOS());
+  readonly isNativeApp = computed(() => {
+    const ctx = this.appContext();
+    return ctx === 'native-android' || ctx === 'native-ios';
+  });
 
   /** Whether the app is running on a mobile device (native or mobile browser) */
   readonly isMobile = computed(() => this.isIOS() || this.isAndroid());
 
   /**
-   * The payment platform to use based on app context.
+   * The recommended payment platform based on app context.
    * - Native Android: Play Store billing
-   * - Native iOS: External URL (Apple doesn't allow in-app alternative payments)
+   * - Native iOS: App Store / StoreKit
    * - Web/PWA: Bitcoin Lightning
    */
   readonly paymentPlatform = computed<PaymentPlatform>(() => {
-    if (this.isNativeAndroid()) return 'play-store';
-    if (this.isNativeIOS()) return 'external-url';
+    const ctx = this.appContext();
+    if (ctx === 'native-android') return 'play-store';
+    if (ctx === 'native-ios') return 'app-store';
     return 'bitcoin';
   });
 
@@ -74,7 +88,10 @@ export class PlatformService {
   /** Whether Play Store billing is available (Android native context) */
   readonly canPayWithPlayStore = computed(() => this.paymentPlatform() === 'play-store');
 
-  /** Whether the user must be directed to an external URL to pay (iOS native context) */
+  /** Whether App Store / StoreKit billing is available (iOS native context) */
+  readonly canPayWithAppStore = computed(() => this.paymentPlatform() === 'app-store');
+
+  /** Whether the user must be directed to an external URL to pay (fallback, always available) */
   readonly mustUseExternalPayment = computed(() => this.paymentPlatform() === 'external-url');
 
   constructor() {

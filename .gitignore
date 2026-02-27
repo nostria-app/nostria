@@ -1,7 +1,9 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 .codenomad
+null
 nul
+lint*.txt
 lint-output.txt
 lint_check.txt
 lint_output.txt

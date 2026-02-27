@@ -95,11 +95,61 @@ export class RenewComponent implements OnDestroy {
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
   selectedPaymentOption = signal<'monthly' | 'quarterly' | 'yearly' | null>('yearly');
+  selectedPaymentMethod = signal<'lightning' | 'play-store' | 'app-store' | 'external' | null>(null);
   paymentInvoice = signal<PaymentInvoice | null>(null);
   invoiceExpiresIn = signal<string>('15');
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | ReturnType<typeof setInterval>>(null);
+
+  /** Available payment methods based on platform detection */
+  availablePaymentMethods = computed(() => {
+    const methods: { key: 'lightning' | 'play-store' | 'app-store' | 'external'; label: string; icon: string; description: string; recommended: boolean }[] = [];
+
+    methods.push({
+      key: 'lightning',
+      label: 'Bitcoin Lightning',
+      icon: 'bolt',
+      description: 'Pay with Bitcoin via Lightning Network',
+      recommended: !this.platform.isNativeApp(),
+    });
+
+    if (this.platform.canPayWithPlayStore()) {
+      methods.push({
+        key: 'play-store',
+        label: 'Google Play',
+        icon: 'shop',
+        description: 'Pay through Google Play Store',
+        recommended: true,
+      });
+    }
+
+    if (this.platform.canPayWithAppStore()) {
+      methods.push({
+        key: 'app-store',
+        label: 'App Store',
+        icon: 'apple',
+        description: 'Pay through Apple App Store',
+        recommended: true,
+      });
+    }
+
+    methods.push({
+      key: 'external',
+      label: 'Pay in Browser',
+      icon: 'open_in_new',
+      description: 'Complete payment on nostria.app',
+      recommended: false,
+    });
+
+    return methods;
+  });
+
+  /** The recommended payment method (first recommended one, or first available) */
+  recommendedPaymentMethod = computed(() => {
+    const methods = this.availablePaymentMethods();
+    return methods.find(m => m.recommended) || methods[0];
+  });
   
   // Computed values for current subscription
   currentTier = computed(() => this.accountState.subscription()?.tier || 'premium');
@@ -185,6 +235,20 @@ export class RenewComponent implements OnDestroy {
         ...this.stepComplete(),
         0: true,
       });
+      // Pre-select the recommended payment method
+      this.selectedPaymentMethod.set(this.recommendedPaymentMethod()?.key || 'lightning');
+      // Move to payment step — invoice generation happens when user selects Lightning
+      this.currentStep.set(1);
+    }
+  }
+
+  /**
+   * Called when user selects a payment method in the payment step.
+   * If Lightning is selected, generate the invoice immediately.
+   */
+  selectPaymentMethod(method: 'lightning' | 'play-store' | 'app-store' | 'external') {
+    this.selectedPaymentMethod.set(method);
+    if (method === 'lightning' && !this.paymentInvoice()) {
       this.generatePaymentInvoice();
     }
   }
@@ -231,9 +295,6 @@ export class RenewComponent implements OnDestroy {
         status: payment.status,
         expires: payment.expires,
       });
-
-      // Move to the payment step
-      this.currentStep.set(1);
 
       // Start checking for payment
       this.startPaymentCheck();
@@ -391,7 +452,51 @@ export class RenewComponent implements OnDestroy {
   }
 
   /**
-   * Open external payment URL for iOS users.
+   * Initiate an App Store purchase for renewal (iOS native app).
+   */
+  async purchaseWithAppStore() {
+    const selectedTier = this.selectedTier();
+    const selectedPaymentOption = this.selectedPaymentOption();
+    if (!selectedTier || !selectedPaymentOption) return;
+
+    const tierName = selectedTier.details.tier as 'premium' | 'premium_plus';
+    const productId = this.iap.getProductId(tierName, selectedPaymentOption);
+    if (!productId) {
+      this.snackBar.open('Product not available in store.', 'Close', { duration: 5000 });
+      return;
+    }
+
+    const result = await this.iap.purchaseWithAppStore(productId);
+    if (result.success && result.purchaseToken) {
+      const verified = await this.iap.verifyPurchaseWithBackend(
+        result.purchaseToken,
+        this.accountState.pubkey(),
+        'app-store'
+      );
+
+      if (verified) {
+        this.stepComplete.set({ ...this.stepComplete(), 1: true, 2: true });
+        this.isPaymentCompleted.set(true);
+        await this.accountState.refreshSubscription();
+
+        this.snackBar.open('Subscription renewed successfully!', 'Great!', {
+          duration: 8000,
+        });
+        setTimeout(() => this.currentStep.set(2), 1000);
+      } else {
+        this.snackBar.open(
+          'Purchase completed but verification failed. Please contact support.',
+          'Close',
+          { duration: 8000 }
+        );
+      }
+    } else if (result.error && result.error !== 'Purchase cancelled by user') {
+      this.snackBar.open(`Purchase failed: ${result.error}`, 'Close', { duration: 5000 });
+    }
+  }
+
+  /**
+   * Open external payment URL (fallback for any platform).
    */
   openExternalPayment() {
     const selectedTier = this.selectedTier();
@@ -410,6 +515,7 @@ export class RenewComponent implements OnDestroy {
     // Reset the payment state
     this.paymentInvoice.set(null);
     this.isPaymentCompleted.set(false);
+    this.selectedPaymentMethod.set(null);
 
     // Go back to payment options
     this.currentStep.set(0);

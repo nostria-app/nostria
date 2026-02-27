@@ -60,6 +60,7 @@ export class SettingsRegistryService {
     { id: 'database', title: $localize`:@@settings.sections.database:Storage`, icon: 'storage', route: '/settings/database' },
     { id: 'logs', title: $localize`:@@settings.sections.logs:Logs`, icon: 'article', route: '/settings/logs' },
     { id: 'about', title: $localize`:@@settings.sections.about:About`, icon: 'info', route: '/settings/about' },
+    { id: 'debug', title: $localize`:@@settings.sections.debug:Debug`, icon: 'bug_report', route: '/settings/debug' },
   ];
 
   /** All registered settings items (searchable) */
@@ -621,6 +622,18 @@ export class SettingsRegistryService {
       route: '/settings/general',
       priority: 4,
       popular: true,
+    },
+    // Debug Settings
+    {
+      id: 'simulate-platform',
+      title: $localize`:@@settings.simulate-platform:Simulate Platform`,
+      description: $localize`:@@settings.simulate-platform.description:Override detected platform to test payment flows`,
+      keywords: ['debug', 'simulate', 'platform', 'android', 'ios', 'payment', 'test', 'developer'],
+      section: 'debug',
+      sectionTitle: $localize`:@@settings.sections.debug:Debug`,
+      icon: 'bug_report',
+      route: '/settings/debug',
+      priority: 1,
     },
   ];
 

@@ -564,7 +564,55 @@ export class GiftPremiumDialogComponent {
   }
 
   /**
-   * Open external gift payment URL for iOS users.
+   * Purchase a gift subscription via Apple App Store (iOS native).
+   */
+  async purchaseGiftWithAppStore(): Promise<void> {
+    const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
+    const duration = this.giftForm.get('duration')?.value as Duration;
+    if (!premiumType || !duration) return;
+
+    const tier = premiumType === 'premium' ? 'premium' : 'premium_plus';
+    const productId = this.iap.getGiftProductId(tier as 'premium' | 'premium_plus', duration);
+    if (!productId) {
+      this.snackBar.open('Gift product not available in store.', 'Close', { duration: 5000 });
+      return;
+    }
+
+    this.isProcessing.set(true);
+    try {
+      const result = await this.iap.purchaseWithAppStore(productId);
+      if (result.success && result.purchaseToken) {
+        const verified = await this.iap.verifyPurchaseWithBackend(
+          result.purchaseToken,
+          this.accountState.pubkey(),
+          'app-store'
+        );
+
+        if (verified) {
+          this.triggerCelebration();
+          this.snackBar.open(
+            `Successfully gifted ${this.getPremiumTypeName(premiumType)} for ${this.getDurationText(duration)}!`,
+            'Dismiss',
+            { duration: 5000 }
+          );
+          setTimeout(() => this.dialogRef.close({ success: true }), 2500);
+        } else {
+          this.snackBar.open(
+            'Purchase completed but verification failed. Please contact support.',
+            'Close',
+            { duration: 8000 }
+          );
+        }
+      } else if (result.error && result.error !== 'Purchase cancelled by user') {
+        this.snackBar.open(`Purchase failed: ${result.error}`, 'Close', { duration: 5000 });
+      }
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
+
+  /**
+   * Open external gift payment URL (fallback).
    */
   openExternalGiftPayment(): void {
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;

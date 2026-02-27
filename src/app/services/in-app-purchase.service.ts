@@ -93,13 +93,37 @@ interface PaymentDetailsInit {
 }
 
 /**
+ * WebKit message handler interface for iOS StoreKit bridge.
+ * The native iOS app shell exposes this via WKWebView's userContentController.
+ */
+interface WebKitMessageHandler {
+  postMessage(message: unknown): void;
+}
+
+interface WebKitHandlers {
+  nostriaStoreKit?: WebKitMessageHandler;
+}
+
+/**
+ * Result payload posted back from the iOS native shell
+ * via window.nostriaStoreKitCallback().
+ */
+interface AppStorePurchaseResponse {
+  success: boolean;
+  transactionId?: string;
+  originalTransactionId?: string;
+  productId?: string;
+  error?: string;
+}
+
+/**
  * Service for handling in-app purchases across platforms.
  *
  * On Android (TWA), uses the Digital Goods API + Payment Request API
  * to interact with Google Play Billing.
  *
- * On iOS, redirects to an external URL (Apple disallows in-app
- * alternative payment methods from within the app).
+ * On iOS (native app), uses a WebKit message handler bridge to
+ * communicate with the native StoreKit 2 integration.
  *
  * On web/PWA, this service is not used (Bitcoin Lightning is used instead).
  */
@@ -116,14 +140,25 @@ export class InAppPurchaseService {
   /** Whether Play Store billing is available and ready */
   readonly playStoreAvailable = signal(false);
 
+  /** Whether App Store / StoreKit billing is available and ready */
+  readonly appStoreAvailable = signal(false);
+
   /** Whether a purchase is currently in progress */
   readonly purchasing = signal(false);
 
   private digitalGoodsService: DigitalGoodsService | null = null;
 
+  /** Pending App Store purchase resolve callback */
+  private appStorePurchaseResolve: ((result: PurchaseResult) => void) | null = null;
+
   constructor() {
-    if (this.isBrowser && this.platformService.canPayWithPlayStore()) {
-      this.initPlayStoreBilling();
+    if (this.isBrowser) {
+      if (this.platformService.canPayWithPlayStore()) {
+        this.initPlayStoreBilling();
+      }
+      if (this.platformService.canPayWithAppStore()) {
+        this.initAppStoreBilling();
+      }
     }
   }
 
@@ -146,6 +181,58 @@ export class InAppPurchaseService {
       }
     } catch (error) {
       this.logger.error('Failed to initialize Play Store billing:', error);
+    }
+  }
+
+  /**
+   * Initialize Apple App Store billing via WebKit message handler bridge.
+   * The native iOS app shell exposes `window.webkit.messageHandlers.nostriaStoreKit`
+   * and posts results back via `window.nostriaStoreKitCallback`.
+   */
+  private initAppStoreBilling(): void {
+    try {
+      const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
+      if (webkit?.messageHandlers?.nostriaStoreKit) {
+        this.appStoreAvailable.set(true);
+        this.logger.info('App Store billing bridge detected');
+
+        // Register the global callback for receiving purchase results from native
+        (window as unknown as { nostriaStoreKitCallback: (response: AppStorePurchaseResponse) => void })
+          .nostriaStoreKitCallback = (response: AppStorePurchaseResponse) => {
+            this.handleAppStoreCallback(response);
+          };
+      } else {
+        this.logger.warn('WebKit StoreKit message handler not available');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize App Store billing:', error);
+    }
+  }
+
+  /**
+   * Handle the callback from the native iOS app shell after a StoreKit purchase.
+   */
+  private handleAppStoreCallback(response: AppStorePurchaseResponse): void {
+    if (!this.appStorePurchaseResolve) {
+      this.logger.warn('Received App Store callback with no pending purchase');
+      return;
+    }
+
+    const resolve = this.appStorePurchaseResolve;
+    this.appStorePurchaseResolve = null;
+    this.purchasing.set(false);
+
+    if (response.success && response.transactionId) {
+      resolve({
+        success: true,
+        purchaseToken: response.transactionId,
+        orderId: response.originalTransactionId,
+      });
+    } else {
+      resolve({
+        success: false,
+        error: response.error || 'App Store purchase failed',
+      });
     }
   }
 
@@ -267,6 +354,63 @@ export class InAppPurchaseService {
   }
 
   /**
+   * Purchase a subscription via Apple App Store / StoreKit.
+   * Sends a message to the native iOS shell via WebKit message handlers,
+   * which triggers a StoreKit purchase flow. The result is received
+   * asynchronously via `window.nostriaStoreKitCallback`.
+   *
+   * @param productId The App Store product ID to purchase
+   * @returns Purchase result with transaction ID for server-side verification
+   */
+  async purchaseWithAppStore(productId: string): Promise<PurchaseResult> {
+    const webkit = (window as unknown as { webkit?: { messageHandlers?: WebKitHandlers } }).webkit;
+    const handler = webkit?.messageHandlers?.nostriaStoreKit;
+
+    if (!handler) {
+      return { success: false, error: 'App Store billing not available' };
+    }
+
+    this.purchasing.set(true);
+
+    try {
+      return await new Promise<PurchaseResult>((resolve) => {
+        // Set up the resolve callback before posting the message
+        this.appStorePurchaseResolve = resolve;
+
+        // Set a timeout in case the native shell never responds
+        const timeout = setTimeout(() => {
+          if (this.appStorePurchaseResolve === resolve) {
+            this.appStorePurchaseResolve = null;
+            this.purchasing.set(false);
+            resolve({ success: false, error: 'App Store purchase timed out' });
+          }
+        }, 120000); // 2 minute timeout
+
+        // Override resolve to also clear the timeout
+        this.appStorePurchaseResolve = (result: PurchaseResult) => {
+          clearTimeout(timeout);
+          resolve(result);
+        };
+
+        // Send purchase request to native iOS shell
+        handler.postMessage({
+          action: 'purchase',
+          productId,
+        });
+
+        this.logger.info('App Store purchase initiated:', productId);
+      });
+    } catch (error) {
+      this.purchasing.set(false);
+      this.logger.error('App Store purchase failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'App Store purchase failed',
+      };
+    }
+  }
+
+  /**
    * Acknowledge a Play Store purchase after server verification.
    * This must be called to prevent Google from refunding the purchase.
    */
@@ -286,9 +430,8 @@ export class InAppPurchaseService {
   }
 
   /**
-   * Open the external payment URL for iOS users.
-   * Apple does not allow alternative payment methods within iOS apps,
-   * so users must be directed to a web page to complete their purchase.
+   * Open the external payment URL (fallback for any platform).
+   * Useful when native store billing is unavailable or as a user choice.
    *
    * @param pubkey The user's public key to pre-fill on the payment page
    * @param tier The premium tier to purchase

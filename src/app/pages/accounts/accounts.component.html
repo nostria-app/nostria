@@ -114,6 +114,12 @@
       <button (click)="nostrService.logout()" mat-raised-button class="add-account-button">
         <mat-icon>account_circle_off</mat-icon> Set no active account
       </button>
+
+      <div class="delete-account-link">
+        <a mat-button routerLink="/delete-account" color="warn">
+          <mat-icon>delete_forever</mat-icon> Delete Account
+        </a>
+      </div>
       } @else {
       <p class="no-accounts">No accounts available</p>
       }

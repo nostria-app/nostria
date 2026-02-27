@@ -416,8 +416,10 @@ export const routes: Routes = [
   },
   {
     path: 'credentials',
-    redirectTo: 'accounts?tab=credentials',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('./pages/accounts/accounts.component').then(m => m.AccountsComponent),
+    data: { isRoot: true, tab: 'credentials' },
+    title: 'Credentials',
   },
   {
     path: 'accounts',
@@ -536,8 +538,11 @@ export const routes: Routes = [
   },
   {
     path: 'premium',
-    redirectTo: 'accounts?tab=premium',
+    loadComponent: () =>
+      import('./pages/accounts/accounts.component').then(m => m.AccountsComponent),
+    data: { isRoot: true, tab: 'premium' },
     pathMatch: 'full',
+    title: 'Premium',
   },
   {
     path: 'premium/upgrade',

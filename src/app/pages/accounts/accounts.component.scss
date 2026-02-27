@@ -251,6 +251,15 @@
   }
 }
 
+.delete-account-link {
+  margin-top: 16px;
+  text-align: center;
+
+  a {
+    color: var(--mat-sys-error);
+  }
+}
+
 .no-accounts {
   margin: 24px 0;
   color: var(--mat-text-secondary-color);

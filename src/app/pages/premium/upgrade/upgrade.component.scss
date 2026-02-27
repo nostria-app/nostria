@@ -361,6 +361,87 @@ h2 {
   }
 }
 
+/* Step 3: Payment Method Selector */
+.payment-method-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.payment-method-card {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 2px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+
+  &:hover {
+    box-shadow: var(--mat-sys-level2);
+    border-color: var(--mat-sys-outline);
+  }
+
+  &.selected {
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-surface-container);
+    box-shadow: var(--mat-sys-level2);
+  }
+}
+
+.payment-method-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+
+  > mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    font-size: 28px;
+    height: 28px;
+    width: 28px;
+  }
+}
+
+.payment-method-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.payment-method-label {
+  font-size: 1.05rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.payment-method-description {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.recommended-badge {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.payment-method-content {
+  margin-bottom: 1rem;
+}
+
+.external-payment-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 /* Step 3: External Payment (iOS) */
 .external-payment-notice {
   display: flex;

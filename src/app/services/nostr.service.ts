@@ -1339,6 +1339,21 @@ export class NostrService implements NostriaService {
     return event;
   }
 
+  /**
+   * NIP-62: Request to Vanish
+   *
+   * Creates a kind 62 event requesting relays to delete all events from this pubkey.
+   * - For targeted vanish: include specific relay URLs in `relay` tags.
+   * - For global vanish: use `['relay', 'ALL_RELAYS']`.
+   *
+   * @param relayUrls Array of relay URLs to target, or `['ALL_RELAYS']` for global vanish
+   * @param reason Optional reason or legal notice for the relay operator
+   */
+  createVanishEvent(relayUrls: string[], reason = ''): UnsignedEvent {
+    const tags = relayUrls.map(url => ['relay', url]);
+    return this.createEvent(62, reason, tags);
+  }
+
   // NIP-09 Deletion Request / Retraction Event
   createRetractionEvent(eventToRetract: Event): UnsignedEvent {
     return this.createEvent(kinds.EventDeletion, '', [

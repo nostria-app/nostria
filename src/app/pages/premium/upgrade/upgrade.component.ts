@@ -23,7 +23,6 @@ import { LoggerService } from '../../../services/logger.service';
 import { PlatformService } from '../../../services/platform.service';
 import { InAppPurchaseService } from '../../../services/in-app-purchase.service';
 import { environment } from '../../../../environments/environment';
-import { Payment } from '../../../api/models';
 import { UsernameService } from '../../../services/username';
 
 interface PaymentInvoice {
@@ -102,11 +101,65 @@ export class UpgradeComponent implements OnDestroy {
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
   selectedPaymentOption = signal<'monthly' | 'quarterly' | 'yearly' | null>('yearly');
+  selectedPaymentMethod = signal<'lightning' | 'play-store' | 'app-store' | 'external' | null>(null);
   paymentInvoice = signal<PaymentInvoice | null>(null);
   invoiceExpiresIn = signal<string>('15');
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
-  paymentCheckInterval = signal<number | null | any>(null);
+  paymentCheckInterval = signal<number | null>(null);
+
+  /** Available payment methods based on platform detection */
+  availablePaymentMethods = computed(() => {
+    const methods: { key: 'lightning' | 'play-store' | 'app-store' | 'external'; label: string; icon: string; description: string; recommended: boolean }[] = [];
+
+    // Bitcoin Lightning is always available (except possibly on native where we still show it as an option)
+    methods.push({
+      key: 'lightning',
+      label: 'Bitcoin Lightning',
+      icon: 'bolt',
+      description: 'Pay with Bitcoin via Lightning Network',
+      recommended: !this.platform.isNativeApp(),
+    });
+
+    // Play Store is available when Digital Goods API is detected or simulating Android
+    if (this.platform.canPayWithPlayStore()) {
+      methods.push({
+        key: 'play-store',
+        label: 'Google Play',
+        icon: 'shop',
+        description: 'Pay through Google Play Store',
+        recommended: true,
+      });
+    }
+
+    // App Store is available when StoreKit bridge is detected or simulating iOS
+    if (this.platform.canPayWithAppStore()) {
+      methods.push({
+        key: 'app-store',
+        label: 'App Store',
+        icon: 'apple',
+        description: 'Pay through Apple App Store',
+        recommended: true,
+      });
+    }
+
+    // External browser payment is always available as a fallback
+    methods.push({
+      key: 'external',
+      label: 'Pay in Browser',
+      icon: 'open_in_new',
+      description: 'Complete payment on nostria.app',
+      recommended: false,
+    });
+
+    return methods;
+  });
+
+  /** The recommended payment method (first recommended one, or first available) */
+  recommendedPaymentMethod = computed(() => {
+    const methods = this.availablePaymentMethods();
+    return methods.find(m => m.recommended) || methods[0];
+  });
   selectedPrice = computed(
     () =>
       this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || {
@@ -200,7 +253,46 @@ export class UpgradeComponent implements OnDestroy {
         ...this.stepComplete(),
         1: true,
       });
+      // Pre-select the recommended payment method
+      this.selectedPaymentMethod.set(this.recommendedPaymentMethod()?.key || 'lightning');
+      // Move to payment step — invoice generation happens when user selects Lightning
+      this.currentStep.set(2);
+    }
+  }
+
+  /**
+   * Called when user selects a payment method in Step 3.
+   * If Lightning is selected, generate the invoice immediately.
+   */
+  selectPaymentMethod(method: 'lightning' | 'play-store' | 'app-store' | 'external') {
+    this.selectedPaymentMethod.set(method);
+    // If switching to Lightning and we don't have an invoice yet, generate one
+    if (method === 'lightning' && !this.paymentInvoice()) {
       this.generatePaymentInvoice();
+    }
+  }
+
+  /**
+   * Execute the selected payment method action.
+   */
+  executePayment() {
+    const method = this.selectedPaymentMethod();
+    switch (method) {
+      case 'play-store':
+        this.purchaseWithPlayStore();
+        break;
+      case 'app-store':
+        this.purchaseWithAppStore();
+        break;
+      case 'external':
+        this.openExternalPayment();
+        break;
+      case 'lightning':
+        // Invoice is already being generated/displayed via selectPaymentMethod
+        if (!this.paymentInvoice()) {
+          this.generatePaymentInvoice();
+        }
+        break;
     }
   }
 
@@ -247,12 +339,9 @@ export class UpgradeComponent implements OnDestroy {
         expires: payment.expires,
       });
 
-      // Move to the payment step
-      this.currentStep.set(2);
-
       // Start checking for payment
       this.startPaymentCheck();
-    } catch (error) {
+    } catch {
       this.snackBar.open('Error generating payment invoice. Please try again.', 'Close', {
         duration: 5000,
       });
@@ -262,8 +351,9 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   stopPaymentCheck() {
-    if (this.paymentCheckInterval() !== null) {
-      window.clearInterval(this.paymentCheckInterval());
+    const intervalId = this.paymentCheckInterval();
+    if (intervalId !== null) {
+      window.clearInterval(intervalId);
       this.paymentCheckInterval.set(null);
     }
   }
@@ -318,9 +408,7 @@ export class UpgradeComponent implements OnDestroy {
     const paymentInvoice = this.paymentInvoice();
     if (!paymentInvoice || paymentInvoice.status !== 'pending') return;
 
-    let payment: Payment | undefined;
-
-    payment = await firstValueFrom(
+    const payment = await firstValueFrom(
       this.paymentService.getPayment({
         paymentId: paymentInvoice.id,
         pubkey: this.accountState.pubkey(),
@@ -383,9 +471,10 @@ export class UpgradeComponent implements OnDestroy {
       setTimeout(() => {
         this.currentStep.set(3);
       }, 2000);
-    } catch (e: any) {
-      if (e.status === 409) {
-        this.snackBar.open(e?.error?.error, 'Ok', { duration: 5000 });
+    } catch (e: unknown) {
+      const err = e as { status?: number; error?: { error?: string } };
+      if (err.status === 409) {
+        this.snackBar.open(err?.error?.error || 'Username conflict', 'Ok', { duration: 5000 });
         this.stepComplete.set({
           ...this.stepComplete(),
           0: false,
@@ -405,6 +494,7 @@ export class UpgradeComponent implements OnDestroy {
     // Reset the payment state
     this.paymentInvoice.set(null);
     this.isPaymentCompleted.set(false);
+    this.selectedPaymentMethod.set(null);
 
     // Go back to payment options
     this.currentStep.set(1);
@@ -466,8 +556,53 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   /**
-   * Open external payment URL for iOS users.
-   * Apple does not allow in-app alternative payment methods.
+   * Purchase via Apple App Store / StoreKit.
+   * Uses the native iOS bridge to trigger a StoreKit purchase.
+   */
+  async purchaseWithAppStore() {
+    const selectedTier = this.selectedTier();
+    const selectedPaymentOption = this.selectedPaymentOption();
+    if (!selectedTier || !selectedPaymentOption) return;
+
+    const tierName = selectedTier.details.tier as 'premium' | 'premium_plus';
+    const productId = this.iap.getProductId(tierName, selectedPaymentOption);
+    if (!productId) {
+      this.snackBar.open('Product not available in store.', 'Close', { duration: 5000 });
+      return;
+    }
+
+    const result = await this.iap.purchaseWithAppStore(productId);
+    if (result.success && result.purchaseToken) {
+      // Verify the purchase with our backend
+      const verified = await this.iap.verifyPurchaseWithBackend(
+        result.purchaseToken,
+        this.accountState.pubkey(),
+        'app-store'
+      );
+
+      if (verified) {
+        this.stepComplete.set({ ...this.stepComplete(), 2: true, 3: true });
+        this.isPaymentCompleted.set(true);
+        await this.accountState.changeAccount(this.accountState.account());
+
+        this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+          duration: 8000,
+        });
+        setTimeout(() => this.currentStep.set(3), 1000);
+      } else {
+        this.snackBar.open(
+          'Purchase completed but verification failed. Please contact support.',
+          'Close',
+          { duration: 8000 }
+        );
+      }
+    } else if (result.error && result.error !== 'Purchase cancelled by user') {
+      this.snackBar.open(`Purchase failed: ${result.error}`, 'Close', { duration: 5000 });
+    }
+  }
+
+  /**
+   * Open external payment URL (fallback for any platform).
    */
   openExternalPayment() {
     const selectedTier = this.selectedTier();

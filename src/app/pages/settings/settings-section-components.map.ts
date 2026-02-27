@@ -20,6 +20,7 @@ export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<u
   'database': () => import('./database/database.component').then(m => m.DatabaseSettingsComponent),
   'logs': () => import('./logs-settings/logs-settings.component').then(m => m.LogsSettingsComponent),
   'about': () => import('./about/about.component').then(m => m.AboutComponent),
+  'debug': () => import('./debug/debug.component').then(m => m.DebugSettingsComponent),
 };
 
 /**

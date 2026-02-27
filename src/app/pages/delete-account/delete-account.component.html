@@ -17,9 +17,29 @@
         <div class="completion-icon">
           <mat-icon>check_circle</mat-icon>
         </div>
-        <h3>Deletion Complete</h3>
+        <h3>
+          @if (vanishSent()) {
+          Vanish Request Sent
+          } @else {
+          Deletion Complete
+          }
+        </h3>
 
-        @if (localDataCleared()) {
+        @if (vanishSent()) {
+        <div class="completion-stats">
+          <p>
+            Vanish request delivered to <strong>{{ vanishSuccessCount() }}</strong> of
+            <strong>{{ vanishRelayCount() }}</strong> relays.
+            @if (vanishFailCount() > 0) {
+            <span class="vanish-fail-note">{{ vanishFailCount() }} relays could not be reached.</span>
+            }
+          </p>
+        </div>
+        <p class="completion-hint">
+          Compliant relays will permanently delete all your events and prevent re-broadcast.
+          Local data has also been cleared.
+        </p>
+        } @else if (localDataCleared()) {
         <p>Your local data has been cleared successfully.</p>
         } @else {
         <div class="completion-stats">
@@ -32,9 +52,11 @@
         </div>
         }
 
+        @if (!vanishSent()) {
         <p class="completion-hint">
           You can sign out of this account or go back to continue using the app.
         </p>
+        }
 
         <div class="completion-actions">
           <button mat-stroked-button (click)="navigateBack()">
@@ -57,6 +79,7 @@
       @if (currentAccount(); as account) {
       <div class="account-info">
         <h3>Current Account</h3>
+        <p class="account-npub">{{ account.pubkey | npub }}</p>
         <p class="account-pubkey">{{ account.pubkey }}</p>
       </div>
       }
@@ -208,26 +231,106 @@
       </div>
       }
 
+      <!-- NIP-62 Request to Vanish Section -->
+      <mat-divider></mat-divider>
+
+      <div class="vanish-section">
+        <div class="section-header">
+          <h3>Request to Vanish (NIP-62)</h3>
+        </div>
+        <p class="section-description">
+          Send a cryptographic request to relays asking them to permanently delete <strong>all</strong> your events
+          and block future re-broadcasts. This is a stronger signal than individual NIP-09 deletions.
+        </p>
+
+        <div class="warning-notice vanish-warning">
+          <mat-icon class="warning-icon">warning</mat-icon>
+          <div class="warning-content">
+            <h4>Irreversible Action</h4>
+            <p>
+              Compliant relays will permanently delete all events from your pubkey and prevent
+              re-broadcast. A kind 5 deletion event cannot undo a vanish request.
+            </p>
+          </div>
+        </div>
+
+        <div class="vanish-options">
+          <h4>Vanish Scope</h4>
+          <mat-radio-group [ngModel]="vanishScope()" (ngModelChange)="vanishScope.set($event)">
+            <mat-radio-button value="global" class="vanish-radio">
+              <div class="radio-label">
+                <span class="radio-title">Global (ALL_RELAYS)</span>
+                <span class="radio-description">Broadcast to all known relays for maximum reach</span>
+              </div>
+            </mat-radio-button>
+            <mat-radio-button value="targeted" class="vanish-radio">
+              <div class="radio-label">
+                <span class="radio-title">Targeted (Your Relays Only)</span>
+                <span class="radio-description">Send only to your configured relays</span>
+              </div>
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+
+        <div class="vanish-reason">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Reason (optional)</mat-label>
+            <textarea matInput
+              [ngModel]="vanishReason()"
+              (ngModelChange)="vanishReason.set($event)"
+              placeholder="Optionally explain why you want to vanish"
+              rows="2">
+            </textarea>
+          </mat-form-field>
+        </div>
+
+        @if (deletionState() === 'vanishing') {
+        <div class="vanish-progress">
+          <mat-icon class="spinning">sync</mat-icon>
+          <span>Sending vanish request to {{ vanishRelayCount() }} relays...</span>
+        </div>
+        }
+
+        <div class="vanish-actions">
+          <button mat-flat-button class="danger-button"
+            (click)="requestToVanish()"
+            [disabled]="!deleteForm.valid || deletionState() === 'vanishing' || deleting()">
+            @if (deletionState() === 'vanishing') {
+            <mat-icon class="spinning">sync</mat-icon>
+            Sending Vanish Request...
+            } @else {
+            <mat-icon>delete_sweep</mat-icon>
+            Request to Vanish
+            }
+          </button>
+        </div>
+      </div>
+
       <!-- NIP-09 Information -->
       <mat-divider></mat-divider>
 
       <div class="info-section">
         <div class="info-header">
           <mat-icon>info</mat-icon>
-          <h4>About Event Deletion (NIP-09)</h4>
+          <h4>About Event Deletion</h4>
         </div>
         <div class="info-content">
           <p>
-            Event deletion in Nostr works through NIP-09 deletion requests. When you delete events:
+            <strong>NIP-09 (Delete Events):</strong> Publishes individual deletion requests for each event.
+            Well-behaved relays and clients will honor these requests, but compliance is not guaranteed.
+          </p>
+          <p>
+            <strong>NIP-62 (Request to Vanish):</strong> A single signed event requesting relays to delete
+            <em>all</em> events from your pubkey and prevent re-broadcast. This is a stronger, more
+            comprehensive signal and is irreversible.
           </p>
           <ul>
-            <li>Deletion requests are published to relays asking them to remove the original events</li>
-            <li>Well-behaved relays and clients should honor these requests and stop showing the events</li>
-            <li>However, there's no guarantee all relays will comply with deletion requests</li>
-            <li>Some copies of your events may persist on non-compliant relays or in backups</li>
+            <li>NIP-09 targets specific events you have stored locally</li>
+            <li>NIP-62 instructs relays to wipe everything from your pubkey, even events you do not have locally</li>
+            <li>Neither method can guarantee deletion from all relays or backups</li>
           </ul>
           <p>
-            <strong>Consider this carefully before proceeding with account deletion.</strong>
+            <strong>Consider this carefully before proceeding.</strong>
           </p>
         </div>
       </div>

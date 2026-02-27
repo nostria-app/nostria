@@ -10,6 +10,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatRadioModule } from '@angular/material/radio';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { kinds } from 'nostr-tools';
 
@@ -17,7 +19,12 @@ import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { DatabaseService } from '../../services/database.service';
+import { PublishService } from '../../services/publish.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
+import { RelaysService } from '../../services/relays/relays';
+import { LoggerService } from '../../services/logger.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { NPubPipe } from '../../pipes/npub.pipe';
 
 interface EventKindInfo {
   kind: number;
@@ -26,12 +33,16 @@ interface EventKindInfo {
   count: number;
 }
 
-type DeletionState = 'idle' | 'deleting' | 'completed' | 'clearing-local';
+type DeletionState = 'idle' | 'deleting' | 'completed' | 'clearing-local' | 'vanishing';
+
+/** NIP-62 vanish scope: targeted (user's relays only) or global (ALL_RELAYS) */
+type VanishScope = 'targeted' | 'global';
 
 @Component({
   selector: 'app-delete-account',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -40,6 +51,8 @@ type DeletionState = 'idle' | 'deleting' | 'completed' | 'clearing-local';
     MatDividerModule,
     MatProgressBarModule,
     MatDialogModule,
+    MatRadioModule,
+    NPubPipe,
   ],
   templateUrl: './delete-account.component.html',
   styleUrl: './delete-account.component.scss',
@@ -51,6 +64,10 @@ export class DeleteAccountComponent implements OnInit {
   private readonly nostrService = inject(NostrService);
   private readonly accountStateService = inject(AccountStateService);
   private readonly databaseService = inject(DatabaseService);
+  private readonly publishService = inject(PublishService);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly relaysService = inject(RelaysService);
+  private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
@@ -68,6 +85,14 @@ export class DeleteAccountComponent implements OnInit {
   failedCount = signal(0);
   deletionState = signal<DeletionState>('idle');
   localDataCleared = signal(false);
+
+  // NIP-62 vanish signals
+  vanishScope = signal<VanishScope>('global');
+  vanishReason = signal('');
+  vanishRelayCount = signal(0);
+  vanishSuccessCount = signal(0);
+  vanishFailCount = signal(0);
+  vanishSent = signal(false);
 
   // Computed values
   totalEventsCount = computed(() =>
@@ -353,6 +378,149 @@ export class DeleteAccountComponent implements OnInit {
     this.scanUserEvents();
   }
 
+  /**
+   * NIP-62: Request to Vanish
+   *
+   * Creates and publishes a kind 62 event requesting relays to delete all data
+   * from this pubkey. Supports two modes:
+   * - Targeted: sends to the user's configured relays only, tagging each relay URL
+   * - Global: tags `ALL_RELAYS` and broadcasts to as many relays as possible
+   */
+  async requestToVanish() {
+    const currentAccount = this.currentAccount();
+    if (!currentAccount) {
+      this.showMessage('No active account found');
+      return;
+    }
+
+    if (!this.deleteForm.valid) {
+      this.showMessage('Please enter the confirmation text correctly');
+      return;
+    }
+
+    const scope = this.vanishScope();
+    const scopeLabel = scope === 'global' ? 'ALL relays (global)' : 'your configured relays';
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Request to Vanish (NIP-62)',
+        message: `This will broadcast a Request to Vanish event to ${scopeLabel}. ` +
+          'Compliant relays will permanently delete ALL your events and block re-broadcast. ' +
+          'This is irreversible. Are you sure?',
+        confirmText: 'Request to Vanish',
+        cancelText: 'Cancel',
+      } as ConfirmDialogData,
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletionState.set('vanishing');
+    this.vanishSent.set(false);
+    this.vanishSuccessCount.set(0);
+    this.vanishFailCount.set(0);
+
+    try {
+      const reason = this.vanishReason().trim();
+
+      // Build the relay tag list and determine broadcast targets
+      let relayTags: string[];
+      let broadcastRelayUrls: string[];
+
+      if (scope === 'global') {
+        // Global vanish: tag ALL_RELAYS, broadcast to every relay we know about
+        relayTags = ['ALL_RELAYS'];
+        broadcastRelayUrls = this.collectAllKnownRelayUrls();
+      } else {
+        // Targeted vanish: tag each of the user's configured relays, send only to those
+        const userRelays = this.accountRelay.getRelayUrls();
+        relayTags = userRelays;
+        broadcastRelayUrls = userRelays;
+      }
+
+      this.vanishRelayCount.set(broadcastRelayUrls.length);
+
+      if (broadcastRelayUrls.length === 0) {
+        this.showMessage('No relays found to send the vanish request to');
+        this.deletionState.set('idle');
+        return;
+      }
+
+      // Create the NIP-62 vanish event
+      const vanishEvent = this.nostrService.createVanishEvent(relayTags, reason);
+
+      // Sign the event
+      const signedEvent = await this.nostrService.signEvent(vanishEvent);
+
+      // Publish to the determined relay set
+      const publishResult = await this.publishService.publish(signedEvent, {
+        relayUrls: broadcastRelayUrls,
+        timeout: 30000,
+      });
+
+      // Count successes and failures
+      let successes = 0;
+      let failures = 0;
+      for (const [, relayResult] of publishResult.relayResults) {
+        if (relayResult.success) {
+          successes++;
+        } else {
+          failures++;
+        }
+      }
+
+      this.vanishSuccessCount.set(successes);
+      this.vanishFailCount.set(failures);
+      this.vanishSent.set(true);
+
+      if (publishResult.success) {
+        this.logger.info(`[DeleteAccount] NIP-62 vanish request sent to ${successes}/${broadcastRelayUrls.length} relays`);
+        this.showMessage(`Vanish request sent to ${successes} relay(s)`);
+      } else {
+        this.logger.warn('[DeleteAccount] NIP-62 vanish request failed on all relays');
+        this.showMessage('Vanish request failed to reach any relays');
+      }
+
+      // Clear local data after vanish
+      try {
+        await this.databaseService.clearAllData();
+        this.localDataCleared.set(true);
+        this.eventKinds.set([]);
+      } catch (error) {
+        this.logger.warn('[DeleteAccount] Failed to clear local data after vanish', error);
+      }
+
+      this.deletionState.set('completed');
+    } catch (error) {
+      console.error('Error during vanish request:', error);
+      this.showMessage('Error sending vanish request');
+      this.deletionState.set('idle');
+    }
+  }
+
+  /**
+   * Collect all relay URLs we know about: the user's relays + all relays with stats.
+   * Used for global vanish to maximize broadcast reach.
+   */
+  private collectAllKnownRelayUrls(): string[] {
+    const allUrls = new Set<string>();
+
+    // User's own configured relays
+    for (const url of this.accountRelay.getRelayUrls()) {
+      allUrls.add(url);
+    }
+
+    // All relays we've seen (from relay stats tracking)
+    for (const [url] of this.relaysService.getAllRelayStats()) {
+      allUrls.add(url);
+    }
+
+    return Array.from(allUrls);
+  }
+
   async signOut() {
     await this.nostrService.logout();
     this.router.navigate(['/']);
@@ -364,6 +532,13 @@ export class DeleteAccountComponent implements OnInit {
     this.deletedCount.set(0);
     this.failedCount.set(0);
     this.localDataCleared.set(false);
+    // Reset NIP-62 vanish signals
+    this.vanishSent.set(false);
+    this.vanishSuccessCount.set(0);
+    this.vanishFailCount.set(0);
+    this.vanishRelayCount.set(0);
+    this.vanishReason.set('');
+    this.vanishScope.set('global');
     this.deleteForm.reset();
     this.scanUserEvents();
   }
