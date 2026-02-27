@@ -318,3 +318,17 @@
     }
   }
 }
+
+@media (max-width: 599px) {
+  .lists-container {
+    padding: 8px;
+  }
+
+  .tab-content {
+    padding: 12px 0;
+  }
+
+  .tab-description {
+    margin-bottom: 12px;
+  }
+}

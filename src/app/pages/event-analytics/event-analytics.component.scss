@@ -437,3 +437,37 @@
     color: var(--mat-sys-on-surface-variant);
   }
 }
+
+@media (max-width: 599px) {
+  .analytics-container {
+    padding: 8px;
+  }
+
+  .analytics-header {
+    margin-bottom: 16px;
+  }
+
+  .loading-event,
+  .loading-state {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .engager-item {
+    padding: 10px 12px;
+  }
+
+  .no-event,
+  .unauthenticated-state,
+  .premium-cta-overlay {
+    padding: 32px 12px;
+  }
+
+  .preview-backdrop {
+    padding: 12px;
+  }
+}

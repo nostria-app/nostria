@@ -386,7 +386,7 @@ button mat-spinner {
 // Mobile responsive styles
 @media (max-width: 599px) {
   .badges-container {
-    padding: 12px;
+    padding: 8px;
   }
 
   .reorder-toggle {
@@ -419,7 +419,7 @@ button mat-spinner {
   }
 
   .no-badges-message {
-    padding: 32px 16px;
+    padding: 24px 12px;
 
     mat-icon {
       font-size: 36px;

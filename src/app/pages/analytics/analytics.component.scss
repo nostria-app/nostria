@@ -820,6 +820,10 @@
 
 // Responsive
 @media (max-width: 768px) {
+  .analytics-container {
+    padding: 0.75rem;
+  }
+
   .preview-backdrop .mock-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -904,6 +908,10 @@
 }
 
 @media (max-width: 480px) {
+  .analytics-container {
+    padding: 0.5rem;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -1093,4 +1101,3 @@
     }
   }
 }
-
