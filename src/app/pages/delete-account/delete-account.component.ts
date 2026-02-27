@@ -27,6 +27,7 @@ import { RelaysService } from '../../services/relays/relays';
 import { LoggerService } from '../../services/logger.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 
 interface EventKindInfo {
   kind: number;
@@ -57,6 +58,7 @@ type DeleteAccountSource = 'accounts' | 'privacy';
     MatRadioModule,
     MatExpansionModule,
     NPubPipe,
+    UserProfileComponent,
   ],
   templateUrl: './delete-account.component.html',
   styleUrl: './delete-account.component.scss',

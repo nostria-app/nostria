@@ -85,6 +85,9 @@
       @if (currentAccount(); as account) {
       <div class="account-info">
         <h3>Current Account</h3>
+        <div class="account-profile">
+          <app-user-profile [pubkey]="currentAccount()!.pubkey" view="compact"></app-user-profile>
+        </div>
         <p class="account-npub">{{ account.pubkey | npub }}</p>
         <p class="account-pubkey">{{ account.pubkey }}</p>
       </div>
@@ -263,11 +266,8 @@
         <div class="vanish-reason">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Reason (optional)</mat-label>
-            <textarea matInput
-              [ngModel]="vanishReason()"
-              (ngModelChange)="vanishReason.set($event)"
-              placeholder="Optionally explain why you want to vanish"
-              rows="2">
+            <textarea matInput [ngModel]="vanishReason()" (ngModelChange)="vanishReason.set($event)"
+              placeholder="Optionally explain why you want to vanish" rows="2">
             </textarea>
           </mat-form-field>
         </div>
@@ -294,8 +294,7 @@
         }
 
         <div class="vanish-actions">
-          <button mat-flat-button class="danger-button"
-            (click)="requestToVanish()"
+          <button mat-flat-button class="danger-button" (click)="requestToVanish()"
             [disabled]="!isDeleteConfirmationValid() || !isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
             <span class="button-content">
               @if (deletionState() === 'vanishing') {

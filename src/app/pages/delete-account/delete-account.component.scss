@@ -17,6 +17,13 @@
   .account-info {
     margin-bottom: 16px;
 
+    .account-profile {
+      margin-bottom: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      background: var(--mat-sys-surface-container-low);
+    }
+
     h3 {
       margin: 0 0 8px 0;
       color: var(--mat-sys-on-surface);
