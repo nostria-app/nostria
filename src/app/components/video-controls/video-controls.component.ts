@@ -81,6 +81,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '[class.visible]': 'controlsVisible()',
     '[class.is-paused]': 'paused()',
     '[class.native-fullscreen]': 'nativeFullscreen()',
+    '[class.settings-open]': 'settingsPanel() !== "closed"',
     'tabindex': '0',
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'onMouseLeave()',
@@ -219,9 +220,9 @@ export class VideoControlsComponent implements OnDestroy {
     return ((rate - this.speedMin) / (this.speedMax - this.speedMin)) * 100;
   });
 
-  // Computed: label for the preset button (e.g., "Normal" for 1.0)
+  // Computed: label for the preset button (number only, "Normal" shown as sublabel)
   speedPresetLabel(rate: number): string {
-    return rate === 1.0 ? 'Normal' : rate.toString();
+    return rate.toString();
   }
 
   constructor() {

@@ -6,14 +6,10 @@
   bottom: 0;
   // Receive mouse events for hover detection, pass through to video for click-to-play
   pointer-events: auto;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  // NOTE: opacity is NOT set on :host — it's on .controls-overlay instead.
+  // Setting opacity on :host creates an isolated stacking context that prevents
+  // backdrop-filter on children from seeing through to content outside (the video).
   z-index: 10;
-
-  &.visible,
-  &.is-paused {
-    opacity: 1;
-  }
 }
 
 .controls-overlay {
@@ -27,6 +23,14 @@
   justify-content: flex-end;
   // Pass through mouse events to parent
   pointer-events: none;
+  // Fade controls in/out (moved from :host to avoid isolating backdrop-filter)
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  :host.visible &,
+  :host.is-paused & {
+    opacity: 1;
+  }
 }
 
 // Gradients for visibility
@@ -54,6 +58,12 @@
   height: 120px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
   pointer-events: none;
+  transition: opacity 0.15s ease;
+
+  // Hide gradient when settings panel is open so backdrop-filter sees the video, not the dark gradient
+  :host.settings-open & {
+    opacity: 0;
+  }
 }
 
 // Center play button
@@ -461,16 +471,17 @@
   position: absolute;
   bottom: 60px;
   right: 12px;
-  background: rgba(28, 28, 28, 0.95);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.15);
+  -webkit-backdrop-filter: blur(50px) saturate(1.8) brightness(0.7);
+  backdrop-filter: blur(50px) saturate(1.8) brightness(0.7);
   border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   min-width: 280px;
   max-width: 320px;
   z-index: 21;
   pointer-events: auto;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   animation: settingsPanelIn 0.15s ease-out;
 
   @media (max-width: 480px) {
@@ -548,7 +559,7 @@
   display: flex;
   align-items: center;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   gap: 4px;
 }
 
@@ -738,6 +749,7 @@
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   text-align: center;
+  white-space: nowrap;
 
   &:hover {
     background: rgba(255, 255, 255, 0.18);
@@ -751,21 +763,20 @@
   }
 }
 
-// "Normal" label under presets
+// "Normal" label under the first preset (1.0)
 .speed-presets-labels {
   display: flex;
   width: 100%;
   padding: 0;
 
   .speed-preset-sublabel {
+    // Match the flex: 1 width of a single preset button
     flex: 1;
     text-align: center;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.4);
-    // Only show under the first preset (1.0)
-    &:first-child {
-      text-align: center;
-    }
+    // Only takes up 1/5 of the row, left-aligned
+    max-width: calc(100% / 5);
   }
 }
 

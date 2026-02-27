@@ -1,109 +1,109 @@
+<!-- Settings Panel Overlay (YouTube-style, outside controls-overlay for true glass effect) -->
+@if (settingsPanel() !== 'closed') {
+<div class="settings-panel-backdrop" (click)="closeSettingsPanel()"></div>
+<div class="settings-panel" (click)="$event.stopPropagation()">
+  @if (settingsPanel() === 'main') {
+  <!-- Main settings menu -->
+  <div class="settings-panel-content">
+    @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
+    <button class="settings-item" (click)="openSpeedPanel()">
+      <mat-icon>speed</mat-icon>
+      <span class="settings-item-label">Playback speed</span>
+      <span class="settings-item-value">{{ playbackRate() === 1 ? 'Normal' : speedDisplayText() }}</span>
+      <mat-icon class="settings-item-arrow">chevron_right</mat-icon>
+    </button>
+    }
+    @if (mergedConfig().showQuality && qualityLevels().length > 0) {
+    <button class="settings-item" [matMenuTriggerFor]="qualityMenu">
+      <mat-icon>tune</mat-icon>
+      <span class="settings-item-label">Quality</span>
+      <span class="settings-item-value">{{ currentQualityLabel() }}</span>
+      <mat-icon class="settings-item-arrow">chevron_right</mat-icon>
+    </button>
+    <mat-menu #qualityMenu="matMenu" class="video-controls-menu">
+      <button mat-menu-item (click)="onQualityChange(-1)" [class.active]="currentQuality() === -1">
+        Auto
+      </button>
+      @for (level of qualityLevels(); track level.index) {
+      <button mat-menu-item (click)="onQualityChange(level.index)"
+        [class.active]="currentQuality() === level.index">
+        {{ level.label }}
+      </button>
+      }
+    </mat-menu>
+    }
+    @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showCast) {
+    <button class="settings-item" (click)="onCastToggle(); closeSettingsPanel()">
+      <mat-icon>cast</mat-icon>
+      <span class="settings-item-label">Play on TV</span>
+    </button>
+    }
+    @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showPiP) {
+    <button class="settings-item" (click)="onPipToggle(); closeSettingsPanel()">
+      <mat-icon>picture_in_picture_alt</mat-icon>
+      <span class="settings-item-label">Picture-in-picture</span>
+    </button>
+    }
+  </div>
+  } @else if (settingsPanel() === 'speed') {
+  <!-- YouTube-style speed panel -->
+  <div class="speed-panel">
+    <div class="speed-panel-header">
+      <button class="speed-panel-back" (click)="backToSettingsMain()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="speed-panel-title">Playback speed</span>
+    </div>
+
+    <div class="speed-panel-body">
+      <!-- Current speed display -->
+      <div class="speed-display">{{ speedDisplayText() }}</div>
+
+      <!-- Slider row: minus button, range slider, plus button -->
+      <div class="speed-slider-row">
+        <button class="speed-adjust-btn" (click)="decrementSpeed()" [class.disabled]="playbackRate() <= speedMin">
+          <mat-icon>remove</mat-icon>
+        </button>
+        <div class="speed-slider-track-wrapper">
+          <input type="range"
+            class="speed-slider"
+            [min]="speedMin"
+            [max]="speedMax"
+            [step]="speedStep"
+            [value]="playbackRate()"
+            (input)="onSpeedSliderInput($event)"
+            aria-label="Playback speed" />
+          <div class="speed-slider-track-fill" [style.width.%]="speedSliderPercent()"></div>
+        </div>
+        <button class="speed-adjust-btn" (click)="incrementSpeed()" [class.disabled]="playbackRate() >= speedMax">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <!-- Preset buttons -->
+      <div class="speed-presets">
+        @for (preset of speedPresets; track preset) {
+        <button class="speed-preset-btn"
+          [class.active]="isActivePreset(preset)"
+          (click)="setSpeedPreset(preset)">
+          {{ speedPresetLabel(preset) }}
+        </button>
+        }
+      </div>
+
+      <!-- "Normal" label under the first preset -->
+      <div class="speed-presets-labels">
+        <span class="speed-preset-sublabel">Normal</span>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+}
+
 <div class="controls-overlay">
   <!-- Top gradient (for visibility when hovering) -->
   <div class="gradient-top"></div>
-
-  <!-- Settings Panel Overlay (YouTube-style) -->
-  @if (settingsPanel() !== 'closed') {
-  <div class="settings-panel-backdrop" (click)="closeSettingsPanel()"></div>
-  <div class="settings-panel" (click)="$event.stopPropagation()">
-    @if (settingsPanel() === 'main') {
-    <!-- Main settings menu -->
-    <div class="settings-panel-content">
-      @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
-      <button class="settings-item" (click)="openSpeedPanel()">
-        <mat-icon>speed</mat-icon>
-        <span class="settings-item-label">Playback speed</span>
-        <span class="settings-item-value">{{ playbackRate() === 1 ? 'Normal' : speedDisplayText() }}</span>
-        <mat-icon class="settings-item-arrow">chevron_right</mat-icon>
-      </button>
-      }
-      @if (mergedConfig().showQuality && qualityLevels().length > 0) {
-      <button class="settings-item" [matMenuTriggerFor]="qualityMenu">
-        <mat-icon>tune</mat-icon>
-        <span class="settings-item-label">Quality</span>
-        <span class="settings-item-value">{{ currentQualityLabel() }}</span>
-        <mat-icon class="settings-item-arrow">chevron_right</mat-icon>
-      </button>
-      <mat-menu #qualityMenu="matMenu" class="video-controls-menu">
-        <button mat-menu-item (click)="onQualityChange(-1)" [class.active]="currentQuality() === -1">
-          Auto
-        </button>
-        @for (level of qualityLevels(); track level.index) {
-        <button mat-menu-item (click)="onQualityChange(level.index)"
-          [class.active]="currentQuality() === level.index">
-          {{ level.label }}
-        </button>
-        }
-      </mat-menu>
-      }
-      @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showCast) {
-      <button class="settings-item" (click)="onCastToggle(); closeSettingsPanel()">
-        <mat-icon>cast</mat-icon>
-        <span class="settings-item-label">Play on TV</span>
-      </button>
-      }
-      @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showPiP) {
-      <button class="settings-item" (click)="onPipToggle(); closeSettingsPanel()">
-        <mat-icon>picture_in_picture_alt</mat-icon>
-        <span class="settings-item-label">Picture-in-picture</span>
-      </button>
-      }
-    </div>
-    } @else if (settingsPanel() === 'speed') {
-    <!-- YouTube-style speed panel -->
-    <div class="speed-panel">
-      <div class="speed-panel-header">
-        <button class="speed-panel-back" (click)="backToSettingsMain()">
-          <mat-icon>chevron_left</mat-icon>
-        </button>
-        <span class="speed-panel-title">Playback speed</span>
-      </div>
-
-      <div class="speed-panel-body">
-        <!-- Current speed display -->
-        <div class="speed-display">{{ speedDisplayText() }}</div>
-
-        <!-- Slider row: minus button, range slider, plus button -->
-        <div class="speed-slider-row">
-          <button class="speed-adjust-btn" (click)="decrementSpeed()" [class.disabled]="playbackRate() <= speedMin">
-            <mat-icon>remove</mat-icon>
-          </button>
-          <div class="speed-slider-track-wrapper">
-            <input type="range"
-              class="speed-slider"
-              [min]="speedMin"
-              [max]="speedMax"
-              [step]="speedStep"
-              [value]="playbackRate()"
-              (input)="onSpeedSliderInput($event)"
-              aria-label="Playback speed" />
-            <div class="speed-slider-track-fill" [style.width.%]="speedSliderPercent()"></div>
-          </div>
-          <button class="speed-adjust-btn" (click)="incrementSpeed()" [class.disabled]="playbackRate() >= speedMax">
-            <mat-icon>add</mat-icon>
-          </button>
-        </div>
-
-        <!-- Preset buttons -->
-        <div class="speed-presets">
-          @for (preset of speedPresets; track preset) {
-          <button class="speed-preset-btn"
-            [class.active]="isActivePreset(preset)"
-            (click)="setSpeedPreset(preset)">
-            {{ speedPresetLabel(preset) }}
-          </button>
-          }
-        </div>
-
-        <!-- "Normal" label under the first preset -->
-        <div class="speed-presets-labels">
-          <span class="speed-preset-sublabel">Normal</span>
-        </div>
-      </div>
-    </div>
-    }
-  </div>
-  }
 
   <!-- Center play button (large, only when paused and never played) -->
   @if (mergedConfig().showCenterPlayButton && paused() && !hasPlayedOnce()) {
