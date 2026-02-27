@@ -108,6 +108,18 @@ export class UpgradeComponent implements OnDestroy {
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null>(null);
 
+  readonly storeSingleSubscriptionMode = computed(
+    () => this.platform.canPayWithPlayStore() || this.platform.canPayWithAppStore()
+  );
+
+  readonly planTiers = computed(() => {
+    const allTiers = this.tiers();
+    if (!this.storeSingleSubscriptionMode()) {
+      return allTiers;
+    }
+    return allTiers.filter(tier => tier.key === 'premium');
+  });
+
   /** Available payment methods based on platform detection */
   availablePaymentMethods = computed(() => {
     const methods: { key: 'lightning' | 'play-store' | 'app-store' | 'external'; label: string; icon: string; description: string; recommended: boolean }[] = [];
@@ -228,6 +240,25 @@ export class UpgradeComponent implements OnDestroy {
           this.usernameFormGroup.get('username')!.markAllAsTouched();
         }
       });
+
+    effect(() => {
+      if (!this.storeSingleSubscriptionMode()) {
+        return;
+      }
+
+      if (this.selectedPaymentOption() !== 'monthly') {
+        this.selectedPaymentOption.set('monthly');
+      }
+
+      const premiumTier = this.tiers().find(tier => tier.key === 'premium') ?? null;
+      if (!premiumTier) {
+        return;
+      }
+
+      if (this.selectedTier()?.key !== premiumTier.key) {
+        this.selectedTier.set(premiumTier);
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -514,16 +545,7 @@ export class UpgradeComponent implements OnDestroy {
    * Called when the user is on Android native app.
    */
   async purchaseWithPlayStore() {
-    const selectedTier = this.selectedTier();
-    const selectedPaymentOption = this.selectedPaymentOption();
-    if (!selectedTier || !selectedPaymentOption) return;
-
-    const tierName = selectedTier.details.tier as 'premium' | 'premium_plus';
-    const productId = this.iap.getProductId(tierName, selectedPaymentOption);
-    if (!productId) {
-      this.snackBar.open('Product not available in store.', 'Close', { duration: 5000 });
-      return;
-    }
+    const productId = this.iap.getPrimaryStoreSubscriptionProductId();
 
     const result = await this.iap.purchaseWithPlayStore(productId);
     if (result.success && result.purchaseToken) {
@@ -560,16 +582,7 @@ export class UpgradeComponent implements OnDestroy {
    * Uses the native iOS bridge to trigger a StoreKit purchase.
    */
   async purchaseWithAppStore() {
-    const selectedTier = this.selectedTier();
-    const selectedPaymentOption = this.selectedPaymentOption();
-    if (!selectedTier || !selectedPaymentOption) return;
-
-    const tierName = selectedTier.details.tier as 'premium' | 'premium_plus';
-    const productId = this.iap.getProductId(tierName, selectedPaymentOption);
-    if (!productId) {
-      this.snackBar.open('Product not available in store.', 'Close', { duration: 5000 });
-      return;
-    }
+    const productId = this.iap.getPrimaryStoreSubscriptionProductId();
 
     const result = await this.iap.purchaseWithAppStore(productId);
     if (result.success && result.purchaseToken) {

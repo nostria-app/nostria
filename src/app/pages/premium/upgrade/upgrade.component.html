@@ -97,21 +97,33 @@
   @if (currentStep() === 1) {
   <div class="step-content payment-plan-step">
     <h2>Select Your Premium Plan</h2>
-    <p class="step-description">Choose a plan that works best for you.</p>
+    <p class="step-description">
+      @if (storeSingleSubscriptionMode()) {
+      Store checkout currently supports <strong>Premium Monthly</strong>.
+      } @else {
+      Choose a plan that works best for you.
+      }
+    </p>
+
+    @if (storeSingleSubscriptionMode()) {
+    <div class="store-limited-notice">
+      <mat-icon>info</mat-icon>
+      <span>For the first native store release, only <strong>Premium Monthly</strong> is available.</span>
+    </div>
+    }
 
     <div class="tier-options">
-      @for (tier of tiers(); track tier.key) {
+      @for (tier of planTiers(); track tier.key) {
       <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key"
         (click)="selectedTier.set(tier)">
         <mat-card-header>
           <mat-card-title>{{ tier.details.name }}</mat-card-title>
         </mat-card-header>
         <mat-card-content class="fill-card-content">
-          <ul class="feature-list">
-            @for (feature of getFeatureDescriptions(tier); track $index) {
-            <li>{{ feature }}</li>
+          <div class="feature-list">@for (feature of getFeatureDescriptions(tier); track $index) {
+            <div class="feature-list-item">{{ feature }}</div>
             }
-          </ul>
+          </div>
           <div class="pricing-options">
             <div class="payment-option-cards">
               <mat-card class="payment-option-card" [class.selected]="
@@ -131,6 +143,7 @@
                   </div>
                 </label>
               </mat-card>
+              @if (!storeSingleSubscriptionMode()) {
               <mat-card class="payment-option-card" [class.selected]="
                         selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'
                       ">
@@ -168,6 +181,7 @@
                   </div>
                 </label>
               </mat-card>
+              }
             </div>
           </div>
         </mat-card-content>
@@ -191,8 +205,7 @@
 
     <div class="step-actions">
       <button mat-button (click)="prevStep()">Back</button>
-      <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()"
-        (click)="nextStep()">
+      <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()" (click)="nextStep()">
         Continue to Payment
       </button>
     </div>
@@ -209,8 +222,9 @@
     <div class="payment-method-selector">
       @for (method of availablePaymentMethods(); track method.key) {
       <div class="payment-method-card" [class.selected]="selectedPaymentMethod() === method.key"
-        (click)="selectPaymentMethod(method.key)" (keydown.enter)="selectPaymentMethod(method.key)"
-        tabindex="0" role="radio" [attr.aria-checked]="selectedPaymentMethod() === method.key">
+        (click)="selectPaymentMethod(method.key)" (keydown.enter)="selectPaymentMethod(method.key)" tabindex="0"
+        role="radio" aria-checked="false"
+        [attr.aria-checked]="selectedPaymentMethod() === method.key ? 'true' : 'false'">
         <div class="payment-method-header">
           <mat-icon>{{ method.icon }}</mat-icon>
           <div class="payment-method-info">
@@ -310,11 +324,15 @@
         <p>Your purchase will be processed through Google Play.</p>
         <button mat-flat-button (click)="purchaseWithPlayStore()" [disabled]="iap.purchasing()">
           @if (iap.purchasing()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          Processing...
-          } @else {
-          <mat-icon>shopping_cart</mat-icon>
-          Purchase with Google Play
+          <span class="payment-button-content">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing...</span>
+          </span>
+          }
+          @if (!iap.purchasing()) {
+          <span class="payment-button-content">
+            <span>Purchase with Google Play</span>
+          </span>
           }
         </button>
       </div>
@@ -328,11 +346,15 @@
         <p>Your purchase will be processed through the App Store.</p>
         <button mat-flat-button (click)="purchaseWithAppStore()" [disabled]="iap.purchasing()">
           @if (iap.purchasing()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          Processing...
-          } @else {
-          <mat-icon>shopping_cart</mat-icon>
-          Purchase with App Store
+          <span class="payment-button-content">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing...</span>
+          </span>
+          }
+          @if (!iap.purchasing()) {
+          <span class="payment-button-content">
+            <span>Purchase with App Store</span>
+          </span>
           }
         </button>
       </div>

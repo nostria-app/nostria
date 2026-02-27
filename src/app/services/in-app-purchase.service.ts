@@ -61,6 +61,12 @@ const GIFT_PRODUCTS: StoreProduct[] = [
 /** Debug-only one-time purchase product for store flow verification. */
 const DONATION_PRODUCT_ID = 'nostria_donation_1usd';
 
+/** App Store product ID for purchasing a verified @nostria.app username (1 year). */
+const APP_STORE_USERNAME_PRODUCT_ID = 'username';
+
+/** First release store subscription SKU (App Store + Play Store). */
+const PRIMARY_STORE_SUBSCRIPTION_PRODUCT_ID = 'nostria_premium_monthly';
+
 /**
  * Digital Goods API types for Play Store billing via TWA.
  * @see https://developer.chrome.com/docs/android/trusted-web-activity/receive-payments-play-billing
@@ -276,6 +282,16 @@ export class InAppPurchaseService {
   /** Get the debug donation product ID ($1) used for store purchase verification. */
   getDonationProductId(): string {
     return DONATION_PRODUCT_ID;
+  }
+
+  /** Get the App Store SKU for a 1-year verified @nostria.app username purchase. */
+  getAppStoreUsernameProductId(): string {
+    return APP_STORE_USERNAME_PRODUCT_ID;
+  }
+
+  /** Get the currently supported subscription SKU for native stores. */
+  getPrimaryStoreSubscriptionProductId(): string {
+    return PRIMARY_STORE_SUBSCRIPTION_PRODUCT_ID;
   }
 
   /**

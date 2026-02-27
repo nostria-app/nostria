@@ -9,8 +9,8 @@
   font-size: 2rem;
   margin-bottom: 1.5rem;
   background: linear-gradient(90deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
-  background-clip: text;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -49,6 +49,7 @@
   border-radius: 12px;
   box-shadow: var(--mat-sys-level1);
   overflow: hidden;
+  max-width: 100%;
 }
 
 .step-indicator-container {
@@ -112,6 +113,7 @@
 
 .step-content {
   padding: 2rem;
+  min-width: 0;
 }
 
 h2 {
@@ -123,6 +125,22 @@ h2 {
 .step-description {
   color: var(--mat-sys-on-surface-variant);
   margin-bottom: 2rem;
+}
+
+.store-limited-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
 }
 
 .step-actions {
@@ -189,15 +207,21 @@ h2 {
 
 .feature-list {
   flex: 0 0 auto;
-  list-style-type: disc;
-  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   margin-bottom: 0.7rem;
 }
 
-.feature-list li {
-  margin-bottom: 0.3rem;
+.feature-list-item {
   color: var(--mat-sys-on-surface);
   font-size: 1rem;
+}
+
+.payment-button-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .payment-option-cards {
@@ -333,6 +357,7 @@ h2 {
 .summary-row {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
   padding: 0.5rem 0;
   color: var(--mat-sys-on-surface);
 
@@ -377,11 +402,11 @@ h2 {
 
 .payment-method-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
   gap: 1rem;
 
-  > mat-icon {
+  >mat-icon {
     color: var(--mat-sys-primary);
     flex-shrink: 0;
     font-size: 28px;
@@ -437,7 +462,7 @@ h2 {
   border: 1px solid var(--mat-sys-outline-variant);
   margin-bottom: 2rem;
 
-  > mat-icon {
+  >mat-icon {
     color: var(--mat-sys-primary);
     flex-shrink: 0;
     font-size: 32px;
@@ -516,6 +541,7 @@ h2 {
   justify-content: center;
   align-items: center;
   border-radius: 8px;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -551,6 +577,7 @@ h2 {
 .invoice-request {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   background-color: var(--mat-sys-surface-container-high);
   padding: 0.75rem;
   border-radius: 8px;
@@ -695,6 +722,7 @@ h2 {
 
   .step-indicator-container {
     padding: 1rem;
+    gap: 0.5rem;
   }
 
   .step-label {
@@ -715,7 +743,29 @@ h2 {
   }
 
   .tier-option-card {
-    margin: 0 0.5rem;
+    margin: 0;
+  }
+
+  .step-content {
+    padding: 1.25rem 1rem;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .payment-method-card {
+    padding: 0.875rem;
+  }
+
+  .payment-method-header {
+    gap: 0.75rem;
+  }
+
+  .invoice-request {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .payment-option-card {

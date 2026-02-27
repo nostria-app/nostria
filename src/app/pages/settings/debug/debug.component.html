@@ -64,12 +64,18 @@
       Active payment platform: <code class="info-value highlight">{{ platform.paymentPlatform() }}</code>
     </div>
 
-    <button mat-flat-button (click)="purchaseDonationProduct()"
-      [disabled]="!activeStorePlatform() || !isActiveStoreAvailable() || purchasingDonation()">
-      @if (purchasingDonation()) {
-      Purchasing Donation Product...
+    <p class="setting-description store-status">
+      Username purchase test is App Store only (<code class="info-value highlight">productId: username</code>). It
+      grants a valid NIP-05
+      <code class="info-value highlight">&#64;nostria.app</code> username for 1 year.
+    </p>
+
+    <button mat-flat-button (click)="purchaseUsernameProduct()"
+      [disabled]="!canPurchaseUsernameOnAppStore() || purchasingUsername()">
+      @if (purchasingUsername()) {
+      Purchasing Username...
       } @else {
-      Buy $1 Donation Product
+      Purchase Username (1 year)
       }
     </button>
   </div>

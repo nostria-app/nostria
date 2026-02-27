@@ -34,7 +34,7 @@ export class DebugSettingsComponent {
   readonly iap = inject(InAppPurchaseService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly rightPanel = inject(RightPanelService);
-  readonly purchasingDonation = signal(false);
+  readonly purchasingUsername = signal(false);
 
   readonly activeStorePlatform = computed<'play-store' | 'app-store' | null>(() => {
     const paymentPlatform = this.platform.paymentPlatform();
@@ -54,6 +54,10 @@ export class DebugSettingsComponent {
     }
     return false;
   });
+
+  readonly canPurchaseUsernameOnAppStore = computed(() =>
+    this.activeStorePlatform() === 'app-store' && this.iap.appStoreAvailable()
+  );
 
   readonly platformOptions: { value: AppContext | null; label: string; description: string }[] = [
     { value: null, label: 'Auto-detect', description: 'Use real platform detection' },
@@ -75,10 +79,17 @@ export class DebugSettingsComponent {
     this.platform.enableNativeStorePaymentsForDebug.set(enabled);
   }
 
-  async purchaseDonationProduct(): Promise<void> {
+  async purchaseUsernameProduct(): Promise<void> {
     const store = this.activeStorePlatform();
     if (!store) {
       this.snackBar.open('Select simulated Android/iOS and enable store payments first.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (store !== 'app-store') {
+      this.snackBar.open('Username purchase test currently supports App Store only.', 'Close', {
         duration: 5000,
       });
       return;
@@ -91,27 +102,25 @@ export class DebugSettingsComponent {
       return;
     }
 
-    this.purchasingDonation.set(true);
+    this.purchasingUsername.set(true);
     try {
-      const productId = this.iap.getDonationProductId();
-      const result = store === 'play-store'
-        ? await this.iap.purchaseWithPlayStore(productId)
-        : await this.iap.purchaseWithAppStore(productId);
+      const productId = this.iap.getAppStoreUsernameProductId();
+      const result = await this.iap.purchaseWithAppStore(productId);
 
       if (result.success) {
-        this.snackBar.open('Donation product purchase completed.', 'Close', {
+        this.snackBar.open('Username purchase completed. Verify NIP-05 activation for 1 year.', 'Close', {
           duration: 5000,
         });
         return;
       }
 
       if (result.error && result.error !== 'Purchase cancelled by user') {
-        this.snackBar.open(`Donation purchase failed: ${result.error}`, 'Close', {
+        this.snackBar.open(`Username purchase failed: ${result.error}`, 'Close', {
           duration: 7000,
         });
       }
     } finally {
-      this.purchasingDonation.set(false);
+      this.purchasingUsername.set(false);
     }
   }
 }

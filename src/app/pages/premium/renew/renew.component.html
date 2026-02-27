@@ -1,350 +1,376 @@
 <div class="renew-container">
   <h1 class="renew-title">
     @if (isExpired()) {
-      Reactivate Your Subscription
+    Reactivate Your Subscription
     } @else {
-      Renew Your Subscription
+    Renew Your Subscription
     }
   </h1>
 
   @if (currentExpiry()) {
-    <div class="current-subscription-info">
-      <mat-icon>info</mat-icon>
-      <div>
-        @if (isExpired()) {
-          <p>Your <strong>{{ currentTier() }}</strong> subscription expired on <strong>{{ currentExpiry() | date: 'mediumDate' }}</strong>.</p>
-          <p>Renew now to regain access to your premium features.</p>
-        } @else {
-          <p>Your <strong>{{ currentTier() }}</strong> subscription is active until <strong>{{ currentExpiry() | date: 'mediumDate' }}</strong>.</p>
-          <p>Renew early to extend your subscription. Time will be added to your current expiry date.</p>
-        }
-      </div>
+  <div class="current-subscription-info">
+    <mat-icon>info</mat-icon>
+    <div>
+      @if (isExpired()) {
+      <p>Your <strong>{{ currentTier() }}</strong> subscription expired on <strong>{{ currentExpiry() | date:
+          'mediumDate' }}</strong>.</p>
+      <p>Renew now to regain access to your premium features.</p>
+      } @else {
+      <p>Your <strong>{{ currentTier() }}</strong> subscription is active until <strong>{{ currentExpiry() | date:
+          'mediumDate' }}</strong>.</p>
+      <p>Renew early to extend your subscription. Time will be added to your current expiry date.</p>
+      }
     </div>
+  </div>
   }
 
   <div class="stepper-container">
     <div class="step-indicator-container">
       @for (i of [0, 1, 2]; track i) {
-        <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="stepComplete()[i]">
-          <div class="step-circle">
-            @if (stepComplete()[i]) {
-              <mat-icon>check</mat-icon>
-            } @else {
-              {{ i + 1 }}
+      <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="stepComplete()[i]">
+        <div class="step-circle">
+          @if (stepComplete()[i]) {
+          <mat-icon>check</mat-icon>
+          } @else {
+          {{ i + 1 }}
+          }
+        </div>
+        <div class="step-label">{{ getStepLabel(i) }}</div>
+      </div>
+      @if (i < 2) { <div class="step-connector" [class.active]="currentStep() > i">
+    </div>
+    }
+    }
+  </div>
+
+  <!-- Step 1: Payment Plan -->
+  @if (currentStep() === 0) {
+  <div class="step-content payment-plan-step">
+    <h2>Select Your Renewal Plan</h2>
+    <p class="step-description">
+      @if (storeSingleSubscriptionMode()) {
+      Store checkout currently supports <strong>Premium Monthly</strong>.
+      } @else {
+      Choose how long you want to extend your subscription.
+      }
+    </p>
+
+    @if (storeSingleSubscriptionMode()) {
+    <div class="store-limited-notice">
+      <mat-icon>info</mat-icon>
+      <span>For the first native store release, only <strong>Premium Monthly</strong> is available.</span>
+    </div>
+    }
+
+    <div class="tier-options">
+      @for (tier of planTiers(); track tier.key) {
+      <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key"
+        (click)="selectedTier.set(tier)">
+        <mat-card-header>
+          <mat-card-title>{{ tier.details.name }}</mat-card-title>
+          @if (tier.key === currentTier()) {
+          <span class="current-plan-badge">Current Plan</span>
+          }
+        </mat-card-header>
+        <mat-card-content class="fill-card-content">
+          <div class="feature-list">@for (feature of getFeatureDescriptions(tier); track $index) {
+            <div class="feature-list-item">{{ feature }}</div>
             }
           </div>
-          <div class="step-label">{{ getStepLabel(i) }}</div>
-        </div>
-        @if (i < 2) {
-          <div class="step-connector" [class.active]="currentStep() > i"></div>
-        }
-      }
-    </div>
-
-    <!-- Step 1: Payment Plan -->
-    @if (currentStep() === 0) {
-      <div class="step-content payment-plan-step">
-        <h2>Select Your Renewal Plan</h2>
-        <p class="step-description">Choose how long you want to extend your subscription.</p>
-
-        <div class="tier-options">
-          @for (tier of tiers(); track tier.key) {
-            <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key"
-              (click)="selectedTier.set(tier)">
-              <mat-card-header>
-                <mat-card-title>{{ tier.details.name }}</mat-card-title>
-                @if (tier.key === currentTier()) {
-                  <span class="current-plan-badge">Current Plan</span>
-                }
-              </mat-card-header>
-              <mat-card-content class="fill-card-content">
-                <ul class="feature-list">
-                  @for (feature of getFeatureDescriptions(tier); track $index) {
-                    <li>{{ feature }}</li>
-                  }
-                </ul>
-                <div class="pricing-options">
-                  <div class="payment-option-cards">
-                    <mat-card class="payment-option-card" [class.selected]="
+          <div class="pricing-options">
+            <div class="payment-option-cards">
+              <mat-card class="payment-option-card" [class.selected]="
                               selectedTier()?.key === tier.key && selectedPaymentOption() === 'monthly'
                             ">
-                      <label>
-                        <input type="radio" name="paymentOption-{{ tier.key }}" value="monthly" [checked]="
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="monthly" [checked]="
                                   selectedTier()?.key === tier.key &&
                                   selectedPaymentOption() === 'monthly'
                                 " (change)="selectedTier.set(tier); selectedPaymentOption.set('monthly')" />
-                        <div class="payment-option-content">
-                          <span class="pricing-label">1 Month</span>
-                          <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.monthly.totalPrice
-                              }}</span>
-                            {{ tier.pricing.monthly.currency }}</span>
-                        </div>
-                      </label>
-                    </mat-card>
-                    <mat-card class="payment-option-card" [class.selected]="
+                  <div class="payment-option-content">
+                    <span class="pricing-label">1 Month</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.monthly.totalPrice
+                        }}</span>
+                      {{ tier.pricing.monthly.currency }}</span>
+                  </div>
+                </label>
+              </mat-card>
+              @if (!storeSingleSubscriptionMode()) {
+              <mat-card class="payment-option-card" [class.selected]="
                               selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'
                             ">
-                      <label>
-                        <input type="radio" name="paymentOption-{{ tier.key }}" value="quarterly" [checked]="
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="quarterly" [checked]="
                                   selectedTier()?.key === tier.key &&
                                   selectedPaymentOption() === 'quarterly'
                                 " (change)="selectedTier.set(tier); selectedPaymentOption.set('quarterly')" />
-                        <div class="payment-option-content">
-                          <span class="pricing-label">3 Months</span>
-                          <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.quarterly.totalPrice
-                              }}</span>
-                            {{ tier.pricing.quarterly.currency }} &bull; ${{
-                            tier.pricing.quarterly.pricePerMonth
-                            }}/mo</span>
-                        </div>
-                      </label>
-                    </mat-card>
-                    <mat-card class="payment-option-card" [class.selected]="
+                  <div class="payment-option-content">
+                    <span class="pricing-label">3 Months</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.quarterly.totalPrice
+                        }}</span>
+                      {{ tier.pricing.quarterly.currency }} &bull; ${{
+                      tier.pricing.quarterly.pricePerMonth
+                      }}/mo</span>
+                  </div>
+                </label>
+              </mat-card>
+              <mat-card class="payment-option-card" [class.selected]="
                               selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
                             ">
-                      <label>
-                        <input type="radio" name="paymentOption-{{ tier.key }}" value="yearly" [checked]="
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="yearly" [checked]="
                                   selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
                                 " (change)="selectedTier.set(tier); selectedPaymentOption.set('yearly')" />
-                        <div class="payment-option-content">
-                          <span class="pricing-label">12 Months</span>
-                          <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span>
-                            {{ tier.pricing.yearly.currency }} &bull; ${{
-                            tier.pricing.yearly.pricePerMonth
-                            }}/mo</span>
-                          <span class="best-value-tag">Best Value</span>
-                        </div>
-                      </label>
-                    </mat-card>
+                  <div class="payment-option-content">
+                    <span class="pricing-label">12 Months</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span>
+                      {{ tier.pricing.yearly.currency }} &bull; ${{
+                      tier.pricing.yearly.pricePerMonth
+                      }}/mo</span>
+                    <span class="best-value-tag">Best Value</span>
                   </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          }
-        </div>
-
-        @if (
-        selectedTier() &&
-        selectedPaymentOption() &&
-        getPricing(selectedTier()!.details, selectedPaymentOption()!)
-        ) {
-          <div class="payment-summary">
-            <h3>Renewal Summary</h3>
-            <div class="summary-row">
-              <span>{{ selectedTier()?.details?.name }}</span>
-              <span>{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span>
-            </div>
-            <mat-divider></mat-divider>
-            <div class="summary-row new-expiry">
-              <span>New expiry date:</span>
-              <span class="expiry-date">{{ selectedTierTill() }}</span>
-            </div>
-          </div>
-        }
-
-        <div class="step-actions">
-          <button mat-button routerLink="/accounts" [queryParams]="{tab: 'premium'}">Cancel</button>
-          <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()"
-            (click)="nextStep()">
-            Continue to Payment
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- Step 2: Payment -->
-    @if (currentStep() === 1) {
-      <div class="step-content payment-step">
-        <h2>Complete Your Payment</h2>
-        <p class="step-description">Choose your preferred payment method.</p>
-
-        <!-- Payment Method Selector -->
-        <div class="payment-method-selector">
-          @for (method of availablePaymentMethods(); track method.key) {
-          <div class="payment-method-card" [class.selected]="selectedPaymentMethod() === method.key"
-            (click)="selectPaymentMethod(method.key)" (keydown.enter)="selectPaymentMethod(method.key)"
-            tabindex="0" role="radio" [attr.aria-checked]="selectedPaymentMethod() === method.key">
-            <div class="payment-method-header">
-              <mat-icon>{{ method.icon }}</mat-icon>
-              <div class="payment-method-info">
-                <span class="payment-method-label">{{ method.label }}</span>
-                <span class="payment-method-description">{{ method.description }}</span>
-              </div>
-              @if (method.recommended) {
-              <span class="recommended-badge">Recommended</span>
+                </label>
+              </mat-card>
               }
             </div>
           </div>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+
+    @if (
+    selectedTier() &&
+    selectedPaymentOption() &&
+    getPricing(selectedTier()!.details, selectedPaymentOption()!)
+    ) {
+    <div class="payment-summary">
+      <h3>Renewal Summary</h3>
+      <div class="summary-row">
+        <span>{{ selectedTier()?.details?.name }}</span>
+        <span>{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span>
+      </div>
+      <mat-divider></mat-divider>
+      <div class="summary-row new-expiry">
+        <span>New expiry date:</span>
+        <span class="expiry-date">{{ selectedTierTill() }}</span>
+      </div>
+    </div>
+    }
+
+    <div class="step-actions">
+      <button mat-button routerLink="/accounts" [queryParams]="{tab: 'premium'}">Cancel</button>
+      <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()" (click)="nextStep()">
+        Continue to Payment
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Step 2: Payment -->
+  @if (currentStep() === 1) {
+  <div class="step-content payment-step">
+    <h2>Complete Your Payment</h2>
+    <p class="step-description">Choose your preferred payment method.</p>
+
+    <!-- Payment Method Selector -->
+    <div class="payment-method-selector">
+      @for (method of availablePaymentMethods(); track method.key) {
+      <div class="payment-method-card" [class.selected]="selectedPaymentMethod() === method.key"
+        (click)="selectPaymentMethod(method.key)" (keydown.enter)="selectPaymentMethod(method.key)" tabindex="0"
+        role="radio" aria-checked="false"
+        [attr.aria-checked]="selectedPaymentMethod() === method.key ? 'true' : 'false'">
+        <div class="payment-method-header">
+          <mat-icon>{{ method.icon }}</mat-icon>
+          <div class="payment-method-info">
+            <span class="payment-method-label">{{ method.label }}</span>
+            <span class="payment-method-description">{{ method.description }}</span>
+          </div>
+          @if (method.recommended) {
+          <span class="recommended-badge">Recommended</span>
           }
         </div>
+      </div>
+      }
+    </div>
 
-        <!-- Payment Method Content -->
-        @if (selectedPaymentMethod() === 'lightning') {
-        <!-- Bitcoin Lightning payment -->
-        <div class="payment-method-content">
-          @if (isGeneratingInvoice()) {
-            <div class="loading-container">
-              <mat-spinner diameter="50"></mat-spinner>
-              <p>Generating Lightning invoice...</p>
-            </div>
-          } @else if (paymentInvoice()) {
-            <div class="lightning-invoice">
-              @if (paymentInvoice()?.status === 'pending') {
-                <div class="qr-container">
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{
+    <!-- Payment Method Content -->
+    @if (selectedPaymentMethod() === 'lightning') {
+    <!-- Bitcoin Lightning payment -->
+    <div class="payment-method-content">
+      @if (isGeneratingInvoice()) {
+      <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Generating Lightning invoice...</p>
+      </div>
+      } @else if (paymentInvoice()) {
+      <div class="lightning-invoice">
+        @if (paymentInvoice()?.status === 'pending') {
+        <div class="qr-container">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{
                             paymentInvoice()?.invoice
                           }}&bgcolor=ffffff" alt="Lightning QR Code" class="qr-code" />
-                  @if (isPaymentCompleted()) {
-                    <div class="payment-check-overlay">
-                      <div class="payment-success">
-                        <mat-icon>check_circle</mat-icon>
-                        <span>Payment Received!</span>
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <div class="invoice-details">
-                  <p class="invoice-instruction">
-                    Scan the QR code or copy the payment request below to pay with your Lightning
-                    wallet
-                  </p>
-
-                  <div class="invoice-request">
-                    <div class="invoice-text">
-                      {{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
-                      paymentInvoice()?.invoice?.substring((paymentInvoice()?.invoice)!.length - 20)
-                      }}
-                    </div>
-                    <button mat-icon-button (click)="copyToClipboard(paymentInvoice()?.invoice || '')">
-                      <mat-icon>content_copy</mat-icon>
-                    </button>
-                  </div>
-
-                  <div class="invoice-expiry">
-                    <mat-icon>timer</mat-icon>
-                    <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
-                  </div>
-
-                  <div class="payment-status">
-                    @if (!isPaymentCompleted()) {
-                      <mat-spinner diameter="20"></mat-spinner>
-                      <span>Waiting for payment...</span>
-                    }
-                    @if (isPaymentCompleted()) {
-                      <mat-icon>check_circle</mat-icon>
-                      <span>Payment successful!</span>
-                    }
-                  </div>
-                </div>
-              } @else if (paymentInvoice()?.status === 'expired') {
-                <div class="payment-expired">
-                  <mat-icon>error_outline</mat-icon>
-                  <h3>Payment Invoice Expired</h3>
-                  <p>The payment invoice has expired. Please generate a new one to continue.</p>
-                  <button mat-flat-button (click)="generatePaymentInvoice()">
-                    Generate New Invoice
-                  </button>
-                </div>
-              }
+          @if (isPaymentCompleted()) {
+          <div class="payment-check-overlay">
+            <div class="payment-success">
+              <mat-icon>check_circle</mat-icon>
+              <span>Payment Received!</span>
             </div>
+          </div>
           }
         </div>
 
-        } @else if (selectedPaymentMethod() === 'play-store') {
-        <!-- Google Play Store payment -->
-        <div class="payment-method-content">
-          <div class="store-payment-container">
-            <mat-icon class="store-icon">shop</mat-icon>
-            <p>Your renewal will be processed through Google Play.</p>
-            <button mat-flat-button (click)="purchaseWithPlayStore()" [disabled]="iap.purchasing()">
-              @if (iap.purchasing()) {
-              <mat-spinner diameter="20"></mat-spinner>
-              Processing...
-              } @else {
-              <mat-icon>shopping_cart</mat-icon>
-              Purchase with Google Play
-              }
-            </button>
-          </div>
-        </div>
+        <div class="invoice-details">
+          <p class="invoice-instruction">
+            Scan the QR code or copy the payment request below to pay with your Lightning
+            wallet
+          </p>
 
-        } @else if (selectedPaymentMethod() === 'app-store') {
-        <!-- Apple App Store payment -->
-        <div class="payment-method-content">
-          <div class="store-payment-container">
-            <mat-icon class="store-icon">apple</mat-icon>
-            <p>Your renewal will be processed through the App Store.</p>
-            <button mat-flat-button (click)="purchaseWithAppStore()" [disabled]="iap.purchasing()">
-              @if (iap.purchasing()) {
-              <mat-spinner diameter="20"></mat-spinner>
-              Processing...
-              } @else {
-              <mat-icon>shopping_cart</mat-icon>
-              Purchase with App Store
-              }
-            </button>
-          </div>
-        </div>
-
-        } @else if (selectedPaymentMethod() === 'external') {
-        <!-- External browser payment -->
-        <div class="payment-method-content">
-          <div class="external-payment-notice">
-            <mat-icon>open_in_new</mat-icon>
-            <div>
-              <p>You will be redirected to <strong>nostria.app/premium</strong> to complete your renewal.</p>
-              <p>After payment, return to the app and your subscription will be extended.</p>
+          <div class="invoice-request">
+            <div class="invoice-text">
+              {{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
+              paymentInvoice()?.invoice?.substring((paymentInvoice()?.invoice)!.length - 20)
+              }}
             </div>
-          </div>
-          <div class="external-payment-action">
-            <button mat-flat-button (click)="openExternalPayment()">
-              <mat-icon>open_in_new</mat-icon>
-              Open Payment Page
+            <button mat-icon-button (click)="copyToClipboard(paymentInvoice()?.invoice || '')">
+              <mat-icon>content_copy</mat-icon>
             </button>
           </div>
+
+          <div class="invoice-expiry">
+            <mat-icon>timer</mat-icon>
+            <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
+          </div>
+
+          <div class="payment-status">
+            @if (!isPaymentCompleted()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Waiting for payment...</span>
+            }
+            @if (isPaymentCompleted()) {
+            <mat-icon>check_circle</mat-icon>
+            <span>Payment successful!</span>
+            }
+          </div>
+        </div>
+        } @else if (paymentInvoice()?.status === 'expired') {
+        <div class="payment-expired">
+          <mat-icon>error_outline</mat-icon>
+          <h3>Payment Invoice Expired</h3>
+          <p>The payment invoice has expired. Please generate a new one to continue.</p>
+          <button mat-flat-button (click)="generatePaymentInvoice()">
+            Generate New Invoice
+          </button>
         </div>
         }
+      </div>
+      }
+    </div>
 
-        <div class="step-actions">
-          <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">
-            Back
-          </button>
+    } @else if (selectedPaymentMethod() === 'play-store') {
+    <!-- Google Play Store payment -->
+    <div class="payment-method-content">
+      <div class="store-payment-container">
+        <mat-icon class="store-icon">shop</mat-icon>
+        <p>Your renewal will be processed through Google Play.</p>
+        <button mat-flat-button (click)="purchaseWithPlayStore()" [disabled]="iap.purchasing()">
+          @if (iap.purchasing()) {
+          <span class="payment-button-content">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing...</span>
+          </span>
+          }
+          @if (!iap.purchasing()) {
+          <span class="payment-button-content">
+            <mat-icon>shopping_cart</mat-icon>
+            <span>Purchase with Google Play</span>
+          </span>
+          }
+        </button>
+      </div>
+    </div>
+
+    } @else if (selectedPaymentMethod() === 'app-store') {
+    <!-- Apple App Store payment -->
+    <div class="payment-method-content">
+      <div class="store-payment-container">
+        <mat-icon class="store-icon">apple</mat-icon>
+        <p>Your renewal will be processed through the App Store.</p>
+        <button mat-flat-button (click)="purchaseWithAppStore()" [disabled]="iap.purchasing()">
+          @if (iap.purchasing()) {
+          <span class="payment-button-content">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing...</span>
+          </span>
+          }
+          @if (!iap.purchasing()) {
+          <span class="payment-button-content">
+            <mat-icon>shopping_cart</mat-icon>
+            <span>Purchase with App Store</span>
+          </span>
+          }
+        </button>
+      </div>
+    </div>
+
+    } @else if (selectedPaymentMethod() === 'external') {
+    <!-- External browser payment -->
+    <div class="payment-method-content">
+      <div class="external-payment-notice">
+        <mat-icon>open_in_new</mat-icon>
+        <div>
+          <p>You will be redirected to <strong>nostria.app/premium</strong> to complete your renewal.</p>
+          <p>After payment, return to the app and your subscription will be extended.</p>
         </div>
       </div>
-    }
-
-    <!-- Step 3: Completion -->
-    @if (currentStep() === 2) {
-      <div class="step-content completion-step">
-        <div class="completion-container">
-          <mat-icon class="completion-icon">verified</mat-icon>
-          <h2>Subscription Renewed!</h2>
-          <p>Your subscription has been successfully renewed.</p>
-
-          <div class="renewal-details">
-            <div class="detail-item">
-              <mat-icon>schedule</mat-icon>
-              <div>
-                <h4>New Expiry Date</h4>
-                <p>{{ selectedTierTill() }}</p>
-              </div>
-            </div>
-
-            <div class="detail-item">
-              <mat-icon>workspace_premium</mat-icon>
-              <div>
-                <h4>Plan</h4>
-                <p>{{ selectedTier()?.details?.name }}</p>
-              </div>
-            </div>
-          </div>
-
-          <button mat-flat-button (click)="finishSetup()">
-            Continue to Premium
-          </button>
-        </div>
+      <div class="external-payment-action">
+        <button mat-flat-button (click)="openExternalPayment()">
+          <mat-icon>open_in_new</mat-icon>
+          Open Payment Page
+        </button>
       </div>
+    </div>
     }
+
+    <div class="step-actions">
+      <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">
+        Back
+      </button>
+    </div>
   </div>
+  }
+
+  <!-- Step 3: Completion -->
+  @if (currentStep() === 2) {
+  <div class="step-content completion-step">
+    <div class="completion-container">
+      <mat-icon class="completion-icon">verified</mat-icon>
+      <h2>Subscription Renewed!</h2>
+      <p>Your subscription has been successfully renewed.</p>
+
+      <div class="renewal-details">
+        <div class="detail-item">
+          <mat-icon>schedule</mat-icon>
+          <div>
+            <h4>New Expiry Date</h4>
+            <p>{{ selectedTierTill() }}</p>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <mat-icon>workspace_premium</mat-icon>
+          <div>
+            <h4>Plan</h4>
+            <p>{{ selectedTier()?.details?.name }}</p>
+          </div>
+        </div>
+      </div>
+
+      <button mat-flat-button (click)="finishSetup()">
+        Continue to Premium
+      </button>
+    </div>
+  </div>
+  }
+</div>
 </div>
