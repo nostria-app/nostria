@@ -189,6 +189,31 @@ mat-nav-list,
   font-family: var(--nostria-font-family) !important;
 }
 
+
+@media (max-width: 700px) {
+  .mat-mdc-tab-header-pagination {
+    display: none !important;
+  }
+
+  .mat-mdc-tab-header .mat-mdc-tab-label-container {
+    overflow: visible;
+  }
+
+  .mat-mdc-tab-header .mat-mdc-tab-list {
+    transform: none !important;
+  }
+
+  .mat-mdc-tab-header .mat-mdc-tab-labels {
+    padding: 0;
+  }
+
+  .mat-mdc-tab,
+  .mdc-tab {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+  }
+}
+
 // Android PWA safe area - ensure content doesn't overlap system navigation
 // Uses padding-bottom on html to push all content up
 @media all and (display-mode: standalone) {

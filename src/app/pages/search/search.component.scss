@@ -429,13 +429,13 @@ mat-divider {
   .search-input-container {
     flex-wrap: wrap;
 
+    .search-icon {
+      display: none;
+    }
+
     .search-input {
       width: 100%;
       order: 1;
-    }
-
-    .search-icon {
-      order: 0;
     }
 
     .clear-button {

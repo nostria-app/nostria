@@ -222,6 +222,14 @@ nav {
   .toolbar-center .search-container {
     padding: 0 8px;
     gap: 6px;
+
+    .search-icon {
+      display: none;
+    }
+
+    .search-input {
+      padding-left: 0;
+    }
   }
 }
 
