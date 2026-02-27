@@ -72,6 +72,8 @@ interface TierDisplay {
   styleUrl: './renew.component.scss',
 })
 export class RenewComponent implements OnDestroy {
+  private static readonly APP_STORE_MONTHLY_PRICE_CENTS = 999;
+
   private destroy$ = new Subject<void>();
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
@@ -104,6 +106,10 @@ export class RenewComponent implements OnDestroy {
 
   readonly storeSingleSubscriptionMode = computed(
     () => this.platform.canPayWithPlayStore() || this.platform.canPayWithAppStore()
+  );
+
+  readonly appStoreMonthlyPriceOverride = computed(
+    () => this.platform.canPayWithAppStore() && this.storeSingleSubscriptionMode()
   );
 
   readonly planTiers = computed(() => {
@@ -175,11 +181,22 @@ export class RenewComponent implements OnDestroy {
   });
 
   selectedPrice = computed(
-    () =>
-      this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || {
-        priceCents: 0,
-        currency: 'USD',
+    () => {
+      const period = this.selectedPaymentOption() || 'monthly';
+      const price = this.selectedTier()?.details?.pricing?.[period];
+      if (!price) {
+        return {
+          priceCents: 0,
+          currency: 'USD',
+        };
       }
+
+      return {
+        ...price,
+        priceCents: this.getEffectivePriceCents(price.priceCents, period),
+        currency: price.currency || 'USD',
+      };
+    }
   );
 
   // Calculate the new expiry date based on current expiry and selected plan
@@ -574,14 +591,25 @@ export class RenewComponent implements OnDestroy {
   getPricing(tier: TierDetails, period: 'monthly' | 'quarterly' | 'yearly'): PricingDisplay {
     const price = tier.pricing?.[period];
     if (!price) return { pricePerMonth: '', totalPrice: '', currency: '', period: '' };
+    const priceCents = this.getEffectivePriceCents(price.priceCents, period);
     const months = period === 'yearly' ? 12 : period === 'quarterly' ? 3 : 1;
     return {
-      pricePerMonth: price.priceCents
-        ? (price.priceCents / 100 / months).toFixed(2)
+      pricePerMonth: priceCents
+        ? (priceCents / 100 / months).toFixed(2)
         : '-',
-      totalPrice: price.priceCents ? (price.priceCents / 100).toFixed(2) : '-',
+      totalPrice: priceCents ? (priceCents / 100).toFixed(2) : '-',
       currency: price.currency || 'USD',
       period: period === 'yearly' ? '12 months' : period === 'quarterly' ? '3 months' : '1 month',
     };
+  }
+
+  private getEffectivePriceCents(
+    priceCents: number | null | undefined,
+    period: 'monthly' | 'quarterly' | 'yearly'
+  ): number {
+    if (period === 'monthly' && this.appStoreMonthlyPriceOverride()) {
+      return RenewComponent.APP_STORE_MONTHLY_PRICE_CENTS;
+    }
+    return priceCents || 0;
   }
 }
