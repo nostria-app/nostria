@@ -200,6 +200,14 @@ export class FeedService {
   private readonly settingsService = inject(SettingsService);
   private readonly eventProcessor = inject(EventProcessorService);
 
+  private getGuestForYouPubkeys(): string[] {
+    try {
+      return this.followset.getHardcodedPopularStarterPack().pubkeys;
+    } catch {
+      return [];
+    }
+  }
+
   private readonly algorithms = inject(Algorithms);
 
   // Signals for feeds
@@ -307,6 +315,19 @@ export class FeedService {
           await this.loadFeeds(pubkey);
         });
 
+      } else {
+        untracked(() => {
+          // Guest/no-account mode: still expose default feeds so Feeds UI can render.
+          // This prevents indefinite "Loading feeds..." in incognito sessions.
+          if (!this._feedsLoaded() || this._feeds().length === 0) {
+            const guestFeeds = JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
+            this._feeds.set(guestFeeds);
+            this._feedsLoaded.set(true);
+          }
+
+          // Reset loading tracker so account-based loading can run immediately after login.
+          loadingForPubkey = null;
+        });
       }
     });
   }
@@ -470,12 +491,6 @@ export class FeedService {
   });
 
   async subscribe() {
-    // Don't subscribe if there's no active account
-    if (!this.accountState.account()) {
-      this.logger.debug('No active account - skipping feed subscription');
-      return;
-    }
-
     if (this.eventFocus.isEventFocused()) {
       this.logger.debug('Event focused - skipping feed subscription');
       return;
@@ -541,6 +556,11 @@ export class FeedService {
     if (!active) {
       // When page becomes inactive, unsubscribe from all feeds
       this.unsubscribe();
+    } else {
+      // When page becomes active, ensure subscriptions are started.
+      // This handles startup ordering where active feed is selected before
+      // feeds page is marked active.
+      void this.subscribe();
     }
   }
 
@@ -548,12 +568,6 @@ export class FeedService {
    * Set the active feed and manage subscriptions
    */
   async setActiveFeed(feedId: string | null): Promise<void> {
-    // Don't set active feed if there's no active account
-    if (!this.accountState.account()) {
-      this.logger.debug('No active account - skipping setActiveFeed');
-      return;
-    }
-
     if (this.eventFocus.isEventFocused()) {
       this.logger.debug('Event focused - skipping setActiveFeed subscription');
       this._activeFeedId.set(feedId);
@@ -1504,6 +1518,8 @@ export class FeedService {
       // If following list is empty, return early
       if (followingList.length === 0) {
         this.logger.debug('Following list is empty, no users to fetch from');
+        feedData.initialLoadComplete = true;
+        feedData.isRefreshing?.set(false);
         return;
       }
 
@@ -1849,19 +1865,15 @@ export class FeedService {
       this.logger.debug('🚀 [For You] loadForYouFeed STARTED');
       const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-      // Hardcoded popular pubkeys for INSTANT first load - no waiting for anything
-      const FALLBACK_POPULAR_PUBKEYS = [
-        '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack
-        '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d', // fiatjaf
-        '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
-        '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Vitor Pamplona
-        'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // miljan
-        '460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c', // Vitor
-        '1577e4599dd10c863498fe3c20bd82aafaf829a595ce83c5cf8ac3463531b09b', // yegorpetrov
-        'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
-        '7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194', // verbiricha
-      ];
+      // Guest mode: use the hardcoded Popular starter pack pubkeys via anonymous relays.
+      if (!this.accountState.account()) {
+        const guestPubkeys = this.getGuestForYouPubkeys();
+        this.logger.debug(`⚡ [For You] Guest mode loading with ${guestPubkeys.length} popular starter-pack pubkeys`);
+        await this.fetchEventsFromUsersAnonymous(guestPubkeys, feedData);
+        return;
+      }
 
+      // Hardcoded popular pubkeys for INSTANT first load - no waiting for anything
       // Wait for account relay to be ready before fetching content
       // Account relay is required since discovery relay only handles relay lists (kind 10002/3)
       let accountRelayInitialized = this.accountRelay.isInitialized();
@@ -1886,20 +1898,21 @@ export class FeedService {
 
       if (!accountRelayInitialized) {
         this.logger.debug('⚡ [For You] Account relay not ready after waiting, cannot fetch content');
-        this.logger.warn('Account relay not ready, cannot load For You feed');
+        this.logger.warn('Account relay not ready, falling back to anonymous relay fetch for For You feed');
+        await this.fetchEventsFromUsersAnonymous(this.getGuestForYouPubkeys(), feedData);
         return;
       }
 
       // Build pubkey list: fallback popular + following
-      const immediatePubkeys = new Set<string>(FALLBACK_POPULAR_PUBKEYS);
+      const immediatePubkeys = new Set<string>(this.getGuestForYouPubkeys());
 
       // Add following list (limit to 20 most recent)
       const followingList = this.accountState.followingList();
       const limitedFollowing = followingList.slice(-20);
       limitedFollowing.forEach(pubkey => immediatePubkeys.add(pubkey));
 
-      this.logger.debug(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
-      this.logger.info(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+      this.logger.debug(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (popular starter pack + ${limitedFollowing.length} following)`);
+      this.logger.info(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (popular starter pack + ${limitedFollowing.length} following)`);
 
       const immediatePubkeysArray = Array.from(immediatePubkeys);
       await this.fetchEventsFromUsersFast(immediatePubkeysArray, feedData);
@@ -1967,9 +1980,9 @@ export class FeedService {
         if (result && Array.isArray(result)) {
           const popularPack = result.find(pack => pack.dTag === 'popular');
           if (popularPack) {
-            popularPack.pubkeys.slice(0, 10).forEach(pubkey => additionalPubkeys.add(pubkey));
-            this.logger.debug(`🔄 [For You Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
-            this.logger.debug(`[Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
+            popularPack.pubkeys.forEach(pubkey => additionalPubkeys.add(pubkey));
+            this.logger.debug(`🔄 [For You Background] Added ${popularPack.pubkeys.length} starter pack users`);
+            this.logger.debug(`[Background] Added ${popularPack.pubkeys.length} starter pack users`);
           }
         } else {
           this.logger.debug('🔄 [For You Background] No starter pack result or timed out');
@@ -2111,6 +2124,107 @@ export class FeedService {
     } catch (error) {
       this.logger.error('[Fast Fetch] Error in fast batch fetch:', error);
       // Fall through - the background fetch will still run
+      feedData.initialLoadComplete = true;
+      feedData.isRefreshing?.set(false);
+    }
+  }
+
+  private async fetchEventsFromUsersAnonymous(pubkeys: string[], feedData: FeedItem): Promise<void> {
+    const BATCH_SIZE = 10;
+    const TIMEOUT_MS = 2500;
+    const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+    const PER_BATCH_LIMIT = isArticlesFeed ? 20 : 25;
+    const TARGET_EVENT_COUNT = isArticlesFeed ? 20 : 40;
+    const MAX_PAGINATION_ROUNDS = 3;
+
+    try {
+      const batches: string[][] = [];
+      for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
+        batches.push(pubkeys.slice(i, i + BATCH_SIZE));
+      }
+
+      let allEvents: Event[] = [];
+      let until: number | undefined;
+
+      for (let round = 0; round < MAX_PAGINATION_ROUNDS; round++) {
+        const results = await Promise.all(
+          batches.map(batchAuthors => {
+            const filter: {
+              authors: string[];
+              kinds?: number[];
+              limit: number;
+              until?: number;
+            } = {
+              authors: batchAuthors,
+              kinds: feedData.filter?.kinds,
+              limit: PER_BATCH_LIMIT,
+            };
+
+            if (until) {
+              filter.until = until;
+            }
+
+            return this.relayPool.query(this.utilities.anonymousRelays, filter, TIMEOUT_MS);
+          })
+        );
+
+        const roundEvents = results.flat();
+        if (roundEvents.length === 0) {
+          break;
+        }
+
+        allEvents = [...allEvents, ...roundEvents];
+
+        const allowedKinds = new Set(feedData.feed.kinds);
+        const currentUniqueValidCount = Array.from(
+          new Map(
+            allEvents
+              .filter(event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind))
+              .map(event => [event.id, event])
+          ).values()
+        ).length;
+
+        if (currentUniqueValidCount >= TARGET_EVENT_COUNT) {
+          break;
+        }
+
+        const oldestCreatedAt = roundEvents.reduce((oldest, event) => {
+          const createdAt = event.created_at || 0;
+          return createdAt < oldest ? createdAt : oldest;
+        }, Number.MAX_SAFE_INTEGER);
+
+        if (!Number.isFinite(oldestCreatedAt) || oldestCreatedAt <= 0) {
+          break;
+        }
+
+        until = oldestCreatedAt - 1;
+      }
+
+      const allowedKinds = new Set(feedData.feed.kinds);
+      const validEvents = allEvents.filter(
+        event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
+      );
+
+      const uniqueEvents = Array.from(new Map(validEvents.map(event => [event.id, event])).values())
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      feedData.events.set(uniqueEvents);
+      this._feedData.update(map => new Map(map));
+
+      if (uniqueEvents.length > 0) {
+        this.saveCachedEvents(feedData.feed.id, uniqueEvents);
+        uniqueEvents.forEach(event => this.saveEventToDatabase(event));
+        if (!this._hasInitialContent()) {
+          this._hasInitialContent.set(true);
+          this.appState.feedHasInitialContent.set(true);
+        }
+      }
+
+      feedData.initialLoadComplete = true;
+      feedData.isRefreshing?.set(false);
+      this.updateColumnLastRetrieved(feedData.feed.id);
+    } catch (error) {
+      this.logger.error('[Anonymous Fetch] Failed to load guest feed events:', error);
       feedData.initialLoadComplete = true;
       feedData.isRefreshing?.set(false);
     }
@@ -2488,9 +2602,7 @@ export class FeedService {
           const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
 
           if (popularPack) {
-            // Use same limit as initial load for consistency
-            const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
-            limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
+            popularPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
           }
         } catch (error) {
           this.logger.error('Error fetching popular starter pack for pagination:', error);
@@ -2502,7 +2614,7 @@ export class FeedService {
 
         // Add subset of following accounts (limit for performance)
         const followingList = this.accountState.followingList();
-        const maxFollowingToAdd = 10; // Match initial load
+        const maxFollowingToAdd = 20;
         const limitedFollowing = followingList.length > maxFollowingToAdd
           ? followingList.slice(-maxFollowingToAdd)
           : followingList;
@@ -3502,6 +3614,22 @@ export class FeedService {
         // Filter out any Trending feed that may have been stored previously
         // (Trending is now always appended dynamically via the feeds computed signal)
         const filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
+
+        // Legacy repair: older versions could persist only the Trending feed.
+        // After filtering out Trending, this leaves no real feeds and users only see Trending.
+        // Restore default feeds in this specific case.
+        if (storedFeeds.length > 0 && filteredFeeds.length === 0) {
+          this.logger.info('Detected legacy trending-only feed storage, restoring default feeds');
+          const defaultFeeds = await this.initializeDefaultFeeds();
+          this._feeds.set(defaultFeeds);
+          this._feedsLoaded.set(true);
+          this.saveFeeds();
+
+          if (this.accountState.account()) {
+            await this.subscribe();
+          }
+          return;
+        }
 
         // Check if synced feeds are newer than local feeds
         // Compare by checking if synced has feeds that local doesn't, or vice versa

@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
 import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
+import { ClipboardService } from '../../../services/clipboard.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ProfileDisplayNameComponent } from '../../../components/user-profile/display-name/profile-display-name.component';
 
@@ -49,6 +50,7 @@ export class FollowPacksComponent implements OnInit {
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private clipboard = inject(ClipboardService);
 
   // State
   isLoading = signal(false);
@@ -251,6 +253,21 @@ export class FollowPacksComponent implements OnInit {
         }
       }
     });
+  }
+
+  async copyPackData(pack: FollowPack) {
+    try {
+      const eventData = await this.followPacksService.getFollowPackEventData(pack);
+      if (!eventData) {
+        this.snackBar.open('Unable to load full follow pack event data', 'Close', { duration: 3000 });
+        return;
+      }
+
+      await this.clipboard.copyJson(eventData, 'Follow pack event data copied to clipboard');
+    } catch (error) {
+      this.logger.error('Error copying follow pack event data:', error);
+      this.snackBar.open('Failed to copy follow pack event data', 'Close', { duration: 3000 });
+    }
   }
 
   // Navigate to a profile

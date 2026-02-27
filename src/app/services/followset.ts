@@ -45,9 +45,9 @@ interface ParsedProfileMetadata {
  * This is used as fallback when database has no cached data
  */
 const POPULAR_STARTER_PACK_EVENT: Event = {
-  id: '89c8d851ae5e634c8c02a63aeca1a79292f2e068e7980eaff3cfd877e4971e40',
+  id: 'f995dbe5d4d39f53e05c3d1128208ae55b09b518212b53168376100d5f889c93',
   pubkey: 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b',
-  created_at: 1760778777,
+  created_at: 1772157382,
   kind: 39089,
   tags: [
     ['d', 'popular'],
@@ -60,23 +60,23 @@ const POPULAR_STARTER_PACK_EVENT: Event = {
     ['p', '6116d06dd94aedb145d2e7689a2fe2249de56fc4e89a4cace88a0d4b1d80b135'],
     ['p', 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b'],
     ['p', '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515'],
-    ['p', '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'],
-    ['p', '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9'],
-    ['p', 'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42'],
-    ['p', '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e'],
-    ['p', '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204'],
+    ['p', '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829'],
     ['p', 'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52'],
-    ['p', '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24'],
-    ['p', '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411'],
-    ['p', 'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11'],
     ['p', 'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f'],
-    ['p', '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832'],
-    ['p', '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245'],
-    ['p', 'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0'],
-    ['p', '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93'],
+    ['p', '63d59db8d29abe29db7380beb912b8f600237332b6c9978b208694e4be170f6f'],
+    ['p', 'f4e16d7484571d53b24fc1884c64eb17ff8d25cbee816d6fa3d4c19d8d295ab5'],
+    ['p', '95b17b590253c39e6bfd7f2429f40d540b7ef843610c3dadb697db22df536bbb'],
+    ['p', '014bf2c7b2eaf35be2ffe1b8bb4b2e00a898f1583742f6121d5eedecd603361b'],
+    ['p', '27bb485af70b300ed223b6f8ba89fba97effd2249dd48b9d2ce3276cfc678f22'],
+    ['p', '6a359852238dc902aed19fbbf6a055f9abf21c1ca8915d1c4e27f50df2f290d9'],
+    ['p', 'c8fdea65d43eb3611579b534e2ad7feb6b4dd405b6569816eff162d73132a122'],
+    ['p', 'edf0da8bbdbe11195fb886196abaff586a9092cdcc9c0017b73bd998b2652fa3'],
+    ['p', 'f5f98ba54045a2fa8df2a97c35fc30299b9e0d51a701795c040ca80cedaf39b4'],
+    ['p', 'b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc'],
+    ['p', 'a530f7f75b62f86073078fd0d82302508c9273ec846d19766ef41417eb820644'],
   ],
   content: '',
-  sig: 'a0d3eddcd34d83c8050ee50f9bb8cd86240fd8f3ee07271600aa8659e31a3129deadc6194878029aefd77e9b100932019960cf6228409a979389f3f97b89f93a',
+  sig: 'da9ca388615e1fc6a485fe548f49ae27b6230e3fe733be10b939cbf0d7edfe2448952f6622de371037f9244aaa397f4139c59be74fc920a4d3fe4ad8e6cc5c6d',
 };
 
 @Injectable({
@@ -194,7 +194,7 @@ export class Followset {
 
       // Wait for all sources to complete (in parallel)
       const results = await Promise.all(sourcePromises);
-      
+
       // Deduplicate by dTag - keep only the first occurrence of each unique dTag
       const seenDTags = new Set<string>();
       results.forEach(packs => {

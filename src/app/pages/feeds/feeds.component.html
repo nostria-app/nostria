@@ -1,23 +1,16 @@
-<div class="home-container" #homeContainer
-  [class.one-column-layout]="columnLayout() === 'one-column-layout'"
+<div class="home-container" #homeContainer [class.one-column-layout]="columnLayout() === 'one-column-layout'"
   [class.two-columns-layout]="columnLayout() === 'two-columns-layout'"
   [class.three-columns-layout]="columnLayout() === 'three-columns-layout'">
 
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
 
-      <!-- Panel Header - sticky, always visible, constrained width -->
+    <!-- Panel Header - sticky, always visible, constrained width -->
     <div class="panel-header">
       <div class="panel-header-inner">
         <!-- Feed selector with new impressive style -->
         <div class="feed-selector-container">
-          @if (!app.authenticated()) {
-          <!-- Unauthenticated users see only Trending as static -->
-          <div class="feed-selector-static">
-            <mat-icon class="selector-icon">trending_up</mat-icon>
-            <span class="selector-label">Trending</span>
-          </div>
-          } @else if (showListFeed()) {
+          @if (showListFeed()) {
           <!-- List Feed selected - show with close button -->
           @let listFeed = activeListFeed();
           <div class="feed-selector-active list-feed-active">
@@ -39,10 +32,7 @@
           </div>
           } @else {
           <!-- Feed Selector Button -->
-          <button 
-            class="feed-selector-button" 
-            mat-button 
-            [matMenuTriggerFor]="feedMenu"
+          <button class="feed-selector-button" mat-button [matMenuTriggerFor]="feedMenu"
             [class.has-selection]="activeFeed()">
             <mat-icon class="selector-icon">{{ feedIcon() }}</mat-icon>
             <span class="selector-label">{{ feedLabel() }}</span>
@@ -51,9 +41,7 @@
 
           <mat-menu #feedMenu="matMenu" class="feed-selector-menu">
             @for (feed of feeds(); track feed.id) {
-            <button 
-              mat-menu-item 
-              (click)="selectFeed(feed.id)"
+            <button mat-menu-item (click)="selectFeed(feed.id)"
               [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()">
               <mat-icon>{{ feed.icon }}</mat-icon>
               <span>{{ feed.label }}</span>
@@ -74,7 +62,8 @@
 
         <!-- List Feeds Menu - People Lists and Interests -->
         @if (app.authenticated()) {
-        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)" (interestSelected)="onInterestSelected($event)">
+        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)"
+          (interestSelected)="onInterestSelected($event)">
         </app-list-feed-menu>
         }
 
@@ -150,25 +139,14 @@
     <!-- Content wrapper to constrain width and center - scrollbar stays at panel edge -->
     <div class="feeds-content-wrapper">
 
-      <!-- Unauthenticated users see only Trending content -->
-      @if (!app.authenticated()) {
-      <div class="columns-wrapper" #columnsWrapper>
-        <div class="column-unit" [class.visible]="true">
-          <div class="column-content">
-            <app-trending-column></app-trending-column>
-          </div>
-        </div>
-      </div>
-      }
       <!-- List Feed View - shown when list query param is present -->
-      @else if (showListFeed()) {
+      @if (showListFeed()) {
       <div class="columns-wrapper" #columnsWrapper>
         <div class="column-unit list-feed-unit" [class.visible]="true">
           <div class="column-content">
             <app-list-column #listColumn [listData]="activeListFeed()"
               [showReplies]="localSettings.contentFilter().showReplies"
-              [showReposts]="localSettings.contentFilter().showReposts"
-              [mentionedMode]="listMentionedMode()"
+              [showReposts]="localSettings.contentFilter().showReposts" [mentionedMode]="listMentionedMode()"
               [filterKinds]="localSettings.contentFilter().kinds">
             </app-list-column>
           </div>
@@ -278,7 +256,7 @@
       } @else {
       <div class="columns-wrapper" #columnsWrapper>
         <!-- Normal Feeds with connected headers and content - only show when initialized -->
-        @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded() && activeFeed()) {
+        @if (feedViewReady()) {
         @let feed = activeFeed();
         @if (feed) {
         <div class="column-unit" [attr.data-column-id]="feed.id" [class.visible]="true">
@@ -430,7 +408,7 @@
         }
 
         <!-- Loading indicator while initializing -->
-        @if (!app.initialized() || !accountState.initialized() || !feedService.feedsLoaded()) {
+        @if (!feedViewReady()) {
         <div class="empty-columns-state">
           <div class="empty-state-content">
             <mat-spinner diameter="48"></mat-spinner>

@@ -442,6 +442,7 @@ export class FeedsComponent implements OnDestroy {
 
     const followingList = this.accountState.followingList();
     const followingListLoaded = this.accountState.followingListLoaded();
+    const isGuest = !this.app.authenticated();
     const emptyColumnsMap = new Map<string, boolean>();
 
     // Check if feed source is 'following', following list has been loaded, and user has zero following
@@ -450,7 +451,7 @@ export class FeedsComponent implements OnDestroy {
     if (feedConfig.source === 'following' || feedConfig.source === 'for-you') {
       emptyColumnsMap.set(
         feedConfig.id,
-        feedConfig.source === 'following' && followingListLoaded && followingList.length === 0
+        feedConfig.source === 'following' && (isGuest || followingListLoaded) && followingList.length === 0
       );
     }
 
@@ -477,7 +478,7 @@ export class FeedsComponent implements OnDestroy {
 
   // Scroll detection for auto-loading more content
   lastLoadTime = 0;
-  LOAD_MORE_COOLDOWN_MS = 1000;
+  LOAD_MORE_COOLDOWN_MS = 500;
   scrollCheckCleanup: (() => void) | null = null;
 
   /**
@@ -613,6 +614,19 @@ export class FeedsComponent implements OnDestroy {
   // }  // Replace the old columns signal with columns from active feed
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
+
+  feedViewReady = computed(() => {
+    if (!this.app.initialized() || !this.feedService.feedsLoaded() || !this.activeFeed()) {
+      return false;
+    }
+
+    // Guest mode has no account bootstrap, so accountState.initialized() may remain false.
+    if (!this.app.authenticated()) {
+      return true;
+    }
+
+    return this.accountState.initialized();
+  });
 
   // Check if the active feed is paused (no active subscription)
   isActiveFeedPaused = computed(() => {
@@ -1060,10 +1074,10 @@ export class FeedsComponent implements OnDestroy {
       const scrollHeight = contentWrapper.scrollHeight;
       const clientHeight = contentWrapper.clientHeight;
 
-      // Trigger when within 500px of bottom
+      // Trigger when within 1200px of bottom for smoother continuous loading
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      if (distanceFromBottom < 500) {
+      if (distanceFromBottom < 1200) {
         this.lastLoadTime = now;
 
         // Render more events from cache if available

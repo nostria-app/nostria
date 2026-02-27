@@ -14,6 +14,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ListType, ListData, ListItem } from '../lists.component';
 import { LoggerService } from '../../../services/logger.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface EditorData {
   listType: ListType;
@@ -45,6 +46,7 @@ export class ListEditorDialogComponent implements OnInit {
   dialogRef = inject(MatDialogRef<ListEditorDialogComponent>);
   data = inject<EditorData>(MAT_DIALOG_DATA);
   private logger = inject(LoggerService);
+  private utilities = inject(UtilitiesService);
 
   listType: ListType;
   mode: 'create' | 'edit';
@@ -88,6 +90,9 @@ export class ListEditorDialogComponent implements OnInit {
 
   // Check if current tag supports pubkey field (only 'e' tags)
   showPubkeyField = computed(() => this.newItemTag() === 'e');
+
+  // Starter pack lists should show/edit pubkeys as npub for better UX
+  isStarterPackList = computed(() => this.listType.kind === 39092);
 
   // Check if we're in edit mode for an item
   isEditingItem = computed(() => this.editingIndex() !== null);
@@ -144,6 +149,17 @@ export class ListEditorDialogComponent implements OnInit {
       value = value.toLowerCase();
     }
 
+    // Starter pack entries (kind 39092, p-tags) should be edited as npub,
+    // but stored as hex pubkey in event tags.
+    if (this.isStarterPackList() && tag === 'p') {
+      const normalizedHexPubkey = this.utilities.safeGetHexPubkey(value);
+      if (!normalizedHexPubkey) {
+        this.logger.warn('Invalid starter pack pubkey. Please use a valid npub or hex pubkey.');
+        return;
+      }
+      value = normalizedHexPubkey;
+    }
+
     const item: ListItem = {
       tag,
       value,
@@ -194,7 +210,7 @@ export class ListEditorDialogComponent implements OnInit {
     const item = items[index];
 
     this.newItemTag.set(item.tag);
-    this.newItemValue.set(item.value);
+    this.newItemValue.set(this.getEditableValue(item));
     this.newItemRelay.set(item.relay || '');
     this.newItemPubkey.set(item.pubkey || '');
     this.newItemIsPrivate.set(isPrivate);
@@ -286,7 +302,7 @@ export class ListEditorDialogComponent implements OnInit {
    * Get display text for an item
    */
   getItemDisplay(item: ListItem): string {
-    let display = `[${item.tag}] ${item.value}`;
+    let display = `[${item.tag}] ${this.getItemValueDisplay(item)}`;
     if (item.relay) {
       display += ` @ ${item.relay}`;
     }
@@ -302,6 +318,27 @@ export class ListEditorDialogComponent implements OnInit {
   getShortValue(value: string, maxLength = 32): string {
     if (value.length <= maxLength) return value;
     return value.slice(0, maxLength) + '...';
+  }
+
+  getItemValueDisplay(item: ListItem): string {
+    if (this.isStarterPackList() && item.tag === 'p') {
+      const hexPubkey = this.utilities.safeGetHexPubkey(item.value);
+      if (!hexPubkey) {
+        return item.value;
+      }
+
+      try {
+        return this.utilities.getNpubFromPubkey(hexPubkey);
+      } catch {
+        return item.value;
+      }
+    }
+
+    return item.value;
+  }
+
+  getEditableValue(item: ListItem): string {
+    return this.getItemValueDisplay(item);
   }
 
   /**

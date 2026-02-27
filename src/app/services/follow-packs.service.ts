@@ -189,6 +189,43 @@ export class FollowPacksService {
   }
 
   /**
+   * Get the full raw follow pack event for a pack.
+   * Tries local database first, then falls back to relay fetch by d-tag.
+   */
+  async getFollowPackEventData(pack: FollowPack): Promise<Event | null> {
+    try {
+      await this.database.init();
+
+      if (pack.eventId) {
+        const stored = await this.database.getEventById(pack.eventId);
+        if (stored) {
+          return stored;
+        }
+      }
+
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        return null;
+      }
+
+      const relayEvent = await this.accountRelay.getEventByPubkeyAndKindAndTag(
+        pubkey,
+        FOLLOW_PACK_KIND,
+        { key: 'd', value: pack.identifier }
+      );
+
+      if (relayEvent) {
+        await this.database.saveEvent(relayEvent);
+      }
+
+      return relayEvent;
+    } catch (error) {
+      this.logger.error('Error loading follow pack event data:', error);
+      return null;
+    }
+  }
+
+  /**
    * Parse a follow pack event into a FollowPack object.
    */
   private parseFollowPackEvent(event: Event, identifier: string): FollowPack | null {

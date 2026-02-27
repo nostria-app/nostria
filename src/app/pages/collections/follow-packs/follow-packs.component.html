@@ -83,6 +83,10 @@
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #packMenu="matMenu">
+          <button mat-menu-item (click)="copyPackData(pack)">
+            <mat-icon>content_copy</mat-icon>
+            <span>Copy Data</span>
+          </button>
           <button mat-menu-item (click)="startEditing(pack)">
             <mat-icon>edit</mat-icon>
             <span>Edit</span>

@@ -61,9 +61,12 @@
 
         <mat-form-field appearance="outline" class="value-field">
           <mat-label>Value</mat-label>
-          <input matInput [(ngModel)]="newItemValue" placeholder="Enter value" (keyup.enter)="addItem()" />
+          <input matInput [(ngModel)]="newItemValue" placeholder="Enter value" title="Enter value"
+            (keyup.enter)="addItem()" />
           <mat-hint>
-            @if (newItemTag() === 'p') {
+            @if (newItemTag() === 'p' && isStarterPackList()) {
+            Public key (npub)
+            } @else if (newItemTag() === 'p') {
             Public key (hex)
             } @else if (newItemTag() === 'e') {
             Event ID (hex)
@@ -151,7 +154,8 @@
               <mat-icon class="item-icon">{{ getTagIcon(item.tag) }}</mat-icon>
               <div class="item-content">
                 <span class="item-tag">[{{ item.tag }}]</span>
-                <span class="item-value" [matTooltip]="item.value">{{ getShortValue(item.value) }}</span>
+                <span class="item-value" [matTooltip]="getItemValueDisplay(item)">{{
+                  getShortValue(getItemValueDisplay(item)) }}</span>
                 @if (item.relay) {
                 <span class="item-relay">@ {{ getShortValue(item.relay, 24) }}</span>
                 }
@@ -207,7 +211,8 @@
               <mat-icon class="item-icon">{{ getTagIcon(item.tag) }}</mat-icon>
               <div class="item-content">
                 <span class="item-tag">[{{ item.tag }}]</span>
-                <span class="item-value" [matTooltip]="item.value">{{ getShortValue(item.value) }}</span>
+                <span class="item-value" [matTooltip]="getItemValueDisplay(item)">{{
+                  getShortValue(getItemValueDisplay(item)) }}</span>
                 @if (item.relay) {
                 <span class="item-relay">@ {{ getShortValue(item.relay, 24) }}</span>
                 }

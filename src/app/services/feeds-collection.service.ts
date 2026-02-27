@@ -101,17 +101,10 @@ export class FeedsCollectionService {
     effect(() => {
       const feeds = this.feeds();
       const activeFeedId = this._activeFeedId();
-      const hasAccount = this.accountState.account() !== null;
       const dynamicFeedActive = this._dynamicFeedActive();
 
       // Use untracked to prevent reactive loops when updating signals
       untracked(() => {
-        // Only set active feed if there's an account
-        if (!hasAccount) {
-          this.logger.debug('No active account - skipping feed sync');
-          return;
-        }
-
         // Don't auto-select a feed if a dynamic feed is active
         if (dynamicFeedActive) {
           this.logger.debug('Dynamic feed active - skipping auto-selection');
@@ -125,7 +118,10 @@ export class FeedsCollectionService {
           const defaultFeedId = forYouFeed ? forYouFeed.id : feeds[0].id;
 
           this._activeFeedId.set(defaultFeedId);
-          this.saveActiveFeed();
+          // Persist active feed only when an account exists.
+          if (this.accountState.account()) {
+            this.saveActiveFeed();
+          }
           // Also set in FeedService
           this.feedService.setActiveFeed(defaultFeedId);
         }
