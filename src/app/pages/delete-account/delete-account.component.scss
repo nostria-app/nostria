@@ -4,9 +4,22 @@
   padding: 16px;
 
   .main-card {
+    [mat-card-avatar] {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      margin-right: 12px;
+      background: var(--mat-sys-error-container);
+      border-radius: 50%;
+    }
+
     .danger-icon {
       color: var(--mat-sys-error);
-      font-size: 24px;
+      font-size: 30px;
+      width: 30px;
+      height: 30px;
     }
 
     mat-card-title {
