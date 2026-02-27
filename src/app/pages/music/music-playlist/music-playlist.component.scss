@@ -540,3 +540,10 @@
     height: 1.25rem;
   }
 }
+
+@media (max-width: 700px) {
+  .track-menu-btn {
+    width: 40px;
+    height: 40px;
+  }
+}

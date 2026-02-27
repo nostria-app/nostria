@@ -161,6 +161,8 @@
     right: 0.25rem;
     opacity: 0;
     transition: opacity 0.2s ease;
+    width: 40px;
+    height: 40px;
 
     mat-icon {
       font-size: 1.25rem;
@@ -257,5 +259,11 @@
     font-size: 20px;
     width: 20px;
     height: 20px;
+  }
+}
+
+@media (max-width: 700px) {
+  .artist-card .artist-menu-btn {
+    opacity: 1;
   }
 }

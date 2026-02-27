@@ -235,8 +235,8 @@ const MUSIC_KIND = 36787;
 
     .menu-btn {
       flex-shrink: 0;
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       padding: 0;
       margin: -4px -8px -4px 0;
       opacity: 0.6;

@@ -174,6 +174,15 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
         margin-right: 8px;
         color: var(--mat-sys-on-surface-variant);
       }
+
+      ::ng-deep .mat-mdc-form-field-infix {
+        min-height: 40px;
+      }
+
+      input[matInput] {
+        min-height: 40px;
+        font-size: 16px;
+      }
     }
 
     .section-title {

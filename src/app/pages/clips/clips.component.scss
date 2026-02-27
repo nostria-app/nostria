@@ -95,6 +95,10 @@
   color: var(--mat-sys-on-surface-variant);
   border-radius: var(--mat-sys-corner-full);
   padding: 0.45rem 0.85rem;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   white-space: nowrap;
 
@@ -360,10 +364,16 @@
 
   .clips-tabs-menu-button {
     right: 0.35rem;
+
+    width: 40px;
+    height: 40px;
   }
 
   .clips-tabs-create-button {
     left: 0.35rem;
+
+    width: 40px;
+    height: 40px;
   }
 
   .desktop-pane-tabs {

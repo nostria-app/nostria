@@ -79,6 +79,9 @@ table {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-height: 40px;
+  padding: 0 6px;
+  border-radius: var(--mat-sys-corner-small);
   color: var(--mat-sys-primary);
   text-decoration: none;
 
