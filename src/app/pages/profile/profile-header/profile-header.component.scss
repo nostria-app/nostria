@@ -404,6 +404,8 @@
   @container (max-width: 460px) {
     .following-count.compactable {
       padding: 4px;
+      min-width: 40px;
+      width: 40px;
 
       .compact-text {
         display: none;
@@ -609,4 +611,14 @@
   //   min-width: auto;
   //   padding: 0;
   // }
+}
+
+@media (max-width: 700px) {
+  .profile-extra-info {
+    .following-count {
+      min-width: 40px;
+      min-height: 40px;
+      padding: 8px;
+    }
+  }
 }
