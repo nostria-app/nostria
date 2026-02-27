@@ -20,6 +20,8 @@
   align-items: center;
   justify-content: center;
   outline: none;
+  min-width: 44px;
+  min-height: 44px;
 
   &:hover {
     opacity: 0.8;
@@ -33,6 +35,11 @@
 }
 
 @media screen and (max-width: 600px) {
+  .app-icon {
+    margin-left: 4px;
+    margin-right: 0;
+  }
+
   .icon-button.hide-small {
     display: none !important;
   }

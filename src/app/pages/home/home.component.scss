@@ -1458,5 +1458,24 @@
     flex-direction: column;
     gap: 12px;
     text-align: center;
+
+    .footer-links {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+
+      .dot {
+        display: none;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 10px;
+        border-radius: var(--mat-sys-corner-full);
+      }
+    }
   }
 }

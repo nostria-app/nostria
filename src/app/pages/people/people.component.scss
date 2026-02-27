@@ -247,8 +247,9 @@
     outline: none;
     flex: 1;
     min-width: 0;
-    padding: 8px 0;
-    font-size: 14px;
+    padding: 0;
+    height: 40px;
+    font-size: 16px;
     color: var(--mat-sys-on-surface);
 
     &::placeholder {

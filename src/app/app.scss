@@ -176,6 +176,7 @@ nav {
       color: var(--mat-sys-on-surface);
       outline: none;
       min-width: 0;
+      height: 40px;
 
       &::placeholder {
         color: var(--mat-sys-on-surface-variant);
@@ -190,8 +191,8 @@ nav {
 
     // Search action buttons (voice, qr, close) - shown when search is active
     .search-action-button {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -214,6 +215,13 @@ nav {
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
     }
+  }
+}
+
+@media (max-width: 599px) {
+  .toolbar-center .search-container {
+    padding: 0 8px;
+    gap: 6px;
   }
 }
 
