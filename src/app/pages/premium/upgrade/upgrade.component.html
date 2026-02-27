@@ -191,17 +191,77 @@
 
     <div class="step-actions">
       <button mat-button (click)="prevStep()">Back</button>
+      @if (platform.canPayWithPlayStore()) {
+      <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()"
+        (click)="purchaseWithPlayStore()">
+        <mat-icon>shopping_cart</mat-icon>
+        Purchase via Play Store
+      </button>
+      } @else if (platform.mustUseExternalPayment()) {
+      <button mat-flat-button [disabled]="!selectedTier() || !selectedPaymentOption()"
+        (click)="openExternalPayment()">
+        <mat-icon>open_in_new</mat-icon>
+        Continue to Payment
+      </button>
+      } @else {
       <button mat-flat-button color="primary" [disabled]="!selectedTier() || !selectedPaymentOption()"
         (click)="nextStep()">
         Continue to Payment
       </button>
+      }
     </div>
   </div>
   }
 
-  <!-- Step 3: Bitcoin Lightning Payment -->
+  <!-- Step 3: Payment -->
   @if (currentStep() === 2) {
   <div class="step-content payment-step">
+    @if (platform.mustUseExternalPayment()) {
+    <!-- iOS: External payment redirect -->
+    <h2>Complete Your Payment</h2>
+    <p class="step-description">
+      Due to platform restrictions, payments must be completed in your browser.
+    </p>
+    <div class="external-payment-notice">
+      <mat-icon>open_in_new</mat-icon>
+      <div>
+        <p>You will be redirected to <strong>nostria.app/premium</strong> to complete your purchase.</p>
+        <p>After payment, return to the app and your subscription will be activated.</p>
+      </div>
+    </div>
+    <div class="step-actions">
+      <button mat-button (click)="resetPayment()">Back</button>
+      <button mat-flat-button (click)="openExternalPayment()">
+        <mat-icon>open_in_new</mat-icon>
+        Open Payment Page
+      </button>
+    </div>
+
+    } @else if (platform.canPayWithPlayStore()) {
+    <!-- Android: Play Store payment -->
+    <h2>Complete Your Payment</h2>
+    <p class="step-description">
+      Pay using Google Play to activate your premium account.
+    </p>
+    <div class="store-payment-container">
+      <mat-icon class="store-icon">shop</mat-icon>
+      <p>Your purchase will be processed through Google Play.</p>
+      <button mat-flat-button (click)="purchaseWithPlayStore()" [disabled]="iap.purchasing()">
+        @if (iap.purchasing()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        Processing...
+        } @else {
+        <mat-icon>shopping_cart</mat-icon>
+        Purchase with Google Play
+        }
+      </button>
+    </div>
+    <div class="step-actions">
+      <button mat-button (click)="resetPayment()" [disabled]="iap.purchasing()">Back</button>
+    </div>
+
+    } @else {
+    <!-- Web/PWA: Bitcoin Lightning payment -->
     <h2>Complete Your Payment</h2>
     <p class="step-description">
       Pay using Bitcoin Lightning Network to activate your premium account.
@@ -284,6 +344,7 @@
         Back
       </button>
     </div>
+    }
   </div>
   }
 

@@ -1,8 +1,27 @@
-import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID, signal, computed } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
- * Service for detecting platform (OS) and providing platform-specific utilities
+ * The type of app context the user is running in.
+ * - 'web': Standard browser (desktop or mobile browser)
+ * - 'pwa': Installed Progressive Web App (standalone display mode)
+ * - 'native-android': Native Android app (Play Store / TWA)
+ * - 'native-ios': Native iOS app (App Store)
+ */
+export type AppContext = 'web' | 'pwa' | 'native-android' | 'native-ios';
+
+/**
+ * Available payment methods based on platform context.
+ * - 'bitcoin': Lightning Network invoice (default for web/pwa)
+ * - 'play-store': Google Play Billing (Android native apps)
+ * - 'external-url': External URL redirect (iOS apps, due to Apple's restrictions)
+ */
+export type PaymentPlatform = 'bitcoin' | 'play-store' | 'external-url';
+
+/**
+ * Service for detecting platform (OS) and providing platform-specific utilities.
+ * Detects whether the app is running as a native app, PWA, or in a browser,
+ * and provides payment platform routing based on the app context.
  */
 @Injectable({
   providedIn: 'root',
@@ -18,9 +37,50 @@ export class PlatformService {
   readonly isIOS = signal(false);
   readonly isAndroid = signal(false);
 
+  // App context detection signals
+  readonly isStandalone = signal(false);
+  readonly isNativeAndroid = signal(false);
+  readonly isNativeIOS = signal(false);
+
+  /** The current app context (web, pwa, native-android, native-ios) */
+  readonly appContext = computed<AppContext>(() => {
+    if (this.isNativeIOS()) return 'native-ios';
+    if (this.isNativeAndroid()) return 'native-android';
+    if (this.isStandalone()) return 'pwa';
+    return 'web';
+  });
+
+  /** Whether the app is running as a native mobile app (Android or iOS) */
+  readonly isNativeApp = computed(() => this.isNativeAndroid() || this.isNativeIOS());
+
+  /** Whether the app is running on a mobile device (native or mobile browser) */
+  readonly isMobile = computed(() => this.isIOS() || this.isAndroid());
+
+  /**
+   * The payment platform to use based on app context.
+   * - Native Android: Play Store billing
+   * - Native iOS: External URL (Apple doesn't allow in-app alternative payments)
+   * - Web/PWA: Bitcoin Lightning
+   */
+  readonly paymentPlatform = computed<PaymentPlatform>(() => {
+    if (this.isNativeAndroid()) return 'play-store';
+    if (this.isNativeIOS()) return 'external-url';
+    return 'bitcoin';
+  });
+
+  /** Whether Bitcoin Lightning payment is available (web/PWA context) */
+  readonly canPayWithBitcoin = computed(() => this.paymentPlatform() === 'bitcoin');
+
+  /** Whether Play Store billing is available (Android native context) */
+  readonly canPayWithPlayStore = computed(() => this.paymentPlatform() === 'play-store');
+
+  /** Whether the user must be directed to an external URL to pay (iOS native context) */
+  readonly mustUseExternalPayment = computed(() => this.paymentPlatform() === 'external-url');
+
   constructor() {
     if (this.isBrowser) {
       this.detectPlatform();
+      this.detectAppContext();
     }
   }
 
@@ -35,6 +95,44 @@ export class PlatformService {
     this.isLinux.set(/linux/.test(userAgent) && !/android/.test(userAgent));
     this.isIOS.set(/iphone|ipad|ipod/.test(userAgent));
     this.isAndroid.set(/android/.test(userAgent));
+  }
+
+  /**
+   * Detect whether the app is running as a native app, PWA, or browser.
+   *
+   * Detection heuristics:
+   * - Native Android: TWA (Trusted Web Activity) sets document.referrer to the Android package,
+   *   or a custom query param / Android WebView user agent marker is present.
+   * - Native iOS: iOS Safari standalone mode in combination with iOS-specific signals.
+   * - PWA: display-mode standalone media query matches.
+   */
+  private detectAppContext(): void {
+    // Check if running in standalone (PWA or TWA) mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (navigator as unknown as { standalone?: boolean }).standalone === true;
+    this.isStandalone.set(isStandalone);
+
+    // Check URL params for native app markers (set by native app shells)
+    const urlParams = new URLSearchParams(window.location.search);
+    const nativeParam = urlParams.get('app_context');
+
+    if (nativeParam === 'android' || this.detectTWA()) {
+      this.isNativeAndroid.set(true);
+    } else if (nativeParam === 'ios' || (isStandalone && this.isIOS())) {
+      // On iOS, standalone + iOS means it's from the App Store wrapper or PWA.
+      // The native iOS app shell should set app_context=ios to distinguish from PWA.
+      if (nativeParam === 'ios') {
+        this.isNativeIOS.set(true);
+      }
+    }
+  }
+
+  /**
+   * Detect if running inside a Trusted Web Activity (TWA) on Android.
+   * TWAs set document.referrer to 'android-app://<package-name>'.
+   */
+  private detectTWA(): boolean {
+    return document.referrer.startsWith('android-app://');
   }
 
   /**

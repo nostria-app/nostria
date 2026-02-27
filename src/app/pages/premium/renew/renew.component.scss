@@ -345,6 +345,62 @@ h2 {
   }
 }
 
+/* External Payment (iOS) */
+.external-payment-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 2rem;
+
+  > mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    font-size: 32px;
+    height: 32px;
+    width: 32px;
+  }
+
+  p {
+    margin: 0 0 0.5rem;
+    color: var(--mat-sys-on-surface);
+
+    &:last-child {
+      margin-bottom: 0;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.9rem;
+    }
+  }
+}
+
+/* Play Store Payment (Android) */
+.store-payment-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 2rem;
+
+  p {
+    margin: 1rem 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.store-icon {
+  font-size: 48px;
+  height: 48px;
+  width: 48px;
+  color: var(--mat-sys-primary);
+}
+
 /* Lightning Payment Step */
 .lightning-invoice {
   display: grid;

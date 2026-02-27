@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed } from '@angular/core';
 
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +26,8 @@ interface EventKindInfo {
   count: number;
 }
 
+type DeletionState = 'idle' | 'deleting' | 'completed' | 'clearing-local';
+
 @Component({
   selector: 'app-delete-account',
   imports: [
@@ -37,10 +39,11 @@ interface EventKindInfo {
     MatIconModule,
     MatDividerModule,
     MatProgressBarModule,
-    MatDialogModule
-],
+    MatDialogModule,
+  ],
   templateUrl: './delete-account.component.html',
   styleUrl: './delete-account.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeleteAccountComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -63,6 +66,8 @@ export class DeleteAccountComponent implements OnInit {
   deletionProgress = signal(0);
   deletedCount = signal(0);
   failedCount = signal(0);
+  deletionState = signal<DeletionState>('idle');
+  localDataCleared = signal(false);
 
   // Computed values
   totalEventsCount = computed(() =>
@@ -183,6 +188,43 @@ export class DeleteAccountComponent implements OnInit {
     return descriptions[kind] || 'Events of this type';
   }
 
+  async clearLocalDataOnly() {
+    const currentAccount = this.currentAccount();
+    if (!currentAccount) {
+      this.showMessage('No active account found');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Clear Local Data',
+        message: 'This will clear all locally cached data for your account (events, messages, notifications). Your data on relays will NOT be affected. Continue?',
+        confirmText: 'Clear Local Data',
+        cancelText: 'Cancel',
+      } as ConfirmDialogData,
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (!result) {
+      return;
+    }
+
+    this.deletionState.set('clearing-local');
+
+    try {
+      await this.databaseService.clearAllData();
+      this.localDataCleared.set(true);
+      this.eventKinds.set([]);
+      this.showMessage('Local data cleared successfully');
+      this.deletionState.set('completed');
+    } catch (error) {
+      console.error('Error clearing local data:', error);
+      this.showMessage('Error clearing local data');
+      this.deletionState.set('idle');
+    }
+  }
+
   async deleteAllEvents() {
     const currentAccount = this.currentAccount();
     if (!currentAccount) {
@@ -212,6 +254,7 @@ export class DeleteAccountComponent implements OnInit {
     }
 
     this.deleting.set(true);
+    this.deletionState.set('deleting');
     this.deletionProgress.set(0);
     this.deletedCount.set(0);
     this.failedCount.set(0);
@@ -223,6 +266,7 @@ export class DeleteAccountComponent implements OnInit {
 
       if (totalEvents === 0) {
         this.showMessage('No events found to delete');
+        this.deletionState.set('idle');
         return;
       }
 
@@ -233,7 +277,7 @@ export class DeleteAccountComponent implements OnInit {
       // Process events in batches to avoid overwhelming the system
       const batchSize = 10;
       const deletedEventIds: string[] = [];
-      
+
       for (let i = 0; i < events.length; i += batchSize) {
         const batch = events.slice(i, i + batchSize);
 
@@ -241,11 +285,11 @@ export class DeleteAccountComponent implements OnInit {
           try {
             // Create deletion event (NIP-09)
             const deleteEvent = this.nostrService.createRetractionEvent(event);
-            const result = await this.nostrService.signAndPublish(deleteEvent);
-            if (result.success) {
+            const publishResult = await this.nostrService.signAndPublish(deleteEvent);
+            if (publishResult.success) {
               deletedEventIds.push(event.id);
             }
-            return result.success;
+            return publishResult.success;
           } catch (error) {
             console.error(`Failed to delete event ${event.id}:`, error);
             return false;
@@ -293,15 +337,34 @@ export class DeleteAccountComponent implements OnInit {
       // Rescan to update counts
       await this.scanUserEvents();
 
+      // Move to completed state
+      this.deletionState.set('completed');
+
     } catch (error) {
       console.error('Error during account deletion:', error);
       this.showMessage('Error occurred during account deletion');
+      this.deletionState.set('idle');
     } finally {
       this.deleting.set(false);
     }
   }
 
   rescanEvents() {
+    this.scanUserEvents();
+  }
+
+  async signOut() {
+    await this.nostrService.logout();
+    this.router.navigate(['/']);
+  }
+
+  resetState() {
+    this.deletionState.set('idle');
+    this.deletionProgress.set(0);
+    this.deletedCount.set(0);
+    this.failedCount.set(0);
+    this.localDataCleared.set(false);
+    this.deleteForm.reset();
     this.scanUserEvents();
   }
 

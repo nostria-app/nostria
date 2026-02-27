@@ -181,6 +181,27 @@
   </div>
 
   <!-- Payment Method Selection -->
+  @if (platform.mustUseExternalPayment()) {
+  <!-- iOS: External payment redirect -->
+  <div class="payment-section">
+    <div class="external-payment-notice">
+      <mat-icon>open_in_new</mat-icon>
+      <div>
+        <p>Due to platform restrictions, gift payments must be completed in your browser.</p>
+        <p>You will be redirected to <strong>nostria.app/premium</strong> to complete the gift purchase.</p>
+      </div>
+    </div>
+  </div>
+  } @else if (platform.canPayWithPlayStore()) {
+  <!-- Android: Play Store payment -->
+  <div class="payment-section">
+    <div class="store-payment-container">
+      <mat-icon class="store-icon">shop</mat-icon>
+      <p>Your gift purchase will be processed through Google Play.</p>
+    </div>
+  </div>
+  } @else {
+  <!-- Web/PWA: Lightning payment methods -->
   <div class="payment-section">
     <h3 class="section-title">Payment Method</h3>
 
@@ -283,6 +304,7 @@
       }
     </div>
   </div>
+  }
 
   @if (errorMessage()) {
   <div class="error-message">
@@ -312,7 +334,24 @@
   </button>
 
   <div class="action-buttons">
-    @if (selectedPaymentMethod() === 'nwc') {
+    @if (platform.mustUseExternalPayment()) {
+    <!-- iOS: External payment button -->
+    <button mat-flat-button class="send-button" (click)="openExternalGiftPayment()">
+      <mat-icon>open_in_new</mat-icon>
+      <span>Open Payment Page</span>
+    </button>
+    } @else if (platform.canPayWithPlayStore()) {
+    <!-- Android: Play Store purchase button -->
+    <button mat-flat-button class="send-button" (click)="purchaseGiftWithPlayStore()" [disabled]="isProcessing()">
+      @if (isProcessing()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Processing...</span>
+      } @else {
+      <mat-icon>shopping_cart</mat-icon>
+      <span>Purchase via Play Store</span>
+      }
+    </button>
+    } @else if (selectedPaymentMethod() === 'nwc') {
     <button mat-flat-button class="send-button" (click)="confirmGift()" [disabled]="isProcessing() || !hasNwcWallet()">
       @if (isProcessing()) {
       <mat-spinner diameter="18"></mat-spinner>

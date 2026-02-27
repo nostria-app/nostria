@@ -11,6 +11,48 @@
     </mat-card-header>
 
     <mat-card-content>
+      <!-- Completion State -->
+      @if (deletionState() === 'completed') {
+      <div class="completion-section">
+        <div class="completion-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <h3>Deletion Complete</h3>
+
+        @if (localDataCleared()) {
+        <p>Your local data has been cleared successfully.</p>
+        } @else {
+        <div class="completion-stats">
+          <p>
+            <strong>{{ deletedCount() }}</strong> events deleted successfully.
+            @if (failedCount() > 0) {
+            <strong>{{ failedCount() }}</strong> failed.
+            }
+          </p>
+        </div>
+        }
+
+        <p class="completion-hint">
+          You can sign out of this account or go back to continue using the app.
+        </p>
+
+        <div class="completion-actions">
+          <button mat-stroked-button (click)="navigateBack()">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Settings
+          </button>
+          <button mat-stroked-button (click)="resetState()">
+            <mat-icon>refresh</mat-icon>
+            Start Over
+          </button>
+          <button mat-flat-button (click)="signOut()">
+            <mat-icon>logout</mat-icon>
+            Sign Out
+          </button>
+        </div>
+      </div>
+      } @else {
+
       <!-- Account Info -->
       @if (currentAccount(); as account) {
       <div class="account-info">
@@ -18,6 +60,30 @@
         <p class="account-pubkey">{{ account.pubkey }}</p>
       </div>
       }
+
+      <mat-divider></mat-divider>
+
+      <!-- Clear Local Data Section -->
+      <div class="clear-local-section">
+        <div class="section-header">
+          <h3>Clear Local Data</h3>
+        </div>
+        <p class="section-description">
+          Remove all locally cached data (events, messages, notifications) without broadcasting
+          deletion requests to relays. Your data on relays will remain intact.
+        </p>
+        <button mat-stroked-button
+          (click)="clearLocalDataOnly()"
+          [disabled]="deletionState() === 'clearing-local' || deleting()">
+          @if (deletionState() === 'clearing-local') {
+          <mat-icon class="spinning">sync</mat-icon>
+          Clearing...
+          } @else {
+          <mat-icon>cleaning_services</mat-icon>
+          Clear Local Data Only
+          }
+        </button>
+      </div>
 
       <mat-divider></mat-divider>
 
@@ -111,9 +177,9 @@
             <mat-progress-bar mode="determinate" [value]="deletionProgress()" class="progress-bar">
             </mat-progress-bar>
             <div class="progress-stats">
-              <span class="success">✓ {{ deletedCount() }} deleted</span>
+              <span class="success">{{ deletedCount() }} deleted</span>
               @if (failedCount() > 0) {
-              <span class="failed">✗ {{ failedCount() }} failed</span>
+              <span class="failed">{{ failedCount() }} failed</span>
               }
             </div>
           </div>
@@ -125,7 +191,7 @@
               Back to Privacy Settings
             </button>
 
-            <button mat-flat-button color="warn" type="button" (click)="deleteAllEvents()"
+            <button mat-flat-button type="button" class="danger-button" (click)="deleteAllEvents()"
               [disabled]="!deleteForm.valid || deleting()">
               <span>
                 @if (deleting()) {
@@ -165,6 +231,8 @@
           </p>
         </div>
       </div>
+
+      } <!-- end of non-completed state -->
     </mat-card-content>
   </mat-card>
 </div>

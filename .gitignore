@@ -3,7 +3,9 @@
 .codenomad
 nul
 lint-output.txt
+lint_check.txt
 lint_output.txt
+lint_output2.txt
 zapstore
 .env
 android.keystore

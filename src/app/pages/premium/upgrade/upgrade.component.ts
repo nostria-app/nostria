@@ -20,6 +20,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
+import { PlatformService } from '../../../services/platform.service';
+import { InAppPurchaseService } from '../../../services/in-app-purchase.service';
 import { environment } from '../../../../environments/environment';
 import { Payment } from '../../../api/models';
 import { UsernameService } from '../../../services/username';
@@ -79,6 +81,8 @@ export class UpgradeComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
   private readonly logger = inject(LoggerService);
+  readonly platform = inject(PlatformService);
+  readonly iap = inject(InAppPurchaseService);
   environment = environment;
 
   usernameFormGroup = this.formBuilder.group({
@@ -413,6 +417,66 @@ export class UpgradeComponent implements OnDestroy {
     this.snackBar.open('Welcome to Nostria Premium! Enjoy your new features.', 'Thanks!', {
       duration: 5000,
     });
+  }
+
+  /**
+   * Initiate a Play Store purchase for the selected tier/billing cycle.
+   * Called when the user is on Android native app.
+   */
+  async purchaseWithPlayStore() {
+    const selectedTier = this.selectedTier();
+    const selectedPaymentOption = this.selectedPaymentOption();
+    if (!selectedTier || !selectedPaymentOption) return;
+
+    const tierName = selectedTier.details.tier as 'premium' | 'premium_plus';
+    const productId = this.iap.getProductId(tierName, selectedPaymentOption);
+    if (!productId) {
+      this.snackBar.open('Product not available in store.', 'Close', { duration: 5000 });
+      return;
+    }
+
+    const result = await this.iap.purchaseWithPlayStore(productId);
+    if (result.success && result.purchaseToken) {
+      // Verify the purchase with our backend
+      const verified = await this.iap.verifyPurchaseWithBackend(
+        result.purchaseToken,
+        this.accountState.pubkey(),
+        'play-store'
+      );
+
+      if (verified) {
+        this.stepComplete.set({ ...this.stepComplete(), 2: true, 3: true });
+        this.isPaymentCompleted.set(true);
+        await this.accountState.changeAccount(this.accountState.account());
+
+        this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+          duration: 8000,
+        });
+        setTimeout(() => this.currentStep.set(3), 1000);
+      } else {
+        this.snackBar.open(
+          'Purchase completed but verification failed. Please contact support.',
+          'Close',
+          { duration: 8000 }
+        );
+      }
+    } else if (result.error && result.error !== 'Purchase cancelled by user') {
+      this.snackBar.open(`Purchase failed: ${result.error}`, 'Close', { duration: 5000 });
+    }
+  }
+
+  /**
+   * Open external payment URL for iOS users.
+   * Apple does not allow in-app alternative payment methods.
+   */
+  openExternalPayment() {
+    const selectedTier = this.selectedTier();
+    const selectedPaymentOption = this.selectedPaymentOption();
+    this.iap.openExternalPaymentUrl(
+      this.accountState.pubkey(),
+      selectedTier?.details.tier,
+      selectedPaymentOption || undefined
+    );
   }
 
   // Helper methods for template
