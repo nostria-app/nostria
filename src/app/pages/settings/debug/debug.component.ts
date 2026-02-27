@@ -44,6 +44,17 @@ export class DebugSettingsComponent {
     return null;
   });
 
+  readonly isActiveStoreAvailable = computed(() => {
+    const store = this.activeStorePlatform();
+    if (store === 'play-store') {
+      return this.iap.playStoreAvailable();
+    }
+    if (store === 'app-store') {
+      return this.iap.appStoreAvailable();
+    }
+    return false;
+  });
+
   readonly platformOptions: { value: AppContext | null; label: string; description: string }[] = [
     { value: null, label: 'Auto-detect', description: 'Use real platform detection' },
     { value: 'web', label: 'Web Browser', description: 'Standard browser — Bitcoin Lightning payments' },
@@ -68,6 +79,13 @@ export class DebugSettingsComponent {
     const store = this.activeStorePlatform();
     if (!store) {
       this.snackBar.open('Select simulated Android/iOS and enable store payments first.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (!this.isActiveStoreAvailable()) {
+      this.snackBar.open('Selected store billing is not available in this environment.', 'Close', {
         duration: 5000,
       });
       return;

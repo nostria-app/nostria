@@ -114,7 +114,7 @@ export class RenewComponent implements OnDestroy {
       recommended: !this.platform.isNativeApp(),
     });
 
-    if (this.platform.canPayWithPlayStore()) {
+    if (this.platform.canPayWithPlayStore() && this.iap.playStoreAvailable()) {
       methods.push({
         key: 'play-store',
         label: 'Google Play',
@@ -124,7 +124,7 @@ export class RenewComponent implements OnDestroy {
       });
     }
 
-    if (this.platform.canPayWithAppStore()) {
+    if (this.platform.canPayWithAppStore() && this.iap.appStoreAvailable()) {
       methods.push({
         key: 'app-store',
         label: 'App Store',
@@ -150,7 +150,7 @@ export class RenewComponent implements OnDestroy {
     const methods = this.availablePaymentMethods();
     return methods.find(m => m.recommended) || methods[0];
   });
-  
+
   // Computed values for current subscription
   currentTier = computed(() => this.accountState.subscription()?.tier || 'premium');
   currentExpiry = computed(() => {
@@ -161,7 +161,7 @@ export class RenewComponent implements OnDestroy {
     const expires = this.currentExpiry();
     return expires ? expires.getTime() < Date.now() : false;
   });
-  
+
   selectedPrice = computed(
     () =>
       this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || {
@@ -169,18 +169,18 @@ export class RenewComponent implements OnDestroy {
         currency: 'USD',
       }
   );
-  
+
   // Calculate the new expiry date based on current expiry and selected plan
   selectedTierTill = computed(() => {
     if (!this.selectedTier() || !this.selectedPaymentOption()) return '';
     const paymentOption = this.selectedPaymentOption();
     const days = paymentOption === 'monthly' ? 31 : paymentOption === 'quarterly' ? 92 : 365;
-    
+
     // If subscription is active, extend from current expiry, otherwise start from now
     const currentExpiry = this.currentExpiry();
     const baseDate = (currentExpiry && !this.isExpired()) ? currentExpiry.getTime() : Date.now();
     const validTill = baseDate + 24 * 60 * 60 * 1000 * days;
-    
+
     const date = new Date(validTill);
     const day = date.getDate().toString().padStart(2, '0');
     const month = date.toLocaleString('en-US', { month: 'long' });
@@ -209,7 +209,7 @@ export class RenewComponent implements OnDestroy {
             });
 
             this.tiers.set(tiers);
-            
+
             // Pre-select the user's current tier
             const currentTierKey = this.currentTier();
             const matchingTier = tiers.find(t => t.key === currentTierKey);
@@ -376,16 +376,16 @@ export class RenewComponent implements OnDestroy {
     try {
       const paymentId = this.paymentInvoice()!.id;
       const updatedAccount = await firstValueFrom(this.premiumApi.renewSubscription(paymentId));
-      
+
       this.stepComplete.set({
         ...this.stepComplete(),
         2: true,
       });
       this.isPaymentCompleted.set(true);
-      
+
       // Update the subscription in local state
       this.accountState.addSubscription(updatedAccount);
-      
+
       // Refresh subscription to ensure we have the latest data
       await this.accountState.refreshSubscription();
 
@@ -401,8 +401,8 @@ export class RenewComponent implements OnDestroy {
     } catch (e: unknown) {
       this.logger.error('Failed to renew subscription:', e);
       const errorMessage = (e as { error?: { error?: string } })?.error?.error || 'Failed to renew subscription. Please try again.';
-      this.snackBar.open(errorMessage, 'Ok', { 
-        duration: 5000 
+      this.snackBar.open(errorMessage, 'Ok', {
+        duration: 5000
       });
     }
   }

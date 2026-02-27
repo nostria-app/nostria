@@ -121,8 +121,8 @@ export class UpgradeComponent implements OnDestroy {
       recommended: !this.platform.isNativeApp(),
     });
 
-    // Play Store is available when Digital Goods API is detected or simulating Android
-    if (this.platform.canPayWithPlayStore()) {
+    // Play Store is available only when the platform route is Play Store and billing is initialized
+    if (this.platform.canPayWithPlayStore() && this.iap.playStoreAvailable()) {
       methods.push({
         key: 'play-store',
         label: 'Google Play',
@@ -132,8 +132,8 @@ export class UpgradeComponent implements OnDestroy {
       });
     }
 
-    // App Store is available when StoreKit bridge is detected or simulating iOS
-    if (this.platform.canPayWithAppStore()) {
+    // App Store is available only when the platform route is App Store and StoreKit bridge is initialized
+    if (this.platform.canPayWithAppStore() && this.iap.appStoreAvailable()) {
       methods.push({
         key: 'app-store',
         label: 'App Store',

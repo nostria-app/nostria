@@ -65,7 +65,7 @@
     </div>
 
     <button mat-flat-button (click)="purchaseDonationProduct()"
-      [disabled]="!activeStorePlatform() || purchasingDonation()">
+      [disabled]="!activeStorePlatform() || !isActiveStoreAvailable() || purchasingDonation()">
       @if (purchasingDonation()) {
       Purchasing Donation Product...
       } @else {
