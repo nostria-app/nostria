@@ -1028,10 +1028,9 @@ export class FeedsComponent implements OnDestroy {
     // Set up scroll listeners for the active feed
     effect(() => {
       const activeFeed = this.activeFeed();
-      const account = this.accountState.account();
 
-      // Only set up scroll listeners if there's an active account and feed
-      if (!account || !activeFeed) {
+      // Set up scroll listeners whenever an active feed exists (also in guest mode)
+      if (!activeFeed) {
         return;
       }
 
@@ -1054,8 +1053,8 @@ export class FeedsComponent implements OnDestroy {
     // Clean up existing listeners
     this.cleanupScrollListener();
 
-    // Find the main scroll container - this is typically .content-wrapper
-    const contentWrapper = document.querySelector('.content-wrapper') as HTMLElement;
+    // Find the active feed scroll container
+    const contentWrapper = document.querySelector('.column-content') as HTMLElement;
 
     if (!contentWrapper) {
       return;
@@ -1212,6 +1211,7 @@ export class FeedsComponent implements OnDestroy {
     const container = event.target as HTMLElement;
     const scrollTop = container.scrollTop;
     const scrollDelta = scrollTop - this.lastScrollTop;
+    const now = Date.now();
 
     // Scrolling down - hide header after scrolling down past threshold
     if (scrollDelta > 10 && scrollTop > 100) {
@@ -1224,6 +1224,23 @@ export class FeedsComponent implements OnDestroy {
     // At the very top - always show header
     else if (scrollTop <= 50) {
       this.headerHidden.set(false);
+    }
+
+    const activeFeed = this.activeFeed();
+    if (activeFeed && now - this.lastLoadTime >= this.LOAD_MORE_COOLDOWN_MS) {
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      if (distanceFromBottom < 1200) {
+        this.lastLoadTime = now;
+
+        if (this.hasMoreEventsToRender(activeFeed.id)) {
+          this.loadMoreRenderedEvents(activeFeed.id);
+        }
+
+        void this.loadMoreForFeed(activeFeed.id);
+      }
     }
 
     this.lastScrollTop = scrollTop;

@@ -225,6 +225,7 @@ export class FeedService {
 
   // Track whether the Feeds page is currently active/mounted
   private readonly _feedsPageActive = signal<boolean>(false);
+  private readonly emptyPaginationStreakByFeedId = new Map<string, number>();
 
   // New event checking
   private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -2596,6 +2597,13 @@ export class FeedService {
         const allPubkeys = new Set<string>();
         const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
+        if (!this.accountState.account()) {
+          this.getGuestForYouPubkeys().forEach(pubkey => allPubkeys.add(pubkey));
+          const guestPubkeysArray = Array.from(allPubkeys);
+          await this.fetchOlderEventsFromUsersAnonymous(guestPubkeysArray, feedData);
+          return;
+        }
+
         // Add popular starter pack pubkeys (fetch from 'popular' starter pack)
         try {
           const starterPacks = await this.followset.fetchStarterPacks();
@@ -2750,7 +2758,10 @@ export class FeedService {
    * Fetch older events for pagination with incremental updates
    */
   private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
-    const eventsPerUser = 10; // Increased for better pagination experience
+    const eventsPerUser = 12;
+    const requestedKinds = feedData.filter?.kinds?.length
+      ? feedData.filter.kinds
+      : [kinds.ShortTextNote];
 
     // Removed maxAge limit to allow infinite scrolling
     // Previously: const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
@@ -2777,15 +2788,26 @@ export class FeedService {
     // Process users in parallel with incremental updates
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
-        // Use paginated fetch with 'until' parameter for infinite scroll
-        // This tells relays to fetch events OLDER than the oldest timestamp
-        const recordResults = await this.onDemandUserData.getEventsByPubkeyAndKindPaginated(
-          pubkey,
-          feedData.filter?.kinds?.[0] || kinds.ShortTextNote,
-          oldestTimestamp, // Fetch events older than this
-          eventsPerUser    // Limit per user
+        const perKindLimit = Math.max(4, Math.ceil(eventsPerUser / requestedKinds.length));
+        const paginatedResultsByKind = await Promise.all(
+          requestedKinds.map(kind =>
+            this.onDemandUserData.getEventsByPubkeyAndKindPaginated(
+              pubkey,
+              kind,
+              oldestTimestamp,
+              perKindLimit
+            )
+          )
         );
-        const events = recordResults.map((r: { event: Event }) => r.event);
+
+        const events = Array.from(
+          new Map(
+            paginatedResultsByKind
+              .flat()
+              .map((record: { event: Event }) => record.event)
+              .map(event => [event.id, event])
+          ).values()
+        );
 
         this.logger.debug(`[Pagination] User ${pubkey.slice(0, 8)}... returned ${events.length} events, oldest: ${events.length > 0 ? new Date(Math.min(...events.map(e => (e.created_at || 0))) * 1000).toISOString() : 'none'}`);
 
@@ -2840,6 +2862,88 @@ export class FeedService {
 
     // Final update for pagination
     this.finalizePaginationIncremental(userEventsMap, feedData, existingEvents);
+  }
+
+  private async fetchOlderEventsFromUsersAnonymous(pubkeys: string[], feedData: FeedItem): Promise<void> {
+    if (pubkeys.length === 0) {
+      feedData.hasMore?.set(false);
+      return;
+    }
+
+    const BATCH_SIZE = 10;
+    const TIMEOUT_MS = 3000;
+    const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+    const limit = isArticlesFeed ? 20 : 25;
+
+    const existingEvents = feedData.events();
+    const oldestTimestamp = existingEvents.length > 0
+      ? Math.floor(Math.min(...existingEvents.map(e => e.created_at || 0)) - 1)
+      : undefined;
+
+    const batches: string[][] = [];
+    for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
+      batches.push(pubkeys.slice(i, i + BATCH_SIZE));
+    }
+
+    const results = await Promise.all(
+      batches.map(batchAuthors => {
+        const filter: {
+          authors: string[];
+          kinds?: number[];
+          limit: number;
+          until?: number;
+        } = {
+          authors: batchAuthors,
+          kinds: feedData.filter?.kinds,
+          limit,
+        };
+
+        if (oldestTimestamp) {
+          filter.until = oldestTimestamp;
+        }
+
+        return this.relayPool.query(this.utilities.anonymousRelays, filter, TIMEOUT_MS);
+      })
+    );
+
+    const allEvents = results.flat();
+    const allowedKinds = new Set(feedData.feed.kinds);
+    const existingIds = new Set(existingEvents.map(event => event.id));
+
+    const uniqueOlderEvents = Array.from(
+      new Map(
+        allEvents
+          .filter(event => {
+            const isAllowed = allowedKinds.has(event.kind);
+            const isAccepted = !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true });
+            const isNotLoaded = !existingIds.has(event.id);
+            const isOlder = !oldestTimestamp || (event.created_at || 0) <= oldestTimestamp;
+            return isAllowed && isAccepted && isNotLoaded && isOlder;
+          })
+          .map(event => [event.id, event])
+      ).values()
+    ).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+    const feedId = feedData.feed.id;
+    if (uniqueOlderEvents.length === 0) {
+      const nextStreak = (this.emptyPaginationStreakByFeedId.get(feedId) || 0) + 1;
+      this.emptyPaginationStreakByFeedId.set(feedId, nextStreak);
+
+      if (nextStreak >= 2) {
+        feedData.hasMore?.set(false);
+      }
+      return;
+    }
+
+    this.emptyPaginationStreakByFeedId.set(feedId, 0);
+
+    const mergedEvents = this.mergeEvents(existingEvents, uniqueOlderEvents);
+    feedData.events.set(mergedEvents);
+
+    feedData.lastTimestamp = Math.min(...mergedEvents.map(event => (event.created_at || 0) * 1000));
+
+    this.saveCachedEvents(feedId, mergedEvents);
+    uniqueOlderEvents.forEach(event => this.saveEventToDatabase(event));
   }
 
   /**
@@ -2904,10 +3008,19 @@ export class FeedService {
     // Check if we should mark hasMore as false
     // Only stop if we got NO events at all from this pagination request
     const totalEventsFromUsers = Array.from(userEventsMap.values()).flat().length;
+    const feedId = feedData.feed.id;
     if (totalEventsFromUsers === 0) {
-      this.logger.debug('[Feed Pagination] No more events available, setting hasMore to false');
-      feedData.hasMore?.set(false);
+      const nextStreak = (this.emptyPaginationStreakByFeedId.get(feedId) || 0) + 1;
+      this.emptyPaginationStreakByFeedId.set(feedId, nextStreak);
+
+      if (feedData.feed.source === 'for-you' && nextStreak < 2) {
+        this.logger.debug('[Feed Pagination] For You returned empty page once; keeping hasMore=true for another attempt');
+      } else {
+        this.logger.debug('[Feed Pagination] No more events available, setting hasMore to false');
+        feedData.hasMore?.set(false);
+      }
     } else {
+      this.emptyPaginationStreakByFeedId.set(feedId, 0);
       this.logger.debug(`[Feed Pagination] Got ${totalEventsFromUsers} events from ${userEventsMap.size} users, can load more`);
     }
   }
