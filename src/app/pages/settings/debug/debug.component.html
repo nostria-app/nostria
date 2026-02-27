@@ -17,7 +17,8 @@
     <div class="detected-info">
       <div class="info-row">
         <span class="info-label">Detected platform:</span>
-        <span class="info-value">{{ platform.isIOS() ? 'iOS' : platform.isAndroid() ? 'Android' : platform.isMac() ? 'macOS' : platform.isWindows() ? 'Windows' : 'Linux' }}</span>
+        <span class="info-value">{{ platform.isIOS() ? 'iOS' : platform.isAndroid() ? 'Android' : platform.isMac() ?
+          'macOS' : platform.isWindows() ? 'Windows' : 'Linux' }}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Active app context:</span>
@@ -41,8 +42,35 @@
     @if (platform.simulatedAppContext() !== null) {
     <div class="simulation-active">
       <mat-icon>science</mat-icon>
-      <span>Simulating <strong>{{ platform.appContext() }}</strong> &mdash; payment via <strong>{{ platform.paymentPlatform() }}</strong></span>
+      <span>Simulating <strong>{{ platform.appContext() }}</strong> &mdash; payment via <strong>{{
+          platform.paymentPlatform() }}</strong></span>
     </div>
     }
+  </div>
+
+  <div class="debug-section store-testing-section">
+    <h3>Store Payments (Debug)</h3>
+    <p class="setting-description">
+      Keep this off unless you are actively testing Play Store / App Store purchase flows.
+      When disabled, Premium checkout stays on Lightning/Zap.
+    </p>
+
+    <mat-slide-toggle [ngModel]="platform.enableNativeStorePaymentsForDebug()"
+      (ngModelChange)="setEnableNativeStorePaymentsForDebug($event)">
+      Enable Play Store / App Store payments
+    </mat-slide-toggle>
+
+    <div class="setting-description store-status">
+      Active payment platform: <code class="info-value highlight">{{ platform.paymentPlatform() }}</code>
+    </div>
+
+    <button mat-flat-button (click)="purchaseDonationProduct()"
+      [disabled]="!activeStorePlatform() || purchasingDonation()">
+      @if (purchasingDonation()) {
+      Purchasing Donation Product...
+      } @else {
+      Buy $1 Donation Product
+      }
+    </button>
   </div>
 </div>

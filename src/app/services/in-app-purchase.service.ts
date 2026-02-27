@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { Injectable, effect, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PlatformService } from './platform.service';
@@ -57,6 +57,9 @@ const GIFT_PRODUCTS: StoreProduct[] = [
   { productId: 'nostria_gift_premium_plus_1mo', tier: 'premium_plus', billingCycle: 'monthly' },
   { productId: 'nostria_gift_premium_plus_3mo', tier: 'premium_plus', billingCycle: 'quarterly' },
 ];
+
+/** Debug-only one-time purchase product for store flow verification. */
+const DONATION_PRODUCT_ID = 'nostria_donation_1usd';
 
 /**
  * Digital Goods API types for Play Store billing via TWA.
@@ -147,19 +150,28 @@ export class InAppPurchaseService {
   readonly purchasing = signal(false);
 
   private digitalGoodsService: DigitalGoodsService | null = null;
+  private playStoreInitAttempted = false;
+  private appStoreInitAttempted = false;
 
   /** Pending App Store purchase resolve callback */
   private appStorePurchaseResolve: ((result: PurchaseResult) => void) | null = null;
 
   constructor() {
-    if (this.isBrowser) {
-      if (this.platformService.canPayWithPlayStore()) {
-        this.initPlayStoreBilling();
+    if (!this.isBrowser) {
+      return;
+    }
+
+    effect(() => {
+      if (this.platformService.canPayWithPlayStore() && !this.playStoreInitAttempted) {
+        this.playStoreInitAttempted = true;
+        void this.initPlayStoreBilling();
       }
-      if (this.platformService.canPayWithAppStore()) {
+
+      if (this.platformService.canPayWithAppStore() && !this.appStoreInitAttempted) {
+        this.appStoreInitAttempted = true;
         this.initAppStoreBilling();
       }
-    }
+    });
   }
 
   /**
@@ -259,6 +271,11 @@ export class InAppPurchaseService {
     return GIFT_PRODUCTS.find(
       (p) => p.tier === tier && p.billingCycle === billingCycle
     )?.productId;
+  }
+
+  /** Get the debug donation product ID ($1) used for store purchase verification. */
+  getDonationProductId(): string {
+    return DONATION_PRODUCT_ID;
   }
 
   /**

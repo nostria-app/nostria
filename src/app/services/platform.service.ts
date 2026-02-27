@@ -50,6 +50,13 @@ export class PlatformService {
    */
   readonly simulatedAppContext = signal<AppContext | null>(null);
 
+  /**
+   * Debug gate for native store billing flows.
+   * Disabled by default so premium checkout keeps Lightning as the active method
+   * unless explicitly enabled in Settings > Debug.
+   */
+  readonly enableNativeStorePaymentsForDebug = signal(false);
+
   /** The current app context (web, pwa, native-android, native-ios) */
   readonly appContext = computed<AppContext>(() => {
     const simulated = this.simulatedAppContext();
@@ -76,6 +83,10 @@ export class PlatformService {
    * - Web/PWA: Bitcoin Lightning
    */
   readonly paymentPlatform = computed<PaymentPlatform>(() => {
+    if (!this.enableNativeStorePaymentsForDebug()) {
+      return 'bitcoin';
+    }
+
     const ctx = this.appContext();
     if (ctx === 'native-android') return 'play-store';
     if (ctx === 'native-ios') return 'app-store';

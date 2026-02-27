@@ -9,6 +9,8 @@
 }
 
 .debug-section {
+  margin-bottom: 20px;
+
   h3 {
     margin: 0 0 4px 0;
   }
@@ -66,4 +68,14 @@
     width: 20px;
     height: 20px;
   }
+}
+
+.store-testing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.store-status {
+  margin: 0;
 }
