@@ -823,11 +823,13 @@
   }
 }
 
-@container (max-width: 380px) {
+@container (max-width: 420px) {
   .emoji-indicators .aggregated-emojis {
     display: none;
   }
+}
 
+@container (max-width: 380px) {
   .bookmark-action {
     display: none;
   }

@@ -996,12 +996,14 @@
   }
 }
 
-// On small containers, hide the aggregated emoji icons and bookmark button, keep the "···" dots
-@container note-card (max-width: 380px) {
+// On small containers, hide aggregated emoji icons first, then bookmark at narrower widths
+@container note-card (max-width: 420px) {
   .emoji-indicators .aggregated-emojis {
     display: none;
   }
+}
 
+@container note-card (max-width: 380px) {
   .bookmark-action {
     display: none;
   }
