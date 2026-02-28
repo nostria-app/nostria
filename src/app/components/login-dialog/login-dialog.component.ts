@@ -61,6 +61,9 @@ enum LoginStep {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginDialogComponent implements OnDestroy {
+  private static readonly NIP46_REQUEST_TIMEOUT_MS = 20000;
+  private static readonly NIP46_SWITCH_RELAYS_TIMEOUT_MS = 8000;
+
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
@@ -109,6 +112,8 @@ export class LoginDialogComponent implements OnDestroy {
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
+  private isFinalizingRemoteSigner = false;
+  private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // Default relays for nostrconnect by region
   private readonly nostrConnectRelays = {
@@ -159,6 +164,11 @@ export class LoginDialogComponent implements OnDestroy {
       this.remoteSignerPool.close([]);
       this.remoteSignerPool = null;
     }
+    if (this.nostrConnectListenTimeoutId) {
+      clearTimeout(this.nostrConnectListenTimeoutId);
+      this.nostrConnectListenTimeoutId = null;
+    }
+    this.isFinalizingRemoteSigner = false;
     this.remoteSignerClientKey = null;
     this.isWaitingForRemoteSigner.set(false);
     this.nostrConnectQrUrl.set('');
@@ -651,8 +661,11 @@ export class LoginDialogComponent implements OnDestroy {
       params.append('secret', secret);
       params.append('name', 'Nostria');
       params.append('url', 'https://nostria.app');
-      // Request common permissions
-      params.append('perms', 'sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
+      // Request required NIP-46 login/finalization permissions plus common signing/encryption methods
+      params.append(
+        'perms',
+        'get_public_key,switch_relays,ping,sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt'
+      );
 
       const nostrconnectUrl = `nostrconnect://${clientPubkey}?${params.toString()}`;
       this.nostrConnectQrUrl.set(nostrconnectUrl);
@@ -726,7 +739,18 @@ export class LoginDialogComponent implements OnDestroy {
 
   private startListeningForNostrConnectResponse(clientPubkey: string, relays: string[], expectedSecret: string): void {
     this.nostrConnectError.set(null);
-    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: true });
+
+    // Ensure no stale listener/timer survives from previous QR generations.
+    if (this.remoteSignerPool) {
+      this.remoteSignerPool.close([]);
+      this.remoteSignerPool = null;
+    }
+    if (this.nostrConnectListenTimeoutId) {
+      clearTimeout(this.nostrConnectListenTimeoutId);
+      this.nostrConnectListenTimeoutId = null;
+    }
+
+    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: false });
 
     // Subscribe to kind 24133 responses addressed to our client pubkey
     this.remoteSignerPool.subscribeMany(
@@ -765,6 +789,11 @@ export class LoginDialogComponent implements OnDestroy {
 
             // Validate the secret
             if (response.result === expectedSecret || response.result === 'ack') {
+              if (this.isFinalizingRemoteSigner) {
+                return;
+              }
+              this.isFinalizingRemoteSigner = true;
+
               // Connection successful! Show loading indicator while creating account
               this.isWaitingForRemoteSigner.set(true);
               const remoteSignerPubkey = event.pubkey;
@@ -773,21 +802,29 @@ export class LoginDialogComponent implements OnDestroy {
 
               // Create the account with bunker configuration, passing the client key
               const clientKeyHex = this.remoteSignerClientKey ? bytesToHex(this.remoteSignerClientKey) : undefined;
-              const resolvedConnection = await this.resolveRemoteSignerConnection(
-                remoteSignerPubkey,
-                relays,
-                expectedSecret
-              );
+              try {
+                const resolvedConnection = await this.resolveRemoteSignerConnection(
+                  remoteSignerPubkey,
+                  relays,
+                  expectedSecret
+                );
 
-              await this.createRemoteSignerAccount(
-                resolvedConnection.userPubkey,
-                remoteSignerPubkey,
-                resolvedConnection.relays,
-                expectedSecret,
-                clientKeyHex
-              );
+                await this.createRemoteSignerAccount(
+                  resolvedConnection.userPubkey,
+                  remoteSignerPubkey,
+                  resolvedConnection.relays,
+                  expectedSecret,
+                  clientKeyHex
+                );
 
-              this.cleanupNostrConnectConnection();
+                this.cleanupNostrConnectConnection();
+              } catch (connectionError) {
+                this.logger.error('Failed to finalize remote signer connection after approval', connectionError);
+                this.isFinalizingRemoteSigner = false;
+                this.isWaitingForRemoteSigner.set(false);
+                this.nostrConnectError.set('Connected, but failed to finish setup. Please try again.');
+                this.generateNostrConnectQR();
+              }
             } else if (response.error) {
               this.logger.error('Remote signer error:', response.error);
               this.nostrConnectError.set(`Remote signer error: ${response.error}`);
@@ -800,7 +837,7 @@ export class LoginDialogComponent implements OnDestroy {
     );
 
     // Set a timeout for the connection (2 minutes)
-    setTimeout(() => {
+    this.nostrConnectListenTimeoutId = setTimeout(() => {
       if (this.remoteSignerPool && this.currentStep() === LoginStep.NOSTR_CONNECT) {
         this.nostrConnectError.set('Connection timed out. Please try again.');
         this.cleanupNostrConnectConnection();
@@ -815,34 +852,79 @@ export class LoginDialogComponent implements OnDestroy {
     relays: string[],
     secret: string
   ): Promise<{ userPubkey: string; relays: string[] }> {
+    const uniqueRelays = Array.from(new Set(relays));
+
+    this.logger.debug('Attempting NIP-46 finalize on relays', {
+      relayCount: uniqueRelays.length,
+      relays: uniqueRelays,
+    });
+
     if (!this.remoteSignerClientKey) {
       throw new Error('Remote signer client key is missing');
     }
 
-    const pool = new SimplePool({ enablePing: true, enableReconnect: true });
+    const pool = this.remoteSignerPool ?? new SimplePool({ enablePing: true, enableReconnect: false });
+    const ownsPool = this.remoteSignerPool == null;
+
     const signer = BunkerSigner.fromBunker(
       this.remoteSignerClientKey,
       {
         pubkey: remoteSignerPubkey,
-        relays,
+        relays: uniqueRelays,
         secret,
       },
       { pool }
     );
 
     try {
-      await signer.connect();
-      const userPubkey = await signer.getPublicKey();
-      const relaySwitchResult = await signer.sendRequest('switch_relays', []);
-      const switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+      const userPubkey = await this.withTimeout(
+        signer.getPublicKey(),
+        LoginDialogComponent.NIP46_REQUEST_TIMEOUT_MS,
+        'Timed out waiting for get_public_key response from remote signer.'
+      );
+      let switchedRelays: string[] | null = null;
+
+      try {
+        const relaySwitchResult = await this.withTimeout(
+          signer.sendRequest('switch_relays', []),
+          LoginDialogComponent.NIP46_SWITCH_RELAYS_TIMEOUT_MS,
+          'Timed out waiting for switch_relays response from remote signer.'
+        );
+        switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+      } catch (error) {
+        this.logger.warn('NIP-46 switch_relays request failed during setup, continuing with initial relays', error);
+      }
 
       return {
         userPubkey,
-        relays: switchedRelays?.length ? switchedRelays : relays,
+        relays: switchedRelays?.length ? switchedRelays : uniqueRelays,
       };
     } finally {
-      await signer.close();
-      pool.close([]);
+      try {
+        await signer.close();
+      } catch (error) {
+        this.logger.debug('NIP-46 finalize signer close failed (ignored)', error);
+      }
+
+      if (ownsPool) {
+        pool.close([]);
+      }
+    }
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 
@@ -894,19 +976,25 @@ export class LoginDialogComponent implements OnDestroy {
       await this.nostrService.setAccount(newUser);
       this.logger.info('Remote signer account created successfully');
 
-      // Check if the user has relay configuration
-      const hasRelays = await this.nostrService.hasRelayConfiguration(userPubkey);
-
-      if (!hasRelays) {
-        this.logger.info('No relay configuration found, showing setup dialog');
-        await this.showSetupNewAccountDialog(newUser);
-      }
-
       this.snackBar.open('Successfully connected with remote signer!', 'Dismiss', {
         duration: 3000,
       });
 
       this.closeDialog();
+
+      // Run relay setup checks in background so login dialog closes immediately
+      void (async () => {
+        try {
+          const hasRelays = await this.nostrService.hasRelayConfiguration(userPubkey);
+
+          if (!hasRelays) {
+            this.logger.info('No relay configuration found, showing setup dialog');
+            await this.showSetupNewAccountDialog(newUser);
+          }
+        } catch (error) {
+          this.logger.error('Failed to verify relay configuration after remote signer login', error);
+        }
+      })();
     } catch (error) {
       this.logger.error('Failed to create remote signer account:', error);
       this.nostrConnectError.set('Failed to create account. Please try again.');

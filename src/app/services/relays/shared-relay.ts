@@ -327,6 +327,24 @@ export class SharedRelayService {
       // Execute the query
       const events: T[] = [];
       return new Promise<T[]>((resolve) => {
+        let completed = false;
+        const complete = (result: T[]) => {
+          if (completed) {
+            return;
+          }
+          completed = true;
+          resolve(result);
+        };
+
+        const hardTimeout = setTimeout(() => {
+          this.logger.warn('[SharedRelayService] getMany hard timeout reached, resolving with partial results', {
+            relayCount: relayUrls.length,
+            eventCount: events.length,
+            timeout,
+          });
+          complete(events);
+        }, timeout + 1000);
+
         this.#pool!.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
           onevent: (event) => {
@@ -349,7 +367,8 @@ export class SharedRelayService {
               }
             });
 
-            resolve(events);
+            clearTimeout(hardTimeout);
+            complete(events);
           },
         });
       });

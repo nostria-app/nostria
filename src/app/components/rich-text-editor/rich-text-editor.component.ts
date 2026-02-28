@@ -1178,7 +1178,21 @@ export class RichTextEditorComponent implements AfterViewInit {
       }
     }
 
-    // If no image files or NIP-19 identifiers, allow normal text pasting
+    // In rich text mode, strip color formatting from pasted HTML content
+    // since color is not supported in the editor's Markdown output
+    if (this.isRichTextMode()) {
+      const html = event.clipboardData?.getData('text/html');
+      if (html) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const cleanedHtml = this.stripColorStyles(html);
+        this.insertCleanedHtml(cleanedHtml);
+        return;
+      }
+    }
+
+    // If no special handling needed, allow normal text pasting
     // The browser will handle text pasting automatically
   }
 
@@ -1300,6 +1314,73 @@ export class RichTextEditorComponent implements AfterViewInit {
         textarea.focus();
       }, 0);
     }
+  }
+
+  /**
+   * Strip color-related styles from HTML content.
+   * Removes color, background-color, and background properties from inline styles
+   * since the editor outputs Markdown which does not support color formatting.
+   */
+  private stripColorStyles(html: string): string {
+    // Parse the HTML and walk all elements to remove color-related style properties
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    const elements = tempDiv.querySelectorAll('*');
+    for (const el of elements) {
+      if (el instanceof HTMLElement && el.style) {
+        el.style.color = '';
+        el.style.backgroundColor = '';
+        el.style.background = '';
+
+        // If the style attribute is now empty, remove it entirely
+        if (el.getAttribute('style')?.trim() === '') {
+          el.removeAttribute('style');
+        }
+      }
+
+      // Also remove legacy font color attributes
+      el.removeAttribute('color');
+      if (el.tagName === 'FONT') {
+        el.removeAttribute('color');
+      }
+    }
+
+    return tempDiv.innerHTML;
+  }
+
+  /**
+   * Insert cleaned HTML content at the current cursor position in rich text mode.
+   */
+  private insertCleanedHtml(html: string): void {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+
+      const fragment = document.createDocumentFragment();
+      let lastNode: Node | null = null;
+      while (tempDiv.firstChild) {
+        lastNode = fragment.appendChild(tempDiv.firstChild);
+      }
+      range.insertNode(fragment);
+
+      // Move cursor to end of inserted content
+      if (lastNode) {
+        range.setStartAfter(lastNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
+    // Update model from editor content
+    const markdown = this.convertRichTextToMarkdown();
+    this.isInternalChange = true;
+    this.contentChange.emit(markdown);
   }
 
   /**
