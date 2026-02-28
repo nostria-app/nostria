@@ -12,6 +12,7 @@ import { RepostService } from '../../../services/repost.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { UtilitiesService } from '../../../services/utilities.service';
+import type { NoteEditorDialogData } from '../../../interfaces/note-editor';
 
 type ViewMode = 'icon' | 'full';
 
@@ -139,13 +140,23 @@ export class RepostButtonComponent {
       ? this.utilities.normalizeRelayUrls([accountRelays[0]])
       : [];
 
+    const identifier = this.utilities.isParameterizedReplaceableEvent(event.kind)
+      ? event.tags.find(tag => tag[0] === 'd')?.[1]
+      : undefined;
+
+    const quoteData: NonNullable<NoteEditorDialogData['quote']> = {
+      id: event.id,
+      pubkey: event.pubkey,
+      kind: event.kind,
+      relays: relayHints,
+    };
+
+    if (identifier) {
+      quoteData.identifier = identifier;
+    }
+
     this.eventService.createNote({
-      quote: {
-        id: event.id,
-        pubkey: event.pubkey,
-        kind: event.kind,
-        relays: relayHints,
-      },
+      quote: quoteData,
     });
   }
 

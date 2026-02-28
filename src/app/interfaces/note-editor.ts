@@ -17,6 +17,7 @@ export interface NoteEditorDialogData {
     pubkey: string;
     content?: string;
     kind?: number;
+    identifier?: string;
     relays?: string[];
   };
   mentions?: string[]; // Array of pubkeys to mention

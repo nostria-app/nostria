@@ -21,6 +21,8 @@ export interface QuoteInfo {
   id: string;
   pubkey: string;
   kind?: number;
+  identifier?: string;
+  relays?: string[];
 }
 
 /**
@@ -207,8 +209,9 @@ export class NoteEditorService {
     tags: string[][],
     zapSplit?: BuildTagsConfig['zapSplit']
   ): void {
-    const relay = '';
-    tags.push(['q', quote.id, relay, quote.pubkey]);
+    const relay = quote.relays?.[0] || '';
+    const quoteTarget = this.getQuoteTagTarget(quote);
+    tags.push(['q', quoteTarget, relay, quote.pubkey]);
 
     // Add p-tag for the quoted author
     const existingPubkeys = tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
@@ -225,6 +228,18 @@ export class NoteEditorService {
         tags.push(['zap', zapSplit.currentUserPubkey, '', zapSplit.quoterPercent.toString()]);
       }
     }
+  }
+
+  private getQuoteTagTarget(quote: QuoteInfo): string {
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return `${quote.kind}:${quote.pubkey}:${quote.identifier}`;
+    }
+
+    return quote.id;
   }
 
   /**

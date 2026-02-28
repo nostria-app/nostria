@@ -79,4 +79,19 @@ describe('NoteEditorService', () => {
     expect(quoteTags.length).toBe(1);
     expect(quoteTags[0]).toEqual(['q', eventId, relay, pubkey]);
   });
+
+  it('should use addressable q target for parameterized replaceable quote events', () => {
+    const eventId = 'f'.repeat(64);
+    const pubkey = '1'.repeat(64);
+    const kind = 36787;
+    const identifier = 'track-123';
+
+    const tags = service.buildTags({
+      quote: { id: eventId, pubkey, kind, identifier },
+      mentions: [],
+      content: 'quote track',
+    });
+
+    expect(tags).toContain(['q', `${kind}:${pubkey}:${identifier}`, '', pubkey]);
+  });
 });

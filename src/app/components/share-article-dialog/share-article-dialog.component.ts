@@ -960,13 +960,23 @@ export class ShareArticleDialogComponent {
       ? this.utilities.normalizeRelayUrls([authorRelays[0]])
       : [];
 
+    const identifier = this.utilities.isParameterizedReplaceableEvent(ev.kind)
+      ? ev.tags.find(tag => tag[0] === 'd')?.[1] || this.data.identifier
+      : undefined;
+
+    const quoteData: NonNullable<NoteEditorDialogData['quote']> = {
+      id: ev.id,
+      pubkey: ev.pubkey,
+      kind: ev.kind,
+      relays: relayHints,
+    };
+
+    if (identifier) {
+      quoteData.identifier = identifier;
+    }
+
     this.eventService.createNote({
-      quote: {
-        id: ev.id,
-        pubkey: ev.pubkey,
-        kind: ev.kind,
-        relays: relayHints,
-      },
+      quote: quoteData,
     });
   }
 

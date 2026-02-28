@@ -822,14 +822,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         }
       }
 
-      const nevent = nip19.neventEncode({
-        id: this.data.quote.id,
-        author: this.data.quote.pubkey,
-        kind: this.data.quote.kind,
-        relays: this.utilities.normalizeRelayUrls(relayHints),
-      });
-
-      const quoteText = `nostr:${nevent}`;
+      const quoteReference = this.buildQuoteReference(this.data.quote, relayHints);
+      const quoteText = `nostr:${quoteReference}`;
       const currentContent = this.content();
 
       // Only add the quote if it doesn't already exist in the content
@@ -1532,8 +1526,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Add quote tag (NIP-18)
     if (this.data?.quote) {
-      const relay = ''; // TODO: provide relay for the quoted note
-      tags.push(['q', this.data.quote.id, relay, this.data.quote.pubkey]);
+      const relay = this.data.quote.relays?.[0] || '';
+      const quoteTarget = this.getQuoteTagTarget(this.data.quote);
+      tags.push(['q', quoteTarget, relay, this.data.quote.pubkey]);
 
       // According to NIP-18, also add a p-tag for the quoted author
       // This ensures proper notifications
@@ -1606,6 +1601,45 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     return tags;
+  }
+
+  private getQuoteTagTarget(quote: NonNullable<NoteEditorDialogData['quote']>): string {
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return `${quote.kind}:${quote.pubkey}:${quote.identifier}`;
+    }
+
+    return quote.id;
+  }
+
+  private buildQuoteReference(
+    quote: NonNullable<NoteEditorDialogData['quote']>,
+    relayHints: string[]
+  ): string {
+    const normalizedRelays = this.utilities.normalizeRelayUrls(relayHints);
+
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return nip19.naddrEncode({
+        kind: quote.kind,
+        pubkey: quote.pubkey,
+        identifier: quote.identifier,
+        relays: normalizedRelays,
+      });
+    }
+
+    return nip19.neventEncode({
+      id: quote.id,
+      author: quote.pubkey,
+      kind: quote.kind,
+      relays: normalizedRelays,
+    });
   }
 
   /**
