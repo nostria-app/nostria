@@ -14,114 +14,114 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 
 describe('LoginDialogComponent', () => {
-  let component: LoginDialogComponent;
-  let fixture: ComponentFixture<LoginDialogComponent>;
+    let component: LoginDialogComponent;
+    let fixture: ComponentFixture<LoginDialogComponent>;
 
-  function createComponent() {
-    TestBed.configureTestingModule({
-      imports: [LoginDialogComponent],
-      providers: [
-        provideZonelessChangeDetection(),
-        { provide: MatDialogRef, useValue: { close: jasmine.createSpy('close') } },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
-        { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-        { provide: NostrService, useValue: {
-          loginWithExtension: jasmine.createSpy('loginWithExtension'),
-          loginWithNsec: jasmine.createSpy('loginWithNsec'),
-          loginWithNostrConnect: jasmine.createSpy('loginWithNostrConnect'),
-          generateNewKey: jasmine.createSpy('generateNewKey'),
-          usePreviewAccount: jasmine.createSpy('usePreviewAccount'),
-          switchToUser: jasmine.createSpy('switchToUser'),
-          removeAccount: jasmine.createSpy('removeAccount'),
-          setAccount: jasmine.createSpy('setAccount'),
-          hasRelayConfiguration: jasmine.createSpy('hasRelayConfiguration'),
-          setupNewAccountWithDefaults: jasmine.createSpy('setupNewAccountWithDefaults'),
-          users: jasmine.createSpy('users').and.returnValue([]),
-        }},
-        { provide: LoggerService, useValue: {
-          debug: jasmine.createSpy('debug'),
-          info: jasmine.createSpy('info'),
-          error: jasmine.createSpy('error'),
-          warn: jasmine.createSpy('warn'),
-        }},
-        { provide: MnemonicService, useValue: {
-          isMnemonic: jasmine.createSpy('isMnemonic').and.returnValue(false),
-        }},
-        { provide: RegionService, useValue: {
-          regions: jasmine.createSpy('regions').and.returnValue([]),
-        }},
-        { provide: DiscoveryRelayService, useValue: {
-          checkServerLatency: jasmine.createSpy('checkServerLatency'),
-          getServersByLatency: jasmine.createSpy('getServersByLatency').and.returnValue([]),
-        }},
-        { provide: Profile, useValue: {
-          createInitialProfile: jasmine.createSpy('createInitialProfile'),
-        }},
-        { provide: AccountStateService, useValue: {
-          account: jasmine.createSpy('account').and.returnValue(null),
-          addToCache: jasmine.createSpy('addToCache'),
-          profile: { set: jasmine.createSpy('set') },
-        }},
-        { provide: DataService, useValue: {
-          toRecord: jasmine.createSpy('toRecord'),
-        }},
-        { provide: LayoutService, useValue: {
-          openTermsOfUse: jasmine.createSpy('openTermsOfUse'),
-          handleTermsDialogClose: jasmine.createSpy('handleTermsDialogClose'),
-          isMobile: jasmine.createSpy('isMobile').and.returnValue(false),
-        }},
-      ],
+    function createComponent() {
+        TestBed.configureTestingModule({
+            imports: [LoginDialogComponent],
+            providers: [
+                provideZonelessChangeDetection(),
+                { provide: MatDialogRef, useValue: { close: vi.fn() } },
+                { provide: MatDialog, useValue: { open: vi.fn() } },
+                { provide: MatSnackBar, useValue: { open: vi.fn() } },
+                { provide: NostrService, useValue: {
+                        loginWithExtension: vi.fn(),
+                        loginWithNsec: vi.fn(),
+                        loginWithNostrConnect: vi.fn(),
+                        generateNewKey: vi.fn(),
+                        usePreviewAccount: vi.fn(),
+                        switchToUser: vi.fn(),
+                        removeAccount: vi.fn(),
+                        setAccount: vi.fn(),
+                        hasRelayConfiguration: vi.fn(),
+                        setupNewAccountWithDefaults: vi.fn(),
+                        users: vi.fn().mockReturnValue([]),
+                    } },
+                { provide: LoggerService, useValue: {
+                        debug: vi.fn(),
+                        info: vi.fn(),
+                        error: vi.fn(),
+                        warn: vi.fn(),
+                    } },
+                { provide: MnemonicService, useValue: {
+                        isMnemonic: vi.fn().mockReturnValue(false),
+                    } },
+                { provide: RegionService, useValue: {
+                        regions: vi.fn().mockReturnValue([]),
+                    } },
+                { provide: DiscoveryRelayService, useValue: {
+                        checkServerLatency: vi.fn(),
+                        getServersByLatency: vi.fn().mockReturnValue([]),
+                    } },
+                { provide: Profile, useValue: {
+                        createInitialProfile: vi.fn(),
+                    } },
+                { provide: AccountStateService, useValue: {
+                        account: vi.fn().mockReturnValue(null),
+                        addToCache: vi.fn(),
+                        profile: { set: vi.fn() },
+                    } },
+                { provide: DataService, useValue: {
+                        toRecord: vi.fn(),
+                    } },
+                { provide: LayoutService, useValue: {
+                        openTermsOfUse: vi.fn(),
+                        handleTermsDialogClose: vi.fn(),
+                        isMobile: vi.fn().mockReturnValue(false),
+                    } },
+            ],
+        });
+
+        fixture = TestBed.createComponent(LoginDialogComponent);
+        component = fixture.componentInstance;
+        fixture.detectChanges();
+    }
+
+    it('should create', () => {
+        createComponent();
+        expect(component).toBeTruthy();
     });
 
-    fixture = TestBed.createComponent(LoginDialogComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  }
+    it('should start on INITIAL step', () => {
+        createComponent();
+        expect(component.currentStep()).toBe('initial');
+    });
 
-  it('should create', () => {
-    createComponent();
-    expect(component).toBeTruthy();
-  });
+    it('should navigate to region selection on startNewAccountFlow', () => {
+        createComponent();
+        component.startNewAccountFlow();
+        expect(component.currentStep()).toBe('region');
+    });
 
-  it('should start on INITIAL step', () => {
-    createComponent();
-    expect(component.currentStep()).toBe('initial');
-  });
+    it('should validate empty nsec key as invalid', () => {
+        createComponent();
+        component.nsecKey = '';
+        expect(component.isNsecKeyValid()).toBe(false);
+    });
 
-  it('should navigate to region selection on startNewAccountFlow', () => {
-    createComponent();
-    component.startNewAccountFlow();
-    expect(component.currentStep()).toBe('region');
-  });
+    it('should validate a 64-char hex string as valid nsec key', () => {
+        createComponent();
+        component.nsecKey = 'a'.repeat(64);
+        expect(component.isNsecKeyValid()).toBe(true);
+    });
 
-  it('should validate empty nsec key as invalid', () => {
-    createComponent();
-    component.nsecKey = '';
-    expect(component.isNsecKeyValid()).toBeFalse();
-  });
+    it('should validate a short hex string as invalid nsec key', () => {
+        createComponent();
+        component.nsecKey = 'abcdef';
+        expect(component.isNsecKeyValid()).toBe(false);
+    });
 
-  it('should validate a 64-char hex string as valid nsec key', () => {
-    createComponent();
-    component.nsecKey = 'a'.repeat(64);
-    expect(component.isNsecKeyValid()).toBeTrue();
-  });
+    it('should close dialog when closeDialog is called', () => {
+        createComponent();
+        const dialogRef = TestBed.inject(MatDialogRef);
+        component.closeDialog();
+        expect(dialogRef.close).toHaveBeenCalled();
+    });
 
-  it('should validate a short hex string as invalid nsec key', () => {
-    createComponent();
-    component.nsecKey = 'abcdef';
-    expect(component.isNsecKeyValid()).toBeFalse();
-  });
-
-  it('should close dialog when closeDialog is called', () => {
-    createComponent();
-    const dialogRef = TestBed.inject(MatDialogRef);
-    component.closeDialog();
-    expect(dialogRef.close).toHaveBeenCalled();
-  });
-
-  it('should navigate steps with goToStep', () => {
-    createComponent();
-    component.goToStep('nsec' as never);
-    expect(component.currentStep()).toBe('nsec');
-  });
+    it('should navigate steps with goToStep', () => {
+        createComponent();
+        component.goToStep('nsec' as never);
+        expect(component.currentStep()).toBe('nsec');
+    });
 });

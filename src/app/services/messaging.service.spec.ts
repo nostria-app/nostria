@@ -12,197 +12,190 @@ import { v2 } from 'nostr-tools/nip44';
 import { AccountRelayService } from './relays/account-relay';
 
 describe('MessagingService', () => {
-  let service: MessagingService;
+    let service: MessagingService;
 
-  // Mock services
-  const mockNostrService = jasmine.createSpyObj('NostrService', ['getPool', 'publish']);
-  const mockRelayService = jasmine.createSpyObj('RelayService', ['getPool']);
-  const mockLoggerService = jasmine.createSpyObj('LoggerService', ['log', 'error', 'warn']);
-  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', ['state']);
-  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', ['utils']);
-  const mockEncryptionService = jasmine.createSpyObj('EncryptionService', ['encrypt', 'decrypt']);
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        MessagingService,
-        { provide: NostrService, useValue: mockNostrService },
-        { provide: AccountRelayService, useValue: mockRelayService },
-        { provide: LoggerService, useValue: mockLoggerService },
-        { provide: AccountStateService, useValue: mockAccountStateService },
-        { provide: UtilitiesService, useValue: mockUtilitiesService },
-        { provide: EncryptionService, useValue: mockEncryptionService },
-      ],
-    }).compileComponents();
-
-    service = TestBed.inject(MessagingService);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
-  it('Verifying NIP-17', () => {
-    const myKey = generateSecretKey();
-    const myPubkey = getPublicKey(myKey);
-
-    const receiverKey = generateSecretKey();
-    const receiverKeyPubkey = getPublicKey(receiverKey);
-
-    // Step 1: Create the message (unsigned event) - kind 14
-    const unsignedMessage = {
-      kind: kinds.PrivateDirectMessage,
-      pubkey: myPubkey,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [['p', receiverKeyPubkey]],
-      content: 'Hello World',
+    // Mock services
+    const mockNostrService = {
+        getPool: vi.fn().mockName("NostrService.getPool"),
+        publish: vi.fn().mockName("NostrService.publish")
+    };
+    const mockRelayService = {
+        getPool: vi.fn().mockName("RelayService.getPool")
+    };
+    const mockLoggerService = {
+        log: vi.fn().mockName("LoggerService.log"),
+        error: vi.fn().mockName("LoggerService.error"),
+        warn: vi.fn().mockName("LoggerService.warn")
+    };
+    const mockAccountStateService = {
+        state: vi.fn().mockName("AccountStateService.state")
+    };
+    const mockUtilitiesService = {
+        utils: vi.fn().mockName("UtilitiesService.utils")
+    };
+    const mockEncryptionService = {
+        encrypt: vi.fn().mockName("EncryptionService.encrypt"),
+        decrypt: vi.fn().mockName("EncryptionService.decrypt")
     };
 
-    // Calculate the message ID (but don't sign it)
-    const rumorId = getEventHash(unsignedMessage);
-    const rumorWithId = { ...unsignedMessage, id: rumorId };
-    const plaintext = JSON.stringify(rumorWithId);
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            providers: [
+                provideZonelessChangeDetection(),
+                MessagingService,
+                { provide: NostrService, useValue: mockNostrService },
+                { provide: AccountRelayService, useValue: mockRelayService },
+                { provide: LoggerService, useValue: mockLoggerService },
+                { provide: AccountStateService, useValue: mockAccountStateService },
+                { provide: UtilitiesService, useValue: mockUtilitiesService },
+                { provide: EncryptionService, useValue: mockEncryptionService },
+            ],
+        }).compileComponents();
 
-    // Use nostr-tools nip44 v2 encryption
-    const conversationKey = v2.utils.getConversationKey(myKey, receiverKeyPubkey);
-    const sealedContent = v2.encrypt(plaintext, conversationKey);
+        service = TestBed.inject(MessagingService);
+    });
 
-    const sealedMessage = {
-      kind: kinds.Seal,
-      pubkey: myPubkey,
-      created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-      tags: [],
-      content: sealedContent,
-    };
+    it('should be created', () => {
+        expect(service).toBeTruthy();
+    });
 
-    // Sign the sealed message
-    const signedSealedMessage = finalizeEvent(sealedMessage, myKey);
+    it('Verifying NIP-17', () => {
+        const myKey = generateSecretKey();
+        const myPubkey = getPublicKey(myKey);
 
-    // Use nostr-tools nip44 v2 encryption
-    const conversationKey2 = v2.utils.getConversationKey(myKey, myPubkey);
-    const sealedContent2 = v2.encrypt(plaintext, conversationKey2);
+        const receiverKey = generateSecretKey();
+        const receiverKeyPubkey = getPublicKey(receiverKey);
 
-    const sealedMessage2 = {
-      kind: kinds.Seal,
-      pubkey: myPubkey,
-      created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-      tags: [],
-      content: sealedContent2,
-    };
+        // Step 1: Create the message (unsigned event) - kind 14
+        const unsignedMessage = {
+            kind: kinds.PrivateDirectMessage,
+            pubkey: myPubkey,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', receiverKeyPubkey]],
+            content: 'Hello World',
+        };
 
-    // Sign the sealed message
-    const signedSealedMessage2 = finalizeEvent(sealedMessage2, myKey);
+        // Calculate the message ID (but don't sign it)
+        const rumorId = getEventHash(unsignedMessage);
+        const rumorWithId = { ...unsignedMessage, id: rumorId };
+        const plaintext = JSON.stringify(rumorWithId);
 
-    const ephemeralKey = generateSecretKey();
-    const ephemeralPubkey = getPublicKey(ephemeralKey);
+        // Use nostr-tools nip44 v2 encryption
+        const conversationKey = v2.utils.getConversationKey(myKey, receiverKeyPubkey);
+        const sealedContent = v2.encrypt(plaintext, conversationKey);
 
-    const conversationKeyEmpheral1 = v2.utils.getConversationKey(ephemeralKey, receiverKeyPubkey);
-    const giftWrapContent1 = v2.encrypt(
-      JSON.stringify(signedSealedMessage),
-      conversationKeyEmpheral1
-    );
+        const sealedMessage = {
+            kind: kinds.Seal,
+            pubkey: myPubkey,
+            created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+            tags: [],
+            content: sealedContent,
+        };
 
-    const conversationKeyEmpheral2 = v2.utils.getConversationKey(ephemeralKey, myPubkey);
-    const giftWrapContent2 = v2.encrypt(
-      JSON.stringify(signedSealedMessage2),
-      conversationKeyEmpheral2
-    );
+        // Sign the sealed message
+        const signedSealedMessage = finalizeEvent(sealedMessage, myKey);
 
-    const giftWrap = {
-      kind: kinds.GiftWrap,
-      pubkey: ephemeralPubkey,
-      created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-      tags: [['p', receiverKeyPubkey]],
-      content: giftWrapContent1,
-    };
+        // Use nostr-tools nip44 v2 encryption
+        const conversationKey2 = v2.utils.getConversationKey(myKey, myPubkey);
+        const sealedContent2 = v2.encrypt(plaintext, conversationKey2);
 
-    // Sign the gift wrap with the ephemeral key
-    const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
+        const sealedMessage2 = {
+            kind: kinds.Seal,
+            pubkey: myPubkey,
+            created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+            tags: [],
+            content: sealedContent2,
+        };
 
-    // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
-    // Should we use different ephemeral key for self? The content is the same anyway,
-    // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
-    const giftWrapSelf = {
-      kind: kinds.GiftWrap,
-      pubkey: ephemeralPubkey,
-      created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-      tags: [['p', myPubkey]],
-      content: giftWrapContent2,
-    };
+        // Sign the sealed message
+        const signedSealedMessage2 = finalizeEvent(sealedMessage2, myKey);
 
-    // Sign the gift wrap with the ephemeral key
-    const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
+        const ephemeralKey = generateSecretKey();
+        const ephemeralPubkey = getPublicKey(ephemeralKey);
 
-    // Use nostr-tools nip44 v2 decryption
-    const conversationKeyDecrypt = v2.utils.getConversationKey(receiverKey, signedGiftWrap.pubkey);
-    const decryptedGiftWrap = JSON.parse(
-      v2.decrypt(signedGiftWrap.content, conversationKeyDecrypt)
-    );
+        const conversationKeyEmpheral1 = v2.utils.getConversationKey(ephemeralKey, receiverKeyPubkey);
+        const giftWrapContent1 = v2.encrypt(JSON.stringify(signedSealedMessage), conversationKeyEmpheral1);
 
-    // The receiver & the author should both be able to decrypt the content of kind 13.
-    const receiverConversationKey = v2.utils.getConversationKey(
-      receiverKey,
-      decryptedGiftWrap.pubkey
-    );
-    const decryptedMessageEvent = JSON.parse(
-      v2.decrypt(decryptedGiftWrap.content, receiverConversationKey)
-    );
+        const conversationKeyEmpheral2 = v2.utils.getConversationKey(ephemeralKey, myPubkey);
+        const giftWrapContent2 = v2.encrypt(JSON.stringify(signedSealedMessage2), conversationKeyEmpheral2);
 
-    // Now the sender will decrypt his own gift wrap to get the original message.
-    const conversationKeyDecryptSelf = v2.utils.getConversationKey(
-      myKey,
-      signedGiftWrapSelf.pubkey
-    );
-    const decryptedGiftWrapSelf = JSON.parse(
-      v2.decrypt(signedGiftWrapSelf.content, conversationKeyDecryptSelf)
-    );
+        const giftWrap = {
+            kind: kinds.GiftWrap,
+            pubkey: ephemeralPubkey,
+            created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+            tags: [['p', receiverKeyPubkey]],
+            content: giftWrapContent1,
+        };
 
-    // The receiver & the author should both be able to decrypt the content of kind 13.
-    const receiverConversationKey2 = v2.utils.getConversationKey(
-      myKey,
-      decryptedGiftWrapSelf.pubkey
-    );
-    const decryptedMessageEvent2 = JSON.parse(
-      v2.decrypt(decryptedGiftWrapSelf.content, receiverConversationKey2)
-    );
+        // Sign the gift wrap with the ephemeral key
+        const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-    expect(decryptedMessageEvent2.id).toEqual(decryptedMessageEvent.id);
-  });
+        // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
+        // Should we use different ephemeral key for self? The content is the same anyway,
+        // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
+        const giftWrapSelf = {
+            kind: kinds.GiftWrap,
+            pubkey: ephemeralPubkey,
+            created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+            tags: [['p', myPubkey]],
+            content: giftWrapContent2,
+        };
 
-  it('should extract replyTo from e tag', () => {
-    // Test the private getReplyToFromTags method by testing a DirectMessage with e tag
-    const tags: string[][] = [
-      ['p', 'pubkey123'],
-      ['e', 'event-id-to-reply-to'],
-    ];
+        // Sign the gift wrap with the ephemeral key
+        const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
-    // Access the private method through any for testing
-    const replyTo = (service as any).getReplyToFromTags(tags);
-    
-    expect(replyTo).toBe('event-id-to-reply-to');
-  });
+        // Use nostr-tools nip44 v2 decryption
+        const conversationKeyDecrypt = v2.utils.getConversationKey(receiverKey, signedGiftWrap.pubkey);
+        const decryptedGiftWrap = JSON.parse(v2.decrypt(signedGiftWrap.content, conversationKeyDecrypt));
 
-  it('should return undefined when no e tag exists', () => {
-    const tags: string[][] = [
-      ['p', 'pubkey123'],
-    ];
+        // The receiver & the author should both be able to decrypt the content of kind 13.
+        const receiverConversationKey = v2.utils.getConversationKey(receiverKey, decryptedGiftWrap.pubkey);
+        const decryptedMessageEvent = JSON.parse(v2.decrypt(decryptedGiftWrap.content, receiverConversationKey));
 
-    const replyTo = (service as any).getReplyToFromTags(tags);
-    
-    expect(replyTo).toBeUndefined();
-  });
+        // Now the sender will decrypt his own gift wrap to get the original message.
+        const conversationKeyDecryptSelf = v2.utils.getConversationKey(myKey, signedGiftWrapSelf.pubkey);
+        const decryptedGiftWrapSelf = JSON.parse(v2.decrypt(signedGiftWrapSelf.content, conversationKeyDecryptSelf));
 
-  it('should handle multiple tags and find e tag', () => {
-    const tags: string[][] = [
-      ['p', 'pubkey123'],
-      ['subject', 'Test Subject'],
-      ['e', 'reply-event-id'],
-      ['other', 'value'],
-    ];
+        // The receiver & the author should both be able to decrypt the content of kind 13.
+        const receiverConversationKey2 = v2.utils.getConversationKey(myKey, decryptedGiftWrapSelf.pubkey);
+        const decryptedMessageEvent2 = JSON.parse(v2.decrypt(decryptedGiftWrapSelf.content, receiverConversationKey2));
 
-    const replyTo = (service as any).getReplyToFromTags(tags);
-    
-    expect(replyTo).toBe('reply-event-id');
-  });
+        expect(decryptedMessageEvent2.id).toEqual(decryptedMessageEvent.id);
+    });
+
+    it('should extract replyTo from e tag', () => {
+        // Test the private getReplyToFromTags method by testing a DirectMessage with e tag
+        const tags: string[][] = [
+            ['p', 'pubkey123'],
+            ['e', 'event-id-to-reply-to'],
+        ];
+
+        // Access the private method through any for testing
+        const replyTo = (service as any).getReplyToFromTags(tags);
+
+        expect(replyTo).toBe('event-id-to-reply-to');
+    });
+
+    it('should return undefined when no e tag exists', () => {
+        const tags: string[][] = [
+            ['p', 'pubkey123'],
+        ];
+
+        const replyTo = (service as any).getReplyToFromTags(tags);
+
+        expect(replyTo).toBeUndefined();
+    });
+
+    it('should handle multiple tags and find e tag', () => {
+        const tags: string[][] = [
+            ['p', 'pubkey123'],
+            ['subject', 'Test Subject'],
+            ['e', 'reply-event-id'],
+            ['other', 'value'],
+        ];
+
+        const replyTo = (service as any).getReplyToFromTags(tags);
+
+        expect(replyTo).toBe('reply-event-id');
+    });
 });

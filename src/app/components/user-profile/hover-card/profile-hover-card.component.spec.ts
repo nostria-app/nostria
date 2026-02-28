@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ProfileHoverCardComponent } from './profile-hover-card.component';
@@ -21,211 +22,214 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 // Test wrapper to provide pubkey input
 @Component({
-  selector: 'app-test-host',
-  template: '<app-profile-hover-card [pubkey]="pubkey" />',
-  imports: [ProfileHoverCardComponent],
+    selector: 'app-test-host',
+    template: '<app-profile-hover-card [pubkey]="pubkey" />',
+    imports: [ProfileHoverCardComponent],
 })
 class TestHostComponent {
-  pubkey = 'a'.repeat(64);
+    pubkey = 'a'.repeat(64);
 }
 
 describe('ProfileHoverCardComponent', () => {
-  let hostFixture: ComponentFixture<TestHostComponent>;
-  let hoverCardEl: HTMLElement;
-  let mockHoverCardService: { closeHoverCard: jasmine.Spy; hideHoverCard: jasmine.Spy };
-
-  function createComponent() {
-    const mockSettingsService = {
-      settings: signal({ imageCacheEnabled: false }),
+    let hostFixture: ComponentFixture<TestHostComponent>;
+    let hoverCardEl: HTMLElement;
+    let mockHoverCardService: {
+        closeHoverCard: Mock;
+        hideHoverCard: Mock;
     };
 
-    const mockDataService = {
-      getProfile: jasmine.createSpy('getProfile').and.returnValue(Promise.resolve(null)),
-    };
+    function createComponent() {
+        const mockSettingsService = {
+            settings: signal({ imageCacheEnabled: false }),
+        };
 
-    const mockUtilitiesService = {
-      truncateString: jasmine.createSpy('truncateString').and.callFake((s: string) => s),
-      truncateContent: jasmine.createSpy('truncateContent').and.callFake((s: string) => s),
-      getRelativeTime: jasmine.createSpy('getRelativeTime').and.returnValue('1h ago'),
-      parseNip05: jasmine.createSpy('parseNip05').and.returnValue(null),
-    };
+        const mockDataService = {
+            getProfile: vi.fn().mockReturnValue(Promise.resolve(null)),
+        };
 
-    const mockAccountStateService = {
-      followingList: signal([] as string[]),
-      account: signal(null),
-    };
+        const mockUtilitiesService = {
+            truncateString: vi.fn().mockImplementation((s: string) => s),
+            truncateContent: vi.fn().mockImplementation((s: string) => s),
+            getRelativeTime: vi.fn().mockReturnValue('1h ago'),
+            parseNip05: vi.fn().mockReturnValue(null),
+        };
 
-    const mockTrustService = {
-      isEnabled: signal(false),
-      fetchMetrics: jasmine.createSpy('fetchMetrics').and.returnValue(Promise.resolve(null)),
-    };
+        const mockAccountStateService = {
+            followingList: signal([] as string[]),
+            account: signal(null),
+        };
 
-    const mockFavoritesService = {
-      isFavorite: jasmine.createSpy('isFavorite').and.returnValue(false),
-      toggleFavorite: jasmine.createSpy('toggleFavorite').and.returnValue(true),
-    };
+        const mockTrustService = {
+            isEnabled: signal(false),
+            fetchMetrics: vi.fn().mockReturnValue(Promise.resolve(null)),
+        };
 
-    const mockFollowSetsService = {
-      followSets: signal([]),
-      getFollowSetByDTag: jasmine.createSpy('getFollowSetByDTag').and.returnValue(null),
-    };
+        const mockFavoritesService = {
+            isFavorite: vi.fn().mockReturnValue(false),
+            toggleFavorite: vi.fn().mockReturnValue(true),
+        };
 
-    mockHoverCardService = {
-      closeHoverCard: jasmine.createSpy('closeHoverCard'),
-      hideHoverCard: jasmine.createSpy('hideHoverCard'),
-    };
+        const mockFollowSetsService = {
+            followSets: signal([]),
+            getFollowSetByDTag: vi.fn().mockReturnValue(null),
+        };
 
-    const mockLayoutService = {
-      openProfile: jasmine.createSpy('openProfile'),
-      showLoginDialog: jasmine.createSpy('showLoginDialog').and.returnValue(Promise.resolve()),
-      toast: jasmine.createSpy('toast'),
-    };
+        mockHoverCardService = {
+            closeHoverCard: vi.fn(),
+            hideHoverCard: vi.fn(),
+        };
 
-    const mockDatabaseService = {
-      getEventByPubkeyAndKind: jasmine.createSpy('getEventByPubkeyAndKind').and.returnValue(Promise.resolve(null)),
-    };
+        const mockLayoutService = {
+            openProfile: vi.fn(),
+            showLoginDialog: vi.fn().mockReturnValue(Promise.resolve()),
+            toast: vi.fn(),
+        };
 
-    const mockUserDataService = {
-      getEventByPubkeyAndKind: jasmine.createSpy('getEventByPubkeyAndKind').and.returnValue(Promise.resolve(null)),
-    };
+        const mockDatabaseService = {
+            getEventByPubkeyAndKind: vi.fn().mockReturnValue(Promise.resolve(null)),
+        };
 
-    TestBed.configureTestingModule({
-      imports: [TestHostComponent],
-      providers: [
-        provideZonelessChangeDetection(),
-        { provide: DataService, useValue: mockDataService },
-        { provide: UtilitiesService, useValue: mockUtilitiesService },
-        { provide: SettingsService, useValue: mockSettingsService },
-        { provide: ImageCacheService, useValue: { getOptimizedImageUrl: (url: string) => url } },
-        { provide: AccountStateService, useValue: mockAccountStateService },
-        { provide: ReportingService, useValue: {} },
-        { provide: LayoutService, useValue: mockLayoutService },
-        { provide: DatabaseService, useValue: mockDatabaseService },
-        { provide: UserDataService, useValue: mockUserDataService },
-        { provide: TrustService, useValue: mockTrustService },
-        { provide: FavoritesService, useValue: mockFavoritesService },
-        { provide: PublishService, useValue: {} },
-        { provide: NostrService, useValue: {} },
-        { provide: FollowSetsService, useValue: mockFollowSetsService },
-        { provide: ProfileHoverCardService, useValue: mockHoverCardService },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
-        { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-      ],
+        const mockUserDataService = {
+            getEventByPubkeyAndKind: vi.fn().mockReturnValue(Promise.resolve(null)),
+        };
+
+        TestBed.configureTestingModule({
+            imports: [TestHostComponent],
+            providers: [
+                provideZonelessChangeDetection(),
+                { provide: DataService, useValue: mockDataService },
+                { provide: UtilitiesService, useValue: mockUtilitiesService },
+                { provide: SettingsService, useValue: mockSettingsService },
+                { provide: ImageCacheService, useValue: { getOptimizedImageUrl: (url: string) => url } },
+                { provide: AccountStateService, useValue: mockAccountStateService },
+                { provide: ReportingService, useValue: {} },
+                { provide: LayoutService, useValue: mockLayoutService },
+                { provide: DatabaseService, useValue: mockDatabaseService },
+                { provide: UserDataService, useValue: mockUserDataService },
+                { provide: TrustService, useValue: mockTrustService },
+                { provide: FavoritesService, useValue: mockFavoritesService },
+                { provide: PublishService, useValue: {} },
+                { provide: NostrService, useValue: {} },
+                { provide: FollowSetsService, useValue: mockFollowSetsService },
+                { provide: ProfileHoverCardService, useValue: mockHoverCardService },
+                { provide: MatDialog, useValue: { open: vi.fn() } },
+                { provide: MatSnackBar, useValue: { open: vi.fn() } },
+            ],
+        });
+
+        hostFixture = TestBed.createComponent(TestHostComponent);
+        hostFixture.detectChanges();
+        hoverCardEl = hostFixture.nativeElement.querySelector('app-profile-hover-card');
+    }
+
+    it('should create', () => {
+        createComponent();
+        expect(hoverCardEl).toBeTruthy();
     });
 
-    hostFixture = TestBed.createComponent(TestHostComponent);
-    hostFixture.detectChanges();
-    hoverCardEl = hostFixture.nativeElement.querySelector('app-profile-hover-card');
-  }
+    it('should use OnPush change detection', () => {
+        createComponent();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const metadata = (ProfileHoverCardComponent as any).ɵcmp;
+        expect(metadata.onPush).toBe(true);
+    });
 
-  it('should create', () => {
-    createComponent();
-    expect(hoverCardEl).toBeTruthy();
-  });
+    it('should close hover card when a link element is clicked', fakeAsync(() => {
+        createComponent();
 
-  it('should use OnPush change detection', () => {
-    createComponent();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const metadata = (ProfileHoverCardComponent as any).ɵcmp;
-    expect(metadata.onPush).toBeTrue();
-  });
+        const link = document.createElement('a');
+        link.href = '/test';
+        hoverCardEl.appendChild(link);
 
-  it('should close hover card when a link element is clicked', fakeAsync(() => {
-    createComponent();
+        link.click();
+        tick(150);
 
-    const link = document.createElement('a');
-    link.href = '/test';
-    hoverCardEl.appendChild(link);
+        expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
+    }));
 
-    link.click();
-    tick(150);
+    it('should close hover card when a button element is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
-  }));
+        const button = document.createElement('button');
+        button.textContent = 'Test Button';
+        hoverCardEl.appendChild(button);
 
-  it('should close hover card when a button element is clicked', fakeAsync(() => {
-    createComponent();
+        button.click();
+        tick(150);
 
-    const button = document.createElement('button');
-    button.textContent = 'Test Button';
-    hoverCardEl.appendChild(button);
+        expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
+    }));
 
-    button.click();
-    tick(150);
+    it('should close hover card when an element inside a link is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
-  }));
+        const link = document.createElement('a');
+        link.href = '/test';
+        const span = document.createElement('span');
+        span.textContent = 'Click me';
+        link.appendChild(span);
+        hoverCardEl.appendChild(link);
 
-  it('should close hover card when an element inside a link is clicked', fakeAsync(() => {
-    createComponent();
+        span.click();
+        tick(150);
 
-    const link = document.createElement('a');
-    link.href = '/test';
-    const span = document.createElement('span');
-    span.textContent = 'Click me';
-    link.appendChild(span);
-    hoverCardEl.appendChild(link);
+        expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
+    }));
 
-    span.click();
-    tick(150);
+    it('should close hover card when an element inside a button is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
-  }));
+        const button = document.createElement('button');
+        const icon = document.createElement('mat-icon');
+        icon.textContent = 'person_add';
+        button.appendChild(icon);
+        hoverCardEl.appendChild(button);
 
-  it('should close hover card when an element inside a button is clicked', fakeAsync(() => {
-    createComponent();
+        icon.click();
+        tick(150);
 
-    const button = document.createElement('button');
-    const icon = document.createElement('mat-icon');
-    icon.textContent = 'person_add';
-    button.appendChild(icon);
-    hoverCardEl.appendChild(button);
+        expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
+    }));
 
-    icon.click();
-    tick(150);
+    it('should not close hover card when the menu button is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).toHaveBeenCalled();
-  }));
+        const menuButton = document.createElement('button');
+        menuButton.classList.add('menu-button');
+        hoverCardEl.appendChild(menuButton);
 
-  it('should not close hover card when the menu button is clicked', fakeAsync(() => {
-    createComponent();
+        menuButton.click();
+        tick(150);
 
-    const menuButton = document.createElement('button');
-    menuButton.classList.add('menu-button');
-    hoverCardEl.appendChild(menuButton);
+        expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
+    }));
 
-    menuButton.click();
-    tick(150);
+    it('should not close hover card when a non-interactive element is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
-  }));
+        const div = document.createElement('div');
+        div.textContent = 'Just text';
+        hoverCardEl.appendChild(div);
 
-  it('should not close hover card when a non-interactive element is clicked', fakeAsync(() => {
-    createComponent();
+        div.click();
+        tick(150);
 
-    const div = document.createElement('div');
-    div.textContent = 'Just text';
-    hoverCardEl.appendChild(div);
+        expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
+    }));
 
-    div.click();
-    tick(150);
+    it('should not close hover card when an element inside menu-button is clicked', fakeAsync(() => {
+        createComponent();
 
-    expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
-  }));
+        const menuButton = document.createElement('button');
+        menuButton.classList.add('menu-button');
+        const icon = document.createElement('mat-icon');
+        icon.textContent = 'more_horiz';
+        menuButton.appendChild(icon);
+        hoverCardEl.appendChild(menuButton);
 
-  it('should not close hover card when an element inside menu-button is clicked', fakeAsync(() => {
-    createComponent();
+        icon.click();
+        tick(150);
 
-    const menuButton = document.createElement('button');
-    menuButton.classList.add('menu-button');
-    const icon = document.createElement('mat-icon');
-    icon.textContent = 'more_horiz';
-    menuButton.appendChild(icon);
-    hoverCardEl.appendChild(menuButton);
-
-    icon.click();
-    tick(150);
-
-    expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
-  }));
+        expect(mockHoverCardService.closeHoverCard).not.toHaveBeenCalled();
+    }));
 });

@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { VideoEventComponent } from './video-event.component';
@@ -17,7 +18,7 @@ import { Event } from 'nostr-tools';
 describe('VideoEventComponent', () => {
   let component: VideoEventComponent;
   let fixture: ComponentFixture<VideoEventComponent>;
-  let mockVideoPlayback: jasmine.SpyObj<VideoPlaybackService>;
+  let mockVideoPlayback: MockedObject<VideoPlaybackService>;
 
   const mockVideoEvent: Event = {
     id: 'test-video-id',
@@ -32,17 +33,16 @@ describe('VideoEventComponent', () => {
   };
 
   beforeEach(async () => {
-    mockVideoPlayback = jasmine.createSpyObj('VideoPlaybackService', [
-      'registerPlaying',
-      'unregisterPlaying',
-      'pauseCurrentVideo',
-      'getMutedState',
-      'setMuted',
-    ], {
+    mockVideoPlayback = {
+      registerPlaying: vi.fn().mockName("VideoPlaybackService.registerPlaying"),
+      unregisterPlaying: vi.fn().mockName("VideoPlaybackService.unregisterPlaying"),
+      pauseCurrentVideo: vi.fn().mockName("VideoPlaybackService.pauseCurrentVideo"),
+      getMutedState: vi.fn().mockName("VideoPlaybackService.getMutedState"),
+      setMuted: vi.fn().mockName("VideoPlaybackService.setMuted"),
       isMuted: signal(true),
-      autoPlayAllowed: signal(false),
-    });
-    mockVideoPlayback.getMutedState.and.returnValue(true);
+      autoPlayAllowed: signal(false)
+    } as unknown as MockedObject<VideoPlaybackService>;
+    mockVideoPlayback.getMutedState.mockReturnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [VideoEventComponent],
@@ -65,7 +65,7 @@ describe('VideoEventComponent', () => {
           provide: AccountLocalStateService,
           useValue: {
             isMediaAuthorTrusted: () => false,
-            addTrustedMediaAuthor: () => {},
+            addTrustedMediaAuthor: () => { },
           },
         },
         { provide: CastService, useValue: {} },
@@ -78,7 +78,7 @@ describe('VideoEventComponent', () => {
             generatePlaceholderDataUrl: () => '',
           },
         },
-        { provide: LayoutService, useValue: { openGenericEvent: () => {} } },
+        { provide: LayoutService, useValue: { openGenericEvent: () => { } } },
         {
           provide: UtilitiesService,
           useValue: {
@@ -97,13 +97,13 @@ describe('VideoEventComponent', () => {
         {
           provide: LoggerService,
           useValue: {
-            debug: () => {},
-            warn: () => {},
-            error: () => {},
+            debug: () => { },
+            warn: () => { },
+            error: () => { },
           },
         },
-        { provide: Router, useValue: { navigate: () => {} } },
-        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: Router, useValue: { navigate: () => { } } },
+        { provide: MatDialog, useValue: { open: () => { } } },
         /* eslint-enable @typescript-eslint/no-empty-function */
       ],
     }).compileComponents();

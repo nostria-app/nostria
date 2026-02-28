@@ -3,409 +3,405 @@ import { FeedService, FeedItem } from './feed.service';
 import { Event } from 'nostr-tools';
 
 describe('FeedService', () => {
-  // FeedService has a heavy constructor with many injected deps.
-  // For these unit tests, bypass the constructor and set only the fields needed
-  // by handleFollowingIncrementalUpdate.
-  function createServiceForIncrementalFollowingTests(): FeedService {
-    const service = Object.create(FeedService.prototype) as FeedService;
-
-    (service as any).accountState = {
-      muted: () => false,
-    };
-
-    const map = new Map<string, unknown>();
-    (service as any)._feedData = signal(map);
-
-    (service as any).saveEventToDatabase = jasmine.createSpy('saveEventToDatabase');
-
-    return service;
-  }
-
-  function makeEvent(id: string, createdAt: number, kind = 1): Event {
-    return {
-      id,
-      kind,
-      created_at: createdAt,
-      pubkey: 'pubkey',
-      content: '',
-      tags: [],
-      sig: 'sig',
-    } as unknown as Event;
-  }
-
-  function createServiceForNewEventsTests(): FeedService {
-    const service = Object.create(FeedService.prototype) as FeedService;
-
-    (service as any).accountState = {
-      muted: () => false,
-    };
-
-    const dataMap = new Map<string, FeedItem>();
-    (service as any).data = dataMap;
-    (service as any)._feedData = signal(new Map<string, FeedItem>());
-    (service as any)._activeFeedId = signal<string | null>(null);
-    (service as any)._feedsPageActive = signal(true);
-
-    (service as any).logger = {
-      debug: () => {},
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    };
-
-    return service;
-  }
-
-  describe('handleFollowingIncrementalUpdate', () => {
-    it('renders events directly when initialLoadComplete=true and feed is empty', () => {
-      const service = createServiceForIncrementalFollowingTests();
-
-      const feedData: any = {
-        feed: { id: 'feed-following', kinds: [1] },
-        events: signal<Event[]>([]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: true,
-      };
-
-      const originalMap = (service as any)._feedData();
-      originalMap.set(feedData.feed.id, feedData);
-
-      (service as any).handleFollowingIncrementalUpdate(feedData, [
-        makeEvent('e1', 10),
-        makeEvent('e2', 20),
-      ]);
-
-      expect(feedData.events().map((e: Event) => e.id)).toEqual(['e2', 'e1']);
-      expect(feedData.pendingEvents().length).toBe(0);
-      expect((service as any)._feedData()).not.toBe(originalMap);
-    });
-
-    it('queues events when initialLoadComplete=true and feed already has events', () => {
-      const service = createServiceForIncrementalFollowingTests();
-
-      const feedData: any = {
-        feed: { id: 'feed-following', kinds: [1] },
-        events: signal<Event[]>([makeEvent('existing', 50)]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: true,
-      };
-
-      (service as any).handleFollowingIncrementalUpdate(feedData, [
-        makeEvent('newer', 100),
-        makeEvent('older', 25),
-      ]);
-
-      expect(feedData.events().map((e: Event) => e.id)).toEqual(['existing']);
-      expect(feedData.pendingEvents().map((e: Event) => e.id)).toEqual(['newer', 'older']);
-    });
-  });
-
-  describe('checkForNewEvents', () => {
-    it('should not skip feeds without a persistent subscription', async () => {
-      const service = createServiceForNewEventsTests();
-
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0], source: 'custom', customUsers: ['pubkey1'] },
-        events: signal<Event[]>([makeEvent('e1', 100)]),
-        pendingEvents: signal<Event[]>([]),
-        subscription: null, // Custom feeds don't have persistent subscriptions
-        lastCheckTimestamp: 100,
-        initialLoadComplete: true,
-        isCheckingForNewEvents: signal(false),
-      };
-
-      (service as any).data.set('custom-feed', feedData);
-      (service as any)._activeFeedId.set('custom-feed');
-
-      // Mock checkColumnForNewEvents to track if it's called
-      let checkColumnCalled = false;
-      (service as any).checkColumnForNewEvents = jasmine.createSpy('checkColumnForNewEvents')
-        .and.callFake(async () => { checkColumnCalled = true; });
-
-      await (service as any).checkForNewEvents();
-
-      expect(checkColumnCalled).toBeTrue();
-    });
-
-    it('should skip feeds where initial load is not complete', async () => {
-      const service = createServiceForNewEventsTests();
-
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0], source: 'custom' },
-        events: signal<Event[]>([]),
-        pendingEvents: signal<Event[]>([]),
-        subscription: null,
-        lastCheckTimestamp: 100,
-        initialLoadComplete: false, // Still loading
-        isCheckingForNewEvents: signal(false),
-      };
-
-      (service as any).data.set('custom-feed', feedData);
-      (service as any)._activeFeedId.set('custom-feed');
-
-      (service as any).checkColumnForNewEvents = jasmine.createSpy('checkColumnForNewEvents');
-
-      await (service as any).checkForNewEvents();
-
-      expect((service as any).checkColumnForNewEvents).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('updateFeedIncremental - reactivity', () => {
-    it('should trigger _feedData reactivity when queuing events to pending', () => {
-      const service = createServiceForIncrementalFollowingTests();
-      (service as any).logger = {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      };
-
-      const existingEvent = makeEvent('existing', 50);
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0] },
-        events: signal<Event[]>([existingEvent]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: true,
-        lastTimestamp: Date.now(),
-      };
-
-      // Track the initial _feedData reference
-      const initialFeedData = (service as any)._feedData();
-
-      // Build a userEventsMap with new events
-      const userEventsMap = new Map<string, Event[]>();
-      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
-
-      (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
-
-      // Pending events should have the new event
-      expect(feedData.pendingEvents().length).toBe(1);
-      expect(feedData.pendingEvents()[0].id).toBe('new-1');
-
-      // _feedData signal should have been updated (new reference)
-      const updatedFeedData = (service as any)._feedData();
-      expect(updatedFeedData).not.toBe(initialFeedData);
-    });
-
-    it('should trigger _feedData reactivity when merging events directly', () => {
-      const service = createServiceForIncrementalFollowingTests();
-      (service as any).logger = {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      };
-
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0] },
-        events: signal<Event[]>([]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: false,
-        lastTimestamp: Date.now(),
-      };
-
-      // Track the initial _feedData reference
-      const initialFeedData = (service as any)._feedData();
-
-      const userEventsMap = new Map<string, Event[]>();
-      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
-
-      (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
-
-      // Events should be merged directly
-      expect(feedData.events().length).toBe(1);
-      expect(feedData.events()[0].id).toBe('new-1');
-
-      // _feedData signal should have been updated (new reference)
-      const updatedFeedData = (service as any)._feedData();
-      expect(updatedFeedData).not.toBe(initialFeedData);
-    });
-  });
-
-  describe('finalizeIncrementalFeed - reactivity', () => {
-    it('should trigger _feedData reactivity when queuing events to pending', () => {
-      const service = createServiceForIncrementalFollowingTests();
-      (service as any).logger = {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      };
-      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
-      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
-
-      const existingEvent = makeEvent('existing', 50);
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0] },
-        events: signal<Event[]>([existingEvent]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: true,
-        isRefreshing: signal(true),
-        lastTimestamp: Date.now(),
-      };
-
-      const initialFeedData = (service as any)._feedData();
-
-      const userEventsMap = new Map<string, Event[]>();
-      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
-
-      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
-
-      // Pending events should have the new event
-      expect(feedData.pendingEvents().length).toBe(1);
-      expect(feedData.pendingEvents()[0].id).toBe('new-1');
-
-      // _feedData signal should have been updated (new reference)
-      const updatedFeedData = (service as any)._feedData();
-      expect(updatedFeedData).not.toBe(initialFeedData);
-    });
-
-    it('should trigger _feedData reactivity when merging events directly on empty feed', () => {
-      const service = createServiceForIncrementalFollowingTests();
-      (service as any).logger = {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      };
-      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
-      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
-
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0] },
-        events: signal<Event[]>([]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: false,
-        isRefreshing: signal(true),
-        lastTimestamp: Date.now(),
-      };
-
-      const initialFeedData = (service as any)._feedData();
-
-      const userEventsMap = new Map<string, Event[]>();
-      userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
-
-      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
-
-      // Events should be merged directly
-      expect(feedData.events().length).toBe(1);
-      expect(feedData.events()[0].id).toBe('new-1');
-
-      // _feedData signal should have been updated (new reference)
-      const updatedFeedData = (service as any)._feedData();
-      expect(updatedFeedData).not.toBe(initialFeedData);
-
-      // isRefreshing should be set to false
-      expect(feedData.isRefreshing()).toBeFalse();
-    });
-
-    it('should mark initialLoadComplete and stop refreshing after finalize', () => {
-      const service = createServiceForIncrementalFollowingTests();
-      (service as any).logger = {
-        debug: () => {},
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      };
-      (service as any).saveCachedEvents = jasmine.createSpy('saveCachedEvents');
-      (service as any).updateColumnLastRetrieved = jasmine.createSpy('updateColumnLastRetrieved');
-
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0] },
-        events: signal<Event[]>([]),
-        pendingEvents: signal<Event[]>([]),
-        initialLoadComplete: false,
-        isRefreshing: signal(true),
-      };
-
-      const userEventsMap = new Map<string, Event[]>();
-      // Empty map - no events fetched
-
-      (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
-
-      expect(feedData.initialLoadComplete).toBeTrue();
-      expect(feedData.isRefreshing()).toBeFalse();
-    });
-  });
-
-  describe('checkColumnForNewEvents', () => {
-    it('should use lastCheckTimestamp as sinceTimestamp, not currentTime', async () => {
-      const service = createServiceForNewEventsTests();
-
-      const lastCheck = Math.floor(Date.now() / 1000) - 60; // 60 seconds ago
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [0], source: 'custom', customUsers: ['pubkey1'] },
-        events: signal<Event[]>([makeEvent('e1', lastCheck - 10)]),
-        pendingEvents: signal<Event[]>([]),
-        lastCheckTimestamp: lastCheck,
-        initialLoadComplete: true,
-      };
-
-      (service as any).data.set('custom-feed', feedData);
-
-      // Track which sinceTimestamp is passed to fetchNewEventsForCustom
-      let capturedSinceTimestamp: number | undefined;
-      (service as any).fetchNewEventsForCustom = jasmine.createSpy('fetchNewEventsForCustom')
-        .and.callFake(async (_fd: unknown, since: number) => {
-          capturedSinceTimestamp = since;
-          return [];
+    // FeedService has a heavy constructor with many injected deps.
+    // For these unit tests, bypass the constructor and set only the fields needed
+    // by handleFollowingIncrementalUpdate.
+    function createServiceForIncrementalFollowingTests(): FeedService {
+        const service = Object.create(FeedService.prototype) as FeedService;
+
+        (service as any).accountState = {
+            muted: () => false,
+        };
+
+        const map = new Map<string, unknown>();
+        (service as any)._feedData = signal(map);
+
+        (service as any).saveEventToDatabase = vi.fn();
+
+        return service;
+    }
+
+    function makeEvent(id: string, createdAt: number, kind = 1): Event {
+        return {
+            id,
+            kind,
+            created_at: createdAt,
+            pubkey: 'pubkey',
+            content: '',
+            tags: [],
+            sig: 'sig',
+        } as unknown as Event;
+    }
+
+    function createServiceForNewEventsTests(): FeedService {
+        const service = Object.create(FeedService.prototype) as FeedService;
+
+        (service as any).accountState = {
+            muted: () => false,
+        };
+
+        const dataMap = new Map<string, FeedItem>();
+        (service as any).data = dataMap;
+        (service as any)._feedData = signal(new Map<string, FeedItem>());
+        (service as any)._activeFeedId = signal<string | null>(null);
+        (service as any)._feedsPageActive = signal(true);
+
+        (service as any).logger = {
+            debug: () => { },
+            info: () => { },
+            warn: () => { },
+            error: () => { },
+        };
+
+        return service;
+    }
+
+    describe('handleFollowingIncrementalUpdate', () => {
+        it('renders events directly when initialLoadComplete=true and feed is empty', () => {
+            const service = createServiceForIncrementalFollowingTests();
+
+            const feedData: any = {
+                feed: { id: 'feed-following', kinds: [1] },
+                events: signal<Event[]>([]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: true,
+            };
+
+            const originalMap = (service as any)._feedData();
+            originalMap.set(feedData.feed.id, feedData);
+
+            (service as any).handleFollowingIncrementalUpdate(feedData, [
+                makeEvent('e1', 10),
+                makeEvent('e2', 20),
+            ]);
+
+            expect(feedData.events().map((e: Event) => e.id)).toEqual(['e2', 'e1']);
+            expect(feedData.pendingEvents().length).toBe(0);
+            expect((service as any)._feedData()).not.toBe(originalMap);
         });
 
-      await (service as any).checkColumnForNewEvents('custom-feed');
+        it('queues events when initialLoadComplete=true and feed already has events', () => {
+            const service = createServiceForIncrementalFollowingTests();
 
-      expect((service as any).fetchNewEventsForCustom).toHaveBeenCalled();
-      expect(capturedSinceTimestamp).toBe(lastCheck);
+            const feedData: any = {
+                feed: { id: 'feed-following', kinds: [1] },
+                events: signal<Event[]>([makeEvent('existing', 50)]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: true,
+            };
+
+            (service as any).handleFollowingIncrementalUpdate(feedData, [
+                makeEvent('newer', 100),
+                makeEvent('older', 25),
+            ]);
+
+            expect(feedData.events().map((e: Event) => e.id)).toEqual(['existing']);
+            expect(feedData.pendingEvents().map((e: Event) => e.id)).toEqual(['newer', 'older']);
+        });
     });
 
-    it('should route for-you feeds to fetchNewEventsForFollowing', async () => {
-      const service = createServiceForNewEventsTests();
+    describe('checkForNewEvents', () => {
+        it('should not skip feeds without a persistent subscription', async () => {
+            const service = createServiceForNewEventsTests();
 
-      const lastCheck = Math.floor(Date.now() / 1000) - 30;
-      const feedData: any = {
-        feed: { id: 'for-you-feed', kinds: [1], source: 'for-you' },
-        events: signal<Event[]>([makeEvent('e1', lastCheck - 10)]),
-        pendingEvents: signal<Event[]>([]),
-        lastCheckTimestamp: lastCheck,
-        initialLoadComplete: true,
-      };
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0], source: 'custom', customUsers: ['pubkey1'] },
+                events: signal<Event[]>([makeEvent('e1', 100)]),
+                pendingEvents: signal<Event[]>([]),
+                subscription: null, // Custom feeds don't have persistent subscriptions
+                lastCheckTimestamp: 100,
+                initialLoadComplete: true,
+                isCheckingForNewEvents: signal(false),
+            };
 
-      (service as any).data.set('for-you-feed', feedData);
+            (service as any).data.set('custom-feed', feedData);
+            (service as any)._activeFeedId.set('custom-feed');
 
-      (service as any).fetchNewEventsForFollowing = jasmine.createSpy('fetchNewEventsForFollowing')
-        .and.returnValue(Promise.resolve([]));
+            // Mock checkColumnForNewEvents to track if it's called
+            let checkColumnCalled = false;
+            (service as any).checkColumnForNewEvents = vi.fn().mockImplementation(async () => { checkColumnCalled = true; });
 
-      await (service as any).checkColumnForNewEvents('for-you-feed');
+            await (service as any).checkForNewEvents();
 
-      expect((service as any).fetchNewEventsForFollowing).toHaveBeenCalledWith(feedData, lastCheck);
+            expect(checkColumnCalled).toBe(true);
+        });
+
+        it('should skip feeds where initial load is not complete', async () => {
+            const service = createServiceForNewEventsTests();
+
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0], source: 'custom' },
+                events: signal<Event[]>([]),
+                pendingEvents: signal<Event[]>([]),
+                subscription: null,
+                lastCheckTimestamp: 100,
+                initialLoadComplete: false, // Still loading
+                isCheckingForNewEvents: signal(false),
+            };
+
+            (service as any).data.set('custom-feed', feedData);
+            (service as any)._activeFeedId.set('custom-feed');
+
+            (service as any).checkColumnForNewEvents = vi.fn();
+
+            await (service as any).checkForNewEvents();
+
+            expect((service as any).checkColumnForNewEvents).not.toHaveBeenCalled();
+        });
     });
 
-    it('should filter out events already in the feed from pending', async () => {
-      const service = createServiceForNewEventsTests();
+    describe('updateFeedIncremental - reactivity', () => {
+        it('should trigger _feedData reactivity when queuing events to pending', () => {
+            const service = createServiceForIncrementalFollowingTests();
+            (service as any).logger = {
+                debug: () => { },
+                info: () => { },
+                warn: () => { },
+                error: () => { },
+            };
 
-      const lastCheck = Math.floor(Date.now() / 1000) - 30;
-      const existingEvent = makeEvent('existing-1', lastCheck + 5);
-      const newEvent = makeEvent('new-1', lastCheck + 10);
-      const feedData: any = {
-        feed: { id: 'custom-feed', kinds: [1], source: 'custom', customUsers: ['pubkey1'] },
-        events: signal<Event[]>([existingEvent]),
-        pendingEvents: signal<Event[]>([]),
-        lastCheckTimestamp: lastCheck,
-        initialLoadComplete: true,
-      };
+            const existingEvent = makeEvent('existing', 50);
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0] },
+                events: signal<Event[]>([existingEvent]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: true,
+                lastTimestamp: Date.now(),
+            };
 
-      (service as any).data.set('custom-feed', feedData);
+            // Track the initial _feedData reference
+            const initialFeedData = (service as any)._feedData();
 
-      // Return both an existing event and a new one
-      (service as any).fetchNewEventsForCustom = jasmine.createSpy('fetchNewEventsForCustom')
-        .and.returnValue(Promise.resolve([existingEvent, newEvent]));
+            // Build a userEventsMap with new events
+            const userEventsMap = new Map<string, Event[]>();
+            userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
 
-      await (service as any).checkColumnForNewEvents('custom-feed');
+            (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
 
-      // Only the new event should be in pending, not the existing one
-      const pending = feedData.pendingEvents();
-      expect(pending.length).toBe(1);
-      expect(pending[0].id).toBe('new-1');
+            // Pending events should have the new event
+            expect(feedData.pendingEvents().length).toBe(1);
+            expect(feedData.pendingEvents()[0].id).toBe('new-1');
+
+            // _feedData signal should have been updated (new reference)
+            const updatedFeedData = (service as any)._feedData();
+            expect(updatedFeedData).not.toBe(initialFeedData);
+        });
+
+        it('should trigger _feedData reactivity when merging events directly', () => {
+            const service = createServiceForIncrementalFollowingTests();
+            (service as any).logger = {
+                debug: () => { },
+                info: () => { },
+                warn: () => { },
+                error: () => { },
+            };
+
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0] },
+                events: signal<Event[]>([]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: false,
+                lastTimestamp: Date.now(),
+            };
+
+            // Track the initial _feedData reference
+            const initialFeedData = (service as any)._feedData();
+
+            const userEventsMap = new Map<string, Event[]>();
+            userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+            (service as any).updateFeedIncremental(userEventsMap, feedData, 1, 1);
+
+            // Events should be merged directly
+            expect(feedData.events().length).toBe(1);
+            expect(feedData.events()[0].id).toBe('new-1');
+
+            // _feedData signal should have been updated (new reference)
+            const updatedFeedData = (service as any)._feedData();
+            expect(updatedFeedData).not.toBe(initialFeedData);
+        });
     });
-  });
+
+    describe('finalizeIncrementalFeed - reactivity', () => {
+        it('should trigger _feedData reactivity when queuing events to pending', () => {
+            const service = createServiceForIncrementalFollowingTests();
+            (service as any).logger = {
+                debug: () => { },
+                info: () => { },
+                warn: () => { },
+                error: () => { },
+            };
+            (service as any).saveCachedEvents = vi.fn();
+            (service as any).updateColumnLastRetrieved = vi.fn();
+
+            const existingEvent = makeEvent('existing', 50);
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0] },
+                events: signal<Event[]>([existingEvent]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: true,
+                isRefreshing: signal(true),
+                lastTimestamp: Date.now(),
+            };
+
+            const initialFeedData = (service as any)._feedData();
+
+            const userEventsMap = new Map<string, Event[]>();
+            userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+            (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+            // Pending events should have the new event
+            expect(feedData.pendingEvents().length).toBe(1);
+            expect(feedData.pendingEvents()[0].id).toBe('new-1');
+
+            // _feedData signal should have been updated (new reference)
+            const updatedFeedData = (service as any)._feedData();
+            expect(updatedFeedData).not.toBe(initialFeedData);
+        });
+
+        it('should trigger _feedData reactivity when merging events directly on empty feed', () => {
+            const service = createServiceForIncrementalFollowingTests();
+            (service as any).logger = {
+                debug: () => { },
+                info: () => { },
+                warn: () => { },
+                error: () => { },
+            };
+            (service as any).saveCachedEvents = vi.fn();
+            (service as any).updateColumnLastRetrieved = vi.fn();
+
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0] },
+                events: signal<Event[]>([]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: false,
+                isRefreshing: signal(true),
+                lastTimestamp: Date.now(),
+            };
+
+            const initialFeedData = (service as any)._feedData();
+
+            const userEventsMap = new Map<string, Event[]>();
+            userEventsMap.set('pubkey1', [makeEvent('new-1', 100, 0)]);
+
+            (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+            // Events should be merged directly
+            expect(feedData.events().length).toBe(1);
+            expect(feedData.events()[0].id).toBe('new-1');
+
+            // _feedData signal should have been updated (new reference)
+            const updatedFeedData = (service as any)._feedData();
+            expect(updatedFeedData).not.toBe(initialFeedData);
+
+            // isRefreshing should be set to false
+            expect(feedData.isRefreshing()).toBe(false);
+        });
+
+        it('should mark initialLoadComplete and stop refreshing after finalize', () => {
+            const service = createServiceForIncrementalFollowingTests();
+            (service as any).logger = {
+                debug: () => { },
+                info: () => { },
+                warn: () => { },
+                error: () => { },
+            };
+            (service as any).saveCachedEvents = vi.fn();
+            (service as any).updateColumnLastRetrieved = vi.fn();
+
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0] },
+                events: signal<Event[]>([]),
+                pendingEvents: signal<Event[]>([]),
+                initialLoadComplete: false,
+                isRefreshing: signal(true),
+            };
+
+            const userEventsMap = new Map<string, Event[]>();
+            // Empty map - no events fetched
+
+            (service as any).finalizeIncrementalFeed(userEventsMap, feedData);
+
+            expect(feedData.initialLoadComplete).toBe(true);
+            expect(feedData.isRefreshing()).toBe(false);
+        });
+    });
+
+    describe('checkColumnForNewEvents', () => {
+        it('should use lastCheckTimestamp as sinceTimestamp, not currentTime', async () => {
+            const service = createServiceForNewEventsTests();
+
+            const lastCheck = Math.floor(Date.now() / 1000) - 60; // 60 seconds ago
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [0], source: 'custom', customUsers: ['pubkey1'] },
+                events: signal<Event[]>([makeEvent('e1', lastCheck - 10)]),
+                pendingEvents: signal<Event[]>([]),
+                lastCheckTimestamp: lastCheck,
+                initialLoadComplete: true,
+            };
+
+            (service as any).data.set('custom-feed', feedData);
+
+            // Track which sinceTimestamp is passed to fetchNewEventsForCustom
+            let capturedSinceTimestamp: number | undefined;
+            (service as any).fetchNewEventsForCustom = vi.fn().mockImplementation(async (_fd: unknown, since: number) => {
+                capturedSinceTimestamp = since;
+                return [];
+            });
+
+            await (service as any).checkColumnForNewEvents('custom-feed');
+
+            expect((service as any).fetchNewEventsForCustom).toHaveBeenCalled();
+            expect(capturedSinceTimestamp).toBe(lastCheck);
+        });
+
+        it('should route for-you feeds to fetchNewEventsForFollowing', async () => {
+            const service = createServiceForNewEventsTests();
+
+            const lastCheck = Math.floor(Date.now() / 1000) - 30;
+            const feedData: any = {
+                feed: { id: 'for-you-feed', kinds: [1], source: 'for-you' },
+                events: signal<Event[]>([makeEvent('e1', lastCheck - 10)]),
+                pendingEvents: signal<Event[]>([]),
+                lastCheckTimestamp: lastCheck,
+                initialLoadComplete: true,
+            };
+
+            (service as any).data.set('for-you-feed', feedData);
+
+            (service as any).fetchNewEventsForFollowing = vi.fn().mockReturnValue(Promise.resolve([]));
+
+            await (service as any).checkColumnForNewEvents('for-you-feed');
+
+            expect((service as any).fetchNewEventsForFollowing).toHaveBeenCalledWith(feedData, lastCheck);
+        });
+
+        it('should filter out events already in the feed from pending', async () => {
+            const service = createServiceForNewEventsTests();
+
+            const lastCheck = Math.floor(Date.now() / 1000) - 30;
+            const existingEvent = makeEvent('existing-1', lastCheck + 5);
+            const newEvent = makeEvent('new-1', lastCheck + 10);
+            const feedData: any = {
+                feed: { id: 'custom-feed', kinds: [1], source: 'custom', customUsers: ['pubkey1'] },
+                events: signal<Event[]>([existingEvent]),
+                pendingEvents: signal<Event[]>([]),
+                lastCheckTimestamp: lastCheck,
+                initialLoadComplete: true,
+            };
+
+            (service as any).data.set('custom-feed', feedData);
+
+            // Return both an existing event and a new one
+            (service as any).fetchNewEventsForCustom = vi.fn().mockReturnValue(Promise.resolve([existingEvent, newEvent]));
+
+            await (service as any).checkColumnForNewEvents('custom-feed');
+
+            // Only the new event should be in pending, not the existing one
+            const pending = feedData.pendingEvents();
+            expect(pending.length).toBe(1);
+            expect(pending[0].id).toBe('new-1');
+        });
+    });
 });

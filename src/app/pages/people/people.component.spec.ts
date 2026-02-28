@@ -42,11 +42,11 @@ describe('PeopleComponent', () => {
           useValue: {
             isLoading: signal(false),
             profiles: signal([]),
-            searchProfiles: jasmine.createSpy('searchProfiles').and.returnValue([]),
-            getSortedProfiles: jasmine.createSpy('getSortedProfiles').and.callFake((p: unknown[]) => p),
-            getFilteredProfiles: jasmine.createSpy('getFilteredProfiles').and.callFake((_f: unknown, p: unknown[]) => p),
-            loadProfilesForPubkeys: jasmine.createSpy('loadProfilesForPubkeys').and.resolveTo([]),
-            getProfile: jasmine.createSpy('getProfile').and.returnValue(undefined),
+            searchProfiles: vi.fn().mockReturnValue([]),
+            getSortedProfiles: vi.fn().mockImplementation((p: unknown[]) => p),
+            getFilteredProfiles: vi.fn().mockImplementation((_f: unknown, p: unknown[]) => p),
+            loadProfilesForPubkeys: vi.fn().mockResolvedValue([]),
+            getProfile: vi.fn().mockReturnValue(undefined),
           },
         },
         {
@@ -54,7 +54,7 @@ describe('PeopleComponent', () => {
           useValue: {
             pubkey: signal(''),
             followingList: signal<string[]>(['pubkey1']),
-            follow: jasmine.createSpy('follow').and.resolveTo(),
+            follow: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -70,12 +70,12 @@ describe('PeopleComponent', () => {
         {
           provide: AccountLocalStateService,
           useValue: {
-            getPeopleViewMode: jasmine.createSpy('getPeopleViewMode').and.returnValue(undefined),
-            setPeopleViewMode: jasmine.createSpy('setPeopleViewMode'),
-            getPeopleFilters: jasmine.createSpy('getPeopleFilters').and.returnValue(undefined),
-            setPeopleFilters: jasmine.createSpy('setPeopleFilters'),
-            getPeopleSortOption: jasmine.createSpy('getPeopleSortOption').and.returnValue(undefined),
-            setPeopleSortOption: jasmine.createSpy('setPeopleSortOption'),
+            getPeopleViewMode: vi.fn().mockReturnValue(undefined),
+            setPeopleViewMode: vi.fn(),
+            getPeopleFilters: vi.fn().mockReturnValue(undefined),
+            setPeopleFilters: vi.fn(),
+            getPeopleSortOption: vi.fn().mockReturnValue(undefined),
+            setPeopleSortOption: vi.fn(),
           },
         },
         {
@@ -85,28 +85,28 @@ describe('PeopleComponent', () => {
         {
           provide: MatDialog,
           useValue: {
-            open: jasmine.createSpy('open'),
+            open: vi.fn(),
           },
         },
         {
           provide: Followset,
           useValue: {
-            fetchStarterPacks: jasmine.createSpy('fetchStarterPacks').and.resolveTo([]),
-            convertStarterPacksToInterests: jasmine.createSpy('convertStarterPacksToInterests').and.returnValue([]),
+            fetchStarterPacks: vi.fn().mockResolvedValue([]),
+            convertStarterPacksToInterests: vi.fn().mockReturnValue([]),
             starterPacks: signal([]),
-            convertStarterPacksToProfiles: jasmine.createSpy('convertStarterPacksToProfiles').and.resolveTo([]),
+            convertStarterPacksToProfiles: vi.fn().mockResolvedValue([]),
           },
         },
         {
           provide: NotificationService,
           useValue: {
-            notify: jasmine.createSpy('notify'),
+            notify: vi.fn(),
           },
         },
         {
           provide: FeedsCollectionService,
           useValue: {
-            refreshFollowingFeeds: jasmine.createSpy('refreshFollowingFeeds').and.resolveTo(),
+            refreshFollowingFeeds: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -114,14 +114,14 @@ describe('PeopleComponent', () => {
           useValue: {
             followSets: signal([]),
             hasInitiallyLoaded: signal(false),
-            getFollowSetByDTag: jasmine.createSpy('getFollowSetByDTag').and.returnValue(undefined),
-            createFollowSet: jasmine.createSpy('createFollowSet').and.resolveTo(null),
+            getFollowSetByDTag: vi.fn().mockReturnValue(undefined),
+            createFollowSet: vi.fn().mockResolvedValue(null),
           },
         },
         {
           provide: ProfileHoverCardService,
           useValue: {
-            closeHoverCard: jasmine.createSpy('closeHoverCard'),
+            closeHoverCard: vi.fn(),
           },
         },
         {
@@ -131,23 +131,23 @@ describe('PeopleComponent', () => {
         {
           provide: TwoColumnLayoutService,
           useValue: {
-            setWideLeft: jasmine.createSpy('setWideLeft'),
-            openProfile: jasmine.createSpy('openProfile'),
+            setWideLeft: vi.fn(),
+            openProfile: vi.fn(),
           },
         },
         {
           provide: TrustService,
           useValue: {
-            fetchMetricsBatch: jasmine.createSpy('fetchMetricsBatch').and.resolveTo(),
+            fetchMetricsBatch: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
           provide: LoggerService,
           useValue: {
-            info: jasmine.createSpy('info'),
-            warn: jasmine.createSpy('warn'),
-            error: jasmine.createSpy('error'),
-            debug: jasmine.createSpy('debug'),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
           },
         },
       ],
@@ -171,10 +171,10 @@ describe('PeopleComponent', () => {
       await fixture.whenStable();
       const container = getPeopleContainer();
       expect(container).toBeTruthy();
-      expect(container!.classList.contains('medium-grid')).toBeTrue();
-      expect(container!.classList.contains('comfortable-list')).toBeFalse();
-      expect(container!.classList.contains('small-grid')).toBeFalse();
-      expect(container!.classList.contains('details-list')).toBeFalse();
+      expect(container!.classList.contains('medium-grid')).toBe(true);
+      expect(container!.classList.contains('comfortable-list')).toBe(false);
+      expect(container!.classList.contains('small-grid')).toBe(false);
+      expect(container!.classList.contains('details-list')).toBe(false);
     });
 
     it('should apply comfortable-list class when viewMode is comfortable', async () => {
@@ -183,8 +183,8 @@ describe('PeopleComponent', () => {
       await fixture.whenStable();
       const container = getPeopleContainer();
       expect(container).toBeTruthy();
-      expect(container!.classList.contains('comfortable-list')).toBeTrue();
-      expect(container!.classList.contains('medium-grid')).toBeFalse();
+      expect(container!.classList.contains('comfortable-list')).toBe(true);
+      expect(container!.classList.contains('medium-grid')).toBe(false);
     });
 
     it('should apply small-grid class when viewMode is small', async () => {
@@ -193,8 +193,8 @@ describe('PeopleComponent', () => {
       await fixture.whenStable();
       const container = getPeopleContainer();
       expect(container).toBeTruthy();
-      expect(container!.classList.contains('small-grid')).toBeTrue();
-      expect(container!.classList.contains('medium-grid')).toBeFalse();
+      expect(container!.classList.contains('small-grid')).toBe(true);
+      expect(container!.classList.contains('medium-grid')).toBe(false);
     });
 
     it('should apply details-list class when viewMode is details', async () => {
@@ -203,8 +203,8 @@ describe('PeopleComponent', () => {
       await fixture.whenStable();
       const container = getPeopleContainer();
       expect(container).toBeTruthy();
-      expect(container!.classList.contains('details-list')).toBeTrue();
-      expect(container!.classList.contains('medium-grid')).toBeFalse();
+      expect(container!.classList.contains('details-list')).toBe(true);
+      expect(container!.classList.contains('medium-grid')).toBe(false);
     });
 
     it('should switch classes when viewMode changes', async () => {
@@ -212,14 +212,14 @@ describe('PeopleComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
       let container = getPeopleContainer();
-      expect(container!.classList.contains('comfortable-list')).toBeTrue();
+      expect(container!.classList.contains('comfortable-list')).toBe(true);
 
       component.changeViewMode('details');
       fixture.detectChanges();
       await fixture.whenStable();
       container = getPeopleContainer();
-      expect(container!.classList.contains('details-list')).toBeTrue();
-      expect(container!.classList.contains('comfortable-list')).toBeFalse();
+      expect(container!.classList.contains('details-list')).toBe(true);
+      expect(container!.classList.contains('comfortable-list')).toBe(false);
     });
   });
 });

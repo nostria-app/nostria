@@ -5,23 +5,39 @@ import { RouteDataService } from '../../services/route-data.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { signal } from '@angular/core';
+import type { HomeDestination } from '../../services/local-settings.service';
 
 describe('NavigationComponent', () => {
   let component: NavigationComponent;
   let fixture: ComponentFixture<NavigationComponent>;
-  let mockRouter: jasmine.SpyObj<Router>;
-  let mockRouteDataService: jasmine.SpyObj<RouteDataService>;
-  let mockLocalSettings: jasmine.SpyObj<LocalSettingsService>;
-  let mockPanelNav: jasmine.SpyObj<PanelNavigationService>;
+  let mockRouter: Pick<Router, 'navigate' | 'url'>;
+  let mockRouteDataService: Pick<RouteDataService, 'clearHistory' | 'canGoBack' | 'goBack' | 'currentRouteData' | 'goToHistoryItem'>;
+  let mockLocalSettings: Pick<LocalSettingsService, 'homeDestination' | 'firstMenuItemPath'>;
+  let mockPanelNav: Pick<PanelNavigationService, 'closeRight' | 'clearLeftStack'>;
+
+  const homeDestinationSignal = signal<HomeDestination>('first-menu-item');
+  const firstMenuItemPathSignal = signal('summary');
 
   beforeEach(async () => {
-    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
-    mockRouteDataService = jasmine.createSpyObj('RouteDataService', ['clearHistory', 'canGoBack', 'goBack']);
-    mockLocalSettings = jasmine.createSpyObj('LocalSettingsService', [], {
-      homeDestination: signal('first-menu-item'),
-      firstMenuItemPath: signal('summary'),
-    });
-    mockPanelNav = jasmine.createSpyObj('PanelNavigationService', ['closeRight', 'clearLeftStack']);
+    mockRouter = {
+      navigate: vi.fn().mockName("Router.navigate"),
+      url: '/'
+    } as unknown as Pick<Router, 'navigate' | 'url'>;
+    mockRouteDataService = {
+      clearHistory: vi.fn().mockName("RouteDataService.clearHistory"),
+      canGoBack: signal(false),
+      goBack: vi.fn().mockName("RouteDataService.goBack"),
+      currentRouteData: signal({}),
+      goToHistoryItem: vi.fn().mockName('RouteDataService.goToHistoryItem')
+    } as unknown as Pick<RouteDataService, 'clearHistory' | 'canGoBack' | 'goBack' | 'currentRouteData' | 'goToHistoryItem'>;
+    mockLocalSettings = {
+      homeDestination: homeDestinationSignal,
+      firstMenuItemPath: firstMenuItemPathSignal
+    } as unknown as Pick<LocalSettingsService, 'homeDestination' | 'firstMenuItemPath'>;
+    mockPanelNav = {
+      closeRight: vi.fn().mockName("PanelNavigationService.closeRight"),
+      clearLeftStack: vi.fn().mockName("PanelNavigationService.clearLeftStack")
+    } as unknown as Pick<PanelNavigationService, 'closeRight' | 'clearLeftStack'>;
 
     await TestBed.configureTestingModule({
       imports: [NavigationComponent],
@@ -45,8 +61,8 @@ describe('NavigationComponent', () => {
   describe('navigateToHome', () => {
     it('should navigate to absolute path when firstMenuItemPath returns relative path', () => {
       // Setup: Mock firstMenuItemPath to return 'summary' (relative path)
-      (mockLocalSettings as any).firstMenuItemPath = signal('summary');
-      (mockLocalSettings as any).homeDestination = signal('first-menu-item');
+      firstMenuItemPathSignal.set('summary');
+      homeDestinationSignal.set('first-menu-item');
 
       // Execute
       component.navigateToHome();
@@ -60,7 +76,7 @@ describe('NavigationComponent', () => {
 
     it('should close right panel and clear left stack before navigating', () => {
       // Setup
-      (mockLocalSettings as any).homeDestination = signal('feeds');
+      homeDestinationSignal.set('feeds');
 
       // Execute
       component.navigateToHome();
@@ -72,8 +88,8 @@ describe('NavigationComponent', () => {
 
     it('should navigate to absolute path when firstMenuItemPath returns path with slash', () => {
       // Setup: Mock firstMenuItemPath to return '/f' (already absolute)
-      (mockLocalSettings as any).firstMenuItemPath = signal('/f');
-      (mockLocalSettings as any).homeDestination = signal('first-menu-item');
+      firstMenuItemPathSignal.set('/f');
+      homeDestinationSignal.set('first-menu-item');
 
       // Execute
       component.navigateToHome();
@@ -84,7 +100,7 @@ describe('NavigationComponent', () => {
 
     it('should navigate to feeds when homeDestination is feeds', () => {
       // Setup
-      (mockLocalSettings as any).homeDestination = signal('feeds');
+      homeDestinationSignal.set('feeds');
 
       // Execute
       component.navigateToHome();
@@ -95,7 +111,7 @@ describe('NavigationComponent', () => {
 
     it('should navigate to home when homeDestination is home', () => {
       // Setup
-      (mockLocalSettings as any).homeDestination = signal('home');
+      homeDestinationSignal.set('home');
 
       // Execute
       component.navigateToHome();
@@ -106,8 +122,8 @@ describe('NavigationComponent', () => {
 
     it('should convert articles to absolute path', () => {
       // Setup: Mock firstMenuItemPath to return 'articles'
-      (mockLocalSettings as any).firstMenuItemPath = signal('articles');
-      (mockLocalSettings as any).homeDestination = signal('first-menu-item');
+      firstMenuItemPathSignal.set('articles');
+      homeDestinationSignal.set('first-menu-item');
 
       // Execute
       component.navigateToHome();
@@ -118,8 +134,8 @@ describe('NavigationComponent', () => {
 
     it('should convert messages to absolute path', () => {
       // Setup: Mock firstMenuItemPath to return 'messages'
-      (mockLocalSettings as any).firstMenuItemPath = signal('messages');
-      (mockLocalSettings as any).homeDestination = signal('first-menu-item');
+      firstMenuItemPathSignal.set('messages');
+      homeDestinationSignal.set('first-menu-item');
 
       // Execute
       component.navigateToHome();

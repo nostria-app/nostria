@@ -78,10 +78,10 @@ describe('ReactionSummaryComponent', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     const tabs = el.querySelectorAll('.summary-tab');
-    expect(tabs.length).toBe(5);
+    expect(tabs.length).toBe(4);
 
     const labels = Array.from(tabs).map(t => t.querySelector('.tab-label')?.textContent?.trim());
-    expect(labels).toEqual(['Reactions', 'Comments', 'Reposts', 'Quotes', 'Zaps']);
+    expect(labels).toEqual(['Reactions', 'Reposts', 'Quotes', 'Zaps']);
   });
 
   it('should have the first tab (reactions) selected by default', async () => {
@@ -98,7 +98,6 @@ describe('ReactionSummaryComponent', () => {
   it('should show correct counts for each tab', async () => {
     const reactions = [makeReactionRecord('r1', 'p1'), makeReactionRecord('r2', 'p2')];
     fixture.componentRef.setInput('reactions', reactions);
-    fixture.componentRef.setInput('replyCount', 3);
     fixture.componentRef.setInput('repostCount', 1);
     fixture.componentRef.setInput('quoteCount', 2);
     fixture.componentRef.setInput('zapCount', 4);
@@ -108,7 +107,7 @@ describe('ReactionSummaryComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     const tabs = el.querySelectorAll('.summary-tab');
     const counts = Array.from(tabs).map(t => t.querySelector('.tab-count')?.textContent?.trim());
-    expect(counts).toEqual(['2', '3', '1', '2', '4']);
+    expect(counts).toEqual(['2', '1', '2', '4']);
   });
 
   it('should switch tabs when clicked', async () => {
@@ -118,13 +117,13 @@ describe('ReactionSummaryComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     const tabs = el.querySelectorAll('.summary-tab');
 
-    // Click "Comments" tab (index 1)
+    // Click "Reposts" tab (index 1)
     (tabs[1] as HTMLElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.selectedTab()).toBe('comments');
-    expect(tabs[1].classList.contains('active')).toBeTrue();
+    expect(component.selectedTab()).toBe('reposts');
+    expect(tabs[1].classList.contains('active')).toBe(true);
   });
 
   it('should show empty state when no reactions', async () => {
@@ -151,37 +150,28 @@ describe('ReactionSummaryComponent', () => {
     expect(items.length).toBe(2);
   });
 
-  it('should show empty state for comments tab when no comments', async () => {
-    fixture.componentRef.setInput('replyCount', 0);
-    component.selectedTab.set('comments');
+  it('should show empty state for quotes tab when no quotes', async () => {
+    fixture.componentRef.setInput('quotes', []);
+    component.selectedTab.set('quotes');
     fixture.detectChanges();
     await fixture.whenStable();
 
     const el: HTMLElement = fixture.nativeElement;
     const emptyState = el.querySelector('.empty-state');
-    expect(emptyState?.textContent?.trim()).toBe('No comments yet');
+    expect(emptyState?.textContent?.trim()).toBe('No quotes yet');
   });
 
-  it('should show comment count for comments tab', async () => {
-    fixture.componentRef.setInput('replyCount', 5);
-    component.selectedTab.set('comments');
+  it('should show quote list for quotes tab', async () => {
+    const quotes = [makeRepostRecord('q1', 'p1'), makeRepostRecord('q2', 'p2')];
+    fixture.componentRef.setInput('quotes', quotes);
+    fixture.componentRef.setInput('quoteCount', 2);
+    component.selectedTab.set('quotes');
     fixture.detectChanges();
     await fixture.whenStable();
 
     const el: HTMLElement = fixture.nativeElement;
-    const emptyState = el.querySelector('.empty-state');
-    expect(emptyState?.textContent?.trim()).toBe('5 comments');
-  });
-
-  it('should show singular form for 1 comment', async () => {
-    fixture.componentRef.setInput('replyCount', 1);
-    component.selectedTab.set('comments');
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const el: HTMLElement = fixture.nativeElement;
-    const emptyState = el.querySelector('.empty-state');
-    expect(emptyState?.textContent?.trim()).toBe('1 comment');
+    const items = el.querySelectorAll('.list-item');
+    expect(items.length).toBe(2);
   });
 
   it('should show repost list when reposts tab is selected', async () => {
@@ -258,7 +248,7 @@ describe('ReactionSummaryComponent', () => {
     await fixture.whenStable();
 
     const mouseEvent = new MouseEvent('click', { bubbles: true });
-    spyOn(mouseEvent, 'stopPropagation');
+    vi.spyOn(mouseEvent, 'stopPropagation');
 
     component.onTabClick('zaps', mouseEvent);
     expect(mouseEvent.stopPropagation).toHaveBeenCalled();
@@ -346,7 +336,7 @@ describe('ReactionSummaryComponent', () => {
 
     // The active class applies border-bottom-color via CSS
     // We verify the class is present which triggers the style
-    expect(activeTab.classList.contains('active')).toBeTrue();
+    expect(activeTab.classList.contains('active')).toBe(true);
   });
 
   it('should switch underline when different tab is clicked', async () => {
@@ -357,15 +347,15 @@ describe('ReactionSummaryComponent', () => {
     const tabs = el.querySelectorAll('.summary-tab');
 
     // Initially reactions is active
-    expect(tabs[0].classList.contains('active')).toBeTrue();
-    expect(tabs[2].classList.contains('active')).toBeFalse();
+    expect(tabs[0].classList.contains('active')).toBe(true);
+    expect(tabs[2].classList.contains('active')).toBe(false);
 
     // Click reposts tab
     (tabs[2] as HTMLElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(tabs[0].classList.contains('active')).toBeFalse();
-    expect(tabs[2].classList.contains('active')).toBeTrue();
+    expect(tabs[0].classList.contains('active')).toBe(false);
+    expect(tabs[2].classList.contains('active')).toBe(true);
   });
 });

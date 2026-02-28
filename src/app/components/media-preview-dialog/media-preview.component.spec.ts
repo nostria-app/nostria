@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -6,10 +7,12 @@ import { MediaPreviewDialogComponent } from './media-preview.component';
 describe('MediaPreviewDialogComponent', () => {
   let component: MediaPreviewDialogComponent;
   let fixture: ComponentFixture<MediaPreviewDialogComponent>;
-  let mockDialogRef: jasmine.SpyObj<MatDialogRef<MediaPreviewDialogComponent>>;
+  let mockDialogRef: MockedObject<MatDialogRef<MediaPreviewDialogComponent>>;
 
   function createComponent(data: Record<string, unknown> = {}) {
-    mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['close']);
+    mockDialogRef = {
+      close: vi.fn().mockName("MatDialogRef.close")
+    } as unknown as MockedObject<MatDialogRef<MediaPreviewDialogComponent>>;
 
     TestBed.configureTestingModule({
       imports: [MediaPreviewDialogComponent],
@@ -35,7 +38,7 @@ describe('MediaPreviewDialogComponent', () => {
   });
 
   it('should push a history state when opened', () => {
-    const pushStateSpy = spyOn(window.history, 'pushState');
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
 
     createComponent({ mediaUrl: 'https://example.com/image.jpg', mediaType: 'image' });
 
@@ -44,7 +47,7 @@ describe('MediaPreviewDialogComponent', () => {
 
   it('should close on popstate (mobile back gesture)', () => {
     createComponent({ mediaUrl: 'https://example.com/image.jpg', mediaType: 'image' });
-    mockDialogRef.close.calls.reset();
+    mockDialogRef.close.mockClear();
 
     window.dispatchEvent(new PopStateEvent('popstate'));
 

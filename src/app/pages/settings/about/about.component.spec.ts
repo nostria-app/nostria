@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { Location } from '@angular/common';
@@ -12,14 +13,17 @@ import { LayoutService } from '../../../services/layout.service';
 describe('AboutComponent', () => {
   let component: AboutComponent;
   let fixture: ComponentFixture<AboutComponent>;
-  let mockRightPanel: jasmine.SpyObj<RightPanelService>;
-  let mockLocation: jasmine.SpyObj<Location>;
+  let mockRightPanel: MockedObject<RightPanelService>;
+  let mockLocation: MockedObject<Location>;
 
   beforeEach(async () => {
-    mockRightPanel = jasmine.createSpyObj('RightPanelService', ['goBack'], {
-      hasContent: signal(false),
-    });
-    mockLocation = jasmine.createSpyObj('Location', ['back']);
+    mockRightPanel = {
+      goBack: vi.fn().mockName("RightPanelService.goBack"),
+      hasContent: signal(false)
+    } as unknown as MockedObject<RightPanelService>;
+    mockLocation = {
+      back: vi.fn().mockName("Location.back")
+    } as unknown as MockedObject<Location>;
 
     const mockApp = {
       isBrowser: signal(false),

@@ -29,8 +29,8 @@ describe('Media player components OnPush change detection', () => {
     it(`${name} should use ChangeDetectionStrategy.OnPush`, () => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const cmp = (component as any).ɵcmp;
-      expect(cmp).toBeTruthy(`${name} should have a compiled component definition`);
-      expect(cmp.onPush).toBe(true, `${name} should have OnPush change detection`);
+      expect(cmp).toBeTruthy();
+      expect(cmp.onPush).toBe(true);
       /* eslint-enable @typescript-eslint/no-explicit-any */
     });
   }

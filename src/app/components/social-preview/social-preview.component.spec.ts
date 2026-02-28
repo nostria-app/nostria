@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { SocialPreviewComponent } from './social-preview.component';
@@ -6,11 +7,13 @@ import { OpenGraphService } from '../../services/opengraph.service';
 describe('SocialPreviewComponent', () => {
   let component: SocialPreviewComponent;
   let fixture: ComponentFixture<SocialPreviewComponent>;
-  let mockOpenGraphService: jasmine.SpyObj<OpenGraphService>;
+  let mockOpenGraphService: MockedObject<OpenGraphService>;
 
   beforeEach(async () => {
-    mockOpenGraphService = jasmine.createSpyObj('OpenGraphService', ['getOpenGraphData']);
-    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+    mockOpenGraphService = {
+      getOpenGraphData: vi.fn().mockName("OpenGraphService.getOpenGraphData")
+    } as unknown as MockedObject<OpenGraphService>;
+    mockOpenGraphService.getOpenGraphData.mockResolvedValue({
       url: 'https://example.com',
       title: 'Example Title',
       description: 'Example description text',
@@ -36,13 +39,13 @@ describe('SocialPreviewComponent', () => {
   });
 
   it('should default compact to false', () => {
-    expect(component.compact()).toBeFalse();
+    expect(component.compact()).toBe(false);
   });
 
   it('should accept compact input', () => {
     fixture.componentRef.setInput('compact', true);
     fixture.detectChanges();
-    expect(component.compact()).toBeTrue();
+    expect(component.compact()).toBe(true);
   });
 
   it('should load preview when url is set', async () => {
@@ -64,7 +67,7 @@ describe('SocialPreviewComponent', () => {
 
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('mat-card');
-    expect(card.classList.contains('compact-preview')).toBeTrue();
+    expect(card.classList.contains('compact-preview')).toBe(true);
   });
 
   it('should not apply compact-preview class when compact is false and preview has title and image', async () => {
@@ -75,7 +78,7 @@ describe('SocialPreviewComponent', () => {
 
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('mat-card');
-    expect(card.classList.contains('compact-preview')).toBeFalse();
+    expect(card.classList.contains('compact-preview')).toBe(false);
   });
 
   it('should hide description in compact mode', async () => {
@@ -138,7 +141,7 @@ describe('SocialPreviewComponent', () => {
   it('should hide description loading placeholder in compact mode', async () => {
     // Set up a pending promise to keep loading state
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
+    mockOpenGraphService.getOpenGraphData.mockReturnValue(new Promise(() => { }));
 
     fixture.componentRef.setInput('compact', true);
     fixture.componentRef.setInput('url', 'https://example.com/slow');
@@ -153,7 +156,7 @@ describe('SocialPreviewComponent', () => {
   it('should show description loading placeholder in full mode', async () => {
     // Set up a pending promise to keep loading state
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOpenGraphService.getOpenGraphData.and.returnValue(new Promise(() => {}));
+    mockOpenGraphService.getOpenGraphData.mockReturnValue(new Promise(() => { }));
 
     fixture.componentRef.setInput('compact', false);
     fixture.componentRef.setInput('url', 'https://example.com/slow');
@@ -166,7 +169,7 @@ describe('SocialPreviewComponent', () => {
   });
 
   it('should apply compact-preview class when no title and no image (auto-compact)', async () => {
-    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+    mockOpenGraphService.getOpenGraphData.mockResolvedValue({
       url: 'https://example.com',
       title: '',
       description: '',
@@ -182,18 +185,18 @@ describe('SocialPreviewComponent', () => {
 
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('mat-card');
-    expect(card.classList.contains('compact-preview')).toBeTrue();
+    expect(card.classList.contains('compact-preview')).toBe(true);
   });
 
   it('should handle error state', async () => {
-    mockOpenGraphService.getOpenGraphData.and.rejectWith(new Error('Network error'));
+    mockOpenGraphService.getOpenGraphData.mockRejectedValue(new Error('Network error'));
 
     fixture.componentRef.setInput('url', 'https://example.com/error');
     fixture.detectChanges();
     await fixture.whenStable();
 
     fixture.detectChanges();
-    expect(component.preview().error).toBeTrue();
+    expect(component.preview().error).toBe(true);
   });
 
   it('should default url to empty string', () => {
@@ -212,8 +215,8 @@ describe('SocialPreviewComponent', () => {
     await fixture.whenStable();
 
     expect(component.preview().url).toBe('');
-    expect(component.preview().loading).toBeFalse();
-    expect(component.preview().error).toBeFalse();
+    expect(component.preview().loading).toBe(false);
+    expect(component.preview().error).toBe(false);
   });
 
   it('should reload preview when url changes', async () => {
@@ -223,7 +226,7 @@ describe('SocialPreviewComponent', () => {
 
     expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledWith('https://example.com');
 
-    mockOpenGraphService.getOpenGraphData.and.resolveTo({
+    mockOpenGraphService.getOpenGraphData.mockResolvedValue({
       url: 'https://other.com',
       title: 'Other Title',
       description: 'Other description',
