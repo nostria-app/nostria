@@ -1786,7 +1786,7 @@ export class NostrService implements NostriaService {
       // Get the secret
       const secret = searchParams.get('secret');
 
-      if (!pubkey || !secret || relays.length === 0) {
+      if (!pubkey || relays.length === 0) {
         throw new Error('Invalid Nostr Connect URL: missing required components');
       }
 
@@ -1861,6 +1861,17 @@ export class NostrService implements NostriaService {
 
         const remotePublicKey = await Promise.race([bunker.getPublicKey(), errorPromise]) as string;
 
+        const relaySwitchResult = await Promise.race([
+          bunker.sendRequest('switch_relays', []),
+          errorPromise,
+        ]) as string;
+        const switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+        const bunkerRelays = switchedRelays?.length ? switchedRelays : bunkerParsed!.relays;
+        const bunkerPointer: BunkerPointer = {
+          ...bunkerParsed!,
+          relays: bunkerRelays,
+        };
+
         this.logger.info('Using remote signer account');
         // jack
         const newUser: NostrUser = {
@@ -1868,7 +1879,7 @@ export class NostrService implements NostriaService {
           pubkey: remotePublicKey,
           name: 'Remote Signer',
           source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
-          bunker: bunkerParsed!,
+          bunker: bunkerPointer,
           lastUsed: Date.now(),
           hasActivated: true,
         };
@@ -1876,6 +1887,8 @@ export class NostrService implements NostriaService {
         await this.setAccount(newUser);
         this.logger.debug('Remote signer account set successfully', {
           pubkey: remotePublicKey,
+          remoteSignerPubkey: bunkerParsed!.pubkey,
+          relayCount: bunkerRelays.length,
         });
 
         this.logger.info('Nostr Connect login successful', { pubkey });
@@ -1893,6 +1906,25 @@ export class NostrService implements NostriaService {
       this.logger.error('Login with Nostr Connect failed:', error);
       throw error;
     }
+  }
+
+  private parseNip46SwitchRelays(result: string): string[] | null {
+    const trimmed = result.trim();
+
+    if (!trimmed || trimmed === 'null') {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.every(relay => typeof relay === 'string')) {
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
   }
 
   /**

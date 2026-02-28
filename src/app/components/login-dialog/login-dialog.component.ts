@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { BunkerPointer } from 'nostr-tools/nip46';
+import { BunkerPointer, BunkerSigner } from 'nostr-tools/nip46';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -773,7 +773,19 @@ export class LoginDialogComponent implements OnDestroy {
 
               // Create the account with bunker configuration, passing the client key
               const clientKeyHex = this.remoteSignerClientKey ? bytesToHex(this.remoteSignerClientKey) : undefined;
-              await this.createRemoteSignerAccount(remoteSignerPubkey, relays, expectedSecret, clientKeyHex);
+              const resolvedConnection = await this.resolveRemoteSignerConnection(
+                remoteSignerPubkey,
+                relays,
+                expectedSecret
+              );
+
+              await this.createRemoteSignerAccount(
+                resolvedConnection.userPubkey,
+                remoteSignerPubkey,
+                resolvedConnection.relays,
+                expectedSecret,
+                clientKeyHex
+              );
 
               this.cleanupNostrConnectConnection();
             } else if (response.error) {
@@ -798,7 +810,67 @@ export class LoginDialogComponent implements OnDestroy {
     }, 120000);
   }
 
-  private async createRemoteSignerAccount(remoteSignerPubkey: string, relays: string[], secret: string, clientKeyHex?: string): Promise<void> {
+  private async resolveRemoteSignerConnection(
+    remoteSignerPubkey: string,
+    relays: string[],
+    secret: string
+  ): Promise<{ userPubkey: string; relays: string[] }> {
+    if (!this.remoteSignerClientKey) {
+      throw new Error('Remote signer client key is missing');
+    }
+
+    const pool = new SimplePool({ enablePing: true, enableReconnect: true });
+    const signer = BunkerSigner.fromBunker(
+      this.remoteSignerClientKey,
+      {
+        pubkey: remoteSignerPubkey,
+        relays,
+        secret,
+      },
+      { pool }
+    );
+
+    try {
+      await signer.connect();
+      const userPubkey = await signer.getPublicKey();
+      const relaySwitchResult = await signer.sendRequest('switch_relays', []);
+      const switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+
+      return {
+        userPubkey,
+        relays: switchedRelays?.length ? switchedRelays : relays,
+      };
+    } finally {
+      await signer.close();
+      pool.close([]);
+    }
+  }
+
+  private parseNip46SwitchRelays(result: string): string[] | null {
+    const trimmed = result.trim();
+    if (!trimmed || trimmed === 'null') {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.every(relay => typeof relay === 'string')) {
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private async createRemoteSignerAccount(
+    userPubkey: string,
+    remoteSignerPubkey: string,
+    relays: string[],
+    secret: string,
+    clientKeyHex?: string
+  ): Promise<void> {
     try {
       // Create bunker pointer
       const bunker: BunkerPointer = {
@@ -809,7 +881,7 @@ export class LoginDialogComponent implements OnDestroy {
 
       // Create new user account with remote signing
       const newUser: NostrUser = {
-        pubkey: remoteSignerPubkey,
+        pubkey: userPubkey,
         name: 'Remote Signer',
         source: 'remote',
         lastUsed: Date.now(),
@@ -823,7 +895,7 @@ export class LoginDialogComponent implements OnDestroy {
       this.logger.info('Remote signer account created successfully');
 
       // Check if the user has relay configuration
-      const hasRelays = await this.nostrService.hasRelayConfiguration(remoteSignerPubkey);
+      const hasRelays = await this.nostrService.hasRelayConfiguration(userPubkey);
 
       if (!hasRelays) {
         this.logger.info('No relay configuration found, showing setup dialog');
