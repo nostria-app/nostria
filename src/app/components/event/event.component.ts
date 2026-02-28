@@ -335,6 +335,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Computed to check if event author is muted/blocked
   // CRITICAL: Filter out muted content from rendering
   // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
+  isLocallyDeleted = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) {
+      return false;
+    }
+
+    return this.eventService.isEventLocallyDeleted(currentEvent.id);
+  });
+
   isAuthorMuted = computed<boolean>(() => {
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return false;

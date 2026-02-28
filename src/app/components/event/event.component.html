@@ -9,6 +9,8 @@
   <mat-spinner diameter="32"></mat-spinner>
   <p class="loading-text">Loading event...</p>
 </div>
+} @else if (isLocallyDeleted()) {
+<!-- Don't render events that were deleted locally after successful deletion publish -->
 } @else if (isAuthorMuted()) {
 <!-- Don't render events from muted/blocked accounts at all -->
 } @else if (isRepostEvent() && isRepostedContentFiltered()) {
