@@ -277,6 +277,7 @@ export class
     // 3. Handle other special formats
     if (trimmedResult.startsWith('bunker://') ||
       trimmedResult.startsWith('nostr+walletconnect://') ||
+      trimmedResult.startsWith('web+nostr+walletconnect://') ||
       trimmedResult.startsWith('nostr+')) {
       this.logger.debug('Found special protocol:', trimmedResult);
       return trimmedResult;

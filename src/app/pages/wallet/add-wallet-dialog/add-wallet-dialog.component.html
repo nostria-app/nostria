@@ -12,7 +12,7 @@
     <mat-error i18n="@@wallet.error.required">Connection string is required</mat-error>
     }
     @if (connectionStringControl.hasError('pattern')) {
-    <mat-error i18n="@@wallet.error.pattern">Invalid connection string format. Must start with nostr+walletconnect://</mat-error>
+    <mat-error i18n="@@wallet.error.pattern">Invalid connection string format. Must start with nostr+walletconnect:// or web+nostr+walletconnect://</mat-error>
     }
   </mat-form-field>
 

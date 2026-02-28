@@ -1332,12 +1332,15 @@ export class App implements OnInit, OnDestroy {
             return;
           }
 
-          if (result.startsWith('nostr+walletconnect://')) {
+          if (result.startsWith('nostr+walletconnect://') || result.startsWith('web+nostr+walletconnect://')) {
             // Handle WalletConnect URL
             try {
-              const parsed = this.wallets.parseConnectionString(result);
+              const walletConnectUri = result.startsWith('web+')
+                ? result.substring(4)
+                : result;
+              const parsed = this.wallets.parseConnectionString(walletConnectUri);
 
-              this.wallets.addWallet(parsed.pubkey, result, {
+              this.wallets.addWallet(parsed.pubkey, walletConnectUri, {
                 relay: parsed.relay,
                 secret: parsed.secret,
               });
