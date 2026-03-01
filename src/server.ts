@@ -71,11 +71,48 @@ interface CachedResponse {
   timestamp: number;
 }
 
+interface PreviewCacheabilityAnalysis {
+  isCacheable: boolean;
+  reason:
+    | 'ok'
+    | 'no_social_tags'
+    | 'generic_title'
+    | 'generic_route_fallback'
+    | 'generic_home'
+    | 'low_quality_marker';
+  ogTitle: string;
+  ogDescription: string;
+  twitterTitle: string;
+  twitterDescription: string;
+}
+
 function setNoStoreHeaders(res: express.Response): void {
   res.setHeader('Cache-Control', 'no-store, no-cache, max-age=0, s-maxage=0, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
+}
+
+function toHeaderSafe(value: string, maxLen = 180): string {
+  return value.replace(/[\r\n]+/g, ' ').trim().slice(0, maxLen);
+}
+
+function setPreviewDebugHeaders(
+  res: express.Response,
+  analysis: PreviewCacheabilityAnalysis,
+  renderMs: number,
+): void {
+  res.setHeader('X-SSR-Preview-Quality', analysis.isCacheable ? 'healthy' : 'degraded');
+  res.setHeader('X-SSR-Preview-Reason', analysis.reason);
+  res.setHeader('X-SSR-Render-Ms', renderMs.toString());
+
+  if (analysis.ogTitle) {
+    res.setHeader('X-SSR-OG-Title', toHeaderSafe(analysis.ogTitle));
+  }
+
+  if (analysis.twitterTitle) {
+    res.setHeader('X-SSR-TW-Title', toHeaderSafe(analysis.twitterTitle));
+  }
 }
 
 function extractMetaContent(html: string, tag: string): string {
@@ -198,7 +235,7 @@ function applyRouteFallbackPreviewHtml(html: string, path: string): string {
   return result;
 }
 
-function isCacheableSsrPreviewHtml(html: string): boolean {
+function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
   const ogTitle = extractMetaContent(html, 'og:title').trim();
   const ogDescription = extractMetaContent(html, 'og:description').trim();
   const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
@@ -206,7 +243,14 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
 
   const hasSocialTags = !!(ogTitle || ogDescription || twitterTitle || twitterDescription);
   if (!hasSocialTags) {
-    return false;
+    return {
+      isCacheable: false,
+      reason: 'no_social_tags',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
   }
 
   const lowQualityMarkers = [
@@ -257,7 +301,59 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
     genericHomeTitles.includes(ogTitle.toLowerCase()) ||
     genericHomeTitles.includes(twitterTitle.toLowerCase()) ||
     genericHomeDescriptionMarkers.some(marker => combined.includes(marker));
-  return !genericTitle && !genericHomePreview && !genericRouteFallbackPreview && !lowQualityMarkers.some(marker => combined.includes(marker));
+
+  if (genericTitle) {
+    return {
+      isCacheable: false,
+      reason: 'generic_title',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (genericRouteFallbackPreview) {
+    return {
+      isCacheable: false,
+      reason: 'generic_route_fallback',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (genericHomePreview) {
+    return {
+      isCacheable: false,
+      reason: 'generic_home',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (lowQualityMarkers.some(marker => combined.includes(marker))) {
+    return {
+      isCacheable: false,
+      reason: 'low_quality_marker',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  return {
+    isCacheable: true,
+    reason: 'ok',
+    ogTitle,
+    ogDescription,
+    twitterTitle,
+    twitterDescription,
+  };
 }
 
 // Cache for SSR responses (keyed by URL path)
@@ -498,6 +594,7 @@ app.use(
  * For bot requests, responses are cached to improve performance.
  */
 app.use(async (req, res, next) => {
+  const requestStartedAt = Date.now();
   const userAgent = req.headers['user-agent'];
   const isBotRequest = isBot(userAgent);
   const path = req.path;
@@ -508,6 +605,8 @@ app.use(async (req, res, next) => {
     res.setHeader('Vary', 'User-Agent');
     const cached = ssrCache.get(path);
     if (cached && (Date.now() - cached.timestamp) < SSR_CACHE_MAX_AGE_MS) {
+      const cachedAnalysis = analyzeSsrPreviewHtml(cached.html);
+      setPreviewDebugHeaders(res, cachedAnalysis, Date.now() - requestStartedAt);
       // Set cached headers
       for (const [key, value] of Object.entries(cached.headers)) {
         res.setHeader(key, value);
@@ -537,7 +636,8 @@ app.use(async (req, res, next) => {
           headersToCache[key] = value;
         });
 
-        const isCacheableHtml = isCacheableSsrPreviewHtml(html);
+        const analysis = analyzeSsrPreviewHtml(html);
+        const isCacheableHtml = analysis.isCacheable;
         const finalHtml = isCacheableHtml ? html : applyRouteFallbackPreviewHtml(html, path);
         if (isCacheableHtml) {
           // Cache healthy SSR response for bots
@@ -559,6 +659,7 @@ app.use(async (req, res, next) => {
           setNoStoreHeaders(res);
           res.setHeader('X-SSR-Retryable', 'true');
         }
+        setPreviewDebugHeaders(res, analysis, Date.now() - requestStartedAt);
         res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED_FALLBACK');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
@@ -590,6 +691,9 @@ app.use(async (req, res, next) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       setNoStoreHeaders(res);
       res.setHeader('Vary', 'User-Agent');
+      res.setHeader('X-SSR-Preview-Quality', 'degraded');
+      res.setHeader('X-SSR-Preview-Reason', 'error_fallback');
+      res.setHeader('X-SSR-Render-Ms', (Date.now() - requestStartedAt).toString());
       res.setHeader('X-SSR-Cache', 'SKIP_ERROR_FALLBACK');
       res.setHeader('X-SSR-Retryable', 'true');
 
