@@ -12,6 +12,38 @@ import multer from 'multer';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
+
+const SSR_ALLOWED_HOST_PATTERNS = [
+  'nostria.app',
+  'www.nostria.app',
+  'beta.nostria.app',
+  'nostria-beta.azurewebsites.net',
+  '*.azurewebsites.net',
+  '*.nostria.app',
+  'localhost',
+  '127.0.0.1',
+];
+
+const deploymentHosts = [
+  process.env['WEBSITE_HOSTNAME'],
+  process.env['HOSTNAME'],
+]
+  .map(host => host?.trim().toLowerCase())
+  .filter((host): host is string => !!host);
+
+const envAllowedHosts = (process.env['NG_ALLOWED_HOSTS'] ?? '')
+  .split(',')
+  .map(host => host.trim().toLowerCase())
+  .filter(Boolean);
+
+const angularAllowedHosts = Array.from(new Set([
+  ...SSR_ALLOWED_HOST_PATTERNS,
+  ...deploymentHosts,
+  ...envAllowedHosts,
+]));
+
+process.env['NG_ALLOWED_HOSTS'] = angularAllowedHosts.join(',');
+
 const angularApp = new AngularNodeAppEngine();
 
 // ============================================
@@ -61,13 +93,9 @@ function isBot(userAgent: string | undefined): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
-const SSR_TRUSTED_HOSTS = new Set([
-  'nostria.app',
-  'www.nostria.app',
-  'beta.nostria.app',
-  'localhost',
-  '127.0.0.1',
-]);
+const SSR_TRUSTED_HOSTS = new Set(
+  angularAllowedHosts.filter(host => !host.includes('*')),
+);
 
 function extractHostnamesFromHeader(value: string | undefined): string[] {
   if (!value) {
@@ -806,6 +834,7 @@ if (isMainModule(import.meta.url)) {
     }
 
     console.log(`Node Express server listening on http://localhost:${port}`);
+    console.log(`[SSR] NG_ALLOWED_HOSTS=${process.env['NG_ALLOWED_HOSTS']}`);
   });
 }
 

@@ -83,6 +83,16 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": [
+              "nostria.app",
+              "www.nostria.app",
+              "beta.nostria.app",
+              "*.nostria.app",
+              "localhost",
+              "127.0.0.1"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "app:build:production"
