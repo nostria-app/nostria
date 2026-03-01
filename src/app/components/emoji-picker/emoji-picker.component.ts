@@ -193,7 +193,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-picker {
       width: 100%;
-      max-width: 460px;
+      max-width: 360px;
       min-width: 0;
       max-height: 350px;
       display: flex;
@@ -298,7 +298,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     }
 
     :host-context(.emoji-picker-dialog) .emoji-grid {
-      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
     :host-context(.emoji-picker-dialog) .emoji-btn {
@@ -328,11 +328,25 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 2px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
+    }
+
+    @media (max-width: 420px) {
+      .emoji-grid,
+      :host-context(.emoji-picker-dialog) .emoji-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 360px) {
+      .emoji-grid,
+      :host-context(.emoji-picker-dialog) .emoji-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
 
     .emoji-btn {

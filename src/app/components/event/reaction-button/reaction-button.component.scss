@@ -128,9 +128,9 @@
 // Reaction picker inside mat-menu
 ::ng-deep .mat-mdc-menu-panel.reaction-picker-menu {
   overflow: hidden;
-  width: min(460px, calc(100vw - 24px));
-  min-width: min(460px, calc(100vw - 24px));
-  max-width: min(460px, calc(100vw - 24px));
+  width: min(360px, calc(100vw - 24px));
+  min-width: min(360px, calc(100vw - 24px));
+  max-width: min(360px, calc(100vw - 24px));
   max-height: 400px;
 
   .mat-mdc-menu-content {
@@ -144,7 +144,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 460px;
+  max-width: 360px;
   min-width: 0;
   max-height: 400px;
   overflow: hidden;
@@ -351,11 +351,23 @@
 // Grid layout for emojis
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
   padding: 4px 0;
   width: 100%;
   min-width: 0;
+}
+
+@media (max-width: 420px) {
+  .emoji-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .emoji-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 // Emoji sets container with tabs
