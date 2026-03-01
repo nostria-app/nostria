@@ -179,7 +179,13 @@ function setNoStoreHeaders(res: express.Response): void {
 }
 
 function toHeaderSafe(value: string, maxLen = 180): string {
-  return value.replace(/[\r\n]+/g, ' ').trim().slice(0, maxLen);
+  return value
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+    .replace(/[^\u0020-\u007E]/g, '?')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
 }
 
 function setPreviewDebugHeaders(
