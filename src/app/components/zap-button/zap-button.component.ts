@@ -179,6 +179,7 @@ export class ZapButtonComponent {
   recipientPubkey = input<string | null>(null);
   recipientName = input<string | null>(null);
   recipientMetadata = input<Record<string, unknown> | null>(null);
+  comment = input<string>('');
 
   // Outputs
   zapSent = output<number>();
@@ -375,12 +376,16 @@ export class ZapButtonComponent {
         return;
       }
 
-      // Check for zap splits
       const currentEvent = this.event();
+      const message = this.comment().trim();
+      const eventKind = currentEvent?.kind;
+      const eventAddress = this.getEventAddress(currentEvent);
+
+      // Check for zap splits
       if (currentEvent) {
         const zapSplits = this.zapService.parseZapSplits(currentEvent);
         if (zapSplits.length > 0) {
-          await this.zapService.sendSplitZap(currentEvent, amount, '');
+          await this.zapService.sendSplitZap(currentEvent, amount, message);
           this.snackBar.open(
             `⚡ Zapped ${amount} sats split to ${zapSplits.length} recipients!`,
             'Dismiss',
@@ -392,7 +397,17 @@ export class ZapButtonComponent {
       }
 
       // Send regular zap
-      await this.zapService.sendZap(pubkey, amount, '', this.event()?.id, metadata);
+      await this.zapService.sendZap(
+        pubkey,
+        amount,
+        message,
+        currentEvent?.id,
+        metadata,
+        undefined,
+        undefined,
+        eventKind,
+        eventAddress
+      );
 
       const recipientName = this.recipientName() ||
         (typeof metadata?.['name'] === 'string' ? metadata['name'] : undefined) ||
@@ -476,8 +491,11 @@ export class ZapButtonComponent {
         (typeof metadata?.['display_name'] === 'string' ? metadata['display_name'] : undefined) ||
         undefined,
       recipientMetadata: metadata,
-      eventId: this.event()?.id,
-      eventContent: this.event()?.content ? this.truncateContent(this.event()!.content) : undefined,
+      eventId: currentEvent?.id,
+      eventKind: currentEvent?.kind,
+      eventAddress: this.getEventAddress(currentEvent),
+      eventContent: currentEvent?.content ? this.truncateContent(currentEvent.content) : undefined,
+      initialMessage: this.comment().trim() || undefined,
     };
 
     const dialogRef = this.dialog.open(ZapDialogComponent, {
@@ -502,6 +520,7 @@ export class ZapButtonComponent {
       recipientPubkey: event.pubkey,
       eventId: event.id,
       eventContent: event.content ? this.truncateContent(event.content) : undefined,
+      initialMessage: this.comment().trim() || undefined,
       zapSplits: splits,
       event: event,
     };
@@ -518,6 +537,23 @@ export class ZapButtonComponent {
         this.onZapSent(result.amount);
       }
     });
+  }
+
+  private getEventAddress(event: NostrEvent | null): string | undefined {
+    if (!event) {
+      return undefined;
+    }
+
+    if (event.kind < 30000 || event.kind >= 40000) {
+      return undefined;
+    }
+
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+    if (!dTag) {
+      return undefined;
+    }
+
+    return `${event.kind}:${event.pubkey}:${dTag}`;
   }
 
   private truncateContent(content: string): string {

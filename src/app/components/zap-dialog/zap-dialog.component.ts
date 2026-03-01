@@ -30,6 +30,7 @@ export interface ZapDialogData {
   eventId?: string;
   eventKind?: number; // Added eventKind
   eventAddress?: string; // Added eventAddress for addressable events (a tag)
+  initialMessage?: string;
   eventContent?: string;
   goalEventId?: string; // For NIP-75 zap goals
   zapSplits?: { pubkey: string; relay: string; weight: number }[];
@@ -81,7 +82,7 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
     ReactiveFormsModule,
     UserProfileComponent,
     QrCodeComponent
-],
+  ],
   templateUrl: './zap-dialog.component.html',
   styleUrls: ['./zap-dialog.component.scss'],
 })
@@ -184,6 +185,12 @@ export class ZapDialogComponent {
   });
 
   constructor() {
+    const initialMessage = this.data.initialMessage?.trim();
+    if (initialMessage) {
+      this.zapForm.get('message')?.setValue(initialMessage);
+      this.forceComment.set(true);
+    }
+
     // Watch for amount changes to enable/disable custom amount
     this.zapForm.get('amount')?.valueChanges.pipe(
       takeUntilDestroyed(this.destroyRef)
