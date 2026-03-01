@@ -1898,6 +1898,89 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
   }
 
+  /**
+   * Open the reference picker dialog to insert nostr: references (profiles, events, articles)
+   */
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleReferencePickerDialogComponent.prototype,
+      ArticleReferencePickerResult
+    >(ArticleReferencePickerDialogComponent, {
+      title: 'Insert Reference',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const references = result?.references ?? [];
+      if (references.length > 0) {
+        this.insertReferences(references);
+      }
+    });
+  }
+
+  /**
+   * Insert nostr: reference strings at the current cursor position in the textarea
+   */
+  private insertReferences(references: string[]): void {
+    const uniqueReferences = Array.from(new Set(references.filter(ref => !!ref?.trim())));
+    if (uniqueReferences.length === 0) {
+      return;
+    }
+
+    const insertionText = uniqueReferences.join('\n');
+    const textarea = this.contentTextarea?.nativeElement;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentContent = this.content();
+
+      // Add spacing around the insertion if needed
+      const before = currentContent.substring(0, start);
+      const after = currentContent.substring(end);
+      const needsLeadingSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+      const needsTrailingSpace = after.length > 0 && !after.startsWith('\n') && !after.startsWith(' ');
+
+      const textToInsert = (needsLeadingSpace ? ' ' : '') + insertionText + (needsTrailingSpace ? ' ' : '');
+      const newContent = before + textToInsert + after;
+
+      this.content.set(newContent);
+      textarea.value = newContent;
+
+      // Position cursor after the inserted text
+      setTimeout(() => {
+        const newPos = start + textToInsert.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+        this.autoResizeTextarea(textarea);
+      });
+    } else {
+      // Fallback: append to end
+      const currentContent = this.content();
+      const separator = !currentContent.trim()
+        ? ''
+        : currentContent.endsWith('\n')
+          ? '\n'
+          : '\n\n';
+      this.content.set(`${currentContent}${separator}${insertionText}`);
+    }
+
+    this.snackBar.open(
+      uniqueReferences.length === 1 ? 'Reference inserted' : `${uniqueReferences.length} references inserted`,
+      'Close',
+      { duration: 2500 },
+    );
+  }
+
   // Mention input handling methods
   onContentInput(event: Event): void {
     const target = event.target as HTMLTextAreaElement;

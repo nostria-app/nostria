@@ -61,6 +61,57 @@ function isBot(userAgent: string | undefined): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
+const SSR_TRUSTED_HOSTS = new Set([
+  'nostria.app',
+  'www.nostria.app',
+  'beta.nostria.app',
+  'localhost',
+  '127.0.0.1',
+]);
+
+function extractHostnamesFromHeader(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map(host => host.trim())
+    .filter(Boolean)
+    .map((host) => {
+      const withoutPort = host.includes(':') ? host.split(':')[0] : host;
+      return withoutPort.toLowerCase();
+    });
+}
+
+function normalizeAbsoluteRequestUrl(req: express.Request): { normalized: boolean; hostname?: string } {
+  const requestUrl = req.url;
+
+  if (!/^https?:\/\//i.test(requestUrl)) {
+    return { normalized: false };
+  }
+
+  try {
+    const parsed = new URL(requestUrl);
+    const hostname = parsed.hostname.toLowerCase();
+
+    const dynamicAllowedHosts = new Set<string>([
+      ...extractHostnamesFromHeader(req.headers.host),
+      ...extractHostnamesFromHeader(req.headers['x-forwarded-host'] as string | undefined),
+    ]);
+
+    const isTrustedHost = SSR_TRUSTED_HOSTS.has(hostname) || dynamicAllowedHosts.has(hostname);
+    if (!isTrustedHost) {
+      return { normalized: false, hostname };
+    }
+
+    req.url = `${parsed.pathname}${parsed.search}`;
+    return { normalized: true, hostname };
+  } catch {
+    return { normalized: false };
+  }
+}
+
 // ============================================
 // SSR Response Cache for Bot Requests
 // ============================================
@@ -595,6 +646,11 @@ app.use(
  */
 app.use(async (req, res, next) => {
   const requestStartedAt = Date.now();
+  const normalizedRequestUrl = normalizeAbsoluteRequestUrl(req);
+  if (normalizedRequestUrl.normalized) {
+    res.setHeader('X-SSR-URL-Normalized', 'true');
+  }
+
   const userAgent = req.headers['user-agent'];
   const isBotRequest = isBot(userAgent);
   const path = req.path;
