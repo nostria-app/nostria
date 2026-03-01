@@ -124,6 +124,9 @@ export class UtilitiesService {
     'kmc-nostr.amiunderwater.com',
     'nostr.drss.io',
     'galaxy13.nostr1.com',
+    'jp-relay-nostr.invr.chat',
+    'relay.moinsen.com',
+    'nostr-relay.philipcristiano.com',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;

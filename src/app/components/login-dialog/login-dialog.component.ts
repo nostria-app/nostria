@@ -111,6 +111,7 @@ export class LoginDialogComponent implements OnDestroy {
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
+  private nostrConnectSubscription: { close: (reason?: string) => void } | null = null;
   private isFinalizingRemoteSigner = false;
   private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -122,6 +123,51 @@ export class LoginDialogComponent implements OnDestroy {
     eu: ['wss://ribo.eu.nostria.app'],
     us: ['wss://ribo.us.nostria.app'],
   };
+
+  // Future-proof signer permissions:
+  // - include generic sign_event to allow new kinds without redeploying
+  // - include explicit frequently used kinds for signers that display granular consent
+  private readonly nostrConnectSignEventPerms: string[] = [
+    'sign_event',
+    'sign_event:0',
+    'sign_event:1',
+    'sign_event:3',
+    'sign_event:4',
+    'sign_event:5',
+    'sign_event:6',
+    'sign_event:7',
+    'sign_event:13',
+    'sign_event:16',
+    'sign_event:62',
+    'sign_event:1018',
+    'sign_event:1068',
+    'sign_event:1984',
+    'sign_event:9734',
+    'sign_event:9735',
+    'sign_event:10000',
+    'sign_event:10001',
+    'sign_event:10002',
+    'sign_event:10050',
+    'sign_event:10086',
+    'sign_event:24242',
+    'sign_event:27235',
+    'sign_event:30002',
+    'sign_event:30003',
+    'sign_event:30008',
+    'sign_event:30023',
+    'sign_event:30078',
+    'sign_event:32100',
+    'sign_event:32123',
+    'sign_event:34235',
+    'sign_event:34236',
+  ];
+
+  private readonly nostrConnectEncryptionPerms: string[] = [
+    'nip04_encrypt',
+    'nip04_decrypt',
+    'nip44_encrypt',
+    'nip44_decrypt',
+  ];
 
   // Input fields
   nsecKey = '';
@@ -162,6 +208,15 @@ export class LoginDialogComponent implements OnDestroy {
   }
 
   private cleanupNostrConnectConnection(): void {
+    if (this.nostrConnectSubscription) {
+      try {
+        this.nostrConnectSubscription.close('cleanup');
+      } catch {
+        void 0;
+      }
+      this.nostrConnectSubscription = null;
+    }
+
     if (this.remoteSignerPool) {
       // Make teardown idempotent across multiple cleanup call paths.
       const pool = this.remoteSignerPool;
@@ -181,6 +236,12 @@ export class LoginDialogComponent implements OnDestroy {
     this.remoteSignerClientKey = null;
     this.isWaitingForRemoteSigner.set(false);
     this.nostrConnectQrUrl.set('');
+  }
+
+  private scheduleNostrConnectCleanup(): void {
+    setTimeout(() => {
+      this.cleanupNostrConnectConnection();
+    }, 0);
   }
 
   onWindowFocusExternalSigner = async () => {
@@ -670,11 +731,14 @@ export class LoginDialogComponent implements OnDestroy {
       params.append('secret', secret);
       params.append('name', 'Nostria');
       params.append('url', 'https://nostria.app');
-      // Request required NIP-46 login/finalization permissions plus common signing/encryption methods
-      params.append(
-        'perms',
-        'get_public_key,switch_relays,ping,sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:10086,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt'
-      );
+      const perms = [
+        'get_public_key',
+        'switch_relays',
+        'ping',
+        ...this.nostrConnectSignEventPerms,
+        ...this.nostrConnectEncryptionPerms,
+      ];
+      params.append('perms', perms.join(','));
 
       const nostrconnectUrl = `nostrconnect://${clientPubkey}?${params.toString()}`;
       this.nostrConnectQrUrl.set(nostrconnectUrl);
@@ -770,7 +834,7 @@ export class LoginDialogComponent implements OnDestroy {
     // response when Amber approves quickly and the event's created_at falls just before
     // the cutoff (e.g. if the relay or Amber has slight clock skew).
     // Subscribe to kind 24133 responses addressed to our client pubkey
-    this.remoteSignerPool.subscribeMany(
+    this.nostrConnectSubscription = this.remoteSignerPool.subscribeMany(
       relays,
       {
         kinds: [24133],
@@ -842,7 +906,7 @@ export class LoginDialogComponent implements OnDestroy {
                   clientKeyHex
                 );
 
-                this.cleanupNostrConnectConnection();
+                this.scheduleNostrConnectCleanup();
               } catch (connectionError) {
                 this.logger.error('Failed to finalize remote signer connection after approval', connectionError);
                 this.isFinalizingRemoteSigner = false;
