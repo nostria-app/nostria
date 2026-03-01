@@ -460,6 +460,26 @@
       }
     }
   }
+
+  :host-context(.profile-page) {
+    .action-button {
+      min-height: 0;
+
+      ::ng-deep {
+
+        app-reaction-button,
+        app-reply-button,
+        app-zap-button,
+        .zap-button-container,
+        .reaction-container,
+        button[mat-icon-button],
+        .mat-mdc-icon-button {
+          width: 22px;
+          height: 22px;
+        }
+      }
+    }
+  }
 }
 
 .like-action {
