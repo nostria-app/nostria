@@ -100,10 +100,21 @@ export class UtilitiesService {
     'thewildhustle.nostr1.com',
     'relay.nostr.vet',
     'nostr.v6.army',
-    'relay-jp.nostr.wirednet.jp',
     'haven.vanderwarker.family',
     'jellyfish.land',
     'relay.otherstuff.fyi',
+    'mhp258zrpiiwn.clorecloud.net',
+    'shawn.nostr1.com',
+    'relay.neuance.net',
+    'relay.poster.place',
+    'teemie1-relay.duckdns.org',
+    'nostr.bitcoin-21.org',
+    'nostr.okaits7534.net',
+    'nostr.easify.de',
+    'br.purplerelay.com',
+    'lightning.red',
+    'haven.slidestr.net',
+    'atl.purplerelay.com',
     
   ]);
 
