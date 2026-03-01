@@ -126,16 +126,16 @@
 }
 
 // Reaction picker inside mat-menu
-::ng-deep .reaction-picker-menu {
+::ng-deep .mat-mdc-menu-panel.reaction-picker-menu {
+  overflow: hidden;
+  width: min(460px, calc(100vw - 24px));
+  min-width: min(460px, calc(100vw - 24px));
+  max-width: min(460px, calc(100vw - 24px));
+  max-height: 400px;
+
   .mat-mdc-menu-content {
     padding: 0;
     overflow: hidden;
-  }
-
-  .mat-mdc-menu-panel {
-    overflow: hidden;
-    max-width: 320px;
-    max-height: 400px;
   }
 }
 
@@ -144,7 +144,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 296px;
+  max-width: 460px;
   min-width: 0;
   max-height: 400px;
   overflow: hidden;
@@ -351,7 +351,7 @@
 // Grid layout for emojis
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: 4px;
   padding: 4px 0;
   width: 100%;

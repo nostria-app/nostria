@@ -193,7 +193,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-picker {
       width: 100%;
-      max-width: 320px;
+      max-width: 460px;
       min-width: 0;
       max-height: 350px;
       display: flex;
@@ -328,7 +328,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
       gap: 2px;
       width: 100%;
       max-width: 100%;
