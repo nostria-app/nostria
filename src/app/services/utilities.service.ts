@@ -127,6 +127,11 @@ export class UtilitiesService {
     'jp-relay-nostr.invr.chat',
     'relay.moinsen.com',
     'nostr-relay.philipcristiano.com',
+    'nostr.cercatrova.me',
+    'nostr1676319567170.app.runonflux.io',
+    'nostr.cercatrova.me',
+    'nostr.com.de',
+    'shu02.shugur.net',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
