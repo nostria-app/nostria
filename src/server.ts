@@ -668,8 +668,7 @@ app.use(
  */
 app.use(async (req, res, next) => {
   const requestStartedAt = Date.now();
-  const normalizedRequestUrl = normalizeAbsoluteRequestUrl(req);
-  void normalizedRequestUrl;
+  normalizeAbsoluteRequestUrl(req);
 
   const userAgent = req.headers['user-agent'];
   const isBotRequest = isBot(userAgent);
@@ -725,7 +724,6 @@ app.use(async (req, res, next) => {
         } else {
           // Ensure degraded responses don't poison cache for retries
           ssrCache.delete(path);
-          console.warn(`[SSR Cache] Skipping cache for degraded preview on ${path}`);
         }
 
         // Set Cache-Control headers for bots
@@ -826,7 +824,6 @@ if (isMainModule(import.meta.url)) {
     }
 
     console.log(`Node Express server listening on http://localhost:${port}`);
-    console.log(`[SSR] NG_ALLOWED_HOSTS=${process.env['NG_ALLOWED_HOSTS']}`);
   });
 }
 
