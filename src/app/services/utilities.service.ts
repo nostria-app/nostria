@@ -7,6 +7,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
 import { encode } from 'blurhash';
+import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
 
 /**
  * Represents a relay entry with its read/write markers per NIP-65.
@@ -24,6 +25,7 @@ export interface RelayEntry {
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
+  private readonly ignoredRelayAudit = inject(IgnoredRelayAuditService);
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
     'relay.nostr.band',
@@ -544,22 +546,62 @@ export class UtilitiesService {
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
 
+    this.trackIgnoredRelayUsage(event.pubkey, relayUrls);
+
     return relayUrls.filter(url => !this.isIgnoredRelayDomain(url));
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event): string[] {
-    const relayUrls = event.tags
+    const relayUrlsRaw = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         const url = tag[1];
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
       })
-      .filter(url => url.trim() !== '')
-      .filter(url => !this.isIgnoredRelayDomain(url));
+      .filter(url => url.trim() !== '');
+
+    this.trackIgnoredRelayUsage(event.pubkey, relayUrlsRaw);
+
+    const relayUrls = relayUrlsRaw.filter(url => !this.isIgnoredRelayDomain(url));
 
     return relayUrls;
+  }
+
+  private trackIgnoredRelayUsage(pubkey: string, relayUrls: string[]): void {
+    if (!pubkey || relayUrls.length === 0) {
+      return;
+    }
+
+    const ignoredDomains = relayUrls
+      .map((url) => this.getIgnoredRelayDomain(url))
+      .filter((domain): domain is string => !!domain);
+
+    if (ignoredDomains.length === 0) {
+      return;
+    }
+
+    this.ignoredRelayAudit.recordIgnoredRelayUsage(pubkey, ignoredDomains, relayUrls);
+  }
+
+  private getIgnoredRelayDomain(url: string): string | null {
+    try {
+      const parsedUrl = new URL(url);
+      const domain = parsedUrl.hostname.toLowerCase();
+
+      if (!this.ignoredRelayDomains.has(domain)) {
+        return null;
+      }
+
+      if (this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
+        return null;
+      }
+
+      return domain;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -573,7 +615,7 @@ export class UtilitiesService {
    * When fetching events ABOUT a user (mentions), prefer READ relays.
    */
   getRelayEntries(event: Event): RelayEntry[] {
-    return event.tags
+    const entries = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         let url = tag[1];
@@ -588,8 +630,11 @@ export class UtilitiesService {
 
         return { url, read: isRead, write: isWrite };
       })
-      .filter(entry => entry.url.trim() !== '')
-      .filter(entry => !this.isIgnoredRelayDomain(entry.url));
+      .filter(entry => entry.url.trim() !== '');
+
+    this.trackIgnoredRelayUsage(event.pubkey, entries.map((entry) => entry.url));
+
+    return entries.filter(entry => !this.isIgnoredRelayDomain(entry.url));
   }
 
   /**
