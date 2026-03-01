@@ -143,7 +143,9 @@
 .emoji-picker-container {
   display: flex;
   flex-direction: column;
-  width: 296px;
+  width: 100%;
+  max-width: 296px;
+  min-width: 0;
   max-height: 400px;
   overflow: hidden;
 }
@@ -214,84 +216,49 @@
   font-size: 0.875rem;
 }
 
-// Emoji category tabs (icon-only tabs)
-.emoji-category-tabs {
+// Vertical emoji section list
+.emoji-list-scroll {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 8px 8px 12px;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: auto;
+  scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
 
-  ::ng-deep {
-    .mat-mdc-tab-header {
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-      min-height: 40px;
-    }
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
 
-    .mat-mdc-tab-labels {
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: none;
+  &::-webkit-scrollbar-track {
+    background: var(--scrollbar-track, transparent);
+  }
 
-      &::-webkit-scrollbar {
-        display: none;
-      }
-    }
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb, var(--mat-sys-outline));
+    border-radius: 4px;
 
-    .mat-mdc-tab {
-      min-width: 36px;
-      padding: 0 4px;
-      flex-shrink: 0;
-      height: 40px;
-      min-height: 40px;
-
-      .mdc-tab__content {
-        padding: 0;
-      }
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .mat-mdc-tab-body-wrapper {
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .mat-mdc-tab-body-content {
-      overflow: hidden;
+    &:hover {
+      background: var(--scrollbar-thumb-hover, var(--mat-sys-on-surface-variant));
     }
   }
 }
 
-// Tab content area
-.emoji-tab-content {
-  padding: 8px 8px 8px 12px;
-  max-height: 240px;
-  overflow-y: auto;
-  overflow-x: hidden;
+.emoji-section-block {
+  margin-bottom: 12px;
 
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 8px;
+  &:last-of-type {
+    margin-bottom: 0;
   }
+}
 
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--mat-sys-outline-variant);
-    border-radius: 4px;
-
-    &:hover {
-      background: var(--mat-sys-outline);
-    }
-  }
+.section-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
 }
 
 // Empty state message for tabs
@@ -384,9 +351,11 @@
 // Grid layout for emojis
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(6, 40px);
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   gap: 4px;
   padding: 4px 0;
+  width: 100%;
+  min-width: 0;
 }
 
 // Emoji sets container with tabs
@@ -445,7 +414,8 @@
 
 // Emoji button styles
 .emoji-button {
-  width: 40px;
+  width: 100%;
+  min-width: 0;
   height: 40px;
   font-size: 1.25rem;
   display: inline-flex;

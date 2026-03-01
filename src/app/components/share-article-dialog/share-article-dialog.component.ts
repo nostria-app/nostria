@@ -182,31 +182,31 @@ export interface ShareArticleDialogData {
           <span class="action-label">Email</span>
         </button>
         <button class="share-action-item" (click)="shareToBluesky()">
-          <span class="action-icon-circle"><mat-icon>cloud</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon" aria-hidden="true">🦋</span></span>
           <span class="action-label">Bluesky</span>
         </button>
         <button class="share-action-item" (click)="shareToTwitter()">
-          <span class="action-icon-circle"><mat-icon>tag</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon" aria-hidden="true">𝕏</span></span>
           <span class="action-label">X (Twitter)</span>
         </button>
         <button class="share-action-item" (click)="shareToReddit()">
-          <span class="action-icon-circle"><mat-icon>forum</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon brand-icon-sm" aria-hidden="true">r/</span></span>
           <span class="action-label">Reddit</span>
         </button>
         <button class="share-action-item" (click)="shareToFacebook()">
-          <span class="action-icon-circle"><mat-icon>facebook</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon" aria-hidden="true">f</span></span>
           <span class="action-label">Facebook</span>
         </button>
         <button class="share-action-item" (click)="shareToLinkedIn()">
-          <span class="action-icon-circle"><mat-icon>work</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon brand-icon-sm" aria-hidden="true">in</span></span>
           <span class="action-label">LinkedIn</span>
         </button>
         <button class="share-action-item" (click)="shareToHackerNews()">
-          <span class="action-icon-circle"><mat-icon>code</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon" aria-hidden="true">Y</span></span>
           <span class="action-label">Hacker News</span>
         </button>
         <button class="share-action-item" (click)="shareToPinterest()">
-          <span class="action-icon-circle"><mat-icon>push_pin</mat-icon></span>
+          <span class="action-icon-circle"><span class="brand-icon" aria-hidden="true">P</span></span>
           <span class="action-label">Pinterest</span>
         </button>
         <button class="share-action-item" (click)="copyEmbed()">
@@ -568,6 +568,16 @@ export interface ShareArticleDialogData {
       font-size: 13px;
       line-height: 1.2;
       color: var(--mat-sys-on-surface);
+    }
+
+    .brand-icon {
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand-icon-sm {
+      font-size: 18px;
     }
 
     .dialog-actions {

@@ -11,7 +11,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -26,15 +25,16 @@ interface EmojiSetGroup {
 }
 
 const EMOJI_CATEGORIES = [
-  { id: 'smileys', label: 'Smileys', icon: 'sentiment_satisfied', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
-  { id: 'gestures', label: 'Gestures', icon: 'waving_hand', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
-  { id: 'hearts', label: 'Hearts', icon: 'favorite', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '❤️‍🔥', '❤️‍🩹'] },
-  { id: 'animals', label: 'Animals', icon: 'pets', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪲', '🪳', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈'] },
-  { id: 'nature', label: 'Nature', icon: 'eco', emojis: ['🌸', '💮', '🏵️', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🍀', '☘️', '🍃', '🍂', '🍁', '🍄', '🌾', '🌿', '🌍', '🌎', '🌏', '🌙', '☀️', '⭐', '🌟', '🌠', '🌈', '🔥', '💧', '🌊', '✨', '💫'] },
-  { id: 'food', label: 'Food', icon: 'restaurant', emojis: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍒', '🍑', '🥭', '🍍', '🥝', '🍅', '🥑', '🌶️', '🌽', '🍔', '🍟', '🍕', '🌮', '🌯', '🥗', '🍝', '🍜', '🍣', '🍱', '🍩', '🍪', '🎂', '🍰', '🍫', '🍬', '🍭', '🍿', '☕', '🍵', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹'] },
-  { id: 'activities', label: 'Activities', icon: 'sports_soccer', emojis: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🎱', '🏓', '🎯', '🎳', '🎮', '🎰', '🧩', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🎻', '🎲'] },
-  { id: 'objects', label: 'Objects', icon: 'lightbulb', emojis: ['📱', '💻', '⌨️', '🖥️', '📷', '📸', '📹', '📺', '📻', '⏰', '💡', '🔦', '💰', '💳', '💎', '🔧', '🔨', '🔩', '⚙️', '🔫', '💣', '🔪', '🔮', '💊', '💉', '🔑', '🗝️', '🚪', '🛋️', '🛏️', '🧸', '🎁', '🎈', '🎉', '🎊', '✉️', '📦', '📚', '📖', '✏️', '📝', '🔍'] },
-  { id: 'symbols', label: 'Symbols', icon: 'emoji_symbols', emojis: ['❤️', '💔', '💯', '💢', '💬', '💭', '🗯️', '❗', '❓', '‼️', '⁉️', '✅', '❌', '⭕', '🚫', '♻️', '⚡', '🔔', '🔕', '🎵', '🎶', '➕', '➖', '➗', '✖️', '💲', '™️', '©️', '®️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🔘'] },
+  { id: 'smileys', label: 'Smileys', icon: '😀', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😮', '😯', '😲', '😳', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
+  { id: 'gestures', label: 'Gestures', icon: '👍', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
+  { id: 'hearts', label: 'Hearts', icon: '❤️', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '❤️‍🔥', '❤️‍🩹'] },
+  { id: 'animals', label: 'Animals', icon: '🐶', emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🪲', '🪳', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈'] },
+  { id: 'nature', label: 'Nature', icon: '🌿', emojis: ['🌸', '💮', '🏵️', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🍀', '☘️', '🍃', '🍂', '🍁', '🍄', '🌾', '🌿', '🌍', '🌎', '🌏', '🌙', '☀️', '⭐', '🌟', '🌠', '🌈', '🔥', '💧', '🌊', '✨', '💫'] },
+  { id: 'food', label: 'Food', icon: '🍔', emojis: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍒', '🍑', '🥭', '🍍', '🥝', '🍅', '🥑', '🌶️', '🌽', '🍔', '🍟', '🍕', '🌮', '🌯', '🥗', '🍝', '🍜', '🍣', '🍱', '🍩', '🍪', '🎂', '🍰', '🍫', '🍬', '🍭', '🍿', '☕', '🍵', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹'] },
+  { id: 'activities', label: 'Activities', icon: '⚽', emojis: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🎱', '🏓', '🎯', '🎳', '🎮', '🎰', '🧩', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🎻', '🎲'] },
+  { id: 'travel', label: 'Travel', icon: '🚀', emojis: ['🚗', '🚕', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚚', '🚜', '🏍️', '🚲', '✈️', '🛫', '🛬', '🚁', '🚂', '🚆', '🚇', '🚝', '🚢', '⛵', '🚤', '🛥️', '🛳️', '🚀', '🛰️'] },
+  { id: 'objects', label: 'Objects', icon: '💡', emojis: ['📱', '💻', '⌨️', '🖥️', '📷', '📸', '📹', '📺', '📻', '⏰', '💡', '🔦', '💰', '💳', '💎', '🔧', '🔨', '🔩', '⚙️', '🔫', '💣', '🔪', '🔮', '💊', '💉', '🔑', '🗝️', '🚪', '🛋️', '🛏️', '🧸', '🎁', '🎈', '🎉', '🎊', '✉️', '📦', '📚', '📖', '✏️', '📝', '🔍'] },
+  { id: 'symbols', label: 'Symbols', icon: '🔣', emojis: ['❤️', '💔', '💯', '💢', '💬', '💭', '🗯️', '❗', '❓', '‼️', '⁉️', '✅', '❌', '⭕', '🚫', '♻️', '⚡', '🔔', '🔕', '🎵', '🎶', '➕', '➖', '➗', '✖️', '💲', '™️', '©️', '®️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🔘'] },
 ];
 
 const EMOJI_KEYWORDS: Record<string, string[]> = {
@@ -60,6 +60,8 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
   '💬': ['speech', 'chat', 'message', 'talk'], '💭': ['thought', 'thinking'],
   '😷': ['mask', 'sick', 'covid'], '🤮': ['vomit', 'sick'], '🤧': ['sneeze', 'sick'],
   '😵': ['dizzy', 'dead'], '🤠': ['cowboy', 'western'], '🤓': ['nerd', 'geek', 'glasses'],
+  '😮': ['surprised', 'wow', 'open', 'mouth', 'shock'],
+  '🚀': ['rocket', 'launch', 'space'],
 };
 
 @Component({
@@ -68,7 +70,6 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     FormsModule,
     MatIconModule,
     MatButtonModule,
-    MatTabsModule,
     MatTooltipModule,
   ],
   template: `
@@ -108,16 +109,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
         }
       </div>
       } @else {
-      <!-- Category tabs -->
-      <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
-        class="emoji-tabs">
-
-        <!-- Recent tab -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon matTooltip="Recent">schedule</mat-icon>
-          </ng-template>
-          <div class="emoji-grid-container">
+        <div class="emoji-list-scroll">
+          <div class="emoji-section">
+            <div class="section-title">
+              <span class="section-icon">🕘</span>
+              <span>Recent</span>
+            </div>
             @if (recentEmojis().length > 0) {
             <div class="emoji-grid">
               @for (recent of recentEmojis(); track recent.emoji) {
@@ -137,31 +134,13 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
             </div>
             }
           </div>
-        </mat-tab>
 
-        @for (category of categories; track category.id) {
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon [matTooltip]="category.label">{{ category.icon }}</mat-icon>
-          </ng-template>
-          <div class="emoji-grid-container">
-            <div class="emoji-grid">
-              @for (emoji of category.emojis; track emoji) {
-              <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()">
-                {{ emoji }}
-              </button>
-              }
+          @if (emojiSets().length > 0) {
+          <div class="emoji-section">
+            <div class="section-title">
+              <span class="section-icon">🧩</span>
+              <span>Custom Emojis</span>
             </div>
-          </div>
-        </mat-tab>
-        }
-
-        @if (emojiSets().length > 0) {
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon matTooltip="Custom Emojis">add_reaction</mat-icon>
-          </ng-template>
-          <div class="emoji-grid-container">
             @for (set of emojiSets(); track set.id) {
             <div class="emoji-set-section">
               <div class="set-title">{{ set.title }}</div>
@@ -176,9 +155,24 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
             </div>
             }
           </div>
-        </mat-tab>
-        }
-      </mat-tab-group>
+          }
+
+          @for (category of categories; track category.id) {
+          <div class="emoji-section">
+            <div class="section-title">
+              <span class="section-icon">{{ category.icon }}</span>
+              <span>{{ category.label }}</span>
+            </div>
+            <div class="emoji-grid">
+              @for (emoji of category.emojis; track emoji) {
+              <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()">
+                {{ emoji }}
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
       }
     </div>
   `,
@@ -198,11 +192,19 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     }
 
     .emoji-picker {
-      width: 320px;
+      width: 100%;
+      max-width: 320px;
+      min-width: 0;
       max-height: 350px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+
+    .emoji-picker * {
+      box-sizing: border-box;
     }
 
     .emoji-search {
@@ -250,8 +252,49 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-grid-container {
       overflow-y: auto;
+      overflow-x: hidden;
       max-height: 280px;
       padding: 6px;
+      scrollbar-gutter: stable both-edges;
+      scrollbar-width: auto;
+      scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
+    }
+
+    :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+      max-height: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .emoji-list-scroll {
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: 280px;
+      padding: 6px;
+      scrollbar-gutter: stable both-edges;
+      scrollbar-width: auto;
+      scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
+    }
+
+    .emoji-grid-container::-webkit-scrollbar,
+    .emoji-list-scroll::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .emoji-grid-container::-webkit-scrollbar-track,
+    .emoji-list-scroll::-webkit-scrollbar-track {
+      background: var(--scrollbar-track, transparent);
+    }
+
+    .emoji-grid-container::-webkit-scrollbar-thumb,
+    .emoji-list-scroll::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb, var(--mat-sys-outline));
+      border-radius: 5px;
+    }
+
+    .emoji-grid-container::-webkit-scrollbar-thumb:hover,
+    .emoji-list-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover, var(--mat-sys-on-surface-variant));
     }
 
     :host-context(.emoji-picker-dialog) .emoji-grid {
@@ -266,41 +309,6 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       .custom-emoji-img {
         width: 32px;
         height: 32px;
-      }
-    }
-
-    :host-context(.emoji-picker-dialog) .emoji-tabs {
-      display: flex;
-      flex-direction: column;
-
-      ::ng-deep .mat-mdc-tab-header {
-        min-height: 44px;
-      }
-
-      ::ng-deep .mdc-tab {
-        min-width: 40px !important;
-        padding: 0 6px;
-        height: 44px;
-      }
-
-      ::ng-deep .mat-mdc-tab-body-wrapper {
-        flex: 1;
-      }
-
-      ::ng-deep .mat-mdc-tab-body {
-        height: 100%;
-      }
-
-      ::ng-deep .mat-mdc-tab-body-content {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
-
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
       }
     }
 
@@ -320,15 +328,19 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-grid {
       display: grid;
-      grid-template-columns: repeat(8, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
       gap: 2px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .emoji-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
+      width: 100%;
+      min-width: 0;
       height: 36px;
       font-size: 1.25rem;
       border: none;
@@ -349,34 +361,25 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       }
     }
 
-    .emoji-tabs {
-      flex: 1;
-      overflow: hidden;
+    .emoji-section {
+      margin-bottom: 10px;
+      overflow-x: hidden;
+    }
 
-      ::ng-deep .mat-mdc-tab-header {
-        min-height: 36px;
-      }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--mat-sys-on-surface-variant);
+    }
 
-      ::ng-deep .mdc-tab {
-        min-width: 32px !important;
-        padding: 0 4px;
-        height: 36px;
-      }
-
-      ::ng-deep .mdc-tab__content {
-        padding: 0;
-      }
-
-      ::ng-deep .mat-mdc-tab-body-wrapper {
-        flex: 1;
-        overflow: hidden;
-      }
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
+    .section-icon {
+      line-height: 1;
+      font-size: 0.95rem;
     }
 
     .no-results {
@@ -422,7 +425,6 @@ export class EmojiPickerComponent {
 
   readonly categories = EMOJI_CATEGORIES;
   searchQuery = signal('');
-  activeTabIndex = signal(0);
   recentEmojis = signal<RecentEmoji[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
 

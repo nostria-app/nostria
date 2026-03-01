@@ -7,7 +7,6 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
@@ -292,7 +291,6 @@ interface EmojiSetGroup {
     MatTooltipModule,
     MatMenuModule,
     MatProgressSpinnerModule,
-    MatTabsModule,
     RouterLink,
     CustomDialogComponent
   ],
@@ -390,12 +388,11 @@ export class ReactionButtonComponent {
   customEmojis = signal<{ shortcode: string; url: string }[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
   recentEmojis = signal<RecentEmoji[]>([]);
-  activeTabIndex = signal<number>(0);
   emojiSearchQuery = signal<string>('');
   showSigningErrorDialog = signal<boolean>(false);
   signingErrorMessage = signal<string>('');
 
-  // Emoji categories for tabbed display
+  // Emoji categories for sectioned display
   readonly emojiCategories = EMOJI_CATEGORIES;
 
   // Quick reactions for the picker
