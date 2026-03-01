@@ -103,6 +103,8 @@ export class UtilitiesService {
     'relay-jp.nostr.wirednet.jp',
     'haven.vanderwarker.family',
     'jellyfish.land',
+    'relay.otherstuff.fyi',
+    
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
-import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
+import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool, finalizeEvent } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { BunkerPointer, BunkerSigner } from 'nostr-tools/nip46';
 
@@ -115,10 +115,13 @@ export class LoginDialogComponent implements OnDestroy {
   private isFinalizingRemoteSigner = false;
   private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  // Default relays for nostrconnect by region
+  // Default relays for nostrconnect by region.
+  // Include wss://relay.nsec.app first — it is the de-facto NIP-46 relay and is
+  // used by Amber as its primary subscription relay. Without a shared relay
+  // between us and Amber, signing requests are never delivered to Amber.
   private readonly nostrConnectRelays = {
-    eu: ['wss://ribo.eu.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
-    us: ['wss://ribo.us.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
+    eu: ['wss://relay.nsec.app', 'wss://ribo.eu.nostria.app'],
+    us: ['wss://relay.nsec.app', 'wss://ribo.us.nostria.app'],
   };
 
   // Input fields
@@ -161,7 +164,8 @@ export class LoginDialogComponent implements OnDestroy {
 
   private cleanupNostrConnectConnection(): void {
     if (this.remoteSignerPool) {
-      this.remoteSignerPool.close([]);
+      // destroy() closes all relay connections; close([]) with empty array is a no-op
+      this.remoteSignerPool.destroy();
       this.remoteSignerPool = null;
     }
     if (this.nostrConnectListenTimeoutId) {
@@ -742,7 +746,7 @@ export class LoginDialogComponent implements OnDestroy {
 
     // Ensure no stale listener/timer survives from previous QR generations.
     if (this.remoteSignerPool) {
-      this.remoteSignerPool.close([]);
+      this.remoteSignerPool.destroy();
       this.remoteSignerPool = null;
     }
     if (this.nostrConnectListenTimeoutId) {
@@ -752,6 +756,14 @@ export class LoginDialogComponent implements OnDestroy {
 
     this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: false });
 
+    // Capture the client key NOW (synchronously) so that a concurrent QR regeneration
+    // (which replaces this.remoteSignerClientKey) cannot invalidate the key mid-flight.
+    const capturedClientKey = this.remoteSignerClientKey!;
+
+    // No `since` filter here — the unique random secret in every QR provides sufficient
+    // replay protection against old sessions. A `since` filter risks dropping the connect
+    // response when Amber approves quickly and the event's created_at falls just before
+    // the cutoff (e.g. if the relay or Amber has slight clock skew).
     // Subscribe to kind 24133 responses addressed to our client pubkey
     this.remoteSignerPool.subscribeMany(
       relays,
@@ -762,30 +774,38 @@ export class LoginDialogComponent implements OnDestroy {
       {
         onevent: async (event) => {
           try {
-            if (!this.remoteSignerClientKey) return;
+            // Use the key captured at subscription-creation time, not this.remoteSignerClientKey
+            // which may have been replaced by a concurrent QR regeneration.
+            const clientKey = capturedClientKey;
+            if (!clientKey) return;
 
             // Try to decrypt the response
-            let response: { id?: string; result?: string; error?: string };
-
-            // Try NIP-04 decryption first (check for ?iv= pattern)
-            if (event.content.includes('?iv=')) {
-              const decrypted = await nip04.decrypt(
-                bytesToHex(this.remoteSignerClientKey),
-                event.pubkey,
-                event.content
-              );
-              response = JSON.parse(decrypted);
-            } else {
-              // Try NIP-44 decryption
+            // Try NIP-44 first, fallback to NIP-04 (Amber sometimes uses NIP-04)
+            let decrypted: string | null = null;
+            try {
+              const convKey = nip44.getConversationKey(clientKey, event.pubkey);
+              decrypted = nip44.decrypt(event.content, convKey);
+            } catch {
+              // NIP-44 failed; try NIP-04
+            }
+            if (!decrypted && event.content.includes('?iv=')) {
               try {
-                const conversationKey = nip44.getConversationKey(this.remoteSignerClientKey, event.pubkey);
-                const decrypted = nip44.decrypt(event.content, conversationKey);
-                response = JSON.parse(decrypted);
+                decrypted = await nip04.decrypt(bytesToHex(clientKey), event.pubkey, event.content);
               } catch {
-                // Couldn't decrypt, skip this event
-                return;
+                // NIP-04 also failed
               }
             }
+            if (!decrypted) {
+              this.logger.debug('NIP-46 connect listener: could not decrypt event, skipping', { eventId: event.id });
+              return;
+            }
+            const response = JSON.parse(decrypted) as { id?: string; result?: string; error?: string };
+
+            // Log every decrypted response so we can see exactly what Amber sends
+            this.logger.debug('NIP-46 connect listener: decrypted response', {
+              id: response.id, result: response.result, hasError: !!response.error,
+              expectedSecret, resultMatchesSecret: response.result === expectedSecret,
+            });
 
             // Validate the secret
             if (response.result === expectedSecret || response.result === 'ack') {
@@ -800,13 +820,15 @@ export class LoginDialogComponent implements OnDestroy {
 
               this.logger.info('Remote signer connected:', { pubkey: remoteSignerPubkey });
 
-              // Create the account with bunker configuration, passing the client key
-              const clientKeyHex = this.remoteSignerClientKey ? bytesToHex(this.remoteSignerClientKey) : undefined;
+              // Pass the captured key explicitly — do NOT read this.remoteSignerClientKey
+              // here because it may have been replaced by a concurrent QR regeneration.
+              const clientKeyHex = bytesToHex(clientKey);
               try {
                 const resolvedConnection = await this.resolveRemoteSignerConnection(
                   remoteSignerPubkey,
                   relays,
-                  expectedSecret
+                  expectedSecret,
+                  clientKey
                 );
 
                 await this.createRemoteSignerAccount(
@@ -850,7 +872,8 @@ export class LoginDialogComponent implements OnDestroy {
   private async resolveRemoteSignerConnection(
     remoteSignerPubkey: string,
     relays: string[],
-    secret: string
+    secret: string,
+    clientKey: Uint8Array
   ): Promise<{ userPubkey: string; relays: string[] }> {
     const uniqueRelays = Array.from(new Set(relays));
 
@@ -859,40 +882,59 @@ export class LoginDialogComponent implements OnDestroy {
       relays: uniqueRelays,
     });
 
-    if (!this.remoteSignerClientKey) {
-      throw new Error('Remote signer client key is missing');
-    }
-
-    const pool = this.remoteSignerPool ?? new SimplePool({ enablePing: true, enableReconnect: false });
-    const ownsPool = this.remoteSignerPool == null;
-
-    const signer = BunkerSigner.fromBunker(
-      this.remoteSignerClientKey,
-      {
-        pubkey: remoteSignerPubkey,
-        relays: uniqueRelays,
-        secret,
-      },
-      { pool }
-    );
+    // Use a fresh isolated pool — never share with the listen-for-connect pool.
+    const pool = new SimplePool({ enablePing: true, enableReconnect: false });
 
     try {
-      const userPubkey = await this.withTimeout(
-        signer.getPublicKey(),
-        LoginDialogComponent.NIP46_REQUEST_TIMEOUT_MS,
-        'Timed out waiting for get_public_key response from remote signer.'
-      );
-      let switchedRelays: string[] | null = null;
-
+      // ── Step 1: get_public_key ──────────────────────────────────────────────
+      // We implement this ourselves instead of going through BunkerSigner because
+      // nostr-tools' setupSubscription onevent has NO error handling — any decrypt
+      // failure is silently swallowed, causing an invisible 20 s timeout.
+      //
+      // Amber-compatibility note: in the nostrconnect:// flow Amber echoes the
+      // secret to confirm the connection and does NOT respond to a separate
+      // get_public_key request — it uses a single key for both signing and identity.
+      // We therefore try get_public_key with a short timeout and fall back to
+      // using remoteSignerPubkey (the event.pubkey of the connect response) which
+      // IS the user's public key for single-key signers like Amber.
+      let userPubkey: string;
       try {
-        const relaySwitchResult = await this.withTimeout(
-          signer.sendRequest('switch_relays', []),
-          LoginDialogComponent.NIP46_SWITCH_RELAYS_TIMEOUT_MS,
-          'Timed out waiting for switch_relays response from remote signer.'
+        userPubkey = await this.withTimeout(
+          this.rawNip46GetPublicKey(pool, uniqueRelays, clientKey, remoteSignerPubkey),
+          5000,
+          'get_public_key timed out — falling back to remote signer pubkey.'
         );
-        switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+        this.logger.debug('NIP-46 resolveConnection: get_public_key succeeded', { userPubkey });
+      } catch (gpkError) {
+        // Amber (and similar single-key signers) don't respond to get_public_key
+        // after the nostrconnect handshake. Use the signer's own pubkey as the
+        // user pubkey — this is correct for Amber's single-key model.
+        this.logger.warn('NIP-46 resolveConnection: get_public_key timed out, falling back to remoteSignerPubkey (Amber / single-key signer)', {
+          reason: gpkError instanceof Error ? gpkError.message : String(gpkError),
+        });
+        userPubkey = remoteSignerPubkey;
+      }
+
+      // ── Step 2: switch_relays (optional, non-fatal) ─────────────────────────
+      let switchedRelays: string[] | null = null;
+      try {
+        const signer = BunkerSigner.fromBunker(
+          clientKey,
+          { pubkey: remoteSignerPubkey, relays: uniqueRelays, secret },
+          { pool }
+        );
+        try {
+          const relaySwitchResult = await this.withTimeout(
+            signer.sendRequest('switch_relays', []),
+            LoginDialogComponent.NIP46_SWITCH_RELAYS_TIMEOUT_MS,
+            'Timed out waiting for switch_relays response from remote signer.'
+          );
+          switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
+        } finally {
+          try { await signer.close(); } catch { /* ignore */ }
+        }
       } catch (error) {
-        this.logger.warn('NIP-46 switch_relays request failed during setup, continuing with initial relays', error);
+        this.logger.warn('NIP-46 switch_relays failed, continuing with initial relays', error);
       }
 
       return {
@@ -900,17 +942,165 @@ export class LoginDialogComponent implements OnDestroy {
         relays: switchedRelays?.length ? switchedRelays : uniqueRelays,
       };
     } finally {
-      try {
-        await signer.close();
-      } catch (error) {
-        this.logger.debug('NIP-46 finalize signer close failed (ignored)', error);
-      }
-
-      if (ownsPool) {
-        pool.close([]);
-      }
+      pool.destroy();
     }
   }
+
+  /**
+   * Sends a raw NIP-46 get_public_key request and waits for the response.
+   *
+   * Bypasses BunkerSigner to avoid its silent error-swallowing in onevent.
+   * Handles both NIP-44 and NIP-04 (Amber sometimes uses NIP-04).
+   * Also tolerates Amber's ID-mismatch bug: if only one response arrives and
+   * it decrypts to a valid 64-char hex pubkey we use it regardless of ID.
+   */
+  private rawNip46GetPublicKey(
+    pool: SimplePool,
+    relays: string[],
+    clientKey: Uint8Array,
+    remoteSignerPubkey: string,
+  ): Promise<string> {
+    const clientPubkey = getPublicKey(clientKey);
+    const requestId = Math.random().toString(36).substring(2, 10);
+
+    let resolved = false;
+    let subCloser: { close: (reason?: string) => void } | null = null;
+
+    const finish = (resolve: (v: string) => void, pubkey: string) => {
+      if (resolved) return;
+      resolved = true;
+      subCloser?.close('done');
+      resolve(pubkey);
+    };
+
+    const fail = (reject: (e: unknown) => void, err: unknown) => {
+      if (resolved) return;
+      resolved = true;
+      subCloser?.close('error');
+      reject(err);
+    };
+
+    return new Promise<string>((resolve, reject) => {
+      // Subscribe BEFORE publishing so we don't miss an instant Amber response.
+      // Use a since filter 30 s in the past so stale responses from prior sessions
+      // are not replayed while still catching responses to our request.
+      const listenSince = Math.floor(Date.now() / 1000) - 30;
+
+      this.logger.debug('NIP-46 get_public_key: subscribing', { requestId, relays, listenSince });
+
+      try {
+        subCloser = pool.subscribeMany(
+          relays,
+          {
+            kinds: [24133],
+            authors: [remoteSignerPubkey],
+            '#p': [clientPubkey],
+            since: listenSince,
+          },
+          {
+            onevent: (event) => {
+              // Must not be async at top level — wrap in void IIFE
+              void (async () => {
+                this.logger.debug('NIP-46 get_public_key: event received', { eventId: event.id, created_at: event.created_at });
+
+                try {
+                  // ── Try NIP-44 decryption ────────────────────────────────
+                  let decryptedJson: string | null = null;
+
+                  try {
+                    const convKey = nip44.getConversationKey(clientKey, event.pubkey);
+                    decryptedJson = nip44.decrypt(event.content, convKey);
+                    this.logger.debug('NIP-46 get_public_key: NIP-44 decryption succeeded', { eventId: event.id });
+                  } catch (nip44Err) {
+                    this.logger.debug('NIP-46 get_public_key: NIP-44 failed, trying NIP-04', { err: String(nip44Err) });
+                  }
+
+                  // ── Fallback: NIP-04 (Amber bug) ────────────────────────
+                  if (!decryptedJson) {
+                    try {
+                      decryptedJson = await nip04.decrypt(bytesToHex(clientKey), event.pubkey, event.content);
+                      this.logger.debug('NIP-46 get_public_key: NIP-04 decryption succeeded', { eventId: event.id });
+                    } catch (nip04Err) {
+                      this.logger.debug('NIP-46 get_public_key: NIP-04 also failed', { err: String(nip04Err) });
+                    }
+                  }
+
+                  if (!decryptedJson) {
+                    this.logger.warn('NIP-46 get_public_key: could not decrypt event, skipping', { eventId: event.id });
+                    return;
+                  }
+
+                  const payload = JSON.parse(decryptedJson) as { id?: string; method?: string; result?: string; error?: string };
+                  this.logger.debug('NIP-46 get_public_key: response payload', { id: payload.id, hasResult: !!payload.result, hasError: !!payload.error });
+
+                  if (payload.error) {
+                    this.logger.error('NIP-46 get_public_key: remote signer error', payload.error);
+                    fail(reject, new Error(`Remote signer error: ${payload.error}`));
+                    return;
+                  }
+
+                  const result = payload.result;
+                  if (!result) return;
+
+                  // Normalise to raw hex — Amber may return npub1 bech32 format.
+                  let pubkeyHex: string | null = null;
+                  if (/^[0-9a-f]{64}$/.test(result)) {
+                    pubkeyHex = result;
+                  } else if (result.startsWith('npub1')) {
+                    try {
+                      const decoded = nip19.decode(result);
+                      if (decoded.type === 'npub') {
+                        pubkeyHex = decoded.data as string;
+                        this.logger.warn('NIP-46 get_public_key: Amber returned bech32 npub, decoded to hex', { pubkeyHex });
+                      }
+                    } catch {
+                      this.logger.warn('NIP-46 get_public_key: could not decode bech32 result', { result });
+                    }
+                  }
+
+                  if (pubkeyHex) {
+                    if (payload.id !== requestId) {
+                      this.logger.warn('NIP-46 get_public_key: ID mismatch (Amber bug?), accepting pubkey anyway', {
+                        expectedId: requestId, gotId: payload.id, pubkey: pubkeyHex,
+                      });
+                    } else {
+                      this.logger.debug('NIP-46 get_public_key: resolved', { pubkey: pubkeyHex });
+                    }
+                    finish(resolve, pubkeyHex);
+                  } else {
+                    this.logger.debug('NIP-46 get_public_key: result is not a pubkey (likely connect echo), ignoring', { result });
+                  }
+                } catch (err) {
+                  this.logger.error('NIP-46 get_public_key: error processing event', err);
+                }
+              })();
+            },
+          }
+        );
+      } catch (subErr) {
+        this.logger.error('NIP-46 get_public_key: failed to create subscription', subErr);
+        fail(reject, subErr);
+        return;
+      }
+
+      // Publish the get_public_key request.
+      const convKey = nip44.getConversationKey(clientKey, remoteSignerPubkey);
+      const content = nip44.encrypt(
+        JSON.stringify({ id: requestId, method: 'get_public_key', params: [] }),
+        convKey
+      );
+      const event = finalizeEvent(
+        { kind: 24133, tags: [['p', remoteSignerPubkey]], content, created_at: Math.floor(Date.now() / 1000) },
+        clientKey
+      );
+      this.logger.debug('NIP-46 get_public_key: publishing request', { requestId, eventId: event.id });
+
+      Promise.any(pool.publish(relays, event))
+        .then(() => this.logger.debug('NIP-46 get_public_key: request published'))
+        .catch((publishErr) => fail(reject, new Error(`Failed to publish get_public_key request: ${publishErr}`)));
+    });
+  }
+
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;

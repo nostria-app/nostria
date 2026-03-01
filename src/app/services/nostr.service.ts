@@ -134,6 +134,7 @@ export class NostrService implements NostriaService {
   private readonly followSetsService = inject(FollowSetsService);
   private readonly ngZone = inject(NgZone);
   private readonly injector = inject(Injector);
+  private encryptionServiceInstance?: import('./encryption.service').EncryptionService;
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -1220,28 +1221,14 @@ export class NostrService implements NostriaService {
           pubkey: eventPubkey,
         };
 
-        // Get the client key for NIP-46 communication
-        let clientKey: Uint8Array;
-
-        if (currentUser.bunkerClientKey) {
-          // Pure remote signer account - use stored client key
-          clientKey = hexToBytes(currentUser.bunkerClientKey);
-        } else if (currentUser.privkey) {
-          // Hybrid account with local key - use local key for bunker communication
-          const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
-          clientKey = hexToBytes(decryptedPrivkey);
-        } else {
-          throw new Error('No client key available for remote signing. Please re-connect your remote signer.');
+        // Route through EncryptionService's cached BunkerSigner so the single
+        // connect() handshake is reused across sign_event, encrypt, and decrypt.
+        if (!this.encryptionServiceInstance) {
+          const { EncryptionService } = await import('./encryption.service');
+          this.encryptionServiceInstance = this.injector.get(EncryptionService);
         }
-
-        const pool = new SimplePool({ enablePing: true, enableReconnect: true });
-        const bunker = BunkerSigner.fromBunker(
-          clientKey,
-          this.accountState.account()!.bunker!,
-          { pool }
-        );
-        signedEvent = await bunker.signEvent(cleanEvent);
-        this.logger.info('Using remote signer account');
+        signedEvent = await this.encryptionServiceInstance.signRemoteEvent(cleanEvent);
+        this.logger.info('Event signed via remote signer');
         break;
       }
       case 'preview':
@@ -1807,13 +1794,15 @@ export class NostrService implements NostriaService {
         errorListener = reject;
       });
 
-      // Monitor for error messages
+      // Monitor for error messages; use 'since' to avoid replaying stale signer events
+      const connectSince = Math.floor(Date.now() / 1000) - 30;
       const sub = pool.subscribeMany(
         bunkerParsed!.relays,
         {
           kinds: [24133],
           authors: [bunkerParsed!.pubkey],
           '#p': [clientPubkey],
+          since: connectSince,
         },
         {
           onevent: async (event) => {
@@ -1873,9 +1862,9 @@ export class NostrService implements NostriaService {
         };
 
         this.logger.info('Using remote signer account');
-        // jack
         const newUser: NostrUser = {
           privkey: bytesToHex(privateKey),
+          bunkerClientKey: bytesToHex(privateKey), // Store explicitly so encryption.service doesn't need fallback
           pubkey: remotePublicKey,
           name: 'Remote Signer',
           source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.

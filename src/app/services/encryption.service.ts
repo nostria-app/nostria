@@ -3,7 +3,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
 import { hexToBytes } from '@noble/hashes/utils.js';
-import { Event, nip04 } from 'nostr-tools';
+import { Event, UnsignedEvent, nip04 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
 import { BunkerSigner } from 'nostr-tools/nip46';
 import { SimplePool } from 'nostr-tools';
@@ -174,6 +174,20 @@ export class EncryptionService {
   }
 
   /**
+   * Sign an event using the cached connected BunkerSigner.
+   * All remote signing goes through here so we use a single NIP-46 session
+   * (one connect() handshake) rather than a fresh signer per request.
+   */
+  async signRemoteEvent(event: UnsignedEvent): Promise<Event> {
+    const account = this.accountState.account();
+    if (!account || account.source !== 'remote') {
+      throw new Error('signRemoteEvent called but current account is not a remote signer account');
+    }
+    const bunker = await this.getBunkerSigner(account);
+    return await this.queueBunkerOperation(() => bunker.signEvent(event));
+  }
+
+  /**
    * Get NostrService lazily to avoid circular dependency
    */
   private getNostrService(): NostrService {
@@ -204,7 +218,7 @@ export class EncryptionService {
     }
     if (this.cachedBunkerPool) {
       try {
-        this.cachedBunkerPool.close([]);
+        this.cachedBunkerPool.destroy();
       } catch {
         // Ignore errors when closing
       }
@@ -230,6 +244,20 @@ export class EncryptionService {
     this.cachedBunkerPool = new SimplePool({ enablePing: true, enableReconnect: true });
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
+
+    // Re-establish the NIP-46 session with the remote signer.
+    // Amber (and some other signers) require a connect() handshake before they
+    // will process sign_event / encrypt / decrypt requests.
+    const connectTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('NIP-46 connect() timed out after 20 s')), 20000)
+    );
+    try {
+      await Promise.race([this.cachedBunkerSigner.connect(), connectTimeout]);
+      this.logger.debug('BunkerSigner session re-established (connect ack received)');
+    } catch (connectErr) {
+      // Non-fatal: the signer may not require an explicit connect().
+      this.logger.warn('BunkerSigner connect() did not complete, continuing anyway', connectErr);
+    }
 
     return this.cachedBunkerSigner;
   }
