@@ -1850,12 +1850,11 @@ export class NostrService implements NostriaService {
 
         const remotePublicKey = await Promise.race([bunker.getPublicKey(), errorPromise]) as string;
 
-        const relaySwitchResult = await Promise.race([
-          bunker.sendRequest('switch_relays', []),
+        await Promise.race([
+          bunker.sendRequest('switch_relays', bunkerParsed!.relays),
           errorPromise,
         ]) as string;
-        const switchedRelays = this.parseNip46SwitchRelays(relaySwitchResult);
-        const bunkerRelays = switchedRelays?.length ? switchedRelays : bunkerParsed!.relays;
+        const bunkerRelays = bunkerParsed!.relays;
         const bunkerPointer: BunkerPointer = {
           ...bunkerParsed!,
           relays: bunkerRelays,

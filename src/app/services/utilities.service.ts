@@ -115,7 +115,15 @@ export class UtilitiesService {
     'lightning.red',
     'haven.slidestr.net',
     'atl.purplerelay.com',
-    
+    'dev-relay.nostrassets.com',
+    'relay.hash.stream',
+    'nostr.comunidadecancaonova.com',
+    'fog.dedyn.io',
+    'nostr.lnwallet.app',
+    'nostr.tbai.me',
+    'kmc-nostr.amiunderwater.com',
+    'nostr.drss.io',
+    'galaxy13.nostr1.com',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;

@@ -171,6 +171,49 @@
               operations are handled by your external signer.
             </p>
           </div>
+
+          <div class="relay-switch-section">
+            <p><strong>Remote Signing Relay</strong></p>
+            <p class="relay-switch-hint">Choose one of the default signing relays or set a custom relay.</p>
+
+            <div class="relay-option-buttons">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'" (click)="setRemoteRelayOption('nip46')">
+                {{ getRemoteRelayLabel('nip46') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'" (click)="setRemoteRelayOption('eu')">
+                {{ getRemoteRelayLabel('eu') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'" (click)="setRemoteRelayOption('us')">
+                {{ getRemoteRelayLabel('us') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'custom'"
+                (click)="setRemoteRelayOption('custom')">
+                Custom
+              </button>
+            </div>
+
+            @if (remoteRelayOption() === 'custom') {
+            <mat-form-field appearance="outline" class="remote-relay-input">
+              <mat-label>Custom relay</mat-label>
+              <input matInput [value]="customRemoteRelayInput()" (input)="onCustomRemoteRelayInput($any($event.target).value)"
+                (blur)="autoFormatCustomRemoteRelay()" placeholder="relay.example.com" autocomplete="off" />
+              <mat-hint>Domain-only input auto-formats to wss://.../</mat-hint>
+            </mat-form-field>
+            }
+
+            @if (getCurrentRemoteRelay()) {
+            <p class="relay-switch-current">Current: {{ getCurrentRemoteRelay() }}</p>
+            }
+
+            <button mat-flat-button (click)="switchRemoteRelays()" [disabled]="!canSwitchRemoteRelay()">
+              <mat-icon>sync</mat-icon>
+              @if (isSwitchingRemoteRelay()) {
+              Switching...
+              } @else {
+              Switch Relay
+              }
+            </button>
+          </div>
         </mat-card-content>
       </mat-card>
       } @else if (accountState.account()?.privkey) {
@@ -238,6 +281,49 @@
         </mat-card-header>
 
         <mat-card-content>
+          <div class="relay-switch-section">
+            <p><strong>Remote Signing Relay</strong></p>
+            <p class="relay-switch-hint">Choose one of the default signing relays or set a custom relay.</p>
+
+            <div class="relay-option-buttons">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'" (click)="setRemoteRelayOption('nip46')">
+                {{ getRemoteRelayLabel('nip46') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'" (click)="setRemoteRelayOption('eu')">
+                {{ getRemoteRelayLabel('eu') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'" (click)="setRemoteRelayOption('us')">
+                {{ getRemoteRelayLabel('us') }}
+              </button>
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'custom'"
+                (click)="setRemoteRelayOption('custom')">
+                Custom
+              </button>
+            </div>
+
+            @if (remoteRelayOption() === 'custom') {
+            <mat-form-field appearance="outline" class="remote-relay-input">
+              <mat-label>Custom relay</mat-label>
+              <input matInput [value]="customRemoteRelayInput()" (input)="onCustomRemoteRelayInput($any($event.target).value)"
+                (blur)="autoFormatCustomRemoteRelay()" placeholder="relay.example.com" autocomplete="off" />
+              <mat-hint>Domain-only input auto-formats to wss://.../</mat-hint>
+            </mat-form-field>
+            }
+
+            @if (getCurrentRemoteRelay()) {
+            <p class="relay-switch-current">Current: {{ getCurrentRemoteRelay() }}</p>
+            }
+
+            <button mat-flat-button (click)="switchRemoteRelays()" [disabled]="!canSwitchRemoteRelay()">
+              <mat-icon>sync</mat-icon>
+              @if (isSwitchingRemoteRelay()) {
+              Switching...
+              } @else {
+              Switch Relay
+              }
+            </button>
+          </div>
+
           <div class="signing-method-section">
             <p><strong>Current Signing Method:</strong></p>
             <div class="signing-method-toggle">
