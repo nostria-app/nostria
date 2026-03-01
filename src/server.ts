@@ -1,9 +1,3 @@
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
 import express from 'express';
 import cors from 'cors';
 import { join } from 'node:path';
@@ -43,6 +37,13 @@ const angularAllowedHosts = Array.from(new Set([
 ]));
 
 process.env['NG_ALLOWED_HOSTS'] = angularAllowedHosts.join(',');
+
+const {
+  AngularNodeAppEngine,
+  createNodeRequestHandler,
+  isMainModule,
+  writeResponseToNodeResponse,
+} = await import('@angular/ssr/node');
 
 const angularApp = new AngularNodeAppEngine();
 
@@ -133,7 +134,12 @@ function normalizeAbsoluteRequestUrl(req: express.Request): { normalized: boolea
       return { normalized: false, hostname };
     }
 
-    req.url = `${parsed.pathname}${parsed.search}`;
+    const normalizedPathAndQuery = `${parsed.pathname}${parsed.search}`;
+    req.url = normalizedPathAndQuery;
+    const reqWithOriginalUrl = req as express.Request & { originalUrl?: string };
+    if (typeof reqWithOriginalUrl.originalUrl === 'string') {
+      reqWithOriginalUrl.originalUrl = normalizedPathAndQuery;
+    }
     return { normalized: true, hostname };
   } catch {
     return { normalized: false };
