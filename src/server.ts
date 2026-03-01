@@ -178,16 +178,6 @@ function setNoStoreHeaders(res: express.Response): void {
   res.setHeader('Surrogate-Control', 'no-store');
 }
 
-function toHeaderSafe(value: string, maxLen = 180): string {
-  return value
-    .replace(/[\r\n]+/g, ' ')
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
-    .replace(/[^\u0020-\u007E]/g, '?')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, maxLen);
-}
-
 function setPreviewDebugHeaders(
   res: express.Response,
   analysis: PreviewCacheabilityAnalysis,
@@ -196,14 +186,6 @@ function setPreviewDebugHeaders(
   res.setHeader('X-SSR-Preview-Quality', analysis.isCacheable ? 'healthy' : 'degraded');
   res.setHeader('X-SSR-Preview-Reason', analysis.reason);
   res.setHeader('X-SSR-Render-Ms', renderMs.toString());
-
-  if (analysis.ogTitle) {
-    res.setHeader('X-SSR-OG-Title', toHeaderSafe(analysis.ogTitle));
-  }
-
-  if (analysis.twitterTitle) {
-    res.setHeader('X-SSR-TW-Title', toHeaderSafe(analysis.twitterTitle));
-  }
 }
 
 function extractMetaContent(html: string, tag: string): string {
@@ -687,9 +669,7 @@ app.use(
 app.use(async (req, res, next) => {
   const requestStartedAt = Date.now();
   const normalizedRequestUrl = normalizeAbsoluteRequestUrl(req);
-  if (normalizedRequestUrl.normalized) {
-    res.setHeader('X-SSR-URL-Normalized', 'true');
-  }
+  void normalizedRequestUrl;
 
   const userAgent = req.headers['user-agent'];
   const isBotRequest = isBot(userAgent);
