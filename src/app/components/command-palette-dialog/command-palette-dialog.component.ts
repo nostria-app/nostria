@@ -15,6 +15,7 @@ import { SettingsService } from '../../services/settings.service';
 import { SpeechService } from '../../services/speech.service';
 import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
 import { MetricsDialogComponent } from '../metrics-dialog/metrics-dialog.component';
+import { DebugLogsDialogComponent } from '../debug-logs-dialog/debug-logs-dialog.component';
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 
@@ -546,6 +547,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['debug', 'metrics', 'performance', 'timing', 'profiling', 'speed', 'benchmark', 'wasm', 'webassembly'],
       description: 'View application performance metrics and timing data'
     },
+    {
+      id: 'debug-event-logs',
+      label: 'Debug: Event Logs',
+      icon: 'feed',
+      action: () => this.openDebugLogsPanel(),
+      keywords: ['debug', 'logs', 'events', 'malformed', 'nostr', 'diagnostics', 'inspector'],
+      description: 'Inspect malformed event contexts and samples'
+    },
 
     // Actions - Content Creation
     {
@@ -640,6 +649,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     this.customDialog.open(MetricsDialogComponent, {
       title: 'Debug: Metrics',
       width: '900px',
+      maxWidth: '95vw',
+    });
+  }
+
+  openDebugLogsPanel() {
+    this.customDialog.open(DebugLogsDialogComponent, {
+      title: 'Debug: Event Logs',
+      width: '1100px',
       maxWidth: '95vw',
     });
   }
