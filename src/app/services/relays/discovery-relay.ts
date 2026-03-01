@@ -5,8 +5,9 @@ import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
 import { RegionService } from '../region.service';
-import { kinds, SimplePool, UnsignedEvent, Event } from 'nostr-tools';
+import { kinds, UnsignedEvent, Event } from 'nostr-tools';
 import { AccountRelayService } from './account-relay';
+import { PoolService } from './pool.service';
 
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
 export const DiscoveryRelayListKind = 10086;
@@ -19,16 +20,19 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
   private region = inject(RegionService);
-  private initialized = false;
+  private poolLoaded = false;
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
 
   constructor() {
-    super(new SimplePool({ enablePing: true, enableReconnect: true }));
+    // Use the application-wide shared pool so that connections to discovery/indexer
+    // relays are reused across DiscoveryRelayService, RelayPoolService and
+    // SharedRelayService instead of opening duplicate WebSockets.
+    super(inject(PoolService).pool);
   }
 
   async getUserRelayUrls(pubkey: string): Promise<string[]> {
-    if (!this.initialized) {
+    if (!this.poolLoaded) {
       await this.load();
     }
 
@@ -87,7 +91,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
    * Falls back to regular relay list (kind 10002) if no DM relays are found.
    */
   async getUserDmRelayUrls(pubkey: string): Promise<string[]> {
-    if (!this.initialized) {
+    if (!this.poolLoaded) {
       await this.load();
     }
 
@@ -154,7 +158,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         // User has a kind 10086 event, use those relays
         this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
         this.init(relaysFromEvent);
-        this.initialized = true;
+        this.poolLoaded = true;
         return true; // Event found
       }
       // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
@@ -162,7 +166,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     }
 
     this.init(bootstrapRelays);
-    this.initialized = true;
+    this.poolLoaded = true;
     return false; // No event found (or no pubkey provided)
   }
 

@@ -154,27 +154,13 @@ export class MessagingService implements NostriaService {
    * Start the DM subscription with retry logic to wait for relay initialization.
    * Retries up to 10 times with 2-second intervals.
    */
-  private async startDmSubscriptionWithRetry(retryCount = 0): Promise<void> {
-    const maxRetries = 10;
-    const retryDelay = 2000; // 2 seconds
+  private async startDmSubscriptionWithRetry(): Promise<void> {
+    this.logger.debug('[MessagingService] Waiting for relay initialization before starting DM subscription');
 
-    this.logger.debug('[MessagingService] startDmSubscriptionWithRetry called', {
-      retryCount,
-      isRelayInitialized: this.relay.isInitialized(),
-      relayUrls: this.relay.getRelayUrls(),
-    });
-
-    // Check if relays are initialized
-    if (!this.relay.isInitialized()) {
-      if (retryCount < maxRetries) {
-        this.logger.debug(`Waiting for relay initialization before starting DM subscription (attempt ${retryCount + 1}/${maxRetries})`);
-        setTimeout(() => {
-          this.startDmSubscriptionWithRetry(retryCount + 1);
-        }, retryDelay);
-        return;
-      } else {
-        this.logger.warn('Max retries reached waiting for relay initialization, attempting subscription anyway');
-      }
+    try {
+      await this.relay.waitUntilInitialized();
+    } catch {
+      this.logger.warn('[MessagingService] Relay initialization timed out, attempting subscription anyway');
     }
 
     this.logger.debug('Starting DM subscription...');

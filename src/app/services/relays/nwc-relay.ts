@@ -15,7 +15,10 @@ export class NwcRelayService extends RelayServiceBase {
   private connectionPools = new Map<string, SimplePool>();
 
   constructor() {
-    super(new SimplePool({ enablePing: true, enableReconnect: true }));
+    // NwcRelayService uses per-connection pools (connectionPools map) and does
+    // not rely on the RelayServiceBase pool for its actual operations.
+    // Passing no pool avoids creating a wasted SimplePool instance.
+    super();
   }
 
   /**

@@ -1,10 +1,11 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { SimplePool, Event } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
+import { PoolService } from './pool.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -13,7 +14,8 @@ let EventProcessorServiceRef: any;
   providedIn: 'root',
 })
 export class SharedRelayService {
-  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  readonly #poolService = inject(PoolService);
+  get #pool() { return this.#poolService.pool; }
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
@@ -345,7 +347,7 @@ export class SharedRelayService {
           complete(events);
         }, timeout + 1000);
 
-        this.#pool!.subscribeEose(relayUrls, filter, {
+        this.#pool.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
           onevent: (event) => {
             // Filter event through centralized processor (expiration, deletion, muting)
