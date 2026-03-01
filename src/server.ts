@@ -78,6 +78,119 @@ function extractMetaContent(html: string, tag: string): string {
   return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
 }
 
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, content: string): string {
+  const escapedKey = key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const escapedContent = escapeHtmlAttribute(content);
+
+  const attrFirst = new RegExp(`(<meta\\s+${attr}=["']${escapedKey}["']\\s+content=["'])[^"']*(["'][^>]*>)`, 'i');
+  if (attrFirst.test(html)) {
+    return html.replace(attrFirst, `$1${escapedContent}$2`);
+  }
+
+  const contentFirst = new RegExp(`(<meta\\s+content=["'])[^"']*(["']\\s+${attr}=["']${escapedKey}["'][^>]*>)`, 'i');
+  if (contentFirst.test(html)) {
+    return html.replace(contentFirst, `$1${escapedContent}$2`);
+  }
+
+  return html.replace('</head>', `  <meta ${attr}="${key}" content="${escapedContent}">\n</head>`);
+}
+
+function upsertTitleTag(html: string, title: string): string {
+  const escapedTitle = escapeHtmlAttribute(title);
+  if (/<title>[\s\S]*?<\/title>/i.test(html)) {
+    return html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapedTitle}</title>`);
+  }
+  return html.replace('</head>', `  <title>${escapedTitle}</title>\n</head>`);
+}
+
+function buildRouteFallbackPreview(path: string): { title: string; description: string; url: string } | null {
+  if (path.startsWith('/e/')) {
+    return {
+      title: 'Nostr Note on Nostria',
+      description: 'Open this Nostr note on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/a/')) {
+    return {
+      title: 'Nostr Article on Nostria',
+      description: 'Open this Nostr article on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/p/') || path.startsWith('/u/')) {
+    return {
+      title: 'Nostr Profile on Nostria',
+      description: 'View this Nostr profile on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/stream/')) {
+    return {
+      title: 'Nostr Live Stream on Nostria',
+      description: 'Watch this live stream on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/song/')) {
+    return {
+      title: 'Nostr Song on Nostria',
+      description: 'Listen to this song on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/artist/')) {
+    return {
+      title: 'Nostr Artist on Nostria',
+      description: 'Discover this artist on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/playlist/')) {
+    return {
+      title: 'Nostr Playlist on Nostria',
+      description: 'Open this playlist on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  return null;
+}
+
+function applyRouteFallbackPreviewHtml(html: string, path: string): string {
+  const fallback = buildRouteFallbackPreview(path);
+  if (!fallback) {
+    return html;
+  }
+
+  let result = html;
+  result = upsertTitleTag(result, `Nostria – ${fallback.title}`);
+  result = upsertMetaTag(result, 'name', 'description', fallback.description);
+  result = upsertMetaTag(result, 'property', 'og:title', fallback.title);
+  result = upsertMetaTag(result, 'property', 'og:description', fallback.description);
+  result = upsertMetaTag(result, 'property', 'og:image', 'https://nostria.app/assets/nostria-social.jpg');
+  result = upsertMetaTag(result, 'property', 'og:url', fallback.url);
+  result = upsertMetaTag(result, 'name', 'twitter:card', 'summary_large_image');
+  result = upsertMetaTag(result, 'name', 'twitter:title', fallback.title);
+  result = upsertMetaTag(result, 'name', 'twitter:description', fallback.description);
+  result = upsertMetaTag(result, 'name', 'twitter:image', 'https://nostria.app/assets/nostria-social.jpg');
+  return result;
+}
+
 function isCacheableSsrPreviewHtml(html: string): boolean {
   const ogTitle = extractMetaContent(html, 'og:title').trim();
   const ogDescription = extractMetaContent(html, 'og:description').trim();
@@ -387,10 +500,11 @@ app.use(async (req, res, next) => {
         });
 
         const isCacheableHtml = isCacheableSsrPreviewHtml(html);
+        const finalHtml = isCacheableHtml ? html : applyRouteFallbackPreviewHtml(html, path);
         if (isCacheableHtml) {
           // Cache healthy SSR response for bots
           ssrCache.set(path, {
-            html,
+            html: finalHtml,
             headers: headersToCache,
             timestamp: Date.now(),
           });
@@ -407,7 +521,7 @@ app.use(async (req, res, next) => {
             ? 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400'
             : 'no-store, max-age=0'
         );
-        res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED');
+        res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED_FALLBACK');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
         // Copy other headers from the original response
@@ -417,7 +531,7 @@ app.use(async (req, res, next) => {
           }
         });
 
-        res.send(html);
+        res.send(finalHtml);
         return;
       }
 
