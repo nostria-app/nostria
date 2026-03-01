@@ -74,12 +74,12 @@ interface CachedResponse {
 interface PreviewCacheabilityAnalysis {
   isCacheable: boolean;
   reason:
-    | 'ok'
-    | 'no_social_tags'
-    | 'generic_title'
-    | 'generic_route_fallback'
-    | 'generic_home'
-    | 'low_quality_marker';
+  | 'ok'
+  | 'no_social_tags'
+  | 'generic_title'
+  | 'generic_route_fallback'
+  | 'generic_home'
+  | 'low_quality_marker';
   ogTitle: string;
   ogDescription: string;
   twitterTitle: string;
