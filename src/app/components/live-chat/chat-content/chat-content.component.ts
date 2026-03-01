@@ -70,7 +70,7 @@ export class ChatContentComponent {
   content = input.required<string>();
 
   // Regex to match nostr URIs and bare NIP-19 identifiers
-  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
+  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
 
   parsedContent = computed<ContentPart[]>(() => {
     const text = this.content();

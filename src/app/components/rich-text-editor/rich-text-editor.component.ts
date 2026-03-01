@@ -1212,7 +1212,7 @@ export class RichTextEditorComponent implements AfterViewInit {
    * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
    */
   private containsNip19Identifier(text: string): boolean {
-    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)(?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+\b/;
     return nip19Pattern.test(text);
   }
 
@@ -1268,7 +1268,7 @@ export class RichTextEditorComponent implements AfterViewInit {
     // Replace NIP-19 identifiers with nostr: prefix if not already present
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
     const processedText = text.replace(
-      /(?<!nostr:)\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b/g,
+      /(?<!nostr:)\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b/g,
       'nostr:$1$2'
     );
 

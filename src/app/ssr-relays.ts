@@ -22,18 +22,33 @@ export const SSR_POPULAR_RELAYS = [
 ];
 
 // Timeout for direct relay fetches (milliseconds)
-export const SSR_RELAY_FETCH_TIMEOUT_MS = 3000;
+export const SSR_RELAY_FETCH_TIMEOUT_MS = 5000;
 
 // Total resolver timeout — must complete within this time for social bots
-export const SSR_TOTAL_RESOLVER_TIMEOUT_MS = 6000;
+export const SSR_TOTAL_RESOLVER_TIMEOUT_MS = 9000;
+
+const RELAY_URL_PATTERN = /^wss?:\/\/[^\s]+$/i;
+
+function sanitizeRelayHints(relayHints?: string[]): string[] {
+  if (!relayHints || relayHints.length === 0) {
+    return [];
+  }
+
+  return relayHints
+    .map(relay => relay.trim())
+    .filter(relay => RELAY_URL_PATTERN.test(relay));
+}
 
 /**
  * Combine relay hints with popular relays, deduplicating the result.
  * Relay hints are placed first so they are prioritized by SimplePool.
  */
 export function buildRelayList(relayHints?: string[]): string[] {
-  if (relayHints && relayHints.length > 0) {
-    return [...new Set([...relayHints, ...SSR_POPULAR_RELAYS])];
+  const sanitizedHints = sanitizeRelayHints(relayHints);
+
+  if (sanitizedHints.length > 0) {
+    return [...new Set([...sanitizedHints, ...SSR_POPULAR_RELAYS])];
   }
+
   return SSR_POPULAR_RELAYS;
 }

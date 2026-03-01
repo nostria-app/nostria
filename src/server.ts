@@ -71,6 +71,13 @@ interface CachedResponse {
   timestamp: number;
 }
 
+function setNoStoreHeaders(res: express.Response): void {
+  res.setHeader('Cache-Control', 'no-store, no-cache, max-age=0, s-maxage=0, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+}
+
 function extractMetaContent(html: string, tag: string): string {
   const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
@@ -211,16 +218,46 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
     'loading...',
   ];
 
+  const genericRouteFallbackTitles = [
+    'nostr note on nostria',
+    'nostr article on nostria',
+    'nostr profile on nostria',
+    'nostr post on nostria',
+    'nostr song on nostria',
+    'nostr playlist on nostria',
+    'nostr artist on nostria',
+    'nostr live stream on nostria',
+  ];
+
+  const genericRouteFallbackMarkers = [
+    'open this nostr note on nostria',
+    'open this nostr article on nostria',
+    'view this nostr profile on nostria',
+    'open this content on nostria',
+    'listen to this song on nostria',
+    'open this playlist on nostria',
+    'discover this artist on nostria',
+    'watch this live stream on nostria',
+  ];
+
   const genericHomeTitles = ['nostria - your social network', 'nostria'];
-  const genericHomeDescriptionMarker = 'nostria puts control back where it belongs';
+  const genericHomeDescriptionMarkers = [
+    'nostria puts control back where it belongs',
+    'nostria: built for human connections',
+    'nostria is social without the noise',
+  ];
 
   const combined = `${ogTitle} ${ogDescription} ${twitterTitle} ${twitterDescription}`.toLowerCase();
   const genericTitle = ogTitle.toLowerCase() === 'nostr event' || twitterTitle.toLowerCase() === 'nostr event';
+  const genericRouteFallbackPreview =
+    genericRouteFallbackTitles.includes(ogTitle.toLowerCase()) ||
+    genericRouteFallbackTitles.includes(twitterTitle.toLowerCase()) ||
+    genericRouteFallbackMarkers.some(marker => combined.includes(marker));
   const genericHomePreview =
     genericHomeTitles.includes(ogTitle.toLowerCase()) ||
     genericHomeTitles.includes(twitterTitle.toLowerCase()) ||
-    combined.includes(genericHomeDescriptionMarker);
-  return !genericTitle && !genericHomePreview && !lowQualityMarkers.some(marker => combined.includes(marker));
+    genericHomeDescriptionMarkers.some(marker => combined.includes(marker));
+  return !genericTitle && !genericHomePreview && !genericRouteFallbackPreview && !lowQualityMarkers.some(marker => combined.includes(marker));
 }
 
 // Cache for SSR responses (keyed by URL path)
@@ -468,6 +505,7 @@ app.use(async (req, res, next) => {
 
   // Check cache for bot requests on SSR routes
   if (isBotRequest && isSSR) {
+    res.setHeader('Vary', 'User-Agent');
     const cached = ssrCache.get(path);
     if (cached && (Date.now() - cached.timestamp) < SSR_CACHE_MAX_AGE_MS) {
       // Set cached headers
@@ -515,12 +553,12 @@ app.use(async (req, res, next) => {
         }
 
         // Set Cache-Control headers for bots
-        res.setHeader(
-          'Cache-Control',
-          isCacheableHtml
-            ? 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400'
-            : 'no-store, max-age=0'
-        );
+        if (isCacheableHtml) {
+          res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
+        } else {
+          setNoStoreHeaders(res);
+          res.setHeader('X-SSR-Retryable', 'true');
+        }
         res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED_FALLBACK');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
@@ -548,9 +586,14 @@ app.use(async (req, res, next) => {
 
     // For bot requests, try to serve a basic fallback with meta tags
     if (isBotRequest && isSSR) {
+      ssrCache.delete(path);
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.status(200).send(`<!DOCTYPE html>
+      setNoStoreHeaders(res);
+      res.setHeader('Vary', 'User-Agent');
+      res.setHeader('X-SSR-Cache', 'SKIP_ERROR_FALLBACK');
+      res.setHeader('X-SSR-Retryable', 'true');
+
+      const fallbackHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -572,7 +615,9 @@ app.use(async (req, res, next) => {
   <h1>Loading...</h1>
   <script>window.location.reload();</script>
 </body>
-</html>`);
+</html>`;
+
+      res.status(200).send(applyRouteFallbackPreviewHtml(fallbackHtml, path));
       return;
     }
 

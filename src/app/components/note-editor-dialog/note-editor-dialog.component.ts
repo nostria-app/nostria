@@ -1659,7 +1659,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
     // Match all nostr: URIs in content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
     // Track added quote event IDs (q tags) separately from reply event IDs (e tags)
@@ -3000,7 +3000,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
    */
   private containsNip19Identifier(text: string): boolean {
-    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)(?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+\b/;
     return nip19Pattern.test(text);
   }
 
@@ -3020,7 +3020,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Extract nostr: URIs from new content and check if they exist in current content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)[a-zA-Z0-9]+/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)(?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+/g;
     const nostrUris = newContent.match(nostrUriPattern);
 
     if (nostrUris) {
@@ -3037,7 +3037,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Check for bare NIP-19 identifiers (without nostr: prefix) and see if they exist with prefix
-    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)\b/g;
+    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)\b/g;
     const bareIdentifiers = newContent.match(bareNip19Pattern);
 
     if (bareIdentifiers) {
@@ -3076,7 +3076,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
     // and are not part of a URL (preceded by /)
     const processedText = text.replace(
-      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b)/g,
       'nostr:$1'
     );
 

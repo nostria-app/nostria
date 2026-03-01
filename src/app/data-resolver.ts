@@ -26,6 +26,8 @@ function debugLog(message: string, ...args: unknown[]): void {
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
 const ARTICLE_KIND = kinds.LongFormArticle; // 30023
+const EVENT_RETRY_TIMEOUT_MS = 2500;
+const PROFILE_WAIT_AFTER_EVENT_MS = 800;
 
 /**
  * Configure nostr-tools to use Node.js WebSocket implementation during SSR.
@@ -756,13 +758,61 @@ export class DataResolver implements Resolve<EventData | null> {
         if (directRelayFetchPromise || profileRelayFetchPromise) {
           const directPromise = directRelayFetchPromise as Promise<Event | null> | null;
           const profilePromise = profileRelayFetchPromise as Promise<Event | null> | null;
-          const [relayResult, profileResult] = await Promise.all([
-            directPromise ? directPromise.catch(() => null) : Promise.resolve(null),
-            profilePromise ? profilePromise.catch(() => null) : Promise.resolve(null),
-          ]);
 
-          directEvent = relayResult;
-          profileEvent = profileResult;
+          directEvent = directPromise ? await directPromise.catch(() => null) : null;
+
+          if (!directEvent && canFetchDirectRelayEvent) {
+            const elapsedAfterFirstEventAttempt = Date.now() - resolveStart;
+            const retryBudgetMs = SSR_TOTAL_RESOLVER_TIMEOUT_MS - elapsedAfterFirstEventAttempt - 250;
+
+            if (retryBudgetMs > 600) {
+              const retryTimeoutMs = Math.max(600, Math.min(EVENT_RETRY_TIMEOUT_MS, retryBudgetMs));
+              const retryStart = Date.now();
+
+              try {
+                if (eventPointer?.kind && eventPointer.identifier !== undefined && eventPointer.author) {
+                  directEvent = await fetchEventByAddress(
+                    eventPointer.kind,
+                    eventPointer.author,
+                    eventPointer.identifier,
+                    undefined,
+                    retryTimeoutMs,
+                  );
+                } else if (eventPointer?.id) {
+                  directEvent = await fetchEventFromRelays(eventPointer.id, undefined, retryTimeoutMs);
+                } else if (isHexEventId) {
+                  directEvent = await fetchEventFromRelays(id, undefined, retryTimeoutMs);
+                }
+
+                fetchStatus.relayEvent = directEvent ? 'success' : 'empty';
+                debugLog(
+                  `[SSR] DataResolver(${traceId}): Event retry completed in ${Date.now() - retryStart}ms`,
+                  { success: !!directEvent, retryTimeoutMs }
+                );
+              } catch (retryError) {
+                fetchStatus.relayEvent = 'error';
+                console.error(
+                  `[SSR] DataResolver(${traceId}): Event retry failed in ${Date.now() - retryStart}ms:`,
+                  retryError
+                );
+              }
+            }
+          }
+
+          if (profilePromise) {
+            if (directEvent) {
+              profileEvent = await Promise.race([
+                profilePromise.catch(() => null),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), PROFILE_WAIT_AFTER_EVENT_MS)),
+              ]);
+
+              if (!profileEvent && fetchStatus.relayProfile === 'pending') {
+                fetchStatus.relayProfile = 'skipped';
+              }
+            } else {
+              profileEvent = await profilePromise.catch(() => null);
+            }
+          }
         }
 
         debugLog(`[SSR] DataResolver(${traceId}): Fetch status summary`, fetchStatus);
@@ -803,12 +853,14 @@ export class DataResolver implements Resolve<EventData | null> {
                 ? `https://nostria.app/p/${nip19.npubEncode(resolvedProfilePubkey)}`
                 : undefined;
 
-              this.metaService.updateSocialMetadata({
-                title: displayName,
-                description,
-                image: relayProfile.profile.picture || 'https://nostria.app/assets/nostria-social.jpg',
-                url: targetUrl,
-              });
+              if (isProfileRoute) {
+                this.metaService.updateSocialMetadata({
+                  title: displayName,
+                  description,
+                  image: relayProfile.profile.picture || 'https://nostria.app/assets/nostria-social.jpg',
+                  url: targetUrl,
+                });
+              }
 
               data.metadata = relayProfile;
             }
@@ -824,12 +876,17 @@ export class DataResolver implements Resolve<EventData | null> {
             ? directEvent.content.substring(0, 200) + '...'
             : directEvent.content || 'Open this Nostr post on Nostria, the decentralized social app.';
 
-          const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
-          const title = titleTag?.[1] || 'Nostr Post on Nostria';
           const authorName =
             data.metadata?.profile?.display_name ||
             data.metadata?.profile?.name ||
             undefined;
+          const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
+          const titleFromTag = typeof titleTag?.[1] === 'string' ? titleTag[1].trim() : '';
+          const titleFromContent = (directEvent.content || '').trim().slice(0, 80);
+          const fallbackTitle = authorName
+            ? `${authorName} on Nostria`
+            : `Nostr Note ${directEvent.id.slice(0, 8)} on Nostria`;
+          const title = titleFromTag || titleFromContent || fallbackTitle;
 
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
@@ -848,14 +905,15 @@ export class DataResolver implements Resolve<EventData | null> {
             content: directEvent.content,
             tags: directEvent.tags,
           };
-        } else if (!data.metadata) {
-          data.title = 'Nostr Post on Nostria';
-          data.description = 'Open this content on Nostria, the decentralized social app.';
+        } else if (!isProfileRoute || !data.metadata) {
+          data.title = fallbackSocial.title;
+          data.description = fallbackSocial.description;
 
           this.metaService.updateSocialMetadata({
             title: data.title,
             description: data.description,
-            image: 'https://nostria.app/assets/nostria-social.jpg',
+            image: relayProfilePicture || data.metadata?.profile?.picture || 'https://nostria.app/assets/nostria-social.jpg',
+            url: fallbackSocial.url,
           });
         }
       } catch (error) {

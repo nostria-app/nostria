@@ -390,7 +390,7 @@ export class ParsingService implements OnDestroy {
     // IMPORTANT: Must NOT match npub1 inside URLs (e.g., https://npub1...blossom.band/...)
     // We'll filter out URL-embedded matches after finding them
     const nostrRegex =
-      /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+/gi;
+      /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L])+/gi;
     // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only
     const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
     // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
