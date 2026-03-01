@@ -14,7 +14,8 @@ New-Item -ItemType Directory -Force -Path $testResultsDir | Out-Null
 if ([string]::IsNullOrWhiteSpace($OutFile)) {
   $hostName = ([uri]$BaseUrl).Host.Replace('.', '-')
   $OutFile = Join-Path $testResultsDir ("social-preview-check-$hostName.txt")
-} elseif (-not [System.IO.Path]::IsPathRooted($OutFile)) {
+}
+elseif (-not [System.IO.Path]::IsPathRooted($OutFile)) {
   $OutFile = Join-Path $root $OutFile
 }
 
@@ -31,7 +32,8 @@ $eventPaths = @(
 $urls = $eventPaths | ForEach-Object {
   if ($BaseUrl.EndsWith('/')) {
     $BaseUrl.TrimEnd('/') + $_
-  } else {
+  }
+  else {
     $BaseUrl + $_
   }
 }
@@ -46,7 +48,7 @@ foreach ($pass in $passes) {
     foreach ($agent in $agents) {
       try {
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $response = Invoke-WebRequest -Uri $url -Headers @{'User-Agent' = $agent} -UseBasicParsing -TimeoutSec $TimeoutSec -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri $url -Headers @{'User-Agent' = $agent } -UseBasicParsing -TimeoutSec $TimeoutSec -ErrorAction Stop
         $stopwatch.Stop()
 
         $content = $response.Content
