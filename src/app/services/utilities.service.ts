@@ -27,7 +27,6 @@ export class UtilitiesService {
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
     'relay.nostr.band',
-    'offchain.pub',
     'relay.minds.com',
     'nostr.ono.re',
     'dev.nostrplayground.com',
@@ -103,6 +102,7 @@ export class UtilitiesService {
     'nostr.v6.army',
     'relay-jp.nostr.wirednet.jp',
     'haven.vanderwarker.family',
+    'jellyfish.land',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
