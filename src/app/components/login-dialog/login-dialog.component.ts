@@ -108,20 +108,20 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Client-initiated nostrconnect signals
   nostrConnectQrUrl = signal<string>('');
-  nostrConnectRegion = signal<'eu' | 'us'>('eu');
+  nostrConnectRelayOption = signal<'nip46' | 'eu' | 'us'>('nip46');
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
   private isFinalizingRemoteSigner = false;
   private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  // Default relays for nostrconnect by region.
-  // Include wss://relay.nsec.app first — it is the de-facto NIP-46 relay and is
-  // used by Amber as its primary subscription relay. Without a shared relay
-  // between us and Amber, signing requests are never delivered to Amber.
-  private readonly nostrConnectRelays = {
-    eu: ['wss://relay.nsec.app', 'wss://ribo.eu.nostria.app'],
-    us: ['wss://relay.nsec.app', 'wss://ribo.us.nostria.app'],
+  // Default relays for nostrconnect by option.
+  // 'nip46' is the default — relay.nip46.com is universally supported by Amber
+  // and other NIP-46 signers. The eu/us options use Nostria's own regional relays.
+  private readonly nostrConnectRelays: Record<'nip46' | 'eu' | 'us', string[]> = {
+    nip46: ['wss://relay.nip46.com'],
+    eu: ['wss://ribo.eu.nostria.app'],
+    us: ['wss://ribo.us.nostria.app'],
   };
 
   // Input fields
@@ -653,8 +653,8 @@ export class LoginDialogComponent implements OnDestroy {
       this.remoteSignerClientKey = generateSecretKey();
       const clientPubkey = getPublicKey(this.remoteSignerClientKey);
 
-      // Get relays based on selected region
-      const relaysToUse = this.nostrConnectRelays[this.nostrConnectRegion()];
+      // Get relays based on selected option
+      const relaysToUse = this.nostrConnectRelays[this.nostrConnectRelayOption()];
 
       // Generate a random secret for connection validation
       const secret = this.generateRandomSecret();
@@ -1191,9 +1191,9 @@ export class LoginDialogComponent implements OnDestroy {
     }
   }
 
-  setNostrConnectRegion(region: 'eu' | 'us'): void {
-    this.nostrConnectRegion.set(region);
-    // Regenerate QR code with new relays
+  setNostrConnectRelayOption(option: 'nip46' | 'eu' | 'us'): void {
+    this.nostrConnectRelayOption.set(option);
+    // Regenerate QR code with new relay
     this.generateNostrConnectQR();
   }
 
