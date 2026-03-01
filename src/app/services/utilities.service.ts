@@ -7,6 +7,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
 import { encode } from 'blurhash';
+import { IgnoredRelayAuditService } from './ignored-relay-audit.service';
 
 /**
  * Represents a relay entry with its read/write markers per NIP-65.
@@ -24,10 +25,115 @@ export interface RelayEntry {
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
+  private readonly ignoredRelayAudit = inject(IgnoredRelayAuditService);
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
     'relay.nostr.band',
-    'offchain.pub'
+    'relay.minds.com',
+    'nostr.ono.re',
+    'dev.nostrplayground.com',
+    'nostrelites.org',
+    'relay.nsite.lol',
+    'nostr.bongbong.com',
+    'nostr1.tunnelsats.com',
+    'nostr.orangepill.dev',
+    'relay.nostrgraph.net',
+    'relay.current.fyi',
+    'nostr-relay.wlvs.space',
+    'relay.orange-crush.com',
+    'nostr-dev.zbd.gg',
+    'student.chadpolytechnic.com',
+    'brb.io',
+    'sg.qemura.xyz',
+    'nostrsatva.net',
+    'khatru.puhcho.me',
+    'nostr.v0l.io',
+    'nostr-2.zebedee.cloud',
+    'welcome.nostr.wine',
+    'nostr.mutinywallet.com',
+    'relay.nostr.bg',
+    'expensive-relay.fiatjaf.com',
+    'nostr-relay.untethr.me',
+    'nostr-01.bolt.observer',
+    'relay.kamp.site',
+    'lightningrelay.com',
+    'us.rbr.bio',
+    'relayer.fiatjaf.com',
+    'nostr-relay.lnmarkets.com',
+    'relayable.org',
+    'nostr.fmt.wiz.biz',
+    'wot.dergigi.com',
+    'relay.ohbe.me',
+    'relay.westernbtc.com',
+    'nostr.milou.lol',
+    'relay.orangepill.dev',
+    'feeds.nostr.band',
+    'nostr.zbd.gg',
+    'relay.davidebtc.me',
+    'nostr.hubmaker.io',
+    'nostr.zebedee.cloud',
+    'wot.utxo.one',
+    'nostr.onsats.org',
+    'nostr-relay.nokotaro.com',
+    'rsslay.nostr.net',
+    'relay.stoner.com',
+    'nostr.walletofsatoshi.com',
+    'relay.f7z.io',
+    'relay.exit.pub',
+    'nostr.lbdev.fun',
+    'nostr.relayer.se',
+    'nostr.lnbitcoin.cz',
+    'umami.nostr1.com',
+    'social.camph.net',
+    'nostr2.actn.io',
+    'nostr.actn.io',
+    'nostr.portemonero.com',
+    'ca.orangepill.dev',
+    'nostrex.fly.dev',
+    'rsslay.fiatjaf.com',
+    'kiwibuilders.nostr21.net',
+    'news.nos.social',
+    'nostr3.actn.io',
+    'relay-jp.nostr.wirednet.jp',
+    'relay.nostrati.com',
+    'relay.siamstr.com',
+    'beta.nostril.cam',
+    'relay.farscapian.com',
+    'thewildhustle.nostr1.com',
+    'relay.nostr.vet',
+    'nostr.v6.army',
+    'haven.vanderwarker.family',
+    'jellyfish.land',
+    'relay.otherstuff.fyi',
+    'mhp258zrpiiwn.clorecloud.net',
+    'shawn.nostr1.com',
+    'relay.neuance.net',
+    'relay.poster.place',
+    'teemie1-relay.duckdns.org',
+    'nostr.bitcoin-21.org',
+    'nostr.okaits7534.net',
+    'nostr.easify.de',
+    'br.purplerelay.com',
+    'lightning.red',
+    'haven.slidestr.net',
+    'atl.purplerelay.com',
+    'dev-relay.nostrassets.com',
+    'relay.hash.stream',
+    'nostr.comunidadecancaonova.com',
+    'fog.dedyn.io',
+    'nostr.lnwallet.app',
+    'nostr.tbai.me',
+    'kmc-nostr.amiunderwater.com',
+    'nostr.drss.io',
+    'galaxy13.nostr1.com',
+    'jp-relay-nostr.invr.chat',
+    'relay.moinsen.com',
+    'nostr-relay.philipcristiano.com',
+    'nostr.cercatrova.me',
+    'nostr1676319567170.app.runonflux.io',
+    'nostr.cercatrova.me',
+    'nostr.com.de',
+    'shu02.shugur.net',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
@@ -440,22 +546,62 @@ export class UtilitiesService {
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
 
+    this.trackIgnoredRelayUsage(event.pubkey, relayUrls);
+
     return relayUrls.filter(url => !this.isIgnoredRelayDomain(url));
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event): string[] {
-    const relayUrls = event.tags
+    const relayUrlsRaw = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         const url = tag[1];
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
       })
-      .filter(url => url.trim() !== '')
-      .filter(url => !this.isIgnoredRelayDomain(url));
+      .filter(url => url.trim() !== '');
+
+    this.trackIgnoredRelayUsage(event.pubkey, relayUrlsRaw);
+
+    const relayUrls = relayUrlsRaw.filter(url => !this.isIgnoredRelayDomain(url));
 
     return relayUrls;
+  }
+
+  private trackIgnoredRelayUsage(pubkey: string, relayUrls: string[]): void {
+    if (!pubkey || relayUrls.length === 0) {
+      return;
+    }
+
+    const ignoredDomains = relayUrls
+      .map((url) => this.getIgnoredRelayDomain(url))
+      .filter((domain): domain is string => !!domain);
+
+    if (ignoredDomains.length === 0) {
+      return;
+    }
+
+    this.ignoredRelayAudit.recordIgnoredRelayUsage(pubkey, ignoredDomains, relayUrls);
+  }
+
+  private getIgnoredRelayDomain(url: string): string | null {
+    try {
+      const parsedUrl = new URL(url);
+      const domain = parsedUrl.hostname.toLowerCase();
+
+      if (!this.ignoredRelayDomains.has(domain)) {
+        return null;
+      }
+
+      if (this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
+        return null;
+      }
+
+      return domain;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -469,7 +615,7 @@ export class UtilitiesService {
    * When fetching events ABOUT a user (mentions), prefer READ relays.
    */
   getRelayEntries(event: Event): RelayEntry[] {
-    return event.tags
+    const entries = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         let url = tag[1];
@@ -484,8 +630,11 @@ export class UtilitiesService {
 
         return { url, read: isRead, write: isWrite };
       })
-      .filter(entry => entry.url.trim() !== '')
-      .filter(entry => !this.isIgnoredRelayDomain(entry.url));
+      .filter(entry => entry.url.trim() !== '');
+
+    this.trackIgnoredRelayUsage(event.pubkey, entries.map((entry) => entry.url));
+
+    return entries.filter(entry => !this.isIgnoredRelayDomain(entry.url));
   }
 
   /**
@@ -609,6 +758,9 @@ export class UtilitiesService {
     if (!url || !this.isSecureRelayUrl(url)) {
       return false;
     }
+    if (url.includes(',')) {
+      return false;
+    }
     try {
       const parsedUrl = new URL(url);
       if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
@@ -632,6 +784,12 @@ export class UtilitiesService {
       // Only allow secure WebSocket connections (wss://)
       // Reject ws:// to prevent mixed content errors when served over HTTPS
       if (!this.isSecureRelayUrl(url)) {
+        return '';
+      }
+
+      // Reject URLs with commas or other invalid hostname characters (e.g. "relay,damus.io")
+      if (url.includes(',')) {
+        this.logger.warn(`Invalid relay URL (contains comma): ${url}`);
         return '';
       }
 

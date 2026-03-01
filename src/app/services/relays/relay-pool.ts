@@ -1,11 +1,12 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { SimplePool, Event, Filter } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
 import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
+import { PoolService } from './pool.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -14,7 +15,8 @@ let EventProcessorServiceRef: any;
   providedIn: 'root'
 })
 export class RelayPoolService {
-  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  readonly #poolService = inject(PoolService);
+  get #pool() { return this.#poolService.pool; }
   private readonly relaysService = inject(RelaysService);
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
@@ -458,6 +460,28 @@ export class RelayPoolService {
 
       throw error;
     }
+  }
+
+  /**
+   * Publish an event and return the per-relay promise array without awaiting.
+   * Use this when callers need to track individual relay publish results
+   * (e.g. to display per-relay notifications).  The caller receives the raw
+   * promises and is responsible for handling rejections.
+   */
+  publishWithTracking(relayUrls: string[], event: Event): Promise<string>[] {
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      return [];
+    }
+    const filteredUrls = this.relayBlock.filterBlockedRelays(
+      this.relayAuth.filterAuthFailedRelays(secureUrls)
+    );
+    if (filteredUrls.length === 0) {
+      return [];
+    }
+    this.addRelays(filteredUrls);
+    const authCallback = this.relayAuth.getAuthCallback();
+    return this.#pool.publish(filteredUrls, event, { onauth: authCallback });
   }
 
   /**

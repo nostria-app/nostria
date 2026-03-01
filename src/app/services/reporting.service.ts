@@ -197,7 +197,7 @@ export class ReportingService {
    * false positives from encoded identifiers (e.g., "gm" inside an npub string).
    */
   private static readonly NOSTR_URI_AND_URL_REGEX =
-    /nostr:(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+|https?:\/\/\S+/gi;
+    /nostr:(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-z0-9])+|https?:\/\/\S+/gi;
 
   /**
    * Strip nostr URIs and URLs from content so muted word matching

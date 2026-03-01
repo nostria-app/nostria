@@ -426,6 +426,16 @@
       </mat-menu>
       }
 
+      <!-- Insert reference button (dialog mode only) -->
+      @if (!inlineMode()) {
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
+        (click)="openReferencePicker()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Insert reference">
+        <mat-icon>bookmarks</mat-icon>
+      </button>
+      }
+
       <!-- Dictation button (hidden on smaller screens) -->
       @if (!layout.isHandset()) {
       <button mat-icon-button type="button" class="desktop-action action-priority-medium dictation-action"
@@ -504,6 +514,12 @@
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
           <mat-icon>sentiment_satisfied</mat-icon>
           <span>Emoji</span>
+        </button>
+
+        <button mat-menu-item (click)="openReferencePicker()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>bookmarks</mat-icon>
+          <span>Insert reference</span>
         </button>
 
         @if (!layout.isHandset()) {

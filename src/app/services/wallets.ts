@@ -185,7 +185,16 @@ export class Wallets {
   }
 
   parseConnectionString(connectionString: string) {
-    const { host, pathname, searchParams } = new URL(connectionString);
+    const normalizedConnectionString = connectionString.startsWith('web+nostr+walletconnect://')
+      ? connectionString.replace('web+nostr+walletconnect://', 'nostr+walletconnect://')
+      : connectionString;
+
+    const parsedUrl = new URL(normalizedConnectionString);
+    if (parsedUrl.protocol !== 'nostr+walletconnect:') {
+      throw new Error('invalid connection string');
+    }
+
+    const { host, pathname, searchParams } = parsedUrl;
     // The pathname may contain leading slashes (e.g., "//pubkey"), so we need to strip them
     // Use host as primary since it contains the clean pubkey without slashes
     const pubkey = host || pathname.replace(/^\/+/, '');

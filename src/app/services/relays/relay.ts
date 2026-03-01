@@ -1,4 +1,4 @@
-import { inject, signal, Signal, Injector } from '@angular/core';
+import { inject, signal, Signal, Injector, effect } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool, Filter } from 'nostr-tools';
 import { RelaysService } from './relays';
@@ -20,7 +20,10 @@ export interface Relay {
 }
 
 export abstract class RelayServiceBase {
-  #pool!: SimplePool;
+  #pool: SimplePool | null = null;
+  // When true the pool was provided externally (e.g. from PoolService) and must
+  // never be destroyed or recreated by this service.
+  #externalPool = false;
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
   protected relaysService = inject(RelaysService);
@@ -55,6 +58,9 @@ export abstract class RelayServiceBase {
   // Signal to notify when relays have been modified
   protected relaysModified = signal<string[]>([]);
 
+  /** True once this relay service has been initialized with at least one URL. */
+  readonly initialized = signal<boolean>(false);
+
   // Basic concurrency control for base class
   protected readonly maxConcurrentRequests = 10;
   protected currentRequests = 0;
@@ -71,15 +77,18 @@ export abstract class RelayServiceBase {
   // Idempotent destroy flag
   private _destroyed = false;
 
-  constructor(pool: SimplePool) {
-    this.#pool = pool;
+  constructor(pool?: SimplePool) {
+    if (pool) {
+      this.#pool = pool;
+      this.#externalPool = true;
+    }
     // Generate unique identifier for this pool instance
     this.poolInstanceId = `${this.constructor.name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.logger.debug(`[${this.constructor.name}] Created pool instance: ${this.poolInstanceId}`);
   }
 
   getPool(): SimplePool {
-    return this.#pool;
+    return this.#pool!;
   }
 
   /**
@@ -88,6 +97,27 @@ export abstract class RelayServiceBase {
    */
   isInitialized(): boolean {
     return this.relayUrls.length > 0 && !this._destroyed;
+  }
+
+  /**
+   * Returns a Promise that resolves when this relay service is initialized (has relay URLs).
+   * Resolves immediately if already initialized. Rejects after `timeoutMs` milliseconds.
+   */
+  waitUntilInitialized(timeoutMs = 10000): Promise<void> {
+    if (this.initialized()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        effectRef.destroy();
+        reject(new Error(`[${this.constructor.name}] Timed out waiting for initialization after ${timeoutMs}ms`));
+      }, timeoutMs);
+      const effectRef = effect(() => {
+        if (this.initialized()) {
+          clearTimeout(timeoutId);
+          effectRef.destroy();
+          resolve();
+        }
+      }, { injector: this.injector });
+    });
   }
 
   /**
@@ -119,7 +149,8 @@ export abstract class RelayServiceBase {
       this.relayUrls.some((u, i) => u !== normalizedUniqueUrls[i]);
 
     // Decide whether to recreate pool
-    const shouldRecreate = forceRecreate || !this.#pool || this._destroyed || urlsChanged;
+    // Never recreate an externally-provided pool – it is shared and owned by PoolService.
+    const shouldRecreate = !this.#externalPool && (forceRecreate || !this.#pool || this._destroyed || urlsChanged);
 
     if (shouldRecreate && this.#pool && !this._destroyed) {
       // Destroy the previous pool to close underlying sockets
@@ -133,13 +164,16 @@ export abstract class RelayServiceBase {
     // Assign new pool if required
     if (shouldRecreate) {
       this.#pool = new SimplePool({ enablePing: true, enableReconnect: true });
-      this._destroyed = false; // Reset destroyed flag for new pool lifecycle
       this.logger.debug(`[${this.constructor.name}] Created new SimplePool with ping and reconnect enabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
+    // Always reset the destroyed flag when init() is called – it expresses intent to be active,
+    // regardless of whether the pool was recreated (e.g. external shared-pool services).
+    this._destroyed = false;
     this.relayUrls = normalizedUniqueUrls;
     this.updateRelaysSignal();
     this.notifyRelaysModified();
+    this.initialized.set(normalizedUniqueUrls.length > 0);
   }
 
   destroy() {
@@ -147,12 +181,17 @@ export abstract class RelayServiceBase {
       return; // Already destroyed
     }
     this.logger.debug(`[${this.constructor.name}] destroy() called`);
-    try {
-      this.#pool?.destroy();
-    } catch (e) {
-      this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
+    if (!this.#externalPool) {
+      try {
+        this.#pool?.destroy();
+      } catch (e) {
+        this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
+      }
+    } else {
+      this.logger.debug(`[${this.constructor.name}] Skipping pool.destroy() – pool is externally owned`);
     }
     this._destroyed = true;
+    this.initialized.set(false);
     this.logger.debug(`[${this.constructor.name}] Pool destroyed`);
   }
 
@@ -661,7 +700,7 @@ export abstract class RelayServiceBase {
 
       // Execute the query
       const queryStart = performance.now();
-      const event = (await this.#pool.get(urls, filter, {
+      const event = (await this.#pool!.get(urls, filter, {
         maxWait: timeout,
       })) as T;
       const queryDuration = performance.now() - queryStart;

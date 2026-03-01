@@ -22,7 +22,7 @@ export class ResolveNostrPipe implements PipeTransform {
     if (!text) return '';
 
     // Regex to match nostr: identifiers and bare NIP-19 identifiers
-    const nostrRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent)1[a-zA-Z0-9]+)/g;
+    const nostrRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent)1(?:(?!(?:npub|nprofile|note|nevent)1)[a-zA-Z0-9])+)/g;
 
     // Use replace with a function to handle all occurrences
     return text.replace(nostrRegex, (match) => {

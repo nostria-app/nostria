@@ -88,7 +88,7 @@ export class EventImageComponent {
     // Regex to match nostr URIs and raw bech32 identifiers (with optional @ prefix)
     // Uses the exact bech32 character set to properly terminate matches
     // Supports: nostr:npub1..., npub1..., @npub1..., and same for nprofile, note, nevent, naddr
-    const nostrRegex = /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+/gi;
+    const nostrRegex = /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L])+/gi;
 
     const segments: ContentSegment[] = [];
     let lastIndex = 0;

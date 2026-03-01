@@ -379,7 +379,7 @@ export class FormatService {
     let normalized = content;
 
     const wrappedRegex =
-      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{16,})\s*\n\s*([qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{8,})/g;
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]){16,})\s*\n\s*([qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{8,})/g;
 
     while (wrappedRegex.test(normalized)) {
       wrappedRegex.lastIndex = 0;
@@ -563,7 +563,7 @@ export class FormatService {
 
     const normalizedContent = this.normalizeWrappedNostrIdentifiers(contentWithLinksAndUrlsMasked);
     const nostrRegex =
-      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L])+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
     const matches = Array.from(normalizedContent.matchAll(nostrRegex));
@@ -729,7 +729,7 @@ export class FormatService {
 
     const normalizedContent = this.normalizeWrappedNostrIdentifiers(contentWithLinksAndUrlsMasked);
     const nostrRegex =
-      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+      /((?:@)?(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L])+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
     const matches = Array.from(normalizedContent.matchAll(nostrRegex));

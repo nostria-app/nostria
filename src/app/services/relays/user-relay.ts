@@ -1,5 +1,5 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { Event, Filter, SimplePool } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { DiscoveryRelayService } from './discovery-relay';
 import { LoggerService } from '../logger.service';
 import { RelaysService } from './relays';
@@ -20,9 +20,6 @@ export class UserRelayService {
   private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private injector = inject(Injector);
-
-  // Private SimplePool instance for publishing with notification support
-  private publishPool = new SimplePool({ enablePing: true, enableReconnect: true });
 
   private useOptimizedRelays = true;
 
@@ -556,8 +553,8 @@ export class UserRelayService {
 
     this.logger.info(`[UserRelayService] Publishing to ${relayUrls.length} relays for pubkey: ${pubkey.slice(0, 16)}...`);
 
-    // Use the SimplePool directly to get publish promises for notification tracking
-    const publishResults = this.publishPool.publish(relayUrls, event);
+    // Use RelayPoolService.publishWithTracking to get per-relay promises for notification tracking
+    const publishResults = this.pool.publishWithTracking(relayUrls, event);
     this.logger.debug('[UserRelayService] Publish results count:', publishResults.length);
 
     // Create notifications for tracking (same pattern as RelayServiceBase)
@@ -621,8 +618,8 @@ export class UserRelayService {
 
     this.logger.info(`[UserRelayService] Publishing DM to ${relayUrls.length} relays for pubkey: ${pubkey.slice(0, 16)}...`, relayUrls);
 
-    // Use the SimplePool directly to get publish promises
-    const publishResults = this.publishPool.publish(relayUrls, event);
+    // Use RelayPoolService.publishWithTracking to get per-relay promises
+    const publishResults = this.pool.publishWithTracking(relayUrls, event);
 
     // Wait for all publish attempts to complete and log results
     const results = await Promise.allSettled(publishResults);

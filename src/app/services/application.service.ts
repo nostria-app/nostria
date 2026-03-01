@@ -19,7 +19,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { BadgeService } from './badge.service';
-import { SleepModeService } from './sleep-mode.service';
 import { FavoritesService } from './favorites.service';
 import { ContentNotificationService } from './content-notification.service';
 import { AccountLocalStateService } from './account-local-state.service';
@@ -38,7 +37,6 @@ export class ApplicationService {
   appState = inject(ApplicationStateService);
   accountState = inject(AccountStateService);
   badgeService = inject(BadgeService);
-  sleepModeService = inject(SleepModeService);
   theme = inject(ThemeService);
   notificationService = inject(NotificationService);
   dataService = inject(DataService);
@@ -250,7 +248,8 @@ export class ApplicationService {
       'nostria-poll-drafts',
       'nostria-polls',
       'nostria-subscriptions',
-      'nostria-settings'
+      'nostria-settings',
+      'nostria-following-history'
 
       // Delete auto-drafts, example:
       // article-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27

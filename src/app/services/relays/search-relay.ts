@@ -4,7 +4,7 @@ import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
-import { SimplePool, UnsignedEvent, Event, Filter } from 'nostr-tools';
+import { UnsignedEvent, Event, Filter } from 'nostr-tools';
 
 // Kind 10007 is not exported from nostr-tools, so we define it here
 export const SearchRelayListKind = 10007;
@@ -20,26 +20,27 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
-  private initialized = false;
+  private poolLoaded = false;
 
   private readonly DEFAULT_SEARCH_RELAYS = ['wss://search.nos.today/', 'wss://relay.ditto.pub'];
 
   constructor() {
-    super(new SimplePool({ enablePing: true, enableReconnect: true }));
+    // Pool is created lazily on first init() / load() call.
+    super();
   }
 
   async load() {
     // Load search relays from local storage or use default ones
     const searchRelays = this.loadSearchRelaysFromStorage();
     this.init(searchRelays);
-    this.initialized = true;
+    this.poolLoaded = true;
   }
 
   /**
    * Ensures the service is initialized before performing operations
    */
   async ensureInitialized(): Promise<void> {
-    if (!this.initialized) {
+    if (!this.poolLoaded) {
       await this.load();
     }
   }

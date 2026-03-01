@@ -1,10 +1,11 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { SimplePool, Event } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
+import { PoolService } from './pool.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -13,7 +14,8 @@ let EventProcessorServiceRef: any;
   providedIn: 'root',
 })
 export class SharedRelayService {
-  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  readonly #poolService = inject(PoolService);
+  get #pool() { return this.#poolService.pool; }
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
@@ -327,7 +329,25 @@ export class SharedRelayService {
       // Execute the query
       const events: T[] = [];
       return new Promise<T[]>((resolve) => {
-        this.#pool!.subscribeEose(relayUrls, filter, {
+        let completed = false;
+        const complete = (result: T[]) => {
+          if (completed) {
+            return;
+          }
+          completed = true;
+          resolve(result);
+        };
+
+        const hardTimeout = setTimeout(() => {
+          this.logger.warn('[SharedRelayService] getMany hard timeout reached, resolving with partial results', {
+            relayCount: relayUrls.length,
+            eventCount: events.length,
+            timeout,
+          });
+          complete(events);
+        }, timeout + 1000);
+
+        this.#pool.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
           onevent: (event) => {
             // Filter event through centralized processor (expiration, deletion, muting)
@@ -349,7 +369,8 @@ export class SharedRelayService {
               }
             });
 
-            resolve(events);
+            clearTimeout(hardTimeout);
+            complete(events);
           },
         });
       });

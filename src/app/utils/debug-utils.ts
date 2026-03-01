@@ -6,6 +6,7 @@
 import { ApplicationRef } from '@angular/core';
 import { SubscriptionManagerService } from '../services/relays/subscription-manager';
 import { RelaysService } from '../services/relays/relays';
+import { DataService } from '../services/data.service';
 
 export interface NostriaDebugUtils {
   /**
@@ -38,6 +39,21 @@ export interface NostriaDebugUtils {
    * Display help information
    */
   help: () => void;
+
+  /**
+   * Show malformed event summary and recent samples in console
+   */
+  showMalformedEvents: (limit?: number) => void;
+
+  /**
+   * Get malformed event inspector data
+   */
+  getMalformedEvents: () => ReturnType<DataService['getMalformedEventsInspector']>;
+
+  /**
+   * Reset malformed event inspector data
+   */
+  resetMalformedEvents: () => void;
 }
 
 /**
@@ -47,6 +63,7 @@ export interface NostriaDebugUtils {
 export function initializeDebugUtils(appRef: ApplicationRef): void {
   const subscriptionManager = appRef.injector.get(SubscriptionManagerService);
   const relaysService = appRef.injector.get(RelaysService);
+  const dataService = appRef.injector.get(DataService);
 
   const debug: NostriaDebugUtils = {
     showRelayMetrics: () => {
@@ -73,6 +90,18 @@ export function initializeDebugUtils(appRef: ApplicationRef): void {
       return relaysService.getAllRelayStats();
     },
 
+    showMalformedEvents: (limit = 20) => {
+      dataService.logMalformedEventsInspector(limit);
+    },
+
+    getMalformedEvents: () => {
+      return dataService.getMalformedEventsInspector();
+    },
+
+    resetMalformedEvents: () => {
+      dataService.resetMalformedEventsInspector();
+    },
+
     help: () => {
       console.log(`
 🔧 Nostria Debug Utilities
@@ -93,6 +122,15 @@ Available commands:
 
   nostriaDebug.getRelayStats()
     Get detailed relay statistics
+
+  nostriaDebug.showMalformedEvents(limit?)
+    Show malformed event summary and recent samples (default: 20)
+
+  nostriaDebug.getMalformedEvents()
+    Get malformed event inspector snapshot for programmatic inspection
+
+  nostriaDebug.resetMalformedEvents()
+    Reset malformed event inspector counters and samples
 
   nostriaDebug.help()
     Show this help message

@@ -1,0 +1,93 @@
+<div class="debug-logs-dialog" dialog-content>
+  <section class="summary-grid">
+    <article class="summary-card">
+      <div class="summary-label">Malformed Events</div>
+      <div class="summary-value">{{ snapshot().total }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-label">Contexts</div>
+      <div class="summary-value">{{ snapshot().contextCount }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-label">Recent Samples</div>
+      <div class="summary-value">{{ snapshot().recentSamples.length }}</div>
+    </article>
+  </section>
+
+  <section class="toolbar">
+    <mat-slide-toggle [checked]="autoRefresh()" (change)="toggleAutoRefresh()">
+      Auto refresh
+    </mat-slide-toggle>
+
+    <div class="limit-controls">
+      <span>Rows: {{ limit() }}</span>
+      <button mat-button (click)="decreaseLimit()" [disabled]="limit() <= 10">
+        <mat-icon>remove</mat-icon>
+      </button>
+      <button mat-button (click)="increaseLimit()" [disabled]="limit() >= 200">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Top Contexts</h3>
+    <div class="table-head">
+      <span>Context</span>
+      <span>Count</span>
+      <span>Last Seen</span>
+    </div>
+    <div class="rows">
+      @for (context of topContexts(); track context.context) {
+        <div class="row">
+          <span class="context">{{ context.context }}</span>
+          <span class="count">{{ context.count }}</span>
+          <span class="timestamp">{{ formatTimestamp(context.lastSeen) }}</span>
+        </div>
+      } @empty {
+        <div class="empty">No malformed events tracked yet.</div>
+      }
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Recent Samples</h3>
+    <div class="samples">
+      @for (sample of recentSamples(); track sample.timestamp + '-' + sample.context + '-' + $index) {
+        <article class="sample">
+          <div class="sample-head">
+            <span class="sample-context">{{ sample.context }}</span>
+            <span class="sample-time">{{ formatTimestamp(sample.timestamp) }}</span>
+          </div>
+          <pre>{{ sample.diagnostic | json }}</pre>
+        </article>
+      } @empty {
+        <div class="empty">No samples available.</div>
+      }
+    </div>
+  </section>
+
+  <div class="actions" dialog-actions>
+    <div class="left-actions">
+      <button mat-button (click)="refreshNow()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-button (click)="logSnapshot()">
+        <mat-icon>terminal</mat-icon>
+        Log to Console
+      </button>
+      <button mat-button (click)="copySnapshot()">
+        <mat-icon>content_copy</mat-icon>
+        Copy Snapshot
+      </button>
+    </div>
+
+    <div class="right-actions">
+      <button mat-button (click)="resetInspector()">
+        <mat-icon>delete_sweep</mat-icon>
+        Reset
+      </button>
+    </div>
+  </div>
+</div>

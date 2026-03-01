@@ -2040,7 +2040,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
     // Match all nostr: URIs in content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
     const addedEventIds = new Set(tags.filter(tag => tag[0] === 'e').map(tag => tag[1]));

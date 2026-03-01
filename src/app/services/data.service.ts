@@ -27,6 +27,26 @@ export interface DeepDiscoveryStatus {
   message: string;
 }
 
+export interface MalformedEventSample {
+  context: string;
+  timestamp: number;
+  diagnostic: Record<string, unknown>;
+}
+
+export interface MalformedEventContextStats {
+  context: string;
+  count: number;
+  lastSeen: number;
+  lastDiagnostic: Record<string, unknown>;
+}
+
+export interface MalformedEventsInspectorSnapshot {
+  total: number;
+  contextCount: number;
+  contexts: MalformedEventContextStats[];
+  recentSamples: MalformedEventSample[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -64,6 +84,9 @@ export class DataService implements OnDestroy {
 
   // Interval handle for cleanup - stored for proper cleanup on destroy
   private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+  private readonly malformedEventStats = new Map<string, MalformedEventContextStats>();
+  private malformedEventSamples: MalformedEventSample[] = [];
+  private readonly MALFORMED_EVENT_SAMPLE_LIMIT = 100;
 
   // Clean up old pending requests periodically
   constructor() {
@@ -85,6 +108,8 @@ export class DataService implements OnDestroy {
     }
     // Clear pending requests map
     this.pendingProfileRequests.clear();
+    this.malformedEventStats.clear();
+    this.malformedEventSamples = [];
   }
 
   toRecord(event: Event) {
@@ -110,7 +135,143 @@ export class DataService implements OnDestroy {
     );
   }
 
+  private getMalformedEventDiagnostic(event: unknown): Record<string, unknown> {
+    if (event === null) {
+      return { valueType: 'null' };
+    }
+
+    if (event === undefined) {
+      return { valueType: 'undefined' };
+    }
+
+    if (Array.isArray(event)) {
+      const first = event[0];
+      return {
+        valueType: 'array',
+        length: event.length,
+        firstItemType: first === null ? 'null' : Array.isArray(first) ? 'array' : typeof first,
+        firstItemPreview: typeof first === 'object' && first !== null
+          ? {
+            id: (first as { id?: unknown }).id,
+            kind: (first as { kind?: unknown }).kind,
+            pubkey: (first as { pubkey?: unknown }).pubkey,
+          }
+          : first,
+      };
+    }
+
+    if (typeof event === 'object') {
+      const candidate = event as Record<string, unknown>;
+      const requiredFields: Array<keyof Event> = ['id', 'kind', 'pubkey', 'tags', 'content'];
+      const missingFields = requiredFields.filter((field) => !(field in candidate));
+
+      return {
+        valueType: 'object',
+        keys: Object.keys(candidate).slice(0, 20),
+        missingFields,
+        fieldTypes: {
+          id: typeof candidate['id'],
+          kind: typeof candidate['kind'],
+          pubkey: typeof candidate['pubkey'],
+          tags: Array.isArray(candidate['tags']) ? 'array' : typeof candidate['tags'],
+          content: typeof candidate['content'],
+        },
+        preview: {
+          id: candidate['id'],
+          kind: candidate['kind'],
+          pubkey: candidate['pubkey'],
+          created_at: candidate['created_at'],
+        },
+      };
+    }
+
+    return {
+      valueType: typeof event,
+      value: event,
+    };
+  }
+
+  private trackMalformedEvent(context: string, diagnostic: Record<string, unknown>): void {
+    const now = Date.now();
+    const current = this.malformedEventStats.get(context);
+
+    if (current) {
+      this.malformedEventStats.set(context, {
+        ...current,
+        count: current.count + 1,
+        lastSeen: now,
+        lastDiagnostic: diagnostic,
+      });
+    } else {
+      this.malformedEventStats.set(context, {
+        context,
+        count: 1,
+        lastSeen: now,
+        lastDiagnostic: diagnostic,
+      });
+    }
+
+    this.malformedEventSamples.unshift({
+      context,
+      timestamp: now,
+      diagnostic,
+    });
+
+    if (this.malformedEventSamples.length > this.MALFORMED_EVENT_SAMPLE_LIMIT) {
+      this.malformedEventSamples = this.malformedEventSamples.slice(0, this.MALFORMED_EVENT_SAMPLE_LIMIT);
+    }
+  }
+
+  getMalformedEventsInspector(): MalformedEventsInspectorSnapshot {
+    const contexts = Array.from(this.malformedEventStats.values())
+      .sort((a, b) => b.count - a.count || b.lastSeen - a.lastSeen);
+
+    const total = contexts.reduce((sum, item) => sum + item.count, 0);
+
+    return {
+      total,
+      contextCount: contexts.length,
+      contexts,
+      recentSamples: [...this.malformedEventSamples],
+    };
+  }
+
+  resetMalformedEventsInspector(): void {
+    this.malformedEventStats.clear();
+    this.malformedEventSamples = [];
+    this.logger.info('[DataService] Malformed event inspector reset');
+  }
+
+  logMalformedEventsInspector(limit = 20): void {
+    const snapshot = this.getMalformedEventsInspector();
+    const topContexts = snapshot.contexts.slice(0, Math.max(1, limit));
+    const recent = snapshot.recentSamples.slice(0, Math.max(1, limit));
+
+    this.logger.info(
+      `[DataService] Malformed events summary: total=${snapshot.total}, contexts=${snapshot.contextCount}`
+    );
+
+    if (topContexts.length > 0) {
+      console.table(topContexts.map((entry) => ({
+        context: entry.context,
+        count: entry.count,
+        lastSeen: new Date(entry.lastSeen).toISOString(),
+      })));
+    } else {
+      this.logger.info('[DataService] No malformed events tracked');
+    }
+
+    if (recent.length > 0) {
+      this.logger.info('[DataService] Recent malformed event samples', recent);
+    }
+  }
+
   private asValidNostrEvent(event: unknown, context: string): Event | null {
+    if (event === null || event === undefined) {
+      this.logger.debug(`[DataService] No event found in ${context}`);
+      return null;
+    }
+
     // Defensive fallback: some relay wrapper paths may occasionally return [event]
     // when a single event is expected.
     if (Array.isArray(event)) {
@@ -122,7 +283,12 @@ export class DataService implements OnDestroy {
     }
 
     if (!this.isValidNostrEvent(event)) {
-      this.logger.warn(`[DataService] Ignoring malformed event in ${context}:`, event);
+      const diagnostic = this.getMalformedEventDiagnostic(event);
+      this.trackMalformedEvent(context, diagnostic);
+      this.logger.warn(
+        `[DataService] Ignoring malformed event in ${context}`,
+        diagnostic
+      );
       return null;
     }
 

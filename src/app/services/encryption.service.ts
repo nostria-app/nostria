@@ -3,7 +3,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
 import { hexToBytes } from '@noble/hashes/utils.js';
-import { Event, nip04 } from 'nostr-tools';
+import { Event, UnsignedEvent, nip04 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
 import { BunkerSigner } from 'nostr-tools/nip46';
 import { SimplePool } from 'nostr-tools';
@@ -31,6 +31,12 @@ interface BunkerQueueItem<T> {
   providedIn: 'root',
 })
 export class EncryptionService {
+  private readonly unsupportedRemoteSignerHosts = new Set<string>([
+    'nos.lol',
+    'relay.damus.io',
+    'relay.primal.net',
+  ]);
+
   private logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);
@@ -82,7 +88,7 @@ export class EncryptionService {
     }
     if (this.cachedBunkerPool) {
       try {
-        this.cachedBunkerPool.close([]);
+        this.cachedBunkerPool.destroy();
       } catch {
         // Ignore errors when closing
       }
@@ -151,15 +157,24 @@ export class EncryptionService {
       this.pendingBunkerOperations.set(this.bunkerQueue.length);
 
       try {
-        // Add timeout to prevent hanging forever - 30 seconds per operation
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Bunker operation timed out after 30s')), 30000);
-        });
-        const result = await Promise.race([item.operation(), timeoutPromise]);
+        const result = await this.executeBunkerOperationWithTimeout(item.operation);
         item.resolve(result);
       } catch (error) {
-        this.logger.debug('Bunker operation failed:', error);
-        item.reject(error instanceof Error ? error : new Error(String(error)));
+        if (this.isRetryableBunkerError(error)) {
+          this.logger.warn('Bunker operation failed, retrying once with fresh connection', error);
+          this.clearCachedBunker();
+
+          try {
+            const retryResult = await this.executeBunkerOperationWithTimeout(item.operation);
+            item.resolve(retryResult);
+          } catch (retryError) {
+            this.logger.debug('Bunker operation retry failed:', retryError);
+            item.reject(retryError instanceof Error ? retryError : new Error(String(retryError)));
+          }
+        } else {
+          this.logger.debug('Bunker operation failed:', error);
+          item.reject(error instanceof Error ? error : new Error(String(error)));
+        }
       }
 
       // Small delay between operations to prevent overwhelming the bunker
@@ -171,6 +186,39 @@ export class EncryptionService {
     this.logger.debug('Bunker queue processing complete');
     this.isProcessingQueue = false;
     this.pendingBunkerOperations.set(0);
+  }
+
+  private executeBunkerOperationWithTimeout<T>(operation: () => Promise<T>): Promise<T> {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Bunker operation timed out after 30s')), 30000);
+    });
+
+    return Promise.race([operation(), timeoutPromise]);
+  }
+
+  private isRetryableBunkerError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message.toLowerCase();
+    return message.includes('timed out') || message.includes('timeout') || message.includes('connect');
+  }
+
+  /**
+   * Sign an event using the cached connected BunkerSigner.
+   * All remote signing goes through here so we use a single NIP-46 session
+   * (one connect() handshake) rather than a fresh signer per request.
+   */
+  async signRemoteEvent(event: UnsignedEvent): Promise<Event> {
+    const account = this.accountState.account();
+    if (!account || account.source !== 'remote') {
+      throw new Error('signRemoteEvent called but current account is not a remote signer account');
+    }
+    return await this.queueBunkerOperation(async () => {
+      const bunker = await this.getBunkerSigner(account);
+      return await bunker.signEvent(event);
+    });
   }
 
   /**
@@ -204,7 +252,7 @@ export class EncryptionService {
     }
     if (this.cachedBunkerPool) {
       try {
-        this.cachedBunkerPool.close([]);
+        this.cachedBunkerPool.destroy();
       } catch {
         // Ignore errors when closing
       }
@@ -227,9 +275,51 @@ export class EncryptionService {
     }
 
     this.logger.debug('Creating new BunkerSigner for remote account');
+    const sanitizedRelays = this.sanitizeRemoteSignerRelays(account.bunker.relays || []);
+    const bunkerPointer = {
+      ...account.bunker,
+      relays: sanitizedRelays.length ? sanitizedRelays : account.bunker.relays,
+    };
+
+    if (sanitizedRelays.length && sanitizedRelays.length !== (account.bunker.relays || []).length) {
+      this.logger.warn('Filtered unsupported remote-signing relays for bunker connection', {
+        originalRelays: account.bunker.relays,
+        sanitizedRelays,
+      });
+    }
+
     this.cachedBunkerPool = new SimplePool({ enablePing: true, enableReconnect: true });
-    this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
+    this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, bunkerPointer, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
+
+    // Re-establish the NIP-46 session with the remote signer.
+    // Amber (and some other signers) require a connect() handshake before they
+    // will process sign_event / encrypt / decrypt requests.
+    const connectTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('NIP-46 connect() timed out after 35 s')), 35000)
+    );
+    try {
+      await Promise.race([this.cachedBunkerSigner.connect(), connectTimeout]);
+      this.logger.debug('BunkerSigner session re-established (connect ack received)');
+    } catch (connectErr) {
+      this.logger.warn('BunkerSigner connect() did not complete, trying ping health check', connectErr);
+
+      const pingTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('NIP-46 ping timed out after 10 s')), 10000)
+      );
+
+      try {
+        await Promise.race([
+          this.cachedBunkerSigner.sendRequest('ping', []),
+          pingTimeout,
+        ]);
+        this.logger.debug('BunkerSigner ping succeeded after connect timeout, continuing with active session');
+      } catch (pingErr) {
+        this.logger.error('BunkerSigner session check failed after connect timeout', pingErr);
+        this.clearCachedBunker();
+        throw new Error('Failed to establish remote signer session. Reconnect your signer and try again.');
+      }
+    }
 
     return this.cachedBunkerSigner;
   }
@@ -256,8 +346,10 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = await this.getBunkerSigner(account);
-        return await this.queueBunkerOperation(() => bunker.nip04Encrypt(recipientPubkey, plaintext));
+        return await this.queueBunkerOperation(async () => {
+          const bunker = await this.getBunkerSigner(account);
+          return await bunker.nip04Encrypt(recipientPubkey, plaintext);
+        });
       }
 
       if (!account?.privkey) {
@@ -302,8 +394,10 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = await this.getBunkerSigner(account);
-        return await this.queueBunkerOperation(() => bunker.nip04Decrypt(pubkey, ciphertext));
+        return await this.queueBunkerOperation(async () => {
+          const bunker = await this.getBunkerSigner(account);
+          return await bunker.nip04Decrypt(pubkey, ciphertext);
+        });
       }
 
       if (!account?.privkey) {
@@ -347,8 +441,10 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = await this.getBunkerSigner(account);
-        return await this.queueBunkerOperation(() => bunker.nip44Encrypt(recipientPubkey, plaintext));
+        return await this.queueBunkerOperation(async () => {
+          const bunker = await this.getBunkerSigner(account);
+          return await bunker.nip44Encrypt(recipientPubkey, plaintext);
+        });
       }
 
       if (!account?.privkey) {
@@ -395,8 +491,10 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = await this.getBunkerSigner(account);
-        return await this.queueBunkerOperation(() => bunker.nip44Decrypt(senderPubkey, ciphertext));
+        return await this.queueBunkerOperation(async () => {
+          const bunker = await this.getBunkerSigner(account);
+          return await bunker.nip44Decrypt(senderPubkey, ciphertext);
+        });
       }
 
       if (!account?.privkey) {
@@ -489,6 +587,18 @@ export class EncryptionService {
    */
   getPreferredEncryption(): 'nip44' | 'nip04' {
     return 'nip44'; // Always prefer the more secure option for new messages
+  }
+
+  private sanitizeRemoteSignerRelays(relays: string[]): string[] {
+    const normalizedRelays = this.utilities.normalizeRelayUrls(relays);
+    return normalizedRelays.filter(relay => {
+      try {
+        const host = new URL(relay).hostname.toLowerCase();
+        return !this.unsupportedRemoteSignerHosts.has(host);
+      } catch {
+        return false;
+      }
+    });
   }
 
   /**

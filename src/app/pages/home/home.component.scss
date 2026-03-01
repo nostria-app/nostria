@@ -63,7 +63,7 @@
   transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
   border: none;
   font-family: inherit;
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-surface-container);
 
   .tile-background {
     position: absolute;
@@ -355,7 +355,7 @@
 }
 
 .tile-messages {
-  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(33, 150, 243, 0.15);
 
   .tile-icon {
@@ -372,7 +372,7 @@
 }
 
 .tile-articles {
-  background: linear-gradient(160deg, rgba(96, 125, 139, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(96, 125, 139, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(96, 125, 139, 0.15);
 
   .tile-icon {
@@ -389,7 +389,7 @@
 }
 
 .tile-summary {
-  background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(0, 188, 212, 0.15);
 
   .tile-icon {
@@ -402,7 +402,7 @@
 }
 
 .tile-notifications {
-  background: linear-gradient(160deg, rgba(233, 30, 99, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(233, 30, 99, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(233, 30, 99, 0.15);
 
   .tile-icon {
@@ -415,7 +415,7 @@
 }
 
 .tile-profile {
-  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(156, 39, 176, 0.15);
 
   .tile-icon {
@@ -448,7 +448,7 @@
 }
 
 .tile-people {
-  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(76, 175, 80, 0.15);
 
   .tile-icon {
@@ -465,7 +465,7 @@
 }
 
 .tile-clips {
-  background: linear-gradient(160deg, var(--mat-sys-secondary-container) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, var(--mat-sys-secondary-container) 0%, transparent 100%);
   border: 1px solid var(--mat-sys-outline-variant);
 
   .tile-icon {
@@ -500,7 +500,7 @@
 }
 
 .tile-media {
-  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(63, 81, 181, 0.15);
 
   .tile-icon {
@@ -517,7 +517,7 @@
 }
 
 .tile-streams {
-  background: linear-gradient(160deg, rgba(244, 67, 54, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(244, 67, 54, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(244, 67, 54, 0.15);
 
   .tile-icon {
@@ -534,7 +534,7 @@
 }
 
 .tile-collections {
-  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 193, 7, 0.15);
 
   .tile-icon {
@@ -552,7 +552,7 @@
 
 // Tiny tiles colors
 .tile-find-people {
-  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(156, 39, 176, 0.15);
 
   mat-icon {
@@ -565,7 +565,7 @@
 }
 
 .tile-lists {
-  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(33, 150, 243, 0.15);
 
   mat-icon {
@@ -578,7 +578,7 @@
 }
 
 .tile-polls {
-  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(76, 175, 80, 0.15);
 
   mat-icon {
@@ -591,7 +591,7 @@
 }
 
 .tile-playlists {
-  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(156, 39, 176, 0.15);
 
   .tile-icon {
@@ -604,7 +604,7 @@
 }
 
 .tile-queue {
-  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(63, 81, 181, 0.15);
 
   .tile-icon {
@@ -617,7 +617,7 @@
 }
 
 .tile-my-articles {
-  background: linear-gradient(160deg, rgba(96, 125, 139, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(96, 125, 139, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(96, 125, 139, 0.15);
 
   .tile-icon {
@@ -630,7 +630,7 @@
 }
 
 .tile-meetings {
-  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(76, 175, 80, 0.15);
 
   .tile-icon {
@@ -661,7 +661,7 @@
 }
 
 .tile-ai-settings {
-  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(156, 39, 176, 0.15);
 
   .tile-icon {
@@ -675,7 +675,7 @@
 
 // Collections Section tiles
 .tile-col-media {
-  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(63, 81, 181, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(63, 81, 181, 0.15);
 
   .tile-icon {
@@ -692,7 +692,7 @@
 }
 
 .tile-col-bookmarks {
-  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 193, 7, 0.15);
 
   .tile-icon {
@@ -709,7 +709,7 @@
 }
 
 .tile-col-relays {
-  background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(0, 188, 212, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(0, 188, 212, 0.15);
 
   .tile-icon {
@@ -722,7 +722,7 @@
 }
 
 .tile-col-emojis {
-  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 152, 0, 0.15);
 
   .tile-icon {
@@ -735,7 +735,7 @@
 }
 
 .tile-col-interests {
-  background: linear-gradient(160deg, rgba(233, 30, 99, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(233, 30, 99, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(233, 30, 99, 0.15);
 
   .tile-icon {
@@ -769,7 +769,7 @@
 }
 
 .tile-premium-analytics {
-  background: linear-gradient(160deg, rgba(255, 215, 0, 0.15) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 215, 0, 0.15) 0%, transparent 100%);
   border: 1px solid rgba(255, 215, 0, 0.2);
 
   .tile-icon {
@@ -786,7 +786,7 @@
 }
 
 .tile-premium-backup {
-  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(76, 175, 80, 0.15);
 
   .tile-icon {
@@ -803,7 +803,7 @@
 }
 
 .tile-premium-memos {
-  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 193, 7, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 193, 7, 0.15);
 
   .tile-icon {
@@ -816,7 +816,7 @@
 }
 
 .tile-premium-calendar {
-  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(33, 150, 243, 0.15);
 
   .tile-icon {
@@ -829,7 +829,7 @@
 }
 
 .tile-premium-youtube {
-  background: linear-gradient(160deg, rgba(244, 67, 54, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(244, 67, 54, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(244, 67, 54, 0.15);
 
   .tile-icon {
@@ -842,7 +842,7 @@
 }
 
 .tile-premium-newsletter {
-  background: linear-gradient(160deg, rgba(103, 58, 183, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(103, 58, 183, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(103, 58, 183, 0.15);
 
   .tile-icon {
@@ -855,7 +855,7 @@
 }
 
 .tile-premium-subscription {
-  background: linear-gradient(160deg, rgba(255, 215, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 215, 0, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 215, 0, 0.15);
 
   .tile-icon {
@@ -925,7 +925,7 @@
 }
 
 .tile-more-publish {
-  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(76, 175, 80, 0.15);
 
   .tile-icon {
@@ -938,7 +938,7 @@
 }
 
 .tile-more-player {
-  background: linear-gradient(160deg, var(--mat-sys-surface-container) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, var(--mat-sys-surface-container) 0%, transparent 100%);
   border: 1px solid var(--mat-sys-outline-variant);
 
   .tile-icon {
@@ -951,7 +951,7 @@
 }
 
 .tile-more-install {
-  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(33, 150, 243, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(33, 150, 243, 0.15);
 
   .tile-icon {
@@ -964,7 +964,7 @@
 }
 
 .tile-more-settings {
-  background: linear-gradient(160deg, rgba(158, 158, 158, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(158, 158, 158, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(158, 158, 158, 0.15);
 
   .tile-icon {
@@ -977,7 +977,7 @@
 }
 
 .tile-more-whatsnew {
-  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, var(--mat-sys-surface) 100%);
+  background: linear-gradient(160deg, rgba(255, 152, 0, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(255, 152, 0, 0.15);
 
   .tile-icon {
@@ -1055,7 +1055,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-surface-container);
   border-radius: 12px;
   text-decoration: none;
   color: var(--mat-sys-on-surface);
@@ -1124,7 +1124,7 @@
       align-items: center;
       gap: 10px;
       padding: 20px 16px;
-      background-color: var(--mat-sys-surface);
+      background-color: var(--mat-sys-surface-container);
       border-radius: 16px;
       border: 1px solid rgba(255, 215, 0, 0.2);
       text-decoration: none;
@@ -1476,6 +1476,480 @@
         padding: 0 10px;
         border-radius: var(--mat-sys-corner-full);
       }
+    }
+  }
+}
+
+// =============================================================================
+// Dark Mode Enhancements
+// Boost color vibrancy, border visibility, and hover glow on dark gray background
+// =============================================================================
+:host-context(.dark) {
+  // --- Large Feeds tile ---
+  .tile-large {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.3) 0%, rgba(255, 193, 7, 0.15) 100%);
+    border-color: rgba(255, 152, 0, 0.4);
+
+    .tile-icon-wrapper {
+      box-shadow: 0 8px 28px rgba(255, 152, 0, 0.5);
+    }
+
+    &:hover {
+      border-color: rgba(255, 152, 0, 0.65);
+      box-shadow: 0 20px 60px rgba(255, 152, 0, 0.3);
+    }
+  }
+
+  .tile-feeds .tile-background {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.4) 0%, rgba(255, 193, 7, 0.25) 100%);
+  }
+
+  // --- Messages ---
+  .tile-messages {
+    background: linear-gradient(160deg, rgba(33, 150, 243, 0.28) 0%, rgba(33, 150, 243, 0.06) 100%);
+    border-color: rgba(33, 150, 243, 0.4);
+
+    .tile-icon { color: #42A5F5; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(33, 150, 243, 0.38) 0%, rgba(33, 150, 243, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(33, 150, 243, 0.6);
+      box-shadow: 0 16px 40px rgba(33, 150, 243, 0.18);
+    }
+  }
+
+  // --- Articles ---
+  .tile-articles {
+    background: linear-gradient(160deg, rgba(96, 125, 139, 0.28) 0%, rgba(96, 125, 139, 0.06) 100%);
+    border-color: rgba(96, 125, 139, 0.4);
+
+    .tile-icon { color: #90A4AE; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(96, 125, 139, 0.38) 0%, rgba(96, 125, 139, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(96, 125, 139, 0.6);
+      box-shadow: 0 16px 40px rgba(96, 125, 139, 0.15);
+    }
+  }
+
+  // --- Summary ---
+  .tile-summary {
+    background: linear-gradient(160deg, rgba(0, 188, 212, 0.28) 0%, rgba(0, 188, 212, 0.06) 100%);
+    border-color: rgba(0, 188, 212, 0.4);
+
+    .tile-icon { color: #26C6DA; }
+    &:hover {
+      border-color: rgba(0, 188, 212, 0.6);
+      box-shadow: 0 12px 32px rgba(0, 188, 212, 0.18);
+    }
+  }
+
+  // --- Notifications ---
+  .tile-notifications {
+    background: linear-gradient(160deg, rgba(233, 30, 99, 0.28) 0%, rgba(233, 30, 99, 0.06) 100%);
+    border-color: rgba(233, 30, 99, 0.4);
+
+    .tile-icon { color: #F06292; }
+    &:hover {
+      border-color: rgba(233, 30, 99, 0.6);
+      box-shadow: 0 12px 32px rgba(233, 30, 99, 0.18);
+    }
+  }
+
+  // --- Profile ---
+  .tile-profile {
+    background: linear-gradient(160deg, rgba(156, 39, 176, 0.28) 0%, rgba(156, 39, 176, 0.06) 100%);
+    border-color: rgba(156, 39, 176, 0.4);
+
+    .tile-icon { color: #BA68C8; }
+    &:hover {
+      border-color: rgba(156, 39, 176, 0.6);
+      box-shadow: 0 12px 32px rgba(156, 39, 176, 0.18);
+    }
+  }
+
+  // --- Discover ---
+  .tile-discover {
+    background: linear-gradient(135deg, rgba(103, 58, 183, 0.28) 0%, rgba(63, 81, 181, 0.14) 100%);
+    border-color: rgba(103, 58, 183, 0.4);
+
+    .tile-icon { color: #9575CD; }
+    .tile-background {
+      background: linear-gradient(135deg, rgba(103, 58, 183, 0.38) 0%, rgba(63, 81, 181, 0.18) 100%);
+    }
+    &:hover {
+      border-color: rgba(103, 58, 183, 0.6);
+      box-shadow: 0 16px 40px rgba(103, 58, 183, 0.18);
+    }
+  }
+
+  // --- People ---
+  .tile-people {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    .tile-icon { color: #66BB6A; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(76, 175, 80, 0.38) 0%, rgba(76, 175, 80, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(76, 175, 80, 0.6);
+      box-shadow: 0 16px 40px rgba(76, 175, 80, 0.18);
+    }
+  }
+
+  // --- Clips ---
+  .tile-clips {
+    border-color: var(--mat-sys-outline-variant);
+
+    &:hover {
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  // --- Music ---
+  .tile-music {
+    background: linear-gradient(180deg, rgba(255, 87, 34, 0.3) 0%, rgba(255, 87, 34, 0.1) 100%);
+    border-color: rgba(255, 87, 34, 0.4);
+
+    .tile-icon { color: #FF7043; }
+    .tile-background {
+      background: linear-gradient(180deg, rgba(255, 87, 34, 0.4) 0%, rgba(255, 87, 34, 0.15) 100%);
+    }
+    &:hover {
+      border-color: rgba(255, 87, 34, 0.65);
+      box-shadow: 0 20px 40px rgba(255, 87, 34, 0.22);
+    }
+  }
+
+  // --- Media ---
+  .tile-media {
+    background: linear-gradient(160deg, rgba(63, 81, 181, 0.28) 0%, rgba(63, 81, 181, 0.06) 100%);
+    border-color: rgba(63, 81, 181, 0.4);
+
+    .tile-icon { color: #7986CB; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(63, 81, 181, 0.38) 0%, rgba(63, 81, 181, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(63, 81, 181, 0.6);
+      box-shadow: 0 16px 40px rgba(63, 81, 181, 0.18);
+    }
+  }
+
+  // --- Streams ---
+  .tile-streams {
+    background: linear-gradient(160deg, rgba(244, 67, 54, 0.28) 0%, rgba(244, 67, 54, 0.06) 100%);
+    border-color: rgba(244, 67, 54, 0.4);
+
+    .tile-icon { color: #EF5350; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(244, 67, 54, 0.38) 0%, rgba(244, 67, 54, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(244, 67, 54, 0.6);
+      box-shadow: 0 16px 40px rgba(244, 67, 54, 0.18);
+    }
+  }
+
+  // --- Collections ---
+  .tile-collections {
+    background: linear-gradient(160deg, rgba(255, 193, 7, 0.28) 0%, rgba(255, 193, 7, 0.06) 100%);
+    border-color: rgba(255, 193, 7, 0.4);
+
+    .tile-icon { color: #FFCA28; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(255, 193, 7, 0.38) 0%, rgba(255, 193, 7, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(255, 193, 7, 0.6);
+      box-shadow: 0 16px 40px rgba(255, 193, 7, 0.18);
+    }
+  }
+
+  // --- Tiny tiles ---
+  .tile-find-people {
+    background: linear-gradient(160deg, rgba(156, 39, 176, 0.28) 0%, rgba(156, 39, 176, 0.06) 100%);
+    border-color: rgba(156, 39, 176, 0.4);
+
+    mat-icon { color: #BA68C8; }
+    &:hover { border-color: rgba(156, 39, 176, 0.6); }
+  }
+
+  .tile-lists {
+    background: linear-gradient(160deg, rgba(33, 150, 243, 0.28) 0%, rgba(33, 150, 243, 0.06) 100%);
+    border-color: rgba(33, 150, 243, 0.4);
+
+    mat-icon { color: #42A5F5; }
+    &:hover { border-color: rgba(33, 150, 243, 0.6); }
+  }
+
+  .tile-polls {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    mat-icon { color: #66BB6A; }
+    &:hover { border-color: rgba(76, 175, 80, 0.6); }
+  }
+
+  // --- Small tiles ---
+  .tile-playlists {
+    background: linear-gradient(160deg, rgba(156, 39, 176, 0.28) 0%, rgba(156, 39, 176, 0.06) 100%);
+    border-color: rgba(156, 39, 176, 0.4);
+
+    .tile-icon { color: #BA68C8; }
+    &:hover { border-color: rgba(156, 39, 176, 0.6); }
+  }
+
+  .tile-queue {
+    background: linear-gradient(160deg, rgba(63, 81, 181, 0.28) 0%, rgba(63, 81, 181, 0.06) 100%);
+    border-color: rgba(63, 81, 181, 0.4);
+
+    .tile-icon { color: #7986CB; }
+    &:hover { border-color: rgba(63, 81, 181, 0.6); }
+  }
+
+  .tile-my-articles {
+    background: linear-gradient(160deg, rgba(96, 125, 139, 0.28) 0%, rgba(96, 125, 139, 0.06) 100%);
+    border-color: rgba(96, 125, 139, 0.4);
+
+    .tile-icon { color: #90A4AE; }
+    &:hover { border-color: rgba(96, 125, 139, 0.6); }
+  }
+
+  .tile-meetings {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    .tile-icon { color: #66BB6A; }
+    &:hover { border-color: rgba(76, 175, 80, 0.6); }
+  }
+
+  // --- AI Section ---
+  .tile-ai-models {
+    background: linear-gradient(135deg, rgba(103, 58, 183, 0.28) 0%, rgba(156, 39, 176, 0.14) 100%);
+    border-color: rgba(103, 58, 183, 0.4);
+
+    .tile-icon { color: #9575CD; }
+    .tile-background {
+      background: linear-gradient(135deg, rgba(103, 58, 183, 0.38) 0%, rgba(156, 39, 176, 0.18) 100%);
+    }
+    &:hover {
+      border-color: rgba(103, 58, 183, 0.6);
+      box-shadow: 0 16px 40px rgba(103, 58, 183, 0.18);
+    }
+  }
+
+  .tile-ai-settings {
+    background: linear-gradient(160deg, rgba(156, 39, 176, 0.28) 0%, rgba(156, 39, 176, 0.06) 100%);
+    border-color: rgba(156, 39, 176, 0.4);
+
+    .tile-icon { color: #BA68C8; }
+    &:hover {
+      border-color: rgba(156, 39, 176, 0.6);
+    }
+  }
+
+  // --- Collections Section ---
+  .tile-col-media {
+    background: linear-gradient(160deg, rgba(63, 81, 181, 0.28) 0%, rgba(63, 81, 181, 0.06) 100%);
+    border-color: rgba(63, 81, 181, 0.4);
+
+    .tile-icon { color: #7986CB; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(63, 81, 181, 0.38) 0%, rgba(63, 81, 181, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(63, 81, 181, 0.6);
+    }
+  }
+
+  .tile-col-bookmarks {
+    background: linear-gradient(160deg, rgba(255, 193, 7, 0.28) 0%, rgba(255, 193, 7, 0.06) 100%);
+    border-color: rgba(255, 193, 7, 0.4);
+
+    .tile-icon { color: #FFCA28; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(255, 193, 7, 0.38) 0%, rgba(255, 193, 7, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(255, 193, 7, 0.6);
+    }
+  }
+
+  .tile-col-relays {
+    background: linear-gradient(160deg, rgba(0, 188, 212, 0.28) 0%, rgba(0, 188, 212, 0.06) 100%);
+    border-color: rgba(0, 188, 212, 0.4);
+
+    .tile-icon { color: #26C6DA; }
+    &:hover {
+      border-color: rgba(0, 188, 212, 0.6);
+    }
+  }
+
+  .tile-col-emojis {
+    background: linear-gradient(160deg, rgba(255, 152, 0, 0.28) 0%, rgba(255, 152, 0, 0.06) 100%);
+    border-color: rgba(255, 152, 0, 0.4);
+
+    .tile-icon { color: #FFA726; }
+    &:hover {
+      border-color: rgba(255, 152, 0, 0.6);
+    }
+  }
+
+  .tile-col-interests {
+    background: linear-gradient(160deg, rgba(233, 30, 99, 0.28) 0%, rgba(233, 30, 99, 0.06) 100%);
+    border-color: rgba(233, 30, 99, 0.4);
+
+    .tile-icon { color: #F06292; }
+    &:hover {
+      border-color: rgba(233, 30, 99, 0.6);
+    }
+  }
+
+  // --- Premium Section ---
+  .premium-active {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 215, 0, 0.04) 100%);
+    border-color: rgba(255, 215, 0, 0.3);
+  }
+
+  .tile-premium-analytics {
+    background: linear-gradient(160deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.08) 100%);
+    border-color: rgba(255, 215, 0, 0.4);
+
+    .tile-icon { color: #FFE082; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0.12) 100%);
+    }
+    &:hover {
+      border-color: rgba(255, 215, 0, 0.65);
+      box-shadow: 0 16px 40px rgba(255, 215, 0, 0.18);
+    }
+  }
+
+  .tile-premium-backup {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    .tile-icon { color: #66BB6A; }
+    .tile-background {
+      background: linear-gradient(160deg, rgba(76, 175, 80, 0.38) 0%, rgba(76, 175, 80, 0.1) 100%);
+    }
+    &:hover {
+      border-color: rgba(76, 175, 80, 0.6);
+    }
+  }
+
+  .tile-premium-memos {
+    background: linear-gradient(160deg, rgba(255, 193, 7, 0.28) 0%, rgba(255, 193, 7, 0.06) 100%);
+    border-color: rgba(255, 193, 7, 0.4);
+
+    .tile-icon { color: #FFCA28; }
+    &:hover { border-color: rgba(255, 193, 7, 0.6); }
+  }
+
+  .tile-premium-calendar {
+    background: linear-gradient(160deg, rgba(33, 150, 243, 0.28) 0%, rgba(33, 150, 243, 0.06) 100%);
+    border-color: rgba(33, 150, 243, 0.4);
+
+    .tile-icon { color: #42A5F5; }
+    &:hover { border-color: rgba(33, 150, 243, 0.6); }
+  }
+
+  .tile-premium-youtube {
+    background: linear-gradient(160deg, rgba(244, 67, 54, 0.28) 0%, rgba(244, 67, 54, 0.06) 100%);
+    border-color: rgba(244, 67, 54, 0.4);
+
+    .tile-icon { color: #EF5350; }
+    &:hover { border-color: rgba(244, 67, 54, 0.6); }
+  }
+
+  .tile-premium-newsletter {
+    background: linear-gradient(160deg, rgba(103, 58, 183, 0.28) 0%, rgba(103, 58, 183, 0.06) 100%);
+    border-color: rgba(103, 58, 183, 0.4);
+
+    .tile-icon { color: #9575CD; }
+    &:hover { border-color: rgba(103, 58, 183, 0.6); }
+  }
+
+  .tile-premium-subscription {
+    background: linear-gradient(160deg, rgba(255, 215, 0, 0.28) 0%, rgba(255, 215, 0, 0.06) 100%);
+    border-color: rgba(255, 215, 0, 0.4);
+
+    .tile-icon { color: #FFE082; }
+    &:hover { border-color: rgba(255, 215, 0, 0.6); }
+  }
+
+  // --- Premium Upsell ---
+  .tile-premium-upsell {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.06) 100%);
+    border-color: rgba(255, 215, 0, 0.4);
+
+    .tile-background {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.1) 100%);
+    }
+    &:hover {
+      border-color: #FFD700;
+      box-shadow: 0 16px 40px rgba(255, 215, 0, 0.22);
+    }
+  }
+
+  // --- More Section ---
+  .tile-more-commands {
+    background: linear-gradient(135deg, rgba(96, 125, 139, 0.28) 0%, rgba(120, 144, 156, 0.12) 100%);
+    border-color: rgba(96, 125, 139, 0.4);
+
+    .tile-icon { color: #90A4AE; }
+    .tile-background {
+      background: linear-gradient(135deg, rgba(96, 125, 139, 0.38) 0%, rgba(120, 144, 156, 0.18) 100%);
+    }
+    &:hover {
+      border-color: rgba(96, 125, 139, 0.6);
+    }
+  }
+
+  .tile-more-publish {
+    background: linear-gradient(160deg, rgba(76, 175, 80, 0.28) 0%, rgba(76, 175, 80, 0.06) 100%);
+    border-color: rgba(76, 175, 80, 0.4);
+
+    .tile-icon { color: #66BB6A; }
+    &:hover { border-color: rgba(76, 175, 80, 0.6); }
+  }
+
+  .tile-more-install {
+    background: linear-gradient(160deg, rgba(33, 150, 243, 0.28) 0%, rgba(33, 150, 243, 0.06) 100%);
+    border-color: rgba(33, 150, 243, 0.4);
+
+    .tile-icon { color: #42A5F5; }
+    &:hover { border-color: rgba(33, 150, 243, 0.6); }
+  }
+
+  .tile-more-settings {
+    background: linear-gradient(160deg, rgba(158, 158, 158, 0.28) 0%, rgba(158, 158, 158, 0.06) 100%);
+    border-color: rgba(158, 158, 158, 0.4);
+
+    .tile-icon { color: #BDBDBD; }
+    &:hover { border-color: rgba(158, 158, 158, 0.6); }
+  }
+
+  .tile-more-whatsnew {
+    background: linear-gradient(160deg, rgba(255, 152, 0, 0.28) 0%, rgba(255, 152, 0, 0.06) 100%);
+    border-color: rgba(255, 152, 0, 0.4);
+
+    .tile-icon { color: #FFA726; }
+    &:hover { border-color: rgba(255, 152, 0, 0.6); }
+  }
+
+  .tile-more-learn {
+    background: linear-gradient(160deg, rgba(0, 188, 212, 0.3) 0%, rgba(103, 58, 183, 0.14) 100%);
+    border-color: rgba(0, 188, 212, 0.45);
+
+    .tile-icon { color: #26C6DA; }
+    &:hover {
+      border-color: rgba(0, 188, 212, 0.75);
+      box-shadow: 0 8px 28px rgba(0, 188, 212, 0.28);
     }
   }
 }

@@ -285,17 +285,6 @@
     }
   }
 
-  @media (max-width: 700px) {
-
-    .user-profile-name-link,
-    .user-profile-npub-link {
-      min-height: 40px;
-      display: inline-flex;
-      align-items: center;
-      padding: 0 2px;
-    }
-  }
-
   .user-profile-npub {
     color: var(--mat-sys-on-surface-variant);
     font-size: 13px;

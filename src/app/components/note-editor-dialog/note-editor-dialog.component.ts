@@ -1659,7 +1659,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
     // Match all nostr: URIs in content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
     // Track added quote event IDs (q tags) separately from reply event IDs (e tags)
@@ -1896,6 +1896,89 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.insertEmoji(result.result);
       }
     });
+  }
+
+  /**
+   * Open the reference picker dialog to insert nostr: references (profiles, events, articles)
+   */
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleReferencePickerDialogComponent.prototype,
+      ArticleReferencePickerResult
+    >(ArticleReferencePickerDialogComponent, {
+      title: 'Insert Reference',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const references = result?.references ?? [];
+      if (references.length > 0) {
+        this.insertReferences(references);
+      }
+    });
+  }
+
+  /**
+   * Insert nostr: reference strings at the current cursor position in the textarea
+   */
+  private insertReferences(references: string[]): void {
+    const uniqueReferences = Array.from(new Set(references.filter(ref => !!ref?.trim())));
+    if (uniqueReferences.length === 0) {
+      return;
+    }
+
+    const insertionText = uniqueReferences.join('\n');
+    const textarea = this.contentTextarea?.nativeElement;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentContent = this.content();
+
+      // Add spacing around the insertion if needed
+      const before = currentContent.substring(0, start);
+      const after = currentContent.substring(end);
+      const needsLeadingSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+      const needsTrailingSpace = after.length > 0 && !after.startsWith('\n') && !after.startsWith(' ');
+
+      const textToInsert = (needsLeadingSpace ? ' ' : '') + insertionText + (needsTrailingSpace ? ' ' : '');
+      const newContent = before + textToInsert + after;
+
+      this.content.set(newContent);
+      textarea.value = newContent;
+
+      // Position cursor after the inserted text
+      setTimeout(() => {
+        const newPos = start + textToInsert.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+        this.autoResizeTextarea(textarea);
+      });
+    } else {
+      // Fallback: append to end
+      const currentContent = this.content();
+      const separator = !currentContent.trim()
+        ? ''
+        : currentContent.endsWith('\n')
+          ? '\n'
+          : '\n\n';
+      this.content.set(`${currentContent}${separator}${insertionText}`);
+    }
+
+    this.snackBar.open(
+      uniqueReferences.length === 1 ? 'Reference inserted' : `${uniqueReferences.length} references inserted`,
+      'Close',
+      { duration: 2500 },
+    );
   }
 
   // Mention input handling methods
@@ -3000,7 +3083,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
    */
   private containsNip19Identifier(text: string): boolean {
-    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)(?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+\b/;
     return nip19Pattern.test(text);
   }
 
@@ -3020,7 +3103,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Extract nostr: URIs from new content and check if they exist in current content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)[a-zA-Z0-9]+/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)(?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+/g;
     const nostrUris = newContent.match(nostrUriPattern);
 
     if (nostrUris) {
@@ -3037,7 +3120,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Check for bare NIP-19 identifiers (without nostr: prefix) and see if they exist with prefix
-    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)\b/g;
+    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)\b/g;
     const bareIdentifiers = newContent.match(bareNip19Pattern);
 
     if (bareIdentifiers) {
@@ -3076,7 +3159,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
     // and are not part of a URL (preceded by /)
     const processedText = text.replace(
-      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b)/g,
       'nostr:$1'
     );
 

@@ -249,15 +249,19 @@
       <p class="scan-instruction">Scan this QR code with your remote signer app (e.g., Amber)</p>
 
       <div class="region-selector">
-        <span class="region-label">Select relay region:</span>
+        <span class="region-label">Select signing relay:</span>
         <div class="region-buttons">
-          <button mat-stroked-button [class.selected]="nostrConnectRegion() === 'eu'"
-            (click)="setNostrConnectRegion('eu')">
-            🇪🇺 Europe
+          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'nip46'"
+            (click)="setNostrConnectRelayOption('nip46')">
+            relay.nip46.com
           </button>
-          <button mat-stroked-button [class.selected]="nostrConnectRegion() === 'us'"
-            (click)="setNostrConnectRegion('us')">
-            🇺🇸 United States
+          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'eu'"
+            (click)="setNostrConnectRelayOption('eu')">
+            🇪🇺 Nostria Europe
+          </button>
+          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'us'"
+            (click)="setNostrConnectRelayOption('us')">
+            🇺🇸 Nostria US
           </button>
         </div>
       </div>

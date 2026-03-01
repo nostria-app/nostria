@@ -65,8 +65,6 @@ import { Wallets } from './services/wallets';
 import { NwcService } from './services/nwc.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
-import { SleepModeService } from './services/sleep-mode.service';
-import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { FollowSetsService } from './services/follow-sets.service';
@@ -163,7 +161,6 @@ interface NavItem {
     SearchResultsComponent,
     NavigationComponent,
     NavigationContextMenuComponent,
-    SleepModeOverlayComponent,
     FavoritesOverlayComponent,
     RunesSidebarComponent,
     StandaloneLoginDialogComponent,
@@ -220,7 +217,6 @@ export class App implements OnInit, OnDestroy {
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
-  sleepModeService = inject(SleepModeService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
   feedsCollectionService = inject(FeedsCollectionService);
@@ -1332,12 +1328,15 @@ export class App implements OnInit, OnDestroy {
             return;
           }
 
-          if (result.startsWith('nostr+walletconnect://')) {
+          if (result.startsWith('nostr+walletconnect://') || result.startsWith('web+nostr+walletconnect://')) {
             // Handle WalletConnect URL
             try {
-              const parsed = this.wallets.parseConnectionString(result);
+              const walletConnectUri = result.startsWith('web+')
+                ? result.substring(4)
+                : result;
+              const parsed = this.wallets.parseConnectionString(walletConnectUri);
 
-              this.wallets.addWallet(parsed.pubkey, result, {
+              this.wallets.addWallet(parsed.pubkey, walletConnectUri, {
                 relay: parsed.relay,
                 secret: parsed.secret,
               });

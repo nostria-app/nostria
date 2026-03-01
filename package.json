@@ -41,6 +41,8 @@
     "debug:ssr:build": "ng build && ng run app:serve",
     "debug:ssr:serve": "node --inspect dist/app/server/server.mjs",
     "debug:ssr": "npm run debug:ssr:build && npm run debug:ssr:serve",
+    "check:social-preview:beta": "powershell -ExecutionPolicy Bypass -File scripts/beta-social-preview-check.ps1",
+    "check:social-preview:prod": "powershell -ExecutionPolicy Bypass -File scripts/prod-social-preview-check.ps1",
     "lint": "ng lint",
     "lint-fix": "eslint . --ext .ts,.html --fix",
     "lint:check": "eslint . --ext .ts,.html --fix"

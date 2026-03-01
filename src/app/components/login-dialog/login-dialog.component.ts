@@ -61,6 +61,8 @@ enum LoginStep {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginDialogComponent implements OnDestroy {
+  private static readonly NIP46_REQUEST_TIMEOUT_MS = 20000;
+
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
@@ -105,16 +107,69 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Client-initiated nostrconnect signals
   nostrConnectQrUrl = signal<string>('');
-  nostrConnectRegion = signal<'eu' | 'us'>('eu');
+  nostrConnectRelayOption = signal<'nip46' | 'eu' | 'us'>('nip46');
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
+  private nostrConnectSubscription: { close: (reason?: string) => void } | null = null;
+  private isFinalizingRemoteSigner = false;
+  private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  // Default relays for nostrconnect by region
-  private readonly nostrConnectRelays = {
-    eu: ['wss://ribo.eu.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
-    us: ['wss://ribo.us.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
+  // Default relays for nostrconnect by option.
+  // 'nip46' is the default — relay.nip46.com is universally supported by Amber
+  // and other NIP-46 signers. The eu/us options use Nostria's own regional relays.
+  private readonly nostrConnectRelays: Record<'nip46' | 'eu' | 'us', string[]> = {
+    nip46: ['wss://relay.nip46.com'],
+    eu: ['wss://ribo.eu.nostria.app'],
+    us: ['wss://ribo.us.nostria.app'],
   };
+
+  // Future-proof signer permissions:
+  // - include generic sign_event to allow new kinds without redeploying
+  // - include explicit frequently used kinds for signers that display granular consent
+  private readonly nostrConnectSignEventPerms: string[] = [
+    'sign_event',
+    'sign_event:0',
+    'sign_event:1',
+    'sign_event:3',
+    'sign_event:4',
+    'sign_event:5',
+    'sign_event:6',
+    'sign_event:7',
+    'sign_event:13',
+    'sign_event:16',
+    'sign_event:62',
+    'sign_event:1018',
+    'sign_event:1068',
+    'sign_event:1311',
+    'sign_event:1984',
+    'sign_event:9734',
+    'sign_event:9735',
+    'sign_event:10000',
+    'sign_event:10001',
+    'sign_event:10002',
+    'sign_event:10050',
+    'sign_event:10086',
+    'sign_event:24242',
+    'sign_event:27235',
+    'sign_event:30000',
+    'sign_event:30002',
+    'sign_event:30003',
+    'sign_event:30008',
+    'sign_event:30023',
+    'sign_event:30078',
+    'sign_event:32100',
+    'sign_event:32123',
+    'sign_event:34235',
+    'sign_event:34236',
+  ];
+
+  private readonly nostrConnectEncryptionPerms: string[] = [
+    'nip04_encrypt',
+    'nip04_decrypt',
+    'nip44_encrypt',
+    'nip44_decrypt',
+  ];
 
   // Input fields
   nsecKey = '';
@@ -155,13 +210,40 @@ export class LoginDialogComponent implements OnDestroy {
   }
 
   private cleanupNostrConnectConnection(): void {
-    if (this.remoteSignerPool) {
-      this.remoteSignerPool.close([]);
-      this.remoteSignerPool = null;
+    if (this.nostrConnectSubscription) {
+      try {
+        this.nostrConnectSubscription.close('cleanup');
+      } catch {
+        void 0;
+      }
+      this.nostrConnectSubscription = null;
     }
+
+    if (this.remoteSignerPool) {
+      // Make teardown idempotent across multiple cleanup call paths.
+      const pool = this.remoteSignerPool;
+      this.remoteSignerPool = null;
+      try {
+        // destroy() closes all relay connections; close([]) with empty array is a no-op
+        pool.destroy();
+      } catch {
+        void 0;
+      }
+    }
+    if (this.nostrConnectListenTimeoutId) {
+      clearTimeout(this.nostrConnectListenTimeoutId);
+      this.nostrConnectListenTimeoutId = null;
+    }
+    this.isFinalizingRemoteSigner = false;
     this.remoteSignerClientKey = null;
     this.isWaitingForRemoteSigner.set(false);
     this.nostrConnectQrUrl.set('');
+  }
+
+  private scheduleNostrConnectCleanup(): void {
+    setTimeout(() => {
+      this.cleanupNostrConnectConnection();
+    }, 0);
   }
 
   onWindowFocusExternalSigner = async () => {
@@ -639,8 +721,8 @@ export class LoginDialogComponent implements OnDestroy {
       this.remoteSignerClientKey = generateSecretKey();
       const clientPubkey = getPublicKey(this.remoteSignerClientKey);
 
-      // Get relays based on selected region
-      const relaysToUse = this.nostrConnectRelays[this.nostrConnectRegion()];
+      // Get relays based on selected option
+      const relaysToUse = this.nostrConnectRelays[this.nostrConnectRelayOption()];
 
       // Generate a random secret for connection validation
       const secret = this.generateRandomSecret();
@@ -651,8 +733,14 @@ export class LoginDialogComponent implements OnDestroy {
       params.append('secret', secret);
       params.append('name', 'Nostria');
       params.append('url', 'https://nostria.app');
-      // Request common permissions
-      params.append('perms', 'sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
+      const perms = [
+        'get_public_key',
+        'switch_relays',
+        'ping',
+        ...this.nostrConnectSignEventPerms,
+        ...this.nostrConnectEncryptionPerms,
+      ];
+      params.append('perms', perms.join(','));
 
       const nostrconnectUrl = `nostrconnect://${clientPubkey}?${params.toString()}`;
       this.nostrConnectQrUrl.set(nostrconnectUrl);
@@ -726,10 +814,29 @@ export class LoginDialogComponent implements OnDestroy {
 
   private startListeningForNostrConnectResponse(clientPubkey: string, relays: string[], expectedSecret: string): void {
     this.nostrConnectError.set(null);
-    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: true });
 
+    // Ensure no stale listener/timer survives from previous QR generations.
+    if (this.remoteSignerPool) {
+      this.remoteSignerPool.destroy();
+      this.remoteSignerPool = null;
+    }
+    if (this.nostrConnectListenTimeoutId) {
+      clearTimeout(this.nostrConnectListenTimeoutId);
+      this.nostrConnectListenTimeoutId = null;
+    }
+
+    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: false });
+
+    // Capture the client key NOW (synchronously) so that a concurrent QR regeneration
+    // (which replaces this.remoteSignerClientKey) cannot invalidate the key mid-flight.
+    const capturedClientKey = this.remoteSignerClientKey!;
+
+    // No `since` filter here — the unique random secret in every QR provides sufficient
+    // replay protection against old sessions. A `since` filter risks dropping the connect
+    // response when Amber approves quickly and the event's created_at falls just before
+    // the cutoff (e.g. if the relay or Amber has slight clock skew).
     // Subscribe to kind 24133 responses addressed to our client pubkey
-    this.remoteSignerPool.subscribeMany(
+    this.nostrConnectSubscription = this.remoteSignerPool.subscribeMany(
       relays,
       {
         kinds: [24133],
@@ -738,44 +845,77 @@ export class LoginDialogComponent implements OnDestroy {
       {
         onevent: async (event) => {
           try {
-            if (!this.remoteSignerClientKey) return;
+            // Use the key captured at subscription-creation time, not this.remoteSignerClientKey
+            // which may have been replaced by a concurrent QR regeneration.
+            const clientKey = capturedClientKey;
+            if (!clientKey) return;
 
             // Try to decrypt the response
-            let response: { id?: string; result?: string; error?: string };
-
-            // Try NIP-04 decryption first (check for ?iv= pattern)
-            if (event.content.includes('?iv=')) {
-              const decrypted = await nip04.decrypt(
-                bytesToHex(this.remoteSignerClientKey),
-                event.pubkey,
-                event.content
-              );
-              response = JSON.parse(decrypted);
-            } else {
-              // Try NIP-44 decryption
+            // Try NIP-44 first, fallback to NIP-04 (Amber sometimes uses NIP-04)
+            let decrypted: string | null = null;
+            try {
+              const convKey = nip44.getConversationKey(clientKey, event.pubkey);
+              decrypted = nip44.decrypt(event.content, convKey);
+            } catch {
+              // NIP-44 failed; try NIP-04
+            }
+            if (!decrypted && event.content.includes('?iv=')) {
               try {
-                const conversationKey = nip44.getConversationKey(this.remoteSignerClientKey, event.pubkey);
-                const decrypted = nip44.decrypt(event.content, conversationKey);
-                response = JSON.parse(decrypted);
+                decrypted = await nip04.decrypt(bytesToHex(clientKey), event.pubkey, event.content);
               } catch {
-                // Couldn't decrypt, skip this event
-                return;
+                // NIP-04 also failed
               }
             }
+            if (!decrypted) {
+              this.logger.debug('NIP-46 connect listener: could not decrypt event, skipping', { eventId: event.id });
+              return;
+            }
+            const response = JSON.parse(decrypted) as { id?: string; result?: string; error?: string };
+
+            // Log every decrypted response so we can see exactly what Amber sends
+            this.logger.debug('NIP-46 connect listener: decrypted response', {
+              id: response.id, result: response.result, hasError: !!response.error,
+              expectedSecret, resultMatchesSecret: response.result === expectedSecret,
+            });
 
             // Validate the secret
             if (response.result === expectedSecret || response.result === 'ack') {
+              if (this.isFinalizingRemoteSigner) {
+                return;
+              }
+              this.isFinalizingRemoteSigner = true;
+
               // Connection successful! Show loading indicator while creating account
               this.isWaitingForRemoteSigner.set(true);
               const remoteSignerPubkey = event.pubkey;
 
               this.logger.info('Remote signer connected:', { pubkey: remoteSignerPubkey });
 
-              // Create the account with bunker configuration, passing the client key
-              const clientKeyHex = this.remoteSignerClientKey ? bytesToHex(this.remoteSignerClientKey) : undefined;
-              await this.createRemoteSignerAccount(remoteSignerPubkey, relays, expectedSecret, clientKeyHex);
+              // Pass the captured key explicitly — do NOT read this.remoteSignerClientKey
+              // here because it may have been replaced by a concurrent QR regeneration.
+              const clientKeyHex = bytesToHex(clientKey);
+              try {
+                const resolvedConnection = await this.resolveRemoteSignerConnection(
+                  remoteSignerPubkey,
+                  relays
+                );
 
-              this.cleanupNostrConnectConnection();
+                await this.createRemoteSignerAccount(
+                  resolvedConnection.userPubkey,
+                  remoteSignerPubkey,
+                  resolvedConnection.relays,
+                  expectedSecret,
+                  clientKeyHex
+                );
+
+                this.scheduleNostrConnectCleanup();
+              } catch (connectionError) {
+                this.logger.error('Failed to finalize remote signer connection after approval', connectionError);
+                this.isFinalizingRemoteSigner = false;
+                this.isWaitingForRemoteSigner.set(false);
+                this.nostrConnectError.set('Connected, but failed to finish setup. Please try again.');
+                this.generateNostrConnectQR();
+              }
             } else if (response.error) {
               this.logger.error('Remote signer error:', response.error);
               this.nostrConnectError.set(`Remote signer error: ${response.error}`);
@@ -788,7 +928,7 @@ export class LoginDialogComponent implements OnDestroy {
     );
 
     // Set a timeout for the connection (2 minutes)
-    setTimeout(() => {
+    this.nostrConnectListenTimeoutId = setTimeout(() => {
       if (this.remoteSignerPool && this.currentStep() === LoginStep.NOSTR_CONNECT) {
         this.nostrConnectError.set('Connection timed out. Please try again.');
         this.cleanupNostrConnectConnection();
@@ -798,7 +938,33 @@ export class LoginDialogComponent implements OnDestroy {
     }, 120000);
   }
 
-  private async createRemoteSignerAccount(remoteSignerPubkey: string, relays: string[], secret: string, clientKeyHex?: string): Promise<void> {
+  private async resolveRemoteSignerConnection(
+    remoteSignerPubkey: string,
+    relays: string[]
+  ): Promise<{ userPubkey: string; relays: string[] }> {
+    const uniqueRelays = Array.from(new Set(relays));
+
+    this.logger.debug('Attempting NIP-46 finalize on relays', {
+      relayCount: uniqueRelays.length,
+      relays: uniqueRelays,
+    });
+
+    // We already received a valid connect response on these relays.
+    // Keep finalize lightweight to avoid creating extra signer connections in the dialog.
+    // Runtime signing/decryption uses EncryptionService's cached BunkerSigner session.
+    return {
+      userPubkey: remoteSignerPubkey,
+      relays: uniqueRelays,
+    };
+  }
+
+  private async createRemoteSignerAccount(
+    userPubkey: string,
+    remoteSignerPubkey: string,
+    relays: string[],
+    secret: string,
+    clientKeyHex?: string
+  ): Promise<void> {
     try {
       // Create bunker pointer
       const bunker: BunkerPointer = {
@@ -809,7 +975,7 @@ export class LoginDialogComponent implements OnDestroy {
 
       // Create new user account with remote signing
       const newUser: NostrUser = {
-        pubkey: remoteSignerPubkey,
+        pubkey: userPubkey,
         name: 'Remote Signer',
         source: 'remote',
         lastUsed: Date.now(),
@@ -822,28 +988,34 @@ export class LoginDialogComponent implements OnDestroy {
       await this.nostrService.setAccount(newUser);
       this.logger.info('Remote signer account created successfully');
 
-      // Check if the user has relay configuration
-      const hasRelays = await this.nostrService.hasRelayConfiguration(remoteSignerPubkey);
-
-      if (!hasRelays) {
-        this.logger.info('No relay configuration found, showing setup dialog');
-        await this.showSetupNewAccountDialog(newUser);
-      }
-
       this.snackBar.open('Successfully connected with remote signer!', 'Dismiss', {
         duration: 3000,
       });
 
       this.closeDialog();
+
+      // Run relay setup checks in background so login dialog closes immediately
+      void (async () => {
+        try {
+          const hasRelays = await this.nostrService.hasRelayConfiguration(userPubkey);
+
+          if (!hasRelays) {
+            this.logger.info('No relay configuration found, showing setup dialog');
+            await this.showSetupNewAccountDialog(newUser);
+          }
+        } catch (error) {
+          this.logger.error('Failed to verify relay configuration after remote signer login', error);
+        }
+      })();
     } catch (error) {
       this.logger.error('Failed to create remote signer account:', error);
       this.nostrConnectError.set('Failed to create account. Please try again.');
     }
   }
 
-  setNostrConnectRegion(region: 'eu' | 'us'): void {
-    this.nostrConnectRegion.set(region);
-    // Regenerate QR code with new relays
+  setNostrConnectRelayOption(option: 'nip46' | 'eu' | 'us'): void {
+    this.nostrConnectRelayOption.set(option);
+    // Regenerate QR code with new relay
     this.generateNostrConnectQR();
   }
 
