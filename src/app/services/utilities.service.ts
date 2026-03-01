@@ -102,6 +102,7 @@ export class UtilitiesService {
     'relay.nostr.vet',
     'nostr.v6.army',
     'relay-jp.nostr.wirednet.jp',
+    'haven.vanderwarker.family',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
