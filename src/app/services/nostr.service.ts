@@ -2269,7 +2269,7 @@ export class NostrService implements NostriaService {
     // Configure the discovery relays based on the user's region
     // Use both regional Nostria relay and indexer.coracle.social for better lookup performance
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(accountRegion);
-    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
+    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
     this.logger.info('Setting discovery relays for new user based on region', {
       region: accountRegion,
       discoveryRelays,

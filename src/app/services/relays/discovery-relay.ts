@@ -22,7 +22,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private region = inject(RegionService);
   private poolLoaded = false;
 
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
 
   constructor() {
     // Use the application-wide shared pool so that connections to discovery/indexer
@@ -317,7 +317,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
 
     // Always include both regional relay and indexer.coracle.social for best profile discovery
-    const defaultRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
+    const defaultRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
 
     this.logger.debug(`Generated default discovery relays for region ${region}:`, defaultRelays);
     return defaultRelays;
