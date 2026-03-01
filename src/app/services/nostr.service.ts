@@ -1444,12 +1444,12 @@ export class NostrService implements NostriaService {
   }
 
   /** Get the BUD-03: User Server List */
-  async getMediaServers(pubkey: string): Promise<Event | null> {
+  async getMediaServers(pubkey: string, warnIfMissing = true): Promise<Event | null> {
     // Media server list (kind 10063) is already fetched in the consolidated account query
     // in the load() method, so we just retrieve from storage
     const event = await this.database.getEventByPubkeyAndKind(pubkey, 10063);
 
-    if (!event) {
+    if (!event && warnIfMissing) {
       this.logger.warn('No media server list found in storage for pubkey:', pubkey);
     }
 

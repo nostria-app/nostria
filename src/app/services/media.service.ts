@@ -49,6 +49,7 @@ export class MediaService implements NostriaService {
   private _error = signal<string | null>(null);
   private _mediaServers = signal<string[]>([]);
   private lastFetchTime = signal<number>(0);
+  private mediaServersLoadPromise: Promise<string[]> | null = null;
 
   // Temporary flag to disable batch operations due to server limitation
   readonly batchOperationsTemporarilyDisabledDueToBug = true;
@@ -60,7 +61,7 @@ export class MediaService implements NostriaService {
 
   async load(pubkey: string = this.accountState.pubkey()) {
     // First try to get from storage (fast path)
-    let userServerList = await this.nostrService.getMediaServers(pubkey);
+    let userServerList = await this.nostrService.getMediaServers(pubkey, false);
 
     // If not in storage, try fetching from relay as fallback
     // This handles race conditions where the subscription hasn't received the event yet
@@ -98,7 +99,25 @@ export class MediaService implements NostriaService {
     }
   }
 
+  async ensureMediaServersLoaded(pubkey: string = this.accountState.pubkey()): Promise<string[]> {
+    const existingServers = this._mediaServers();
+    if (existingServers.length > 0) {
+      return existingServers;
+    }
+
+    if (!this.mediaServersLoadPromise) {
+      this.mediaServersLoadPromise = this.loadMediaServersWithRetry(pubkey)
+        .finally(() => {
+          this.mediaServersLoadPromise = null;
+        });
+    }
+
+    return this.mediaServersLoadPromise;
+  }
+
   async loadMedia() {
+    await this.ensureMediaServersLoaded();
+
     if (this.mediaServers().length > 0) {
       // Only fetch files if it's been more than 10 minutes since last fetch
       const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -154,6 +173,32 @@ export class MediaService implements NostriaService {
     this._mediaServers.set(servers);
   }
 
+  private async wait(ms: number): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async loadMediaServersWithRetry(pubkey: string): Promise<string[]> {
+    let attempt = 0;
+    const maxAttempts = 4;
+    const retryDelayMs = 500;
+
+    while (attempt < maxAttempts) {
+      await this.load(pubkey);
+
+      const servers = this._mediaServers();
+      if (servers.length > 0) {
+        return servers;
+      }
+
+      attempt += 1;
+      if (attempt < maxAttempts) {
+        await this.wait(retryDelayMs);
+      }
+    }
+
+    return this._mediaServers();
+  }
+
   private async loadMediaServers(): Promise<void> {
     // First try to load from localStorage for faster initial load
     let mediaServerEvent = await this.database.getEventByPubkeyAndKind(
@@ -179,6 +224,8 @@ export class MediaService implements NostriaService {
     this._error.set(null);
 
     try {
+      await this.ensureMediaServersLoaded();
+
       // First check if we have any media servers configured
       const servers = this._mediaServers();
       if (servers.length === 0) {
@@ -475,6 +522,15 @@ export class MediaService implements NostriaService {
     let headers: Record<string, string> = {};
 
     try {
+      let activeServers = servers;
+      if (activeServers.length === 0) {
+        activeServers = await this.ensureMediaServersLoaded();
+      }
+
+      if (activeServers.length === 0) {
+        throw new Error('No media servers configured');
+      }
+
       let uploadedMedia: MediaItem | null = null;
       let firstError: Error | null = null;
       let hash = '';
@@ -495,7 +551,7 @@ export class MediaService implements NostriaService {
         // Only consider it a duplicate if both are original or both are optimized
         if ((uploadOriginal && isExistingOriginal) || (!uploadOriginal && !isExistingOriginal)) {
           // Still trigger mirroring in background for duplicates - file might exist on one server but not mirrors
-          const otherServers = this.otherServers(existingFile.url, servers);
+          const otherServers = this.otherServers(existingFile.url, activeServers);
           if (otherServers.length > 0) {
             (async () => {
               try {
@@ -519,7 +575,7 @@ export class MediaService implements NostriaService {
         // Otherwise, allow upload of different version (original vs. optimized)
       }
 
-      for (const server of servers) {
+      for (const server of activeServers) {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
@@ -645,7 +701,7 @@ export class MediaService implements NostriaService {
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
         // Ask other servers to mirror the file - DO NOT await, let it run in background
-        const otherServers = this.otherServers(uploadedMedia.url, servers);
+        const otherServers = this.otherServers(uploadedMedia.url, activeServers);
         console.log('Asking to mirror on: ', otherServers);
 
         if (otherServers.length > 0) {
@@ -710,6 +766,8 @@ export class MediaService implements NostriaService {
     this._error.set(null);
 
     try {
+      await this.ensureMediaServersLoaded();
+
       // Check if we have any media servers configured
       const servers = this._mediaServers();
       if (servers.length === 0) {
@@ -770,6 +828,8 @@ export class MediaService implements NostriaService {
     this._error.set(null);
 
     try {
+      await this.ensureMediaServersLoaded();
+
       // Check if we have any media servers configured
       const servers = this._mediaServers();
       if (servers.length === 0) {
@@ -841,6 +901,7 @@ export class MediaService implements NostriaService {
 
     // Check if we have any media servers configured
     if (!servers || servers.length === 0) {
+      await this.ensureMediaServersLoaded();
       servers = this.otherServers(fileUrl);
     }
 
@@ -943,6 +1004,8 @@ export class MediaService implements NostriaService {
     this._error.set(null);
 
     try {
+      await this.ensureMediaServersLoaded();
+
       // Create a comma-separated string of all file hashes for the auth header
       const fileHashes = items.map(item => item.sha256).join(',');
 
