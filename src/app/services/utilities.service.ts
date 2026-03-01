@@ -27,7 +27,81 @@ export class UtilitiesService {
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
     'relay.nostr.band',
-    'offchain.pub'
+    'offchain.pub',
+    'relay.minds.com',
+    'nostr.ono.re',
+    'dev.nostrplayground.com',
+    'nostrelites.org',
+    'relay.nsite.lol',
+    'nostr.bongbong.com',
+    'nostr1.tunnelsats.com',
+    'nostr.orangepill.dev',
+    'relay.nostrgraph.net',
+    'relay.current.fyi',
+    'nostr-relay.wlvs.space',
+    'relay.orange-crush.com',
+    'nostr-dev.zbd.gg',
+    'student.chadpolytechnic.com',
+    'brb.io',
+    'sg.qemura.xyz',
+    'nostrsatva.net',
+    'khatru.puhcho.me',
+    'nostr.v0l.io',
+    'nostr-2.zebedee.cloud',
+    'welcome.nostr.wine',
+    'nostr.mutinywallet.com',
+    'relay.nostr.bg',
+    'expensive-relay.fiatjaf.com',
+    'nostr-relay.untethr.me',
+    'nostr-01.bolt.observer',
+    'relay.kamp.site',
+    'lightningrelay.com',
+    'us.rbr.bio',
+    'relayer.fiatjaf.com',
+    'nostr-relay.lnmarkets.com',
+    'relayable.org',
+    'nostr.fmt.wiz.biz',
+    'wot.dergigi.com',
+    'relay.ohbe.me',
+    'relay.westernbtc.com',
+    'nostr.milou.lol',
+    'relay.orangepill.dev',
+    'feeds.nostr.band',
+    'nostr.zbd.gg',
+    'relay.davidebtc.me',
+    'nostr.hubmaker.io',
+    'nostr.zebedee.cloud',
+    'wot.utxo.one',
+    'nostr.onsats.org',
+    'nostr-relay.nokotaro.com',
+    'rsslay.nostr.net',
+    'relay.stoner.com',
+    'nostr.walletofsatoshi.com',
+    'relay.f7z.io',
+    'relay.exit.pub',
+    'nostr.lbdev.fun',
+    'nostr.relayer.se',
+    'nostr.lnbitcoin.cz',
+    'umami.nostr1.com',
+    'social.camph.net',
+    'nostr2.actn.io',
+    'nostr.actn.io',
+    'nostr.portemonero.com',
+    'ca.orangepill.dev',
+    'nostrex.fly.dev',
+    'rsslay.fiatjaf.com',
+    'kiwibuilders.nostr21.net',
+    'news.nos.social',
+    'nostr3.actn.io',
+    'relay-jp.nostr.wirednet.jp',
+    'relay.nostrati.com',
+    'relay.siamstr.com',
+    'beta.nostril.cam',
+    'relay.farscapian.com',
+    'thewildhustle.nostr1.com',
+    'relay.nostr.vet',
+    'nostr.v6.army',
+    'relay-jp.nostr.wirednet.jp',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
@@ -609,6 +683,9 @@ export class UtilitiesService {
     if (!url || !this.isSecureRelayUrl(url)) {
       return false;
     }
+    if (url.includes(',')) {
+      return false;
+    }
     try {
       const parsedUrl = new URL(url);
       if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
@@ -632,6 +709,12 @@ export class UtilitiesService {
       // Only allow secure WebSocket connections (wss://)
       // Reject ws:// to prevent mixed content errors when served over HTTPS
       if (!this.isSecureRelayUrl(url)) {
+        return '';
+      }
+
+      // Reject URLs with commas or other invalid hostname characters (e.g. "relay,damus.io")
+      if (url.includes(',')) {
+        this.logger.warn(`Invalid relay URL (contains comma): ${url}`);
         return '';
       }
 
