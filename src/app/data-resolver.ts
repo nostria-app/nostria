@@ -344,6 +344,90 @@ function extractProfilePictureFromEvent(profileEvent: Event): string | undefined
   }
 }
 
+function canonicalizeNostrIdentifier(identifier: string): string {
+  if (!identifier) {
+    return identifier;
+  }
+
+  try {
+    const decoded = nip19.decode(identifier);
+
+    if (decoded.type === 'nevent') {
+      return nip19.neventEncode({
+        id: decoded.data.id,
+        author: decoded.data.author,
+        kind: decoded.data.kind,
+      });
+    }
+
+    if (decoded.type === 'naddr') {
+      return nip19.naddrEncode({
+        kind: decoded.data.kind,
+        pubkey: decoded.data.pubkey,
+        identifier: decoded.data.identifier,
+      });
+    }
+
+    if (decoded.type === 'nprofile') {
+      return nip19.npubEncode(decoded.data.pubkey);
+    }
+  } catch {
+    return identifier;
+  }
+
+  return identifier;
+}
+
+function buildFallbackSocialMetadata(routePath: string, id: string): { title: string; description: string; url: string } {
+  const normalizedId = canonicalizeNostrIdentifier(id);
+
+  if (routePath.startsWith('e/')) {
+    return {
+      title: 'Nostr Note on Nostria',
+      description: 'Open this Nostr note on Nostria, the decentralized social app.',
+      url: `https://nostria.app/e/${normalizedId}`,
+    };
+  }
+
+  if (routePath.startsWith('a/') || normalizedId.startsWith('naddr')) {
+    return {
+      title: 'Nostr Article on Nostria',
+      description: 'Open this Nostr article on Nostria, the decentralized social app.',
+      url: `https://nostria.app/a/${normalizedId}`,
+    };
+  }
+
+  if (routePath.startsWith('p/') || routePath.startsWith('u/') || routePath.startsWith('music/artist')) {
+    return {
+      title: 'Nostr Profile on Nostria',
+      description: 'View this Nostr profile on Nostria, the decentralized social app.',
+      url: `https://nostria.app/p/${normalizedId}`,
+    };
+  }
+
+  if (routePath.startsWith('music/song')) {
+    return {
+      title: 'Nostr Song on Nostria',
+      description: 'Listen to this track on Nostria, the decentralized social app.',
+      url: `https://nostria.app/music/song/${normalizedId}`,
+    };
+  }
+
+  if (routePath.startsWith('music/playlist')) {
+    return {
+      title: 'Nostr Playlist on Nostria',
+      description: 'Open this playlist on Nostria, the decentralized social app.',
+      url: `https://nostria.app/music/playlist/${normalizedId}`,
+    };
+  }
+
+  return {
+    title: 'Nostr Post on Nostria',
+    description: 'Open this content on Nostria, the decentralized social app.',
+    url: 'https://nostria.app',
+  };
+}
+
 export interface EventData {
   title: string;
   description: string;
@@ -372,6 +456,16 @@ export class DataResolver implements Resolve<EventData | null> {
       title: 'Nostr Post on Nostria',
       description: 'Open this content on Nostria, the decentralized social app.',
     };
+
+    const timeoutRoutePath = route.routeConfig?.path || '';
+    const timeoutRouteId = route.params['id'] || route.params['pubkey'] || route.params['username'];
+    const timeoutFallback = typeof timeoutRouteId === 'string' && timeoutRouteId.trim()
+      ? buildFallbackSocialMetadata(timeoutRoutePath, timeoutRouteId)
+      : {
+        title: defaultData.title,
+        description: defaultData.description,
+        url: 'https://nostria.app',
+      };
 
     // Wrap resolution in a timeout to ensure fast response for social bots
     const resolveData = async (): Promise<EventData> => {
@@ -471,8 +565,24 @@ export class DataResolver implements Resolve<EventData | null> {
       // If we don't have a valid id, return early
       if (!id || id === 'undefined' || !id.trim()) {
         console.warn(`[SSR] DataResolver(${traceId}): Missing/invalid ID, returning default data`);
+        this.metaService.updateSocialMetadata({
+          title: defaultData.title,
+          description: defaultData.description,
+          image: 'https://nostria.app/assets/nostria-social.jpg',
+          url: 'https://nostria.app',
+        });
         return data;
       }
+
+      const fallbackSocial = buildFallbackSocialMetadata(routePath, id);
+      data.title = fallbackSocial.title;
+      data.description = fallbackSocial.description;
+      this.metaService.updateSocialMetadata({
+        title: fallbackSocial.title,
+        description: fallbackSocial.description,
+        image: 'https://nostria.app/assets/nostria-social.jpg',
+        url: fallbackSocial.url,
+      });
 
       debugLog(`[SSR] DataResolver(${traceId}): Resolving route`, {
         routePath,
@@ -774,6 +884,12 @@ export class DataResolver implements Resolve<EventData | null> {
       timeoutHandle = setTimeout(() => {
         timeoutTriggered = true;
         console.warn(`[SSR] DataResolver: Total timeout (${SSR_TOTAL_RESOLVER_TIMEOUT_MS}ms) reached, returning default data. Route params:`, route.params);
+        this.metaService.updateSocialMetadata({
+          title: timeoutFallback.title,
+          description: timeoutFallback.description,
+          image: 'https://nostria.app/assets/nostria-social.jpg',
+          url: timeoutFallback.url,
+        });
         resolve(defaultData);
       }, SSR_TOTAL_RESOLVER_TIMEOUT_MS);
     });

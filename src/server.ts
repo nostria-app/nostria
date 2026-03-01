@@ -98,9 +98,16 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
     'loading...',
   ];
 
+  const genericHomeTitles = ['nostria - your social network', 'nostria'];
+  const genericHomeDescriptionMarker = 'nostria puts control back where it belongs';
+
   const combined = `${ogTitle} ${ogDescription} ${twitterTitle} ${twitterDescription}`.toLowerCase();
   const genericTitle = ogTitle.toLowerCase() === 'nostr event' || twitterTitle.toLowerCase() === 'nostr event';
-  return !genericTitle && !lowQualityMarkers.some(marker => combined.includes(marker));
+  const genericHomePreview =
+    genericHomeTitles.includes(ogTitle.toLowerCase()) ||
+    genericHomeTitles.includes(twitterTitle.toLowerCase()) ||
+    combined.includes(genericHomeDescriptionMarker);
+  return !genericTitle && !genericHomePreview && !lowQualityMarkers.some(marker => combined.includes(marker));
 }
 
 // Cache for SSR responses (keyed by URL path)
