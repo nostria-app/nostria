@@ -154,14 +154,23 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     // The actual publishing of defaults happens in ensureDefaultDiscoveryRelays()
     if (pubkey) {
       const relaysFromEvent = await this.loadFromEvent(pubkey);
-      if (relaysFromEvent !== null && relaysFromEvent.length > 0) {
-        // User has a kind 10086 event, use those relays
-        this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
-        this.init(relaysFromEvent);
+      if (relaysFromEvent !== null) {
+        // User has a kind 10086 event, use those relays when available.
+        // If the event exists but has no usable relay tags, keep bootstrap relays
+        // but still treat it as existing so we don't overwrite the user's event.
+        if (relaysFromEvent.length > 0) {
+          this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
+          this.init(relaysFromEvent);
+        } else {
+          this.logger.debug('Kind 10086 event exists but has no usable relay tags, keeping bootstrap relays');
+          this.init(bootstrapRelays);
+        }
+
         this.poolLoaded = true;
         return true; // Event found
       }
-      // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
+
+      // No kind 10086 event found, use bootstrap relays from storage/defaults
       this.logger.debug('No kind 10086 event found for user, using bootstrap relays');
     }
 
@@ -184,6 +193,18 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   }
 
   /**
+   * Extract normalized relay URLs from a kind 10086 event.
+   * Supports both "relay" and legacy "r" tags.
+   */
+  getRelayUrlsFromDiscoveryEvent(event: Event): string[] {
+    return this.utilities.normalizeRelayUrls(
+      event.tags
+        .filter(tag => (tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string')
+        .map(tag => tag[1])
+    );
+  }
+
+  /**
    * Load discovery relays from kind 10086 event for a user.
    * Returns null if no event exists (to distinguish from empty list).
    */
@@ -193,9 +214,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       const event = await this.database.getEventByPubkeyAndKind(pubkey, DiscoveryRelayListKind);
 
       if (event) {
-        const relayUrls = event.tags
-          .filter(tag => tag[0] === 'relay' && tag[1])
-          .map(tag => tag[1]);
+        const relayUrls = this.getRelayUrlsFromDiscoveryEvent(event);
 
         this.logger.debug(`Loaded ${relayUrls.length} discovery relays from kind 10086 event`);
         return relayUrls;
