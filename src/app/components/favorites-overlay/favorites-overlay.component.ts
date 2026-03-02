@@ -14,6 +14,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FollowingService } from '../../services/following.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { HapticsService } from '../../services/haptics.service';
 
 @Component({
   selector: 'app-favorites-overlay',
@@ -35,6 +36,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private followingService = inject(FollowingService);
   private utilities = inject(UtilitiesService);
+  private haptics = inject(HapticsService);
   layout = inject(LayoutService);
 
   // Signal to track if overlay is visible
@@ -500,10 +502,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
         this.dropTargetIndex.set(index);
         this.timelineHoverCardService.hideHoverCard();
 
-        // Add haptic feedback if available
-        if ('vibrate' in navigator) {
-          navigator.vibrate(50);
-        }
+        this.haptics.triggerMedium();
       }
     }, 150);
   }
@@ -543,10 +542,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
           const currentDropTarget = this.dropTargetIndex();
           if (currentDropTarget !== dropIndex) {
             this.dropTargetIndex.set(dropIndex);
-            // Haptic feedback when crossing into a new drop zone
-            if ('vibrate' in navigator) {
-              navigator.vibrate(10);
-            }
+            this.haptics.triggerSelection();
           }
         }
       }
@@ -607,10 +603,7 @@ export class FavoritesOverlayComponent implements OnDestroy {
       // Update the favorites with the new order
       this.favoritesService.reorderFavorites(reorderedFavorites);
 
-      // Haptic feedback for successful reorder
-      if ('vibrate' in navigator) {
-        navigator.vibrate(25);
-      }
+      this.haptics.triggerLight();
     }
 
     // Clear drag state

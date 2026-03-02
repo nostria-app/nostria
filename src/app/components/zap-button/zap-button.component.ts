@@ -12,6 +12,7 @@ import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { SettingsService } from '../../services/settings.service';
+import { HapticsService } from '../../services/haptics.service';
 
 /**
  * Unified Zap Button - Supports both quick zap and custom zap.
@@ -192,6 +193,7 @@ export class ZapButtonComponent {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private settings = inject(SettingsService);
+  private haptics = inject(HapticsService);
   private ngZone = inject(NgZone);
   private platformId = inject(PLATFORM_ID);
 
@@ -265,10 +267,7 @@ export class ZapButtonComponent {
     this.longPressTimer = setTimeout(() => {
       this.ngZone.run(() => {
         this.longPressTriggered = true;
-        // Provide haptic feedback if available
-        if ('vibrate' in navigator) {
-          navigator.vibrate(50);
-        }
+        this.haptics.triggerMedium();
         // Open the custom zap dialog
         this.openZapDialog(event as unknown as MouseEvent);
       });
@@ -567,6 +566,7 @@ export class ZapButtonComponent {
   private onZapSent(amount: number): void {
     this.totalZaps.update(current => current + amount);
     this.hasZapped.set(true);
+    this.haptics.triggerZapBuzz();
     this.zapSent.emit(amount);
   }
 }

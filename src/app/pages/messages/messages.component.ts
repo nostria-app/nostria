@@ -77,6 +77,7 @@ import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
+import { HapticsService } from '../../services/haptics.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -166,6 +167,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly accountLocalState = inject(AccountLocalStateService);
   readonly localSettings = inject(LocalSettingsService);
   readonly mediaService = inject(MediaService);
+  private readonly haptics = inject(HapticsService);
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -1575,10 +1577,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Start the long press timer
     this.longPressTimeout = setTimeout(() => {
-      // Trigger haptic feedback if available
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      this.haptics.triggerMedium();
 
       this.longPressedMessage.set(message);
       this.showMessageContextMenu(message, event);

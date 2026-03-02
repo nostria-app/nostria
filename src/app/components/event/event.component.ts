@@ -68,6 +68,7 @@ import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { HapticsService } from '../../services/haptics.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -224,6 +225,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly haptics = inject(HapticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
@@ -2315,6 +2317,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
+        } else {
+          this.haptics.triggerMedium();
         }
       }
 

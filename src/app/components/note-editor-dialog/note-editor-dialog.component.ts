@@ -64,6 +64,7 @@ import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
+import { HapticsService } from '../../services/haptics.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -180,6 +181,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
+  private haptics = inject(HapticsService);
   private destroyRef = inject(DestroyRef);
 
   private shouldNavigateAfterPublish(): boolean {
@@ -1408,6 +1410,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         if (isOurEvent && relayEvent.success) {
           dialogClosed = true;
           publishedEventId = relayEvent.event.id;
+
+          this.haptics.triggerSuccess();
 
           // Clear draft and close dialog immediately after first successful publish
           if (!this.inlineMode()) {
