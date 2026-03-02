@@ -61,6 +61,12 @@
   padding: 16px;
 }
 
+@media (max-width: 699px) {
+  .event-content {
+    padding: 8px;
+  }
+}
+
 .thread-loading {
   display: flex;
   flex-direction: column;

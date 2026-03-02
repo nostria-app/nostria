@@ -56,20 +56,20 @@
 
   <!-- Main event - indented when there are parents -->
   @if (event() && !isMainThreadHiddenByCollapsedParent()) {
-  <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="(parentEvents().length + 1) * 16">
+  <div id="main-event" class="main-event-wrapper" [style.margin-left.px]="(parentEvents().length + 1) * threadIndent()">
     <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
       [trustedByPubkey]="trustedByPubkey()" [replyCountFromParent]="totalReplyCount()"></app-event>
   </div>
 
   <!-- Inline Reply Editor -->
-  <div [style.margin-left.px]="(parentEvents().length + 1) * 16">
+  <div [style.margin-left.px]="(parentEvents().length + 1) * threadIndent()">
     <app-inline-reply-editor [replyToEvent]="event()!"></app-inline-reply-editor>
   </div>
   }
 
   <!-- Unified loading indicator for thread context (parents/replies) -->
   @if (!isMainThreadHiddenByCollapsedParent() && (isLoadingParents() || isLoadingReplies())) {
-  <div class="loading-status" [style.margin-left.px]="(parentEvents().length + 1) * 16">
+  <div class="loading-status" [style.margin-left.px]="(parentEvents().length + 1) * threadIndent()">
     <mat-spinner diameter="14"></mat-spinner>
     <span>Loading thread...</span>
   </div>
@@ -123,7 +123,7 @@
   }
 
   @if (!isMainThreadHiddenByCollapsedParent()) {
-  <div class="replies-section" [style.margin-left.px]="(parentEvents().length + 1) * 16">
+  <div class="replies-section" [style.margin-left.px]="(parentEvents().length + 1) * threadIndent()">
     <!-- Filter indicator when filter is active -->
     @if (isReplyFilterActive() && !isLoadingReplies()) {
     <div class="filter-indicator">

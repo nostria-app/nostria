@@ -85,6 +85,9 @@ export class EventPageComponent {
   // Computed to check if we're in dialog mode
   isInDialogMode = computed(() => !!this.dialogEventId());
 
+  // Reduce indentation on mobile to preserve horizontal space in thread view
+  readonly threadIndent = computed(() => this.panelNav.isMobile() ? 8 : 16);
+
   // Detect if event is rendered in the right panel outlet
   isInRightPanel = computed(() => {
     // Check both the route outlet property AND the current URL structure

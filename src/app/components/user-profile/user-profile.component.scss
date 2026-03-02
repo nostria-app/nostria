@@ -749,6 +749,18 @@
   }
 
   &.list {
+    .user-profile-content {
+      // gap: 1px;
+    }
+
+    .user-profile-name-link {
+      // line-height: 1.2;
+    }
+
+    .user-profile-npub {
+      // line-height: 1.15;
+    }
+
     .user-profile-avatar {
       width: 42px;
       height: 42px;
