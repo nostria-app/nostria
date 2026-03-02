@@ -94,6 +94,9 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   /** The event being replied to */
   replyToEvent = input.required<NostrEvent>();
 
+  /** When false, stay in the current view after publish instead of navigating to the new event */
+  navigateOnPublish = input<boolean>(true);
+
   /** Emitted when a reply is successfully published */
   replyPublished = output<NostrEvent>();
 
@@ -648,12 +651,14 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
           this.isExpanded.set(false);
           this.replyPublished.emit(signedEvent);
 
-          const nevent = nip19.neventEncode({
-            id: signedEvent.id,
-            author: signedEvent.pubkey,
-            kind: signedEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, signedEvent);
+          if (this.navigateOnPublish()) {
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+              kind: signedEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, signedEvent);
+          }
         }
       }
     });

@@ -2250,6 +2250,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (ev.kind === kinds.ShortTextNote) {
       const eventTags = this.eventService.getEventTags(ev);
       this.eventService.createNote({
+        navigateOnPublish: this.mode() !== 'thread',
         replyTo: {
           id: ev.id,
           pubkey: ev.pubkey,

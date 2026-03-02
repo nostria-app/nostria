@@ -182,6 +182,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private platformService = inject(PlatformService);
   private destroyRef = inject(DestroyRef);
 
+  private shouldNavigateAfterPublish(): boolean {
+    return this.data?.navigateOnPublish !== false;
+  }
+
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -1306,13 +1310,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the original event (not the edit event)
-          const nevent = nip19.neventEncode({
-            id: editEvent.id,
-            author: editEvent.pubkey,
-            kind: editEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, editEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the original event (not the edit event)
+            const nevent = nip19.neventEncode({
+              id: editEvent.id,
+              author: editEvent.pubkey,
+              kind: editEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, editEvent);
+          }
 
           if (this.publishSubscription) {
             this.publishSubscription.unsubscribe();
@@ -1427,13 +1433,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the published event
-          const nevent = nip19.neventEncode({
-            id: signedEvent.id,
-            author: signedEvent.pubkey,
-            kind: signedEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, signedEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the published event
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+              kind: signedEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, signedEvent);
+          }
 
           // Unsubscribe after handling
           if (this.publishSubscription) {
