@@ -3,7 +3,8 @@
   "version": "2.1.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --host 0.0.0.0 --port 4200",
+    "start": "ng serve --port 4200",
+    "start-open": "ng serve --host 0.0.0.0 --port 4200",
     "build": "ng build",
     "build:ssr:prod": "ng build --configuration=production",
     "serve:ssr:prod": "npm run build:ssr:prod && npm run serve:ssr:app",
