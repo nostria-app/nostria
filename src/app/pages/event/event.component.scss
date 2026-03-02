@@ -69,6 +69,10 @@
   padding: 16px;
 }
 
+.inline-reply-editor-wrapper {
+  padding-inline: 0;
+}
+
 @media (max-width: 699px) {
   .event-content {
     padding: 0;

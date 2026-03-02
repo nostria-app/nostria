@@ -62,7 +62,7 @@
   </div>
 
   <!-- Inline Reply Editor -->
-  <div [style.margin-left.px]="parentEvents().length * threadIndent()">
+  <div class="inline-reply-editor-wrapper" [style.margin-left.px]="parentEvents().length * threadIndent()">
     <app-inline-reply-editor [replyToEvent]="event()!"></app-inline-reply-editor>
   </div>
   }
