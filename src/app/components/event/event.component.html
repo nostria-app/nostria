@@ -160,8 +160,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio"
+        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
+        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
@@ -171,8 +171,10 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
-        [fillContainer]="!!video.aspectRatio" [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
+      <app-inline-video-player [src]="video.url" [poster]="video.poster"
+        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
+        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>
@@ -298,8 +300,8 @@
         <div class="collapsed-videos" (click)="$event.stopPropagation()">
           <app-inline-video-player [src]="rootCollapsedMedia().videos[0].url"
             [poster]="rootCollapsedMedia().videos[0].poster"
-            [style.aspect-ratio]="rootCollapsedMedia().videos[0].aspectRatio"
-            [fillContainer]="!!rootCollapsedMedia().videos[0].aspectRatio"
+            [style.aspect-ratio]="!isPortraitAspectRatio(rootCollapsedMedia().videos[0].aspectRatio) ? rootCollapsedMedia().videos[0].aspectRatio : null"
+            [fillContainer]="!!rootCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(rootCollapsedMedia().videos[0].aspectRatio)"
             [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           @if (rootCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
           <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
@@ -309,8 +311,10 @@
           }
           @if (collapsedVideosExpanded()) {
           @for (video of rootCollapsedMedia().videos.slice(1); track video.url) {
-          <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
-            [fillContainer]="!!video.aspectRatio" [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
+          <app-inline-video-player [src]="video.url" [poster]="video.poster"
+            [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
+            [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
         </div>
@@ -429,8 +433,8 @@
         <div class="collapsed-videos" (click)="$event.stopPropagation()">
           <app-inline-video-player [src]="parentCollapsedMedia().videos[0].url"
             [poster]="parentCollapsedMedia().videos[0].poster"
-            [style.aspect-ratio]="parentCollapsedMedia().videos[0].aspectRatio"
-            [fillContainer]="!!parentCollapsedMedia().videos[0].aspectRatio"
+            [style.aspect-ratio]="!isPortraitAspectRatio(parentCollapsedMedia().videos[0].aspectRatio) ? parentCollapsedMedia().videos[0].aspectRatio : null"
+            [fillContainer]="!!parentCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(parentCollapsedMedia().videos[0].aspectRatio)"
             [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           @if (parentCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
           <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
@@ -440,8 +444,10 @@
           }
           @if (collapsedVideosExpanded()) {
           @for (video of parentCollapsedMedia().videos.slice(1); track video.url) {
-          <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
-            [fillContainer]="!!video.aspectRatio" [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
+          <app-inline-video-player [src]="video.url" [poster]="video.poster"
+            [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
+            [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
+            [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
           }
           }
         </div>
@@ -556,8 +562,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio"
+        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
+        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
@@ -567,8 +573,10 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
-        [fillContainer]="!!video.aspectRatio" [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
+      <app-inline-video-player [src]="video.url" [poster]="video.poster"
+        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
+        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>
@@ -687,8 +695,8 @@
     <div class="collapsed-videos" (click)="$event.stopPropagation()">
       <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
         [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="mainCollapsedMedia().videos[0].aspectRatio"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio"
+        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
+        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
         [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
       <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
@@ -698,8 +706,10 @@
       }
       @if (collapsedVideosExpanded()) {
       @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster" [style.aspect-ratio]="video.aspectRatio"
-        [fillContainer]="!!video.aspectRatio" [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
+      <app-inline-video-player [src]="video.url" [poster]="video.poster"
+        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
+        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
+        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
       }
       }
     </div>

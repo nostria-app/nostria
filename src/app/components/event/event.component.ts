@@ -500,6 +500,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return { images, videos, urls };
   }
 
+  isPortraitAspectRatio(aspectRatio?: string): boolean {
+    if (!aspectRatio) {
+      return false;
+    }
+
+    const normalized = aspectRatio.replace(/\s+/g, '');
+    const [widthValue, heightValue] = normalized.split('/').map(Number);
+
+    if (!Number.isFinite(widthValue) || !Number.isFinite(heightValue) || widthValue <= 0 || heightValue <= 0) {
+      return false;
+    }
+
+    return heightValue > widthValue;
+  }
+
   // Check if root event content should be collapsible (content is long enough)
   isRootContentLong = computed<boolean>(() => {
     // Don't show expander in dialogs or thread view - only in feed

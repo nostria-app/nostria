@@ -100,6 +100,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   isReady = signal(false);
   hasError = signal(false);
   needsRotationCorrection = signal(false);
+  isPortraitVideo = signal(false);
 
   // Fallback blob URL when QUIC protocol fails
   private blobUrl = signal<string | null>(null);
@@ -186,6 +187,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.duration.set(0);
         this.buffered.set(0);
         this.needsRotationCorrection.set(false);
+        this.isPortraitVideo.set(false);
         this.wasAutoPlayed.set(false);
         this.userPausedByInteraction.set(false);
         this.cleanupVideoListeners();
@@ -379,6 +381,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.playbackRate.set(video.playbackRate);
       this.videoLoadedMetadata.emit(e);
       this.applyOrientationCorrectionHint(video);
+      this.updateVideoOrientation(video);
 
       // Apply persisted mute state when video loads
       const mutedState = this.shouldBeMuted();
@@ -454,6 +457,21 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.duration.set(video.duration || 0);
     this.volume.set(video.volume);
     this.isMuted.set(video.muted);
+  }
+
+  private updateVideoOrientation(video: HTMLVideoElement): void {
+    const actualWidth = video.videoWidth;
+    const actualHeight = video.videoHeight;
+
+    if (!actualWidth || !actualHeight) {
+      this.isPortraitVideo.set(false);
+      return;
+    }
+
+    const displayWidth = this.needsRotationCorrection() ? actualHeight : actualWidth;
+    const displayHeight = this.needsRotationCorrection() ? actualWidth : actualHeight;
+
+    this.isPortraitVideo.set(displayHeight > displayWidth);
   }
 
   private applyOrientationCorrectionHint(video: HTMLVideoElement): void {
