@@ -14,6 +14,7 @@ import { AccountStateService } from '../../../../services/account-state.service'
 import { LoggerService } from '../../../../services/logger.service';
 import { UtilitiesService } from '../../../../services/utilities.service';
 import { Event, kinds } from 'nostr-tools';
+import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../../utils/website-url';
 
 interface ExternalIdentity {
   platform: string;
@@ -414,7 +415,11 @@ export class ContactOverviewComponent {
 
   getWebsite(): string | null {
     const metadata = this.metadata();
-    return (metadata.data.website as string) || null;
+    return cleanWebsiteValue(metadata.data.website as string);
+  }
+
+  getWebsiteUrl(): string | null {
+    return normalizeWebsiteUrl(this.getWebsite()) || null;
   }
 
   getLud16(): string | null {

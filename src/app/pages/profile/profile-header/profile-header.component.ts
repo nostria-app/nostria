@@ -46,6 +46,7 @@ import { DataService } from '../../../services/data.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { SettingsService } from '../../../services/settings.service';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
+import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
 
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -280,12 +281,11 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   // Computed to get website URL with protocol prefix
   websiteUrl = computed(() => {
-    const website = this.profile()?.data.website;
-    if (!website) {
-      return '';
-    }
+    return normalizeWebsiteUrl(this.profile()?.data.website);
+  });
 
-    return this.getWebsiteUrl(website);
+  websiteDisplay = computed(() => {
+    return cleanWebsiteValue(this.profile()?.data.website);
   });
 
   // Add signal for verified identifier
@@ -1172,17 +1172,7 @@ export class ProfileHeaderComponent implements OnDestroy {
    * Get website URL with protocol prefix
    */
   getWebsiteUrl(website: string): string {
-    if (!website) {
-      return '';
-    }
-
-    // Check if the website already has a protocol prefix
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(website)) {
-      return website;
-    }
-
-    // If no protocol prefix, add https:// as default
-    return `https://${website}`;
+    return normalizeWebsiteUrl(website);
   }
 
   // Add methods for QR code visibility

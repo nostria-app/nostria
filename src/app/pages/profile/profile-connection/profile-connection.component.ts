@@ -23,6 +23,7 @@ import { ZapService } from '../../../services/zap.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
+import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
 
 // Interfaces
 interface ExternalIdentity {
@@ -491,7 +492,11 @@ export class ProfileConnectionComponent {
 
   getWebsite(): string | null {
     const metadataRecord = this.metadata();
-    return (metadataRecord?.data?.website as string) || null;
+    return cleanWebsiteValue(metadataRecord?.data?.website as string);
+  }
+
+  getWebsiteUrl(): string | null {
+    return normalizeWebsiteUrl(this.getWebsite()) || null;
   }
 
   getLud16(): string | null {

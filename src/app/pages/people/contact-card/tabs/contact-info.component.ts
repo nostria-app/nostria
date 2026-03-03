@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrRecord } from '../../../../interfaces';
 import { LoggerService } from '../../../../services/logger.service';
 import { UtilitiesService } from '../../../../services/utilities.service';
+import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../../utils/website-url';
 
 interface ExternalIdentity {
   platform: string;
@@ -226,7 +227,11 @@ export class ContactInfoComponent {
 
   getWebsite(): string | null {
     const metadata = this.metadata();
-    return (metadata.data.website as string) || null;
+    return cleanWebsiteValue(metadata.data.website as string);
+  }
+
+  getWebsiteUrl(): string | null {
+    return normalizeWebsiteUrl(this.getWebsite()) || null;
   }
 
   getLud16(): string | null {
