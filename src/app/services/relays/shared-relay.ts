@@ -3,7 +3,6 @@ import { Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
-import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PoolService } from './pool.service';
 
@@ -19,7 +18,6 @@ export class SharedRelayService {
   private logger = inject(LoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
-  private readonly relayBlock = inject(RelayBlockService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly injector = inject(Injector);
   // Lazy-loaded to avoid circular dependency
@@ -101,7 +99,7 @@ export class SharedRelayService {
       return null;
     }
 
-    const filteredUrls = this.relayBlock.filterBlockedRelays(secureUrls);
+    const filteredUrls = secureUrls;
     if (filteredUrls.length === 0) {
       this.logger.warn('[SharedRelayService] All relays are unavailable, skipping request');
       return null;
@@ -139,7 +137,6 @@ export class SharedRelayService {
       // Track connection retry for failed connections
       const errorMessage = error instanceof Error ? error.message : String(error);
       filteredUrls.forEach((url) => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
@@ -234,9 +231,7 @@ export class SharedRelayService {
   ): Promise<T | null> {
     // Get optimal relays for the user
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relayBlock.filterBlockedRelays(
-      this.relaysService.getOptimalRelays(relayUrls)
-    );
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
 
     // Reduced logging for metadata requests to prevent console spam
     if (!filter.kinds?.includes(0)) {
@@ -314,9 +309,7 @@ export class SharedRelayService {
     timeout: number,
   ): Promise<T[]> {
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relayBlock.filterBlockedRelays(
-      this.relaysService.getOptimalRelays(relayUrls)
-    );
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -363,9 +356,7 @@ export class SharedRelayService {
             }
             reasons.forEach(reason => {
               if (reason) {
-                relayUrls.forEach(url => {
-                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
-                });
+                this.logger.debug('Relay closed with reason:', reason);
               }
             });
 

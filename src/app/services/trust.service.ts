@@ -4,7 +4,6 @@ import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService, TrustMetrics } from './database.service';
 import { TrustProviderService } from './trust-provider.service';
-import { RelayBlockService } from './relays/relay-block.service';
 import { RelayAuthService } from './relays/relay-auth.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
@@ -28,7 +27,6 @@ export class TrustService {
   private relayPool = inject(RelayPoolService);
   private database = inject(DatabaseService);
   private trustProviderService = inject(TrustProviderService);
-  private relayBlock = inject(RelayBlockService);
   private relayAuth = inject(RelayAuthService);
   private injector = inject(Injector);
 
@@ -239,12 +237,9 @@ export class TrustService {
     try {
       const { relayUrls, authors } = this.resolveProviderConfig();
 
-      // Trust relays are essential infrastructure — clear any blocks/auth-failures
+      // Trust relays are essential infrastructure — clear any auth-failures
       // that may have accumulated (e.g., transient WebSocket failures in WKWebView).
-      // Without this, a couple of connection hiccups can permanently block trust
-      // data for the entire session.
       for (const url of relayUrls) {
-        this.relayBlock.recordSuccess(url);
         if (this.relayAuth.hasAuthFailed(url)) {
           this.relayAuth.resetAuthFailure(url);
         }
@@ -322,7 +317,6 @@ export class TrustService {
       this.logger.error(`Batch trust metrics relay query failed for ${pubkeys.length} pubkeys`, {
         error,
         relayUrls: this.resolveProviderConfig().relayUrls,
-        blockedRelays: this.relayBlock.getBlockedRelays().map(r => r.url),
       });
       // Reject all requests in this batch
       for (const req of batch) {

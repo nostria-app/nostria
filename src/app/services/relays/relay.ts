@@ -5,7 +5,6 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
-import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PerformanceMetricsService } from '../performance-metrics.service';
 
@@ -31,7 +30,6 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
-  protected relayBlock = inject(RelayBlockService);
   protected localSettings = inject(LocalSettingsService);
   protected perfMetrics = inject(PerformanceMetricsService);
   // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
@@ -214,9 +212,7 @@ export abstract class RelayServiceBase {
    * @returns Object with filtered URLs and whether the operation should proceed
    */
   protected filterAuthFailedRelays(urls: string[]): { urls: string[]; shouldProceed: boolean } {
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(urls)
-    );
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
     if (filteredUrls.length === 0) {
       this.logger.warn(`[${this.constructor.name}] All relays are unavailable, cannot execute operation`);
       return { urls: [], shouldProceed: false };
@@ -750,7 +746,6 @@ export abstract class RelayServiceBase {
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
@@ -851,7 +846,7 @@ export abstract class RelayServiceBase {
             reasons.forEach((reason) => {
               if (reason) {
                 urls.forEach((url) => {
-                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                  this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
                 });
               }
             });
@@ -938,7 +933,6 @@ export abstract class RelayServiceBase {
               if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
-              this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
               throw new Error(`${relayUrl}: ${errorMsg}`);
             });
           relayPromises.set(wrappedPromise, relayUrl);
@@ -1004,7 +998,7 @@ export abstract class RelayServiceBase {
           if (!errorMsg || errorMsg.trim() === '') {
             errorMsg = 'Unknown error (relay returned empty response)';
           }
-          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
+          this.logger.warn(`Relay ${relayUrl} publish failed: ${errorMsg}`);
         });
       });
 
@@ -1176,7 +1170,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               availableRelays.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
               });
             }
           });
@@ -1304,7 +1298,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               urls.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               });
             }
           });
