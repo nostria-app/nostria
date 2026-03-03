@@ -706,7 +706,12 @@ export class FeedService {
         item.events.set(cachedEvents);
         const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
         item.lastCheckTimestamp = mostRecentTimestamp;
-        this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id}`);
+
+        // Mark initial load as complete so all relay events go to pending queue.
+        // This prevents UI jumps by keeping cached events stable on screen.
+        item.initialLoadComplete = true;
+        item.isRefreshing?.set(false);
+        this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id} - relay events will be queued`);
 
         // Prefetch profiles for cached events in background
         this.prefetchProfilesForEvents(cachedEvents);
@@ -864,9 +869,11 @@ export class FeedService {
       // Store subscription for later cleanup
       item.subscription = sub;
 
-      // Mark initial load as complete after brief delay to allow relay events to flow in
-      const hasCachedEvents = cachedEvents.length > 0;
-      if (!hasCachedEvents) {
+      // For empty feeds (no cache), mark initial load as complete after brief delay
+      // to allow relay events to flow in before switching to pending mode.
+      // When there ARE cached events, initialLoadComplete was already set to true
+      // during cache loading above, so relay events are already being queued.
+      if (!item.initialLoadComplete) {
         setTimeout(() => {
           if (!item.initialLoadComplete) {
             item.initialLoadComplete = true;
@@ -874,9 +881,6 @@ export class FeedService {
             this.logger.info(`✅ Initial relay load complete for feed ${feed.id} - new events will be queued`);
           }
         }, 2000);
-      } else {
-        // If we have cached events, set isRefreshing to false immediately so they display
-        item.isRefreshing?.set(false);
       }
     }
   }
@@ -942,7 +946,11 @@ export class FeedService {
       const mostRecentTimestamp = Math.max(...cachedEventsForDyn.map(e => e.created_at));
       item.lastCheckTimestamp = mostRecentTimestamp;
 
-      this.logger.info(`🚀 Rendered ${cachedEventsForDyn.length} cached events for feed ${feed.id}`);
+      // Mark initial load as complete so all relay events go to pending queue.
+      // This prevents UI jumps by keeping cached events stable on screen.
+      item.initialLoadComplete = true;
+      item.isRefreshing?.set(false);
+      this.logger.info(`🚀 Rendered ${cachedEventsForDyn.length} cached events for feed ${feed.id} - relay events will be queued`);
 
       // Prefetch profiles for cached events in background
       this.prefetchProfilesForEvents(cachedEventsForDyn);
@@ -1462,24 +1470,40 @@ export class FeedService {
       });
 
       if (newEvents.length > 0) {
-        // Sort by created_at descending
-        const combinedEvents = [...currentEvents, ...newEvents].sort(
-          (a, b) => (b.created_at || 0) - (a.created_at || 0)
-        );
+        // If initial load is complete and we have cached events, queue to pending
+        // This prevents UI jumps when cached events are already displayed
+        if (feedData.initialLoadComplete && currentEvents.length > 0) {
+          const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+          const trulyNewEvents = newEvents.filter(e => !pendingIds.has(e.id));
 
-        feedData.events.set(combinedEvents);
+          if (trulyNewEvents.length > 0) {
+            feedData.pendingEvents?.update((pending: Event[]) => {
+              const newPending = [...pending, ...trulyNewEvents];
+              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            });
+
+            this._feedData.update(map => new Map(map));
+            this.logger.debug(`🏷️ Queued ${trulyNewEvents.length} interest events to pending`);
+          }
+        } else {
+          // No cached events - merge directly for initial load
+          const combinedEvents = [...currentEvents, ...newEvents].sort(
+            (a, b) => (b.created_at || 0) - (a.created_at || 0)
+          );
+
+          feedData.events.set(combinedEvents);
+          this.logger.debug(`Added ${newEvents.length} new events from interests`);
+        }
 
         // Save to cache (skip for dynamic feeds - they change frequently)
         if (feed.id !== this.DYNAMIC_FEED_ID) {
-          this.saveCachedEvents(feed.id, allEvents);
+          this.saveCachedEvents(feed.id, [...feedData.events(), ...(feedData.pendingEvents?.() || [])]);
         }
 
         // Save events to database for offline access
         for (const event of newEvents) {
           this.saveEventToDatabase(event);
         }
-
-        this.logger.debug(`Added ${newEvents.length} new events from interests`);
       }
 
       // Update lastRetrieved timestamp
@@ -2092,25 +2116,54 @@ export class FeedService {
         );
 
         if (validEvents.length > 0) {
-          // Add events to the feed directly since this is initial load
-          feedData.events.update((currentEvents: Event[]) => {
-            const existingIds = new Set(currentEvents.map(e => e.id));
-            const newEvents = validEvents.filter(e => !existingIds.has(e.id));
-            const combined = [...currentEvents, ...newEvents];
-            const sorted = combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-            return sorted;
-          });
+          const existingEvents = feedData.events();
+
+          // If initial load is complete and we have cached events, queue to pending
+          // This prevents UI jumps when cached events are already displayed
+          if (feedData.initialLoadComplete && existingEvents.length > 0) {
+            const existingIds = new Set(existingEvents.map(e => e.id));
+            const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+            const trulyNewEvents = validEvents.filter(e => !existingIds.has(e.id) && !pendingIds.has(e.id));
+
+            if (trulyNewEvents.length > 0) {
+              feedData.pendingEvents?.update((pending: Event[]) => {
+                const newPending = [...pending, ...trulyNewEvents];
+                return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              });
+
+              // Trigger reactivity update for pending count in UI
+              this._feedData.update(map => new Map(map));
+
+              this.logger.debug(`⚡ [Fast Fetch] Queued ${trulyNewEvents.length} events to pending (${existingEvents.length} cached events preserved)`);
+            }
+
+            // Save events to database for queries
+            validEvents.forEach(event => this.saveEventToDatabase(event));
+
+            // Save to cache (include pending for persistence)
+            const allForCache = [...existingEvents, ...trulyNewEvents];
+            this.saveCachedEvents(feedData.feed.id, allForCache);
+          } else {
+            // No cached events - merge directly for initial load
+            feedData.events.update((currentEvents: Event[]) => {
+              const existingIds = new Set(currentEvents.map(e => e.id));
+              const newEvents = validEvents.filter(e => !existingIds.has(e.id));
+              const combined = [...currentEvents, ...newEvents];
+              const sorted = combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return sorted;
+            });
+
+            // Save to cache
+            this.saveCachedEvents(feedData.feed.id, feedData.events());
+
+            // Save events to database for queries
+            validEvents.forEach(event => this.saveEventToDatabase(event));
+          }
 
           // Signal that initial content is ready - this unblocks profile loading
           this.logger.debug(`✅ [Fast Fetch] Feed has ${validEvents.length} events - signaling content ready`);
           this._hasInitialContent.set(true);
           this.appState.feedHasInitialContent.set(true); // Signal via shared state
-
-          // Save to cache
-          this.saveCachedEvents(feedData.feed.id, feedData.events());
-
-          // Save events to database for queries
-          validEvents.forEach(event => this.saveEventToDatabase(event));
         }
       } else {
         this.logger.debug(`⚠️ [Fast Fetch] No events received from any batch`);
@@ -2209,15 +2262,35 @@ export class FeedService {
       const uniqueEvents = Array.from(new Map(validEvents.map(event => [event.id, event])).values())
         .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
-      feedData.events.set(uniqueEvents);
-      this._feedData.update(map => new Map(map));
+      const existingEvents = feedData.events();
 
-      if (uniqueEvents.length > 0) {
-        this.saveCachedEvents(feedData.feed.id, uniqueEvents);
-        uniqueEvents.forEach(event => this.saveEventToDatabase(event));
-        if (!this._hasInitialContent()) {
-          this._hasInitialContent.set(true);
-          this.appState.feedHasInitialContent.set(true);
+      // If we have cached events, queue new ones to pending to prevent UI jumps
+      if (feedData.initialLoadComplete && existingEvents.length > 0) {
+        const existingIds = new Set(existingEvents.map(e => e.id));
+        const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+        const trulyNewEvents = uniqueEvents.filter(e => !existingIds.has(e.id) && !pendingIds.has(e.id));
+
+        if (trulyNewEvents.length > 0) {
+          feedData.pendingEvents?.update((pending: Event[]) => {
+            const newPending = [...pending, ...trulyNewEvents];
+            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
+          this._feedData.update(map => new Map(map));
+          this.saveCachedEvents(feedData.feed.id, [...existingEvents, ...trulyNewEvents]);
+          trulyNewEvents.forEach(event => this.saveEventToDatabase(event));
+        }
+      } else {
+        // No cached events - show directly
+        feedData.events.set(uniqueEvents);
+        this._feedData.update(map => new Map(map));
+
+        if (uniqueEvents.length > 0) {
+          this.saveCachedEvents(feedData.feed.id, uniqueEvents);
+          uniqueEvents.forEach(event => this.saveEventToDatabase(event));
+          if (!this._hasInitialContent()) {
+            this._hasInitialContent.set(true);
+            this.appState.feedHasInitialContent.set(true);
+          }
         }
       }
 
