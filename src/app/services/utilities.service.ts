@@ -796,7 +796,6 @@ export class UtilitiesService {
       const parsedUrl = new URL(url);
 
       if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
-        this.logger.debug(`Ignoring relay URL from excluded domain: ${url}`);
         return '';
       }
 
