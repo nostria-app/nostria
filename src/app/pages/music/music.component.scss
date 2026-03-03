@@ -234,29 +234,6 @@
       height: 18px;
     }
   }
-
-  // Collapsible section header
-  &.collapsible {
-    cursor: pointer;
-    user-select: none;
-    border-radius: var(--mat-sys-corner-small);
-    padding: 0.5rem;
-    margin: -0.5rem;
-    margin-bottom: 0.5rem;
-
-    &:hover {
-      background-color: var(--mat-sys-surface-container-high);
-    }
-
-    .collapse-icon {
-      transition: transform 0.2s ease;
-      color: var(--mat-sys-on-surface-variant);
-
-      &.collapsed {
-        transform: rotate(-90deg);
-      }
-    }
-  }
 }
 
 // Playlists grid - larger cards (desktop)
