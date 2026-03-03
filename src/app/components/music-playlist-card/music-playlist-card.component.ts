@@ -315,91 +315,89 @@ const MUSIC_KIND = 36787;
       }
     }
 
-    // Compact mode when inside yours-grid on mobile
-    @media (max-width: 600px) {
-      :host-context(.yours-grid) {
-        :host {
-          min-width: 0;
-          overflow: hidden;
-        }
+    // Compact mode when inside yours-grid (all screen sizes)
+    :host-context(.yours-grid) {
+      :host {
+        min-width: 0;
+        overflow: hidden;
+      }
 
-        .playlist-card {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          height: 56px;
-          border-radius: var(--mat-sys-corner-small);
-          overflow: hidden;
+      .playlist-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        height: 56px;
+        border-radius: var(--mat-sys-corner-small);
+        overflow: hidden;
 
-          &:hover {
-            transform: none;
-
-            .play-btn {
-              opacity: 0;
-            }
-          }
-        }
-
-        .playlist-cover {
-          width: 56px;
-          min-width: 56px;
-          height: 56px;
-          aspect-ratio: auto;
-          border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
-
-          .cover-image {
-            width: 56px;
-            height: 56px;
-            object-fit: cover;
-          }
-
-          .cover-placeholder mat-icon {
-            font-size: 1.5rem;
-            width: 1.5rem;
-            height: 1.5rem;
-          }
+        &:hover {
+          transform: none;
 
           .play-btn {
-            display: none;
+            opacity: 0;
           }
         }
+      }
 
-        mat-card-content {
-          padding: 0 0.625rem;
-          flex: 1;
-          min-width: 0;
-          overflow: hidden;
+      .playlist-cover {
+        width: 56px;
+        min-width: 56px;
+        height: 56px;
+        aspect-ratio: auto;
+        border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
+
+        .cover-image {
+          width: 56px;
+          height: 56px;
+          object-fit: cover;
         }
 
-        .playlist-info {
-          overflow: hidden;
+        .cover-placeholder mat-icon {
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
         }
 
-        .playlist-title-row {
-          overflow: hidden;
-        }
-
-        .playlist-title {
-          font-size: 0.8125rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .playlist-meta {
-          font-size: 0.6875rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .playlist-description {
+        .play-btn {
           display: none;
         }
+      }
 
-        .menu-btn {
-          display: none;
-        }
+      mat-card-content {
+        padding: 0 0.625rem;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .playlist-info {
+        overflow: hidden;
+      }
+
+      .playlist-title-row {
+        overflow: hidden;
+      }
+
+      .playlist-title {
+        font-size: 0.8125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .playlist-meta {
+        font-size: 0.6875rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .playlist-description {
+        display: none;
+      }
+
+      .menu-btn {
+        display: none;
       }
     }
   `],

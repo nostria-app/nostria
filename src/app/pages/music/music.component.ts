@@ -95,9 +95,6 @@ export class MusicComponent implements OnDestroy {
   searchQuery = signal('');
   showSearch = signal(false);
 
-  // "Yours" section collapsed state
-  yoursSectionCollapsed = signal(false);
-
   // Container width for dynamic rendering
   containerWidth = signal(0);
 
@@ -401,11 +398,6 @@ export class MusicComponent implements OnDestroy {
 
   constructor() {
     this.twoColumnLayout.setWideLeft();
-    // Load collapsed state from storage
-    const pubkey = this.currentPubkey();
-    if (pubkey) {
-      this.yoursSectionCollapsed.set(this.accountLocalState.getMusicYoursSectionCollapsed(pubkey));
-    }
     this.initializeMusic();
 
     // Update container width after view init and after CSS transitions complete
@@ -876,16 +868,6 @@ export class MusicComponent implements OnDestroy {
   onSearchInput(event: InputEvent): void {
     const target = event.target as HTMLInputElement;
     this.searchQuery.set(target.value);
-  }
-
-  // Toggle "Yours" section collapsed state
-  toggleYoursSection(): void {
-    const newState = !this.yoursSectionCollapsed();
-    this.yoursSectionCollapsed.set(newState);
-    const pubkey = this.currentPubkey();
-    if (pubkey) {
-      this.accountLocalState.setMusicYoursSectionCollapsed(pubkey, newState);
-    }
   }
 
   // Menu actions

@@ -42,7 +42,7 @@ export class IgnoredRelayAuditService {
       if (!raw) return new Set();
       const accounts = JSON.parse(raw);
       if (!Array.isArray(accounts)) return new Set();
-      return new Set(accounts.map((a: { pubkey?: string }) => a.pubkey).filter(Boolean));
+      return new Set(accounts.map((a: { pubkey?: string }) => a.pubkey).filter((p): p is string => !!p));
     } catch {
       return new Set();
     }
