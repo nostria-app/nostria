@@ -66,6 +66,10 @@ export class ProfileState {
   // This allows UI components to wait for cached data before loading from relays
   cachedEventsLoaded = signal<boolean>(false);
 
+  // Signal to indicate when relay list loading is fully complete (cache + relay fetch)
+  // Unlike cachedEventsLoaded, this stays false until the relay list has been queried from relays too
+  relayListFullyLoaded = signal<boolean>(false);
+
   // Track the oldest timestamp from relay-loaded events for pagination
   // This is separate from cached events to ensure proper infinite scroll
   private oldestRelayTimestamp = signal<number | null>(null);
@@ -200,6 +204,7 @@ export class ProfileState {
     this.currentlyLoadingPubkey.set('');
     this.isInitiallyLoading.set(false);
     this.cachedEventsLoaded.set(false);
+    this.relayListFullyLoaded.set(false);
     this.followingList.set([]);
     this.followingListTimestamp.set(0);
     this.relayList.set([]);
@@ -826,6 +831,11 @@ export class ProfileState {
       }
     } catch (err) {
       this.logger.error('Error loading relay list:', err);
+    } finally {
+      // Mark relay list loading as fully complete (cache + relay fetch done)
+      if (this.currentlyLoadingPubkey() === pubkey) {
+        this.relayListFullyLoaded.set(true);
+      }
     }
 
     // Small delay between queries

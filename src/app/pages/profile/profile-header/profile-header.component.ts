@@ -355,9 +355,9 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.profileState.relayList() || [];
   });
 
-  // Check if we're still loading cached events (relay list is loaded as part of cached events)
+  // Check if we're still loading relay list (includes both cache and relay fetch)
   isLoadingRelays = computed(() => {
-    return !this.profileState.cachedEventsLoaded();
+    return !this.profileState.relayListFullyLoaded();
   });
 
   // Check if the current user is blocked

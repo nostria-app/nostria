@@ -220,7 +220,12 @@
           <mat-icon class="compact-icon" aria-hidden="true">settings_input_antenna</mat-icon>
           <span class="compact-count" aria-hidden="true">{{ getUserRelays().length }}</span>
         </a>
-        } @else if (!isLoadingRelays()) {
+        } @else if (isLoadingRelays()) {
+        <span class="following-count">
+          <mat-spinner diameter="14"></mat-spinner>&nbsp;
+          <span>Loading relays...</span>
+        </span>
+        } @else {
         <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
         }
 
