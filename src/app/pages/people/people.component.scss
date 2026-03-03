@@ -749,6 +749,33 @@
   .people-container {
     padding: 0.5rem 0;
   }
+
+  // Shrink medium grid avatars on small screens
+  .medium-grid {
+    gap: 0.25rem;
+
+    .person-item {
+      app-user-profile {
+        ::ng-deep {
+          &.medium {
+            .user-profile-avatar {
+              width: 64px;
+              height: 64px;
+            }
+
+            .default-user-avatar {
+              font-size: 64px;
+            }
+
+            app-profile-display-name,
+            .user-profile-name {
+              font-size: 13px;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 // Alphabet Navigation Container - sticky sidebar that stays visible while scrolling
