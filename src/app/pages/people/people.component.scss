@@ -456,7 +456,12 @@
   display: flex;
   flex-wrap: wrap; // Changed to wrap
   gap: 0.4rem; // Added gap between items
-  justify-content: flex-start; // Added to ensure proper alignment
+  justify-content: flex-start; // Default alignment for larger screens
+
+  // On smaller screens, spread avatars across the full width
+  @media (max-width: 599px) {
+    justify-content: space-evenly;
+  }
 
   .person-card.medium {
     width: auto; // Changed from 220px to auto to match avatar size
