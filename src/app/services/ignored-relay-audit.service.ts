@@ -23,6 +23,7 @@ export interface IgnoredRelayAuditSnapshot {
 export class IgnoredRelayAuditService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly storageKey = 'nostria-ignored-relay-audit-v1';
+  private readonly accountsStorageKey = 'nostria-accounts';
   private readonly excludedAuditDomains = new Set<string>(['nwc.primal.net']);
 
   private readonly entriesMap = signal<Map<string, IgnoredRelayAuditEntry>>(new Map());
@@ -31,8 +32,29 @@ export class IgnoredRelayAuditService {
     this.loadFromStorage();
   }
 
+  /** Returns the set of pubkeys belonging to the current user's own accounts. */
+  private getOwnAccountPubkeys(): Set<string> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return new Set();
+    }
+    try {
+      const raw = localStorage.getItem(this.accountsStorageKey);
+      if (!raw) return new Set();
+      const accounts = JSON.parse(raw);
+      if (!Array.isArray(accounts)) return new Set();
+      return new Set(accounts.map((a: { pubkey?: string }) => a.pubkey).filter(Boolean));
+    } catch {
+      return new Set();
+    }
+  }
+
   recordIgnoredRelayUsage(pubkey: string, ignoredDomains: string[], relayUrls: string[]): void {
     if (!pubkey || typeof pubkey !== 'string') {
+      return;
+    }
+
+    // Skip tracking for the current user's own accounts
+    if (this.getOwnAccountPubkeys().has(pubkey)) {
       return;
     }
 
@@ -69,7 +91,9 @@ export class IgnoredRelayAuditService {
   }
 
   getSnapshot(): IgnoredRelayAuditSnapshot {
+    const ownPubkeys = this.getOwnAccountPubkeys();
     const entries = Array.from(this.entriesMap().values())
+      .filter((entry) => !ownPubkeys.has(entry.pubkey))
       .sort((a, b) => b.lastSeen - a.lastSeen);
 
     const affectedDomains = [...new Set(entries.flatMap((entry) => entry.ignoredDomains))]
