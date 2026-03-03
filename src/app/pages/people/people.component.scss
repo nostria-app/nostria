@@ -679,17 +679,22 @@
         ::ng-deep {
           &.medium {
             .user-profile-avatar {
-              width: 64px;
-              height: 64px;
+              width: 80px;
+              height: 80px;
             }
 
             .default-user-avatar {
-              font-size: 64px;
+              font-size: 80px;
+            }
+
+            .medium-name {
+              width: 80px;
+              font-size: 11px;
             }
 
             app-profile-display-name,
             .user-profile-name {
-              font-size: 13px;
+              font-size: 11px;
             }
           }
         }

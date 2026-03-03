@@ -428,29 +428,42 @@
   }
 
   &.medium {
-    width: auto; // Changed from 220px to auto
+    width: auto;
     flex-shrink: 0;
 
     .user-profile-container {
-      justify-content: center; // Center the avatar
-      padding: 0; // Removed padding
-      width: auto; // Container should only be as wide as its content
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      width: auto;
     }
 
     .user-profile-avatar {
       width: 128px;
       height: 128px;
-      margin: 0; // Removed margin
+      margin: 0;
     }
 
     .default-user-avatar {
       font-size: 128px;
     }
 
+    .medium-name {
+      width: 128px;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
     app-profile-display-name,
     .user-profile-name {
-      font-size: 16px;
-      margin-top: 0; // Removed margin
+      font-size: 13px;
+      margin-top: 0;
     }
   }
 

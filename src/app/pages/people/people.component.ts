@@ -598,6 +598,22 @@ export class PeopleComponent implements OnDestroy {
   });
 
   /**
+   * Get label for current view mode
+   */
+  viewModeLabel = computed(() => {
+    switch (this.viewMode()) {
+      case 'comfortable':
+        return 'Comfortable';
+      case 'medium':
+        return 'Avatars';
+      case 'details':
+        return 'Details';
+      default:
+        return 'Avatars';
+    }
+  });
+
+  /**
    * Handle filter changes from filter panel
    */
   onFiltersChanged(changes: Partial<FilterOptions>): void {

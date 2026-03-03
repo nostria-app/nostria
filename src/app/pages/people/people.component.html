@@ -114,7 +114,7 @@
   </app-filter-button>
 
   <!-- View toggle button - cycles through modes - always visible -->
-  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'">
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewModeLabel()">
     <mat-icon>{{ viewModeIcon() }}</mat-icon>
   </button>
 
@@ -219,8 +219,7 @@
       } @else {
       <!-- Apply different container classes based on viewMode() -->
       <div class="people-container" [class.comfortable-list]="viewMode() === 'comfortable'"
-        [class.medium-grid]="viewMode() === 'medium'"
-        [class.details-list]="viewMode() === 'details'">
+        [class.medium-grid]="viewMode() === 'medium'" [class.details-list]="viewMode() === 'details'">
         @for (pubkey of visiblePeople(); track pubkey) {
         <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
           (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
@@ -228,8 +227,7 @@
           [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
-            [view]="$any(viewMode())"
-            [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'medium'"
+            [view]="$any(viewMode())" [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'medium'"
             [showRank]="filters().showRank" [disableLink]="true">
           </app-user-profile>
         </div>
