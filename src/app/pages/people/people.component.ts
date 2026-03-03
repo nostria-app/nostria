@@ -48,7 +48,7 @@ type FilterOptions = PeopleFilters;
 type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc' | 'name-asc' | 'name-desc';
 
 // View modes in cycling order
-const VIEW_MODES = ['comfortable', 'medium', 'small', 'details'] as const;
+const VIEW_MODES = ['comfortable', 'medium', 'details'] as const;
 type ViewModeType = typeof VIEW_MODES[number];
 
 const CACHED_PROFILES_D_TAG = 'nostria-cached-profiles';
@@ -307,8 +307,6 @@ export class PeopleComponent implements OnDestroy {
         return 200;
       case 'medium':
         return 150;
-      case 'small':
-        return 100;
       case 'details':
         return 72;
       default:
@@ -592,8 +590,6 @@ export class PeopleComponent implements OnDestroy {
         return 'view_agenda';
       case 'medium':
         return 'view_module';
-      case 'small':
-        return 'apps';
       case 'details':
         return 'view_list';
       default:

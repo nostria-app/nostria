@@ -173,7 +173,6 @@ describe('PeopleComponent', () => {
       expect(container).toBeTruthy();
       expect(container!.classList.contains('medium-grid')).toBe(true);
       expect(container!.classList.contains('comfortable-list')).toBe(false);
-      expect(container!.classList.contains('small-grid')).toBe(false);
       expect(container!.classList.contains('details-list')).toBe(false);
     });
 
@@ -184,16 +183,6 @@ describe('PeopleComponent', () => {
       const container = getPeopleContainer();
       expect(container).toBeTruthy();
       expect(container!.classList.contains('comfortable-list')).toBe(true);
-      expect(container!.classList.contains('medium-grid')).toBe(false);
-    });
-
-    it('should apply small-grid class when viewMode is small', async () => {
-      component.changeViewMode('small');
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const container = getPeopleContainer();
-      expect(container).toBeTruthy();
-      expect(container!.classList.contains('small-grid')).toBe(true);
       expect(container!.classList.contains('medium-grid')).toBe(false);
     });
 
