@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { computed, effect, inject, Injectable, Injector, signal, untracked } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -65,7 +65,8 @@ export class MessagingService implements NostriaService {
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
-  private userRelayService: any = null; // Lazy loaded to avoid circular dependency
+  private readonly injector = inject(Injector);
+  private userRelayService: any = null; // Lazy-initialized to control load timing
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
@@ -193,6 +194,57 @@ export class MessagingService implements NostriaService {
   private getReplyToFromTags(tags: string[][]): string | undefined {
     const eTag = tags.find(tag => tag[0] === 'e');
     return eTag ? eTag[1] : undefined;
+  }
+
+  /**
+   * Update an existing message in a chat (e.g., to change pending/failed/received status).
+   * Returns true if the message was found and updated, false otherwise.
+   */
+  updateMessageInChat(pubkey: string, messageId: string, updates: Partial<DirectMessage>): boolean {
+    const currentMap = this.chatsMap();
+    const chatId = pubkey;
+    const chat = currentMap.get(chatId);
+    if (!chat) return false;
+
+    const existingMessage = chat.messages.get(messageId);
+    if (!existingMessage) return false;
+
+    const updatedMessage = { ...existingMessage, ...updates };
+    const newMessagesMap = new Map(chat.messages);
+    newMessagesMap.set(messageId, updatedMessage);
+
+    const newMap = new Map(currentMap);
+    newMap.set(chatId, {
+      ...chat,
+      messages: newMessagesMap,
+      lastMessage: this.getLatestMessage(newMessagesMap),
+    });
+    this.chatsMap.set(newMap);
+
+    // Update in storage too
+    this.saveMessageToStorage(updatedMessage, chatId);
+    return true;
+  }
+
+  /**
+   * Remove a message from a chat (e.g., when retrying a failed message).
+   */
+  removeMessageFromChat(pubkey: string, messageId: string): void {
+    const currentMap = this.chatsMap();
+    const chatId = pubkey;
+    const chat = currentMap.get(chatId);
+    if (!chat || !chat.messages.has(messageId)) return;
+
+    const newMessagesMap = new Map(chat.messages);
+    newMessagesMap.delete(messageId);
+
+    const newMap = new Map(currentMap);
+    newMap.set(chatId, {
+      ...chat,
+      messages: newMessagesMap,
+      lastMessage: this.getLatestMessage(newMessagesMap),
+    });
+    this.chatsMap.set(newMap);
   }
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
@@ -2366,20 +2418,19 @@ export class MessagingService implements NostriaService {
   }
 
   /**
-   * Lazy load UserRelayService to avoid circular dependency
+   * Lazy load UserRelayService to control initialization timing.
+   * Uses the root Injector since both services are providedIn: 'root'.
    */
   private async getUserRelayService() {
     if (!this.userRelayService) {
       const { UserRelayService } = await import('./relays/user-relay');
-      const injector = await import('@angular/core').then(m => m.inject);
-      // Use dynamic import workaround
-      this.userRelayService = (window as any).__injector?.get(UserRelayService);
-      if (!this.userRelayService) {
-        // Fallback: create instance via inject in a different way
-        const { Injector } = await import('@angular/core');
-        this.userRelayService = Injector.create({
-          providers: [],
-        }).get(UserRelayService, null);
+      try {
+        this.userRelayService = this.injector.get(UserRelayService, null);
+        if (!this.userRelayService) {
+          this.logger.warn('UserRelayService not available from injector');
+        }
+      } catch (e) {
+        this.logger.warn('Could not resolve UserRelayService from injector', e);
       }
     }
     return this.userRelayService;
@@ -2508,6 +2559,7 @@ export class MessagingService implements NostriaService {
 
         // Publish both gift wraps to recipient's and sender's DM relays (NIP-17)
         // Also publish to account relays for multi-device sync
+        // Also publish to discovery relays for delivery redundancy
         const publishPromises: Promise<unknown>[] = [];
 
         // Publish to account relays (backup/sync)
@@ -2524,6 +2576,15 @@ export class MessagingService implements NostriaService {
         if (userRelayService) {
           publishPromises.push(userRelayService.publishToDmRelays(receiverPubkey, signedGiftWrap));
           publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap2));
+        }
+
+        // Publish to discovery relays as additional fallback for delivery
+        const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+        if (discoveryRelayUrls.length > 0) {
+          const pool = this.discoveryRelay.getPool();
+          if (pool) {
+            publishPromises.push(...pool.publish(discoveryRelayUrls, signedGiftWrap));
+          }
         }
 
         await Promise.allSettled(publishPromises);

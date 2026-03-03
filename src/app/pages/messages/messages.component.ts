@@ -1421,8 +1421,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Send a direct message using both NIP-04 and NIP-44.
-   * Uses optimistic UI: the message appears immediately while
-   * relay publishing happens in the background.
+   * Uses optimistic UI: the message appears as pending immediately while
+   * relay publishing happens in the background. The message transitions
+   * to received/failed based on actual relay delivery results.
    */
   async sendMessage(): Promise<void> {
     const messageText = this.newMessageText().trim();
@@ -1458,7 +1459,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
       // Create the message (encrypts + signs, but does NOT publish yet)
-      let result: { message: DirectMessage; publish: () => Promise<void> };
+      let result: { message: DirectMessage; publish: () => Promise<boolean> };
 
       if (useModernEncryption) {
         result = await this.createNip44Message(
@@ -1478,37 +1479,77 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const finalMessage = result.message;
 
-      // Create a pending message to show immediately in the UI
+      // Add message as PENDING to both the messaging service and local pending list.
+      // It stays pending until relay publishing confirms delivery.
       const pendingMessage: DirectMessage = {
         ...finalMessage,
         pending: true,
         received: false,
       };
 
-      // Add to pending messages so the user sees feedback right away
+      // Add to messaging service (persists to DB as pending)
+      this.messaging.addMessageToChat(receiverPubkey, pendingMessage);
+
+      // Also add to local pending signal for immediate UI feedback
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
-      // Add the message to the messaging service to update the chat's lastMessage
-      const updatedMessage = {
-        ...finalMessage,
-        pending: false,
-        received: true,
-      };
-
-      this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
-
-      // Release the send button immediately - message is visible in the UI
+      // Release the send button immediately - message is visible as pending
       this.isSending.set(false);
       this.focusMessageInput();
 
-      // Publish to relays in the background (fire-and-forget from UI perspective)
-      result.publish().catch(err => {
+      // Publish to relays in the background, then update message status
+      result.publish().then(success => {
+        if (success) {
+          // At least one relay accepted — mark as delivered
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: true,
+            failed: false,
+          });
+          // Remove from local pending (persisted version will take over)
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+        } else {
+          // All relays rejected — mark as failed
+          this.logger.error('All relays rejected the message');
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: false,
+            failed: true,
+          });
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+          this.notifications.addNotification({
+            id: Date.now().toString(),
+            type: NotificationType.ERROR,
+            title: 'Message Not Delivered',
+            message: 'Your message could not be delivered to any relay. Tap the retry button to try again.',
+            timestamp: Date.now(),
+            read: false,
+          });
+        }
+      }).catch(err => {
         this.logger.error('Background relay publishing failed', err);
+        // Mark as failed so user can see and retry
+        this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+          pending: false,
+          received: false,
+          failed: true,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+        this.notifications.addNotification({
+          id: Date.now().toString(),
+          type: NotificationType.ERROR,
+          title: 'Message Not Delivered',
+          message: 'Failed to publish message to relays. Tap the retry button to try again.',
+          timestamp: Date.now(),
+          read: false,
+        });
       });
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
-      // Clear any pending messages since the send failed
+      // Clear any pending messages since the send failed before publishing
       this.pendingMessages.set([]);
 
       this.isSending.set(false);
@@ -1532,14 +1573,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Retry sending a failed message
+   * Retry sending a failed message.
+   * Removes the failed message from state and puts the text back
+   * into the input so the user can re-send.
    */
   retryMessage(message: DirectMessage): void {
-    // Remove the failed message from pending
+    const receiverPubkey = this.selectedChat()?.pubkey;
+
+    // Remove the failed message from pending list
     this.pendingMessages.update(msgs => msgs.filter(msg => msg.id !== message.id));
 
-    // Then set its content to the input field so the user can try again
+    // Also remove from persisted chat state (it was saved as failed)
+    if (receiverPubkey) {
+      this.messaging.removeMessageFromChat(receiverPubkey, message.id);
+    }
+
+    // Set its content to the input field so the user can re-send
     this.newMessageText.set(message.content);
+    this.focusMessageInput();
   }
 
   /**
@@ -2020,7 +2071,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<boolean> }> {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
@@ -2057,7 +2108,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: 'nip04',
       };
 
-      const publish = () => this.publishToRelays(signedEvent, receiverPubkey);
+      const publish = (): Promise<boolean> => this.publishToRelays(signedEvent, receiverPubkey);
 
       return { message, publish };
     } catch (error) {
@@ -2075,7 +2126,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<boolean> }> {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
 
@@ -2180,23 +2231,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: 'nip44',
       };
 
-      // Return a publish function that handles all relay publishing in the background
-      const publish = async () => {
+      // Return a publish function that handles all relay publishing in the background.
+      // Returns true if at least one relay accepted the recipient's gift wrap.
+      const publish = async (): Promise<boolean> => {
         if (isNoteToSelf) {
-          // Note to Self: Only one gift wrap needed
-          await Promise.allSettled([
+          const results = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, myPubkey),
             this.publishToAccountRelays(signedGiftWrap),
           ]);
+          return results.some(r => r.status === 'fulfilled');
         } else {
-          // Regular message: publish both gift wraps
-          await Promise.allSettled([
+          const results = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
             this.publishToAccountRelays(signedGiftWrap),
             this.publishToDiscoveryRelays(signedGiftWrap),
             this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
             this.publishToAccountRelays(signedGiftWrap2!),
           ]);
+          // Consider success if any of the recipient-facing publishes succeeded
+          return results.some(r => r.status === 'fulfilled');
         }
       };
 
@@ -2208,14 +2261,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Publish an event to multiple relays
+   * Publish an event to multiple relays.
+   * Returns true if at least one relay accepted the event.
    */
-  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<void> {
+  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
     const promisesUser = this.userRelayService.publish(pubkey, event);
     const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesUser, promisesAccount]);
+    const results = await Promise.allSettled([promisesUser, promisesAccount]);
+    return results.some(r => r.status === 'fulfilled');
   }
 
   /**
