@@ -423,8 +423,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Playlist cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Playlist cards are minmax(150px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 150;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
@@ -439,8 +439,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Track cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Track cards are minmax(150px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 150;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
@@ -455,8 +455,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Artist cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Artist cards are minmax(120px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 120;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
