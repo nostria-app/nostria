@@ -76,7 +76,7 @@ export class MessagingService implements NostriaService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
-  MESSAGE_SIZE = 200;
+  MESSAGE_SIZE = 400;
 
   getChat(chatId: string): Chat | null {
     const chat = this.chatsMap().get(chatId);
@@ -1578,7 +1578,12 @@ export class MessagingService implements NostriaService {
   }
 
   /**
-   * Load more (older) messages for a specific chat
+   * Load more (older) messages for a specific chat.
+   *
+   * Always computes the query window from the oldest message currently in the chat,
+   * going back at least 2 days further to account for NIP-17 gift wrap timestamp
+   * randomization (up to 2 days offset). Queries DM relays (kind 10050), account
+   * relays, and discovery relays so gift-wrapped messages are not missed.
    */
   async loadMoreMessages(chatId: string, beforeTimestamp?: number): Promise<DirectMessage[]> {
     const myPubkey = this.accountState.pubkey();
@@ -1591,29 +1596,43 @@ export class MessagingService implements NostriaService {
       throw new Error('Chat not found');
     }
 
-    // Determine the oldest timestamp to fetch from
-    let until = beforeTimestamp;
-    if (!until) {
-      const currentMessages = this.getChatMessages(chatId);
-      if (currentMessages.length === 0) {
-        until = this.utilities.currentDate(); // Current timestamp
-      } else {
-        until = Math.min(...currentMessages.map(m => m.created_at)) - 1;
-      }
+    // Always compute "until" from the oldest message currently visible in the chat.
+    // This ensures each "scroll up" request moves the window backwards correctly
+    // regardless of any stored timestamp state.
+    const currentMessages = this.getChatMessages(chatId);
+    let oldestInnerTimestamp: number;
+    if (currentMessages.length === 0) {
+      oldestInnerTimestamp = this.utilities.currentDate();
+    } else {
+      oldestInnerTimestamp = Math.min(...currentMessages.map(m => m.created_at));
     }
+
+    // NIP-17 gift wraps use randomized outer timestamps up to 2 days (172800s) in the past.
+    // The inner (decrypted) message timestamp is the real one, but relays index by the
+    // outer timestamp. To find older messages we need to look further back.
+    const NIP17_TIMESTAMP_BUFFER = 172800; // 2 days in seconds
+    const until = oldestInnerTimestamp + NIP17_TIMESTAMP_BUFFER; // outer timestamp could be up to 2 days after inner
+    const since = oldestInnerTimestamp - NIP17_TIMESTAMP_BUFFER; // also look 2 days before the oldest inner
 
     // Query both NIP-04 and NIP-44 messages for merged chats
     const messageKinds = [kinds.EncryptedDirectMessage, kinds.GiftWrap];
 
     this.logger.debug(
-      `Loading more messages for chat ${chatId}, until: ${until}`
+      `Loading more messages for chat ${chatId}, oldest inner: ${oldestInnerTimestamp} (${new Date(oldestInnerTimestamp * 1000).toISOString()}), ` +
+      `query window: since=${new Date(since * 1000).toISOString()} until=${new Date(until * 1000).toISOString()}`
     );
 
-    // Create filters for both received and sent messages
+    // Build combined relay list: DM relays (kind 10050) + account relays + discovery relays
+    const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
+    const accountRelays = this.relay.getRelayUrls();
+    const discoveryRelays = this.discoveryRelay.getRelayUrls();
+    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+
+    // Create filters — use `since` to narrow the window and avoid pulling everything
     const filterReceived: Filter = {
       kinds: messageKinds,
-      authors: [chat.pubkey],
       '#p': [myPubkey],
+      since: since,
       until: until,
       limit: this.MESSAGE_SIZE,
     };
@@ -1621,174 +1640,110 @@ export class MessagingService implements NostriaService {
     const filterSent: Filter = {
       kinds: messageKinds,
       authors: [myPubkey],
-      '#p': [chat.pubkey],
+      since: since,
       until: until,
       limit: this.MESSAGE_SIZE,
     };
 
     const loadedMessages: DirectMessage[] = [];
 
+    const processEvent = async (event: NostrEvent) => {
+      try {
+        // Skip if we already have this message (by event ID or inner message ID)
+        if (this.hasMessage(chatId, event.id)) {
+          return;
+        }
+
+        let decryptedMessage: any = null;
+        let giftWrapId: string | undefined = undefined;
+
+        if (event.kind === kinds.EncryptedDirectMessage) {
+          decryptedMessage = await this.unwrapNip04MessageInternal(event);
+        } else if (event.kind === kinds.GiftWrap) {
+          const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
+          if (alreadyProcessed) {
+            this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages)', { eventId: event.id });
+            return;
+          }
+          decryptedMessage = await this.unwrapMessageInternal(event);
+          giftWrapId = event.id;
+        }
+
+        if (decryptedMessage) {
+          // Only include messages that are actually older than what we have
+          if (currentMessages.length > 0 && decryptedMessage.created_at >= oldestInnerTimestamp) {
+            // This message is not older — we already have it or it's newer
+            // Still add to chat in case it was missing from the DB
+            const existingInChat = currentMessages.find(m => m.id === decryptedMessage.id);
+            if (existingInChat) return;
+          }
+
+          const isOutgoing = event.pubkey === myPubkey;
+          let otherPubkey = chat.pubkey;
+
+          if (event.kind === kinds.EncryptedDirectMessage) {
+            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+            if (isOutgoing && pTags.length > 0) {
+              otherPubkey = pTags[0];
+            } else if (!isOutgoing) {
+              otherPubkey = event.pubkey;
+            }
+          }
+
+          // For NIP-44 messages, verify this message belongs to this chat
+          if (event.kind === kinds.GiftWrap && otherPubkey !== chat.pubkey) {
+            // Gift wrap for a different chat — skip
+            return;
+          }
+
+          const directMessage: DirectMessage = {
+            id: decryptedMessage.id,
+            pubkey: otherPubkey,
+            created_at: decryptedMessage.created_at,
+            content: decryptedMessage.content,
+            isOutgoing: isOutgoing,
+            tags: decryptedMessage.tags || [],
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
+            giftWrapId: giftWrapId,
+          };
+
+          loadedMessages.push(directMessage);
+          this.addMessageToChat(otherPubkey, directMessage);
+        }
+      } catch (error) {
+        this.logger.error('Failed to process older message:', error);
+      }
+    };
+
     try {
-      // Use subscribe with EOSE to get historical messages
-      await new Promise<void>((resolve, reject) => {
-        const sub = this.relay.subscribe(
-          filterReceived,
-          async (event: NostrEvent) => {
-            try {
-              // Skip if we already have this message
-              if (this.hasMessage(chatId, event.id)) {
-                return;
-              }
+      // Query all relay types in parallel using the pool
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          const sub = this.pool.subscribe(allRelays, filterReceived, async (event: NostrEvent) => {
+            await processEvent(event);
+          });
 
-              let decryptedMessage: any = null;
-              let giftWrapId: string | undefined = undefined;
-
-              if (event.kind === kinds.EncryptedDirectMessage) {
-                // Handle NIP-04 messages
-                decryptedMessage = await this.unwrapNip04MessageInternal(event);
-              } else if (event.kind === kinds.GiftWrap) {
-                // Check if this gift wrap has already been processed to avoid re-decryption
-                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-                if (alreadyProcessed) {
-                  this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages)', { eventId: event.id });
-                  return;
-                }
-                // Handle NIP-44 wrapped messages
-                decryptedMessage = await this.unwrapMessageInternal(event);
-                giftWrapId = event.id;
-              }
-
-              if (decryptedMessage) {
-                // Determine if this is an outgoing message
-                const isOutgoing = event.pubkey === myPubkey;
-
-                // Determine the other party's pubkey
-                let otherPubkey = chat.pubkey;
-                if (event.kind === kinds.EncryptedDirectMessage) {
-                  // For NIP-04, get the other party from 'p' tags
-                  const pTags = this.utilities.getPTagsValuesFromEvent(event);
-                  if (isOutgoing && pTags.length > 0) {
-                    otherPubkey = pTags[0];
-                  } else if (!isOutgoing) {
-                    otherPubkey = event.pubkey;
-                  }
-                }
-
-                const directMessage: DirectMessage = {
-                  id: decryptedMessage.id,
-                  pubkey: otherPubkey,
-                  created_at: decryptedMessage.created_at,
-                  content: decryptedMessage.content,
-                  isOutgoing: isOutgoing,
-                  tags: decryptedMessage.tags || [],
-                  pending: false,
-                  failed: false,
-                  received: true,
-                  read: false,
-                  encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
-                  giftWrapId: giftWrapId, // Store gift wrap ID for NIP-44 messages
-                };
-
-                loadedMessages.push(directMessage);
-                this.addMessageToChat(otherPubkey, directMessage);
-              }
-            } catch (error) {
-              this.logger.error('Failed to process older message:', error);
-            }
-          },
-          () => {
-            // EOSE callback - end of stored events
-            (sub as { close: () => void })?.close?.();
+          // Set a timeout to prevent hanging
+          setTimeout(() => {
+            sub.close();
             resolve();
-          }
-        );
+          }, 15000);
+        }),
+        new Promise<void>((resolve) => {
+          const sub = this.pool.subscribe(allRelays, filterSent, async (event: NostrEvent) => {
+            await processEvent(event);
+          });
 
-        // Set a timeout to prevent hanging
-        setTimeout(() => {
-          (sub as { close: () => void })?.close?.();
-          resolve();
-        }, 10000);
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        const sub = this.relay.subscribe(
-          filterSent,
-          async (event: NostrEvent) => {
-            try {
-              // Skip if we already have this message
-              if (this.hasMessage(chatId, event.id)) {
-                return;
-              }
-
-              let decryptedMessage: any = null;
-              let giftWrapId: string | undefined = undefined;
-
-              if (event.kind === kinds.EncryptedDirectMessage) {
-                // Handle NIP-04 messages
-                decryptedMessage = await this.unwrapNip04MessageInternal(event);
-              } else if (event.kind === kinds.GiftWrap) {
-                // Check if this gift wrap has already been processed to avoid re-decryption
-                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-                if (alreadyProcessed) {
-                  this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages sub2)', { eventId: event.id });
-                  return;
-                }
-                // Handle NIP-44 wrapped messages
-                decryptedMessage = await this.unwrapMessageInternal(event);
-                giftWrapId = event.id;
-              }
-
-              if (decryptedMessage) {
-                // Determine if this is an outgoing message
-                const isOutgoing = event.pubkey === myPubkey;
-
-                // Determine the other party's pubkey
-                let otherPubkey = chat.pubkey;
-                if (event.kind === kinds.EncryptedDirectMessage) {
-                  // For NIP-04, get the other party from 'p' tags
-                  const pTags = this.utilities.getPTagsValuesFromEvent(event);
-                  if (isOutgoing && pTags.length > 0) {
-                    otherPubkey = pTags[0];
-                  } else if (!isOutgoing) {
-                    otherPubkey = event.pubkey;
-                  }
-                }
-
-                const directMessage: DirectMessage = {
-                  id: decryptedMessage.id,
-                  pubkey: otherPubkey,
-                  created_at: decryptedMessage.created_at,
-                  content: decryptedMessage.content,
-                  isOutgoing: isOutgoing,
-                  tags: decryptedMessage.tags || [],
-                  pending: false,
-                  failed: false,
-                  received: true,
-                  read: false,
-                  encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
-                  giftWrapId: giftWrapId, // Store gift wrap ID for NIP-44 messages
-                };
-
-                loadedMessages.push(directMessage);
-                this.addMessageToChat(otherPubkey, directMessage);
-              }
-            } catch (error) {
-              this.logger.error('Failed to process older message:', error);
-            }
-          },
-          () => {
-            // EOSE callback - end of stored events
-            (sub as { close: () => void })?.close?.();
+          setTimeout(() => {
+            sub.close();
             resolve();
-          }
-        );
-
-        // Set a timeout to prevent hanging
-        setTimeout(() => {
-          (sub as { close: () => void })?.close?.();
-          resolve();
-        }, 10000);
-      });
+          }, 15000);
+        }),
+      ]);
 
       this.logger.debug(`Loaded ${loadedMessages.length} older messages for chat ${chatId}`);
       return loadedMessages.sort((a, b) => a.created_at - b.created_at);
