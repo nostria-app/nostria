@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './database.service';
 import { DatabaseService } from './database.service';
-import { kinds, nip19, nip57, Event } from 'nostr-tools';
+import { kinds, nip19, nip57, Event, Filter } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
@@ -508,9 +508,10 @@ export class ContentNotificationService implements OnDestroy {
   /**
    * Check for new followers (kind 3 events mentioning the user).
    *
-   * On first login (or after notification reset), all follow events are aggregated
-   * into a single summary notification showing the total follower count with a link
-   * to the followers page. All discovered pubkeys are stored as processed.
+   * On first login (or after notification reset), paginates through ALL kind 3
+   * events that reference the user's pubkey (500 per batch until exhausted).
+   * All followers are aggregated into a single summary notification with a link
+   * to the followers page, and all pubkeys are stored as processed.
    *
    * On subsequent checks, uses the stored followerCheckLastTimestamp (minus 1 hour
    * for time-drift tolerance) to fetch only new kind 3 events. New followers get
@@ -522,27 +523,26 @@ export class ContentNotificationService implements OnDestroy {
       const isFirstCheck = followerCheckTimestamp === 0;
       const now = Math.floor(Date.now() / 1000);
 
-      // On subsequent checks, use the stored timestamp minus 1 hour for time-drift tolerance
-      // instead of the generic `since` from the notification system
-      const effectiveSince = isFirstCheck
-        ? since
-        : Math.max(since, followerCheckTimestamp - 3600); // 1 hour buffer
-
-      this.logger.debug(`Checking for new followers since ${effectiveSince} (first check: ${isFirstCheck})`);
-
-      // Query for kind 3 (contact list) events that include this user's pubkey
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Contacts],
-        '#p': [pubkey],
-        since: effectiveSince,
-        limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
-      });
-
-      this.logger.debug(`Found ${events.length} potential follow events`);
+      console.log(`[FollowerCheck] isFirstCheck=${isFirstCheck}, followerCheckTimestamp=${followerCheckTimestamp}, since=${since}`);
 
       if (isFirstCheck) {
-        await this.processFollowerEventsFirstTime(pubkey, events, now);
+        // First-time scan: paginate through ALL kind 3 events, ignoring the `since` cap
+        await this.scanAllFollowers(pubkey, now);
       } else {
+        // Subsequent check: use stored timestamp minus 1 hour for time-drift tolerance
+        const effectiveSince = Math.max(since, followerCheckTimestamp - 3600);
+
+        this.logger.debug(`Checking for new followers since ${effectiveSince}`);
+
+        const events = await this.accountRelay.getMany({
+          kinds: [kinds.Contacts],
+          '#p': [pubkey],
+          since: effectiveSince,
+          limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
+        });
+
+        this.logger.debug(`Found ${events.length} potential follow events`);
+
         for (const event of events) {
           await this.processFollowerEvent(pubkey, event);
         }
@@ -555,40 +555,110 @@ export class ContentNotificationService implements OnDestroy {
     }
   }
 
+  /** Batch size for paginated follower scanning */
+  private readonly FOLLOWER_SCAN_BATCH_SIZE = 500;
+
   /**
-   * Process all follower events on first login or notification reset.
-   * Aggregates all followers into a single summary notification and batch-marks
-   * all their pubkeys as processed so they don't trigger individual notifications later.
+   * Paginate through ALL kind 3 events that reference the user's pubkey.
+   * Fetches 500 events at a time, using the oldest event's created_at as the
+   * next `until` boundary, until no more events are returned.
+   * All discovered followers are aggregated into a single summary notification.
    */
-  private async processFollowerEventsFirstTime(pubkey: string, events: Event[], now: number): Promise<void> {
-    // Filter to valid, unique follower pubkeys
-    const followerPubkeys: string[] = [];
+  private async scanAllFollowers(pubkey: string, now: number): Promise<void> {
     const seen = new Set<string>();
+    const followerPubkeys: string[] = [];
+    let until: number | undefined;
+    let totalFetched = 0;
 
-    for (const event of events) {
-      if (event.pubkey === pubkey) continue;
-      if (seen.has(event.pubkey)) continue;
+    this.logger.info('[FollowerScan] Starting full follower scan (first-time or reset)');
 
-      const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
-      if (!followsCurrentUser) continue;
-
-      seen.add(event.pubkey);
-      followerPubkeys.push(event.pubkey);
+    // Remove any existing follower summary so the fresh scan can create a new one.
+    // We must await the DB deletion because createContentNotification checks storage
+    // for duplicates — a fire-and-forget delete would race and block creation.
+    const existingSummaryId = `content-${NotificationType.FOLLOWER_SUMMARY}-${pubkey}`;
+    this.notificationService.removeNotification(existingSummaryId);
+    try {
+      await this.database.deleteNotification(existingSummaryId);
+    } catch {
+      // Ignore — may not exist yet
     }
 
-    this.logger.info(`First-time follower check: found ${followerPubkeys.length} unique followers`);
+    while (true) {
+      const filter: Filter = {
+        kinds: [kinds.Contacts],
+        '#p': [pubkey],
+        limit: this.FOLLOWER_SCAN_BATCH_SIZE,
+        ...(until !== undefined ? { until } : {}),
+      };
+
+      const events = await this.accountRelay.getMany(filter);
+      totalFetched += events.length;
+
+      this.logger.debug(`[FollowerScan] Batch returned ${events.length} events (total so far: ${totalFetched})`);
+
+      if (events.length === 0) {
+        break;
+      }
+
+      // Find the oldest timestamp in this batch for the next pagination cursor
+      let oldestTimestamp = Infinity;
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+        if (seen.has(event.pubkey)) continue;
+
+        const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+        if (!followsCurrentUser) continue;
+
+        seen.add(event.pubkey);
+        followerPubkeys.push(event.pubkey);
+
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+      }
+
+      // Also check non-matching events for oldest timestamp (they still affect pagination)
+      for (const event of events) {
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+      }
+
+      // If we got fewer events than the batch size, we've exhausted all events
+      if (events.length < this.FOLLOWER_SCAN_BATCH_SIZE) {
+        break;
+      }
+
+      // Move the cursor back: use oldest timestamp to avoid re-fetching the same batch.
+      // If the cursor didn't change (all events share the same timestamp), subtract 1 to
+      // avoid an infinite loop re-fetching the same batch.
+      if (until === oldestTimestamp) {
+        until = oldestTimestamp - 1;
+      } else {
+        until = oldestTimestamp;
+      }
+    }
+
+    this.logger.info(`[FollowerScan] Complete. Found ${followerPubkeys.length} unique followers from ${totalFetched} events`);
+    console.log(`[FollowerScan] DONE — ${followerPubkeys.length} unique followers found from ${totalFetched} kind-3 events`);
+
+    if (followerPubkeys.length === 0) {
+      console.log('[FollowerScan] No followers found — skipping summary notification creation');
+    }
 
     if (followerPubkeys.length > 0) {
-      // Create a single aggregated summary notification
       const message = followerPubkeys.length === 1
         ? '1 person is following you'
         : `${followerPubkeys.length} people are following you`;
+
+      console.log(`[FollowerScan] Creating FOLLOWER_SUMMARY notification: "${message}"`);
 
       await this.createContentNotification({
         type: NotificationType.FOLLOWER_SUMMARY,
         title: 'Followers',
         message,
-        authorPubkey: followerPubkeys[0], // Use the first follower for the avatar
+        authorPubkey: followerPubkeys[0],
         recipientPubkey: pubkey,
         timestamp: now * 1000,
         metadata: {
@@ -596,6 +666,8 @@ export class ContentNotificationService implements OnDestroy {
           followerPubkeys,
         },
       });
+
+      console.log(`[FollowerScan] FOLLOWER_SUMMARY notification created successfully`);
 
       // Batch-mark all follower pubkeys as processed
       this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, followerPubkeys, now);
@@ -1053,8 +1125,9 @@ export class ContentNotificationService implements OnDestroy {
   }): Promise<void> {
     // CRITICAL: Filter out notifications from muted/blocked accounts
     // Don't create or store notifications from muted users at all
+    // Skip this check for FOLLOWER_SUMMARY since authorPubkey is just the first follower
     const mutedAccounts = this.accountState.mutedAccounts();
-    if (mutedAccounts.includes(data.authorPubkey)) {
+    if (data.type !== NotificationType.FOLLOWER_SUMMARY && mutedAccounts.includes(data.authorPubkey)) {
       this.logger.debug(`Skipping notification from muted account: ${data.authorPubkey}`);
       return;
     }

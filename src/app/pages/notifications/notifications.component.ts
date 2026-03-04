@@ -265,7 +265,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Recalculate viewport when filtered content size changes.
     effect(() => {
-      this.contentNotifications().length;
+      void this.contentNotifications().length;
 
       untracked(() => {
         this.scheduleViewportRefresh();
@@ -422,7 +422,16 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const wotLevel = this.wotFilterLevel();
     const trustRanks = this.authorTrustRanks();
 
-    return this.notifications()
+    // DEBUG: Log follower summary presence
+    const allNotifications = this.notifications();
+    const summaries = allNotifications.filter(n => n.type === NotificationType.FOLLOWER_SUMMARY);
+    if (summaries.length > 0) {
+      console.log(`[NotifFilter] Found ${summaries.length} FOLLOWER_SUMMARY in notifications signal. filters[NEW_FOLLOWER]=${filters[NotificationType.NEW_FOLLOWER]}, showUnreadOnly=${unreadOnly}, wotLevel=${wotLevel}`);
+    } else {
+      console.log(`[NotifFilter] No FOLLOWER_SUMMARY found in ${allNotifications.length} total notifications`);
+    }
+
+    return allNotifications
       .filter(n => {
         // Filter by notification type
         // FOLLOWER_SUMMARY follows the NEW_FOLLOWER filter toggle
@@ -725,6 +734,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     this.isRefreshing.set(true);
 
+    // Pause periodic polling so it doesn't race with the manual refresh
+    this.contentNotificationService.stopPolling();
+
     try {
       await this.contentNotificationService.refreshRecentNotifications(this.REFRESH_LOOKBACK_DAYS);
       this.snackBar.open('Notifications refreshed', 'Close', {
@@ -741,18 +753,16 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       });
     } finally {
       this.isRefreshing.set(false);
+      // Resume periodic polling now that the manual refresh is done
+      this.contentNotificationService.startPolling();
     }
   }
 
   clearNotifications(): void {
     this.notificationService.clearNotifications();
 
-    // Update the notification last check timestamp to now to prevent re-fetching cleared notifications
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      this.accountLocalState.setNotificationLastCheck(pubkey, now);
-    }
+    // Reset notification state so the next refresh triggers a full first-time scan
+    this.contentNotificationService.resetLastCheckTimestamp();
   }
 
   removeNotification(id: string): void {
