@@ -165,6 +165,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
     [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.FOLLOWER_SUMMARY]: true,
     [NotificationType.MENTION]: true,
     [NotificationType.REPOST]: true,
     [NotificationType.REPLY]: true,
@@ -186,6 +187,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   private readonly defaultNotificationFilters: Record<NotificationType, boolean> = {
     [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.FOLLOWER_SUMMARY]: true,
     [NotificationType.MENTION]: true,
     [NotificationType.REPOST]: true,
     [NotificationType.REPLY]: true,
@@ -392,6 +394,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private isContentNotification(type: NotificationType): boolean {
     return [
       NotificationType.NEW_FOLLOWER,
+      NotificationType.FOLLOWER_SUMMARY,
       NotificationType.MENTION,
       NotificationType.REPOST,
       NotificationType.REPLY,
@@ -422,7 +425,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     return this.notifications()
       .filter(n => {
         // Filter by notification type
-        if (!this.isContentNotification(n.type) || !filters[n.type]) {
+        // FOLLOWER_SUMMARY follows the NEW_FOLLOWER filter toggle
+        const filterType = n.type === NotificationType.FOLLOWER_SUMMARY
+          ? NotificationType.NEW_FOLLOWER
+          : n.type;
+        if (!this.isContentNotification(n.type) || !filters[filterType]) {
           return false;
         }
 
@@ -432,13 +439,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         }
 
         // CRITICAL: Filter out notifications from muted/blocked accounts
+        // Skip muted-account filtering for follower summary (it aggregates many users)
         const contentNotif = n as ContentNotification;
-        if (contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
+        if (contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
           return false;
         }
 
+        // Skip WoT filtering for follower summary (authorPubkey is just the first follower)
         if (
-          contentNotif.authorPubkey
+          contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.authorPubkey
           && !this.passesWotRankFilter(
             trustRanks.get(contentNotif.authorPubkey),
             wotLevel,
@@ -826,6 +837,18 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // For follower summary notifications, navigate to current user's followers page
+    if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
+      const currentPubkey = this.accountState.pubkey();
+      if (currentPubkey) {
+        this.layout.openFollowersPage(
+          currentPubkey,
+          contentNotif.metadata?.followerPubkeys,
+        );
+      }
+      return;
+    }
+
     // For zap notifications, open the zap detail page
     if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.zapReceiptId) {
       this.layout.openZapDetail(contentNotif.metadata.zapReceiptId);
@@ -963,6 +986,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
         return 'new-follower'; // Placeholder to indicate clickable
       }
+
+      // For follower summary, always clickable (navigate to followers page)
+      if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
+        return 'follower-summary'; // Placeholder to indicate clickable
+      }
     }
     return undefined;
   }
@@ -992,6 +1020,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   getNotificationTypeLabel(type: NotificationType): string {
     const labels: Record<NotificationType, string> = {
       [NotificationType.NEW_FOLLOWER]: 'Followers',
+      [NotificationType.FOLLOWER_SUMMARY]: 'Followers',
       [NotificationType.MENTION]: 'Mentions',
       [NotificationType.REPOST]: 'Reposts',
       [NotificationType.REPLY]: 'Replies',
@@ -1012,6 +1041,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   getNotificationTypeIcon(type: NotificationType): string {
     const icons: Record<NotificationType, string> = {
       [NotificationType.NEW_FOLLOWER]: 'person_add',
+      [NotificationType.FOLLOWER_SUMMARY]: 'group',
       [NotificationType.MENTION]: 'alternate_email',
       [NotificationType.REPOST]: 'repeat',
       [NotificationType.REPLY]: 'reply',

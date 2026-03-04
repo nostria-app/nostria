@@ -506,27 +506,99 @@ export class ContentNotificationService implements OnDestroy {
   }
 
   /**
-   * Check for new followers (kind 3 events mentioning the user)
+   * Check for new followers (kind 3 events mentioning the user).
+   *
+   * On first login (or after notification reset), all follow events are aggregated
+   * into a single summary notification showing the total follower count with a link
+   * to the followers page. All discovered pubkeys are stored as processed.
+   *
+   * On subsequent checks, uses the stored followerCheckLastTimestamp (minus 1 hour
+   * for time-drift tolerance) to fetch only new kind 3 events. New followers get
+   * individual notifications; already-processed followers are silently ignored.
    */
   private async checkForNewFollowers(pubkey: string, since: number): Promise<void> {
     try {
-      this.logger.debug(`Checking for new followers since ${since}`);
+      const followerCheckTimestamp = this.accountLocalState.getFollowerCheckLastTimestamp(pubkey);
+      const isFirstCheck = followerCheckTimestamp === 0;
+      const now = Math.floor(Date.now() / 1000);
+
+      // On subsequent checks, use the stored timestamp minus 1 hour for time-drift tolerance
+      // instead of the generic `since` from the notification system
+      const effectiveSince = isFirstCheck
+        ? since
+        : Math.max(since, followerCheckTimestamp - 3600); // 1 hour buffer
+
+      this.logger.debug(`Checking for new followers since ${effectiveSince} (first check: ${isFirstCheck})`);
 
       // Query for kind 3 (contact list) events that include this user's pubkey
       const events = await this.accountRelay.getMany({
         kinds: [kinds.Contacts],
         '#p': [pubkey],
-        since,
+        since: effectiveSince,
         limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
       });
 
       this.logger.debug(`Found ${events.length} potential follow events`);
 
-      for (const event of events) {
-        await this.processFollowerEvent(pubkey, event);
+      if (isFirstCheck) {
+        await this.processFollowerEventsFirstTime(pubkey, events, now);
+      } else {
+        for (const event of events) {
+          await this.processFollowerEvent(pubkey, event);
+        }
       }
+
+      // Always update the follower check timestamp after processing
+      this.accountLocalState.setFollowerCheckLastTimestamp(pubkey, now);
     } catch (error) {
       this.logger.error('Failed to check for new followers', error);
+    }
+  }
+
+  /**
+   * Process all follower events on first login or notification reset.
+   * Aggregates all followers into a single summary notification and batch-marks
+   * all their pubkeys as processed so they don't trigger individual notifications later.
+   */
+  private async processFollowerEventsFirstTime(pubkey: string, events: Event[], now: number): Promise<void> {
+    // Filter to valid, unique follower pubkeys
+    const followerPubkeys: string[] = [];
+    const seen = new Set<string>();
+
+    for (const event of events) {
+      if (event.pubkey === pubkey) continue;
+      if (seen.has(event.pubkey)) continue;
+
+      const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+      if (!followsCurrentUser) continue;
+
+      seen.add(event.pubkey);
+      followerPubkeys.push(event.pubkey);
+    }
+
+    this.logger.info(`First-time follower check: found ${followerPubkeys.length} unique followers`);
+
+    if (followerPubkeys.length > 0) {
+      // Create a single aggregated summary notification
+      const message = followerPubkeys.length === 1
+        ? '1 person is following you'
+        : `${followerPubkeys.length} people are following you`;
+
+      await this.createContentNotification({
+        type: NotificationType.FOLLOWER_SUMMARY,
+        title: 'Followers',
+        message,
+        authorPubkey: followerPubkeys[0], // Use the first follower for the avatar
+        recipientPubkey: pubkey,
+        timestamp: now * 1000,
+        metadata: {
+          followerCount: followerPubkeys.length,
+          followerPubkeys,
+        },
+      });
+
+      // Batch-mark all follower pubkeys as processed
+      this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, followerPubkeys, now);
     }
   }
 
@@ -975,6 +1047,8 @@ export class ContentNotificationService implements OnDestroy {
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)
       recipientPubkey?: string; // For profile zaps, the recipient's pubkey
+      followerCount?: number; // For follower summary, total follower count
+      followerPubkeys?: string[]; // For follower summary, the list of follower pubkeys
     };
   }): Promise<void> {
     // CRITICAL: Filter out notifications from muted/blocked accounts
@@ -992,7 +1066,10 @@ export class ContentNotificationService implements OnDestroy {
     // For other notification types, use eventId if available
     let notificationId: string;
 
-    if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
+    if (data.type === NotificationType.FOLLOWER_SUMMARY) {
+      // For follower summary, use a stable ID per recipient so it can be replaced on re-check
+      notificationId = `content-${data.type}-${data.recipientPubkey}`;
+    } else if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
       // For zaps, use the zap receipt ID (unique for each zap)
       notificationId = `content-${data.type}-${data.metadata.zapReceiptId}`;
     } else if (data.type === NotificationType.REACTION && data.metadata?.reactionEventId) {
