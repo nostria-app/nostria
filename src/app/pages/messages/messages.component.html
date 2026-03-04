@@ -28,6 +28,9 @@
     <div class="panel-header">
       <h2 class="panel-title title-font">Messages</h2>
       <span class="panel-header-spacer"></span>
+      @if (messaging.isLoading()) {
+        <mat-spinner diameter="20" matTooltip="Loading messages..."></mat-spinner>
+      }
       <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
         <mat-icon>search</mat-icon>
       </button>
