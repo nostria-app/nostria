@@ -33,10 +33,21 @@
   .panel-title {
     margin: 0;
     font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .panel-header-spacer {
     flex: 1;
+    min-width: 0;
+  }
+}
+
+// When the left panel is narrow (700–1024px), hide the title so icon buttons remain visible
+@media (min-width: 700px) and (max-width: 1024px) {
+  .panel-header .panel-title {
+    display: none;
   }
 }
 

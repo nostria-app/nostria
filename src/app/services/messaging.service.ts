@@ -76,6 +76,13 @@ export class MessagingService implements NostriaService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
+  /**
+   * Fast in-memory lookup of all known outer event IDs (gift wrap IDs for NIP-44,
+   * event IDs for NIP-04) that have already been processed. Prevents redundant
+   * decryption when the same event arrives from multiple relays or code paths.
+   */
+  private knownEventIds = new Set<string>();
+
   MESSAGE_SIZE = 400;
 
   getChat(chatId: string): Chat | null {
@@ -268,6 +275,12 @@ export class MessagingService implements NostriaService {
       return;
     }
 
+    // Track the outer event ID so future encounters can skip decryption entirely
+    if (message.giftWrapId) {
+      this.knownEventIds.add(message.giftWrapId);
+    }
+    this.knownEventIds.add(message.id);
+
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);
 
@@ -384,11 +397,13 @@ export class MessagingService implements NostriaService {
     this.isLoadingMoreChats.set(false);
     this.hasMoreChats.set(true);
     this.error.set(null);
+    this.knownEventIds.clear();
   }
 
   reset() {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);
+    this.knownEventIds.clear();
   }
 
   async load() {
@@ -463,9 +478,16 @@ export class MessagingService implements NostriaService {
             read: storedMsg.read,
             encryptionType: storedMsg.encryptionType,
             replyTo: this.getReplyToFromTags(storedMsg.tags || []),
+            giftWrapId: storedMsg.giftWrapId,
           };
 
           messagesMap.set(dm.id, dm);
+
+          // Track known event IDs from storage so we can skip re-decryption
+          if (dm.giftWrapId) {
+            this.knownEventIds.add(dm.giftWrapId);
+          }
+          this.knownEventIds.add(dm.id);
 
           if (!lastMessage || dm.created_at > lastMessage.created_at) {
             lastMessage = dm;
@@ -616,8 +638,7 @@ export class MessagingService implements NostriaService {
     try {
       if (event.kind === kinds.GiftWrap) {
         // Check if this gift wrap has already been processed to avoid re-decryption
-        const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-        if (alreadyProcessed) {
+        if (this.knownEventIds.has(event.id)) {
           this.logger.debug('Gift wrap already processed, skipping decryption (processIncomingEvent)', { eventId: event.id });
           return;
         }
@@ -774,8 +795,7 @@ export class MessagingService implements NostriaService {
             const processPromise = (async () => {
               try {
                 // Check if this gift wrap has already been processed to avoid re-decryption
-                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-                if (alreadyProcessed) {
+                if (this.knownEventIds.has(event.id)) {
                   this.logger.debug('Gift wrap already processed, skipping decryption', { eventId: event.id });
                   return;
                 }
@@ -923,8 +943,7 @@ export class MessagingService implements NostriaService {
             const processPromise = (async () => {
               try {
                 // Check if this gift wrap has already been processed to avoid re-decryption
-                const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-                if (alreadyProcessed) {
+                if (this.knownEventIds.has(event.id)) {
                   this.logger.debug('Gift wrap already processed, skipping decryption (sub2)', { eventId: event.id });
                   return;
                 }
@@ -1116,8 +1135,7 @@ export class MessagingService implements NostriaService {
         try {
           if (event.kind === kinds.GiftWrap) {
             // Check if this gift wrap has already been processed to avoid re-decryption
-            const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-            if (alreadyProcessed) {
+            if (this.knownEventIds.has(event.id)) {
               this.logger.debug('Gift wrap already processed, skipping decryption (queryDmRelays)', { eventId: event.id });
               continue;
             }
@@ -1304,22 +1322,21 @@ export class MessagingService implements NostriaService {
     });
 
     // Track processed event IDs to avoid duplicates
-    const processedEventIds = new Set<string>();
+    // Uses the service-level knownEventIds for cross-call dedup
 
     const processEvent = async (event: NostrEvent) => {
-      // Skip if already processed
-      if (processedEventIds.has(event.id)) {
+      // Skip if already processed (across all code paths, not just this batch)
+      if (this.knownEventIds.has(event.id)) {
         return;
       }
-      processedEventIds.add(event.id);
+      this.knownEventIds.add(event.id);
 
       this.logger.debug('Received real-time DM event', { kind: event.kind, id: event.id });
 
       try {
         if (event.kind === kinds.GiftWrap) {
           // Check if this gift wrap has already been processed to avoid re-decryption
-          const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-          if (alreadyProcessed) {
+          if (this.knownEventIds.has(event.id)) {
             this.logger.debug('Gift wrap already processed, skipping decryption (live subscription)', { eventId: event.id });
             return;
           }
@@ -1649,23 +1666,18 @@ export class MessagingService implements NostriaService {
 
     // Track outer event IDs we've already seen in this batch to prevent
     // the same event arriving from multiple relays being processed twice.
-    const processedEventIds = new Set<string>();
+    // Uses service-level knownEventIds for cross-call dedup.
 
     const processEvent = async (event: NostrEvent) => {
       try {
-        // Dedup: skip if we already processed this outer event in this batch
-        if (processedEventIds.has(event.id)) {
+        // Dedup: skip if we already processed this outer event in this or any previous batch
+        if (this.knownEventIds.has(event.id)) {
           return;
         }
-        processedEventIds.add(event.id);
+        this.knownEventIds.add(event.id);
 
         if (event.kind === kinds.GiftWrap) {
           // --- NIP-44 (Gift Wrap) ---
-          const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-          if (alreadyProcessed) {
-            this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages)', { eventId: event.id });
-            return;
-          }
 
           const unwrappedMessage = await this.unwrapMessageInternal(event);
           if (!unwrappedMessage) return;
@@ -1885,8 +1897,7 @@ export class MessagingService implements NostriaService {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
               // Check if this gift wrap has already been processed to avoid re-decryption
-              const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-              if (alreadyProcessed) {
+              if (this.knownEventIds.has(event.id)) {
                 this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub1)', { eventId: event.id });
                 completedDecryptions++;
                 checkCompletion();
@@ -2037,8 +2048,7 @@ export class MessagingService implements NostriaService {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
               // Check if this gift wrap has already been processed to avoid re-decryption
-              const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
-              if (alreadyProcessed) {
+              if (this.knownEventIds.has(event.id)) {
                 this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub2)', { eventId: event.id });
                 completedDecryptions++;
                 checkCompletion();
