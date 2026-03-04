@@ -111,6 +111,8 @@ export class ContentNotificationService implements OnDestroy {
 
   // Track if we're currently checking for new content
   private isChecking = signal<boolean>(false);
+  /** Public readonly signal for checking state */
+  readonly isCheckingNotifications = this.isChecking.asReadonly();
 
   constructor() {
     this.logger.info('ContentNotificationService initialized');

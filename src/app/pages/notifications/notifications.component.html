@@ -55,6 +55,9 @@
       </button>
     </mat-menu>
   </div>
+  @if (isLoadingNotifications()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
 
 
   <!-- Search Input (toggled by global search button) -->

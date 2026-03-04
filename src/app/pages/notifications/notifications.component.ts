@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { NotificationService } from '../../services/notification.service';
 import {
   NotificationType,
@@ -67,6 +68,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     UserProfileComponent,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     FilterButtonComponent,
     NotificationsFilterPanelComponent,
     ResolveNostrPipe
@@ -153,6 +155,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   consecutiveEmptyLoads = signal(0);
   // State for refreshing notifications
   isRefreshing = signal(false);
+  isLoadingNotifications = computed(() => this.contentNotificationService.isCheckingNotifications());
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
