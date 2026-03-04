@@ -226,6 +226,7 @@ export interface StoredDirectMessage {
   pending?: boolean; // Whether the message is still being sent
   failed?: boolean; // Whether the message failed to send
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
+  failureReason?: string; // Human-readable reason for send failure
 }
 
 /**

@@ -829,12 +829,19 @@
 
     &.pending {
       opacity: 0.7;
+      animation: bubble-sending 1.5s ease-in-out infinite;
     }
 
     &.failed {
       background-color: rgba(255, 180, 171, 0.8);
+      border-left: 3px solid var(--mat-sys-error);
     }
   }
+}
+
+@keyframes bubble-sending {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.85; }
 }
 
 // Dark mode glass effect for message bubbles
@@ -861,6 +868,7 @@
 
     &.failed {
       background-color: rgba(147, 0, 10, 0.7);
+      border-left: 3px solid var(--mat-sys-error);
     }
   }
 }
@@ -1209,10 +1217,6 @@
   top: 8px;
   font-size: 1.1rem;
 
-  &.secure {
-    color: var(--mat-success-color);
-  }
-
   &.mixed {
     color: var(--mat-sys-outline);
   }
@@ -1238,13 +1242,21 @@
     height: 12px;
     width: 12px;
 
-    &.secure {
-      color: var(--mat-success-color);
-    }
-
     &.insecure {
       color: var(--mat-sys-outline);
     }
+  }
+
+  .sending-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .sending-text {
+    font-size: var(--text-2xs);
+    opacity: 0.8;
+    animation: sending-pulse 1.5s ease-in-out infinite;
   }
 
   .pending-spinner {
@@ -1259,11 +1271,17 @@
 
   .failed-icon {
     color: var(--mat-sys-error);
+    cursor: pointer;
   }
 
   .read-icon {
     color: var(--mat-sys-primary);
   }
+}
+
+@keyframes sending-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 // Message actions (retry button for failed messages)
@@ -1281,6 +1299,7 @@
       font-size: 16px;
       width: 16px;
       height: 16px;
+      color: var(--mat-sys-error);
     }
   }
 }

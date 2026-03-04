@@ -48,6 +48,7 @@ interface DirectMessage {
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
+  failureReason?: string; // Human-readable reason for send failure
 }
 
 @Injectable({
