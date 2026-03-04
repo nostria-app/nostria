@@ -506,6 +506,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private chatListScrollThrottleTimeout: any = null;
   private chatListScrollElement: HTMLElement | null = null;
 
+  /** Whether the user has manually scrolled away from the bottom of the chat. */
+  private userScrolledUp = false;
+  /** ResizeObserver that watches for content height changes (image/embed loads). */
+  private contentResizeObserver: ResizeObserver | null = null;
+  /** Last known scrollHeight — used to detect content growth vs. shrink. */
+  private lastScrollHeight = 0;
+
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
@@ -567,12 +574,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.hasMoreMessages.set(true);
             // Reset message count tracking for the new chat
             this.lastMessageCount.set(chatMessages.length);
-            this.scrollToBottom();
 
-            // Re-setup scroll listener for the new chat
+            // Set up scroll listener + ResizeObserver FIRST so it can catch
+            // content reflows that happen after the initial scrollToBottom.
             setTimeout(() => {
               this.setupScrollListener();
-            }, 200);
+              this.scrollToBottom();
+              // Secondary delayed scroll to catch late-rendering content
+              // (Angular template rendering, lazy images, embeds)
+              setTimeout(() => this.scrollToBottomIfNotScrolledUp(), 500);
+            }, 50);
           } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
             // Same chat but check for new messages
             const latestLocalTimestamp =
@@ -920,6 +931,40 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Add the scroll event listener
     scrollElement.addEventListener('scroll', this.scrollHandler);
+
+    // Set up the ResizeObserver for auto-scroll on content growth (images/embeds loading)
+    this.setupContentResizeObserver(scrollElement);
+  }
+
+  /**
+   * Observe content height changes inside the messages wrapper.
+   * When content grows (e.g. an image finishes loading) and the user
+   * was already at the bottom, scroll down automatically. If the user
+   * has scrolled up manually, leave the position alone.
+   */
+  private setupContentResizeObserver(scrollElement: HTMLElement): void {
+    // Clean up previous observer
+    this.contentResizeObserver?.disconnect();
+    this.lastScrollHeight = scrollElement.scrollHeight;
+
+    this.contentResizeObserver = new ResizeObserver(() => {
+      const newScrollHeight = scrollElement.scrollHeight;
+      if (newScrollHeight > this.lastScrollHeight && !this.userScrolledUp) {
+        // Content grew and user is at the bottom — keep them there
+        scrollElement.scrollTop = newScrollHeight;
+      }
+      this.lastScrollHeight = newScrollHeight;
+    });
+
+    // Observe the first child (the actual content container) so we detect
+    // size changes from lazy-loaded images, embeds, etc.
+    const content = scrollElement.firstElementChild;
+    if (content) {
+      this.contentResizeObserver.observe(content);
+    } else {
+      // Fallback: observe the scroll element itself
+      this.contentResizeObserver.observe(scrollElement);
+    }
   }
 
   /**
@@ -938,8 +983,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const scrollElement = this.messagesWrapper?.nativeElement;
       if (!scrollElement) return;
 
-      // Check if user is near the top and we have messages to load
       const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+
+      // Track whether the user has scrolled away from the bottom.
+      // "Near the bottom" = within 150px of the end.
+      const distFromBottom = scrollHeight - (scrollTop + clientHeight);
+      this.userScrolledUp = distFromBottom > 150;
+
+      // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
 
       this.logger.debug(
@@ -959,16 +1010,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   /**
-   * Scroll the messages wrapper to the bottom to show latest messages
+   * Scroll the messages wrapper to the bottom to show latest messages.
+   * Also resets the userScrolledUp flag so the ResizeObserver keeps scrolling.
    */
   private scrollToBottom(): void {
+    this.userScrolledUp = false;
     // Use setTimeout to ensure DOM is updated
     setTimeout(() => {
       if (this.messagesWrapper?.nativeElement) {
         const element = this.messagesWrapper.nativeElement;
         element.scrollTop = element.scrollHeight;
+        this.lastScrollHeight = element.scrollHeight;
       }
     }, 100);
+  }
+
+  /**
+   * Scroll to bottom only if the user hasn't manually scrolled up.
+   * Used as a delayed safety-net scroll after content may have reflowed.
+   */
+  private scrollToBottomIfNotScrolledUp(): void {
+    if (this.userScrolledUp) return;
+    if (this.messagesWrapper?.nativeElement) {
+      const element = this.messagesWrapper.nativeElement;
+      element.scrollTop = element.scrollHeight;
+      this.lastScrollHeight = element.scrollHeight;
+    }
   }
 
   ngOnDestroy(): void {
@@ -998,6 +1065,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       clearTimeout(this.chatListScrollThrottleTimeout);
       this.chatListScrollThrottleTimeout = null;
     }
+
+    // Clean up ResizeObserver
+    this.contentResizeObserver?.disconnect();
+    this.contentResizeObserver = null;
 
     // Clean up subscriptions
     if (this.messageSubscription) {

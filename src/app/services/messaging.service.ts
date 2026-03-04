@@ -1509,7 +1509,8 @@ export class MessagingService implements NostriaService {
       const decryptionResult = await this.encryption.autoDecrypt(
         event.content,
         decryptionPubkey,
-        event
+        event,
+        event.created_at
       );
 
       // Return the message with decrypted content
@@ -1551,7 +1552,8 @@ export class MessagingService implements NostriaService {
         const decryptionResult = await this.encryption.autoDecrypt(
           wrappedEvent.content,
           wrappedEvent.pubkey,
-          wrappedEvent
+          wrappedEvent,
+          wrappedEvent.created_at
         );
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
@@ -1571,7 +1573,8 @@ export class MessagingService implements NostriaService {
           const sealedDecryptionResult = await this.encryption.autoDecrypt(
             wrappedContent.content,
             wrappedContent.pubkey,
-            wrappedEvent
+            wrappedEvent,
+            wrappedEvent.created_at
           );
           sealedEvent = JSON.parse(sealedDecryptionResult.content);
         } catch (err) {
