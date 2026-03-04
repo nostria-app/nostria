@@ -1647,58 +1647,105 @@ export class MessagingService implements NostriaService {
 
     const loadedMessages: DirectMessage[] = [];
 
+    // Track outer event IDs we've already seen in this batch to prevent
+    // the same event arriving from multiple relays being processed twice.
+    const processedEventIds = new Set<string>();
+
     const processEvent = async (event: NostrEvent) => {
       try {
-        // Skip if we already have this message (by event ID or inner message ID)
-        if (this.hasMessage(chatId, event.id)) {
+        // Dedup: skip if we already processed this outer event in this batch
+        if (processedEventIds.has(event.id)) {
           return;
         }
+        processedEventIds.add(event.id);
 
-        let decryptedMessage: any = null;
-        let giftWrapId: string | undefined = undefined;
-
-        if (event.kind === kinds.EncryptedDirectMessage) {
-          decryptedMessage = await this.unwrapNip04MessageInternal(event);
-        } else if (event.kind === kinds.GiftWrap) {
+        if (event.kind === kinds.GiftWrap) {
+          // --- NIP-44 (Gift Wrap) ---
           const alreadyProcessed = await this.database.giftWrapExists(myPubkey, event.id);
           if (alreadyProcessed) {
             this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreMessages)', { eventId: event.id });
             return;
           }
-          decryptedMessage = await this.unwrapMessageInternal(event);
-          giftWrapId = event.id;
-        }
 
-        if (decryptedMessage) {
-          // Only include messages that are actually older than what we have
-          if (currentMessages.length > 0 && decryptedMessage.created_at >= oldestInnerTimestamp) {
-            // This message is not older — we already have it or it's newer
-            // Still add to chat in case it was missing from the DB
-            const existingInChat = currentMessages.find(m => m.id === decryptedMessage.id);
-            if (existingInChat) return;
-          }
+          const unwrappedMessage = await this.unwrapMessageInternal(event);
+          if (!unwrappedMessage) return;
 
-          const isOutgoing = event.pubkey === myPubkey;
-          let otherPubkey = chat.pubkey;
+          // For NIP-44, isOutgoing is determined from the INNER message pubkey
+          const isOutgoing = unwrappedMessage.pubkey === myPubkey;
 
-          if (event.kind === kinds.EncryptedDirectMessage) {
-            const pTags = this.utilities.getPTagsValuesFromEvent(event);
-            if (isOutgoing && pTags.length > 0) {
-              otherPubkey = pTags[0];
-            } else if (!isOutgoing) {
-              otherPubkey = event.pubkey;
+          // Determine targetPubkey (the chat partner) from the inner message
+          let targetPubkey: string;
+          if (isOutgoing) {
+            const pTags = this.utilities.getPTagsValuesFromEvent(unwrappedMessage);
+            if (pTags.length > 0 && pTags[0]) {
+              targetPubkey = pTags[0];
+            } else {
+              return; // No valid recipient
             }
+          } else {
+            targetPubkey = unwrappedMessage.pubkey;
           }
 
-          // For NIP-44 messages, verify this message belongs to this chat
-          if (event.kind === kinds.GiftWrap && otherPubkey !== chat.pubkey) {
-            // Gift wrap for a different chat — skip
+          // Only process messages belonging to THIS chat
+          if (targetPubkey !== chat.pubkey) {
+            return;
+          }
+
+          // Check if we already have this inner message ID in the chat
+          if (this.hasMessage(targetPubkey, unwrappedMessage.id)) {
             return;
           }
 
           const directMessage: DirectMessage = {
+            id: unwrappedMessage.id,
+            pubkey: unwrappedMessage.pubkey,
+            created_at: unwrappedMessage.created_at,
+            content: unwrappedMessage.content,
+            isOutgoing: isOutgoing,
+            tags: unwrappedMessage.tags || [],
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: 'nip44',
+            replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
+            giftWrapId: event.id,
+          };
+
+          loadedMessages.push(directMessage);
+          this.addMessageToChat(targetPubkey, directMessage);
+
+        } else if (event.kind === kinds.EncryptedDirectMessage) {
+          // --- NIP-04 ---
+          // For NIP-04, isOutgoing is determined from the outer event pubkey
+          const isOutgoing = event.pubkey === myPubkey;
+
+          let targetPubkey = event.pubkey;
+          if (isOutgoing) {
+            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+            if (pTags.length > 0) {
+              targetPubkey = pTags[0];
+            } else {
+              return;
+            }
+          }
+
+          // Only process messages belonging to THIS chat
+          if (targetPubkey !== chat.pubkey) {
+            return;
+          }
+
+          // Check if we already have this event in the chat
+          if (this.hasMessage(targetPubkey, event.id)) {
+            return;
+          }
+
+          const decryptedMessage = await this.unwrapNip04MessageInternal(event);
+          if (!decryptedMessage) return;
+
+          const directMessage: DirectMessage = {
             id: decryptedMessage.id,
-            pubkey: otherPubkey,
+            pubkey: decryptedMessage.pubkey,
             created_at: decryptedMessage.created_at,
             content: decryptedMessage.content,
             isOutgoing: isOutgoing,
@@ -1707,12 +1754,12 @@ export class MessagingService implements NostriaService {
             failed: false,
             received: true,
             read: false,
-            encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
-            giftWrapId: giftWrapId,
+            encryptionType: 'nip04',
+            replyTo: this.getReplyToFromTags(decryptedMessage.tags || []),
           };
 
           loadedMessages.push(directMessage);
-          this.addMessageToChat(otherPubkey, directMessage);
+          this.addMessageToChat(targetPubkey, directMessage);
         }
       } catch (error) {
         this.logger.error('Failed to process older message:', error);
