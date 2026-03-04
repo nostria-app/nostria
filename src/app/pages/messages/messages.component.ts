@@ -508,10 +508,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /** Whether the user has manually scrolled away from the bottom of the chat. */
   private userScrolledUp = false;
-  /** ResizeObserver that watches for content height changes (image/embed loads). */
-  private contentResizeObserver: ResizeObserver | null = null;
   /** Last known scrollHeight — used to detect content growth vs. shrink. */
   private lastScrollHeight = 0;
+  /** Bound handler for capturing `load` events on media elements. */
+  private mediaLoadHandler: ((e: Event) => void) | null = null;
+  /** MutationObserver that watches for new DOM nodes (e.g. Angular rendering new message bubbles). */
+  private contentMutationObserver: MutationObserver | null = null;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -932,39 +934,78 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Add the scroll event listener
     scrollElement.addEventListener('scroll', this.scrollHandler);
 
-    // Set up the ResizeObserver for auto-scroll on content growth (images/embeds loading)
-    this.setupContentResizeObserver(scrollElement);
+    // Set up auto-scroll watchers for rich content loading
+    this.setupMediaLoadListener(scrollElement);
+    this.setupContentMutationObserver(scrollElement);
   }
 
   /**
-   * Observe content height changes inside the messages wrapper.
-   * When content grows (e.g. an image finishes loading) and the user
-   * was already at the bottom, scroll down automatically. If the user
-   * has scrolled up manually, leave the position alone.
+   * Auto-scroll to bottom when new content causes the scroll height to grow,
+   * but only if the user was already near the bottom before the growth.
+   *
+   * Uses the *previous* scrollHeight (`lastScrollHeight`) to determine the
+   * "was near bottom" state so that the height increase itself doesn't
+   * falsely mark the user as scrolled up.
    */
-  private setupContentResizeObserver(scrollElement: HTMLElement): void {
-    // Clean up previous observer
-    this.contentResizeObserver?.disconnect();
+  private autoScrollAfterContentGrowth(scrollElement: HTMLElement): void {
+    const newScrollHeight = scrollElement.scrollHeight;
+    if (newScrollHeight <= this.lastScrollHeight) {
+      this.lastScrollHeight = newScrollHeight;
+      return;
+    }
+
+    const { scrollTop, clientHeight } = scrollElement;
+    const wasNearBottom = (this.lastScrollHeight - (scrollTop + clientHeight)) < 150;
+
+    if (wasNearBottom) {
+      scrollElement.scrollTop = newScrollHeight;
+      this.userScrolledUp = false;
+    }
+
+    this.lastScrollHeight = newScrollHeight;
+  }
+
+  /**
+   * Listen for `load` events on media elements (img, video, iframe) inside
+   * the message list. The `load` event does NOT bubble, so we must use
+   * capturing (`{ capture: true }`) to intercept it on the scroll container.
+   */
+  private setupMediaLoadListener(scrollElement: HTMLElement): void {
+    // Clean up previous listener
+    if (this.mediaLoadHandler) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+    }
+
     this.lastScrollHeight = scrollElement.scrollHeight;
 
-    this.contentResizeObserver = new ResizeObserver(() => {
-      const newScrollHeight = scrollElement.scrollHeight;
-      if (newScrollHeight > this.lastScrollHeight && !this.userScrolledUp) {
-        // Content grew and user is at the bottom — keep them there
-        scrollElement.scrollTop = newScrollHeight;
+    this.mediaLoadHandler = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'IMG' || tag === 'VIDEO' || tag === 'IFRAME') {
+        this.autoScrollAfterContentGrowth(scrollElement);
       }
-      this.lastScrollHeight = newScrollHeight;
+    };
+
+    scrollElement.addEventListener('load', this.mediaLoadHandler, true);
+  }
+
+  /**
+   * Watch for DOM mutations (new child nodes added by Angular rendering)
+   * that increase the scroll height. This catches cases where new message
+   * bubbles are inserted or Angular components expand after rendering.
+   */
+  private setupContentMutationObserver(scrollElement: HTMLElement): void {
+    this.contentMutationObserver?.disconnect();
+
+    this.contentMutationObserver = new MutationObserver(() => {
+      this.autoScrollAfterContentGrowth(scrollElement);
     });
 
-    // Observe the first child (the actual content container) so we detect
-    // size changes from lazy-loaded images, embeds, etc.
-    const content = scrollElement.firstElementChild;
-    if (content) {
-      this.contentResizeObserver.observe(content);
-    } else {
-      // Fallback: observe the scroll element itself
-      this.contentResizeObserver.observe(scrollElement);
-    }
+    this.contentMutationObserver.observe(scrollElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   /**
@@ -1066,9 +1107,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.chatListScrollThrottleTimeout = null;
     }
 
-    // Clean up ResizeObserver
-    this.contentResizeObserver?.disconnect();
-    this.contentResizeObserver = null;
+    // Clean up media load listener
+    if (this.mediaLoadHandler && scrollElement) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+      this.mediaLoadHandler = null;
+    }
+
+    // Clean up MutationObserver
+    this.contentMutationObserver?.disconnect();
+    this.contentMutationObserver = null;
 
     // Clean up subscriptions
     if (this.messageSubscription) {
