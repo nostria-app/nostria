@@ -28,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -76,6 +77,8 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { OpenGraphService, OpenGraphData } from '../../services/opengraph.service';
+import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
 
@@ -168,6 +171,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly localSettings = inject(LocalSettingsService);
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
+  private readonly openGraph = inject(OpenGraphService);
+  private readonly dialog = inject(MatDialog);
+
+  // Link preview data - keyed by URL
+  linkPreviews = signal<Map<string, OpenGraphData>>(new Map());
+  private linkPreviewsLoaded = new Set<string>();
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -342,6 +351,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const links = this.sharedLinks();
     const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
     return links.filter(link => mediaExtensions.test(link.url));
+  });
+
+  /** Image-only subset of shared media for thumbnail grid */
+  sharedImages = computed(() => {
+    const links = this.sharedLinks();
+    return links.filter(link => isImageUrl(link.url));
+  });
+
+  /** Video-only subset of shared media */
+  sharedVideos = computed(() => {
+    const links = this.sharedLinks();
+    const videoExtensions = /\.(mp4|webm|mov)$/i;
+    return links.filter(link => videoExtensions.test(link.url));
+  });
+
+  /** Regular links (not media, not files) that need OG previews */
+  regularLinks = computed(() => {
+    const links = this.sharedLinks();
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
+    const fileExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|7z|txt|csv|json|xml)$/i;
+    return links.filter(link => !mediaExtensions.test(link.url) && !fileExtensions.test(link.url) && !isImageUrl(link.url));
   });
 
   // Helper to check if a chat matches the search query
@@ -1923,6 +1953,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   toggleChatDetails(): void {
     this.showChatDetails.update(v => !v);
+    if (this.showChatDetails()) {
+      this.loadLinkPreviews();
+    }
   }
 
   /**
@@ -2008,11 +2041,72 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /** Check if a URL points to an image */
+  isImageLink(url: string): boolean {
+    return isImageUrl(url);
+  }
+
+  /** Get the OG preview for a URL, only when loaded */
+  getLinkPreview(url: string): OpenGraphData | undefined {
+    const preview = this.linkPreviews().get(url);
+    if (preview && !preview.loading && !preview.error) {
+      return preview;
+    }
+    return undefined;
+  }
+
+  /** Load OG previews for visible regular links */
+  loadLinkPreviews(): void {
+    const links = this.regularLinks();
+    const toFetch = links
+      .slice(0, 10)
+      .filter(link => !this.linkPreviewsLoaded.has(link.url));
+
+    for (const link of toFetch) {
+      this.linkPreviewsLoaded.add(link.url);
+      this.openGraph.getOpenGraphData(link.url).then(data => {
+        this.linkPreviews.update(map => {
+          const newMap = new Map(map);
+          newMap.set(link.url, data);
+          return newMap;
+        });
+      });
+    }
+  }
+
   /**
    * Open URL in new tab
    */
   openUrl(url: string): void {
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  /**
+   * Open image preview dialog for shared images
+   */
+  async openImagePreview(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const images = this.sharedImages();
+    if (images.length === 0) return;
+
+    const { MediaPreviewDialogComponent } = await import('../../components/media-preview-dialog/media-preview.component');
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: images.map(img => ({
+          url: img.url,
+          type: 'image',
+        })),
+        initialIndex: index,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   /**
