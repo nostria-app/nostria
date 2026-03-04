@@ -1106,6 +1106,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Mark chat as read when selected
     await this.markChatAsRead(chat.id);
 
+    // Resolve any messages stuck in "pending" state from a previous session.
+    // These were likely sent but the publish callback was lost (e.g. page refresh).
+    this.resolveStalePendingMessages(chat.pubkey);
+
     // Preload DM relays (kind 10050) for this contact so sending is instant.
     // Loads from database first, refreshes from network in the background.
     this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
@@ -1117,6 +1121,41 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/messages', chat.id], {
       queryParams: {},
     });
+  }
+
+  /**
+   * Resolve messages stuck in "pending" state from a previous session.
+   * These messages were encrypted, signed, and the publish() call was fired,
+   * but the component was destroyed (page refresh, navigation) before the
+   * relay response arrived. Since they were already published, re-signing
+   * would risk duplicates. We mark them as delivered because the publish
+   * likely succeeded.
+   *
+   * Only resolves messages that are NOT in the current in-memory pendingMessages
+   * signal (those are actively being published right now).
+   */
+  private resolveStalePendingMessages(chatPubkey: string): void {
+    const persistedMessages = this.messaging.getChatMessages(chatPubkey);
+    const activePendingIds = new Set(this.pendingMessages().map(m => m.id));
+
+    const staleMessages = persistedMessages.filter(
+      m => m.pending && !activePendingIds.has(m.id)
+    );
+
+    if (staleMessages.length === 0) return;
+
+    this.logger.info(
+      `[MessagesComponent] Resolving ${staleMessages.length} stale pending message(s) in chat ${chatPubkey.slice(0, 16)}...`
+    );
+
+    for (const msg of staleMessages) {
+      this.messaging.updateMessageInChat(chatPubkey, msg.id, {
+        pending: false,
+        received: true,
+        failed: false,
+        failureReason: undefined,
+      });
+    }
   }
 
   /**

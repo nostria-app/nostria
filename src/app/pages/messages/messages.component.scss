@@ -840,8 +840,15 @@
 }
 
 @keyframes bubble-sending {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.85; }
+
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
 }
 
 // Dark mode glass effect for message bubbles
@@ -1280,8 +1287,15 @@
 }
 
 @keyframes sending-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 // Message actions (retry button for failed messages)
