@@ -523,8 +523,6 @@ export class ContentNotificationService implements OnDestroy {
       const isFirstCheck = followerCheckTimestamp === 0;
       const now = Math.floor(Date.now() / 1000);
 
-      console.log(`[FollowerCheck] isFirstCheck=${isFirstCheck}, followerCheckTimestamp=${followerCheckTimestamp}, since=${since}`);
-
       if (isFirstCheck) {
         // First-time scan: paginate through ALL kind 3 events, ignoring the `since` cap
         await this.scanAllFollowers(pubkey, now);
@@ -641,24 +639,17 @@ export class ContentNotificationService implements OnDestroy {
     }
 
     this.logger.info(`[FollowerScan] Complete. Found ${followerPubkeys.length} unique followers from ${totalFetched} events`);
-    console.log(`[FollowerScan] DONE — ${followerPubkeys.length} unique followers found from ${totalFetched} kind-3 events`);
-
-    if (followerPubkeys.length === 0) {
-      console.log('[FollowerScan] No followers found — skipping summary notification creation');
-    }
 
     if (followerPubkeys.length > 0) {
       const message = followerPubkeys.length === 1
         ? '1 person is following you'
         : `${followerPubkeys.length} people are following you`;
 
-      console.log(`[FollowerScan] Creating FOLLOWER_SUMMARY notification: "${message}"`);
-
       await this.createContentNotification({
         type: NotificationType.FOLLOWER_SUMMARY,
         title: 'Followers',
         message,
-        authorPubkey: followerPubkeys[0],
+        authorPubkey: pubkey,
         recipientPubkey: pubkey,
         timestamp: now * 1000,
         metadata: {
@@ -666,8 +657,6 @@ export class ContentNotificationService implements OnDestroy {
           followerPubkeys,
         },
       });
-
-      console.log(`[FollowerScan] FOLLOWER_SUMMARY notification created successfully`);
 
       // Batch-mark all follower pubkeys as processed
       this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, followerPubkeys, now);
