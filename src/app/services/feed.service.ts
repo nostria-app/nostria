@@ -1799,45 +1799,26 @@ export class FeedService {
 
     if (unprocessedEvents.length > 0) {
       if (existingEvents.length > 0) {
-        // User has events - find the most recent to determine where to put unprocessed events
-        const mostRecentExistingTimestamp = Math.max(...existingEvents.map(e => e.created_at || 0));
+        // User has cached events displayed - queue ALL unprocessed events to pending.
+        // Do NOT try to "fill gaps" by merging older events directly, as this causes
+        // visible UI jumps when the feed service's and FollowingDataService's caches differ.
+        feedData.pendingEvents?.update((pending: Event[]) => {
+          const currentPendingIds = new Set(pending.map(e => e.id));
+          const newPending = [...pending];
+          for (const event of unprocessedEvents) {
+            if (!currentPendingIds.has(event.id)) {
+              newPending.push(event);
+            }
+          }
+          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        });
 
-        const eventsToMerge: Event[] = [];
-        const eventsToQueue: Event[] = [];
-
+        // Save events to database for Summary page queries
         for (const event of unprocessedEvents) {
-          if (event.created_at <= mostRecentExistingTimestamp) {
-            // Older or same age as existing events - merge directly (fill gaps)
-            eventsToMerge.push(event);
-          } else {
-            // Newer than existing events - queue for "new posts" button
-            eventsToQueue.push(event);
-          }
+          this.saveEventToDatabase(event);
         }
 
-        // Merge older events directly into the feed
-        if (eventsToMerge.length > 0) {
-          const mergedEvents = [...existingEvents, ...eventsToMerge]
-            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-          feedData.events.set(mergedEvents);
-
-          this.logger.debug(`✅ Final: Merged ${eventsToMerge.length} older events into feed`);
-        }
-
-        // Queue newer events
-        if (eventsToQueue.length > 0) {
-          feedData.pendingEvents?.update((pending: Event[]) => {
-            const newPending = [...pending, ...eventsToQueue];
-            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-          });
-
-          // Save new events to database for Summary page queries
-          for (const event of eventsToQueue) {
-            this.saveEventToDatabase(event);
-          }
-
-          this.logger.debug(`📥 Final: Queued ${eventsToQueue.length} additional events to pending`);
-        }
+        this.logger.debug(`📥 Final: Queued ${unprocessedEvents.length} events to pending (${existingEvents.length} cached events preserved)`);
       } else {
         // No existing events - merge all unprocessed events
         const mergedEvents = [...existingEvents, ...unprocessedEvents]
