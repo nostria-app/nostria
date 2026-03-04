@@ -15,22 +15,20 @@
 
   <!-- Bento Grid Layout -->
   <div class="bento-grid">
-    <!-- Featured: Feeds - Large tile spanning 2 columns -->
-    <a routerLink="/f" class="bento-tile tile-feeds tile-large" mat-ripple>
+    <!-- Featured: Feeds -->
+    <a routerLink="/f" class="bento-tile tile-feeds tile-hero" mat-ripple>
       <div class="tile-background"></div>
       <div class="tile-content">
         <div class="tile-icon-wrapper">
           <mat-icon>dynamic_feed</mat-icon>
         </div>
-        <div class="tile-text">
-          <h2 i18n="@@home.feeds.title">Your Feeds</h2>
-        </div>
+        <h2 i18n="@@home.feeds.title">Your Feeds</h2>
         <mat-icon class="tile-arrow">arrow_forward</mat-icon>
       </div>
     </a>
 
-    <!-- Messages - Medium tile -->
-    <a routerLink="/messages" class="bento-tile tile-messages tile-medium" mat-ripple>
+    <!-- Messages -->
+    <a routerLink="/messages" class="bento-tile tile-messages tile-hero-side" mat-ripple>
       <div class="tile-background"></div>
       <div class="tile-content">
         <mat-icon class="tile-icon">mail</mat-icon>
@@ -38,8 +36,8 @@
       </div>
     </a>
 
-    <!-- Articles - Medium tile -->
-    <a routerLink="/articles" class="bento-tile tile-articles tile-medium" mat-ripple>
+    <!-- Articles -->
+    <a routerLink="/articles" class="bento-tile tile-articles tile-hero-side" mat-ripple>
       <div class="tile-background"></div>
       <div class="tile-content">
         <mat-icon class="tile-icon">article</mat-icon>
