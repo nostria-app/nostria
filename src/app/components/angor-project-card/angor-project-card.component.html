@@ -1,0 +1,81 @@
+<article class="angor-card" (click)="openAngor()" role="link"
+  [attr.aria-label]="'View ' + titleText() + ' on Angor Hub'">
+
+  <!-- Banner -->
+  <div class="angor-card__banner">
+    @if (banner()) {
+    <img class="angor-card__banner-img" [src]="banner()" alt="" loading="lazy" />
+    }
+  </div>
+
+  <div class="angor-card__body">
+
+    <!-- Avatar + name -->
+    <div class="angor-card__header">
+      @if (picture()) {
+      <img class="angor-card__avatar" [src]="picture()" [alt]="titleText()" loading="lazy" />
+      } @else {
+      <div class="angor-card__avatar angor-card__avatar--placeholder">
+        <mat-icon>rocket_launch</mat-icon>
+      </div>
+      }
+
+      <div class="angor-card__title-group">
+        <h3 class="angor-card__name" [class.angor-card__name--id]="!hasName()">{{ titleText() }}</h3>
+        @if (hasName()) {
+          @if (project().metadata?.nip05) {
+          <span class="angor-card__sub angor-card__sub--nip05">{{ project().metadata?.nip05 }}</span>
+          } @else if (shortIdentifier()) {
+          <span class="angor-card__sub angor-card__sub--id">{{ shortIdentifier() }}</span>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- About / description -->
+    @if (about()) {
+    <p class="angor-card__about">{{ about() }}</p>
+    } @else if (!hasName()) {
+      
+    <!-- When no metadata at all, show a "no info yet" hint -->
+    <p class="angor-card__about angor-card__about--empty">No project description available yet.</p>
+    }
+
+    <!-- Stats chips -->
+    @if (targetBtc() || startDateFormatted() || endDateFormatted()) {
+    <div class="angor-card__stats">
+      @if (targetBtc()) {
+      <div class="angor-card__stat angor-card__stat--btc" [matTooltip]="'Target fundraising amount'">
+        <mat-icon class="angor-card__stat-icon">currency_bitcoin</mat-icon>
+        <span>{{ targetBtc() }} BTC</span>
+      </div>
+      }
+      @if (startDateFormatted()) {
+      <div class="angor-card__stat" [matTooltip]="'Project start date'">
+        <mat-icon class="angor-card__stat-icon">play_circle_outline</mat-icon>
+        <span>{{ startDateFormatted() }}</span>
+      </div>
+      }
+      @if (endDateFormatted()) {
+      <div class="angor-card__stat" [matTooltip]="'Project end date'">
+        <mat-icon class="angor-card__stat-icon">outlined_flag</mat-icon>
+        <span>{{ endDateFormatted() }}</span>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Footer -->
+    <div class="angor-card__footer">
+      <span class="angor-card__badge">
+        <mat-icon>currency_bitcoin</mat-icon>
+        Mainnet
+      </span>
+      <button mat-flat-button class="angor-card__cta" (click)="$event.stopPropagation(); openAngor()">
+        View on Angor Hub
+        <mat-icon>open_in_new</mat-icon>
+      </button>
+    </div>
+
+  </div>
+</article>

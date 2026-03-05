@@ -26,6 +26,8 @@ import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
+import { AngorService } from '../../../services/angor.service';
+import { AngorProjectCardComponent } from '../../../components/angor-project-card/angor-project-card.component';
 
 /** Curated article item with parsed addressable ID and relay hints */
 interface CuratedArticle {
@@ -62,6 +64,7 @@ interface CuratedItem {
     ArticleComponent,
     EventComponent,
     LiveEventComponent,
+    AngorProjectCardComponent,
   ],
   templateUrl: './discover-category.component.html',
   styleUrl: './discover-category.component.scss',
@@ -76,6 +79,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private angorService = inject(AngorService);
   private destroy$ = new Subject<void>();
   private streamsSubscription: { close: () => void } | null = null;
 
@@ -123,6 +127,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Check if this is the photography category
   readonly isPhotographyCategory = computed(() => this.categoryId() === 'photography');
 
+  // Check if this is the finance category 
+  readonly isFinanceCategory = computed(() => this.categoryId() === 'finance');
+
   // Video content signals for videos category
   readonly vineVideos = signal<Event[]>([]);
   readonly publicShorts = signal<Event[]>([]);
@@ -137,6 +144,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly imagesLoading = signal(false);
   readonly postsLoading = signal(false);
 
+  // Angor project signals
+  readonly angorProjects = this.angorService.angorProjects;
+  readonly angorLoading = this.angorService.loading;
+
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
     const cat = this.category();
@@ -146,7 +157,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       case 'news':
         return 'News Sources';
       case 'finance':
-        return 'Angor Hubs';
+        return 'Angor Hub';
       case 'live':
         return 'Streamers';
       case 'podcasts':
@@ -248,6 +259,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         const creatorPubkeys = creatorsData.map(c => c.pubkey);
         this.loadPhotographerImages(creatorPubkeys);
         this.loadPhotographerPosts(creatorPubkeys);
+      }
+
+      // Load Angor projects for the 'finance' category
+      if (cat.id === 'finance') {
+        this.loadAngorProjects();
       }
     } catch (err) {
       console.error('Error loading category content:', err);
@@ -390,6 +406,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   viewPicture(item: CuratedItem): void {
     // Navigate to picture/event view in right panel
     this.layout.openGenericEvent(item.id);
+  }
+
+
+  private loadAngorProjects(): void {
+    this.angorService.loadAngorProjects(20);
   }
 
   /**

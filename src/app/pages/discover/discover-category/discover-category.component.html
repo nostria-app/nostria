@@ -47,6 +47,33 @@
     </section>
     }
 
+    <!-- Angor Projects Section -->
+    @if (isFinanceCategory()) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>rocket_launch</mat-icon>
+        Angor Projects
+      </h2>
+      @if (angorLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading Angor projects...</span>
+      </div>
+      } @else if (angorProjects().length > 0) {
+      <div class="angor-projects-grid">
+        @for (project of angorProjects(); track project.eventId) {
+        <app-angor-project-card [project]="project"></app-angor-project-card>
+        }
+      </div>
+      } @else {
+      <div class="no-content">
+        <mat-icon>explore_off</mat-icon>
+        <p>No Angor projects found at the moment</p>
+      </div>
+      }
+    </section>
+    }
+
     <!-- Articles Section -->
     @if (articles().length > 0) {
     <section class="content-section">
@@ -358,7 +385,7 @@
 
     <!-- Empty State -->
     @if (creators().length === 0 && articles().length === 0 && events().length === 0 && videos().length === 0 &&
-    pictures().length === 0) {
+    pictures().length === 0 && angorProjects().length === 0) {
     <div class="empty-state">
       <mat-icon>explore_off</mat-icon>
       <h3>No curated content yet</h3>
