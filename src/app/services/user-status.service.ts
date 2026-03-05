@@ -4,6 +4,8 @@ import { AccountStateService } from './account-state.service';
 import { UserDataService } from './user-data.service';
 import { LoggerService } from './logger.service';
 import { ApplicationService } from './application.service';
+import { RelayPoolService } from './relays/relay-pool';
+import { AccountRelayService } from './relays/account-relay';
 import type { Event as NostrEvent } from 'nostr-tools';
 
 export interface UserStatus {
@@ -25,6 +27,8 @@ export class UserStatusService {
   private userDataService = inject(UserDataService);
   private logger = inject(LoggerService);
   private app = inject(ApplicationService);
+  private relayPool = inject(RelayPoolService);
+  private accountRelay = inject(AccountRelayService);
 
   /** The logged-in user's own general status */
   ownGeneralStatus = signal<UserStatus | null>(null);
@@ -241,5 +245,61 @@ export class UserStatusService {
    */
   invalidateCache(pubkey: string): void {
     this.statusCache.delete(pubkey);
+  }
+
+  /**
+   * Subscribe to live NIP-38 status updates for a given pubkey.
+   * Returns a cleanup function that closes the subscription.
+   * The callback fires whenever a new status event is received.
+   */
+  subscribeToUserStatuses(
+    pubkey: string,
+    onUpdate: (statuses: { general: UserStatus | null; music: UserStatus | null }) => void,
+  ): () => void {
+    const relayUrls = this.accountRelay.getRelayUrls();
+    if (relayUrls.length === 0) {
+      this.logger.warn('[UserStatus] No relay URLs available for status subscription');
+      return () => {};
+    }
+
+    // Track the latest status events so we can resolve updates correctly
+    let latestGeneral: NostrEvent | null = null;
+    let latestMusic: NostrEvent | null = null;
+
+    const filter = {
+      kinds: [USER_STATUS_KIND],
+      authors: [pubkey],
+      '#d': ['general', 'music'],
+      since: Math.floor(Date.now() / 1000),
+    };
+
+    const subscription = this.relayPool.subscribe(relayUrls, filter, (event: NostrEvent) => {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+
+      if (dTag === 'general') {
+        if (!latestGeneral || event.created_at > latestGeneral.created_at) {
+          latestGeneral = event;
+        }
+      } else if (dTag === 'music') {
+        if (!latestMusic || event.created_at > latestMusic.created_at) {
+          latestMusic = event;
+        }
+      }
+
+      const general = latestGeneral ? this.parseStatusEvent(latestGeneral) : null;
+      const music = latestMusic ? this.parseStatusEvent(latestMusic) : null;
+
+      // Update cache
+      this.statusCache.set(pubkey, { general, music, fetchedAt: Date.now() });
+
+      onUpdate({ general, music });
+    });
+
+    this.logger.debug('[UserStatus] Subscribed to live status updates', { pubkey });
+
+    return () => {
+      subscription.close();
+      this.logger.debug('[UserStatus] Unsubscribed from live status updates', { pubkey });
+    };
   }
 }

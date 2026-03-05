@@ -128,6 +128,9 @@ export class ProfileHeaderComponent implements OnDestroy {
   isSavingStatus = signal(false);
   showStatusFlyout = signal(false);
 
+  /** Cleanup function for the live status subscription */
+  private statusSubscriptionCleanup: (() => void) | null = null;
+
   // Mutual followers ("Followers you know")
   mutualFollowing = signal<string[]>([]);
   mutualFollowingProfiles = signal<MutualFollowProfile[]>([]);
@@ -531,13 +534,14 @@ export class ProfileHeaderComponent implements OnDestroy {
       }
     });
 
-    // NIP-38: Load user statuses when profile changes
+    // NIP-38: Load user statuses when profile changes + subscribe for live updates
     effect(async () => {
       const currentPubkey = this.pubkey();
       const cachedLoaded = this.profileState.cachedEventsLoaded();
 
-      // Reset statuses when switching profiles
+      // Clean up previous status subscription when profile changes
       untracked(() => {
+        this.cleanupStatusSubscription();
         this.generalStatus.set(null);
         this.musicStatus.set(null);
         this.showStatusEditor.set(false);
@@ -565,6 +569,25 @@ export class ProfileHeaderComponent implements OnDestroy {
       } catch (error) {
         this.logger.debug('[ProfileHeader] Failed to load user statuses:', error);
       }
+
+      // Verify we're still on the same profile before subscribing
+      if (this.pubkey() !== currentPubkey) return;
+
+      // Subscribe for live status updates
+      untracked(() => {
+        this.statusSubscriptionCleanup = this.userStatusService.subscribeToUserStatuses(
+          currentPubkey,
+          (statuses) => {
+            this.generalStatus.set(statuses.general);
+            this.musicStatus.set(statuses.music);
+            if (statuses.general || statuses.music) {
+              this.showStatusFlyout.set(true);
+            } else {
+              this.showStatusFlyout.set(false);
+            }
+          },
+        );
+      });
     });
 
     // Load badges when pubkey changes - DEFERRED: badges are lowest priority
@@ -1657,6 +1680,14 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.clearBadgeTimeouts();
+    this.cleanupStatusSubscription();
+  }
+
+  private cleanupStatusSubscription(): void {
+    if (this.statusSubscriptionCleanup) {
+      this.statusSubscriptionCleanup();
+      this.statusSubscriptionCleanup = null;
+    }
   }
 
   // NIP-38: User Status methods
