@@ -778,33 +778,29 @@ export class MessagingService implements NostriaService {
       // const chatPubkeys = new Set<string>();
       let oldestTimestamp = this.oldestChatTimestamp() || this.utilities.currentDate();
 
-      // ── Unified collection pipeline ──────────────────────────────────
-      // Both sub1 (received) and sub2 (sent NIP-04) collect into a single
-      // array.  Processing starts only after BOTH reach EOSE so that
-      // incoming and outgoing messages are interleaved by timestamp and
-      // chats render correctly from the start.
-      const allCollectedEvents: NostrEvent[] = [];
-      let eoseCount = 0;
-      const TOTAL_SUBS = 2; // sub1 + sub2
+      // ── Independent dual-subscription pipeline ───────────────────────
+      // sub1 (filterReceived) captures ALL NIP-17 messages (incoming +
+      // outgoing self-copies) plus incoming NIP-04.  Its EOSE fires fast
+      // and we process immediately — no waiting.
+      // sub2 (filterSent) captures only NIP-04 *sent* messages.  When its
+      // EOSE fires we process those as a supplemental batch, adding any
+      // messages not already rendered by sub1.
+      const sub1Events: NostrEvent[] = [];
+      const sub2Events: NostrEvent[] = [];
 
       const pendingDecryptions: Promise<void>[] = [];
 
       /**
-       * Called when each subscription reaches EOSE.
-       * Once ALL subscriptions are done, sort events newest-first and process.
+       * Process a batch of collected events: sort newest-first, decrypt,
+       * and add to chats.  Shared by both EOSE handlers.
        */
-      const onAllEose = async () => {
-        eoseCount++;
-        if (eoseCount < TOTAL_SUBS) {
-          return; // Still waiting for the other subscription
-        }
-
-        this.logger.info(`Both subscriptions complete. Processing ${allCollectedEvents.length} events (newest-first)...`);
+      const processEventBatch = async (events: NostrEvent[], label: string) => {
+        this.logger.info(`${label}: Processing ${events.length} events (newest-first)...`);
 
         // Sort newest-first so recent chats are decrypted & rendered before old ones
-        allCollectedEvents.sort((a, b) => b.created_at - a.created_at);
+        events.sort((a, b) => b.created_at - a.created_at);
 
-        for (const event of allCollectedEvents) {
+        for (const event of events) {
           if (event.kind === kinds.GiftWrap) {
             const processPromise = (async () => {
               try {
@@ -908,6 +904,14 @@ export class MessagingService implements NostriaService {
             pendingDecryptions.push(nip04Promise);
           }
         }
+      };
+
+      // Track whether sub1 has finished so we can finalize once both are done
+      let sub1Done = false;
+      let sub2Done = false;
+
+      const finalizeIfBothDone = async () => {
+        if (!sub1Done || !sub2Done) return;
 
         // Wait for all pending decryption operations to complete
         this.logger.info(`Waiting for ${pendingDecryptions.length} pending decryption operations...`);
@@ -927,31 +931,43 @@ export class MessagingService implements NostriaService {
         this.isLoading.set(false);
       };
 
-      // ── Event collector (shared by both subs) ───────────────────────
-      const collectEvent = (event: NostrEvent) => {
+      // ── Event collectors ─────────────────────────────────────────────
+      const collectSub1Event = (event: NostrEvent) => {
         if (event.created_at < oldestTimestamp) {
           oldestTimestamp = event.created_at;
         }
-        allCollectedEvents.push(event);
+        sub1Events.push(event);
       };
 
-      // sub1: received messages (GiftWrap + incoming NIP-04)
+      const collectSub2Event = (event: NostrEvent) => {
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+        sub2Events.push(event);
+      };
+
+      // sub1: incoming NIP-17 (both directions) + incoming NIP-04
+      // Processes immediately on EOSE — no waiting for sub2
       const sub1 = this.relay.subscribe(
         filterReceived,
-        collectEvent,
+        collectSub1Event,
         async () => {
-          this.logger.debug(`EOSE for incoming messages. Collected so far: ${allCollectedEvents.length} events.`);
-          await onAllEose();
+          this.logger.debug(`sub1 EOSE: ${sub1Events.length} events (NIP-17 + received NIP-04)`);
+          await processEventBatch(sub1Events, 'sub1');
+          sub1Done = true;
+          await finalizeIfBothDone();
         }
       );
 
-      // sub2: sent NIP-04 messages
+      // sub2: sent NIP-04 messages (supplemental batch)
       const sub2 = this.relay.subscribe(
         filterSent,
-        collectEvent,
+        collectSub2Event,
         async () => {
-          this.logger.debug(`EOSE for sent messages. Collected so far: ${allCollectedEvents.length} events.`);
-          await onAllEose();
+          this.logger.debug(`sub2 EOSE: ${sub2Events.length} events (sent NIP-04)`);
+          await processEventBatch(sub2Events, 'sub2');
+          sub2Done = true;
+          await finalizeIfBothDone();
         }
       );
 

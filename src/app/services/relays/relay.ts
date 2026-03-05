@@ -1076,7 +1076,7 @@ export abstract class RelayServiceBase {
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Check for duplicate subscriptions
-    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter, urls);
+    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter as Filter, urls);
     if (duplicateId) {
       this.logger.warn(
         `[${this.constructor.name}] Duplicate subscription detected, reusing existing: ${duplicateId}`,
@@ -1091,7 +1091,7 @@ export abstract class RelayServiceBase {
     // Try to register the subscription - returns available relays (those not at limit)
     const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,
-      filter,
+      filter as Filter,
       urls,
       this.constructor.name,
       this.poolInstanceId
@@ -1126,7 +1126,7 @@ export abstract class RelayServiceBase {
       });
 
       // Create the subscription with auth support, using only available relays
-      const sub = this.#pool.subscribeMany(availableRelays, filter, {
+      const sub = this.#pool.subscribeMany(availableRelays, filter as Filter, {
         onauth: authCallback,
         onevent: (evt) => {
           this.perfMetrics.incrementCounter('relay.subscribe.events_received');
