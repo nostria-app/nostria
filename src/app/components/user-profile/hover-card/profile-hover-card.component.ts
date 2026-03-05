@@ -28,6 +28,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
+import { Router } from '@angular/router';
 import { TrustService } from '../../../services/trust.service';
 import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
@@ -93,6 +94,7 @@ export class ProfileHoverCardComponent {
   private hoverCardService = inject(ProfileHoverCardService);
   private nip05Service = inject(Nip05VerificationService);
   private userStatusService = inject(UserStatusService);
+  private router = inject(Router);
 
   // NIP-38 User Status
   generalStatus = signal<UserStatus | null>(null);
@@ -537,6 +539,24 @@ export class ProfileHoverCardComponent {
     }
     if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
       setTimeout(() => this.hoverCardService.closeHoverCard(), 100);
+    }
+  }
+
+  /** Navigate to a music track page from an aTag like "36787:pubkey:identifier" */
+  navigateToMusicTrack(aTag: string): void {
+    const parts = aTag.split(':');
+    if (parts.length < 3) return;
+
+    const kind = parseInt(parts[0], 10);
+    const pubkey = parts[1];
+    const identifier = parts.slice(2).join(':');
+
+    try {
+      const naddr = nip19.naddrEncode({ kind, pubkey, identifier });
+      this.router.navigate(['/a', naddr]);
+      this.hoverCardService.closeHoverCard();
+    } catch (err) {
+      console.warn('[HoverCard] Failed to navigate to music track:', err);
     }
   }
 }

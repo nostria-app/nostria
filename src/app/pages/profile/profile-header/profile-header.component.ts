@@ -1731,4 +1731,39 @@ export class ProfileHeaderComponent implements OnDestroy {
   activeStatus = computed(() => {
     return this.musicStatus() || this.generalStatus();
   });
+
+  /** Handle click on status flyout: toggle text, or navigate to track if expanded and aTag present */
+  onStatusFlyoutClick(event: MouseEvent, status: UserStatus): void {
+    if (!this.showStatusFlyout()) {
+      // First click: expand the flyout text
+      this.showStatusFlyout.set(true);
+      return;
+    }
+
+    // Flyout is already expanded
+    if (status.aTag) {
+      // Navigate to the music track
+      event.stopPropagation();
+      this.navigateToMusicTrack(status.aTag);
+    } else {
+      this.showStatusFlyout.set(false);
+    }
+  }
+
+  /** Navigate to a music track page from an aTag like "36787:pubkey:identifier" */
+  private navigateToMusicTrack(aTag: string): void {
+    const parts = aTag.split(':');
+    if (parts.length < 3) return;
+
+    const kind = parseInt(parts[0], 10);
+    const pubkey = parts[1];
+    const identifier = parts.slice(2).join(':');
+
+    try {
+      const naddr = nip19.naddrEncode({ kind, pubkey, identifier });
+      this.router.navigate(['/a', naddr]);
+    } catch (err) {
+      console.warn('[ProfileHeader] Failed to navigate to music track:', err);
+    }
+  }
 }

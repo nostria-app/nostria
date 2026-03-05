@@ -286,6 +286,20 @@
       white-space: nowrap;
       line-height: 1.3;
     }
+
+    &.clickable {
+      cursor: pointer;
+
+      .status-text {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+      }
+
+      &:hover {
+        filter: brightness(1.1);
+      }
+    }
   }
 
   @keyframes hoverMusicPulse {

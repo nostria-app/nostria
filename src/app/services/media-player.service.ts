@@ -407,6 +407,14 @@ export class MediaPlayerService implements OnInitialized {
   exit() {
     console.log('Exiting media player and hiding footer');
 
+    // NIP-38: Clear music status when player is closed
+    const exitingItem = this.current();
+    if (exitingItem?.type === 'Music' && this.accountState.pubkey() && this.settingsService.settings().publishMusicStatus !== false) {
+      this.userStatusService.clearMusicStatus().catch(err => {
+        console.warn('[MediaPlayer] Failed to clear music status on exit:', err);
+      });
+    }
+
     // Check if we're on a stream route and in fullscreen mode
     const currentUrl = this.router.url;
     const isStreamRoute = currentUrl.startsWith('/stream/');
@@ -982,7 +990,13 @@ export class MediaPlayerService implements OnInitialized {
 
     const duration = durationOverride || this.durationSig() || 180; // fallback 3 minutes
     const statusText = item.artist ? `${item.title} - ${item.artist}` : item.title;
-    this.userStatusService.setMusicStatus(statusText, duration, item.source).catch(err => {
+
+    // Build track info for a/r tags if event metadata is available
+    const trackInfo = item.eventPubkey && item.eventIdentifier
+      ? { eventPubkey: item.eventPubkey, eventIdentifier: item.eventIdentifier }
+      : undefined;
+
+    this.userStatusService.setMusicStatus(statusText, duration, trackInfo).catch(err => {
       console.warn('[MediaPlayer] Failed to publish music status:', err);
     });
   }

@@ -112,7 +112,8 @@
 
     <!-- NIP-38 User Status -->
     @if (activeStatus(); as status) {
-    <div class="user-status" [class.music-status]="status.type === 'music'">
+    <div class="user-status" [class.music-status]="status.type === 'music'" [class.clickable]="status.aTag"
+      (click)="status.aTag && navigateToMusicTrack(status.aTag)">
       <mat-icon class="status-icon">{{ status.type === 'music' ? 'music_note' : 'chat_bubble' }}</mat-icon>
       <span class="status-text">{{ status.content }}</span>
     </div>

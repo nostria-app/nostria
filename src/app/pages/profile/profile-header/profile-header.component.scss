@@ -663,6 +663,12 @@
     background-color: var(--mat-sys-surface-container-high);
   }
 
+  &.clickable .status-flyout-text {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+  }
+
   &.music {
     background-color: var(--mat-sys-primary-container);
 

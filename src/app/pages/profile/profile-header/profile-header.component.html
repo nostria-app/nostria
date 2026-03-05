@@ -31,8 +31,8 @@
 
         <!-- Status fly-out from avatar -->
         @if (activeStatus(); as status) {
-        <div class="status-flyout" [class.music]="status.type === 'music'"
-          (click)="showStatusFlyout.set(!showStatusFlyout())" [matTooltip]="status.content" role="button" tabindex="0"
+        <div class="status-flyout" [class.music]="status.type === 'music'" [class.clickable]="status.aTag"
+          (click)="onStatusFlyoutClick($event, status)" [matTooltip]="status.content" role="button" tabindex="0"
           [attr.aria-label]="'User status: ' + status.content">
           <mat-icon class="status-flyout-icon">{{ status.type === 'music' ? 'music_note' : 'chat_bubble' }}</mat-icon>
           @if (showStatusFlyout()) {

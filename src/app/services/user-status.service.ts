@@ -6,12 +6,14 @@ import { LoggerService } from './logger.service';
 import { ApplicationService } from './application.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
+import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 
 export interface UserStatus {
   content: string;
   type: 'general' | 'music';
   url?: string;
+  aTag?: string;
   expiration?: number;
   createdAt: number;
 }
@@ -87,9 +89,9 @@ export class UserStatusService {
    * Publish a music status for the current user with expiration.
    * @param trackTitle - Display text (e.g. "Track Name - Artist")
    * @param durationSeconds - Track duration in seconds (used to set expiration)
-   * @param url - Optional reference URL (e.g. spotify link)
+   * @param trackInfo - Optional track event info for linking
    */
-  async setMusicStatus(trackTitle: string, durationSeconds: number, url?: string): Promise<boolean> {
+  async setMusicStatus(trackTitle: string, durationSeconds: number, trackInfo?: { eventPubkey: string; eventIdentifier: string }): Promise<boolean> {
     const expirationTimestamp = Math.floor(Date.now() / 1000) + Math.ceil(durationSeconds);
 
     const tags: string[][] = [
@@ -97,18 +99,38 @@ export class UserStatusService {
       ['expiration', String(expirationTimestamp)],
     ];
 
-    if (url) {
-      tags.push(['r', url]);
+    if (trackInfo?.eventPubkey && trackInfo?.eventIdentifier) {
+      // Add "a" tag referencing the music track event
+      const aTagValue = `36787:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`;
+      tags.push(['a', aTagValue]);
+
+      // Generate naddr URL for the "r" tag
+      try {
+        const relayUrls = this.accountRelay.getRelayUrls().slice(0, 3);
+        const naddrEncoded = nip19.naddrEncode({
+          kind: 36787,
+          pubkey: trackInfo.eventPubkey,
+          identifier: trackInfo.eventIdentifier,
+          relays: relayUrls,
+        });
+        tags.push(['r', `https://nostria.app/a/${naddrEncoded}`]);
+      } catch (err) {
+        this.logger.warn('[UserStatus] Failed to encode naddr for music status', err);
+      }
     }
 
     const event = this.nostr.createEvent(USER_STATUS_KIND, trackTitle, tags);
     const result = await this.nostr.signAndPublish(event);
 
     if (result.success) {
+      const aTag = trackInfo?.eventPubkey && trackInfo?.eventIdentifier
+        ? `36787:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`
+        : undefined;
       this.ownMusicStatus.set({
         content: trackTitle,
         type: 'music',
-        url,
+        url: tags.find(t => t[0] === 'r')?.[1],
+        aTag,
         expiration: expirationTimestamp,
         createdAt: event.created_at,
       });
@@ -207,6 +229,7 @@ export class UserStatusService {
     const dTag = event.tags.find(t => t[0] === 'd')?.[1];
     const type = dTag === 'music' ? 'music' : 'general';
     const url = event.tags.find(t => t[0] === 'r')?.[1];
+    const aTag = event.tags.find(t => t[0] === 'a')?.[1];
     const expirationStr = event.tags.find(t => t[0] === 'expiration')?.[1];
     const expiration = expirationStr ? parseInt(expirationStr, 10) : undefined;
 
@@ -219,6 +242,7 @@ export class UserStatusService {
       content: event.content,
       type,
       url,
+      aTag,
       expiration,
       createdAt: event.created_at,
     };
