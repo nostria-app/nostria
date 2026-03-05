@@ -719,7 +719,10 @@
   right: -4px;
   width: 32px !important;
   height: 32px !important;
-  line-height: 32px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   background-color: var(--mat-sys-surface-container) !important;
   box-shadow: var(--mat-sys-level1);
 
@@ -762,7 +765,10 @@
   .status-editor-close {
     width: 28px !important;
     height: 28px !important;
-    line-height: 28px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
 
     mat-icon {
       font-size: 18px;

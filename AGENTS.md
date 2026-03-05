@@ -134,6 +134,7 @@ Dark mode: `:host-context(.dark) .my-class { ... }`
 - Use `field-sizing: content` for auto-growing textareas
 - Do NOT use `color="primary"` on buttons (Material 3)
 - Use `mat-flat-button` for primary actions
+- When resizing `mat-icon-button` smaller than default, **never** use `line-height` to center the icon. Use `padding: 0 !important; display: flex !important; align-items: center; justify-content: center;` instead
 
 ## Dialogs
 
@@ -270,4 +271,3 @@ npm run test:e2e:report
 ```
 
 The full report includes: test results table, performance metrics with pass/fail indicators, console error summary, network health, memory trends, and actionable improvement recommendations.
-
