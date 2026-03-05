@@ -832,7 +832,10 @@
 
       <!-- Top emojis indicator (right-aligned) -->
       @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0)) {
-      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
+        (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"
+        (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
+        (touchcancel)="onBookmarkLongPressEnd()">
         @if (topEmojis().length > 0) {
         <span class="aggregated-emojis">
           @for (emoji of topEmojis(); track emoji.emoji) {
