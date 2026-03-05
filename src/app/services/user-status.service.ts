@@ -259,7 +259,7 @@ export class UserStatusService {
     const relayUrls = this.accountRelay.getRelayUrls();
     if (relayUrls.length === 0) {
       this.logger.warn('[UserStatus] No relay URLs available for status subscription');
-      return () => {};
+      return () => { };
     }
 
     // Track the latest status events so we can resolve updates correctly

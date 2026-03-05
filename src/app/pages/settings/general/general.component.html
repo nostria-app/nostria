@@ -180,6 +180,16 @@
       When enabled, all videos will automatically play muted when they appear in the feed.
       Short videos (15 seconds or less) will also loop automatically.
     </p>
+
+    <div class="setting-item">
+      <span i18n="@@settings.music-status.toggle">Share Music Status (NIP-38)</span>
+      <mat-slide-toggle [checked]="settings.settings().publishMusicStatus !== false"
+        (change)="togglePublishMusicStatus()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description" i18n="@@settings.music-status.description">
+      When enabled, your currently playing song is shared as a user status so others can see what you're listening to.
+    </p>
   </div>
 
   @if (accountState.account()) {

@@ -11,6 +11,7 @@ import { OfflineMusicService } from './offline-music.service';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { UserStatusService } from './user-status.service';
+import { SettingsService } from './settings.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -39,6 +40,7 @@ export class MediaPlayerService implements OnInitialized {
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private userStatusService = inject(UserStatusService);
+  private settingsService = inject(SettingsService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -968,15 +970,34 @@ export class MediaPlayerService implements OnInitialized {
     console.log('[MediaPlayer] Restored volume settings:', { volume, muted });
   }
 
+  /**
+   * Publish NIP-38 music status for the given item.
+   * Respects the publishMusicStatus setting.
+   * @param item The currently playing MediaItem
+   * @param durationOverride Optional duration override (e.g. remaining time on resume)
+   */
+  private publishMusicStatusForItem(item: MediaItem, durationOverride?: number): void {
+    if (!this.accountState.pubkey()) return;
+    if (this.settingsService.settings().publishMusicStatus === false) return;
+
+    const duration = durationOverride || this.durationSig() || 180; // fallback 3 minutes
+    const statusText = item.artist ? `${item.title} - ${item.artist}` : item.title;
+    this.userStatusService.setMusicStatus(statusText, duration, item.source).catch(err => {
+      console.warn('[MediaPlayer] Failed to publish music status:', err);
+    });
+  }
+
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
 
     // NIP-38: Clear music status when track ends (if not advancing to next)
     const endedItem = this.current();
     if (endedItem?.type === 'Music' && this.accountState.pubkey() && !this.canNext()) {
-      this.userStatusService.clearMusicStatus().catch(err => {
-        console.warn('[MediaPlayer] Failed to clear music status:', err);
-      });
+      if (this.settingsService.settings().publishMusicStatus !== false) {
+        this.userStatusService.clearMusicStatus().catch(err => {
+          console.warn('[MediaPlayer] Failed to clear music status:', err);
+        });
+      }
     }
 
     // Mark podcast as completed if applicable
@@ -1135,6 +1156,11 @@ export class MediaPlayerService implements OnInitialized {
           this.audio.currentTime = savedPosition;
           console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
         }
+      }
+
+      // NIP-38: Publish music status once metadata (and thus accurate duration) is available
+      if (currentItem?.type === 'Music') {
+        this.publishMusicStatusForItem(currentItem);
       }
     }
   };
@@ -1326,13 +1352,10 @@ export class MediaPlayerService implements OnInitialized {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // NIP-38: Publish music status when a music track starts playing
-    if (file.type === 'Music' && this.accountState.pubkey()) {
-      const duration = this.durationSig() || 180; // fallback 3 minutes
-      const statusText = file.artist ? `${file.title} - ${file.artist}` : file.title;
-      this.userStatusService.setMusicStatus(statusText, duration, file.source).catch(err => {
-        console.warn('[MediaPlayer] Failed to publish music status:', err);
-      });
+    // NIP-38: Publish music status for video-based music tracks
+    // (Audio tracks publish in handleLoadedMetadata for accurate duration)
+    if (file.type === 'Music' && file.video?.trim()) {
+      this.publishMusicStatusForItem(file);
     }
   }
 
@@ -1677,10 +1700,7 @@ export class MediaPlayerService implements OnInitialized {
     if (currentItem?.type === 'Music' && this.accountState.pubkey()) {
       const remainingTime = this.durationSig() - this.currentTimeSig();
       if (remainingTime > 5) {
-        const statusText = currentItem.artist ? `${currentItem.title} - ${currentItem.artist}` : currentItem.title;
-        this.userStatusService.setMusicStatus(statusText, remainingTime, currentItem.source).catch(err => {
-          console.warn('[MediaPlayer] Failed to re-publish music status on resume:', err);
-        });
+        this.publishMusicStatusForItem(currentItem, remainingTime);
       }
     }
   }
@@ -1735,7 +1755,7 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     // NIP-38: Clear music status when paused
-    if (currentItem?.type === 'Music' && this.accountState.pubkey()) {
+    if (currentItem?.type === 'Music' && this.accountState.pubkey() && this.settingsService.settings().publishMusicStatus !== false) {
       this.userStatusService.clearMusicStatus().catch(err => {
         console.warn('[MediaPlayer] Failed to clear music status on pause:', err);
       });

@@ -393,6 +393,23 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
     },
     {
+      id: 'toggle-music-status',
+      label: 'Toggle Music Status',
+      icon: 'music_note',
+      action: () => {
+        const current = this.settings.settings().publishMusicStatus !== false;
+        this.settings.updateSettings({ publishMusicStatus: !current }).then(() => {
+          this.snackBar.open(
+            !current ? 'Music status enabled' : 'Music status disabled',
+            'Dismiss',
+            { duration: 3000 },
+          );
+        });
+      },
+      keywords: ['music status', 'nip-38', 'now playing', 'listening', 'share music', 'user status', 'music settings'],
+      description: 'Enable or disable sharing your currently playing track as a Nostr status',
+    },
+    {
       id: 'nav-settings-logs',
       label: 'Settings: Logs',
       icon: 'article',

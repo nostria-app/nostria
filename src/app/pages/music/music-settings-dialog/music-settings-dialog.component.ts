@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { Event, Filter } from 'nostr-tools';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
@@ -18,6 +19,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { DatabaseService } from '../../../services/database.service';
+import { SettingsService } from '../../../services/settings.service';
 
 const RELAY_SET_KIND = 30002;
 const MUSIC_RELAY_SET_D_TAG = 'music';
@@ -47,6 +49,7 @@ interface MusicRelaySet {
     MatChipsModule,
     MatDividerModule,
     MatSnackBarModule,
+    MatSlideToggleModule,
     FormsModule,
   ],
   templateUrl: './music-settings-dialog.component.html',
@@ -64,6 +67,10 @@ export class MusicSettingsDialogComponent implements OnInit {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private database = inject(DatabaseService);
+  readonly settingsService = inject(SettingsService);
+
+  // Music status setting
+  publishMusicStatus = signal(true);
 
   // State
   isLoading = signal(true);
@@ -90,6 +97,8 @@ export class MusicSettingsDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadMusicRelaySet();
+    // Initialize music status setting from current settings
+    this.publishMusicStatus.set(this.settingsService.settings().publishMusicStatus !== false);
   }
 
   private async loadMusicRelaySet(): Promise<void> {
@@ -309,6 +318,18 @@ export class MusicSettingsDialogComponent implements OnInit {
       this.snackBar.open('Failed to save settings. Please try again.', 'Dismiss', { duration: 3000 });
     } finally {
       this.isSaving.set(false);
+    }
+  }
+
+  async togglePublishMusicStatus(): Promise<void> {
+    const newValue = !this.publishMusicStatus();
+    this.publishMusicStatus.set(newValue);
+    try {
+      await this.settingsService.updateSettings({ publishMusicStatus: newValue });
+    } catch (error) {
+      // Revert on failure
+      this.publishMusicStatus.set(!newValue);
+      this.logger.error('Failed to save music status setting', error);
     }
   }
 
