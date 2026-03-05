@@ -19,6 +19,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative; // Positioning context for status flyout
   }
 
   // Second div should take remaining space
@@ -82,9 +83,25 @@
   }
 }
 
-.profile-avatar {
-  top: -60px;
+// Anchor wrapper: takes the avatar's visual offset so absolutely-positioned
+// children (flyout, button, editor) align to the avatar's visual position.
+.avatar-status-anchor {
   position: relative;
+  top: -60px;
+  width: 168px;
+  flex-shrink: 0;
+
+  @media (max-width: 500px) {
+    width: 120px;
+    top: -40px;
+  }
+
+  &.mobile {
+    top: 0;
+  }
+}
+
+.profile-avatar {
   width: 168px;
   height: 168px;
   border-radius: 50%;
@@ -113,11 +130,9 @@
   @media (max-width: 500px) {
     width: 120px;
     height: 120px;
-    top: -40px;
   }
 
   .mobile & {
-    top: 0px;
     flex-shrink: 0;
     /* Ensure avatar doesn't shrink on mobile */
   }
@@ -620,5 +635,154 @@
       min-height: 40px;
       padding: 8px;
     }
+  }
+}
+
+// NIP-38 User Status styles
+
+.status-flyout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-full);
+  cursor: pointer;
+  position: absolute;
+  z-index: 3;
+  max-width: 260px;
+  transition: background-color 0.2s ease;
+  overflow: hidden;
+
+  // Positioned relative to .avatar-status-anchor
+  // Use fixed pixel offsets from the avatar's top-right for consistency across sizes
+  top: 20px;
+  left: calc(100% - 30px);
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &.music {
+    background-color: var(--mat-sys-primary-container);
+
+    .status-flyout-icon {
+      color: var(--mat-sys-on-primary-container);
+      animation: musicPulse 1.5s ease-in-out infinite;
+    }
+
+    .status-flyout-text {
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+
+  .status-flyout-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .status-flyout-text {
+    font-size: var(--text-xs);
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+
+  // On narrow containers, same visual position
+  @media (max-width: 500px) {
+    max-width: 200px;
+  }
+
+}
+
+@keyframes musicPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.set-status-btn {
+  position: absolute;
+  z-index: 3;
+  bottom: 0;
+  right: -4px;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  background-color: var(--mat-sys-surface-container) !important;
+  box-shadow: var(--mat-sys-level1);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &:hover {
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+}
+
+.status-editor-card {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 12px;
+  margin-top: 4px;
+  box-shadow: var(--mat-sys-level3);
+  width: 250px;
+
+  .status-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: var(--text-sm);
+    color: var(--mat-sys-on-surface);
+  }
+
+  .status-editor-close {
+    width: 28px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .status-input-field {
+    width: 100%;
+
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+  }
+
+  .status-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
   }
 }

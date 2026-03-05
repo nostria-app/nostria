@@ -47,6 +47,9 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { SettingsService } from '../../../services/settings.service';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
 import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
+import { UserStatusService, UserStatus } from '../../../services/user-status.service';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -76,6 +79,8 @@ interface MutualFollowProfile {
     QrCodeComponent,
     ZapButtonComponent,
     BioContentComponent,
+    FormsModule,
+    MatInputModule,
   ],
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',
@@ -113,6 +118,15 @@ export class ProfileHeaderComponent implements OnDestroy {
   private relayPool = inject(RelayPoolService);
   private imageCacheService = inject(ImageCacheService);
   readonly settingsService = inject(SettingsService);
+  private userStatusService = inject(UserStatusService);
+
+  // User status (NIP-38)
+  generalStatus = signal<UserStatus | null>(null);
+  musicStatus = signal<UserStatus | null>(null);
+  showStatusEditor = signal(false);
+  statusInput = signal('');
+  isSavingStatus = signal(false);
+  showStatusFlyout = signal(false);
 
   // Mutual followers ("Followers you know")
   mutualFollowing = signal<string[]>([]);
@@ -514,6 +528,42 @@ export class ProfileHeaderComponent implements OnDestroy {
         untracked(() => {
           this.verifiedIdentifier.set({ value: '', valid: false, status: '' });
         });
+      }
+    });
+
+    // NIP-38: Load user statuses when profile changes
+    effect(async () => {
+      const currentPubkey = this.pubkey();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
+
+      // Reset statuses when switching profiles
+      untracked(() => {
+        this.generalStatus.set(null);
+        this.musicStatus.set(null);
+        this.showStatusEditor.set(false);
+        this.showStatusFlyout.set(false);
+      });
+
+      if (!currentPubkey || !cachedLoaded) return;
+
+      // Delay to avoid competing with higher priority queries
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      // Verify we're still on the same profile
+      if (this.pubkey() !== currentPubkey) return;
+
+      try {
+        const statuses = await this.userStatusService.getUserStatuses(currentPubkey);
+        untracked(() => {
+          this.generalStatus.set(statuses.general);
+          this.musicStatus.set(statuses.music);
+          // Auto-show fly-out if user has a status
+          if (statuses.general || statuses.music) {
+            this.showStatusFlyout.set(true);
+          }
+        });
+      } catch (error) {
+        this.logger.debug('[ProfileHeader] Failed to load user statuses:', error);
       }
     });
 
@@ -1608,4 +1658,46 @@ export class ProfileHeaderComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.clearBadgeTimeouts();
   }
+
+  // NIP-38: User Status methods
+  toggleStatusEditor(): void {
+    const showing = !this.showStatusEditor();
+    this.showStatusEditor.set(showing);
+    if (showing) {
+      this.statusInput.set(this.generalStatus()?.content || '');
+    }
+  }
+
+  async saveStatus(): Promise<void> {
+    this.isSavingStatus.set(true);
+    try {
+      const content = this.statusInput().trim();
+      const success = await this.userStatusService.setGeneralStatus(content);
+      if (success) {
+        this.generalStatus.set(content ? { content, type: 'general', createdAt: Math.floor(Date.now() / 1000) } : null);
+        this.showStatusEditor.set(false);
+      }
+    } finally {
+      this.isSavingStatus.set(false);
+    }
+  }
+
+  async clearStatus(): Promise<void> {
+    this.isSavingStatus.set(true);
+    try {
+      const success = await this.userStatusService.clearGeneralStatus();
+      if (success) {
+        this.generalStatus.set(null);
+        this.statusInput.set('');
+        this.showStatusEditor.set(false);
+      }
+    } finally {
+      this.isSavingStatus.set(false);
+    }
+  }
+
+  /** Returns the active status to display (music takes priority over general) */
+  activeStatus = computed(() => {
+    return this.musicStatus() || this.generalStatus();
+  });
 }

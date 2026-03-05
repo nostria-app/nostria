@@ -309,6 +309,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['edit profile', 'update profile', 'change profile']
     },
     {
+      id: 'set-status',
+      label: 'Set Status',
+      icon: 'add_reaction',
+      action: () => {
+        // Navigate to own profile to set status
+        const pubkey = this.accountState.pubkey();
+        if (pubkey) {
+          this.router.navigate(['/p', pubkey], { queryParams: { status: 'edit' } });
+        }
+      },
+      keywords: ['status', 'user status', 'nip-38', 'set status', 'mood', 'what are you doing', 'activity'],
+      description: 'Set your general status (NIP-38)'
+    },
+    {
       id: 'nav-accounts',
       label: 'Open Accounts',
       icon: 'manage_accounts',
