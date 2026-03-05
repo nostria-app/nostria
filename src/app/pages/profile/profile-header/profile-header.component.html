@@ -215,7 +215,7 @@
         <!-- @if (profileState.relay?.userRelaysFound()) { -->
         @if (getUserRelays() && getUserRelays().length > 0) {
         <a class="following-count compactable" (click)="navigateToRelays($event)"
-          [matTooltip]="getUserRelays().length + ' relays'" [attr.aria-label]="getUserRelays().length + ' relays'">
+           [attr.aria-label]="getUserRelays().length + ' relays'">
           <span class="compact-text">{{ getUserRelays().length }} relays</span>
           <mat-icon class="compact-icon" aria-hidden="true">settings_input_antenna</mat-icon>
           <span class="compact-count" aria-hidden="true">{{ getUserRelays().length }}</span>
@@ -231,7 +231,7 @@
 
         @if (badgeCount() > 0) {
         <a class="following-count compactable" (click)="navigateToBadges($event)"
-          [matTooltip]="badgeCount() + ' badges'" [attr.aria-label]="badgeCount() + ' badges'">
+           [attr.aria-label]="badgeCount() + ' badges'">
           <span class="compact-text">{{ badgeCount() }} badges</span>
           <mat-icon class="compact-icon" aria-hidden="true">military_tech</mat-icon>
           <span class="compact-count" aria-hidden="true">{{ badgeCount() }}</span>
