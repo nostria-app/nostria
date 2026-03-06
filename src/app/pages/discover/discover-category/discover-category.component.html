@@ -52,7 +52,7 @@
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>rocket_launch</mat-icon>
-        Angor Projects
+        Angor Projects <span class="section-count">({{ angorProjectCount() }})</span>
       </h2>
       @if (angorLoading()) {
       <div class="streams-loading">
@@ -65,6 +65,22 @@
         <app-angor-project-card [project]="project"></app-angor-project-card>
         }
       </div>
+
+      @if (angorHasMore()) {
+      <div class="angor-load-more" #angorLoadMoreTrigger>
+        @if (angorLoadingMore()) {
+        <mat-spinner diameter="26"></mat-spinner>
+        <span>Loading more projects...</span>
+        } @else {
+        <span>Scroll to load more projects</span>
+        }
+      </div>
+      } @else {
+      <div class="angor-load-more angor-load-more--end">
+        <mat-icon>check_circle</mat-icon>
+        <span>All available projects loaded</span>
+      </div>
+      }
       } @else {
       <div class="no-content">
         <mat-icon>explore_off</mat-icon>

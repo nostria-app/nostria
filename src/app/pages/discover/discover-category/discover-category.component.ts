@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -82,6 +82,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private angorService = inject(AngorService);
   private destroy$ = new Subject<void>();
   private streamsSubscription: { close: () => void } | null = null;
+  private angorLoadMoreObserver: IntersectionObserver | null = null;
 
   // Route params
   readonly categoryType = signal<'content' | 'media'>('content');
@@ -147,6 +148,19 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Angor project signals
   readonly angorProjects = this.angorService.angorProjects;
   readonly angorLoading = this.angorService.loading;
+  readonly angorLoadingMore = this.angorService.loadingMore;
+  readonly angorHasMore = this.angorService.hasMore;
+  readonly angorProjectCount = computed(() => this.angorProjects().length);
+
+  @ViewChild('angorLoadMoreTrigger')
+  set angorLoadMoreTrigger(ref: ElementRef<HTMLElement> | undefined) {
+    if (!ref?.nativeElement) {
+      this.disconnectAngorLoadMoreObserver();
+      return;
+    }
+
+    this.setupAngorLoadMoreObserver(ref.nativeElement);
+  }
 
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
@@ -194,6 +208,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     if (this.streamsSubscription) {
       this.streamsSubscription.close();
     }
+    this.disconnectAngorLoadMoreObserver();
   }
 
   private async loadCategoryContent(): Promise<void> {
@@ -410,7 +425,45 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
 
 
   private loadAngorProjects(): void {
-    this.angorService.loadAngorProjects(20);
+    void this.angorService.loadAngorProjects(20);
+  }
+
+  loadMoreAngorProjects(): void {
+    void this.angorService.loadMoreAngorProjects(20);
+  }
+
+  private setupAngorLoadMoreObserver(target: HTMLElement): void {
+    this.disconnectAngorLoadMoreObserver();
+
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    this.angorLoadMoreObserver = new IntersectionObserver(
+      entries => {
+        if (!this.isFinanceCategory()) return;
+        if (!this.angorHasMore() || this.angorLoading() || this.angorLoadingMore()) return;
+
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            this.loadMoreAngorProjects();
+            break;
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '240px 0px',
+        threshold: 0.01,
+      },
+    );
+
+    this.angorLoadMoreObserver.observe(target);
+  }
+
+  private disconnectAngorLoadMoreObserver(): void {
+    if (!this.angorLoadMoreObserver) return;
+
+    this.angorLoadMoreObserver.disconnect();
+    this.angorLoadMoreObserver = null;
   }
 
   /**

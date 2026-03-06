@@ -90,6 +90,7 @@ export class AngorService {
   readonly ANGOR_DEFAULT_RELAYS = ['wss://relay.angor.io', 'wss://relay2.angor.io'];
 
   readonly ANGOR_PROJECT_KIND = 3030;
+  private readonly DEFAULT_BATCH_SIZE = 20;
 
   private pool: SimplePool | null = null;
 
@@ -99,9 +100,13 @@ export class AngorService {
   /** Reactive signal */
   readonly angorProjects = signal<AngorProject[]>([]);
   readonly loading = signal(false);
+  readonly loadingMore = signal(false);
+  readonly hasMore = signal(true);
   readonly error = signal<string | null>(null);
 
   private projectsLoaded = false;
+  private currentLimit = 0;
+  private lastIndexerCount = 0;
 
   private getPool(): SimplePool {
     if (!this.pool) {
@@ -113,17 +118,29 @@ export class AngorService {
   /**
    * Load Angor projects.
    */
-  async loadAngorProjects(limit = 20): Promise<void> {
-    if (this.loading() || this.projectsLoaded) return;
+  async loadAngorProjects(limit = this.DEFAULT_BATCH_SIZE): Promise<void> {
+    if (this.loading() || this.loadingMore()) return;
 
-    this.loading.set(true);
+    const nextLimit = Math.max(limit, this.currentLimit || this.DEFAULT_BATCH_SIZE);
+    const isLoadMore = this.projectsLoaded && nextLimit > this.currentLimit;
+    if (this.projectsLoaded && !isLoadMore) return;
+    if (isLoadMore && !this.hasMore()) return;
+
+    if (isLoadMore) {
+      this.loadingMore.set(true);
+    } else {
+      this.loading.set(true);
+    }
     this.error.set(null);
 
     try {
       //project list 
 
-      const indexedProjects = await this.fetchIndexerProjects(limit);
-      if (indexedProjects.length === 0) return;
+      const indexedProjects = await this.fetchIndexerProjects(nextLimit);
+      if (indexedProjects.length === 0) {
+        this.hasMore.set(false);
+        return;
+      }
 
       const pool = this.getPool();
       const targetRelays = await this.resolveAngorRelays();
@@ -189,6 +206,17 @@ export class AngorService {
       const projects = this.applyCachedMetadata(Array.from(projectMap.values()));
       projects.sort((a, b) => b.createdAt - a.createdAt);
 
+      const previousIndexerCount = this.lastIndexerCount;
+      this.lastIndexerCount = indexedProjects.length;
+      this.currentLimit = nextLimit;
+
+      // If increasing limit doesn't return more rows, we've reached the end.
+      if (indexedProjects.length < nextLimit || (isLoadMore && indexedProjects.length <= previousIndexerCount)) {
+        this.hasMore.set(false);
+      } else {
+        this.hasMore.set(true);
+      }
+
       // Publish basic project data immediately 
       this.zone.run(() => this.angorProjects.set(projects));
       this.projectsLoaded = true;
@@ -199,8 +227,19 @@ export class AngorService {
       this.logger.error('AngorService: failed to load projects', err);
       this.zone.run(() => this.error.set('Failed to load Angor projects'));
     } finally {
-      this.zone.run(() => this.loading.set(false));
+      this.zone.run(() => {
+        this.loading.set(false);
+        this.loadingMore.set(false);
+      });
     }
+  }
+
+  /** Load the next page worth of Angor projects by increasing the API limit. */
+  async loadMoreAngorProjects(batchSize = this.DEFAULT_BATCH_SIZE): Promise<void> {
+    if (this.loading() || this.loadingMore() || !this.hasMore()) return;
+
+    const nextLimit = (this.currentLimit || batchSize) + batchSize;
+    await this.loadAngorProjects(nextLimit);
   }
 
 
@@ -412,6 +451,10 @@ export class AngorService {
   /** Reset state so the next call to loadAngorProjects() re-fetches everything. */
   clearCache(): void {
     this.projectsLoaded = false;
+    this.currentLimit = 0;
+    this.lastIndexerCount = 0;
+    this.loadingMore.set(false);
+    this.hasMore.set(true);
     this.zone.run(() => this.angorProjects.set([]));
   }
 }
