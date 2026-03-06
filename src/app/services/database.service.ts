@@ -130,6 +130,10 @@ export interface RelayPublishingNotification extends Notification {
   event: Event;
   relayPromises?: RelayPublishPromise[];
   complete: boolean;
+  /** Number of retry attempts already executed for failed relay publishes. */
+  retryCount?: number;
+  /** Timestamp (ms) when the latest retry attempt was executed. */
+  lastRetryAttemptAt?: number;
 }
 
 // Track status of publishing to an individual relay

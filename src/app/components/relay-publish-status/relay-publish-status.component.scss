@@ -33,6 +33,10 @@
   gap: 16px;
 }
 
+.retry-limit-label {
+  color: var(--mat-sys-error);
+}
+
 .progress-text {
   font-weight: 500;
   color: var(--mat-sys-primary);

@@ -72,6 +72,14 @@ export class RelayPublishStatusComponent {
     return this.failedCount > 0;
   }
 
+  get retryCount(): number {
+    return this.notification().retryCount ?? 0;
+  }
+
+  get autoRetryLimitReached(): boolean {
+    return this.hasFailures && this.retryCount >= 2;
+  }
+
   onRetry(): void {
     this.retry.emit(this.notification().id);
   }
