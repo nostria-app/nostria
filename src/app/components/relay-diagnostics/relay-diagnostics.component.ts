@@ -1,6 +1,5 @@
 import { Component, inject, computed } from '@angular/core';
 import { SubscriptionManagerService } from '../../services/relays/subscription-manager';
-import { RelayBlockService } from '../../services/relays/relay-block.service';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -128,36 +127,6 @@ import { MatChipsModule } from '@angular/material/chips';
                     </div>
                   }
                 }
-              </div>
-            }
-          </mat-tab>
-          <mat-tab [label]="'Blocked (' + blockedRelays().length + ')'">
-            @if (blockedRelays().length > 0) {
-              <div class="section">
-                <h3>Blocked Relays</h3>
-                <table mat-table [dataSource]="blockedRelays()">
-                  <ng-container matColumnDef="blockedRelay">
-                    <th mat-header-cell *matHeaderCellDef>Relay URL</th>
-                    <td mat-cell *matCellDef="let entry">{{ entry.url }}</td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="blockedUntil">
-                    <th mat-header-cell *matHeaderCellDef>Blocked Until</th>
-                    <td mat-cell *matCellDef="let entry">{{ formatBlockedUntil(entry) }}</td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="blockedReason">
-                    <th mat-header-cell *matHeaderCellDef>Reason</th>
-                    <td mat-cell *matCellDef="let entry">{{ entry.reason }}</td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="blockedColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: blockedColumns;"></tr>
-                </table>
-              </div>
-            } @else {
-              <div class="section">
-                <h3>No blocked relays</h3>
               </div>
             }
           </mat-tab>
@@ -347,14 +316,10 @@ import { MatChipsModule } from '@angular/material/chips';
 })
 export class RelayDiagnosticsComponent {
   private subscriptionManager = inject(SubscriptionManagerService);
-  private relayBlock = inject(RelayBlockService);
 
   metrics = this.subscriptionManager.metricsSignal;
 
-  blockedRelays = computed(() => this.relayBlock.getBlockedRelays());
-
   displayedColumns = ['url', 'status', 'subscriptions', 'requests', 'pool', 'lastActivity'];
-  blockedColumns = ['blockedRelay', 'blockedUntil', 'blockedReason'];
 
   subscriptionsBySourceArray = computed(() => {
     return Array.from(this.metrics().subscriptionsBySource.entries());
@@ -392,26 +357,5 @@ export class RelayDiagnosticsComponent {
 
   formatFilter(filter: object): string {
     return JSON.stringify(filter, null, 0);
-  }
-
-  formatBlockedUntil(entry: { blockedUntil: number | null; remainingSeconds: number | null }): string {
-    if (entry.blockedUntil === null) {
-      return 'Auth required';
-    }
-
-    if (entry.remainingSeconds === null) {
-      return 'Unknown';
-    }
-
-    if (entry.remainingSeconds <= 0) {
-      return 'Expired';
-    }
-
-    if (entry.remainingSeconds < 60) {
-      return `${entry.remainingSeconds}s`;
-    }
-
-    const minutes = Math.ceil(entry.remainingSeconds / 60);
-    return `${minutes}m`;
   }
 }

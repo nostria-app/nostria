@@ -442,26 +442,6 @@
   }
 }
 
-@media (max-width: 700px) {
-  .action-button {
-    min-height: 40px;
-
-    ::ng-deep {
-
-      app-reaction-button,
-      app-reply-button,
-      app-zap-button,
-      .zap-button-container,
-      .reaction-container,
-      button[mat-icon-button],
-      .mat-mdc-icon-button {
-        width: 40px;
-        height: 40px;
-      }
-    }
-  }
-}
-
 .like-action {
   &:hover {
     color: #e91e63;

@@ -1,9 +1,3 @@
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
 import express from 'express';
 import cors from 'cors';
 import { join } from 'node:path';
@@ -12,6 +6,45 @@ import multer from 'multer';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
+
+const SSR_ALLOWED_HOST_PATTERNS = [
+  'nostria.app',
+  'www.nostria.app',
+  'beta.nostria.app',
+  'nostria-beta.azurewebsites.net',
+  '*.azurewebsites.net',
+  '*.nostria.app',
+  'localhost',
+  '127.0.0.1',
+];
+
+const deploymentHosts = [
+  process.env['WEBSITE_HOSTNAME'],
+  process.env['HOSTNAME'],
+]
+  .map(host => host?.trim().toLowerCase())
+  .filter((host): host is string => !!host);
+
+const envAllowedHosts = (process.env['NG_ALLOWED_HOSTS'] ?? '')
+  .split(',')
+  .map(host => host.trim().toLowerCase())
+  .filter(Boolean);
+
+const angularAllowedHosts = Array.from(new Set([
+  ...SSR_ALLOWED_HOST_PATTERNS,
+  ...deploymentHosts,
+  ...envAllowedHosts,
+]));
+
+process.env['NG_ALLOWED_HOSTS'] = angularAllowedHosts.join(',');
+
+const {
+  AngularNodeAppEngine,
+  createNodeRequestHandler,
+  isMainModule,
+  writeResponseToNodeResponse,
+} = await import('@angular/ssr/node');
+
 const angularApp = new AngularNodeAppEngine();
 
 // ============================================
@@ -61,6 +94,58 @@ function isBot(userAgent: string | undefined): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
+const SSR_TRUSTED_HOSTS = new Set(
+  angularAllowedHosts.filter(host => !host.includes('*')),
+);
+
+function extractHostnamesFromHeader(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map(host => host.trim())
+    .filter(Boolean)
+    .map((host) => {
+      const withoutPort = host.includes(':') ? host.split(':')[0] : host;
+      return withoutPort.toLowerCase();
+    });
+}
+
+function normalizeAbsoluteRequestUrl(req: express.Request): { normalized: boolean; hostname?: string } {
+  const requestUrl = req.url;
+
+  if (!/^https?:\/\//i.test(requestUrl)) {
+    return { normalized: false };
+  }
+
+  try {
+    const parsed = new URL(requestUrl);
+    const hostname = parsed.hostname.toLowerCase();
+
+    const dynamicAllowedHosts = new Set<string>([
+      ...extractHostnamesFromHeader(req.headers.host),
+      ...extractHostnamesFromHeader(req.headers['x-forwarded-host'] as string | undefined),
+    ]);
+
+    const isTrustedHost = SSR_TRUSTED_HOSTS.has(hostname) || dynamicAllowedHosts.has(hostname);
+    if (!isTrustedHost) {
+      return { normalized: false, hostname };
+    }
+
+    const normalizedPathAndQuery = `${parsed.pathname}${parsed.search}`;
+    req.url = normalizedPathAndQuery;
+    const reqWithOriginalUrl = req as express.Request & { originalUrl?: string };
+    if (typeof reqWithOriginalUrl.originalUrl === 'string') {
+      reqWithOriginalUrl.originalUrl = normalizedPathAndQuery;
+    }
+    return { normalized: true, hostname };
+  } catch {
+    return { normalized: false };
+  }
+}
+
 // ============================================
 // SSR Response Cache for Bot Requests
 // ============================================
@@ -71,6 +156,38 @@ interface CachedResponse {
   timestamp: number;
 }
 
+interface PreviewCacheabilityAnalysis {
+  isCacheable: boolean;
+  reason:
+  | 'ok'
+  | 'no_social_tags'
+  | 'generic_title'
+  | 'generic_route_fallback'
+  | 'generic_home'
+  | 'low_quality_marker';
+  ogTitle: string;
+  ogDescription: string;
+  twitterTitle: string;
+  twitterDescription: string;
+}
+
+function setNoStoreHeaders(res: express.Response): void {
+  res.setHeader('Cache-Control', 'no-store, no-cache, max-age=0, s-maxage=0, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+}
+
+function setPreviewDebugHeaders(
+  res: express.Response,
+  analysis: PreviewCacheabilityAnalysis,
+  renderMs: number,
+): void {
+  res.setHeader('X-SSR-Preview-Quality', analysis.isCacheable ? 'healthy' : 'degraded');
+  res.setHeader('X-SSR-Preview-Reason', analysis.reason);
+  res.setHeader('X-SSR-Render-Ms', renderMs.toString());
+}
+
 function extractMetaContent(html: string, tag: string): string {
   const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
@@ -78,7 +195,120 @@ function extractMetaContent(html: string, tag: string): string {
   return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
 }
 
-function isCacheableSsrPreviewHtml(html: string): boolean {
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, content: string): string {
+  const escapedKey = key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const escapedContent = escapeHtmlAttribute(content);
+
+  const attrFirst = new RegExp(`(<meta\\s+${attr}=["']${escapedKey}["']\\s+content=["'])[^"']*(["'][^>]*>)`, 'i');
+  if (attrFirst.test(html)) {
+    return html.replace(attrFirst, `$1${escapedContent}$2`);
+  }
+
+  const contentFirst = new RegExp(`(<meta\\s+content=["'])[^"']*(["']\\s+${attr}=["']${escapedKey}["'][^>]*>)`, 'i');
+  if (contentFirst.test(html)) {
+    return html.replace(contentFirst, `$1${escapedContent}$2`);
+  }
+
+  return html.replace('</head>', `  <meta ${attr}="${key}" content="${escapedContent}">\n</head>`);
+}
+
+function upsertTitleTag(html: string, title: string): string {
+  const escapedTitle = escapeHtmlAttribute(title);
+  if (/<title>[\s\S]*?<\/title>/i.test(html)) {
+    return html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapedTitle}</title>`);
+  }
+  return html.replace('</head>', `  <title>${escapedTitle}</title>\n</head>`);
+}
+
+function buildRouteFallbackPreview(path: string): { title: string; description: string; url: string } | null {
+  if (path.startsWith('/e/')) {
+    return {
+      title: 'Nostr Note on Nostria',
+      description: 'Open this Nostr note on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/a/')) {
+    return {
+      title: 'Nostr Article on Nostria',
+      description: 'Open this Nostr article on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/p/') || path.startsWith('/u/')) {
+    return {
+      title: 'Nostr Profile on Nostria',
+      description: 'View this Nostr profile on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/stream/')) {
+    return {
+      title: 'Nostr Live Stream on Nostria',
+      description: 'Watch this live stream on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/song/')) {
+    return {
+      title: 'Nostr Song on Nostria',
+      description: 'Listen to this song on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/artist/')) {
+    return {
+      title: 'Nostr Artist on Nostria',
+      description: 'Discover this artist on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  if (path.startsWith('/music/playlist/')) {
+    return {
+      title: 'Nostr Playlist on Nostria',
+      description: 'Open this playlist on Nostria, the decentralized social app.',
+      url: `https://nostria.app${path}`,
+    };
+  }
+
+  return null;
+}
+
+function applyRouteFallbackPreviewHtml(html: string, path: string): string {
+  const fallback = buildRouteFallbackPreview(path);
+  if (!fallback) {
+    return html;
+  }
+
+  let result = html;
+  result = upsertTitleTag(result, `Nostria – ${fallback.title}`);
+  result = upsertMetaTag(result, 'name', 'description', fallback.description);
+  result = upsertMetaTag(result, 'property', 'og:title', fallback.title);
+  result = upsertMetaTag(result, 'property', 'og:description', fallback.description);
+  result = upsertMetaTag(result, 'property', 'og:image', 'https://nostria.app/assets/nostria-social.jpg');
+  result = upsertMetaTag(result, 'property', 'og:url', fallback.url);
+  result = upsertMetaTag(result, 'name', 'twitter:card', 'summary_large_image');
+  result = upsertMetaTag(result, 'name', 'twitter:title', fallback.title);
+  result = upsertMetaTag(result, 'name', 'twitter:description', fallback.description);
+  result = upsertMetaTag(result, 'name', 'twitter:image', 'https://nostria.app/assets/nostria-social.jpg');
+  return result;
+}
+
+function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
   const ogTitle = extractMetaContent(html, 'og:title').trim();
   const ogDescription = extractMetaContent(html, 'og:description').trim();
   const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
@@ -86,7 +316,14 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
 
   const hasSocialTags = !!(ogTitle || ogDescription || twitterTitle || twitterDescription);
   if (!hasSocialTags) {
-    return false;
+    return {
+      isCacheable: false,
+      reason: 'no_social_tags',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
   }
 
   const lowQualityMarkers = [
@@ -98,9 +335,98 @@ function isCacheableSsrPreviewHtml(html: string): boolean {
     'loading...',
   ];
 
+  const genericRouteFallbackTitles = [
+    'nostr note on nostria',
+    'nostr article on nostria',
+    'nostr profile on nostria',
+    'nostr post on nostria',
+    'nostr song on nostria',
+    'nostr playlist on nostria',
+    'nostr artist on nostria',
+    'nostr live stream on nostria',
+  ];
+
+  const genericRouteFallbackMarkers = [
+    'open this nostr note on nostria',
+    'open this nostr article on nostria',
+    'view this nostr profile on nostria',
+    'open this content on nostria',
+    'listen to this song on nostria',
+    'open this playlist on nostria',
+    'discover this artist on nostria',
+    'watch this live stream on nostria',
+  ];
+
+  const genericHomeTitles = ['nostria - your social network', 'nostria'];
+  const genericHomeDescriptionMarkers = [
+    'nostria puts control back where it belongs',
+    'nostria: built for human connections',
+    'nostria is social without the noise',
+  ];
+
   const combined = `${ogTitle} ${ogDescription} ${twitterTitle} ${twitterDescription}`.toLowerCase();
   const genericTitle = ogTitle.toLowerCase() === 'nostr event' || twitterTitle.toLowerCase() === 'nostr event';
-  return !genericTitle && !lowQualityMarkers.some(marker => combined.includes(marker));
+  const genericRouteFallbackPreview =
+    genericRouteFallbackTitles.includes(ogTitle.toLowerCase()) ||
+    genericRouteFallbackTitles.includes(twitterTitle.toLowerCase()) ||
+    genericRouteFallbackMarkers.some(marker => combined.includes(marker));
+  const genericHomePreview =
+    genericHomeTitles.includes(ogTitle.toLowerCase()) ||
+    genericHomeTitles.includes(twitterTitle.toLowerCase()) ||
+    genericHomeDescriptionMarkers.some(marker => combined.includes(marker));
+
+  if (genericTitle) {
+    return {
+      isCacheable: false,
+      reason: 'generic_title',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (genericRouteFallbackPreview) {
+    return {
+      isCacheable: false,
+      reason: 'generic_route_fallback',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (genericHomePreview) {
+    return {
+      isCacheable: false,
+      reason: 'generic_home',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  if (lowQualityMarkers.some(marker => combined.includes(marker))) {
+    return {
+      isCacheable: false,
+      reason: 'low_quality_marker',
+      ogTitle,
+      ogDescription,
+      twitterTitle,
+      twitterDescription,
+    };
+  }
+
+  return {
+    isCacheable: true,
+    reason: 'ok',
+    ogTitle,
+    ogDescription,
+    twitterTitle,
+    twitterDescription,
+  };
 }
 
 // Cache for SSR responses (keyed by URL path)
@@ -341,6 +667,9 @@ app.use(
  * For bot requests, responses are cached to improve performance.
  */
 app.use(async (req, res, next) => {
+  const requestStartedAt = Date.now();
+  normalizeAbsoluteRequestUrl(req);
+
   const userAgent = req.headers['user-agent'];
   const isBotRequest = isBot(userAgent);
   const path = req.path;
@@ -348,8 +677,11 @@ app.use(async (req, res, next) => {
 
   // Check cache for bot requests on SSR routes
   if (isBotRequest && isSSR) {
+    res.setHeader('Vary', 'User-Agent');
     const cached = ssrCache.get(path);
     if (cached && (Date.now() - cached.timestamp) < SSR_CACHE_MAX_AGE_MS) {
+      const cachedAnalysis = analyzeSsrPreviewHtml(cached.html);
+      setPreviewDebugHeaders(res, cachedAnalysis, Date.now() - requestStartedAt);
       // Set cached headers
       for (const [key, value] of Object.entries(cached.headers)) {
         res.setHeader(key, value);
@@ -379,28 +711,30 @@ app.use(async (req, res, next) => {
           headersToCache[key] = value;
         });
 
-        const isCacheableHtml = isCacheableSsrPreviewHtml(html);
+        const analysis = analyzeSsrPreviewHtml(html);
+        const isCacheableHtml = analysis.isCacheable;
+        const finalHtml = isCacheableHtml ? html : applyRouteFallbackPreviewHtml(html, path);
         if (isCacheableHtml) {
           // Cache healthy SSR response for bots
           ssrCache.set(path, {
-            html,
+            html: finalHtml,
             headers: headersToCache,
             timestamp: Date.now(),
           });
         } else {
           // Ensure degraded responses don't poison cache for retries
           ssrCache.delete(path);
-          console.warn(`[SSR Cache] Skipping cache for degraded preview on ${path}`);
         }
 
         // Set Cache-Control headers for bots
-        res.setHeader(
-          'Cache-Control',
-          isCacheableHtml
-            ? 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400'
-            : 'no-store, max-age=0'
-        );
-        res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED');
+        if (isCacheableHtml) {
+          res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400');
+        } else {
+          setNoStoreHeaders(res);
+          res.setHeader('X-SSR-Retryable', 'true');
+        }
+        setPreviewDebugHeaders(res, analysis, Date.now() - requestStartedAt);
+        res.setHeader('X-SSR-Cache', isCacheableHtml ? 'MISS' : 'SKIP_DEGRADED_FALLBACK');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
         // Copy other headers from the original response
@@ -410,7 +744,7 @@ app.use(async (req, res, next) => {
           }
         });
 
-        res.send(html);
+        res.send(finalHtml);
         return;
       }
 
@@ -427,9 +761,17 @@ app.use(async (req, res, next) => {
 
     // For bot requests, try to serve a basic fallback with meta tags
     if (isBotRequest && isSSR) {
+      ssrCache.delete(path);
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.status(200).send(`<!DOCTYPE html>
+      setNoStoreHeaders(res);
+      res.setHeader('Vary', 'User-Agent');
+      res.setHeader('X-SSR-Preview-Quality', 'degraded');
+      res.setHeader('X-SSR-Preview-Reason', 'error_fallback');
+      res.setHeader('X-SSR-Render-Ms', (Date.now() - requestStartedAt).toString());
+      res.setHeader('X-SSR-Cache', 'SKIP_ERROR_FALLBACK');
+      res.setHeader('X-SSR-Retryable', 'true');
+
+      const fallbackHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -451,7 +793,9 @@ app.use(async (req, res, next) => {
   <h1>Loading...</h1>
   <script>window.location.reload();</script>
 </body>
-</html>`);
+</html>`;
+
+      res.status(200).send(applyRouteFallbackPreviewHtml(fallbackHtml, path));
       return;
     }
 

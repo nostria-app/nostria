@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Event, kinds, nip19, Filter } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DataService } from './data.service';
@@ -119,6 +119,23 @@ export class EventService {
   private readonly mediaService = inject(MediaService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly repostService = inject(RepostService);
+  private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
+
+  isEventLocallyDeleted(eventId: string): boolean {
+    return this.locallyDeletedEventIds().has(eventId);
+  }
+
+  markEventAsLocallyDeleted(eventId: string): void {
+    this.locallyDeletedEventIds.update(existing => {
+      if (existing.has(eventId)) {
+        return existing;
+      }
+
+      const next = new Set(existing);
+      next.add(eventId);
+      return next;
+    });
+  }
 
   /**
    * Parse event tags to extract thread information
@@ -538,6 +555,8 @@ export class EventService {
    * @param eventId The event ID to delete from local storage
    */
   async deleteEventFromLocalStorage(eventId: string): Promise<void> {
+    this.markEventAsLocallyDeleted(eventId);
+
     try {
       await this.database.deleteEvent(eventId);
       this.logger.info(`[Deletion] Deleted event ${eventId} from local database`);

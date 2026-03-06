@@ -17,6 +17,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { nip19 } from 'nostr-tools';
+import { SimplePool } from 'nostr-tools';
+import { BunkerSigner } from 'nostr-tools/nip46';
+import { hexToBytes } from '@noble/hashes/utils.js';
 
 import {
   ConfirmDialogComponent,
@@ -35,6 +38,9 @@ import { ApplicationService } from '../../services/application.service';
 import { PremiumApiService, SubscriptionHistoryItem, PaymentHistoryItem } from '../../services/premium-api.service';
 import { SetUsernameDialogComponent, SetUsernameDialogData } from '../premium/set-username-dialog/set-username-dialog.component';
 import { environment } from '../../../environments/environment';
+import { NostrUser } from '../../services/nostr.service';
+
+type RemoteRelayOption = 'nip46' | 'eu' | 'us' | 'custom';
 
 @Component({
   selector: 'app-accounts',
@@ -61,6 +67,23 @@ import { environment } from '../../../environments/environment';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountsComponent implements OnInit, OnDestroy {
+  private static readonly NIP46_SWITCH_RELAYS_TIMEOUT_MS = 8000;
+
+  private readonly remoteRelayDefaults = {
+    nip46: {
+      label: 'relay.nip46.com',
+      url: 'wss://relay.nip46.com/',
+    },
+    eu: {
+      label: '🇪🇺 Nostria Europe',
+      url: 'wss://ribo.eu.nostria.app/',
+    },
+    us: {
+      label: '🇺🇸 Nostria US',
+      url: 'wss://ribo.us.nostria.app/',
+    },
+  } as const;
+
   nostrService = inject(NostrService);
   layout = inject(LayoutService);
   private dialog = inject(MatDialog);
@@ -91,6 +114,9 @@ export class AccountsComponent implements OnInit, OnDestroy {
   resetPinControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
   private cachedNsec = signal<string>('');
   private cachedMnemonic = signal<string>('');
+  remoteRelayOption = signal<RemoteRelayOption>('nip46');
+  customRemoteRelayInput = signal('');
+  isSwitchingRemoteRelay = signal(false);
 
   // Premium signals
   subscriptionHistory = signal<SubscriptionHistoryItem[]>([]);
@@ -136,9 +162,12 @@ export class AccountsComponent implements OnInit, OnDestroy {
       if (account) {
         this.loadNsec();
         this.loadMnemonic();
+        this.initializeRemoteRelaySelection(account);
       } else {
         this.cachedNsec.set('');
         this.cachedMnemonic.set('');
+        this.remoteRelayOption.set('nip46');
+        this.customRemoteRelayInput.set('');
       }
     });
 
@@ -170,6 +199,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
     // Load credentials
     this.loadNsec();
     this.loadMnemonic();
+    this.initializeRemoteRelaySelection(this.accountState.account());
   }
 
   ngOnDestroy(): void {
@@ -488,6 +518,94 @@ export class AccountsComponent implements OnInit, OnDestroy {
     return !!this.accountState.account()?.bunker;
   }
 
+  getRemoteRelayLabel(option: Exclude<RemoteRelayOption, 'custom'>): string {
+    return this.remoteRelayDefaults[option].label;
+  }
+
+  getCurrentRemoteRelay(): string {
+    return this.accountState.account()?.bunker?.relays?.[0] || '';
+  }
+
+  setRemoteRelayOption(option: RemoteRelayOption): void {
+    this.remoteRelayOption.set(option);
+  }
+
+  onCustomRemoteRelayInput(value: string): void {
+    this.customRemoteRelayInput.set(value);
+  }
+
+  autoFormatCustomRemoteRelay(): void {
+    const normalized = this.normalizeRelayInput(this.customRemoteRelayInput());
+    if (normalized) {
+      this.customRemoteRelayInput.set(normalized);
+    }
+  }
+
+  canSwitchRemoteRelay(): boolean {
+    if (!this.hasRemoteSigner() || this.isSwitchingRemoteRelay()) {
+      return false;
+    }
+
+    if (this.remoteRelayOption() !== 'custom') {
+      return true;
+    }
+
+    return this.normalizeRelayInput(this.customRemoteRelayInput()) !== '';
+  }
+
+  async switchRemoteRelays(): Promise<void> {
+    const account = this.accountState.account();
+    if (!account?.bunker) {
+      return;
+    }
+
+    const selectedRelay = this.getSelectedRelayUrl();
+    if (!selectedRelay) {
+      this.snackBar.open('Please enter a valid relay URL', 'Dismiss', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    this.isSwitchingRemoteRelay.set(true);
+
+    try {
+      const currentRelays = this.utilities.normalizeRelayUrls(account.bunker.relays || []);
+      const desiredRelays = [selectedRelay];
+
+      const switchResult = await this.requestSignerRelaySwitch(account, currentRelays, desiredRelays);
+      if (!switchResult.success) {
+        this.snackBar.open('Remote signer did not confirm relay switch. Keep current relay and try again.', 'Dismiss', {
+          duration: 4000,
+        });
+        return;
+      }
+
+      const relaysToUse = desiredRelays;
+
+      const updatedAccount = {
+        ...account,
+        bunker: {
+          ...account.bunker,
+          relays: relaysToUse,
+        },
+      };
+
+      await this.nostrService.setAccount(updatedAccount);
+      this.initializeRemoteRelaySelection(updatedAccount);
+
+      this.snackBar.open('Remote signing relay updated', 'Dismiss', {
+        duration: 3000,
+      });
+    } catch {
+      this.snackBar.open('Failed to update remote signing relay', 'Dismiss', {
+        duration: 3000,
+      });
+    } finally {
+      this.isSwitchingRemoteRelay.set(false);
+    }
+  }
+
   getPreferredSigningMethod(): 'local' | 'remote' {
     return this.accountState.account()?.preferredSigningMethod || 'local';
   }
@@ -621,6 +739,125 @@ export class AccountsComponent implements OnInit, OnDestroy {
 
   isPreviewAccount(): boolean {
     return this.accountState.account()?.source === 'preview';
+  }
+
+  private initializeRemoteRelaySelection(account: NostrUser | null): void {
+    const currentRelay = account?.bunker?.relays?.[0];
+    const normalizedCurrentRelay = this.normalizeRelayInput(currentRelay || '');
+
+    if (!normalizedCurrentRelay) {
+      this.remoteRelayOption.set('nip46');
+      this.customRemoteRelayInput.set('');
+      return;
+    }
+
+    const defaultEntry = Object.entries(this.remoteRelayDefaults).find(([, relay]) => relay.url === normalizedCurrentRelay);
+
+    if (defaultEntry) {
+      this.remoteRelayOption.set(defaultEntry[0] as RemoteRelayOption);
+      this.customRemoteRelayInput.set('');
+      return;
+    }
+
+    this.remoteRelayOption.set('custom');
+    this.customRemoteRelayInput.set(normalizedCurrentRelay);
+  }
+
+  private getSelectedRelayUrl(): string | null {
+    const selectedOption = this.remoteRelayOption();
+
+    if (selectedOption === 'custom') {
+      const normalized = this.normalizeRelayInput(this.customRemoteRelayInput());
+      if (!normalized) {
+        return null;
+      }
+
+      this.customRemoteRelayInput.set(normalized);
+      return normalized;
+    }
+
+    return this.remoteRelayDefaults[selectedOption].url;
+  }
+
+  private normalizeRelayInput(rawInput: string): string {
+    let url = rawInput.trim();
+
+    if (!url) {
+      return '';
+    }
+
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      url = `wss://${url}`;
+    }
+
+    if (url.startsWith('ws://')) {
+      url = `wss://${url.substring(5)}`;
+    }
+
+    return this.utilities.normalizeRelayUrl(url);
+  }
+
+  private async requestSignerRelaySwitch(
+    account: NostrUser,
+    currentRelays: string[],
+    desiredRelays: string[]
+  ): Promise<{ success: boolean }> {
+    if (!account.bunker) {
+      return { success: false };
+    }
+
+    const clientKeyHex = account.bunkerClientKey || account.privkey;
+    if (!clientKeyHex) {
+      return { success: false };
+    }
+
+    let clientKey: Uint8Array;
+    try {
+      clientKey = hexToBytes(clientKeyHex);
+    } catch {
+      return { success: false };
+    }
+
+    const requestRelays = currentRelays.length
+      ? currentRelays
+      : this.utilities.normalizeRelayUrls(account.bunker.relays || []);
+
+    if (!requestRelays.length) {
+      return { success: false };
+    }
+
+    const pool = new SimplePool({ enablePing: true, enableReconnect: false });
+    const signer = BunkerSigner.fromBunker(clientKey, {
+      ...account.bunker,
+      relays: requestRelays,
+    }, { pool });
+
+    try {
+      await Promise.race([
+        signer.connect(),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('connect timeout')), AccountsComponent.NIP46_SWITCH_RELAYS_TIMEOUT_MS);
+        }),
+      ]);
+
+      await Promise.race([
+        signer.sendRequest('switch_relays', desiredRelays),
+        new Promise<string>((_, reject) => {
+          setTimeout(() => reject(new Error('switch_relays timeout')), AccountsComponent.NIP46_SWITCH_RELAYS_TIMEOUT_MS);
+        }),
+      ]);
+
+      return { success: true };
+    } catch {
+      return { success: false };
+    } finally {
+      try {
+        await signer.close();
+      } catch {
+        void 0;
+      }
+      pool.destroy();
+    }
   }
 
   hasEncryptedKey(): boolean {

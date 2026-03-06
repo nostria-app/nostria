@@ -33,10 +33,21 @@
   .panel-title {
     margin: 0;
     font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .panel-header-spacer {
     flex: 1;
+    min-width: 0;
+  }
+}
+
+// When the left panel is narrow (700–1024px), hide the title so icon buttons remain visible
+@media (min-width: 700px) and (max-width: 1024px) {
+  .panel-header .panel-title {
+    display: none;
   }
 }
 
@@ -829,11 +840,25 @@
 
     &.pending {
       opacity: 0.7;
+      animation: bubble-sending 1.5s ease-in-out infinite;
     }
 
     &.failed {
       background-color: rgba(255, 180, 171, 0.8);
+      border-left: 3px solid var(--mat-sys-error);
     }
+  }
+}
+
+@keyframes bubble-sending {
+
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 0.85;
   }
 }
 
@@ -861,6 +886,7 @@
 
     &.failed {
       background-color: rgba(147, 0, 10, 0.7);
+      border-left: 3px solid var(--mat-sys-error);
     }
   }
 }
@@ -1209,10 +1235,6 @@
   top: 8px;
   font-size: 1.1rem;
 
-  &.secure {
-    color: var(--mat-success-color);
-  }
-
   &.mixed {
     color: var(--mat-sys-outline);
   }
@@ -1238,13 +1260,21 @@
     height: 12px;
     width: 12px;
 
-    &.secure {
-      color: var(--mat-success-color);
-    }
-
     &.insecure {
       color: var(--mat-sys-outline);
     }
+  }
+
+  .sending-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .sending-text {
+    font-size: var(--text-2xs);
+    opacity: 0.8;
+    animation: sending-pulse 1.5s ease-in-out infinite;
   }
 
   .pending-spinner {
@@ -1259,10 +1289,23 @@
 
   .failed-icon {
     color: var(--mat-sys-error);
+    cursor: pointer;
   }
 
   .read-icon {
     color: var(--mat-sys-primary);
+  }
+}
+
+@keyframes sending-pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
   }
 }
 
@@ -1281,6 +1324,7 @@
       font-size: 16px;
       width: 16px;
       height: 16px;
+      color: var(--mat-sys-error);
     }
   }
 }
@@ -1535,6 +1579,108 @@ app-message-content {
 }
 
 :host-context(.dark) .shared-link-item {
+  background-color: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Shared Images Thumbnail Grid
+.shared-images-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.shared-image-thumb {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  display: block;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.05);
+  }
+}
+
+// Link Preview Card
+.shared-link-preview {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.2s ease;
+  background-color: rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .link-preview-image {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    border-radius: 6px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .link-preview-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+  }
+
+  .link-preview-title {
+    font-size: var(--text-sm);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .link-preview-description {
+    font-size: var(--text-xs);
+    opacity: 0.7;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .link-preview-url {
+    font-size: var(--text-xs);
+    opacity: 0.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+:host-context(.dark) .shared-link-preview {
   background-color: rgba(255, 255, 255, 0.05);
 
   &:hover {

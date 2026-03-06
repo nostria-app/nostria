@@ -8,7 +8,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SubscriptionManagerService, SubscriptionInfo, ConnectionInfo, QueryInfo } from '../../services/relays/subscription-manager';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MatTabsModule } from '@angular/material/tabs';
-import { RelayBlockService } from '../../services/relays/relay-block.service';
 
 interface RelayStatus {
   url: string;
@@ -51,7 +50,6 @@ interface QueryGroup {
 })
 export class DebugPanelComponent implements OnInit, OnDestroy {
   private subscriptionManager = inject(SubscriptionManagerService);
-  private relayBlock = inject(RelayBlockService);
   dialogRef = inject(CustomDialogRef);
 
   // Public constants for template access
@@ -65,7 +63,6 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
 
   // Get metrics signal from subscription manager
   metrics = this.subscriptionManager.metricsSignal;
-  blockedRelays = computed(() => this.relayBlock.getBlockedRelays());
 
   // Current time for relative calculations
   currentTime = signal(Date.now());
@@ -83,7 +80,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   relayStatuses = computed<RelayStatus[]>(() => {
     const connections = this.metrics().connectionsByRelay;
     const statuses: RelayStatus[] = [];
-    
+
     connections.forEach((conn, url) => {
       statuses.push({
         url: this.shortenUrl(url),
@@ -112,12 +109,12 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
 
     for (const sub of this.metrics().subscriptions) {
       if (!sub.active) continue;
-      
+
       // Filter by selected relay if one is selected
       if (selectedRelayUrl && !sub.relayUrls.includes(selectedRelayUrl)) {
         continue;
       }
-      
+
       const subs = bySource.get(sub.source) || [];
       subs.push(sub);
       bySource.set(sub.source, subs);
@@ -148,7 +145,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
       if (selectedRelayUrl && !query.relayUrls.includes(selectedRelayUrl)) {
         continue;
       }
-      
+
       const queries = bySource.get(query.source) || [];
       queries.push(query);
       bySource.set(query.source, queries);
@@ -172,11 +169,11 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   filteredQueries = computed<QueryInfo[]>(() => {
     const selectedRelayUrl = this.selectedRelay();
     let queries = this.metrics().queries;
-    
+
     if (selectedRelayUrl) {
       queries = queries.filter(q => q.relayUrls.includes(selectedRelayUrl));
     }
-    
+
     // Already sorted by createdAt descending (newest first) from the service
     return queries;
   });
@@ -201,37 +198,37 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   queryStats = computed(() => {
     const queries = this.metrics().queries;
     const completedQueries = queries.filter(q => q.status === 'completed' && q.completedAt);
-    
+
     // Calculate durations for completed queries
     const durations = completedQueries
       .map(q => q.completedAt! - q.createdAt)
       .filter(d => d > 0);
-    
+
     // Average duration
-    const avgDuration = durations.length > 0 
-      ? durations.reduce((a, b) => a + b, 0) / durations.length 
+    const avgDuration = durations.length > 0
+      ? durations.reduce((a, b) => a + b, 0) / durations.length
       : 0;
-    
+
     // Min/Max duration
     const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
     const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
-    
+
     // Queries per second (based on queries in last 10 seconds)
     const now = this.currentTime();
     const recentWindow = 10000; // 10 seconds
     const recentQueries = queries.filter(q => now - q.createdAt < recentWindow);
     const queriesPerSecond = recentQueries.length / (recentWindow / 1000);
-    
+
     // Success rate (completed out of total non-active)
     const totalFinished = completedQueries.length;
     const activeCount = queries.filter(q => q.status === 'active').length;
     const totalAttempted = queries.length - activeCount + totalFinished;
     const successRate = totalAttempted > 0 ? (totalFinished / totalAttempted) * 100 : 100;
-    
+
     // Slow queries (> 2 seconds)
     const slowQueryThreshold = 2000;
     const slowQueries = completedQueries.filter(q => (q.completedAt! - q.createdAt) > slowQueryThreshold).length;
-    
+
     return {
       avgDuration,
       minDuration,
@@ -342,27 +339,6 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  formatBlockedUntil(entry: { blockedUntil: number | null; remainingSeconds: number | null }): string {
-    if (entry.blockedUntil === null) {
-      return 'Auth required';
-    }
-
-    if (entry.remainingSeconds === null) {
-      return 'Unknown';
-    }
-
-    if (entry.remainingSeconds <= 0) {
-      return 'Expired';
-    }
-
-    if (entry.remainingSeconds < 60) {
-      return `${entry.remainingSeconds}s`;
-    }
-
-    const minutes = Math.ceil(entry.remainingSeconds / 60);
-    return `${minutes}m`;
-  }
-
   private getRelayHealth(conn: ConnectionInfo): 'good' | 'warning' | 'error' {
     if (!conn.isConnected) return 'error';
     const maxPerRelay = this.maxSubsPerRelay;
@@ -391,7 +367,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   formatFilter(filter: object): string {
     const f = filter as Record<string, unknown>;
     const parts: string[] = [];
-    
+
     if (f['kinds']) {
       const kinds = f['kinds'] as number[];
       const kindNames = kinds.map(k => this.getKindName(k));
@@ -418,7 +394,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
     if (f['until']) parts.push(`until:${new Date((f['until'] as number) * 1000).toLocaleDateString()}`);
     if (f['limit']) parts.push(`limit:${f['limit']}`);
     if (f['ids']) parts.push(`ids:${(f['ids'] as string[]).length}`);
-    
+
     return parts.join(' ') || JSON.stringify(filter);
   }
 

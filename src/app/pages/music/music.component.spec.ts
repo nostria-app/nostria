@@ -21,125 +21,125 @@ import { MusicDataService } from '../../services/music-data.service';
 import { LoggerService } from '../../services/logger.service';
 
 describe('MusicComponent', () => {
-  let component: MusicComponent;
-  let fixture: ComponentFixture<MusicComponent>;
+    let component: MusicComponent;
+    let fixture: ComponentFixture<MusicComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [MusicComponent],
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([]),
-        {
-          provide: RelayPoolService,
-          useValue: {
-            subscribe: jasmine.createSpy('subscribe').and.returnValue({ close: jasmine.createSpy('close') }),
-          },
-        },
-        {
-          provide: RelaysService,
-          useValue: { getOptimalRelays: jasmine.createSpy('getOptimalRelays').and.returnValue([]) },
-        },
-        {
-          provide: AccountRelayService,
-          useValue: { getRelayUrls: jasmine.createSpy('getRelayUrls').and.returnValue([]) },
-        },
-        {
-          provide: UtilitiesService,
-          useValue: { anonymousRelays: [], extractLyricsFromEvent: jasmine.createSpy('extractLyricsFromEvent') },
-        },
-        {
-          provide: ReportingService,
-          useValue: {
-            isUserBlocked: jasmine.createSpy('isUserBlocked').and.returnValue(false),
-            isContentBlocked: jasmine.createSpy('isContentBlocked').and.returnValue(false),
-          },
-        },
-        {
-          provide: AccountStateService,
-          useValue: {
-            followingList: jasmine.createSpy('followingList').and.returnValue([]),
-            pubkey: jasmine.createSpy('pubkey').and.returnValue(null),
-          },
-        },
-        {
-          provide: ApplicationService,
-          useValue: { authenticated: jasmine.createSpy('authenticated').and.returnValue(false) },
-        },
-        { provide: MediaPlayerService, useValue: {} },
-        { provide: DataService, useValue: { getCachedProfile: jasmine.createSpy('getCachedProfile') } },
-        {
-          provide: DatabaseService,
-          useValue: {
-            getEventsByKind: jasmine.createSpy('getEventsByKind').and.returnValue(Promise.resolve([])),
-            getParameterizedReplaceableEvent: jasmine.createSpy('getParameterizedReplaceableEvent').and.returnValue(Promise.resolve(null)),
-            saveEvent: jasmine.createSpy('saveEvent').and.returnValue(Promise.resolve()),
-          },
-        },
-        {
-          provide: OfflineMusicService,
-          useValue: { offlineTracks: jasmine.createSpy('offlineTracks').and.returnValue([]) },
-        },
-        {
-          provide: AccountLocalStateService,
-          useValue: {
-            getMusicYoursSectionCollapsed: jasmine.createSpy('getMusicYoursSectionCollapsed').and.returnValue(false),
-            setMusicYoursSectionCollapsed: jasmine.createSpy('setMusicYoursSectionCollapsed'),
-          },
-        },
-        { provide: LayoutService, useValue: {} },
-        {
-          provide: TwoColumnLayoutService,
-          useValue: { setWideLeft: jasmine.createSpy('setWideLeft') },
-        },
-        { provide: MusicDataService, useValue: {} },
-        {
-          provide: FollowSetsService,
-          useValue: { followSets: jasmine.createSpy('followSets').and.returnValue([]) },
-        },
-        {
-          provide: LoggerService,
-          useValue: {
-            debug: jasmine.createSpy('debug'),
-            warn: jasmine.createSpy('warn'),
-            error: jasmine.createSpy('error'),
-          },
-        },
-      ],
-    }).compileComponents();
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            imports: [MusicComponent],
+            providers: [
+                provideZonelessChangeDetection(),
+                provideRouter([]),
+                {
+                    provide: RelayPoolService,
+                    useValue: {
+                        subscribe: vi.fn().mockReturnValue({ close: vi.fn() }),
+                    },
+                },
+                {
+                    provide: RelaysService,
+                    useValue: { getOptimalRelays: vi.fn().mockReturnValue([]) },
+                },
+                {
+                    provide: AccountRelayService,
+                    useValue: { getRelayUrls: vi.fn().mockReturnValue([]) },
+                },
+                {
+                    provide: UtilitiesService,
+                    useValue: { anonymousRelays: [], extractLyricsFromEvent: vi.fn() },
+                },
+                {
+                    provide: ReportingService,
+                    useValue: {
+                        isUserBlocked: vi.fn().mockReturnValue(false),
+                        isContentBlocked: vi.fn().mockReturnValue(false),
+                    },
+                },
+                {
+                    provide: AccountStateService,
+                    useValue: {
+                        followingList: vi.fn().mockReturnValue([]),
+                        pubkey: vi.fn().mockReturnValue(null),
+                    },
+                },
+                {
+                    provide: ApplicationService,
+                    useValue: { authenticated: vi.fn().mockReturnValue(false) },
+                },
+                { provide: MediaPlayerService, useValue: {} },
+                { provide: DataService, useValue: { getCachedProfile: vi.fn() } },
+                {
+                    provide: DatabaseService,
+                    useValue: {
+                        getEventsByKind: vi.fn().mockReturnValue(Promise.resolve([])),
+                        getParameterizedReplaceableEvent: vi.fn().mockReturnValue(Promise.resolve(null)),
+                        saveEvent: vi.fn().mockReturnValue(Promise.resolve()),
+                    },
+                },
+                {
+                    provide: OfflineMusicService,
+                    useValue: { offlineTracks: vi.fn().mockReturnValue([]) },
+                },
+                {
+                    provide: AccountLocalStateService,
+                    useValue: {
+                        getMusicYoursSectionCollapsed: vi.fn().mockReturnValue(false),
+                        setMusicYoursSectionCollapsed: vi.fn(),
+                    },
+                },
+                { provide: LayoutService, useValue: {} },
+                {
+                    provide: TwoColumnLayoutService,
+                    useValue: { setWideLeft: vi.fn() },
+                },
+                { provide: MusicDataService, useValue: {} },
+                {
+                    provide: FollowSetsService,
+                    useValue: { followSets: vi.fn().mockReturnValue([]) },
+                },
+                {
+                    provide: LoggerService,
+                    useValue: {
+                        debug: vi.fn(),
+                        warn: vi.fn(),
+                        error: vi.fn(),
+                    },
+                },
+            ],
+        }).compileComponents();
 
-    fixture = TestBed.createComponent(MusicComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
+        fixture = TestBed.createComponent(MusicComponent);
+        component = fixture.componentInstance;
+        fixture.detectChanges();
+    });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+    it('should create', () => {
+        expect(component).toBeTruthy();
+    });
 
-  it('should have panel-with-sticky-header class on host', () => {
-    const hostEl = fixture.nativeElement as HTMLElement;
-    expect(hostEl.classList.contains('panel-with-sticky-header')).toBeTrue();
-  });
+    it('should have panel-with-sticky-header class on host', () => {
+        const hostEl = fixture.nativeElement as HTMLElement;
+        expect(hostEl.classList.contains('panel-with-sticky-header')).toBe(true);
+    });
 
-  it('should call updateContainerWidth on window resize', () => {
-    spyOn(component, 'updateContainerWidth');
-    window.dispatchEvent(new Event('resize'));
-    expect(component.updateContainerWidth).toHaveBeenCalled();
-  });
+    it('should call updateContainerWidth on window resize', () => {
+        vi.spyOn(component, 'updateContainerWidth');
+        window.dispatchEvent(new Event('resize'));
+        expect(component.updateContainerWidth).toHaveBeenCalled();
+    });
 
-  it('should update containerWidth when musicContent element exists', () => {
-    // Simulate having a musicContent element with a width
-    const mockElement = document.createElement('div');
-    Object.defineProperty(mockElement, 'offsetWidth', { value: 800 });
-    component.musicContent = { nativeElement: mockElement } as ElementRef<HTMLDivElement>;
+    it('should update containerWidth when musicContent element exists', () => {
+        // Simulate having a musicContent element with a width
+        const mockElement = document.createElement('div');
+        Object.defineProperty(mockElement, 'offsetWidth', { value: 800 });
+        component.musicContent = { nativeElement: mockElement } as ElementRef<HTMLDivElement>;
 
-    component.updateContainerWidth();
-    expect(component.containerWidth()).toBe(800);
-  });
+        component.updateContainerWidth();
+        expect(component.containerWidth()).toBe(800);
+    });
 
-  it('should not throw when musicContent is undefined', () => {
-    component.musicContent = undefined;
-    expect(() => component.updateContainerWidth()).not.toThrow();
-  });
+    it('should not throw when musicContent is undefined', () => {
+        component.musicContent = undefined;
+        expect(() => component.updateContainerWidth()).not.toThrow();
+    });
 });

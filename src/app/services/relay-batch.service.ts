@@ -647,22 +647,15 @@ export class RelayBatchService {
       return [];
     }
 
-    // Check if account relay is ready - use shorter wait with polling
+    // Wait reactively for account relay to be initialized
     if (!this.accountRelay.isInitialized()) {
-      this.logger.warn('[RelayBatchService] Account relay not initialized, waiting...');
-      // Poll every 50ms for up to 500ms (faster than the old 1000ms single wait)
-      const MAX_WAIT = 500;
-      const POLL_INTERVAL = 50;
-      let waited = 0;
-      while (!this.accountRelay.isInitialized() && waited < MAX_WAIT) {
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-        waited += POLL_INTERVAL;
-      }
-      if (!this.accountRelay.isInitialized()) {
-        this.logger.error('[RelayBatchService] Account relay still not initialized after 500ms');
+      this.logger.debug('[RelayBatchService] Waiting for account relay initialization...');
+      try {
+        await this.accountRelay.waitUntilInitialized();
+      } catch {
+        this.logger.error('[RelayBatchService] Account relay initialization timed out');
         return [];
       }
-      this.logger.debug(`[RelayBatchService] Account relay ready after ${waited}ms`);
     }
 
     const { since, until, timeout = 2000 } = options; // Reduced default timeout from 3000 to 2000

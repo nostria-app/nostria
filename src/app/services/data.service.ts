@@ -27,6 +27,26 @@ export interface DeepDiscoveryStatus {
   message: string;
 }
 
+export interface MalformedEventSample {
+  context: string;
+  timestamp: number;
+  diagnostic: Record<string, unknown>;
+}
+
+export interface MalformedEventContextStats {
+  context: string;
+  count: number;
+  lastSeen: number;
+  lastDiagnostic: Record<string, unknown>;
+}
+
+export interface MalformedEventsInspectorSnapshot {
+  total: number;
+  contextCount: number;
+  contexts: MalformedEventContextStats[];
+  recentSamples: MalformedEventSample[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -64,6 +84,9 @@ export class DataService implements OnDestroy {
 
   // Interval handle for cleanup - stored for proper cleanup on destroy
   private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+  private readonly malformedEventStats = new Map<string, MalformedEventContextStats>();
+  private malformedEventSamples: MalformedEventSample[] = [];
+  private readonly MALFORMED_EVENT_SAMPLE_LIMIT = 100;
 
   // Clean up old pending requests periodically
   constructor() {
@@ -85,6 +108,8 @@ export class DataService implements OnDestroy {
     }
     // Clear pending requests map
     this.pendingProfileRequests.clear();
+    this.malformedEventStats.clear();
+    this.malformedEventSamples = [];
   }
 
   toRecord(event: Event) {
@@ -110,7 +135,143 @@ export class DataService implements OnDestroy {
     );
   }
 
+  private getMalformedEventDiagnostic(event: unknown): Record<string, unknown> {
+    if (event === null) {
+      return { valueType: 'null' };
+    }
+
+    if (event === undefined) {
+      return { valueType: 'undefined' };
+    }
+
+    if (Array.isArray(event)) {
+      const first = event[0];
+      return {
+        valueType: 'array',
+        length: event.length,
+        firstItemType: first === null ? 'null' : Array.isArray(first) ? 'array' : typeof first,
+        firstItemPreview: typeof first === 'object' && first !== null
+          ? {
+            id: (first as { id?: unknown }).id,
+            kind: (first as { kind?: unknown }).kind,
+            pubkey: (first as { pubkey?: unknown }).pubkey,
+          }
+          : first,
+      };
+    }
+
+    if (typeof event === 'object') {
+      const candidate = event as Record<string, unknown>;
+      const requiredFields: (keyof Event)[] = ['id', 'kind', 'pubkey', 'tags', 'content'];
+      const missingFields = requiredFields.filter((field) => !(field in candidate));
+
+      return {
+        valueType: 'object',
+        keys: Object.keys(candidate).slice(0, 20),
+        missingFields,
+        fieldTypes: {
+          id: typeof candidate['id'],
+          kind: typeof candidate['kind'],
+          pubkey: typeof candidate['pubkey'],
+          tags: Array.isArray(candidate['tags']) ? 'array' : typeof candidate['tags'],
+          content: typeof candidate['content'],
+        },
+        preview: {
+          id: candidate['id'],
+          kind: candidate['kind'],
+          pubkey: candidate['pubkey'],
+          created_at: candidate['created_at'],
+        },
+      };
+    }
+
+    return {
+      valueType: typeof event,
+      value: event,
+    };
+  }
+
+  private trackMalformedEvent(context: string, diagnostic: Record<string, unknown>): void {
+    const now = Date.now();
+    const current = this.malformedEventStats.get(context);
+
+    if (current) {
+      this.malformedEventStats.set(context, {
+        ...current,
+        count: current.count + 1,
+        lastSeen: now,
+        lastDiagnostic: diagnostic,
+      });
+    } else {
+      this.malformedEventStats.set(context, {
+        context,
+        count: 1,
+        lastSeen: now,
+        lastDiagnostic: diagnostic,
+      });
+    }
+
+    this.malformedEventSamples.unshift({
+      context,
+      timestamp: now,
+      diagnostic,
+    });
+
+    if (this.malformedEventSamples.length > this.MALFORMED_EVENT_SAMPLE_LIMIT) {
+      this.malformedEventSamples = this.malformedEventSamples.slice(0, this.MALFORMED_EVENT_SAMPLE_LIMIT);
+    }
+  }
+
+  getMalformedEventsInspector(): MalformedEventsInspectorSnapshot {
+    const contexts = Array.from(this.malformedEventStats.values())
+      .sort((a, b) => b.count - a.count || b.lastSeen - a.lastSeen);
+
+    const total = contexts.reduce((sum, item) => sum + item.count, 0);
+
+    return {
+      total,
+      contextCount: contexts.length,
+      contexts,
+      recentSamples: [...this.malformedEventSamples],
+    };
+  }
+
+  resetMalformedEventsInspector(): void {
+    this.malformedEventStats.clear();
+    this.malformedEventSamples = [];
+    this.logger.info('[DataService] Malformed event inspector reset');
+  }
+
+  logMalformedEventsInspector(limit = 20): void {
+    const snapshot = this.getMalformedEventsInspector();
+    const topContexts = snapshot.contexts.slice(0, Math.max(1, limit));
+    const recent = snapshot.recentSamples.slice(0, Math.max(1, limit));
+
+    this.logger.info(
+      `[DataService] Malformed events summary: total=${snapshot.total}, contexts=${snapshot.contextCount}`
+    );
+
+    if (topContexts.length > 0) {
+      console.table(topContexts.map((entry) => ({
+        context: entry.context,
+        count: entry.count,
+        lastSeen: new Date(entry.lastSeen).toISOString(),
+      })));
+    } else {
+      this.logger.info('[DataService] No malformed events tracked');
+    }
+
+    if (recent.length > 0) {
+      this.logger.info('[DataService] Recent malformed event samples', recent);
+    }
+  }
+
   private asValidNostrEvent(event: unknown, context: string): Event | null {
+    if (event === null || event === undefined) {
+      this.logger.debug(`[DataService] No event found in ${context}`);
+      return null;
+    }
+
     // Defensive fallback: some relay wrapper paths may occasionally return [event]
     // when a single event is expected.
     if (Array.isArray(event)) {
@@ -122,7 +283,12 @@ export class DataService implements OnDestroy {
     }
 
     if (!this.isValidNostrEvent(event)) {
-      this.logger.warn(`[DataService] Ignoring malformed event in ${context}:`, event);
+      const diagnostic = this.getMalformedEventDiagnostic(event);
+      this.trackMalformedEvent(context, diagnostic);
+      this.logger.warn(
+        `[DataService] Ignoring malformed event in ${context}`,
+        diagnostic
+      );
       return null;
     }
 
@@ -706,8 +872,32 @@ export class DataService implements OnDestroy {
     try {
       userRelayUrls = await this.discoveryRelayEx.getUserRelayUrls(pubkey);
       this.logger.debug(`[Profile Deep Resolution] Found ${userRelayUrls.length} relay URLs for user`);
+
+      // Update status with the result
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'user-relays',
+        currentBatch: 0,
+        totalBatches: 0,
+        message: userRelayUrls.length > 0
+          ? `Found ${userRelayUrls.length} user relays, querying...`
+          : 'No relay list found, searching observed relays...',
+      });
+
+      // If we found relay URLs, re-publish the relay list event to our discovery/indexer relays
+      // so future lookups for this user are faster for everyone using the same indexers
+      if (userRelayUrls.length > 0) {
+        this.republishRelayListToDiscoveryRelays(pubkey);
+      }
     } catch (error) {
       this.logger.warn(`[Profile Deep Resolution] Failed to get user relay URLs:`, error);
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'user-relays',
+        currentBatch: 0,
+        totalBatches: 0,
+        message: 'No relay list found, searching observed relays...',
+      });
     }
 
     // If we have user relay URLs, try them first with a longer timeout
@@ -720,7 +910,7 @@ export class DataService implements OnDestroy {
         phase: 'user-relays',
         currentBatch: 0,
         totalBatches: 0,
-        message: `Querying ${optimalRelays.length} user relays...`,
+        message: `Querying ${optimalRelays.length} of ${userRelayUrls.length} user relays...`,
       });
 
       try {
@@ -734,12 +924,17 @@ export class DataService implements OnDestroy {
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found on user's relays!`);
           this.deepDiscoveryStatus.set(null); // Clear status on success
+
+          // If we already have relay URLs, the relay list was found via indexers — republish already triggered above
           return mostRecent;
         }
       } catch (error) {
         this.logger.warn(`[Profile Deep Resolution] Error querying user relays:`, error);
       }
     }
+
+    // Track whether we had relay URLs before the observed-relay search
+    const hadRelayList = userRelayUrls.length > 0;
 
     // Get observed relays sorted by events received (most active first)
     const observedRelays = await this.relaysService.getObservedRelaysSorted('eventsReceived');
@@ -791,6 +986,13 @@ export class DataService implements OnDestroy {
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found in batch ${i + 1}/${totalBatches}!`);
           this.deepDiscoveryStatus.set(null); // Clear status on success
+
+          // If we didn't have a relay list from the indexer relays, do a deep discovery
+          // for the relay list so we can republish it to our discovery relays
+          if (!hadRelayList) {
+            this.deepDiscoverAndRepublishRelayList(pubkey);
+          }
+
           return mostRecent;
         }
       } catch (error) {
@@ -802,6 +1004,70 @@ export class DataService implements OnDestroy {
     this.logger.info('[Profile Deep Resolution] Profile not found after searching all batches');
     this.deepDiscoveryStatus.set(null); // Clear status
     return null;
+  }
+
+  /**
+   * Deep discover a user's relay list (kind 10002) by searching observed relays in batches,
+   * then re-publish it to the current user's discovery/indexer relays.
+   * This runs entirely in the background and does not block the caller.
+   */
+  private deepDiscoverAndRepublishRelayList(pubkey: string): void {
+    queueMicrotask(async () => {
+      const BATCH_SIZE = 10;
+
+      try {
+        // First check if we already have the relay list in the database
+        const existing = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        if (existing) {
+          this.logger.debug(`[Relay List Deep Discovery] Relay list already in DB for ${pubkey.substring(0, 8)}..., republishing`);
+          this.republishRelayListToDiscoveryRelays(pubkey);
+          return;
+        }
+
+        this.logger.info(`[Relay List Deep Discovery] Searching observed relays for relay list of ${pubkey.substring(0, 8)}...`);
+
+        // Get observed relays sorted by events received (most active first)
+        const observedRelays = await this.relaysService.getObservedRelaysSorted('eventsReceived');
+        if (observedRelays.length === 0) {
+          this.logger.debug(`[Relay List Deep Discovery] No observed relays available`);
+          return;
+        }
+
+        const relayUrls = observedRelays.map(r => r.url);
+        const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
+
+        for (let i = 0; i < totalBatches; i++) {
+          const start = i * BATCH_SIZE;
+          const end = Math.min(start + BATCH_SIZE, relayUrls.length);
+          const batchRelays = relayUrls.slice(start, end);
+
+          try {
+            const events = await this.relayPool.query(batchRelays, {
+              authors: [pubkey],
+              kinds: [kinds.RelayList],
+            }, 5000);
+
+            if (events && events.length > 0) {
+              const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
+              this.logger.info(`[Relay List Deep Discovery] Found relay list in batch ${i + 1}/${totalBatches}`);
+
+              // Save to database
+              await this.database.saveReplaceableEvent(mostRecent);
+
+              // Republish to discovery relays
+              this.republishRelayListToDiscoveryRelays(pubkey);
+              return;
+            }
+          } catch (error) {
+            this.logger.debug(`[Relay List Deep Discovery] Error in batch ${i + 1}:`, error);
+          }
+        }
+
+        this.logger.debug(`[Relay List Deep Discovery] Relay list not found for ${pubkey.substring(0, 8)}...`);
+      } catch (error) {
+        this.logger.warn(`[Relay List Deep Discovery] Failed for ${pubkey.substring(0, 8)}...:`, error);
+      }
+    });
   }
 
   /**
@@ -855,6 +1121,41 @@ export class DataService implements OnDestroy {
     } catch (error) {
       this.logger.warn(`[Profile Republish] Failed to republish profile for ${pubkey.substring(0, 8)}...:`, error);
     }
+  }
+
+  /**
+   * Re-publish a user's relay list (kind 10002) to the current user's discovery/indexer relays.
+   * This ensures that indexer relays have up-to-date relay list information for the discovered user,
+   * making future lookups faster for everyone using the same indexers.
+   * Runs in the background and does not block the caller.
+   */
+  private republishRelayListToDiscoveryRelays(pubkey: string): void {
+    queueMicrotask(async () => {
+      try {
+        // Get the relay list event (kind 10002) from the database — it was saved by getUserRelayUrls
+        const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        if (!relayListEvent) {
+          this.logger.debug(`[Relay List Republish] No relay list event found in DB for ${pubkey.substring(0, 8)}...`);
+          return;
+        }
+
+        // Get the current user's discovery/indexer relay URLs
+        const discoveryRelayUrls = this.discoveryRelayEx.getRelayUrls();
+        if (discoveryRelayUrls.length === 0) {
+          this.logger.debug(`[Relay List Republish] No discovery relays configured, skipping`);
+          return;
+        }
+
+        this.logger.info(
+          `[Relay List Republish] Re-publishing relay list for ${pubkey.substring(0, 8)}... to ${discoveryRelayUrls.length} discovery relays`
+        );
+
+        await this.relayPool.publish(discoveryRelayUrls, relayListEvent, 10000);
+        this.logger.debug(`[Relay List Republish] Successfully published relay list to discovery relays`);
+      } catch (error) {
+        this.logger.warn(`[Relay List Republish] Failed to republish relay list for ${pubkey.substring(0, 8)}...:`, error);
+      }
+    });
   }
 
   private refreshProfileInBackground(pubkey: string, cacheKey: string): void {

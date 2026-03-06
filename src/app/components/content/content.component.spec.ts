@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ContentComponent } from './content.component';
@@ -9,30 +10,34 @@ import { signal } from '@angular/core';
 describe('ContentComponent', () => {
   let component: ContentComponent;
   let fixture: ComponentFixture<ContentComponent>;
-  let mockSettingsService: jasmine.SpyObj<SettingsService> & { settings: ReturnType<typeof signal> };
-  let mockParsingService: jasmine.SpyObj<ParsingService>;
-  let mockLayoutService: jasmine.SpyObj<LayoutService>;
+  let mockSettingsService: MockedObject<SettingsService> & {
+    settings: ReturnType<typeof signal>;
+  };
+  let mockParsingService: MockedObject<ParsingService>;
+  let mockLayoutService: MockedObject<LayoutService>;
 
   beforeEach(async () => {
-    mockParsingService = jasmine.createSpyObj('ParsingService', [
-      'parseContent',
-      'clearNostrUriCache',
-      'extractNostrUriIdentifier',
-    ]);
-    mockParsingService.parseContent.and.resolveTo({
+    mockParsingService = {
+      parseContent: vi.fn().mockName("ParsingService.parseContent"),
+      clearNostrUriCache: vi.fn().mockName("ParsingService.clearNostrUriCache"),
+      extractNostrUriIdentifier: vi.fn().mockName("ParsingService.extractNostrUriIdentifier")
+    } as unknown as MockedObject<ParsingService>;
+    mockParsingService.parseContent.mockResolvedValue({
       tokens: [],
       pendingMentions: [],
     });
 
-    mockLayoutService = jasmine.createSpyObj('LayoutService', [
-      'openProfile',
-      'openGenericEvent',
-      'openArticle',
-    ]);
+    mockLayoutService = {
+      openProfile: vi.fn().mockName("LayoutService.openProfile"),
+      openGenericEvent: vi.fn().mockName("LayoutService.openGenericEvent"),
+      openArticle: vi.fn().mockName("LayoutService.openArticle")
+    } as unknown as MockedObject<LayoutService>;
 
     mockSettingsService = {
       settings: signal({ socialSharingPreview: false }),
-    } as unknown as jasmine.SpyObj<SettingsService> & { settings: ReturnType<typeof signal> };
+    } as unknown as MockedObject<SettingsService> & {
+      settings: ReturnType<typeof signal>;
+    };
 
     await TestBed.configureTestingModule({
       imports: [ContentComponent],
@@ -80,35 +85,49 @@ describe('ContentComponent', () => {
   });
 
   it('should default hideTaggedReferences to false', () => {
-    expect(component.hideTaggedReferences()).toBeFalse();
+    expect(component.hideTaggedReferences()).toBe(false);
   });
 
   it('should accept hideTaggedReferences input', () => {
     fixture.componentRef.setInput('hideTaggedReferences', true);
     fixture.detectChanges();
-    expect(component.hideTaggedReferences()).toBeTrue();
+    expect(component.hideTaggedReferences()).toBe(true);
   });
 
   it('should default disableExpansion to false', () => {
-    expect(component.disableExpansion()).toBeFalse();
+    expect(component.disableExpansion()).toBe(false);
   });
 
   it('should default hideSocialPreviews to false', () => {
-    expect(component.hideSocialPreviews()).toBeFalse();
+    expect(component.hideSocialPreviews()).toBe(false);
   });
 
   it('should default hideInlineMediaAndLinks to false', () => {
-    expect(component.hideInlineMediaAndLinks()).toBeFalse();
+    expect(component.hideInlineMediaAndLinks()).toBe(false);
   });
 
   it('should hide inline media and links from displayContentTokens when enabled', () => {
     (component as unknown as {
-      _hasBeenVisible: { set: (value: boolean) => void };
-      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+      _hasBeenVisible: {
+        set: (value: boolean) => void;
+      };
+      _cachedTokens: {
+        set: (value: Array<{
+          id: number;
+          type: string;
+          content: string;
+        }>) => void;
+      };
     })._hasBeenVisible.set(true);
 
     (component as unknown as {
-      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+      _cachedTokens: {
+        set: (value: Array<{
+          id: number;
+          type: string;
+          content: string;
+        }>) => void;
+      };
     })._cachedTokens.set([
       { id: 1, type: 'text', content: 'hello ' },
       { id: 2, type: 'url', content: 'https://example.com' },
@@ -126,12 +145,26 @@ describe('ContentComponent', () => {
 
   it('should preserve linebreaks when hiding media tokens', () => {
     (component as unknown as {
-      _hasBeenVisible: { set: (value: boolean) => void };
-      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+      _hasBeenVisible: {
+        set: (value: boolean) => void;
+      };
+      _cachedTokens: {
+        set: (value: Array<{
+          id: number;
+          type: string;
+          content: string;
+        }>) => void;
+      };
     })._hasBeenVisible.set(true);
 
     (component as unknown as {
-      _cachedTokens: { set: (value: Array<{ id: number; type: string; content: string }>) => void };
+      _cachedTokens: {
+        set: (value: Array<{
+          id: number;
+          type: string;
+          content: string;
+        }>) => void;
+      };
     })._cachedTokens.set([
       { id: 1, type: 'text', content: 'Top text' },
       { id: 2, type: 'linebreak', content: '\n' },

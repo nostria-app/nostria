@@ -151,7 +151,7 @@ export class ReactionSummaryComponent {
     }
 
     return content
-      .replace(/nostr:(?:note|nevent|naddr)1[a-z0-9]+/gi, ' ')
+      .replace(/nostr:(?:note|nevent|naddr)1(?:(?!(?:note|nevent|naddr)1)[a-z0-9])+/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }

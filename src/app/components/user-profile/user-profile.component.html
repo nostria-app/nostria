@@ -64,6 +64,13 @@
     </div>
     }
 
+    <!-- Medium (Avatars) view - show name below avatar -->
+    @if (view() === 'medium') {
+    <div class="user-profile-content medium-name">
+      <app-profile-display-name [pubkey]="pubkey()" [disableLink]="disableLink()"></app-profile-display-name>
+    </div>
+    }
+
     <!-- Content section with conditional rendering based on view -->
 
     @if (

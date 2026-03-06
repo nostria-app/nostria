@@ -95,9 +95,6 @@ export class MusicComponent implements OnDestroy {
   searchQuery = signal('');
   showSearch = signal(false);
 
-  // "Yours" section collapsed state
-  yoursSectionCollapsed = signal(false);
-
   // Container width for dynamic rendering
   containerWidth = signal(0);
 
@@ -401,11 +398,6 @@ export class MusicComponent implements OnDestroy {
 
   constructor() {
     this.twoColumnLayout.setWideLeft();
-    // Load collapsed state from storage
-    const pubkey = this.currentPubkey();
-    if (pubkey) {
-      this.yoursSectionCollapsed.set(this.accountLocalState.getMusicYoursSectionCollapsed(pubkey));
-    }
     this.initializeMusic();
 
     // Update container width after view init and after CSS transitions complete
@@ -431,8 +423,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Playlist cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Playlist cards are minmax(150px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 150;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
@@ -447,8 +439,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Track cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Track cards are minmax(150px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 150;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
@@ -463,8 +455,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Artist cards are minmax(180px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 180;
+    // Artist cards are minmax(120px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 120;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
@@ -876,16 +868,6 @@ export class MusicComponent implements OnDestroy {
   onSearchInput(event: InputEvent): void {
     const target = event.target as HTMLInputElement;
     this.searchQuery.set(target.value);
-  }
-
-  // Toggle "Yours" section collapsed state
-  toggleYoursSection(): void {
-    const newState = !this.yoursSectionCollapsed();
-    this.yoursSectionCollapsed.set(newState);
-    const pubkey = this.currentPubkey();
-    if (pubkey) {
-      this.accountLocalState.setMusicYoursSectionCollapsed(pubkey, newState);
-    }
   }
 
   // Menu actions

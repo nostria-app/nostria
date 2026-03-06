@@ -7,8 +7,8 @@ import { LocalStorageService } from './local-storage.service';
 
 describe('ExternalLinkHandlerService', () => {
   let service: ExternalLinkHandlerService;
-  let routerSpy: jasmine.SpyObj<Router>;
-  let localStorageSpy: jasmine.SpyObj<LocalStorageService>;
+  let routerSpy: Pick<Router, 'navigate'>;
+  let localStorageSpy: Pick<LocalStorageService, 'getObject' | 'setObject'>;
 
   // Test data
   const testPubkey = '7460e57a4d77fc2e2e2e3e071a80f14745c3c3e98db0b16995a5e9a0bc104b27';
@@ -47,17 +47,22 @@ describe('ExternalLinkHandlerService', () => {
   });
 
   beforeEach(() => {
-    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
-    routerSpy.navigate.and.returnValue(Promise.resolve(true));
+    routerSpy = {
+      navigate: vi.fn().mockName("Router.navigate")
+    };
+    vi.mocked(routerSpy.navigate).mockResolvedValue(true);
 
-    localStorageSpy = jasmine.createSpyObj('LocalStorageService', ['getObject', 'setObject']);
-    localStorageSpy.getObject.and.returnValue(null); // Use default domains
+    localStorageSpy = {
+      getObject: vi.fn().mockName("LocalStorageService.getObject"),
+      setObject: vi.fn().mockName("LocalStorageService.setObject")
+    };
+    vi.mocked(localStorageSpy.getObject).mockReturnValue(null); // Use default domains
 
     TestBed.configureTestingModule({
       providers: [
         ExternalLinkHandlerService,
         { provide: Router, useValue: routerSpy },
-        { provide: LoggerService, useValue: { info: jasmine.createSpy(), warn: jasmine.createSpy(), error: jasmine.createSpy(), debug: jasmine.createSpy() } },
+        { provide: LoggerService, useValue: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } },
         { provide: LocalStorageService, useValue: localStorageSpy },
       ],
     });

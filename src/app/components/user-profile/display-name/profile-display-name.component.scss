@@ -1,7 +1,7 @@
 :host {
-  display: inline-block;
+  // display: inline-block;
   max-width: 100%;
-  vertical-align: baseline;
+  // vertical-align: baseline;
 }
 
 span {
@@ -27,14 +27,5 @@ span {
 
   &:visited {
     color: inherit;
-  }
-}
-
-@media (max-width: 700px) {
-  .profile-link {
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 2px;
   }
 }

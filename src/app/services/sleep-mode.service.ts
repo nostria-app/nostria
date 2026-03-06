@@ -1,10 +1,8 @@
 import { Injectable, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
-import { AccountRelayService } from './relays/account-relay';
-import { DiscoveryRelayService } from './relays/discovery-relay';
-import { SharedRelayService } from './relays/shared-relay';
-import { UserRelayService } from './relays/user-relay';
+import { PoolService } from './relays/pool.service';
+import { RelaysService } from './relays/relays';
 
 export interface SleepModeState {
   isActive: boolean;
@@ -19,10 +17,8 @@ export interface SleepModeState {
 export class SleepModeService implements OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly accountRelay = inject(AccountRelayService);
-  private readonly discoveryRelay = inject(DiscoveryRelayService);
-  private readonly sharedRelay = inject(SharedRelayService);
-  private readonly userRelay = inject(UserRelayService);
+  private readonly poolService = inject(PoolService);
+  private readonly relaysService = inject(RelaysService);
 
   // Sleep mode configuration
   private readonly SLEEP_DETECTION_ENABLED = false; // Hard-coded flag to enable/disable sleep detection
@@ -165,24 +161,12 @@ export class SleepModeService implements OnDestroy {
     try {
       this.logger.debug('[SleepMode] Disconnecting relay pools...');
 
-      // Get and destroy relay pools
-      const accountPool = this.accountRelay.getPool();
-      const discoveryPool = this.discoveryRelay.getPool();
+      // Close all known relay connections through the single shared pool.
+      // With enableReconnect:true they will re-open automatically on the next request.
+      const allRelayUrls = Array.from(this.relaysService.getAllRelayStats().keys());
+      this.poolService.closeAll(allRelayUrls);
 
-      if (accountPool) {
-        accountPool.destroy();
-        this.logger.debug('[SleepMode] Account relay pool destroyed');
-      }
-
-      if (discoveryPool) {
-        discoveryPool.destroy();
-        this.logger.debug('[SleepMode] Discovery relay pool destroyed');
-      }
-
-      // Note: SharedRelay and UserRelay services also have pools but they're
-      // managed differently. We'll handle them if they have accessible pools.
-
-      this.logger.info('[SleepMode] All relay pools disconnected');
+      this.logger.info('[SleepMode] All relay connections closed');
     } catch (error) {
       this.logger.error('[SleepMode] Error disconnecting relay pools:', error);
     }
@@ -228,28 +212,10 @@ export class SleepModeService implements OnDestroy {
    * Reconnect relay pools by reinitializing them
    */
   private reconnectRelayPools(): void {
-    try {
-      this.logger.debug('[SleepMode] Reconnecting relay pools...');
-
-      // Reinitialize relay services with new pools
-      // The relay services will recreate their SimplePool instances
-      const accountRelayUrls = this.accountRelay.getRelayUrls();
-      const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-
-      if (accountRelayUrls.length > 0) {
-        this.accountRelay.init(accountRelayUrls, true); // destroy=true to create new pool
-        this.logger.debug('[SleepMode] Account relay pool reconnected');
-      }
-
-      if (discoveryRelayUrls.length > 0) {
-        this.discoveryRelay.init(discoveryRelayUrls, true); // destroy=true to create new pool
-        this.logger.debug('[SleepMode] Discovery relay pool reconnected');
-      }
-
-      this.logger.info('[SleepMode] All relay pools reconnected');
-    } catch (error) {
-      this.logger.error('[SleepMode] Error reconnecting relay pools:', error);
-    }
+    // No explicit action needed: the shared pool has enableReconnect:true, so
+    // connections are re-established automatically when the next query or
+    // subscription is made.
+    this.logger.debug('[SleepMode] Relay pools will reconnect on next request (enableReconnect:true)');
   }
 
   /**

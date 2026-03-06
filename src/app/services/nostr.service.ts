@@ -37,7 +37,6 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
 import { PinPromptService } from './pin-prompt.service';
 import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
-import { RelayWebSocketService } from './relays/relay-websocket.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
@@ -129,11 +128,11 @@ export class NostrService implements NostriaService {
   private readonly pinPrompt = inject(PinPromptService);
   private readonly mnemonicService = inject(MnemonicService);
   private readonly relayAuth = inject(RelayAuthService);
-  private readonly relayWebSocket = inject(RelayWebSocketService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly followSetsService = inject(FollowSetsService);
   private readonly ngZone = inject(NgZone);
   private readonly injector = inject(Injector);
+  private encryptionServiceInstance?: import('./encryption.service').EncryptionService;
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -197,9 +196,6 @@ export class NostrService implements NostriaService {
 
     // Set the signing function for NIP-42 relay authentication
     this.relayAuth.setSignFunction((event: EventTemplate) => this.signEvent(event));
-
-    // Ensure nostr-tools uses our relay-aware WebSocket implementation
-    this.relayWebSocket.initialize();
 
     // DEPRECATED: Old signal-based publishing removed
     // The accountState.publish signal has been replaced with direct publishEvent() calls
@@ -1220,28 +1216,14 @@ export class NostrService implements NostriaService {
           pubkey: eventPubkey,
         };
 
-        // Get the client key for NIP-46 communication
-        let clientKey: Uint8Array;
-
-        if (currentUser.bunkerClientKey) {
-          // Pure remote signer account - use stored client key
-          clientKey = hexToBytes(currentUser.bunkerClientKey);
-        } else if (currentUser.privkey) {
-          // Hybrid account with local key - use local key for bunker communication
-          const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
-          clientKey = hexToBytes(decryptedPrivkey);
-        } else {
-          throw new Error('No client key available for remote signing. Please re-connect your remote signer.');
+        // Route through EncryptionService's cached BunkerSigner so the single
+        // connect() handshake is reused across sign_event, encrypt, and decrypt.
+        if (!this.encryptionServiceInstance) {
+          const { EncryptionService } = await import('./encryption.service');
+          this.encryptionServiceInstance = this.injector.get(EncryptionService);
         }
-
-        const pool = new SimplePool({ enablePing: true, enableReconnect: true });
-        const bunker = BunkerSigner.fromBunker(
-          clientKey,
-          this.accountState.account()!.bunker!,
-          { pool }
-        );
-        signedEvent = await bunker.signEvent(cleanEvent);
-        this.logger.info('Using remote signer account');
+        signedEvent = await this.encryptionServiceInstance.signRemoteEvent(cleanEvent);
+        this.logger.info('Event signed via remote signer');
         break;
       }
       case 'preview':
@@ -1457,12 +1439,12 @@ export class NostrService implements NostriaService {
   }
 
   /** Get the BUD-03: User Server List */
-  async getMediaServers(pubkey: string): Promise<Event | null> {
+  async getMediaServers(pubkey: string, warnIfMissing = true): Promise<Event | null> {
     // Media server list (kind 10063) is already fetched in the consolidated account query
     // in the load() method, so we just retrieve from storage
     const event = await this.database.getEventByPubkeyAndKind(pubkey, 10063);
 
-    if (!event) {
+    if (!event && warnIfMissing) {
       this.logger.warn('No media server list found in storage for pubkey:', pubkey);
     }
 
@@ -1496,7 +1478,6 @@ export class NostrService implements NostriaService {
         info.foundMetadataOnUserRelays = true;
       }
 
-      // this.relayService.timeoutRelays(failedRelays);
     } catch (error) {
       this.logger.debug('Failed to fetch metadata from relay', { error });
     } finally {
@@ -1786,7 +1767,7 @@ export class NostrService implements NostriaService {
       // Get the secret
       const secret = searchParams.get('secret');
 
-      if (!pubkey || !secret || relays.length === 0) {
+      if (!pubkey || relays.length === 0) {
         throw new Error('Invalid Nostr Connect URL: missing required components');
       }
 
@@ -1807,13 +1788,15 @@ export class NostrService implements NostriaService {
         errorListener = reject;
       });
 
-      // Monitor for error messages
+      // Monitor for error messages; use 'since' to avoid replaying stale signer events
+      const connectSince = Math.floor(Date.now() / 1000) - 30;
       const sub = pool.subscribeMany(
         bunkerParsed!.relays,
         {
           kinds: [24133],
           authors: [bunkerParsed!.pubkey],
           '#p': [clientPubkey],
+          since: connectSince,
         },
         {
           onevent: async (event) => {
@@ -1861,14 +1844,24 @@ export class NostrService implements NostriaService {
 
         const remotePublicKey = await Promise.race([bunker.getPublicKey(), errorPromise]) as string;
 
+        await Promise.race([
+          bunker.sendRequest('switch_relays', bunkerParsed!.relays),
+          errorPromise,
+        ]) as string;
+        const bunkerRelays = bunkerParsed!.relays;
+        const bunkerPointer: BunkerPointer = {
+          ...bunkerParsed!,
+          relays: bunkerRelays,
+        };
+
         this.logger.info('Using remote signer account');
-        // jack
         const newUser: NostrUser = {
           privkey: bytesToHex(privateKey),
+          bunkerClientKey: bytesToHex(privateKey), // Store explicitly so encryption.service doesn't need fallback
           pubkey: remotePublicKey,
           name: 'Remote Signer',
           source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
-          bunker: bunkerParsed!,
+          bunker: bunkerPointer,
           lastUsed: Date.now(),
           hasActivated: true,
         };
@@ -1876,6 +1869,8 @@ export class NostrService implements NostriaService {
         await this.setAccount(newUser);
         this.logger.debug('Remote signer account set successfully', {
           pubkey: remotePublicKey,
+          remoteSignerPubkey: bunkerParsed!.pubkey,
+          relayCount: bunkerRelays.length,
         });
 
         this.logger.info('Nostr Connect login successful', { pubkey });
@@ -1893,6 +1888,25 @@ export class NostrService implements NostriaService {
       this.logger.error('Login with Nostr Connect failed:', error);
       throw error;
     }
+  }
+
+  private parseNip46SwitchRelays(result: string): string[] | null {
+    const trimmed = result.trim();
+
+    if (!trimmed || trimmed === 'null') {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.every(relay => typeof relay === 'string')) {
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
   }
 
   /**
@@ -2237,7 +2251,7 @@ export class NostrService implements NostriaService {
     // Configure the discovery relays based on the user's region
     // Use both regional Nostria relay and indexer.coracle.social for better lookup performance
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(accountRegion);
-    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/'];
+    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
     this.logger.info('Setting discovery relays for new user based on region', {
       region: accountRegion,
       discoveryRelays,

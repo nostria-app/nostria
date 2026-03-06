@@ -16,6 +16,9 @@ function createComponent(opts: { currentPubkey?: string; viewingPubkey?: string;
   );
   (component as any).tracks = signal<any[]>([]);
   (component as any).playlists = signal<any[]>([]);
+  (component as any).zapService = {
+    getLightningAddress: (profileData: { lud16?: string; lud06?: string }) => profileData.lud16 || profileData.lud06 || null,
+  };
 
   // Re-create computed signals
   (component as any).isOwnProfile = computed(() => {
@@ -31,6 +34,11 @@ function createComponent(opts: { currentPubkey?: string; viewingPubkey?: string;
 
   (component as any).trackCount = computed(() => (component as any).tracks().length);
   (component as any).playlistCount = computed(() => (component as any).playlists().length);
+  (component as any).canZapArtist = computed(() => {
+    const profileData = (component as any).authorProfile()?.data;
+    if (!profileData) return false;
+    return (component as any).zapService.getLightningAddress(profileData) !== null;
+  });
 
   (component as any).panelTitle = computed(() =>
     (component as any).isOwnProfile() ? 'My Music' : (component as any).artistName()
@@ -129,6 +137,32 @@ describe('MusicArtistComponent', () => {
       // For other profiles, panelTitle should match artistName
       expect(component.panelTitle()).toBe('Bob');
       expect(component.panelTitle()).toBe(component.artistName());
+    });
+  });
+
+  describe('canZapArtist', () => {
+    it('should be false when artist has no lightning address', () => {
+      const component = createComponent({
+        viewingPubkey: 'def456',
+        profileName: 'No Zap Artist',
+      });
+
+      expect((component as any).canZapArtist()).toBe(false);
+    });
+
+    it('should be true when artist has lud16 configured', () => {
+      const component = createComponent({
+        viewingPubkey: 'def456',
+        profileName: 'Zap Artist',
+      });
+      (component as any).authorProfile.set({
+        data: {
+          name: 'Zap Artist',
+          lud16: 'artist@wallet.example',
+        },
+      });
+
+      expect((component as any).canZapArtist()).toBe(true);
     });
   });
 });

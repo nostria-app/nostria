@@ -1,0 +1,119 @@
+<div class="ignored-relay-audit" dialog-content>
+  <section class="summary-grid">
+    <article class="summary-card">
+      <div class="label">Users Found</div>
+      <div class="value">{{ snapshot().totalUsers }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="label">Observations</div>
+      <div class="value">{{ snapshot().totalObservations }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="label">Affected Domains</div>
+      <div class="value">{{ snapshot().affectedDomains.length }}</div>
+    </article>
+  </section>
+
+  <section class="domain-list">
+    @if (snapshot().affectedDomains.length > 0) {
+    @for (domain of snapshot().affectedDomains; track domain) {
+    <span class="domain-chip">{{ domain }}</span>
+    }
+    } @else {
+    <span class="empty">No affected domains tracked yet.</span>
+    }
+  </section>
+
+  <section class="toolbar">
+    <mat-slide-toggle [checked]="autoRefresh()" (change)="toggleAutoRefresh()">
+      Auto refresh
+    </mat-slide-toggle>
+
+    <div class="toolbar-right">
+      @if (isLoadingProfiles()) {
+      <span class="status">Loading profiles…</span>
+      }
+    </div>
+  </section>
+
+  <section class="list-panel">
+    <div class="header-row">
+      <span>Profile</span>
+      <span>Ignored Domains</span>
+      <span>First Seen</span>
+      <span>Last Seen</span>
+      <span>Hits</span>
+      <span>Action</span>
+    </div>
+
+    <div class="rows">
+      @for (entry of viewEntries(); track entry.pubkey) {
+      <article class="row">
+        <div class="profile-cell">
+          <div class="profile-row" #profileTrigger (mouseenter)="onProfileMouseEnter(profileTrigger, entry.pubkey)"
+            (mouseleave)="onProfileMouseLeave()">
+            <div class="avatar-wrap">
+              @if (entry.avatarUrl) {
+              <img [src]="entry.avatarUrl" class="avatar" alt="Profile avatar" loading="lazy" />
+              } @else {
+              <mat-icon class="avatar-fallback">account_circle</mat-icon>
+              }
+            </div>
+            <div class="profile-meta">
+              <div class="name">{{ entry.displayName }}</div>
+              <div class="npub">{{ entry.npubShort }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="domains-cell">{{ entry.ignoredDomains.join(', ') }}</div>
+        <div class="time-cell">{{ formatTimestamp(entry.firstSeen) }}</div>
+        <div class="time-cell">{{ formatTimestamp(entry.lastSeen) }}</div>
+        <div class="count-cell">{{ entry.observationCount }}</div>
+        <div class="action-cell">
+          <button mat-button (click)="sendAdvisoryDm(entry.pubkey)" [disabled]="isSending(entry.pubkey)">
+            <mat-icon>
+              @if (isSending(entry.pubkey)) {
+              schedule
+              } @else if (wasSent(entry.pubkey)) {
+              check_circle
+              } @else if (hasSendFailed(entry.pubkey)) {
+              error
+              } @else {
+              send
+              }
+            </mat-icon>
+            @if (isSending(entry.pubkey)) {
+            Sending...
+            } @else if (wasSent(entry.pubkey)) {
+            Sent
+            } @else if (hasSendFailed(entry.pubkey)) {
+            Retry DM
+            } @else {
+            Advisory DM
+            }
+          </button>
+        </div>
+      </article>
+      } @empty {
+      <div class="empty">No users have been tracked with ignored relays yet.</div>
+      }
+    </div>
+  </section>
+
+  <div class="actions" dialog-actions>
+    <div class="left-actions">
+      <button mat-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-button (click)="copySnapshot()">
+        <mat-icon>content_copy</mat-icon>
+        Copy Snapshot
+      </button>
+      <button mat-button (click)="resetAudit()">
+        <mat-icon>delete_sweep</mat-icon>
+        Reset
+      </button>
+    </div>
+  </div>
+</div>

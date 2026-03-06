@@ -70,6 +70,8 @@ export interface UserSettings {
   hideWalletAmounts?: boolean; // Hide sat amounts in wallet UI
   // Video playback settings
   autoPlayVideos?: boolean; // Auto-play all videos (muted)
+  // Music settings
+  publishMusicStatus?: boolean; // Publish NIP-38 music status when playing tracks
   // Custom feeds - synced across devices via kind 30078
   customFeeds?: SyncedFeedConfig[];
   // Favicon settings
@@ -109,6 +111,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideWalletAmounts: false, // Show amounts by default
   // Video playback
   autoPlayVideos: false, // Off by default - user must opt-in
+  // Music
+  publishMusicStatus: true, // Publish NIP-38 music status by default
   // Custom feeds - empty by default, will be populated from FeedService
   customFeeds: undefined,
   // Favicon settings - disabled by default for privacy

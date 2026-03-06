@@ -35,7 +35,7 @@ nav {
 // Glass toolbar styles - positioned beside sidenav (not fixed)
 .app-toolbar {
   position: relative !important;
-  z-index: 60;
+  z-index: 600;
   height: var(--toolbar-height);
   padding: 8px 16px;
   display: flex;

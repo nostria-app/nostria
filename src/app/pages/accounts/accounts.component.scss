@@ -499,6 +499,51 @@
   }
 }
 
+.relay-switch-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  p {
+    margin: 0 0 10px 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.relay-switch-hint {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant) !important;
+}
+
+.relay-option-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  button.active {
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.remote-relay-input {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.relay-switch-current {
+  word-break: break-all;
+}
+
 .pin-info {
   display: flex;
   align-items: flex-start;

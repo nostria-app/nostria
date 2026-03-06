@@ -52,6 +52,11 @@
   @media (min-width: 1200px) {
     margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
   }
+
+  @media (max-width: 600px) {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
 }
 
 .music-header {
@@ -156,6 +161,10 @@
 
 .music-content {
   padding: 1rem 0;
+
+  @media (max-width: 600px) {
+    padding: 0.5rem 0;
+  }
 }
 
 .loading-container {
@@ -175,6 +184,10 @@
 // Section styles
 .music-section {
   margin-bottom: 2rem;
+
+  @media (max-width: 600px) {
+    margin-bottom: 1.25rem;
+  }
 }
 
 .section-header {
@@ -184,6 +197,10 @@
   margin-bottom: 1rem;
   padding: 0 0.25rem;
 
+  @media (max-width: 600px) {
+    margin-bottom: 0.5rem;
+  }
+
   h2 {
     display: flex;
     align-items: center;
@@ -191,6 +208,10 @@
     margin: 0;
     font-size: 1.25rem;
     color: var(--mat-sys-on-surface);
+
+    @media (max-width: 600px) {
+      font-size: 1.1rem;
+    }
   }
 
   .section-count {
@@ -213,302 +234,124 @@
       height: 18px;
     }
   }
-
-  // Collapsible section header
-  &.collapsible {
-    cursor: pointer;
-    user-select: none;
-    border-radius: var(--mat-sys-corner-small);
-    padding: 0.5rem;
-    margin: -0.5rem;
-    margin-bottom: 0.5rem;
-
-    &:hover {
-      background-color: var(--mat-sys-surface-container-high);
-    }
-
-    .collapse-icon {
-      transition: transform 0.2s ease;
-      color: var(--mat-sys-on-surface-variant);
-
-      &.collapsed {
-        transform: rotate(-90deg);
-      }
-    }
-  }
 }
 
-// Playlists grid - larger cards
+// Playlists grid
 .playlists-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
   padding: 0.5rem 0;
   max-width: 100%;
 
   @media (max-width: 600px) {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
-  }
-}
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
 
-// Liked Songs special card
-.liked-songs-card {
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--mat-sys-corner-medium);
-  background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  overflow: hidden;
-  position: relative;
-
-  &:hover,
-  &:focus-within {
-    transform: translateY(-2px);
-    box-shadow: var(--mat-sys-level2);
-
-    .liked-songs-play-btn {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .liked-songs-clickable {
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-
-    &:focus {
-      outline: none;
-    }
-  }
-
-  .liked-songs-cover {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 1 / 1;
-    background: linear-gradient(135deg, #e91e63, #9c27b0);
-    border-radius: 8px;
-
-    mat-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
-      color: white;
-    }
-  }
-
-  .liked-songs-info {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    gap: 0.25rem;
-
-    .liked-songs-title {
-      font-size: 0.875rem;
-      color: var(--mat-sys-on-surface);
-    }
-
-    .liked-songs-meta {
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-    }
-  }
-
-  .liked-songs-play-btn {
-    position: absolute;
-    bottom: 3.5rem;
-    right: 0.5rem;
-    width: 40px;
-    height: 40px;
-    background-color: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
-    border-radius: 50%;
-    box-shadow: var(--mat-sys-level3);
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    z-index: 1;
-
-    &:hover:not(:disabled) {
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-      transform: scale(1.1);
-    }
-
-    &:disabled {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    mat-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
-    }
-
-    mat-spinner {
-      margin: auto;
-
-      ::ng-deep circle {
-        stroke: var(--mat-sys-on-primary) !important;
-      }
+    >* {
+      min-width: 0;
+      overflow: hidden;
     }
   }
 }
 
-// Liked Playlists special card
-.liked-playlists-card {
+// "Yours" section grid - compact horizontal rows
+.yours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  max-width: 100%;
+
+  // Ensure child playlist card components don't overflow the grid
+  app-music-playlist-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// Yours card - compact horizontal row card
+.yours-card {
   display: flex;
-  flex-direction: column;
-  border-radius: var(--mat-sys-corner-medium);
-  background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+  flex-direction: row;
+  align-items: center;
+  border-radius: var(--mat-sys-corner-small);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.15s ease;
   overflow: hidden;
+  background-color: var(--mat-sys-surface-container);
+  height: 56px;
+  min-width: 0;
 
   &:hover,
   &:focus {
-    transform: translateY(-2px);
-    box-shadow: var(--mat-sys-level2);
+    background-color: var(--mat-sys-surface-container-high);
     outline: none;
-  }
-
-  .liked-playlists-cover {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 1 / 1;
-    background: linear-gradient(135deg, #7c4dff, #536dfe);
-    border-radius: 8px;
-
-    mat-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
-      color: white;
-    }
-  }
-
-  .liked-playlists-info {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    gap: 0.25rem;
-
-    .liked-playlists-title {
-      font-size: 0.875rem;
-      color: var(--mat-sys-on-surface);
-    }
-
-    .liked-playlists-meta {
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-    }
   }
 }
 
-// My Music special card
-.my-music-card {
+.yours-card-cover {
   display: flex;
-  flex-direction: column;
-  border-radius: var(--mat-sys-corner-medium);
-  background: linear-gradient(135deg, var(--mat-sys-tertiary-container), var(--mat-sys-primary-container));
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
 
-  &:hover,
-  &:focus {
-    transform: translateY(-2px);
-    box-shadow: var(--mat-sys-level2);
-    outline: none;
-  }
-
-  .my-music-cover {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 1 / 1;
-    background: linear-gradient(135deg, #ff7043, #ff5722);
-    border-radius: 8px;
-
-    mat-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
-      color: white;
-    }
-  }
-
-  .my-music-info {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    gap: 0.25rem;
-
-    .my-music-title {
-      font-size: 0.875rem;
-      color: var(--mat-sys-on-surface);
-    }
-
-    .my-music-meta {
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-    }
+  mat-icon {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: white;
   }
 }
 
-// Offline Music special card
-.offline-music-card {
+.yours-card-info {
   display: flex;
   flex-direction: column;
-  border-radius: var(--mat-sys-corner-medium);
-  background: linear-gradient(135deg, var(--mat-sys-surface-container-high), var(--mat-sys-surface-container));
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.5rem 0.75rem;
+  gap: 0.125rem;
+  min-width: 0;
   overflow: hidden;
+  flex: 1;
 
-  &:hover,
-  &:focus {
-    transform: translateY(-2px);
-    box-shadow: var(--mat-sys-level2);
-    outline: none;
+  .yours-card-title {
+    font-size: 0.8125rem;
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .offline-music-cover {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 1 / 1;
-    background: linear-gradient(135deg, #26a69a, #009688);
-    border-radius: 8px;
-
-    mat-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
-      color: white;
-    }
+  .yours-card-meta {
+    font-size: 0.6875rem;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+}
 
-  .offline-music-info {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    gap: 0.25rem;
+// Gradient backgrounds for yours-card covers
+.liked-songs-gradient {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+}
 
-    .offline-music-title {
-      font-size: 0.875rem;
-      color: var(--mat-sys-on-surface);
-    }
+.liked-playlists-gradient {
+  background: linear-gradient(135deg, #7c4dff, #536dfe);
+}
 
-    .offline-music-meta {
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-    }
-  }
+.my-music-gradient {
+  background: linear-gradient(135deg, #ff7043, #ff5722);
+}
+
+.offline-music-gradient {
+  background: linear-gradient(135deg, #26a69a, #009688);
 }
 
 .empty-state {
@@ -558,28 +401,33 @@
 
 .music-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
   padding: 0.5rem 0;
   max-width: 100%;
 
   @media (max-width: 600px) {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+
+    >* {
+      min-width: 0;
+      overflow: hidden;
+    }
   }
 }
 
-// Artists grid - similar to playlists
+// Artists grid
 .artists-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
   padding: 0.5rem 0;
   max-width: 100%;
 
   @media (max-width: 600px) {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
 }
 
@@ -588,7 +436,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 1rem;
+  padding: 1rem 0.75rem;
   border-radius: var(--mat-sys-corner-medium);
   background-color: var(--mat-sys-surface-container);
   cursor: pointer;
@@ -608,11 +456,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--mat-sys-primary), var(--mat-sys-secondary));
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     overflow: hidden;
 
     img {
@@ -622,9 +470,9 @@
     }
 
     mat-icon {
-      font-size: 2.5rem;
-      width: 2.5rem;
-      height: 2.5rem;
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
       color: white;
     }
   }

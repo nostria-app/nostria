@@ -56,7 +56,7 @@ describe('ProfileReadsComponent', () => {
     hasMoreArticles: mockHasMoreArticles,
     isInitiallyLoading: mockIsInitiallyLoading,
     isInRightPanel: mockIsInRightPanel,
-    loadMoreArticles: jasmine.createSpy('loadMoreArticles').and.returnValue(Promise.resolve([])),
+    loadMoreArticles: vi.fn().mockReturnValue(Promise.resolve([])),
   };
 
   const mockLayoutService = {
@@ -65,54 +65,54 @@ describe('ProfileReadsComponent', () => {
     rightPanelScrolledToBottom: signal(false),
     leftPanelScrollReady: signal(false),
     rightPanelScrollReady: signal(false),
-    openArticle: jasmine.createSpy('openArticle'),
-    copyToClipboard: jasmine.createSpy('copyToClipboard'),
+    openArticle: vi.fn(),
+    copyToClipboard: vi.fn(),
   };
 
   const mockLoggerService = {
-    debug: jasmine.createSpy('debug'),
-    info: jasmine.createSpy('info'),
-    warn: jasmine.createSpy('warn'),
-    error: jasmine.createSpy('error'),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   };
 
   const mockUtilitiesService = {
-    getTagValues: jasmine.createSpy('getTagValues').and.callFake((tag: string, tags: string[][]) => {
+    getTagValues: vi.fn().mockImplementation((tag: string, tags: string[][]) => {
       const found = tags.filter(t => t[0] === tag).map(t => t[1]);
       return found.length > 0 ? found : [''];
     }),
-    normalizeRelayUrls: jasmine.createSpy('normalizeRelayUrls').and.callFake((urls: string[]) => urls),
+    normalizeRelayUrls: vi.fn().mockImplementation((urls: string[]) => urls),
   };
 
   const mockBookmarkService = {};
 
   const mockEventService = {
-    loadReactions: jasmine.createSpy('loadReactions').and.returnValue(Promise.resolve({ events: [] })),
+    loadReactions: vi.fn().mockReturnValue(Promise.resolve({ events: [] })),
   };
 
   const mockSharedRelayService = {
-    getMany: jasmine.createSpy('getMany').and.returnValue(Promise.resolve([])),
+    getMany: vi.fn().mockReturnValue(Promise.resolve([])),
   };
 
   const mockZapService = {
-    getZapsForEvent: jasmine.createSpy('getZapsForEvent').and.returnValue(Promise.resolve([])),
-    parseZapReceipt: jasmine.createSpy('parseZapReceipt').and.returnValue({ amount: 0 }),
+    getZapsForEvent: vi.fn().mockReturnValue(Promise.resolve([])),
+    parseZapReceipt: vi.fn().mockReturnValue({ amount: 0 }),
   };
 
   const mockAccountStateService = {
-    pubkey: jasmine.createSpy('pubkey').and.returnValue('user-pubkey'),
+    pubkey: vi.fn().mockReturnValue('user-pubkey'),
   };
 
   const mockUserRelaysService = {
-    ensureRelaysForPubkey: jasmine.createSpy('ensureRelaysForPubkey').and.returnValue(Promise.resolve()),
-    getRelaysForPubkey: jasmine.createSpy('getRelaysForPubkey').and.returnValue([]),
+    ensureRelaysForPubkey: vi.fn().mockReturnValue(Promise.resolve()),
+    getRelaysForPubkey: vi.fn().mockReturnValue([]),
   };
 
   const mockActivatedRoute = {
     parent: {
       snapshot: {
         paramMap: {
-          get: jasmine.createSpy('get').and.returnValue('test-pubkey'),
+          get: vi.fn().mockReturnValue('test-pubkey'),
         },
       },
     },
@@ -137,15 +137,15 @@ describe('ProfileReadsComponent', () => {
     mockLayoutService.rightPanelScrollReady.set(false);
 
     // Reset spies
-    mockProfileState.loadMoreArticles.calls.reset();
-    mockProfileState.loadMoreArticles.and.returnValue(Promise.resolve([]));
-    mockLayoutService.openArticle.calls.reset();
-    mockLayoutService.copyToClipboard.calls.reset();
-    mockUtilitiesService.getTagValues.calls.reset();
-    mockEventService.loadReactions.calls.reset();
-    mockSharedRelayService.getMany.calls.reset();
-    mockZapService.getZapsForEvent.calls.reset();
-    mockZapService.parseZapReceipt.calls.reset();
+    mockProfileState.loadMoreArticles.mockClear();
+    mockProfileState.loadMoreArticles.mockReturnValue(Promise.resolve([]));
+    mockLayoutService.openArticle.mockClear();
+    mockLayoutService.copyToClipboard.mockClear();
+    mockUtilitiesService.getTagValues.mockClear();
+    mockEventService.loadReactions.mockClear();
+    mockSharedRelayService.getMany.mockClear();
+    mockZapService.getZapsForEvent.mockClear();
+    mockZapService.parseZapReceipt.mockClear();
 
     await TestBed.configureTestingModule({
       imports: [ProfileReadsComponent],
@@ -177,20 +177,20 @@ describe('ProfileReadsComponent', () => {
 
   describe('input signals', () => {
     it('should default isVisible to false', () => {
-      expect(component.isVisible()).toBeFalse();
+      expect(component.isVisible()).toBe(false);
     });
 
     it('should accept isVisible input via setInput', () => {
       fixture.componentRef.setInput('isVisible', true);
-      expect(component.isVisible()).toBeTrue();
+      expect(component.isVisible()).toBe(true);
     });
 
     it('should update isVisible when input changes', () => {
       fixture.componentRef.setInput('isVisible', true);
-      expect(component.isVisible()).toBeTrue();
+      expect(component.isVisible()).toBe(true);
 
       fixture.componentRef.setInput('isVisible', false);
-      expect(component.isVisible()).toBeFalse();
+      expect(component.isVisible()).toBe(false);
     });
   });
 
@@ -229,7 +229,7 @@ describe('ProfileReadsComponent', () => {
     });
 
     it('should set error signal on failure', async () => {
-      mockProfileState.loadMoreArticles.and.returnValue(Promise.reject(new Error('Network error')));
+      mockProfileState.loadMoreArticles.mockReturnValue(Promise.reject(new Error('Network error')));
       await component.loadMoreArticles();
       expect(component.error()).toBe('Failed to load older articles. Please try again.');
     });
@@ -267,24 +267,6 @@ describe('ProfileReadsComponent', () => {
       const event = createMockEvent('1', 1000);
       const image = component.getArticleImage(event);
       expect(image).toBe('');
-    });
-  });
-
-  describe('formatZapAmount', () => {
-    it('should format millions with M suffix', () => {
-      expect(component.formatZapAmount(1500000)).toBe('1.5M');
-    });
-
-    it('should format thousands with k suffix', () => {
-      expect(component.formatZapAmount(1500)).toBe('1.5k');
-    });
-
-    it('should return raw number for amounts under 1000', () => {
-      expect(component.formatZapAmount(500)).toBe('500');
-    });
-
-    it('should handle zero', () => {
-      expect(component.formatZapAmount(0)).toBe('0');
     });
   });
 

@@ -95,6 +95,10 @@ export class Profile {
       // Check if file uploads are needed and media servers are available
       const needsFileUpload = options.profileImageFile || options.bannerImageFile;
 
+      if (needsFileUpload) {
+        await this.media.ensureMediaServersLoaded();
+      }
+
       // If media servers are required but not available, handle gracefully
       if (needsFileUpload && !options.skipMediaServerCheck) {
         if (!this.hasMediaServers()) {

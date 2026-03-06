@@ -28,7 +28,7 @@ export class AddWalletDialogComponent {
 
   connectionStringControl = new FormControl('', [
     Validators.required,
-    Validators.pattern(/^nostr\+walletconnect:\/\//i),
+    Validators.pattern(/^(?:nostr\+walletconnect|web\+nostr\+walletconnect):\/\//i),
   ]);
 
   isAddingWallet = signal(false);
@@ -47,9 +47,12 @@ export class AddWalletDialogComponent {
 
     try {
       const connectionString = this.connectionStringControl.value!;
-      const parsed = this.wallets.parseConnectionString(connectionString);
+      const normalizedConnectionString = connectionString.startsWith('web+nostr+walletconnect://')
+        ? connectionString.replace('web+nostr+walletconnect://', 'nostr+walletconnect://')
+        : connectionString;
+      const parsed = this.wallets.parseConnectionString(normalizedConnectionString);
 
-      this.wallets.addWallet(parsed.pubkey, connectionString, {
+      this.wallets.addWallet(parsed.pubkey, normalizedConnectionString, {
         relay: parsed.relay,
         secret: parsed.secret,
       });

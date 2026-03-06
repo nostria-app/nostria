@@ -1,5 +1,6 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
+beta-social-preview-check.ps1
 .codenomad
 null
 nul

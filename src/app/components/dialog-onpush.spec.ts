@@ -17,39 +17,40 @@ import { SigningDialogComponent } from './signing-dialog/signing-dialog.componen
 import { TextInputDialogComponent } from './text-input-dialog/text-input-dialog.component';
 
 interface ComponentDef {
-  onPush: boolean;
+    onPush: boolean;
 }
 
 function getComponentDef(component: Type<unknown>): ComponentDef | null {
-  return (component as unknown as Record<string, ComponentDef>)['ɵcmp'] ?? null;
+    return (component as unknown as Record<string, ComponentDef>)['ɵcmp'] ?? null;
 }
 
-const dialogComponents: { name: string; component: Type<unknown> }[] = [
-  { name: 'ConfirmDialogComponent', component: ConfirmDialogComponent },
-  { name: 'CustomDialogComponent', component: CustomDialogComponent },
-  { name: 'DatabaseErrorDialogComponent', component: DatabaseErrorDialogComponent },
-  { name: 'ImageUrlDialogComponent', component: ImageUrlDialogComponent },
-  { name: 'InstallDialogComponent', component: InstallDialogComponent },
-  { name: 'LoginDialogComponent', component: LoginDialogComponent },
-  { name: 'ModelLoadDialogComponent', component: ModelLoadDialogComponent },
-  { name: 'PinPromptDialogComponent', component: PinPromptDialogComponent },
-  { name: 'PublishDialogComponent', component: PublishDialogComponent },
-  { name: 'QrcodeScanDialogComponent', component: QrcodeScanDialogComponent },
-  { name: 'ReactionsDialogComponent', component: ReactionsDialogComponent },
-  { name: 'ReportDialogComponent', component: ReportDialogComponent },
-  { name: 'ReportsDialogComponent', component: ReportsDialogComponent },
-  { name: 'SigningDialogComponent', component: SigningDialogComponent },
-  { name: 'TextInputDialogComponent', component: TextInputDialogComponent },
+const dialogComponents: {
+    name: string;
+    component: Type<unknown>;
+}[] = [
+    { name: 'ConfirmDialogComponent', component: ConfirmDialogComponent },
+    { name: 'CustomDialogComponent', component: CustomDialogComponent },
+    { name: 'DatabaseErrorDialogComponent', component: DatabaseErrorDialogComponent },
+    { name: 'ImageUrlDialogComponent', component: ImageUrlDialogComponent },
+    { name: 'InstallDialogComponent', component: InstallDialogComponent },
+    { name: 'LoginDialogComponent', component: LoginDialogComponent },
+    { name: 'ModelLoadDialogComponent', component: ModelLoadDialogComponent },
+    { name: 'PinPromptDialogComponent', component: PinPromptDialogComponent },
+    { name: 'PublishDialogComponent', component: PublishDialogComponent },
+    { name: 'QrcodeScanDialogComponent', component: QrcodeScanDialogComponent },
+    { name: 'ReactionsDialogComponent', component: ReactionsDialogComponent },
+    { name: 'ReportDialogComponent', component: ReportDialogComponent },
+    { name: 'ReportsDialogComponent', component: ReportsDialogComponent },
+    { name: 'SigningDialogComponent', component: SigningDialogComponent },
+    { name: 'TextInputDialogComponent', component: TextInputDialogComponent },
 ];
 
 describe('Dialog components OnPush change detection', () => {
-  for (const { name, component } of dialogComponents) {
-    it(`${name} should use ChangeDetectionStrategy.OnPush`, () => {
-      const def = getComponentDef(component);
-      expect(def).toBeTruthy();
-      expect(def!.onPush)
-        .withContext(`${name} must have changeDetection: ChangeDetectionStrategy.OnPush`)
-        .toBeTrue();
-    });
-  }
+    for (const { name, component } of dialogComponents) {
+        it(`${name} should use ChangeDetectionStrategy.OnPush`, () => {
+            const def = getComponentDef(component);
+            expect(def).toBeTruthy();
+            expect(def!.onPush, `${name} must have changeDetection: ChangeDetectionStrategy.OnPush`).toBe(true);
+        });
+    }
 });

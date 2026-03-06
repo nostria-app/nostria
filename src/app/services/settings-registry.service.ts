@@ -623,6 +623,19 @@ export class SettingsRegistryService {
       priority: 4,
       popular: true,
     },
+    // Music Settings
+    {
+      id: 'music-status',
+      title: $localize`:@@settings.music-status.title:Music Status`,
+      description: $localize`:@@settings.music-status.description:Share what you're listening to via NIP-38 user status`,
+      keywords: ['music', 'status', 'nip-38', 'now playing', 'listening', 'share', 'song', 'track', 'audio'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'music_note',
+      route: '/settings/general',
+      priority: 19,
+    },
+
     // Debug Settings
     {
       id: 'simulate-platform',

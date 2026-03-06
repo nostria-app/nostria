@@ -134,6 +134,7 @@ Dark mode: `:host-context(.dark) .my-class { ... }`
 - Use `field-sizing: content` for auto-growing textareas
 - Do NOT use `color="primary"` on buttons (Material 3)
 - Use `mat-flat-button` for primary actions
+- When resizing `mat-icon-button` smaller than default, **never** use `line-height` to center the icon. Use `padding: 0 !important; display: flex !important; align-items: center; justify-content: center;` instead
 
 ## Dialogs
 
@@ -202,6 +203,19 @@ After running tests, check these outputs:
 5. **Network data**: `test-results/network/*.json` — HTTP requests, WebSocket connections
 6. **Full report**: Run `npm run test:e2e:report:full` to generate `test-results/reports/test-report.md`
 
+### Social Preview Regression Check
+
+When changing SSR, routing, `DataResolver`, or metadata generation, always validate social preview tags before merging.
+
+Use bot user agents and verify dynamic pages do not return homepage fallback tags:
+
+```bash
+# Validate OG/Twitter meta for a known event URL
+curl -A "Twitterbot/1.0" "https://nostria.app/e/nevent1qvzqqqqqqypzq9lz3z0m5qgzr5zg5ylapwss3tf3cwpjv225vrppu6wy8750heg4qqsqqqpsj6e662lsgy26a5g9nvav4z807m08ryhnx7ljs5dnuhpfl0cs642uw" | grep -E "og:title|og:description|twitter:title|twitter:description|og:image|twitter:image"
+```
+
+Expected outcome: event/profile/article-specific tags are present and not generic homepage values like `Nostria - Your Social Network`.
+
 ### Test Tags
 
 Tests are tagged for filtering. Use `--grep` to select:
@@ -257,4 +271,3 @@ npm run test:e2e:report
 ```
 
 The full report includes: test results table, performance metrics with pass/fail indicators, console error summary, network health, memory trends, and actionable improvement recommendations.
-

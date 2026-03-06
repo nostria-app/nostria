@@ -78,6 +78,22 @@
 
     <mat-divider></mat-divider>
 
+    <!-- Music Status Setting (NIP-38) -->
+    <div class="status-section">
+      <div class="status-toggle">
+        <div class="status-toggle-info">
+          <h3>Music Status</h3>
+          <p class="section-description">Share what you're listening to on your Nostr profile. When enabled, your
+            current
+            track is published as a NIP-38 user status that others can see.</p>
+        </div>
+        <mat-slide-toggle [checked]="publishMusicStatus()" (change)="togglePublishMusicStatus()">
+        </mat-slide-toggle>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
     <!-- What is this section -->
     <div class="info-section">
       <h4>What is a Music Relay Set?</h4>

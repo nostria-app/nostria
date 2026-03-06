@@ -5,7 +5,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './database.service';
 import { DatabaseService } from './database.service';
-import { kinds, nip19, nip57, Event } from 'nostr-tools';
+import { kinds, nip19, nip57, Event, Filter } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
@@ -62,7 +62,7 @@ export class ContentNotificationService implements OnDestroy {
    * Regex to match nostr: URI identifiers and bare NIP-19 identifiers in content
    * These can be quite long (100-200+ chars for nprofile with relay hints)
    */
-  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
+  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -111,6 +111,8 @@ export class ContentNotificationService implements OnDestroy {
 
   // Track if we're currently checking for new content
   private isChecking = signal<boolean>(false);
+  /** Public readonly signal for checking state */
+  readonly isCheckingNotifications = this.isChecking.asReadonly();
 
   constructor() {
     this.logger.info('ContentNotificationService initialized');
@@ -506,27 +508,160 @@ export class ContentNotificationService implements OnDestroy {
   }
 
   /**
-   * Check for new followers (kind 3 events mentioning the user)
+   * Check for new followers (kind 3 events mentioning the user).
+   *
+   * On first login (or after notification reset), paginates through ALL kind 3
+   * events that reference the user's pubkey (500 per batch until exhausted).
+   * All followers are aggregated into a single summary notification with a link
+   * to the followers page, and all pubkeys are stored as processed.
+   *
+   * On subsequent checks, uses the stored followerCheckLastTimestamp (minus 1 hour
+   * for time-drift tolerance) to fetch only new kind 3 events. New followers get
+   * individual notifications; already-processed followers are silently ignored.
    */
   private async checkForNewFollowers(pubkey: string, since: number): Promise<void> {
     try {
-      this.logger.debug(`Checking for new followers since ${since}`);
+      const followerCheckTimestamp = this.accountLocalState.getFollowerCheckLastTimestamp(pubkey);
+      const isFirstCheck = followerCheckTimestamp === 0;
+      const now = Math.floor(Date.now() / 1000);
 
-      // Query for kind 3 (contact list) events that include this user's pubkey
-      const events = await this.accountRelay.getMany({
-        kinds: [kinds.Contacts],
-        '#p': [pubkey],
-        since,
-        limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
-      });
+      if (isFirstCheck) {
+        // First-time scan: paginate through ALL kind 3 events, ignoring the `since` cap
+        await this.scanAllFollowers(pubkey, now);
+      } else {
+        // Subsequent check: use stored timestamp minus 1 hour for time-drift tolerance
+        const effectiveSince = Math.max(since, followerCheckTimestamp - 3600);
 
-      this.logger.debug(`Found ${events.length} potential follow events`);
+        this.logger.debug(`Checking for new followers since ${effectiveSince}`);
 
-      for (const event of events) {
-        await this.processFollowerEvent(pubkey, event);
+        const events = await this.accountRelay.getMany({
+          kinds: [kinds.Contacts],
+          '#p': [pubkey],
+          since: effectiveSince,
+          limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
+        });
+
+        this.logger.debug(`Found ${events.length} potential follow events`);
+
+        for (const event of events) {
+          await this.processFollowerEvent(pubkey, event);
+        }
       }
+
+      // Always update the follower check timestamp after processing
+      this.accountLocalState.setFollowerCheckLastTimestamp(pubkey, now);
     } catch (error) {
       this.logger.error('Failed to check for new followers', error);
+    }
+  }
+
+  /** Batch size for paginated follower scanning */
+  private readonly FOLLOWER_SCAN_BATCH_SIZE = 500;
+
+  /**
+   * Paginate through ALL kind 3 events that reference the user's pubkey.
+   * Fetches 500 events at a time, using the oldest event's created_at as the
+   * next `until` boundary, until no more events are returned.
+   * All discovered followers are aggregated into a single summary notification.
+   */
+  private async scanAllFollowers(pubkey: string, now: number): Promise<void> {
+    const seen = new Set<string>();
+    const followerPubkeys: string[] = [];
+    let until: number | undefined;
+    let totalFetched = 0;
+
+    this.logger.info('[FollowerScan] Starting full follower scan (first-time or reset)');
+
+    // Remove any existing follower summary so the fresh scan can create a new one.
+    // We must await the DB deletion because createContentNotification checks storage
+    // for duplicates — a fire-and-forget delete would race and block creation.
+    const existingSummaryId = `content-${NotificationType.FOLLOWER_SUMMARY}-${pubkey}`;
+    this.notificationService.removeNotification(existingSummaryId);
+    try {
+      await this.database.deleteNotification(existingSummaryId);
+    } catch {
+      // Ignore — may not exist yet
+    }
+
+    while (true) {
+      const filter: Filter = {
+        kinds: [kinds.Contacts],
+        '#p': [pubkey],
+        limit: this.FOLLOWER_SCAN_BATCH_SIZE,
+        ...(until !== undefined ? { until } : {}),
+      };
+
+      const events = await this.accountRelay.getMany(filter);
+      totalFetched += events.length;
+
+      this.logger.debug(`[FollowerScan] Batch returned ${events.length} events (total so far: ${totalFetched})`);
+
+      if (events.length === 0) {
+        break;
+      }
+
+      // Find the oldest timestamp in this batch for the next pagination cursor
+      let oldestTimestamp = Infinity;
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+        if (seen.has(event.pubkey)) continue;
+
+        const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+        if (!followsCurrentUser) continue;
+
+        seen.add(event.pubkey);
+        followerPubkeys.push(event.pubkey);
+
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+      }
+
+      // Also check non-matching events for oldest timestamp (they still affect pagination)
+      for (const event of events) {
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+      }
+
+      // If we got fewer events than the batch size, we've exhausted all events
+      if (events.length < this.FOLLOWER_SCAN_BATCH_SIZE) {
+        break;
+      }
+
+      // Move the cursor back: use oldest timestamp to avoid re-fetching the same batch.
+      // If the cursor didn't change (all events share the same timestamp), subtract 1 to
+      // avoid an infinite loop re-fetching the same batch.
+      if (until === oldestTimestamp) {
+        until = oldestTimestamp - 1;
+      } else {
+        until = oldestTimestamp;
+      }
+    }
+
+    this.logger.info(`[FollowerScan] Complete. Found ${followerPubkeys.length} unique followers from ${totalFetched} events`);
+
+    if (followerPubkeys.length > 0) {
+      const message = followerPubkeys.length === 1
+        ? '1 person is following you'
+        : `${followerPubkeys.length} people are following you`;
+
+      await this.createContentNotification({
+        type: NotificationType.FOLLOWER_SUMMARY,
+        title: 'Followers',
+        message,
+        authorPubkey: pubkey,
+        recipientPubkey: pubkey,
+        timestamp: now * 1000,
+        metadata: {
+          followerCount: followerPubkeys.length,
+          followerPubkeys,
+        },
+      });
+
+      // Batch-mark all follower pubkeys as processed
+      this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, followerPubkeys, now);
     }
   }
 
@@ -975,12 +1110,15 @@ export class ContentNotificationService implements OnDestroy {
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)
       recipientPubkey?: string; // For profile zaps, the recipient's pubkey
+      followerCount?: number; // For follower summary, total follower count
+      followerPubkeys?: string[]; // For follower summary, the list of follower pubkeys
     };
   }): Promise<void> {
     // CRITICAL: Filter out notifications from muted/blocked accounts
     // Don't create or store notifications from muted users at all
+    // Skip this check for FOLLOWER_SUMMARY since authorPubkey is just the first follower
     const mutedAccounts = this.accountState.mutedAccounts();
-    if (mutedAccounts.includes(data.authorPubkey)) {
+    if (data.type !== NotificationType.FOLLOWER_SUMMARY && mutedAccounts.includes(data.authorPubkey)) {
       this.logger.debug(`Skipping notification from muted account: ${data.authorPubkey}`);
       return;
     }
@@ -992,7 +1130,10 @@ export class ContentNotificationService implements OnDestroy {
     // For other notification types, use eventId if available
     let notificationId: string;
 
-    if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
+    if (data.type === NotificationType.FOLLOWER_SUMMARY) {
+      // For follower summary, use a stable ID per recipient so it can be replaced on re-check
+      notificationId = `content-${data.type}-${data.recipientPubkey}`;
+    } else if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
       // For zaps, use the zap receipt ID (unique for each zap)
       notificationId = `content-${data.type}-${data.metadata.zapReceiptId}`;
     } else if (data.type === NotificationType.REACTION && data.metadata?.reactionEventId) {

@@ -21,6 +21,8 @@ export interface QuoteInfo {
   id: string;
   pubkey: string;
   kind?: number;
+  identifier?: string;
+  relays?: string[];
 }
 
 /**
@@ -207,8 +209,9 @@ export class NoteEditorService {
     tags: string[][],
     zapSplit?: BuildTagsConfig['zapSplit']
   ): void {
-    const relay = '';
-    tags.push(['q', quote.id, relay, quote.pubkey]);
+    const relay = quote.relays?.[0] || '';
+    const quoteTarget = this.getQuoteTagTarget(quote);
+    tags.push(['q', quoteTarget, relay, quote.pubkey]);
 
     // Add p-tag for the quoted author
     const existingPubkeys = tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
@@ -227,11 +230,23 @@ export class NoteEditorService {
     }
   }
 
+  private getQuoteTagTarget(quote: QuoteInfo): string {
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return `${quote.kind}:${quote.pubkey}:${quote.identifier}`;
+    }
+
+    return quote.id;
+  }
+
   /**
    * Extract NIP-27 references from content and add corresponding tags
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
     const addedQuoteEventIds = new Set(tags.filter(tag => tag[0] === 'q').map(tag => tag[1]));

@@ -28,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -76,7 +77,10 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { OpenGraphService, OpenGraphData } from '../../services/opengraph.service';
+import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
+import { HapticsService } from '../../services/haptics.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -103,6 +107,7 @@ interface DirectMessage {
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
+  failureReason?: string; // Human-readable reason for send failure
 }
 
 interface MessageGroup {
@@ -166,6 +171,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly accountLocalState = inject(AccountLocalStateService);
   readonly localSettings = inject(LocalSettingsService);
   readonly mediaService = inject(MediaService);
+  private readonly haptics = inject(HapticsService);
+  private readonly openGraph = inject(OpenGraphService);
+  private readonly dialog = inject(MatDialog);
+
+  // Link preview data - keyed by URL
+  linkPreviews = signal<Map<string, OpenGraphData>>(new Map());
+  private linkPreviewsLoaded = new Set<string>();
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -342,6 +354,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return links.filter(link => mediaExtensions.test(link.url));
   });
 
+  /** Image-only subset of shared media for thumbnail grid */
+  sharedImages = computed(() => {
+    const links = this.sharedLinks();
+    return links.filter(link => isImageUrl(link.url));
+  });
+
+  /** Video-only subset of shared media */
+  sharedVideos = computed(() => {
+    const links = this.sharedLinks();
+    const videoExtensions = /\.(mp4|webm|mov)$/i;
+    return links.filter(link => videoExtensions.test(link.url));
+  });
+
+  /** Regular links (not media, not files) that need OG previews */
+  regularLinks = computed(() => {
+    const links = this.sharedLinks();
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
+    const fileExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|7z|txt|csv|json|xml)$/i;
+    return links.filter(link => !mediaExtensions.test(link.url) && !fileExtensions.test(link.url) && !isImageUrl(link.url));
+  });
+
   // Helper to check if a chat matches the search query
   private chatMatchesSearch(chat: Chat, query: string): boolean {
     if (!query) return true;
@@ -473,6 +506,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private chatListScrollThrottleTimeout: any = null;
   private chatListScrollElement: HTMLElement | null = null;
 
+  /** Whether the user has manually scrolled away from the bottom of the chat. */
+  private userScrolledUp = false;
+  /** Last known scrollHeight — used to detect content growth vs. shrink. */
+  private lastScrollHeight = 0;
+  /** Bound handler for capturing `load` events on media elements. */
+  private mediaLoadHandler: ((e: Event) => void) | null = null;
+  /** MutationObserver that watches for new DOM nodes (e.g. Angular rendering new message bubbles). */
+  private contentMutationObserver: MutationObserver | null = null;
+
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
@@ -534,12 +576,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.hasMoreMessages.set(true);
             // Reset message count tracking for the new chat
             this.lastMessageCount.set(chatMessages.length);
-            this.scrollToBottom();
 
-            // Re-setup scroll listener for the new chat
+            // Set up scroll listener + ResizeObserver FIRST so it can catch
+            // content reflows that happen after the initial scrollToBottom.
             setTimeout(() => {
               this.setupScrollListener();
-            }, 200);
+              this.scrollToBottom();
+              // Secondary delayed scroll to catch late-rendering content
+              // (Angular template rendering, lazy images, embeds)
+              setTimeout(() => this.scrollToBottomIfNotScrolledUp(), 500);
+            }, 50);
           } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
             // Same chat but check for new messages
             const latestLocalTimestamp =
@@ -887,6 +933,79 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Add the scroll event listener
     scrollElement.addEventListener('scroll', this.scrollHandler);
+
+    // Set up auto-scroll watchers for rich content loading
+    this.setupMediaLoadListener(scrollElement);
+    this.setupContentMutationObserver(scrollElement);
+  }
+
+  /**
+   * Auto-scroll to bottom when new content causes the scroll height to grow,
+   * but only if the user was already near the bottom before the growth.
+   *
+   * Uses the *previous* scrollHeight (`lastScrollHeight`) to determine the
+   * "was near bottom" state so that the height increase itself doesn't
+   * falsely mark the user as scrolled up.
+   */
+  private autoScrollAfterContentGrowth(scrollElement: HTMLElement): void {
+    const newScrollHeight = scrollElement.scrollHeight;
+    if (newScrollHeight <= this.lastScrollHeight) {
+      this.lastScrollHeight = newScrollHeight;
+      return;
+    }
+
+    const { scrollTop, clientHeight } = scrollElement;
+    const wasNearBottom = (this.lastScrollHeight - (scrollTop + clientHeight)) < 150;
+
+    if (wasNearBottom) {
+      scrollElement.scrollTop = newScrollHeight;
+      this.userScrolledUp = false;
+    }
+
+    this.lastScrollHeight = newScrollHeight;
+  }
+
+  /**
+   * Listen for `load` events on media elements (img, video, iframe) inside
+   * the message list. The `load` event does NOT bubble, so we must use
+   * capturing (`{ capture: true }`) to intercept it on the scroll container.
+   */
+  private setupMediaLoadListener(scrollElement: HTMLElement): void {
+    // Clean up previous listener
+    if (this.mediaLoadHandler) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+    }
+
+    this.lastScrollHeight = scrollElement.scrollHeight;
+
+    this.mediaLoadHandler = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'IMG' || tag === 'VIDEO' || tag === 'IFRAME') {
+        this.autoScrollAfterContentGrowth(scrollElement);
+      }
+    };
+
+    scrollElement.addEventListener('load', this.mediaLoadHandler, true);
+  }
+
+  /**
+   * Watch for DOM mutations (new child nodes added by Angular rendering)
+   * that increase the scroll height. This catches cases where new message
+   * bubbles are inserted or Angular components expand after rendering.
+   */
+  private setupContentMutationObserver(scrollElement: HTMLElement): void {
+    this.contentMutationObserver?.disconnect();
+
+    this.contentMutationObserver = new MutationObserver(() => {
+      this.autoScrollAfterContentGrowth(scrollElement);
+    });
+
+    this.contentMutationObserver.observe(scrollElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   /**
@@ -905,8 +1024,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const scrollElement = this.messagesWrapper?.nativeElement;
       if (!scrollElement) return;
 
-      // Check if user is near the top and we have messages to load
       const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+
+      // Track whether the user has scrolled away from the bottom.
+      // "Near the bottom" = within 150px of the end.
+      const distFromBottom = scrollHeight - (scrollTop + clientHeight);
+      this.userScrolledUp = distFromBottom > 150;
+
+      // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
 
       this.logger.debug(
@@ -926,16 +1051,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   /**
-   * Scroll the messages wrapper to the bottom to show latest messages
+   * Scroll the messages wrapper to the bottom to show latest messages.
+   * Also resets the userScrolledUp flag so the ResizeObserver keeps scrolling.
    */
   private scrollToBottom(): void {
+    this.userScrolledUp = false;
     // Use setTimeout to ensure DOM is updated
     setTimeout(() => {
       if (this.messagesWrapper?.nativeElement) {
         const element = this.messagesWrapper.nativeElement;
         element.scrollTop = element.scrollHeight;
+        this.lastScrollHeight = element.scrollHeight;
       }
     }, 100);
+  }
+
+  /**
+   * Scroll to bottom only if the user hasn't manually scrolled up.
+   * Used as a delayed safety-net scroll after content may have reflowed.
+   */
+  private scrollToBottomIfNotScrolledUp(): void {
+    if (this.userScrolledUp) return;
+    if (this.messagesWrapper?.nativeElement) {
+      const element = this.messagesWrapper.nativeElement;
+      element.scrollTop = element.scrollHeight;
+      this.lastScrollHeight = element.scrollHeight;
+    }
   }
 
   ngOnDestroy(): void {
@@ -965,6 +1106,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       clearTimeout(this.chatListScrollThrottleTimeout);
       this.chatListScrollThrottleTimeout = null;
     }
+
+    // Clean up media load listener
+    if (this.mediaLoadHandler && scrollElement) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+      this.mediaLoadHandler = null;
+    }
+
+    // Clean up MutationObserver
+    this.contentMutationObserver?.disconnect();
+    this.contentMutationObserver = null;
 
     // Clean up subscriptions
     if (this.messageSubscription) {
@@ -1073,6 +1224,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Mark chat as read when selected
     await this.markChatAsRead(chat.id);
 
+    // Resolve any messages stuck in "pending" state from a previous session.
+    // These were likely sent but the publish callback was lost (e.g. page refresh).
+    this.resolveStalePendingMessages(chat.pubkey);
+
     // Preload DM relays (kind 10050) for this contact so sending is instant.
     // Loads from database first, refreshes from network in the background.
     this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
@@ -1084,6 +1239,41 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/messages', chat.id], {
       queryParams: {},
     });
+  }
+
+  /**
+   * Resolve messages stuck in "pending" state from a previous session.
+   * These messages were encrypted, signed, and the publish() call was fired,
+   * but the component was destroyed (page refresh, navigation) before the
+   * relay response arrived. Since they were already published, re-signing
+   * would risk duplicates. We mark them as delivered because the publish
+   * likely succeeded.
+   *
+   * Only resolves messages that are NOT in the current in-memory pendingMessages
+   * signal (those are actively being published right now).
+   */
+  private resolveStalePendingMessages(chatPubkey: string): void {
+    const persistedMessages = this.messaging.getChatMessages(chatPubkey);
+    const activePendingIds = new Set(this.pendingMessages().map(m => m.id));
+
+    const staleMessages = persistedMessages.filter(
+      m => m.pending && !activePendingIds.has(m.id)
+    );
+
+    if (staleMessages.length === 0) return;
+
+    this.logger.info(
+      `[MessagesComponent] Resolving ${staleMessages.length} stale pending message(s) in chat ${chatPubkey.slice(0, 16)}...`
+    );
+
+    for (const msg of staleMessages) {
+      this.messaging.updateMessageInChat(chatPubkey, msg.id, {
+        pending: false,
+        received: true,
+        failed: false,
+        failureReason: undefined,
+      });
+    }
   }
 
   /**
@@ -1419,8 +1609,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Send a direct message using both NIP-04 and NIP-44.
-   * Uses optimistic UI: the message appears immediately while
-   * relay publishing happens in the background.
+   * Uses optimistic UI: the message appears as pending immediately while
+   * relay publishing happens in the background. The message transitions
+   * to received/failed based on actual relay delivery results.
    */
   async sendMessage(): Promise<void> {
     const messageText = this.newMessageText().trim();
@@ -1456,7 +1647,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
       // Create the message (encrypts + signs, but does NOT publish yet)
-      let result: { message: DirectMessage; publish: () => Promise<void> };
+      let result: { message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> };
 
       if (useModernEncryption) {
         result = await this.createNip44Message(
@@ -1476,37 +1667,82 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const finalMessage = result.message;
 
-      // Create a pending message to show immediately in the UI
+      // Add message as PENDING to both the messaging service and local pending list.
+      // It stays pending until relay publishing confirms delivery.
       const pendingMessage: DirectMessage = {
         ...finalMessage,
         pending: true,
         received: false,
       };
 
-      // Add to pending messages so the user sees feedback right away
+      // Add to messaging service (persists to DB as pending)
+      this.messaging.addMessageToChat(receiverPubkey, pendingMessage);
+
+      // Also add to local pending signal for immediate UI feedback
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
-      // Add the message to the messaging service to update the chat's lastMessage
-      const updatedMessage = {
-        ...finalMessage,
-        pending: false,
-        received: true,
-      };
-
-      this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
-
-      // Release the send button immediately - message is visible in the UI
+      // Release the send button immediately - message is visible as pending
       this.isSending.set(false);
       this.focusMessageInput();
 
-      // Publish to relays in the background (fire-and-forget from UI perspective)
-      result.publish().catch(err => {
+      // Publish to relays in the background, then update message status
+      result.publish().then(publishResult => {
+        if (publishResult.success) {
+          // At least one relay accepted — mark as delivered
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: true,
+            failed: false,
+            failureReason: undefined,
+          });
+          // Remove from local pending (persisted version will take over)
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+        } else {
+          // All relays rejected — mark as failed with reason
+          const reason = publishResult.failureReason || 'All relays rejected the message';
+          this.logger.error('Message delivery failed:', reason);
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: false,
+            failed: true,
+            failureReason: reason,
+          });
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+          this.notifications.addNotification({
+            id: Date.now().toString(),
+            type: NotificationType.ERROR,
+            title: 'Message Not Delivered',
+            message: reason,
+            timestamp: Date.now(),
+            read: false,
+          });
+        }
+      }).catch(err => {
         this.logger.error('Background relay publishing failed', err);
+        const reason = err?.message || 'Failed to publish message to relays';
+        // Mark as failed so user can see and retry
+        this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+          pending: false,
+          received: false,
+          failed: true,
+          failureReason: reason,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+        this.notifications.addNotification({
+          id: Date.now().toString(),
+          type: NotificationType.ERROR,
+          title: 'Message Not Delivered',
+          message: reason,
+          timestamp: Date.now(),
+          read: false,
+        });
       });
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
-      // Clear any pending messages since the send failed
+      // Clear any pending messages since the send failed before publishing
       this.pendingMessages.set([]);
 
       this.isSending.set(false);
@@ -1530,14 +1766,33 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Retry sending a failed message
+   * Retry sending a failed message.
+   * Removes the failed message and re-triggers the full send flow
+   * with the same content and reply context.
    */
-  retryMessage(message: DirectMessage): void {
-    // Remove the failed message from pending
+  async retryMessage(message: DirectMessage): Promise<void> {
+    const receiverPubkey = this.selectedChat()?.pubkey;
+    if (!receiverPubkey) return;
+
+    // Remove the failed message from pending list
     this.pendingMessages.update(msgs => msgs.filter(msg => msg.id !== message.id));
 
-    // Then set its content to the input field so the user can try again
+    // Remove from persisted chat state (it was saved as failed)
+    this.messaging.removeMessageFromChat(receiverPubkey, message.id);
+
+    // Re-send: put the content into the input field and trigger send
     this.newMessageText.set(message.content);
+
+    // Restore reply context if the original message was a reply
+    if (message.replyTo) {
+      const repliedMessage = this.getMessageById(message.replyTo);
+      if (repliedMessage) {
+        this.replyingToMessage.set(repliedMessage);
+      }
+    }
+
+    // Trigger the send flow
+    await this.sendMessage();
   }
 
   /**
@@ -1575,10 +1830,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Start the long press timer
     this.longPressTimeout = setTimeout(() => {
-      // Trigger haptic feedback if available
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      this.haptics.triggerMedium();
 
       this.longPressedMessage.set(message);
       this.showMessageContextMenu(message, event);
@@ -1873,6 +2125,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   toggleChatDetails(): void {
     this.showChatDetails.update(v => !v);
+    if (this.showChatDetails()) {
+      this.loadLinkPreviews();
+    }
   }
 
   /**
@@ -1958,11 +2213,72 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /** Check if a URL points to an image */
+  isImageLink(url: string): boolean {
+    return isImageUrl(url);
+  }
+
+  /** Get the OG preview for a URL, only when loaded */
+  getLinkPreview(url: string): OpenGraphData | undefined {
+    const preview = this.linkPreviews().get(url);
+    if (preview && !preview.loading && !preview.error) {
+      return preview;
+    }
+    return undefined;
+  }
+
+  /** Load OG previews for visible regular links */
+  loadLinkPreviews(): void {
+    const links = this.regularLinks();
+    const toFetch = links
+      .slice(0, 10)
+      .filter(link => !this.linkPreviewsLoaded.has(link.url));
+
+    for (const link of toFetch) {
+      this.linkPreviewsLoaded.add(link.url);
+      this.openGraph.getOpenGraphData(link.url).then(data => {
+        this.linkPreviews.update(map => {
+          const newMap = new Map(map);
+          newMap.set(link.url, data);
+          return newMap;
+        });
+      });
+    }
+  }
+
   /**
    * Open URL in new tab
    */
   openUrl(url: string): void {
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  /**
+   * Open image preview dialog for shared images
+   */
+  async openImagePreview(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const images = this.sharedImages();
+    if (images.length === 0) return;
+
+    const { MediaPreviewDialogComponent } = await import('../../components/media-preview-dialog/media-preview.component');
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: images.map(img => ({
+          url: img.url,
+          type: 'image',
+        })),
+        initialIndex: index,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   /**
@@ -2021,7 +2337,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
@@ -2058,7 +2374,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: 'nip04',
       };
 
-      const publish = () => this.publishToRelays(signedEvent, receiverPubkey);
+      const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
+        const success = await this.publishToRelays(signedEvent, receiverPubkey);
+        if (success) return { success: true };
+        return { success: false, failureReason: 'Failed to publish to recipient\'s relays' };
+      };
 
       return { message, publish };
     } catch (error) {
@@ -2076,7 +2396,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
 
@@ -2181,23 +2501,47 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: 'nip44',
       };
 
-      // Return a publish function that handles all relay publishing in the background
-      const publish = async () => {
+      // Return a publish function that handles all relay publishing in the background.
+      // Uses kind 10050 DM relays only — does NOT fall back to all account relays (10002).
+      // Returns true if at least one relay accepted the recipient's gift wrap.
+      const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
+        const errors: string[] = [];
+
         if (isNoteToSelf) {
-          // Note to Self: Only one gift wrap needed
-          await Promise.allSettled([
+          const results = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, myPubkey),
-            this.publishToAccountRelays(signedGiftWrap),
           ]);
+          const success = results.some(r => r.status === 'fulfilled');
+          if (!success) {
+            errors.push(...results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
+            return { success: false, failureReason: errors.join('; ') || 'Failed to publish to DM relays' };
+          }
+          return { success: true };
         } else {
-          // Regular message: publish both gift wraps
-          await Promise.allSettled([
+          // Publish recipient's gift wrap to their DM relays (kind 10050)
+          // and to discovery relays as fallback
+          const recipientResults = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
-            this.publishToAccountRelays(signedGiftWrap),
             this.publishToDiscoveryRelays(signedGiftWrap),
-            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
-            this.publishToAccountRelays(signedGiftWrap2!),
           ]);
+          const recipientSuccess = recipientResults.some(r => r.status === 'fulfilled');
+
+          // Publish sender's self-copy to own DM relays (kind 10050)
+          const selfResults = await Promise.allSettled([
+            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
+          ]);
+
+          if (!recipientSuccess) {
+            errors.push(...recipientResults.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
+            return { success: false, failureReason: errors.join('; ') || 'Failed to deliver to recipient\'s relays' };
+          }
+
+          // Log self-copy failures but don't treat as overall failure
+          if (selfResults.every(r => r.status === 'rejected')) {
+            this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
+          }
+
+          return { success: true };
         }
       };
 
@@ -2209,14 +2553,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Publish an event to multiple relays
+   * Publish an event to multiple relays.
+   * Returns true if at least one relay accepted the event.
    */
-  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<void> {
+  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
     const promisesUser = this.userRelayService.publish(pubkey, event);
     const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesUser, promisesAccount]);
+    const results = await Promise.allSettled([promisesUser, promisesAccount]);
+    return results.some(r => r.status === 'fulfilled');
   }
 
   /**

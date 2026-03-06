@@ -59,108 +59,90 @@
         }
       </div>
       } @else {
-      <!-- Category tabs with icons -->
-      <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
-        class="emoji-category-tabs">
-
-        <!-- Recent/Frequently used tab -->
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon matTooltip="Recent">schedule</mat-icon>
-          </ng-template>
-          <div class="emoji-tab-content">
-            @if (recentEmojis().length > 0) {
-            <div class="emoji-grid">
-              @for (recent of recentEmojis(); track recent.emoji) {
-              <button mat-icon-button class="emoji-button"
-                [class.selected]="userReaction()?.event?.content === recent.emoji"
-                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-                [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
-                @if (recent.url) {
-                <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
-                } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
-                } @else {
-                {{ recent.emoji }}
-                }
-              </button>
+      <div class="emoji-list-scroll">
+        <div class="emoji-section-block">
+          <div class="section-title">Recent</div>
+          @if (recentEmojis().length > 0) {
+          <div class="emoji-grid">
+            @for (recent of recentEmojis(); track recent.emoji) {
+            <button mat-icon-button class="emoji-button"
+              [class.selected]="userReaction()?.event?.content === recent.emoji"
+              (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+              [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+              @if (recent.url) {
+              <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+              } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
+              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+              } @else {
+              {{ recent.emoji }}
               }
-            </div>
-            } @else {
-            <div class="empty-tab-message">
-              <mat-icon>sentiment_satisfied</mat-icon>
-              <span>Your recent emojis will appear here</span>
-            </div>
+            </button>
             }
-            <!-- Quick reactions as suggestions when no recent -->
-            @if (recentEmojis().length === 0) {
-            <div class="quick-suggestions">
-              <div class="section-label">Popular</div>
-              <div class="emoji-grid">
-                @for (emoji of quickReactions; track emoji) {
-                <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions()">
-                  {{ emoji }}
-                </button>
-                }
-              </div>
-            </div>
-            }
-            <!-- Link to emoji collections -->
-            <div class="emoji-collections-link">
-              <a routerLink="/collections/emojis" (click)="closeMenu()">
-                <mat-icon>add_circle_outline</mat-icon>
-                <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
-              </a>
-            </div>
           </div>
-        </mat-tab>
+          } @else {
+          <div class="empty-tab-message">
+            <mat-icon>sentiment_satisfied</mat-icon>
+            <span>Your recent emojis will appear here</span>
+          </div>
+          }
 
-        <!-- Unicode emoji category tabs -->
-        @for (category of emojiCategories; track category.id) {
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon [matTooltip]="category.label">{{ category.icon }}</mat-icon>
-          </ng-template>
-          <div class="emoji-tab-content">
+          @if (recentEmojis().length === 0) {
+          <div class="quick-suggestions">
+            <div class="section-label">Popular</div>
             <div class="emoji-grid">
-              @for (emoji of category.emojis; track emoji) {
-              <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-                (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+              @for (emoji of quickReactions; track emoji) {
+              <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
+                [disabled]="isLoadingReactions()">
                 {{ emoji }}
               </button>
               }
             </div>
           </div>
-        </mat-tab>
+          }
+        </div>
+
+        @if (emojiSets().length > 0) {
+        <div class="emoji-section-block">
+          <div class="section-title">Custom Emojis</div>
+          @for (set of emojiSets(); track set.id) {
+          <div class="emoji-set-section">
+            <div class="set-title">{{ set.title }}</div>
+            <div class="emoji-grid">
+              @for (emoji of set.emojis; track emoji.shortcode) {
+              <button mat-icon-button class="emoji-button custom-emoji"
+                [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+                (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+                [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+                <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
         }
 
-        <!-- Custom emoji sets tab -->
-        @if (emojiSets().length > 0) {
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon matTooltip="Custom Emojis">add_reaction</mat-icon>
-          </ng-template>
-          <div class="emoji-tab-content custom-emojis-tab">
-            @for (set of emojiSets(); track set.id) {
-            <div class="emoji-set-section">
-              <div class="set-title">{{ set.title }}</div>
-              <div class="emoji-grid">
-                @for (emoji of set.emojis; track emoji.shortcode) {
-                <button mat-icon-button class="emoji-button custom-emoji"
-                  [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
-                  (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-                  <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
-                </button>
-                }
-              </div>
-            </div>
+        @for (category of emojiCategories; track category.id) {
+        <div class="emoji-section-block">
+          <div class="section-title">{{ category.label }}</div>
+          <div class="emoji-grid">
+            @for (emoji of category.emojis; track emoji) {
+            <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+              {{ emoji }}
+            </button>
             }
           </div>
-        </mat-tab>
+        </div>
         }
-      </mat-tab-group>
+
+        <div class="emoji-collections-link">
+          <a routerLink="/collections/emojis" (click)="closeMenu()">
+            <mat-icon>add_circle_outline</mat-icon>
+            <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
+          </a>
+        </div>
+      </div>
       }
     </div>
   </mat-menu>
@@ -228,109 +210,90 @@
           }
         </div>
         } @else {
-        <!-- Category tabs with icons -->
-        <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)"
-          class="emoji-category-tabs">
-
-          <!-- Recent/Frequently used tab -->
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon matTooltip="Recent">schedule</mat-icon>
-            </ng-template>
-            <div class="emoji-tab-content">
-              @if (recentEmojis().length > 0) {
-              <div class="emoji-grid">
-                @for (recent of recentEmojis(); track recent.emoji) {
-                <button mat-icon-button class="emoji-button"
-                  [class.selected]="userReaction()?.event?.content === recent.emoji"
-                  (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-                  [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
-                  @if (recent.url) {
-                  <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
-                  } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-                  <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji"
-                    class="custom-emoji-img">
-                  } @else {
-                  {{ recent.emoji }}
-                  }
-                </button>
+        <div class="emoji-list-scroll">
+          <div class="emoji-section-block">
+            <div class="section-title">Recent</div>
+            @if (recentEmojis().length > 0) {
+            <div class="emoji-grid">
+              @for (recent of recentEmojis(); track recent.emoji) {
+              <button mat-icon-button class="emoji-button"
+                [class.selected]="userReaction()?.event?.content === recent.emoji"
+                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+                [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+                @if (recent.url) {
+                <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+                } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
+                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+                } @else {
+                {{ recent.emoji }}
                 }
-              </div>
-              } @else {
-              <div class="empty-tab-message">
-                <mat-icon>sentiment_satisfied</mat-icon>
-                <span>Your recent emojis will appear here</span>
-              </div>
+              </button>
               }
-              <!-- Quick reactions as suggestions when no recent -->
-              @if (recentEmojis().length === 0) {
-              <div class="quick-suggestions">
-                <div class="section-label">Popular</div>
-                <div class="emoji-grid">
-                  @for (emoji of quickReactions; track emoji) {
-                  <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
-                    [disabled]="isLoadingReactions()">
-                    {{ emoji }}
-                  </button>
-                  }
-                </div>
-              </div>
-              }
-              <!-- Link to emoji collections -->
-              <div class="emoji-collections-link">
-                <a routerLink="/collections/emojis" (click)="closeMenu()">
-                  <mat-icon>add_circle_outline</mat-icon>
-                  <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
-                </a>
-              </div>
             </div>
-          </mat-tab>
+            } @else {
+            <div class="empty-tab-message">
+              <mat-icon>sentiment_satisfied</mat-icon>
+              <span>Your recent emojis will appear here</span>
+            </div>
+            }
 
-          <!-- Unicode emoji category tabs -->
-          @for (category of emojiCategories; track category.id) {
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon [matTooltip]="category.label">{{ category.icon }}</mat-icon>
-            </ng-template>
-            <div class="emoji-tab-content">
+            @if (recentEmojis().length === 0) {
+            <div class="quick-suggestions">
+              <div class="section-label">Popular</div>
               <div class="emoji-grid">
-                @for (emoji of category.emojis; track emoji) {
-                <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-                  (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+                @for (emoji of quickReactions; track emoji) {
+                <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
+                  [disabled]="isLoadingReactions()">
                   {{ emoji }}
                 </button>
                 }
               </div>
             </div>
-          </mat-tab>
+            }
+          </div>
+
+          @if (emojiSets().length > 0) {
+          <div class="emoji-section-block">
+            <div class="section-title">Custom Emojis</div>
+            @for (set of emojiSets(); track set.id) {
+            <div class="emoji-set-section">
+              <div class="set-title">{{ set.title }}</div>
+              <div class="emoji-grid">
+                @for (emoji of set.emojis; track emoji.shortcode) {
+                <button mat-icon-button class="emoji-button custom-emoji"
+                  [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+                  (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
+                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
+                  <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+                </button>
+                }
+              </div>
+            </div>
+            }
+          </div>
           }
 
-          <!-- Custom emoji sets tab -->
-          @if (emojiSets().length > 0) {
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon matTooltip="Custom Emojis">add_reaction</mat-icon>
-            </ng-template>
-            <div class="emoji-tab-content custom-emojis-tab">
-              @for (set of emojiSets(); track set.id) {
-              <div class="emoji-set-section">
-                <div class="set-title">{{ set.title }}</div>
-                <div class="emoji-grid">
-                  @for (emoji of set.emojis; track emoji.shortcode) {
-                  <button mat-icon-button class="emoji-button custom-emoji"
-                    [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
-                    (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                    [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-                    <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
-                  </button>
-                  }
-                </div>
-              </div>
+          @for (category of emojiCategories; track category.id) {
+          <div class="emoji-section-block">
+            <div class="section-title">{{ category.label }}</div>
+            <div class="emoji-grid">
+              @for (emoji of category.emojis; track emoji) {
+              <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+                (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+                {{ emoji }}
+              </button>
               }
             </div>
-          </mat-tab>
+          </div>
           }
-        </mat-tab-group>
+
+          <div class="emoji-collections-link">
+            <a routerLink="/collections/emojis" (click)="closeMenu()">
+              <mat-icon>add_circle_outline</mat-icon>
+              <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
+            </a>
+          </div>
+        </div>
         }
       </div>
     </mat-menu>

@@ -1,14 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
-import { AccountStateService } from '../../../services/account-state.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { ProfileOpenComponent } from './profile-open.component';
 
 describe('ProfileOpenComponent', () => {
   let fixture: ComponentFixture<ProfileOpenComponent>;
 
   const mockRouter = {
-    navigateByUrl: jasmine.createSpy('navigateByUrl'),
+    navigateByUrl: vi.fn(),
   };
 
   const mockAccountState = {
@@ -16,7 +16,7 @@ describe('ProfileOpenComponent', () => {
   };
 
   beforeEach(async () => {
-    mockRouter.navigateByUrl.calls.reset();
+    mockRouter.navigateByUrl.mockClear();
     mockAccountState.profilePath.set('');
 
     await TestBed.configureTestingModule({

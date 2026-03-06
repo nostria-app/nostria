@@ -1,11 +1,10 @@
-import { inject, signal, Signal, Injector } from '@angular/core';
+import { inject, signal, Signal, Injector, effect } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool, Filter } from 'nostr-tools';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
-import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PerformanceMetricsService } from '../performance-metrics.service';
 
@@ -20,7 +19,10 @@ export interface Relay {
 }
 
 export abstract class RelayServiceBase {
-  #pool!: SimplePool;
+  #pool: SimplePool | null = null;
+  // When true the pool was provided externally (e.g. from PoolService) and must
+  // never be destroyed or recreated by this service.
+  #externalPool = false;
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
   protected relaysService = inject(RelaysService);
@@ -28,7 +30,6 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
-  protected relayBlock = inject(RelayBlockService);
   protected localSettings = inject(LocalSettingsService);
   protected perfMetrics = inject(PerformanceMetricsService);
   // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
@@ -55,6 +56,9 @@ export abstract class RelayServiceBase {
   // Signal to notify when relays have been modified
   protected relaysModified = signal<string[]>([]);
 
+  /** True once this relay service has been initialized with at least one URL. */
+  readonly initialized = signal<boolean>(false);
+
   // Basic concurrency control for base class
   protected readonly maxConcurrentRequests = 10;
   protected currentRequests = 0;
@@ -71,15 +75,18 @@ export abstract class RelayServiceBase {
   // Idempotent destroy flag
   private _destroyed = false;
 
-  constructor(pool: SimplePool) {
-    this.#pool = pool;
+  constructor(pool?: SimplePool) {
+    if (pool) {
+      this.#pool = pool;
+      this.#externalPool = true;
+    }
     // Generate unique identifier for this pool instance
     this.poolInstanceId = `${this.constructor.name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.logger.debug(`[${this.constructor.name}] Created pool instance: ${this.poolInstanceId}`);
   }
 
   getPool(): SimplePool {
-    return this.#pool;
+    return this.#pool!;
   }
 
   /**
@@ -88,6 +95,27 @@ export abstract class RelayServiceBase {
    */
   isInitialized(): boolean {
     return this.relayUrls.length > 0 && !this._destroyed;
+  }
+
+  /**
+   * Returns a Promise that resolves when this relay service is initialized (has relay URLs).
+   * Resolves immediately if already initialized. Rejects after `timeoutMs` milliseconds.
+   */
+  waitUntilInitialized(timeoutMs = 10000): Promise<void> {
+    if (this.initialized()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        effectRef.destroy();
+        reject(new Error(`[${this.constructor.name}] Timed out waiting for initialization after ${timeoutMs}ms`));
+      }, timeoutMs);
+      const effectRef = effect(() => {
+        if (this.initialized()) {
+          clearTimeout(timeoutId);
+          effectRef.destroy();
+          resolve();
+        }
+      }, { injector: this.injector });
+    });
   }
 
   /**
@@ -119,7 +147,8 @@ export abstract class RelayServiceBase {
       this.relayUrls.some((u, i) => u !== normalizedUniqueUrls[i]);
 
     // Decide whether to recreate pool
-    const shouldRecreate = forceRecreate || !this.#pool || this._destroyed || urlsChanged;
+    // Never recreate an externally-provided pool – it is shared and owned by PoolService.
+    const shouldRecreate = !this.#externalPool && (forceRecreate || !this.#pool || this._destroyed || urlsChanged);
 
     if (shouldRecreate && this.#pool && !this._destroyed) {
       // Destroy the previous pool to close underlying sockets
@@ -133,13 +162,16 @@ export abstract class RelayServiceBase {
     // Assign new pool if required
     if (shouldRecreate) {
       this.#pool = new SimplePool({ enablePing: true, enableReconnect: true });
-      this._destroyed = false; // Reset destroyed flag for new pool lifecycle
       this.logger.debug(`[${this.constructor.name}] Created new SimplePool with ping and reconnect enabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
+    // Always reset the destroyed flag when init() is called – it expresses intent to be active,
+    // regardless of whether the pool was recreated (e.g. external shared-pool services).
+    this._destroyed = false;
     this.relayUrls = normalizedUniqueUrls;
     this.updateRelaysSignal();
     this.notifyRelaysModified();
+    this.initialized.set(normalizedUniqueUrls.length > 0);
   }
 
   destroy() {
@@ -147,12 +179,17 @@ export abstract class RelayServiceBase {
       return; // Already destroyed
     }
     this.logger.debug(`[${this.constructor.name}] destroy() called`);
-    try {
-      this.#pool?.destroy();
-    } catch (e) {
-      this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
+    if (!this.#externalPool) {
+      try {
+        this.#pool?.destroy();
+      } catch (e) {
+        this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
+      }
+    } else {
+      this.logger.debug(`[${this.constructor.name}] Skipping pool.destroy() – pool is externally owned`);
     }
     this._destroyed = true;
+    this.initialized.set(false);
     this.logger.debug(`[${this.constructor.name}] Pool destroyed`);
   }
 
@@ -175,9 +212,7 @@ export abstract class RelayServiceBase {
    * @returns Object with filtered URLs and whether the operation should proceed
    */
   protected filterAuthFailedRelays(urls: string[]): { urls: string[]; shouldProceed: boolean } {
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(urls)
-    );
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
     if (filteredUrls.length === 0) {
       this.logger.warn(`[${this.constructor.name}] All relays are unavailable, cannot execute operation`);
       return { urls: [], shouldProceed: false };
@@ -661,7 +696,7 @@ export abstract class RelayServiceBase {
 
       // Execute the query
       const queryStart = performance.now();
-      const event = (await this.#pool.get(urls, filter, {
+      const event = (await this.#pool!.get(urls, filter, {
         maxWait: timeout,
       })) as T;
       const queryDuration = performance.now() - queryStart;
@@ -711,7 +746,6 @@ export abstract class RelayServiceBase {
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
@@ -812,7 +846,7 @@ export abstract class RelayServiceBase {
             reasons.forEach((reason) => {
               if (reason) {
                 urls.forEach((url) => {
-                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                  this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
                 });
               }
             });
@@ -899,7 +933,6 @@ export abstract class RelayServiceBase {
               if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
-              this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
               throw new Error(`${relayUrl}: ${errorMsg}`);
             });
           relayPromises.set(wrappedPromise, relayUrl);
@@ -965,7 +998,7 @@ export abstract class RelayServiceBase {
           if (!errorMsg || errorMsg.trim() === '') {
             errorMsg = 'Unknown error (relay returned empty response)';
           }
-          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
+          this.logger.warn(`Relay ${relayUrl} publish failed: ${errorMsg}`);
         });
       });
 
@@ -1043,7 +1076,7 @@ export abstract class RelayServiceBase {
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Check for duplicate subscriptions
-    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter, urls);
+    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter as Filter, urls);
     if (duplicateId) {
       this.logger.warn(
         `[${this.constructor.name}] Duplicate subscription detected, reusing existing: ${duplicateId}`,
@@ -1058,7 +1091,7 @@ export abstract class RelayServiceBase {
     // Try to register the subscription - returns available relays (those not at limit)
     const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,
-      filter,
+      filter as Filter,
       urls,
       this.constructor.name,
       this.poolInstanceId
@@ -1093,7 +1126,7 @@ export abstract class RelayServiceBase {
       });
 
       // Create the subscription with auth support, using only available relays
-      const sub = this.#pool.subscribeMany(availableRelays, filter, {
+      const sub = this.#pool.subscribeMany(availableRelays, filter as Filter, {
         onauth: authCallback,
         onevent: (evt) => {
           this.perfMetrics.incrementCounter('relay.subscribe.events_received');
@@ -1137,7 +1170,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               availableRelays.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
               });
             }
           });
@@ -1265,7 +1298,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               urls.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               });
             }
           });

@@ -27,6 +27,7 @@ import { MusicPlaylistCardComponent } from '../../../components/music-playlist-c
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
+import { ZapService } from '../../../services/zap.service';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -65,6 +66,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private clipboard = inject(Clipboard);
   private dialog = inject(MatDialog);
   private userRelaysService = inject(UserRelaysService);
+  private zapService = inject(ZapService);
 
   // Input for when opened via RightPanelService
   npubInput = input<string | undefined>(undefined);
@@ -110,6 +112,12 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   artistBio = computed(() => {
     const profile = this.authorProfile();
     return profile?.data?.about || null;
+  });
+
+  canZapArtist = computed(() => {
+    const profileData = this.authorProfile()?.data as Record<string, unknown> | undefined;
+    if (!profileData) return false;
+    return this.zapService.getLightningAddress(profileData) !== null;
   });
 
   artistNpub = computed(() => {
@@ -556,7 +564,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   zapArtist(): void {
     const pk = this.pubkey();
-    if (!pk) return;
+    if (!pk || !this.canZapArtist()) return;
 
     const profile = this.authorProfile();
 

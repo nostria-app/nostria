@@ -83,6 +83,16 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": [
+              "nostria.app",
+              "www.nostria.app",
+              "beta.nostria.app",
+              "*.nostria.app",
+              "localhost",
+              "127.0.0.1"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "app:build:production"
@@ -101,23 +111,11 @@
           }
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              },
-              "src/locale"
-            ],
-            "styles": [
-              "src/styles.scss"
-            ],
-            "scripts": [],
-            "polyfills": [
-              "@angular/localize/init"
+            "browsers": [
+              "chromium"
             ]
           }
         },

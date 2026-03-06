@@ -396,11 +396,13 @@
 // Don't use aspect-ratio on container as it conflicts with max-height constraints
 // Let the video element itself handle aspect ratio naturally
 .video-container {
+  --note-video-max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-top, 0px) - 16px);
   position: relative;
   overflow: hidden;
   display: block;
   width: 100%;
   max-width: 100%;
+  max-height: var(--note-video-max-height);
   border-radius: 12px;
   background: var(--mat-sys-surface-container);
 
@@ -410,7 +412,7 @@
     display: block;
     width: 100%;
     height: auto;
-    max-height: 70vh;
+    max-height: min(70vh, var(--note-video-max-height));
     border-radius: 12px;
     object-fit: contain;
     flex-shrink: 0;
@@ -421,6 +423,7 @@
   .main-video {
     display: block;
     width: 100%;
+    max-height: 100%;
     border-radius: 12px;
     position: relative;
   }
@@ -1085,7 +1088,7 @@
   padding: 12px 0;
   color: var(--mat-sys-on-surface-variant);
 
-  > mat-icon {
+  >mat-icon {
     color: var(--mat-sys-outline);
     font-size: 24px;
     width: 24px;

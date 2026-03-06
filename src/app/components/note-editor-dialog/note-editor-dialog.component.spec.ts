@@ -1,5 +1,7 @@
+import type { Mock } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { nip19 } from 'nostr-tools';
 import { NoteEditorDialogComponent } from './note-editor-dialog.component';
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -26,21 +28,43 @@ import { Router } from '@angular/router';
 describe('NoteEditorDialogComponent', () => {
   let component: NoteEditorDialogComponent;
   let fixture: ComponentFixture<NoteEditorDialogComponent>;
-  let mockPlatformService: { hasModifierKey: jasmine.Spy };
-  let mockLayoutService: { isHandset: jasmine.Spy };
-  let mockCustomDialogService: { open: jasmine.Spy };
+  let mockPlatformService: {
+    hasModifierKey: Mock;
+  };
+  let mockLayoutService: {
+    isHandset: Mock;
+  };
+  let mockCustomDialogService: {
+    open: Mock;
+  };
+  let mockUtilitiesService: {
+    normalizeRelayUrls: Mock;
+    isParameterizedReplaceableEvent: Mock;
+  };
+  let mockAccountRelayService: {
+    getRelayUrls: Mock;
+  };
 
-  function createComponent() {
+  function createComponent(beforeDetectChanges?: (instance: NoteEditorDialogComponent) => void) {
     mockPlatformService = {
-      hasModifierKey: jasmine.createSpy('hasModifierKey').and.returnValue(false),
+      hasModifierKey: vi.fn().mockReturnValue(false),
     };
 
     mockLayoutService = {
-      isHandset: jasmine.createSpy('isHandset').and.returnValue(false),
+      isHandset: vi.fn().mockReturnValue(false),
     };
 
     mockCustomDialogService = {
-      open: jasmine.createSpy('open'),
+      open: vi.fn(),
+    };
+
+    mockUtilitiesService = {
+      normalizeRelayUrls: vi.fn((relays: string[]) => relays),
+      isParameterizedReplaceableEvent: vi.fn((kind: number) => kind >= 30000 && kind < 40000),
+    };
+
+    mockAccountRelayService = {
+      getRelayUrls: vi.fn(() => []),
     };
 
     TestBed.configureTestingModule({
@@ -48,9 +72,9 @@ describe('NoteEditorDialogComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         { provide: NostrService, useValue: { getRelays: () => [], pool: {} } },
-        { provide: AccountRelayService, useValue: {} },
-        { provide: MediaService, useValue: { uploadFile: jasmine.createSpy() } },
-        { provide: LocalStorageService, useValue: { get: () => null, set: jasmine.createSpy('set') } },
+        { provide: AccountRelayService, useValue: mockAccountRelayService },
+        { provide: MediaService, useValue: { uploadFile: vi.fn() } },
+        { provide: LocalStorageService, useValue: { get: () => null, set: vi.fn() } },
         {
           provide: LocalSettingsService,
           useValue: { addClientTag: signal(true) },
@@ -69,25 +93,28 @@ describe('NoteEditorDialogComponent', () => {
             getZapSplitQuoterPercent: () => 10,
           },
         },
-        { provide: MatSnackBar, useValue: { open: jasmine.createSpy() } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy() } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: LayoutService, useValue: mockLayoutService },
         { provide: PowService, useValue: {} },
         { provide: MentionInputService, useValue: {} },
         { provide: DataService, useValue: { getProfile: () => undefined } },
-        { provide: UtilitiesService, useValue: {} },
+        { provide: UtilitiesService, useValue: mockUtilitiesService },
         { provide: ImagePlaceholderService, useValue: {} },
-        { provide: PublishEventBus, useValue: { results$: { subscribe: () => ({ unsubscribe: jasmine.createSpy('unsubscribe') }) } } },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy() } },
+        { provide: PublishEventBus, useValue: { results$: { subscribe: () => ({ unsubscribe: vi.fn() }) } } },
+        { provide: MatDialog, useValue: { open: vi.fn() } },
         { provide: CustomDialogService, useValue: mockCustomDialogService },
         { provide: AiService, useValue: {} },
-        { provide: SpeechService, useValue: { isRecording: signal(false), startRecording: jasmine.createSpy(), stopRecording: jasmine.createSpy() } },
+        { provide: SpeechService, useValue: { isRecording: signal(false), startRecording: vi.fn(), stopRecording: vi.fn() } },
         { provide: PlatformService, useValue: mockPlatformService },
       ],
     });
 
     fixture = TestBed.createComponent(NoteEditorDialogComponent);
     component = fixture.componentInstance;
+    if (beforeDetectChanges) {
+      beforeDetectChanges(component);
+    }
     fixture.detectChanges();
   }
 
@@ -109,7 +136,7 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
 
       document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      expect(component.isExpanded()).toBeTrue();
+      expect(component.isExpanded()).toBe(true);
     });
 
     it('should collapse inline editor when clicking outside with empty content', async () => {
@@ -126,7 +153,7 @@ describe('NoteEditorDialogComponent', () => {
       const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
       document.dispatchEvent(outsideEvent);
 
-      expect(component.isExpanded()).toBeFalse();
+      expect(component.isExpanded()).toBe(false);
     });
 
     it('should not collapse inline editor when clicking inside the component', async () => {
@@ -144,7 +171,7 @@ describe('NoteEditorDialogComponent', () => {
       Object.defineProperty(insideEvent, 'target', { value: fixture.nativeElement });
       document.dispatchEvent(insideEvent);
 
-      expect(component.isExpanded()).toBeTrue();
+      expect(component.isExpanded()).toBe(true);
     });
 
     it('should not collapse inline editor when content is not empty', async () => {
@@ -158,7 +185,7 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
 
       document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      expect(component.isExpanded()).toBeTrue();
+      expect(component.isExpanded()).toBe(true);
     });
 
     it('should not collapse inline editor when not expanded', async () => {
@@ -172,7 +199,7 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
 
       document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      expect(component.isExpanded()).toBeFalse();
+      expect(component.isExpanded()).toBe(false);
     });
   });
 
@@ -182,8 +209,8 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      mockPlatformService.hasModifierKey.and.returnValue(true);
-      spyOn(component, 'toggleRecording');
+      mockPlatformService.hasModifierKey.mockReturnValue(true);
+      vi.spyOn(component, 'toggleRecording');
 
       const event = new KeyboardEvent('keydown', { key: 'd', bubbles: true });
       document.dispatchEvent(event);
@@ -196,8 +223,8 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      mockPlatformService.hasModifierKey.and.returnValue(false);
-      spyOn(component, 'toggleRecording');
+      mockPlatformService.hasModifierKey.mockReturnValue(false);
+      vi.spyOn(component, 'toggleRecording');
 
       const event = new KeyboardEvent('keydown', { key: 'd', bubbles: true });
       document.dispatchEvent(event);
@@ -210,9 +237,9 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      mockPlatformService.hasModifierKey.and.returnValue(true);
+      mockPlatformService.hasModifierKey.mockReturnValue(true);
       component.isUploading.set(true);
-      spyOn(component, 'toggleRecording');
+      vi.spyOn(component, 'toggleRecording');
 
       const event = new KeyboardEvent('keydown', { key: 'd', bubbles: true });
       document.dispatchEvent(event);
@@ -225,9 +252,9 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      mockPlatformService.hasModifierKey.and.returnValue(true);
+      mockPlatformService.hasModifierKey.mockReturnValue(true);
       component.isPublishing.set(true);
-      spyOn(component, 'toggleRecording');
+      vi.spyOn(component, 'toggleRecording');
 
       const event = new KeyboardEvent('keydown', { key: 'd', bubbles: true });
       document.dispatchEvent(event);
@@ -240,9 +267,9 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      mockPlatformService.hasModifierKey.and.returnValue(true);
+      mockPlatformService.hasModifierKey.mockReturnValue(true);
       component.showPreview.set(true);
-      spyOn(component, 'toggleRecording');
+      vi.spyOn(component, 'toggleRecording');
 
       const event = new KeyboardEvent('keydown', { key: 'd', bubbles: true });
       document.dispatchEvent(event);
@@ -257,12 +284,12 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      spyOn(document, 'removeEventListener').and.callThrough();
+      vi.spyOn(document, 'removeEventListener');
 
       fixture.destroy();
 
-      expect(document.removeEventListener).toHaveBeenCalledWith('mousedown', jasmine.any(Function));
-      expect(document.removeEventListener).toHaveBeenCalledWith('keydown', jasmine.any(Function));
+      expect(document.removeEventListener).toHaveBeenCalledWith('mousedown', expect.any(Function));
+      expect(document.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
     });
   });
 
@@ -342,6 +369,40 @@ describe('NoteEditorDialogComponent', () => {
       // Check that the emoji button exists (the mat-menu trigger)
       const buttons = compiled.querySelectorAll('button[mattooltip="Emoji"]');
       expect(buttons.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('quote references', () => {
+    it('should insert nostr:naddr for parameterized replaceable quote events', async () => {
+      const quotePubkey = 'a'.repeat(64);
+      const quoteIdentifier = 'track-123';
+      const quoteKind = 36787;
+
+      createComponent(instance => {
+        instance.data = {
+          quote: {
+            id: 'b'.repeat(64),
+            pubkey: quotePubkey,
+            kind: quoteKind,
+            identifier: quoteIdentifier,
+            relays: ['wss://relay.example'],
+          },
+        };
+      });
+
+      await fixture.whenStable();
+
+      const match = component.content().match(/nostr:(naddr1[a-zA-Z0-9]+)/);
+      expect(match).toBeTruthy();
+
+      const decoded = nip19.decode(match![1]);
+      expect(decoded.type).toBe('naddr');
+
+      if (decoded.type === 'naddr') {
+        expect(decoded.data.kind).toBe(quoteKind);
+        expect(decoded.data.pubkey).toBe(quotePubkey);
+        expect(decoded.data.identifier).toBe(quoteIdentifier);
+      }
     });
   });
 });

@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { TestBed } from '@angular/core/testing';
 import { ResolveNostrPipe } from './resolve-nostr.pipe';
 import { DataService } from '../services/data.service';
@@ -5,12 +6,17 @@ import { UtilitiesService } from '../services/utilities.service';
 
 describe('ResolveNostrPipe', () => {
   let pipe: ResolveNostrPipe;
-  let dataService: jasmine.SpyObj<DataService>;
-  let utilitiesService: jasmine.SpyObj<UtilitiesService>;
+  let dataService: MockedObject<DataService>;
+  let utilitiesService: MockedObject<UtilitiesService>;
 
   beforeEach(() => {
-    const dataServiceSpy = jasmine.createSpyObj('DataService', ['getCachedProfile', 'getProfile']);
-    const utilitiesServiceSpy = jasmine.createSpyObj('UtilitiesService', ['getTruncatedNpub']);
+    const dataServiceSpy = {
+      getCachedProfile: vi.fn().mockName("DataService.getCachedProfile"),
+      getProfile: vi.fn().mockName("DataService.getProfile")
+    };
+    const utilitiesServiceSpy = {
+      getTruncatedNpub: vi.fn().mockName("UtilitiesService.getTruncatedNpub")
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -21,8 +27,8 @@ describe('ResolveNostrPipe', () => {
     });
 
     pipe = TestBed.inject(ResolveNostrPipe);
-    dataService = TestBed.inject(DataService) as jasmine.SpyObj<DataService>;
-    utilitiesService = TestBed.inject(UtilitiesService) as jasmine.SpyObj<UtilitiesService>;
+    dataService = TestBed.inject(DataService) as MockedObject<DataService>;
+    utilitiesService = TestBed.inject(UtilitiesService) as MockedObject<UtilitiesService>;
   });
 
   it('should create an instance', () => {
@@ -49,7 +55,7 @@ describe('ResolveNostrPipe', () => {
       },
     };
 
-    dataService.getCachedProfile.and.returnValue(mockProfile as any);
+    dataService.getCachedProfile.mockReturnValue(mockProfile as any);
 
     const result = pipe.transform(text);
     expect(result).toContain('@Test User');
@@ -60,8 +66,8 @@ describe('ResolveNostrPipe', () => {
     const npub = 'npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8';
     const text = `Check out nostr:${npub}`;
 
-    dataService.getCachedProfile.and.returnValue(null);
-    utilitiesService.getTruncatedNpub.and.returnValue('npub10jvs...');
+    dataService.getCachedProfile.mockReturnValue(undefined);
+    utilitiesService.getTruncatedNpub.mockReturnValue('npub10jvs...');
 
     const result = pipe.transform(text);
     expect(result).toContain('@npub10jvs...');
@@ -77,7 +83,7 @@ describe('ResolveNostrPipe', () => {
       },
     };
 
-    dataService.getCachedProfile.and.returnValue(mockProfile as any);
+    dataService.getCachedProfile.mockReturnValue(mockProfile as any);
 
     const result = pipe.transform(text);
     expect(result).toContain('@Alice');
@@ -106,8 +112,8 @@ describe('ResolveNostrPipe', () => {
   it('should handle multiple nostr identifiers in the same text', () => {
     const text = 'nostr:npub10jvs984jmel09egmvuxndhtjnqhtlyp3wyqdgjnmucdvvd7q5cvq7pmas8 mentioned you in nostr:note1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3yv97v';
 
-    dataService.getCachedProfile.and.returnValue(null);
-    utilitiesService.getTruncatedNpub.and.returnValue('npub10jvs...');
+    dataService.getCachedProfile.mockReturnValue(undefined);
+    utilitiesService.getTruncatedNpub.mockReturnValue('npub10jvs...');
 
     const result = pipe.transform(text);
     expect(result).toContain('@npub10jvs...');
@@ -132,7 +138,7 @@ describe('ResolveNostrPipe', () => {
       },
     };
 
-    dataService.getCachedProfile.and.returnValue(mockProfile as any);
+    dataService.getCachedProfile.mockReturnValue(mockProfile as any);
 
     const result = pipe.transform(text);
     expect(result).toContain('@Display Name');
@@ -148,7 +154,7 @@ describe('ResolveNostrPipe', () => {
       },
     };
 
-    dataService.getCachedProfile.and.returnValue(mockProfile as any);
+    dataService.getCachedProfile.mockReturnValue(mockProfile as any);
 
     const result = pipe.transform(text);
     expect(result).toContain('@username');

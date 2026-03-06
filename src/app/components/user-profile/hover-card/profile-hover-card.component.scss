@@ -188,8 +188,10 @@
       font-size: 14px;
       color: var(--mat-sys-on-surface-variant);
       text-align: center;
-      -webkit-text-size-adjust: 100%; /* Prevent iOS Safari from auto-adjusting font size */
-      text-size-adjust: 100%; /* Standard property for other browsers */
+      -webkit-text-size-adjust: 100%;
+      /* Prevent iOS Safari from auto-adjusting font size */
+      text-size-adjust: 100%;
+      /* Standard property for other browsers */
 
       .nip05-icon {
         font-size: 14px;
@@ -247,6 +249,69 @@
     -webkit-line-clamp: 3;
     line-clamp: 3;
     -webkit-box-orient: vertical;
+  }
+
+  .user-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant);
+    background-color: var(--mat-sys-surface-container);
+    border-radius: 0;
+
+    &.music-status {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+
+      .status-icon {
+        color: var(--mat-sys-on-primary-container);
+        animation: hoverMusicPulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    .status-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+
+    .status-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+
+    &.clickable {
+      cursor: pointer;
+
+      .status-text {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+      }
+
+      &:hover {
+        filter: brightness(1.1);
+      }
+    }
+  }
+
+  @keyframes hoverMusicPulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
   }
 
   .mutual-follows {

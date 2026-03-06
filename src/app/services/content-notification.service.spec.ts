@@ -1,3 +1,4 @@
+import type { Mock, MockedObject } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ContentNotificationService } from './content-notification.service';
@@ -16,14 +17,14 @@ describe('ContentNotificationService', () => {
     pubkey: ReturnType<typeof signal<string | undefined>>;
     mutedAccounts: ReturnType<typeof signal<string[]>>;
   };
-  let mockAccountLocalState: jasmine.SpyObj<AccountLocalStateService>;
+  let mockAccountLocalState: MockedObject<AccountLocalStateService>;
   let mockNotificationService: {
     notifications: ReturnType<typeof signal<unknown[]>>;
-    addNotification: jasmine.Spy;
-    persistNotificationToStorage: jasmine.Spy;
+    addNotification: Mock;
+    persistNotificationToStorage: Mock;
   };
-  let mockAccountRelay: jasmine.SpyObj<AccountRelayService>;
-  let mockDatabase: jasmine.SpyObj<DatabaseService>;
+  let mockAccountRelay: MockedObject<AccountRelayService>;
+  let mockDatabase: MockedObject<DatabaseService>;
   let mockLocalSettings: {
     maxTaggedAccountsFilter: ReturnType<typeof signal<number | 'none'>>;
   };
@@ -37,32 +38,35 @@ describe('ContentNotificationService', () => {
       mutedAccounts: signal<string[]>([]),
     };
 
-    mockAccountLocalState = jasmine.createSpyObj('AccountLocalStateService', [
-      'getNotificationLastCheck',
-      'setNotificationLastCheck',
-      'hasProcessedFollowerNotification',
-      'markFollowerNotificationProcessed',
-      'clearFollowerNotificationsProcessed',
-    ]);
-    mockAccountLocalState.getNotificationLastCheck.and.returnValue(0);
-    mockAccountLocalState.hasProcessedFollowerNotification.and.returnValue(false);
+    mockAccountLocalState = {
+      getNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.getNotificationLastCheck"),
+      setNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.setNotificationLastCheck"),
+      hasProcessedFollowerNotification: vi.fn().mockName("AccountLocalStateService.hasProcessedFollowerNotification"),
+      markFollowerNotificationProcessed: vi.fn().mockName("AccountLocalStateService.markFollowerNotificationProcessed"),
+      clearFollowerNotificationsProcessed: vi.fn().mockName("AccountLocalStateService.clearFollowerNotificationsProcessed")
+    } as unknown as MockedObject<AccountLocalStateService>;
+    mockAccountLocalState.getNotificationLastCheck.mockReturnValue(0);
+    mockAccountLocalState.hasProcessedFollowerNotification.mockReturnValue(false);
 
     mockNotificationService = {
       notifications: signal<unknown[]>([]),
-      addNotification: jasmine.createSpy('addNotification'),
-      persistNotificationToStorage: jasmine.createSpy('persistNotificationToStorage').and.returnValue(Promise.resolve()),
+      addNotification: vi.fn(),
+      persistNotificationToStorage: vi.fn().mockReturnValue(Promise.resolve()),
     };
 
-    mockAccountRelay = jasmine.createSpyObj('AccountRelayService', ['getMany', 'get']);
-    mockAccountRelay.getMany.and.returnValue(Promise.resolve([]));
-    mockAccountRelay.get.and.returnValue(Promise.resolve(null));
+    mockAccountRelay = {
+      getMany: vi.fn().mockName("AccountRelayService.getMany"),
+      get: vi.fn().mockName("AccountRelayService.get")
+    } as unknown as MockedObject<AccountRelayService>;
+    mockAccountRelay.getMany.mockReturnValue(Promise.resolve([]));
+    mockAccountRelay.get.mockReturnValue(Promise.resolve(null));
 
-    mockDatabase = jasmine.createSpyObj('DatabaseService', [
-      'getNotification',
-      'getEventById',
-    ]);
-    mockDatabase.getNotification.and.returnValue(Promise.resolve(undefined));
-    mockDatabase.getEventById.and.returnValue(Promise.resolve(null));
+    mockDatabase = {
+      getNotification: vi.fn().mockName("DatabaseService.getNotification"),
+      getEventById: vi.fn().mockName("DatabaseService.getEventById")
+    } as unknown as MockedObject<DatabaseService>;
+    mockDatabase.getNotification.mockReturnValue(Promise.resolve(undefined));
+    mockDatabase.getEventById.mockReturnValue(Promise.resolve(null));
 
     mockLocalSettings = {
       maxTaggedAccountsFilter: signal<number | 'none'>('none'),
@@ -76,10 +80,10 @@ describe('ContentNotificationService', () => {
         {
           provide: LoggerService,
           useValue: {
-            info: jasmine.createSpy('info'),
-            warn: jasmine.createSpy('warn'),
-            error: jasmine.createSpy('error'),
-            debug: jasmine.createSpy('debug'),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
           },
         },
         { provide: NotificationService, useValue: mockNotificationService },
@@ -105,9 +109,11 @@ describe('ContentNotificationService', () => {
   describe('onAccountChanged', () => {
     it('should reload lastCheckTimestamp for the new account', async () => {
       const accountATimestamp = 1700000000;
-      mockAccountLocalState.getNotificationLastCheck.and.callFake((pubkey: string) => {
-        if (pubkey === TEST_PUBKEY_A) return accountATimestamp;
-        if (pubkey === TEST_PUBKEY_B) return 1700001000;
+      mockAccountLocalState.getNotificationLastCheck.mockImplementation((pubkey: string) => {
+        if (pubkey === TEST_PUBKEY_A)
+          return accountATimestamp;
+        if (pubkey === TEST_PUBKEY_B)
+          return 1700001000;
         return 0;
       });
 
@@ -124,7 +130,7 @@ describe('ContentNotificationService', () => {
     });
 
     it('should reset the rate limiter so immediate check is not blocked', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       await service.initialize();
 
@@ -137,7 +143,7 @@ describe('ContentNotificationService', () => {
 
       // A subsequent check should NOT be rate-limited
       // (we verify by checking that getMany is called again)
-      mockAccountRelay.getMany.calls.reset();
+      mockAccountRelay.getMany.mockClear();
       await service.checkForNewNotifications();
 
       // getMany should have been called (6 parallel queries)
@@ -155,7 +161,7 @@ describe('ContentNotificationService', () => {
   describe('overlap buffer', () => {
     it('should apply overlap buffer when fetching notifications for returning users', async () => {
       const lastCheckTimestamp = 1700000000;
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(lastCheckTimestamp);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(lastCheckTimestamp);
 
       await service.initialize();
       await service.checkForNewNotifications();
@@ -163,19 +169,23 @@ describe('ContentNotificationService', () => {
       // Verify that getMany was called with a `since` value less than the last check timestamp
       // The overlap buffer is 60 seconds, so since should be lastCheckTimestamp - 60
       const expectedSince = lastCheckTimestamp - 60;
-      const getManyCall = mockAccountRelay.getMany.calls.first();
-      expect(getManyCall.args[0].since).toBe(expectedSince);
+      const firstCall = vi.mocked(mockAccountRelay.getMany).mock.calls[0];
+      expect(firstCall).toBeDefined();
+      const [filter] = firstCall!;
+      expect(filter.since).toBe(expectedSince);
     });
 
     it('should not apply overlap buffer for first-time users (since is 0)', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(0);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(0);
 
       await service.initialize();
       await service.checkForNewNotifications();
 
       // For first-time users, since should be capped at 7 days back, not negative
-      const getManyCall = mockAccountRelay.getMany.calls.first();
-      expect(getManyCall.args[0].since).toBeGreaterThan(0);
+      const firstCall = vi.mocked(mockAccountRelay.getMany).mock.calls[0];
+      expect(firstCall).toBeDefined();
+      const [filter] = firstCall!;
+      expect(filter.since).toBeGreaterThan(0);
     });
   });
 
@@ -200,13 +210,13 @@ describe('ContentNotificationService', () => {
     });
 
     it('should skip concurrent checks with isChecking guard', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       // Make getMany return a delayed promise to simulate ongoing check
       let resolveGetMany: () => void;
       const delayedPromise = new Promise<never[]>((resolve) => {
         resolveGetMany = () => resolve([]);
       });
-      mockAccountRelay.getMany.and.returnValue(delayedPromise);
+      mockAccountRelay.getMany.mockReturnValue(delayedPromise);
 
       await service.initialize();
 
@@ -214,7 +224,7 @@ describe('ContentNotificationService', () => {
       const firstCheck = service.checkForNewNotifications();
 
       // Second check should be skipped due to isChecking guard
-      mockAccountRelay.getMany.calls.reset();
+      mockAccountRelay.getMany.mockClear();
       await service.checkForNewNotifications();
       expect(mockAccountRelay.getMany).not.toHaveBeenCalled();
 
@@ -225,7 +235,7 @@ describe('ContentNotificationService', () => {
 
     it('should immediately fetch notifications when timestamp is 0 (first-time or after cache clear)', async () => {
       // Simulate first-time user or after cache clear
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(0);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(0);
 
       await service.initialize();
 
@@ -238,7 +248,7 @@ describe('ContentNotificationService', () => {
 
     it('should not immediately fetch notifications when timestamp is not 0', async () => {
       // Simulate returning user with existing timestamp
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       await service.initialize();
 
@@ -253,11 +263,11 @@ describe('ContentNotificationService', () => {
 
   describe('visibility change handling', () => {
     it('should check for notifications when app becomes visible', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       await service.initialize();
 
       // Clear previous calls from initialization
-      mockAccountRelay.getMany.calls.reset();
+      mockAccountRelay.getMany.mockClear();
 
       // Simulate app hidden
       Object.defineProperty(document, 'hidden', {
@@ -277,7 +287,9 @@ describe('ContentNotificationService', () => {
       // Reset the rate limiter by waiting
       await new Promise(resolve => setTimeout(resolve, 50));
       // Manually reset lastCheckTime to bypass rate limit in test
-      (service as unknown as { lastCheckTime: number }).lastCheckTime = 0;
+      (service as unknown as {
+        lastCheckTime: number;
+      }).lastCheckTime = 0;
 
       document.dispatchEvent(new Event('visibilitychange'));
 
@@ -299,17 +311,19 @@ describe('ContentNotificationService', () => {
       await service.initialize();
       await service.refreshRecentNotifications(3);
 
-      const getManyCall = mockAccountRelay.getMany.calls.first();
+      const firstCall = vi.mocked(mockAccountRelay.getMany).mock.calls[0];
       const now = Math.floor(Date.now() / 1000);
       const threeDaysAgo = now - (3 * 24 * 60 * 60);
 
       // The since timestamp should be approximately 3 days ago (within 5 seconds tolerance)
-      expect(getManyCall.args[0].since).toBeGreaterThan(threeDaysAgo - 5);
-      expect(getManyCall.args[0].since).toBeLessThan(threeDaysAgo + 5);
+      expect(firstCall).toBeDefined();
+      const [filter] = firstCall!;
+      expect(filter.since).toBeGreaterThan(threeDaysAgo - 5);
+      expect(filter.since).toBeLessThan(threeDaysAgo + 5);
     });
 
     it('should not update lastCheckTimestamp', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       await service.initialize();
 
       const timestampBefore = service.lastCheckTimestamp();
@@ -323,7 +337,7 @@ describe('ContentNotificationService', () => {
 
   describe('resetLastCheckTimestamp', () => {
     it('should reset timestamp to 0', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       await service.initialize();
 
       service.resetLastCheckTimestamp();
@@ -336,7 +350,7 @@ describe('ContentNotificationService', () => {
 
   describe('follower processing', () => {
     it('should create follower notification when user is tagged but not last p-tag', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       const now = Math.floor(Date.now() / 1000);
       const followerEvent = {
@@ -351,7 +365,9 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
         if (filter.kinds?.includes(kinds.Contacts)) {
           return [followerEvent] as unknown as T[];
         }
@@ -367,8 +383,8 @@ describe('ContentNotificationService', () => {
     });
 
     it('should skip follower notification when already processed for this follower', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
-      mockAccountLocalState.hasProcessedFollowerNotification.and.callFake((recipient: string, follower: string) => {
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
+      mockAccountLocalState.hasProcessedFollowerNotification.mockImplementation((recipient: string, follower: string) => {
         return recipient === TEST_PUBKEY_A && follower === TEST_PUBKEY_B;
       });
 
@@ -382,7 +398,9 @@ describe('ContentNotificationService', () => {
         tags: [['p', TEST_PUBKEY_A]],
       };
 
-      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
         if (filter.kinds?.includes(kinds.Contacts)) {
           return [followerEvent] as unknown as T[];
         }
@@ -399,7 +417,7 @@ describe('ContentNotificationService', () => {
 
   describe('checkForNewNotifications updates lastCheckTimestamp', () => {
     it('should update lastCheckTimestamp after successful check', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       await service.initialize();
 
       const beforeCheck = Math.floor(Date.now() / 1000);
@@ -415,7 +433,7 @@ describe('ContentNotificationService', () => {
 
   describe('reaction fallback message', () => {
     it('should create "mentioning you" reaction notification when reacted note mentions the current account', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       const now = Math.floor(Date.now() / 1000);
       const reactionEvent = {
@@ -430,14 +448,16 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
         if (filter.kinds?.includes(kinds.Reaction)) {
           return [reactionEvent] as unknown as T[];
         }
         return [] as T[];
       });
 
-      mockDatabase.getEventById.and.callFake((eventId: string) => {
+      mockDatabase.getEventById.mockImplementation((eventId: string) => {
         if (eventId === 'target-note-1') {
           return Promise.resolve({
             id: 'target-note-1',
@@ -456,12 +476,17 @@ describe('ContentNotificationService', () => {
       await service.checkForNewNotifications();
 
       expect(mockNotificationService.addNotification).toHaveBeenCalled();
-      const notification = mockNotificationService.addNotification.calls.mostRecent().args[0] as { message?: string };
-      expect(notification.message).toBe('Reacted to a note mentioning you');
+      const lastCall = vi.mocked(mockNotificationService.addNotification).mock.lastCall;
+      expect(lastCall).toBeDefined();
+      const [notification] = lastCall!;
+      const typedNotification = notification as {
+        message?: string;
+      };
+      expect(typedNotification.message).toBe('Reacted to a note mentioning you');
     });
 
     it('should ignore reaction when reacted note is neither authored by nor mentioning the current account', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       const now = Math.floor(Date.now() / 1000);
       const reactionEvent = {
@@ -476,14 +501,16 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
         if (filter.kinds?.includes(kinds.Reaction)) {
           return [reactionEvent] as unknown as T[];
         }
         return [] as T[];
       });
 
-      mockDatabase.getEventById.and.callFake((eventId: string) => {
+      mockDatabase.getEventById.mockImplementation((eventId: string) => {
         if (eventId === 'target-note-3') {
           return Promise.resolve({
             id: 'target-note-3',
@@ -505,7 +532,7 @@ describe('ContentNotificationService', () => {
     });
 
     it('should keep "your note" when reacting to a note authored by the current account', async () => {
-      mockAccountLocalState.getNotificationLastCheck.and.returnValue(1700000000);
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
 
       const now = Math.floor(Date.now() / 1000);
       const reactionEvent = {
@@ -520,14 +547,16 @@ describe('ContentNotificationService', () => {
         ],
       };
 
-      mockAccountRelay.getMany.and.callFake(async <T>(filter: { kinds?: number[] }) => {
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
         if (filter.kinds?.includes(kinds.Reaction)) {
           return [reactionEvent] as unknown as T[];
         }
         return [] as T[];
       });
 
-      mockDatabase.getEventById.and.callFake((eventId: string) => {
+      mockDatabase.getEventById.mockImplementation((eventId: string) => {
         if (eventId === 'target-note-2') {
           return Promise.resolve({
             id: 'target-note-2',
@@ -546,8 +575,13 @@ describe('ContentNotificationService', () => {
       await service.checkForNewNotifications();
 
       expect(mockNotificationService.addNotification).toHaveBeenCalled();
-      const notification = mockNotificationService.addNotification.calls.mostRecent().args[0] as { message?: string };
-      expect(notification.message).toBe('Reacted to your note');
+      const lastCall = vi.mocked(mockNotificationService.addNotification).mock.lastCall;
+      expect(lastCall).toBeDefined();
+      const [notification] = lastCall!;
+      const typedNotification = notification as {
+        message?: string;
+      };
+      expect(typedNotification.message).toBe('Reacted to your note');
     });
   });
 });

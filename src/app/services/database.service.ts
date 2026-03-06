@@ -89,6 +89,7 @@ export enum NotificationType {
 
   // Content notifications (social interactions, counted in badge)
   NEW_FOLLOWER = 'newfollower',
+  FOLLOWER_SUMMARY = 'followersummary',
   MENTION = 'mention',
   REPOST = 'repost',
   REPLY = 'reply',
@@ -166,6 +167,8 @@ export interface ContentNotification extends Notification {
     zappedEventId?: string; // For zaps, the event that was zapped (if any)
     zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
     recipientPubkey?: string; // For profile zaps, the recipient's pubkey
+    followerCount?: number; // For follower summary, total follower count
+    followerPubkeys?: string[]; // For follower summary, the list of follower pubkeys
   };
 }
 
@@ -226,6 +229,7 @@ export interface StoredDirectMessage {
   pending?: boolean; // Whether the message is still being sent
   failed?: boolean; // Whether the message failed to send
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
+  failureReason?: string; // Human-readable reason for send failure
 }
 
 /**

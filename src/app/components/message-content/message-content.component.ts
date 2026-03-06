@@ -489,7 +489,7 @@ export class MessageContentComponent {
   private readonly CONTENT_LENGTH_THRESHOLD = 300;
 
   // Regex to match nostr URIs and bare NIP-19 identifiers
-  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)/g;
+  private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
   // Regex to match URLs
   private readonly urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
 
@@ -534,7 +534,7 @@ export class MessageContentComponent {
     const parts: ContentPart[] = [];
 
     // Split by nostr URIs and URLs
-    const combinedRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
+    const combinedRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
 
     let lastIndex = 0;
     let match: RegExpExecArray | null;

@@ -8,7 +8,8 @@
   </button>
   }
   <!-- Search toggle - hidden on small screens -->
-  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'" class="hide-small">
+  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'"
+    class="hide-small">
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
   @if (isAuthenticated()) {
@@ -97,70 +98,53 @@
     <!-- YOURS SECTION (Only for authenticated users, hidden during search) -->
     @if (isAuthenticated() && !searchQuery()) {
     <section class="music-section yours-section">
-      <div class="section-header collapsible" (click)="toggleYoursSection()" (keydown.enter)="toggleYoursSection()"
-        tabindex="0" role="button" [attr.aria-expanded]="!yoursSectionCollapsed()">
-        <h2 i18n="@@music.section.yours">Yours</h2>
-        <mat-icon class="collapse-icon" [class.collapsed]="yoursSectionCollapsed()">expand_more</mat-icon>
-      </div>
-      @if (!yoursSectionCollapsed()) {
-      <div class="playlists-grid">
+      <div class="yours-grid">
         <!-- Liked Songs Card -->
-        <div class="liked-songs-card">
-          <div class="liked-songs-clickable" (click)="goToLikedSongs()" (keydown.enter)="goToLikedSongs()" tabindex="0"
-            role="button">
-            <div class="liked-songs-cover">
-              <mat-icon>favorite</mat-icon>
-            </div>
-            <div class="liked-songs-info">
-              <span class="liked-songs-title" i18n="@@music.likedSongs">Liked Songs</span>
-              <span class="liked-songs-meta" i18n="@@music.likedSongs.subtitle">Your favorite tracks</span>
-            </div>
+        <div class="yours-card liked-songs-card" (click)="goToLikedSongs()" (keydown.enter)="goToLikedSongs()"
+          tabindex="0" role="button">
+          <div class="yours-card-cover liked-songs-gradient">
+            <mat-icon>favorite</mat-icon>
           </div>
-          <button mat-icon-button class="liked-songs-play-btn" (click)="playLikedSongs($event)"
-            [disabled]="isLoadingLikedSongs()" i18n-aria-label="@@music.playLikedSongs.aria"
-            aria-label="Play liked songs">
-            @if (isLoadingLikedSongs()) {
-            <mat-spinner diameter="24"></mat-spinner>
-            } @else {
-            <mat-icon>play_arrow</mat-icon>
-            }
-          </button>
+          <div class="yours-card-info">
+            <span class="yours-card-title" i18n="@@music.likedSongs">Liked Songs</span>
+            <span class="yours-card-meta" i18n="@@music.likedSongs.subtitle">Your favorite tracks</span>
+          </div>
         </div>
 
         <!-- Liked Playlists Card -->
-        <div class="liked-playlists-card" (click)="goToLikedPlaylists()" (keydown.enter)="goToLikedPlaylists()"
-          tabindex="0" role="button">
-          <div class="liked-playlists-cover">
+        <div class="yours-card liked-playlists-card" (click)="goToLikedPlaylists()"
+          (keydown.enter)="goToLikedPlaylists()" tabindex="0" role="button">
+          <div class="yours-card-cover liked-playlists-gradient">
             <mat-icon>playlist_play</mat-icon>
           </div>
-          <div class="liked-playlists-info">
-            <span class="liked-playlists-title">Liked Playlists</span>
-            <span class="liked-playlists-meta">Your favorite collections</span>
+          <div class="yours-card-info">
+            <span class="yours-card-title">Liked Playlists</span>
+            <span class="yours-card-meta">Your favorite collections</span>
           </div>
         </div>
 
         <!-- My Music Card -->
-        <div class="my-music-card" (click)="goToMyMusic()" (keydown.enter)="goToMyMusic()" tabindex="0"
+        <div class="yours-card my-music-card" (click)="goToMyMusic()" (keydown.enter)="goToMyMusic()" tabindex="0"
           role="button">
-          <div class="my-music-cover">
+          <div class="yours-card-cover my-music-gradient">
             <mat-icon>album</mat-icon>
           </div>
-          <div class="my-music-info">
-            <span class="my-music-title" i18n="@@music.myMusic">My Music</span>
-            <span class="my-music-meta" i18n="@@music.myMusic.subtitle">Tracks you've published</span>
+          <div class="yours-card-info">
+            <span class="yours-card-title" i18n="@@music.myMusic">My Music</span>
+            <span class="yours-card-meta" i18n="@@music.myMusic.subtitle">Tracks you've published</span>
           </div>
         </div>
 
         <!-- Offline Music Card -->
         @if (offlineTrackCount() > 0) {
-        <div class="offline-music-card" (click)="goToOfflineMusic()" (keydown.enter)="goToOfflineMusic()" tabindex="0"
-          role="button">
-          <div class="offline-music-cover">
+        <div class="yours-card offline-music-card" (click)="goToOfflineMusic()" (keydown.enter)="goToOfflineMusic()"
+          tabindex="0" role="button">
+          <div class="yours-card-cover offline-music-gradient">
             <mat-icon>offline_pin</mat-icon>
           </div>
-          <div class="offline-music-info">
-            <span class="offline-music-title">Offline Library</span>
-            <span class="offline-music-meta">{{ offlineTrackCount() }} track{{ offlineTrackCount() === 1 ? '' : 's' }}
+          <div class="yours-card-info">
+            <span class="yours-card-title">Offline Library</span>
+            <span class="yours-card-meta">{{ offlineTrackCount() }} track{{ offlineTrackCount() === 1 ? '' : 's' }}
               saved</span>
           </div>
         </div>
@@ -168,32 +152,6 @@
 
         <!-- User's playlists -->
         @for (playlist of myPlaylistsPreview(); track playlist.id) {
-        <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
-        }
-      </div>
-      }
-    </section>
-    }
-
-    <!-- PLAYLISTS SECTION (filtered by list filter) -->
-    @if (listFilteredPlaylistsPreview().length > 0) {
-    <section class="music-section">
-      <div class="section-header">
-        <h2>
-          <span i18n="@@music.section.playlists">Playlists</span>
-          @if (listFilteredPlaylistsCount() > 0) {
-          <span class="section-count">{{ listFilteredPlaylistsCount() }}</span>
-          }
-        </h2>
-        @if (hasMoreListFilteredPlaylists()) {
-        <button mat-button (click)="goToAllPlaylists()" class="show-all-btn">
-          <span i18n="@@music.showAll">Show all</span>
-          <mat-icon>arrow_forward</mat-icon>
-        </button>
-        }
-      </div>
-      <div class="playlists-grid">
-        @for (playlist of listFilteredPlaylistsPreview(); track playlist.id) {
         <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
         }
       </div>
@@ -220,6 +178,31 @@
       <div class="music-grid">
         @for (track of listFilteredTracksPreview(); track track.id) {
         <app-music-event [event]="track" mode="card"></app-music-event>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- PLAYLISTS SECTION (filtered by list filter) -->
+    @if (listFilteredPlaylistsPreview().length > 0) {
+    <section class="music-section">
+      <div class="section-header">
+        <h2>
+          <span i18n="@@music.section.playlists">Playlists</span>
+          @if (listFilteredPlaylistsCount() > 0) {
+          <span class="section-count">{{ listFilteredPlaylistsCount() }}</span>
+          }
+        </h2>
+        @if (hasMoreListFilteredPlaylists()) {
+        <button mat-button (click)="goToAllPlaylists()" class="show-all-btn">
+          <span i18n="@@music.showAll">Show all</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+        }
+      </div>
+      <div class="playlists-grid">
+        @for (playlist of listFilteredPlaylistsPreview(); track playlist.id) {
+        <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
         }
       </div>
     </section>

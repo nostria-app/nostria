@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal, PLATFORM_ID } from '@angular/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
@@ -8,21 +9,20 @@ import { CastService } from '../../services/cast.service';
 describe('InlineVideoPlayerComponent', () => {
   let component: InlineVideoPlayerComponent;
   let fixture: ComponentFixture<InlineVideoPlayerComponent>;
-  let mockVideoPlayback: jasmine.SpyObj<VideoPlaybackService>;
+  let mockVideoPlayback: MockedObject<VideoPlaybackService>;
 
   beforeEach(async () => {
-    mockVideoPlayback = jasmine.createSpyObj('VideoPlaybackService', [
-      'registerPlaying',
-      'unregisterPlaying',
-      'pauseCurrentVideo',
-      'getMutedState',
-      'setMuted',
-      'toggleMuted',
-    ], {
+    mockVideoPlayback = {
+      registerPlaying: vi.fn().mockName("VideoPlaybackService.registerPlaying"),
+      unregisterPlaying: vi.fn().mockName("VideoPlaybackService.unregisterPlaying"),
+      pauseCurrentVideo: vi.fn().mockName("VideoPlaybackService.pauseCurrentVideo"),
+      getMutedState: vi.fn().mockName("VideoPlaybackService.getMutedState"),
+      setMuted: vi.fn().mockName("VideoPlaybackService.setMuted"),
+      toggleMuted: vi.fn().mockName("VideoPlaybackService.toggleMuted"),
       isMuted: signal(true),
-      autoPlayAllowed: signal(true),
-    });
-    mockVideoPlayback.getMutedState.and.returnValue(true);
+      autoPlayAllowed: signal(true)
+    } as unknown as MockedObject<VideoPlaybackService>;
+    mockVideoPlayback.getMutedState.mockReturnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [InlineVideoPlayerComponent],

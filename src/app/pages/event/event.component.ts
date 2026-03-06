@@ -27,7 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { ApplicationService } from '../../services/application.service';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../services/event';
 import { Title } from '@angular/platform-browser';
@@ -39,6 +39,7 @@ import { FollowSetsService, FollowSet } from '../../services/follow-sets.service
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { EventFocusService } from '../../services/event-focus.service';
+import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 
 /** Description of the EventPageComponent
  *
@@ -85,6 +86,9 @@ export class EventPageComponent {
   // Computed to check if we're in dialog mode
   isInDialogMode = computed(() => !!this.dialogEventId());
 
+  // Reduce indentation on mobile to preserve horizontal space in thread view
+  readonly threadIndent = computed(() => this.panelNav.isMobile() ? 8 : 16);
+
   // Detect if event is rendered in the right panel outlet
   isInRightPanel = computed(() => {
     // Check both the route outlet property AND the current URL structure
@@ -117,6 +121,7 @@ export class EventPageComponent {
   private elementRef = inject(ElementRef);
   private readonly eventFocus = inject(EventFocusService);
   private readonly destroyRef = inject(DestroyRef);
+  private publishEventBus = inject(PublishEventBus);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -374,6 +379,7 @@ export class EventPageComponent {
 
   item!: EventData;
   reactions = signal<Reaction[]>([]);
+  private handledPublishedReplyIds = new Set<string>();
 
   // Computed signal to track if anything is still loading
   isAnyLoading = computed(
@@ -401,6 +407,17 @@ export class EventPageComponent {
         this.scrollDetectionCleanup?.();
       });
     }
+
+    this.publishEventBus
+      .on('relay-result')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((publishEvent) => {
+        const relayEvent = publishEvent as PublishRelayResultEvent;
+        if (!relayEvent.success || relayEvent.event.kind !== 1) {
+          return;
+        }
+        this.onReplyPublished(relayEvent.event);
+      });
 
     // this.item = this.route.snapshot.data['data'];
 
@@ -518,6 +535,7 @@ export class EventPageComponent {
       this.error.set(null);
       this.showCompletionStatus.set(false);
       this.deepResolutionProgress.set('');
+      this.handledPublishedReplyIds.clear();
 
       // Reset state
       this.parentEvents.set([]);
@@ -650,6 +668,86 @@ export class EventPageComponent {
       }
 
     }
+  }
+
+  onReplyPublished(event: Event): void {
+    const currentEvent = this.event();
+    if (!currentEvent || event.id === currentEvent.id) {
+      return;
+    }
+
+    if (this.handledPublishedReplyIds.has(event.id)) {
+      return;
+    }
+
+    const tags = this.eventService.getEventTags(event);
+    if (!tags.rootId && !tags.replyId) {
+      return;
+    }
+
+    const threadRootId = this.parentEvents()[0]?.id || currentEvent.id;
+    const knownIds = this.collectKnownThreadEventIds();
+
+    const isDirectReplyToCurrent = tags.replyId === currentEvent.id || (!tags.replyId && tags.rootId === currentEvent.id);
+    const repliesToKnownEvent = !!tags.replyId && knownIds.has(tags.replyId);
+    const isInCurrentThreadRoot = tags.rootId === threadRootId || tags.rootId === currentEvent.id;
+
+    if (!isDirectReplyToCurrent && !(isInCurrentThreadRoot && repliesToKnownEvent)) {
+      return;
+    }
+
+    this.handledPublishedReplyIds.add(event.id);
+
+    const mergedReplies = [...this.replies(), event];
+    const dedupedById = new Map<string, Event>();
+    for (const replyEvent of mergedReplies) {
+      dedupedById.set(replyEvent.id, replyEvent);
+    }
+
+    const parentEventIds = new Set(this.parentEvents().map((p) => p.id));
+    parentEventIds.add(currentEvent.id);
+
+    const filteredReplies = Array.from(dedupedById.values()).filter((replyEvent) => !parentEventIds.has(replyEvent.id));
+    this.replies.set(filteredReplies);
+
+    const isViewingThreadRoot = this.threadData()?.isThreadRoot ?? this.parentEvents().length === 0;
+    const rebuiltThread = this.eventService.buildThreadTree(filteredReplies, currentEvent.id, isViewingThreadRoot);
+    this.threadedReplies.set(rebuiltThread);
+    this.initialReplyCount.set(undefined);
+
+    const currentThreadData = this.threadData();
+    if (currentThreadData) {
+      this.threadData.set({
+        ...currentThreadData,
+        replies: filteredReplies,
+        threadedReplies: rebuiltThread,
+      });
+    }
+  }
+
+  private collectKnownThreadEventIds(): Set<string> {
+    const ids = new Set<string>();
+    const currentEvent = this.event();
+    if (currentEvent) {
+      ids.add(currentEvent.id);
+    }
+
+    const addThread = (thread: ThreadedEvent): void => {
+      ids.add(thread.event.id);
+      for (const child of thread.replies) {
+        addThread(child);
+      }
+    };
+
+    for (const parent of this.parentEvents()) {
+      ids.add(parent.id);
+    }
+
+    for (const reply of this.threadedReplies()) {
+      addThread(reply);
+    }
+
+    return ids;
   }
 
   /**

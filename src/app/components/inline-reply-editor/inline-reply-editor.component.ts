@@ -94,6 +94,9 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   /** The event being replied to */
   replyToEvent = input.required<NostrEvent>();
 
+  /** When false, stay in the current view after publish instead of navigating to the new event */
+  navigateOnPublish = input<boolean>(true);
+
   /** Emitted when a reply is successfully published */
   replyPublished = output<NostrEvent>();
 
@@ -648,12 +651,14 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
           this.isExpanded.set(false);
           this.replyPublished.emit(signedEvent);
 
-          const nevent = nip19.neventEncode({
-            id: signedEvent.id,
-            author: signedEvent.pubkey,
-            kind: signedEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, signedEvent);
+          if (this.navigateOnPublish()) {
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+              kind: signedEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, signedEvent);
+          }
         }
       }
     });
@@ -1146,7 +1151,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
    * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
    */
   private containsNip19Identifier(text: string): boolean {
-    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)(?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+\b/;
     return nip19Pattern.test(text);
   }
 
@@ -1163,7 +1168,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
     // and are not part of a URL (preceded by /)
     const processedText = text.replace(
-      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b)/g,
       'nostr:$1'
     );
 

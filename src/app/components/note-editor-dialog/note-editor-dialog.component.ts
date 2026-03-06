@@ -64,6 +64,7 @@ import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
+import { HapticsService } from '../../services/haptics.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -180,7 +181,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
+  private haptics = inject(HapticsService);
   private destroyRef = inject(DestroyRef);
+
+  private shouldNavigateAfterPublish(): boolean {
+    return this.data?.navigateOnPublish !== false;
+  }
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -822,14 +828,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         }
       }
 
-      const nevent = nip19.neventEncode({
-        id: this.data.quote.id,
-        author: this.data.quote.pubkey,
-        kind: this.data.quote.kind,
-        relays: this.utilities.normalizeRelayUrls(relayHints),
-      });
-
-      const quoteText = `nostr:${nevent}`;
+      const quoteReference = this.buildQuoteReference(this.data.quote, relayHints);
+      const quoteText = `nostr:${quoteReference}`;
       const currentContent = this.content();
 
       // Only add the quote if it doesn't already exist in the content
@@ -1312,13 +1312,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the original event (not the edit event)
-          const nevent = nip19.neventEncode({
-            id: editEvent.id,
-            author: editEvent.pubkey,
-            kind: editEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, editEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the original event (not the edit event)
+            const nevent = nip19.neventEncode({
+              id: editEvent.id,
+              author: editEvent.pubkey,
+              kind: editEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, editEvent);
+          }
 
           if (this.publishSubscription) {
             this.publishSubscription.unsubscribe();
@@ -1409,6 +1411,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           dialogClosed = true;
           publishedEventId = relayEvent.event.id;
 
+          this.haptics.triggerSuccess();
+
           // Clear draft and close dialog immediately after first successful publish
           if (!this.inlineMode()) {
             this.clearAutoDraft();
@@ -1433,13 +1437,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the published event
-          const nevent = nip19.neventEncode({
-            id: signedEvent.id,
-            author: signedEvent.pubkey,
-            kind: signedEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, signedEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the published event
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+              kind: signedEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, signedEvent);
+          }
 
           // Unsubscribe after handling
           if (this.publishSubscription) {
@@ -1532,8 +1538,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Add quote tag (NIP-18)
     if (this.data?.quote) {
-      const relay = ''; // TODO: provide relay for the quoted note
-      tags.push(['q', this.data.quote.id, relay, this.data.quote.pubkey]);
+      const relay = this.data.quote.relays?.[0] || '';
+      const quoteTarget = this.getQuoteTagTarget(this.data.quote);
+      tags.push(['q', quoteTarget, relay, this.data.quote.pubkey]);
 
       // According to NIP-18, also add a p-tag for the quoted author
       // This ensures proper notifications
@@ -1608,6 +1615,45 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return tags;
   }
 
+  private getQuoteTagTarget(quote: NonNullable<NoteEditorDialogData['quote']>): string {
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return `${quote.kind}:${quote.pubkey}:${quote.identifier}`;
+    }
+
+    return quote.id;
+  }
+
+  private buildQuoteReference(
+    quote: NonNullable<NoteEditorDialogData['quote']>,
+    relayHints: string[]
+  ): string {
+    const normalizedRelays = this.utilities.normalizeRelayUrls(relayHints);
+
+    if (
+      typeof quote.kind === 'number' &&
+      this.utilities.isParameterizedReplaceableEvent(quote.kind) &&
+      quote.identifier
+    ) {
+      return nip19.naddrEncode({
+        kind: quote.kind,
+        pubkey: quote.pubkey,
+        identifier: quote.identifier,
+        relays: normalizedRelays,
+      });
+    }
+
+    return nip19.neventEncode({
+      id: quote.id,
+      author: quote.pubkey,
+      kind: quote.kind,
+      relays: normalizedRelays,
+    });
+  }
+
   /**
    * Build an imeta tag from media metadata (NIP-92)
    * Format: ["imeta", "url <url>", "m <mime-type>", "blurhash <hash>", "dim <widthxheight>", ...]
@@ -1625,7 +1671,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
     // Match all nostr: URIs in content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
     // Track added quote event IDs (q tags) separately from reply event IDs (e tags)
@@ -1862,6 +1908,89 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.insertEmoji(result.result);
       }
     });
+  }
+
+  /**
+   * Open the reference picker dialog to insert nostr: references (profiles, events, articles)
+   */
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleReferencePickerDialogComponent.prototype,
+      ArticleReferencePickerResult
+    >(ArticleReferencePickerDialogComponent, {
+      title: 'Insert Reference',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const references = result?.references ?? [];
+      if (references.length > 0) {
+        this.insertReferences(references);
+      }
+    });
+  }
+
+  /**
+   * Insert nostr: reference strings at the current cursor position in the textarea
+   */
+  private insertReferences(references: string[]): void {
+    const uniqueReferences = Array.from(new Set(references.filter(ref => !!ref?.trim())));
+    if (uniqueReferences.length === 0) {
+      return;
+    }
+
+    const insertionText = uniqueReferences.join('\n');
+    const textarea = this.contentTextarea?.nativeElement;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const currentContent = this.content();
+
+      // Add spacing around the insertion if needed
+      const before = currentContent.substring(0, start);
+      const after = currentContent.substring(end);
+      const needsLeadingSpace = before.length > 0 && !before.endsWith('\n') && !before.endsWith(' ');
+      const needsTrailingSpace = after.length > 0 && !after.startsWith('\n') && !after.startsWith(' ');
+
+      const textToInsert = (needsLeadingSpace ? ' ' : '') + insertionText + (needsTrailingSpace ? ' ' : '');
+      const newContent = before + textToInsert + after;
+
+      this.content.set(newContent);
+      textarea.value = newContent;
+
+      // Position cursor after the inserted text
+      setTimeout(() => {
+        const newPos = start + textToInsert.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+        this.autoResizeTextarea(textarea);
+      });
+    } else {
+      // Fallback: append to end
+      const currentContent = this.content();
+      const separator = !currentContent.trim()
+        ? ''
+        : currentContent.endsWith('\n')
+          ? '\n'
+          : '\n\n';
+      this.content.set(`${currentContent}${separator}${insertionText}`);
+    }
+
+    this.snackBar.open(
+      uniqueReferences.length === 1 ? 'Reference inserted' : `${uniqueReferences.length} references inserted`,
+      'Close',
+      { duration: 2500 },
+    );
   }
 
   // Mention input handling methods
@@ -2966,7 +3095,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
    */
   private containsNip19Identifier(text: string): boolean {
-    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)(?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+\b/;
     return nip19Pattern.test(text);
   }
 
@@ -2986,7 +3115,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Extract nostr: URIs from new content and check if they exist in current content
-    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)[a-zA-Z0-9]+/g;
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)(?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+/g;
     const nostrUris = newContent.match(nostrUriPattern);
 
     if (nostrUris) {
@@ -3003,7 +3132,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Check for bare NIP-19 identifiers (without nostr: prefix) and see if they exist with prefix
-    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)\b/g;
+    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)((?:(?!(?:note|nevent|npub|nprofile|naddr)1)[a-zA-Z0-9])+)\b/g;
     const bareIdentifiers = newContent.match(bareNip19Pattern);
 
     if (bareIdentifiers) {
@@ -3042,7 +3171,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
     // and are not part of a URL (preceded by /)
     const processedText = text.replace(
-      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b)/g,
       'nostr:$1'
     );
 

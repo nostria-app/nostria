@@ -1,3 +1,4 @@
+import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
@@ -13,15 +14,15 @@ import { AccountStateService } from '../../services/account-state.service';
 describe('SearchComponent', () => {
   let component: SearchComponent;
   let fixture: ComponentFixture<SearchComponent>;
-  let mockSearchRelay: jasmine.SpyObj<SearchRelayService>;
+  let mockSearchRelay: MockedObject<SearchRelayService>;
 
   beforeEach(async () => {
-    mockSearchRelay = jasmine.createSpyObj('SearchRelayService', [
-      'search',
-      'searchProfiles',
-    ]);
-    mockSearchRelay.search.and.resolveTo([]);
-    mockSearchRelay.searchProfiles.and.resolveTo([]);
+    mockSearchRelay = {
+      search: vi.fn().mockName("SearchRelayService.search"),
+      searchProfiles: vi.fn().mockName("SearchRelayService.searchProfiles")
+    } as unknown as MockedObject<SearchRelayService>;
+    mockSearchRelay.search.mockResolvedValue([]);
+    mockSearchRelay.searchProfiles.mockResolvedValue([]);
 
     await TestBed.configureTestingModule({
       imports: [SearchComponent],
@@ -31,38 +32,38 @@ describe('SearchComponent', () => {
         {
           provide: DatabaseService,
           useValue: {
-            getEventsByKind: jasmine.createSpy('getEventsByKind').and.resolveTo([]),
+            getEventsByKind: vi.fn().mockResolvedValue([]),
           },
         },
         { provide: SearchRelayService, useValue: mockSearchRelay },
         {
           provide: FollowingService,
           useValue: {
-            searchProfiles: jasmine.createSpy('searchProfiles').and.returnValue([]),
-            toNostrRecords: jasmine.createSpy('toNostrRecords').and.returnValue([]),
+            searchProfiles: vi.fn().mockReturnValue([]),
+            toNostrRecords: vi.fn().mockReturnValue([]),
           },
         },
         {
           provide: LayoutService,
           useValue: {
-            openProfile: jasmine.createSpy('openProfile'),
-            openGenericEvent: jasmine.createSpy('openGenericEvent'),
-            toast: jasmine.createSpy('toast'),
+            openProfile: vi.fn(),
+            openGenericEvent: vi.fn(),
+            toast: vi.fn(),
           },
         },
         {
           provide: LoggerService,
           useValue: {
-            info: jasmine.createSpy('info'),
-            warn: jasmine.createSpy('warn'),
-            error: jasmine.createSpy('error'),
-            debug: jasmine.createSpy('debug'),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
           provide: UtilitiesService,
           useValue: {
-            isEventExpired: jasmine.createSpy('isEventExpired').and.returnValue(false),
+            isEventExpired: vi.fn().mockReturnValue(false),
           },
         },
         {
@@ -103,7 +104,7 @@ describe('SearchComponent', () => {
     });
 
     it('should be null after search fails', async () => {
-      mockSearchRelay.searchProfiles.and.rejectWith(new Error('fail'));
+      mockSearchRelay.searchProfiles.mockRejectedValue(new Error('fail'));
       component.searchQuery.set('test');
       await component.performSearch();
       expect(component.searchProgress()).toBeNull();
@@ -113,7 +114,7 @@ describe('SearchComponent', () => {
       let resolveSearch: () => void;
       const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
 
-      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+      mockSearchRelay.searchProfiles.mockImplementation(() => searchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -142,11 +143,11 @@ describe('SearchComponent', () => {
         tags: [],
         sig: 'sig',
       };
-      mockSearchRelay.searchProfiles.and.resolveTo([mockProfileEvent]);
+      mockSearchRelay.searchProfiles.mockResolvedValue([mockProfileEvent]);
 
       let resolveNoteSearch: () => void;
       const noteSearchPromise = new Promise<void>(resolve => resolveNoteSearch = resolve);
-      mockSearchRelay.search.and.callFake(() => noteSearchPromise.then(() => []));
+      mockSearchRelay.search.mockImplementation(() => noteSearchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -204,7 +205,7 @@ describe('SearchComponent', () => {
       let resolveSearch: () => void;
       const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
 
-      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+      mockSearchRelay.searchProfiles.mockImplementation(() => searchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -238,7 +239,7 @@ describe('SearchComponent', () => {
       let resolveSearch: () => void;
       const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
 
-      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+      mockSearchRelay.searchProfiles.mockImplementation(() => searchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -260,7 +261,7 @@ describe('SearchComponent', () => {
       let resolveSearch: () => void;
       const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
 
-      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+      mockSearchRelay.searchProfiles.mockImplementation(() => searchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -279,7 +280,7 @@ describe('SearchComponent', () => {
       let resolveSearch: () => void;
       const searchPromise = new Promise<void>(resolve => resolveSearch = resolve);
 
-      mockSearchRelay.searchProfiles.and.callFake(() => searchPromise.then(() => []));
+      mockSearchRelay.searchProfiles.mockImplementation(() => searchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -307,11 +308,11 @@ describe('SearchComponent', () => {
         tags: [],
         sig: 'sig',
       };
-      mockSearchRelay.searchProfiles.and.resolveTo([mockProfileEvent]);
+      mockSearchRelay.searchProfiles.mockResolvedValue([mockProfileEvent]);
 
       let resolveNoteSearch: () => void;
       const noteSearchPromise = new Promise<void>(resolve => resolveNoteSearch = resolve);
-      mockSearchRelay.search.and.callFake(() => noteSearchPromise.then(() => []));
+      mockSearchRelay.search.mockImplementation(() => noteSearchPromise.then(() => []));
 
       component.searchQuery.set('test');
       const performPromise = component.performSearch();
@@ -342,7 +343,7 @@ describe('SearchComponent', () => {
     });
 
     it('should clean up elapsed timer after search fails', async () => {
-      mockSearchRelay.searchProfiles.and.rejectWith(new Error('fail'));
+      mockSearchRelay.searchProfiles.mockRejectedValue(new Error('fail'));
       component.searchQuery.set('test');
       await component.performSearch();
 

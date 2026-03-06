@@ -68,6 +68,7 @@ import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { HapticsService } from '../../services/haptics.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -224,6 +225,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly haptics = inject(HapticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
@@ -335,6 +337,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Computed to check if event author is muted/blocked
   // CRITICAL: Filter out muted content from rendering
   // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
+  isLocallyDeleted = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) {
+      return false;
+    }
+
+    return this.eventService.isEventLocallyDeleted(currentEvent.id);
+  });
+
   isAuthorMuted = computed<boolean>(() => {
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return false;
@@ -487,6 +498,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     return { images, videos, urls };
+  }
+
+  isPortraitAspectRatio(aspectRatio?: string): boolean {
+    if (!aspectRatio) {
+      return false;
+    }
+
+    const normalized = aspectRatio.replace(/\s+/g, '');
+    const [widthValue, heightValue] = normalized.split('/').map(Number);
+
+    if (!Number.isFinite(widthValue) || !Number.isFinite(heightValue) || widthValue <= 0 || heightValue <= 0) {
+      return false;
+    }
+
+    return heightValue > widthValue;
   }
 
   // Check if root event content should be collapsible (content is long enough)
@@ -2241,6 +2267,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (ev.kind === kinds.ShortTextNote) {
       const eventTags = this.eventService.getEventTags(ev);
       this.eventService.createNote({
+        navigateOnPublish: this.mode() !== 'thread',
         replyTo: {
           id: ev.id,
           pubkey: ev.pubkey,
@@ -2305,6 +2332,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
+        } else {
+          this.haptics.triggerMedium();
         }
       }
 

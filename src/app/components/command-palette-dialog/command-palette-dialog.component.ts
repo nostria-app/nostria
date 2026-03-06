@@ -15,6 +15,8 @@ import { SettingsService } from '../../services/settings.service';
 import { SpeechService } from '../../services/speech.service';
 import { DebugPanelComponent } from '../debug-panel/debug-panel.component';
 import { MetricsDialogComponent } from '../metrics-dialog/metrics-dialog.component';
+import { DebugLogsDialogComponent } from '../debug-logs-dialog/debug-logs-dialog.component';
+import { IgnoredRelayAuditDialogComponent } from '../ignored-relay-audit-dialog/ignored-relay-audit-dialog.component';
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 
@@ -307,6 +309,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['edit profile', 'update profile', 'change profile']
     },
     {
+      id: 'set-status',
+      label: 'Set Status',
+      icon: 'add_reaction',
+      action: () => {
+        // Navigate to own profile to set status
+        const pubkey = this.accountState.pubkey();
+        if (pubkey) {
+          this.router.navigate(['/p', pubkey], { queryParams: { status: 'edit' } });
+        }
+      },
+      keywords: ['status', 'user status', 'nip-38', 'set status', 'mood', 'what are you doing', 'activity'],
+      description: 'Set your general status (NIP-38)'
+    },
+    {
       id: 'nav-accounts',
       label: 'Open Accounts',
       icon: 'manage_accounts',
@@ -375,6 +391,23 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'account_balance_wallet',
       action: () => this.router.navigate(['/settings/wallet']),
       keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
+    },
+    {
+      id: 'toggle-music-status',
+      label: 'Toggle Music Status',
+      icon: 'music_note',
+      action: () => {
+        const current = this.settings.settings().publishMusicStatus !== false;
+        this.settings.updateSettings({ publishMusicStatus: !current }).then(() => {
+          this.snackBar.open(
+            !current ? 'Music status enabled' : 'Music status disabled',
+            'Dismiss',
+            { duration: 3000 },
+          );
+        });
+      },
+      keywords: ['music status', 'nip-38', 'now playing', 'listening', 'share music', 'user status', 'music settings'],
+      description: 'Enable or disable sharing your currently playing track as a Nostr status',
     },
     {
       id: 'nav-settings-logs',
@@ -546,6 +579,22 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['debug', 'metrics', 'performance', 'timing', 'profiling', 'speed', 'benchmark', 'wasm', 'webassembly'],
       description: 'View application performance metrics and timing data'
     },
+    {
+      id: 'debug-event-logs',
+      label: 'Debug: Event Logs',
+      icon: 'feed',
+      action: () => this.openDebugLogsPanel(),
+      keywords: ['debug', 'logs', 'events', 'malformed', 'nostr', 'diagnostics', 'inspector'],
+      description: 'Inspect malformed event contexts and samples'
+    },
+    {
+      id: 'debug-ignored-relays',
+      label: 'Debug: Ignored Relays',
+      icon: 'warning',
+      action: () => this.openIgnoredRelayAuditPanel(),
+      keywords: ['debug', 'relays', 'ignored', 'dead relay', 'audit', 'users', 'profiles', 'domain'],
+      description: 'Inspect users that publish ignored relay domains'
+    },
 
     // Actions - Content Creation
     {
@@ -640,6 +689,22 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     this.customDialog.open(MetricsDialogComponent, {
       title: 'Debug: Metrics',
       width: '900px',
+      maxWidth: '95vw',
+    });
+  }
+
+  openDebugLogsPanel() {
+    this.customDialog.open(DebugLogsDialogComponent, {
+      title: 'Debug: Event Logs',
+      width: '1100px',
+      maxWidth: '95vw',
+    });
+  }
+
+  openIgnoredRelayAuditPanel() {
+    this.customDialog.open(IgnoredRelayAuditDialogComponent, {
+      title: 'Debug: Ignored Relays',
+      width: '1300px',
       maxWidth: '95vw',
     });
   }

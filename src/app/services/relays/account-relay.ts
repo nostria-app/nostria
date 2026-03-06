@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { kinds, SimplePool } from 'nostr-tools';
+import { kinds } from 'nostr-tools';
 import { DatabaseService } from '../database.service';
 import { RelayServiceBase } from './relay';
 import { DiscoveryRelayService } from './discovery-relay';
+import { PoolService } from './pool.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,9 +13,12 @@ export class AccountRelayService extends RelayServiceBase {
   private discoveryRelay = inject(DiscoveryRelayService);
 
   constructor() {
-    // TODO: We always create a new instance here that will be immediately destroyed by setAccount.
-    super(new SimplePool({ enablePing: true, enableReconnect: true }));
-    // Ensure we always connect to all account relays to maximize data availability
+    // Use the application-wide shared pool so that connections to the user's
+    // relays are reused across AccountRelayService, RelayPoolService and
+    // SharedRelayService instead of opening duplicate WebSockets.
+    // destroy()/init() will not recreate or close the shared pool.
+    super(inject(PoolService).pool);
+    // Ensure we always connect to all account relays to maximise data availability
     this.useOptimizedRelays = false;
   }
 

@@ -1,11 +1,11 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { SimplePool, Event, Filter } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
-import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
+import { PoolService } from './pool.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -14,12 +14,12 @@ let EventProcessorServiceRef: any;
   providedIn: 'root'
 })
 export class RelayPoolService {
-  #pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  readonly #poolService = inject(PoolService);
+  get #pool() { return this.#poolService.pool; }
   private readonly relaysService = inject(RelaysService);
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
   private readonly relayAuth = inject(RelayAuthService);
-  private readonly relayBlock = inject(RelayBlockService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly injector = inject(Injector);
   // Lazy-loaded to avoid circular dependency
@@ -77,10 +77,8 @@ export class RelayPoolService {
       return null;
     }
 
-    // Filter out relays that have failed authentication or are temporarily blocked
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(secureUrls)
-    );
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute get');
       return null;
@@ -126,10 +124,6 @@ export class RelayPoolService {
       return event;
     } catch (error) {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      filteredUrls.forEach(url => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
-      });
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
@@ -158,10 +152,8 @@ export class RelayPoolService {
       return [];
     }
 
-    // Filter out relays that have failed authentication or are temporarily blocked
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(secureUrls)
-    );
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute query');
       return [];
@@ -216,10 +208,6 @@ export class RelayPoolService {
       return events;
     } catch (error) {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      filteredUrls.forEach(url => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
-      });
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
@@ -248,10 +236,8 @@ export class RelayPoolService {
       };
     }
 
-    // Filter out relays that have failed authentication or are temporarily blocked
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(secureUrls)
-    );
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are unavailable, cannot subscribe');
       return {
@@ -346,9 +332,7 @@ export class RelayPoolService {
             if (!reasonEntry || shouldIgnoreCloseReason(reasonEntry)) {
               return;
             }
-            filteredUrls.forEach(url => {
-              this.relayBlock.recordFailure(url, reasonEntry, this.localSettings.autoRelayAuth());
-            });
+            this.logger.debug('[RelayPoolService] Subscription closed with reason:', reasonEntry);
           });
         }
 
@@ -379,10 +363,8 @@ export class RelayPoolService {
       throw new Error('No relays provided');
     }
 
-    // Filter out relays that have failed authentication or are temporarily blocked
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(relayUrls)
-    );
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
     if (filteredUrls.length === 0) {
       throw new Error('All relays are unavailable, cannot publish');
     }
@@ -439,7 +421,6 @@ export class RelayPoolService {
           if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
             this.relayAuth.markAuthFailed(relayUrl, errorMsg);
           }
-          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
           this.relaysService.recordConnectionRetry(relayUrl);
           this.relaysService.updateRelayConnection(relayUrl, false);
         }
@@ -451,13 +432,32 @@ export class RelayPoolService {
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
 
       throw error;
     }
+  }
+
+  /**
+   * Publish an event and return the per-relay promise array without awaiting.
+   * Use this when callers need to track individual relay publish results
+   * (e.g. to display per-relay notifications).  The caller receives the raw
+   * promises and is responsible for handling rejections.
+   */
+  publishWithTracking(relayUrls: string[], event: Event): Promise<string>[] {
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      return [];
+    }
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    if (filteredUrls.length === 0) {
+      return [];
+    }
+    this.addRelays(filteredUrls);
+    const authCallback = this.relayAuth.getAuthCallback();
+    return this.#pool.publish(filteredUrls, event, { onauth: authCallback });
   }
 
   /**
