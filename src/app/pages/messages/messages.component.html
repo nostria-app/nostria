@@ -527,6 +527,14 @@
         }
         }
       </div>
+
+      @if (showScrollToLatestButton()) {
+      <button mat-mini-fab class="scroll-latest-button" (click)="scrollToLatestMessage()"
+        matTooltip="Scroll to latest message" aria-label="Scroll to latest message">
+        <mat-icon>keyboard_arrow_down</mat-icon>
+      </button>
+      }
+
       <div class="message-input-container" [class.has-reply]="replyingToMessage()"
         [class.drag-over]="isDragOverMessageInput()" (dragover)="onMessageDragOver($event)"
         (dragleave)="onMessageDragLeave($event)" (drop)="onMessageDrop($event)">

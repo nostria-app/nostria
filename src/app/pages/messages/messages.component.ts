@@ -210,6 +210,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   longPressedMessage = signal<DirectMessage | null>(null);
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
+  readonly showScrollToLatestButton = signal<boolean>(false);
 
   // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
   // This enables the same behavior as mobile (toggle between list and thread) when viewing
@@ -1040,6 +1041,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // "Near the bottom" = within 150px of the end.
       const distFromBottom = scrollHeight - (scrollTop + clientHeight);
       this.userScrolledUp = distFromBottom > 150;
+      this.showScrollToLatestButton.set(distFromBottom > 600);
 
       // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
@@ -1066,6 +1068,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private scrollToBottom(): void {
     this.userScrolledUp = false;
+    this.showScrollToLatestButton.set(false);
     // Use setTimeout to ensure DOM is updated
     setTimeout(() => {
       if (this.messagesWrapper?.nativeElement) {
@@ -1082,11 +1085,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private scrollToBottomIfNotScrolledUp(): void {
     if (this.userScrolledUp) return;
+    this.showScrollToLatestButton.set(false);
     if (this.messagesWrapper?.nativeElement) {
       const element = this.messagesWrapper.nativeElement;
       element.scrollTop = element.scrollHeight;
       this.lastScrollHeight = element.scrollHeight;
     }
+  }
+
+  scrollToLatestMessage(): void {
+    this.scrollToBottom();
   }
 
   ngOnDestroy(): void {
@@ -1954,8 +1962,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const extraRumorTags: string[][] = [
         ['e', message.id],
         ['k', String(kinds.PrivateDirectMessage)],
-        ['_nostria_kind', String(kinds.Reaction)],
-        ['_nostria_reaction_to', message.id],
       ];
 
       const shortcode = this.getEmojiShortcode(reaction);

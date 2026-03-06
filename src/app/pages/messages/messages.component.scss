@@ -1843,3 +1843,31 @@ app-message-content {
 .reaction-menu-emoji {
   margin-right: 8px;
 }
+
+.scroll-latest-button {
+  position: absolute;
+  right: 18px;
+  bottom: 84px;
+  z-index: 15;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  box-shadow: var(--mat-sys-level3);
+
+  @media (max-width: 699px) {
+    position: fixed;
+    right: 16px;
+    bottom: calc(122px + env(safe-area-inset-bottom, 0px));
+    z-index: 1100;
+  }
+
+  @media (max-width: 699px) and (display-mode: standalone) {
+    :host-context(html[data-platform="android"]) & {
+      bottom: calc(154px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+:host-context(.dark) .scroll-latest-button {
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+}
