@@ -235,9 +235,12 @@ export class EventPageComponent {
           replies: filteredChildren,
         });
       } else if (filteredChildren.length > 0) {
-        // This reply is filtered out, but it has children that match
-        // Include the children directly (they become top-level in this branch)
-        result.push(...filteredChildren);
+        // Keep disallowed connector replies when they have matching descendants.
+        // This preserves thread structure and avoids making intermediate events disappear.
+        result.push({
+          ...reply,
+          replies: filteredChildren,
+        });
       }
       // If not allowed and no matching children, skip entirely
     }
@@ -903,20 +906,32 @@ export class EventPageComponent {
         }
       }
 
-      const event = await this.eventService.loadEventWithDeepResolution(hex, (current, total, relays) => {
+      const result = await this.eventService.loadEventWithDeepResolution(hex, (current, total, relays) => {
         this.deepResolutionProgress.set(`Scanning batch ${current}/${total} (${relays.length} relays)...`);
       });
 
-      if (event) {
+      if (result.event) {
         this.deepResolutionProgress.set('Event found! Loading thread...');
         // Update item so loadEvent picks it up
         if (!this.item) {
           this.item = { title: '', description: '' };
         }
-        this.item.event = event;
+        this.item.event = result.event;
 
         // Restart loading
         await this.loadEvent(nevent);
+      } else if (result.deletionEvent) {
+        this.logger.info('Deep resolution found deletion request for missing event:', {
+          eventId: hex,
+          deletionEventId: result.deletionEvent.id,
+          reason: result.deletionEvent.content || '(no reason given)',
+        });
+
+        this.isDeleted.set(true);
+        this.deletionReason.set(result.deletionEvent.content || null);
+        this.error.set('This event has been deleted by its author');
+        this.deepResolutionProgress.set('');
+        this.isLoading.set(false);
       } else {
         this.error.set('Event not found');
         this.deepResolutionProgress.set('');
