@@ -64,8 +64,19 @@ export class RelayPublishStatusComponent {
     const promises = this.notification().relayPromises;
     if (!promises || promises.length === 0) return 0;
     const total = promises.length;
-    const completed = this.successCount + this.failedCount;
-    return total > 0 ? (completed / total) * 100 : 0;
+    return total > 0 ? (this.successCount / total) * 100 : 0;
+  }
+
+  get progressText(): string {
+    if (this.pendingCount > 0) {
+      return `${this.progress.toFixed(0)}% success so far`;
+    }
+
+    if (this.failedCount > 0) {
+      return `${this.progress.toFixed(0)}% success`;
+    }
+
+    return '100% complete';
   }
 
   get hasFailures(): boolean {
