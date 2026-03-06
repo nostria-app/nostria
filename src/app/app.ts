@@ -85,6 +85,7 @@ import { Subject } from 'rxjs';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
 import { CredentialsBackupPromptComponent } from './components/credentials-backup-prompt/credentials-backup-prompt.component';
+import { DeadRelaysWarningSheetComponent } from './components/dead-relays-warning-sheet/dead-relays-warning-sheet.component';
 import { isPlatformBrowser } from '@angular/common';
 import { StandaloneLoginDialogComponent } from './components/standalone-login-dialog/standalone-login-dialog.component';
 import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
@@ -114,6 +115,7 @@ import { LeftPanelHeaderService } from './services/left-panel-header.service';
 import { EventFocusService } from './services/event-focus.service';
 import { RunesSettingsService } from './services/runes-settings.service';
 import { TextScaleService } from './services/text-scale.service';
+import { UtilitiesService } from './services/utilities.service';
 
 interface NavItem {
   path: string;
@@ -239,6 +241,7 @@ export class App implements OnInit, OnDestroy {
   private readonly platformService = inject(PlatformService);
   private readonly eventFocus = inject(EventFocusService);
   private readonly textScale = inject(TextScaleService);
+  private readonly utilities = inject(UtilitiesService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -270,6 +273,10 @@ export class App implements OnInit, OnDestroy {
 
   // Track if credentials backup prompt has been shown
   private credentialsBackupPromptShown = signal(false);
+
+  // Track dead relay warning state per account for this app session
+  private deadRelaysPromptCheckedForPubkey: string | null = null;
+  private deadRelaysPromptInFlight = false;
 
   // Voice search - using SpeechService
   private readonly speechService = inject(SpeechService);
@@ -994,7 +1001,31 @@ export class App implements OnInit, OnDestroy {
         this.logger.debug(`[App] Account changed from ${lastPubkey?.substring(0, 8)} to ${pubkey?.substring(0, 8)}, resetting route restoration flag`);
         lastPubkey = pubkey;
         this.hasRestoredRoute = false;
+        this.deadRelaysPromptCheckedForPubkey = null;
+        this.deadRelaysPromptInFlight = false;
       }
+    });
+
+    // Warn users when their published relay list contains known dead/defunct relays.
+    effect(() => {
+      const authenticated = this.app.authenticated();
+      const initialized = this.app.initialized();
+      const pubkey = this.accountState.pubkey();
+
+      if (!authenticated || !initialized || !pubkey) {
+        return;
+      }
+
+      if (this.deadRelaysPromptCheckedForPubkey === pubkey || this.deadRelaysPromptInFlight) {
+        return;
+      }
+
+      this.deadRelaysPromptCheckedForPubkey = pubkey;
+      this.deadRelaysPromptInFlight = true;
+
+      void this.checkAndShowDeadRelaysWarning(pubkey).finally(() => {
+        this.deadRelaysPromptInFlight = false;
+      });
     });
 
     // Effect to restore last route when account is loaded
@@ -2460,5 +2491,53 @@ export class App implements OnInit, OnDestroy {
       disableClose: false,
       hasBackdrop: true,
     });
+  }
+
+  private async checkAndShowDeadRelaysWarning(pubkey: string): Promise<void> {
+    try {
+      const dismissed = this.accountLocalState.getDismissedDeadRelaysWarningDialog(pubkey);
+      if (dismissed) {
+        return;
+      }
+
+      const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      const relayUrls = this.getRawRelayUrlsFromRelayListEvent(relayListEvent);
+
+      if (relayUrls.length === 0) {
+        return;
+      }
+
+      const knownDeadRelayUrls = this.utilities.getKnownDeadRelayUrls(relayUrls);
+      if (knownDeadRelayUrls.length === 0) {
+        return;
+      }
+
+      this.bottomSheet.open(DeadRelaysWarningSheetComponent, {
+        disableClose: false,
+        hasBackdrop: true,
+        data: {
+          relayUrls: knownDeadRelayUrls,
+        },
+      });
+    } catch (error) {
+      this.logger.warn('[App] Failed to evaluate dead relay warning prompt', error);
+    }
+  }
+
+  private getRawRelayUrlsFromRelayListEvent(event: { tags: string[][] } | null): string[] {
+    if (!event) {
+      return [];
+    }
+
+    const relayUrls = event.tags
+      .filter((tag) => tag.length >= 2 && (tag[0] === 'r' || tag[0] === 'relay'))
+      .map((tag) => {
+        const url = tag[1]?.trim() ?? '';
+        const wssIndex = url.indexOf('wss://');
+        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      })
+      .filter((url) => !!url);
+
+    return this.utilities.unique(relayUrls);
   }
 }

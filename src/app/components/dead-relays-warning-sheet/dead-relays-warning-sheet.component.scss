@@ -1,0 +1,67 @@
+.dead-relays-warning-sheet {
+  padding: 20px;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sheet-icon {
+  color: var(--mat-sys-error);
+}
+
+.sheet-header h3 {
+  margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.sheet-message {
+  margin: 0 0 16px;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.5;
+}
+
+.problem-relays {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.problem-relays-label {
+  margin-bottom: 8px;
+  color: var(--mat-sys-on-surface);
+}
+
+.problem-relays-list {
+  display: grid;
+  gap: 6px;
+}
+
+.problem-relay-item {
+  color: var(--mat-sys-on-surface-variant);
+  font-family: monospace;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .dead-relays-warning-sheet {
+    padding: 16px;
+  }
+
+  .sheet-actions {
+    flex-direction: column-reverse;
+  }
+
+  .sheet-actions button {
+    width: 100%;
+  }
+}

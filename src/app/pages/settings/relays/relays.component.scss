@@ -63,12 +63,36 @@
   .status-restricted {
     color: var(--mat-sys-tertiary);
   }
+
+  .status-dead {
+    color: var(--mat-sys-error);
+  }
 }
 
 .relay-has-error {
   background-color: var(--mat-sys-error-container);
   border-radius: 8px;
   margin: 4px 0;
+}
+
+.relay-known-dead {
+  background-color: var(--mat-sys-error-container);
+  border-radius: 8px;
+  margin: 4px 0;
+}
+
+.relay-state-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--mat-sys-corner-full);
+  font-size: 12px;
+}
+
+.relay-state-badge-dead {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
 }
 
 // CDK Drag Drop styles for relay reordering
@@ -206,6 +230,37 @@ app-info-tooltip {
 
 .warning-card {
   border-left-color: var(--mat-sys-tertiary);
+}
+
+.dead-relays-card {
+  border-left-color: var(--mat-sys-error);
+}
+
+.dead-relays-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.dead-relay-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    color: var(--mat-sys-error);
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  span {
+    font-family: monospace;
+  }
 }
 
 .deprecated-actions {

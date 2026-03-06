@@ -79,6 +79,41 @@
         </mat-card>
         }
 
+        @if (knownDeadAccountRelays().length > 0) {
+        <mat-card class="info-card dead-relays-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="info-title">
+                <mat-icon class="info-icon">warning</mat-icon>
+                <span>Known dead relays detected</span>
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              These relays are known to be dead, defunct, or no longer used. Removing them improves reliability and
+              avoids unnecessary connection attempts.
+            </p>
+
+            <div class="dead-relays-list" role="list" aria-label="Known dead account relays">
+              @for (relayUrl of knownDeadAccountRelays(); track relayUrl) {
+              <div class="dead-relay-item" role="listitem">
+                <mat-icon>dns</mat-icon>
+                <span>{{ formatRelayUrl(relayUrl) }}</span>
+              </div>
+              }
+            </div>
+
+            <p>
+              <button mat-flat-button (click)="removeKnownDeadRelays()">
+                <mat-icon>auto_fix_high</mat-icon>
+                Remove Known Dead Relays
+              </button>
+            </p>
+          </mat-card-content>
+        </mat-card>
+        }
+
         <h3 i18n="@@settings.relays.add-new">Add New Relay</h3>
 
         <div class="flex-container add-relay-container">
@@ -105,13 +140,17 @@
           <mat-card-content>
             <mat-list cdkDropList (cdkDropListDropped)="onRelayDrop($event)">
               @for (relay of userRelays(); track relay.url) {
-              <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
+              <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)"
+                [class.relay-known-dead]="isKnownDeadRelay(relay.url)">
                 <div class="relay-item-container">
                   <div class="relay-drag-handle" cdkDragHandle>
                     <mat-icon>drag_indicator</mat-icon>
                   </div>
                   <div class="relay-status-icon">
-                    @if (hasRelayAuthFailed(relay.url)) {
+                    @if (isKnownDeadRelay(relay.url)) {
+                    <mat-icon class="status-icon status-dead"
+                      matTooltip="Known dead relay: defunct or no longer in use">warning</mat-icon>
+                    } @else if (hasRelayAuthFailed(relay.url)) {
                     @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
                     <mat-icon class="status-icon status-restricted"
                       matTooltip="Access restricted - payment or signup required">block</mat-icon>
@@ -124,6 +163,9 @@
                   </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
+                    @if (isKnownDeadRelay(relay.url)) {
+                    <span class="relay-state-badge relay-state-badge-dead">Known dead</span>
+                    }
                   </div>
                   <div class="action-buttons">
                     <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"

@@ -652,7 +652,44 @@ export class UtilitiesService {
     this.ignoredRelayAudit.recordIgnoredRelayUsage(pubkey, ignoredDomains, relayUrls);
   }
 
+  /**
+   * Returns relay URLs that match known dead/defunct relay domains.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  getKnownDeadRelayUrls(relayUrls: string[], excludeAuditExceptions = true): string[] {
+    const knownDeadRelayUrls = relayUrls.filter((url) => {
+      const domain = this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions);
+      return !!domain;
+    });
+
+    return this.unique(knownDeadRelayUrls);
+  }
+
+  /**
+   * Returns relay domains that are known dead/defunct from the provided relay URLs.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  getKnownDeadRelayDomains(relayUrls: string[], excludeAuditExceptions = true): string[] {
+    const knownDeadDomains = relayUrls
+      .map((url) => this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions))
+      .filter((domain): domain is string => !!domain);
+
+    return this.unique(knownDeadDomains);
+  }
+
+  /**
+   * Check if a relay URL belongs to a known dead/defunct relay domain.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  isKnownDeadRelayUrl(url: string, excludeAuditExceptions = true): boolean {
+    return !!this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions);
+  }
+
   private getIgnoredRelayDomain(url: string): string | null {
+    return this.resolveIgnoredRelayDomain(url, false);
+  }
+
+  private resolveIgnoredRelayDomain(url: string, includeAuditExceptions: boolean): string | null {
     try {
       const parsedUrl = new URL(url);
       const domain = parsedUrl.hostname.toLowerCase();
@@ -661,7 +698,7 @@ export class UtilitiesService {
         return null;
       }
 
-      if (this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
+      if (!includeAuditExceptions && this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
         return null;
       }
 

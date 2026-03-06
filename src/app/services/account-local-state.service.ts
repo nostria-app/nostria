@@ -37,6 +37,7 @@ interface AccountLocalState {
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
   dismissedCredentialsBackupDialog?: boolean;
+  dismissedDeadRelaysWarningDialog?: boolean;
   dismissedHiddenChatInfoNotification?: boolean;
   articlesActiveTab?: number;
   /**
@@ -666,6 +667,21 @@ export class AccountLocalStateService {
   }
 
   /**
+   * Get dismissed dead relays warning dialog status for an account
+   */
+  getDismissedDeadRelaysWarningDialog(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.dismissedDeadRelaysWarningDialog || false;
+  }
+
+  /**
+   * Set dismissed dead relays warning dialog status for an account
+   */
+  setDismissedDeadRelaysWarningDialog(pubkey: string, dismissed: boolean): void {
+    this.updateAccountState(pubkey, { dismissedDeadRelaysWarningDialog: dismissed });
+  }
+
+  /**
    * Get dismissed hidden chat info notification status for an account
    */
   getDismissedHiddenChatInfoNotification(pubkey: string): boolean {
@@ -687,6 +703,7 @@ export class AccountLocalStateService {
     this.updateAccountState(pubkey, {
       dismissedPushNotificationDialog: undefined,
       dismissedCredentialsBackupDialog: undefined,
+      dismissedDeadRelaysWarningDialog: undefined,
       dismissedHiddenChatInfoNotification: undefined,
     });
   }
