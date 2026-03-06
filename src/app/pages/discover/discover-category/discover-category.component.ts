@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +26,8 @@ import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
+import { AngorService } from '../../../services/angor.service';
+import { AngorProjectCardComponent } from '../../../components/angor-project-card/angor-project-card.component';
 
 /** Curated article item with parsed addressable ID and relay hints */
 interface CuratedArticle {
@@ -62,6 +64,7 @@ interface CuratedItem {
     ArticleComponent,
     EventComponent,
     LiveEventComponent,
+    AngorProjectCardComponent,
   ],
   templateUrl: './discover-category.component.html',
   styleUrl: './discover-category.component.scss',
@@ -76,8 +79,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private angorService = inject(AngorService);
   private destroy$ = new Subject<void>();
   private streamsSubscription: { close: () => void } | null = null;
+  private angorLoadMoreObserver: IntersectionObserver | null = null;
 
   // Route params
   readonly categoryType = signal<'content' | 'media'>('content');
@@ -123,6 +128,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Check if this is the photography category
   readonly isPhotographyCategory = computed(() => this.categoryId() === 'photography');
 
+  // Check if this is the finance category 
+  readonly isFinanceCategory = computed(() => this.categoryId() === 'finance');
+
   // Video content signals for videos category
   readonly vineVideos = signal<Event[]>([]);
   readonly publicShorts = signal<Event[]>([]);
@@ -137,6 +145,23 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly imagesLoading = signal(false);
   readonly postsLoading = signal(false);
 
+  // Angor project signals
+  readonly angorProjects = this.angorService.angorProjects;
+  readonly angorLoading = this.angorService.loading;
+  readonly angorLoadingMore = this.angorService.loadingMore;
+  readonly angorHasMore = this.angorService.hasMore;
+  readonly angorProjectCount = computed(() => this.angorProjects().length);
+
+  @ViewChild('angorLoadMoreTrigger')
+  set angorLoadMoreTrigger(ref: ElementRef<HTMLElement> | undefined) {
+    if (!ref?.nativeElement) {
+      this.disconnectAngorLoadMoreObserver();
+      return;
+    }
+
+    this.setupAngorLoadMoreObserver(ref.nativeElement);
+  }
+
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
     const cat = this.category();
@@ -146,7 +171,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       case 'news':
         return 'News Sources';
       case 'finance':
-        return 'Angor Hubs';
+        return 'Angor Hub';
       case 'live':
         return 'Streamers';
       case 'podcasts':
@@ -183,6 +208,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     if (this.streamsSubscription) {
       this.streamsSubscription.close();
     }
+    this.disconnectAngorLoadMoreObserver();
   }
 
   private async loadCategoryContent(): Promise<void> {
@@ -248,6 +274,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         const creatorPubkeys = creatorsData.map(c => c.pubkey);
         this.loadPhotographerImages(creatorPubkeys);
         this.loadPhotographerPosts(creatorPubkeys);
+      }
+
+      // Load Angor projects for the 'finance' category
+      if (cat.id === 'finance') {
+        this.loadAngorProjects();
       }
     } catch (err) {
       console.error('Error loading category content:', err);
@@ -390,6 +421,49 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   viewPicture(item: CuratedItem): void {
     // Navigate to picture/event view in right panel
     this.layout.openGenericEvent(item.id);
+  }
+
+
+  private loadAngorProjects(): void {
+    void this.angorService.loadAngorProjects(20);
+  }
+
+  loadMoreAngorProjects(): void {
+    void this.angorService.loadMoreAngorProjects(20);
+  }
+
+  private setupAngorLoadMoreObserver(target: HTMLElement): void {
+    this.disconnectAngorLoadMoreObserver();
+
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    this.angorLoadMoreObserver = new IntersectionObserver(
+      entries => {
+        if (!this.isFinanceCategory()) return;
+        if (!this.angorHasMore() || this.angorLoading() || this.angorLoadingMore()) return;
+
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            this.loadMoreAngorProjects();
+            break;
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '240px 0px',
+        threshold: 0.01,
+      },
+    );
+
+    this.angorLoadMoreObserver.observe(target);
+  }
+
+  private disconnectAngorLoadMoreObserver(): void {
+    if (!this.angorLoadMoreObserver) return;
+
+    this.angorLoadMoreObserver.disconnect();
+    this.angorLoadMoreObserver = null;
   }
 
   /**
