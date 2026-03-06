@@ -50,8 +50,7 @@
   </mat-menu>
 
   <!-- View mode toggle button - hidden on small screens -->
-  <button mat-icon-button (click)="toggleViewMode()"
-    [matTooltip]="viewMode() === 'content' ? 'Switch to Tiles View' : 'Switch to Content View'" class="hide-small">
+  <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" class="hide-small">
     <mat-icon>{{ getViewIcon() }}</mat-icon>
   </button>
 
@@ -79,6 +78,10 @@
     <button mat-menu-item (click)="setViewMode('tiles')" class="show-small" [class.active]="viewMode() === 'tiles'">
       <mat-icon>grid_view</mat-icon>
       <span>Tiles View</span>
+    </button>
+    <button mat-menu-item (click)="setViewMode('list')" class="show-small" [class.active]="viewMode() === 'list'">
+      <mat-icon>view_list</mat-icon>
+      <span>List View</span>
     </button>
     <mat-divider class="show-small"></mat-divider>
 
@@ -123,11 +126,104 @@
 
   <div class="bookmarks-list" [attr.data-view]="viewMode()" (scroll)="onScroll($event)">
     @if (selectedCategory() === 'events') {
+    @if (viewMode() === 'list') {
+    <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
+      (cdkDropListDropped)="onBookmarksDrop('events', $event)">
+      @for (bookmark of displayedEvents(); track bookmark.id) {
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
+        cdkDragPreviewContainer="parent">
+        <ng-template cdkDragPreview>
+          <div class="bookmark-row-drag-preview">
+            <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
+              <mat-icon>drag_indicator</mat-icon>
+            </button>
+            <div class="bookmark-row-link bookmark-row-link--event">
+              <span class="bookmark-row-author">
+                @if (getListEventAuthorPicture(bookmark.id); as picture) {
+                <img class="bookmark-row-avatar" [src]="picture" alt="Author avatar" [style.width.px]="16"
+                  [style.height.px]="16" [style.min-width.px]="16" [style.max-width.px]="16" [style.max-height.px]="16"
+                  [style.border-radius.%]="50" [style.object-fit]="'cover'" />
+                } @else {
+                <mat-icon class="bookmark-row-avatar-icon" [style.width.px]="16" [style.height.px]="16"
+                  [style.font-size.px]="16">account_circle</mat-icon>
+                }
+                <span class="bookmark-row-author-name">{{ getListEventAuthorName(bookmark.id) }}</span>
+              </span>
+              <span class="bookmark-row-preview">{{ getListEventContentPreview(bookmark.id) }}</span>
+            </div>
+            <button mat-icon-button class="compact-remove-btn" aria-label="Remove preview">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+        <button mat-icon-button class="drag-handle-btn" cdkDragHandle matTooltip="Drag to reorder"
+          aria-label="Drag to reorder bookmark">
+          <mat-icon>drag_indicator</mat-icon>
+        </button>
+        <button mat-button class="bookmark-row-link bookmark-row-link--event" (click)="openEventBookmark(bookmark.id)">
+          <span class="bookmark-row-author">
+            @if (getListEventAuthorPicture(bookmark.id); as picture) {
+            <img class="bookmark-row-avatar" [src]="picture" alt="Author avatar" />
+            } @else {
+            <mat-icon class="bookmark-row-avatar-icon">account_circle</mat-icon>
+            }
+            <span class="bookmark-row-author-name">{{ getListEventAuthorName(bookmark.id) }}</span>
+          </span>
+          <span class="bookmark-row-preview">{{ getListEventContentPreview(bookmark.id) }}</span>
+        </button>
+        <button mat-icon-button class="compact-remove-btn" (click)="removeEventBookmark(bookmark.id, $event)"
+          matTooltip="Remove from this list">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+    } @else {
     @for (bookmark of displayedEvents(); track bookmark.id) {
     <app-event [id]="bookmark.id" [relayHints]="bookmark.relay ? [bookmark.relay] : undefined"
       [compact]="viewMode() === 'tiles'"></app-event>
     }
+    }
     } @else if (selectedCategory() === 'articles') {
+    @if (viewMode() === 'list') {
+    <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
+      (cdkDropListDropped)="onBookmarksDrop('articles', $event)">
+      @for (bookmark of displayedArticles(); track bookmark.id) {
+      @let bm = bookmarkService.parseArticleId(bookmark.id);
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
+        cdkDragPreviewContainer="parent">
+        <ng-template cdkDragPreview>
+          <div class="bookmark-row-drag-preview">
+            <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
+              <mat-icon>drag_indicator</mat-icon>
+            </button>
+            <div class="bookmark-row-link">
+              <span class="bookmark-row-type">Article</span>
+              <span class="bookmark-row-title">{{ bm.slug || getCompactPubkeyLabel(bm.id) }}</span>
+            </div>
+            <button mat-icon-button class="compact-remove-btn" aria-label="Remove preview">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+        <button mat-icon-button class="drag-handle-btn" cdkDragHandle matTooltip="Drag to reorder"
+          aria-label="Drag to reorder bookmark">
+          <mat-icon>drag_indicator</mat-icon>
+        </button>
+        <button mat-button class="bookmark-row-link" (click)="openArticleBookmark(bookmark.id)">
+          <span class="bookmark-row-type">Article</span>
+          <span class="bookmark-row-title">{{ bm.slug || getCompactPubkeyLabel(bm.id) }}</span>
+        </button>
+        <button mat-icon-button class="compact-remove-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
+          matTooltip="Remove from this list">
+          <mat-icon>delete</mat-icon>
+        </button>
+        <div class="bookmark-list-content" hidden>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
     @for (bookmark of displayedArticles(); track bookmark.id) {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
     <div class="bookmark-article-wrapper">
@@ -140,7 +236,46 @@
       </button>
     </div>
     }
+    }
     } @else if (selectedCategory() === 'websites') {
+    @if (viewMode() === 'list') {
+    <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
+      (cdkDropListDropped)="onBookmarksDrop('websites', $event)">
+      @for (bookmark of displayedUrls(); track bookmark.id) {
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
+        cdkDragPreviewContainer="parent">
+        <ng-template cdkDragPreview>
+          <div class="bookmark-row-drag-preview">
+            <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
+              <mat-icon>drag_indicator</mat-icon>
+            </button>
+            <div class="bookmark-row-link">
+              <span class="bookmark-row-type">Website</span>
+              <span class="bookmark-row-title">{{ getCompactUrlLabel(bookmark.id) }}</span>
+            </div>
+            <button mat-icon-button class="compact-remove-btn" aria-label="Remove preview">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+        <button mat-icon-button class="drag-handle-btn" cdkDragHandle matTooltip="Drag to reorder"
+          aria-label="Drag to reorder bookmark">
+          <mat-icon>drag_indicator</mat-icon>
+        </button>
+        <button mat-button class="bookmark-row-link" (click)="openUrlBookmark(bookmark.id)">
+          <span class="bookmark-row-type">Website</span>
+          <span class="bookmark-row-title">{{ getCompactUrlLabel(bookmark.id) }}</span>
+        </button>
+        <button mat-icon-button class="compact-remove-btn" (click)="removeUrlBookmark(bookmark.id, $event)"
+          matTooltip="Remove from this list">
+          <mat-icon>delete</mat-icon>
+        </button>
+        <div class="bookmark-list-content" hidden>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
     @for (bookmark of displayedUrls(); track bookmark.id) {
     @if (viewMode() === 'content') {
     <div class="bookmark-url-preview">
@@ -175,6 +310,7 @@
         <mat-icon>delete</mat-icon>
       </button>
     </div>
+    }
     }
     }
     }

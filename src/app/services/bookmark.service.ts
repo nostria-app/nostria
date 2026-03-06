@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { moveItemInArray } from '@angular/cdk/drag-drop';
 import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
@@ -29,6 +30,12 @@ export interface BookmarkList {
   isDefault: boolean; // true for kind 10003
   isPrivate: boolean; // true for encrypted lists
 }
+
+type ReorderableBookmarkItem = {
+  id: string;
+  relay?: string;
+  pubkey?: string;
+};
 
 @Injectable({
   providedIn: 'root',
@@ -783,6 +790,122 @@ export class BookmarkService {
     if (this.selectedListId() === listId) {
       this.selectedListId.set('default');
     }
+  }
+
+  /**
+   * Reorder bookmarks inside the currently selected list for a specific type.
+   * The UI is rendered in reverse-tag order, so we reorder the rendered array
+   * and then map it back to the underlying tag order before publishing.
+   */
+  async reorderBookmarksInActiveList(type: BookmarkType, previousIndex: number, currentIndex: number): Promise<void> {
+    if (previousIndex === currentIndex) {
+      return;
+    }
+
+    const targetListId = this.selectedListId();
+    const activeEvent = this.activeBookmarkEvent();
+    if (!activeEvent) {
+      return;
+    }
+
+    const renderedItems = [...this.getBookmarkSignal(type)()] as ReorderableBookmarkItem[];
+    if (
+      previousIndex < 0 ||
+      currentIndex < 0 ||
+      previousIndex >= renderedItems.length ||
+      currentIndex >= renderedItems.length
+    ) {
+      return;
+    }
+
+    moveItemInArray(renderedItems, previousIndex, currentIndex);
+
+    if (targetListId === 'default') {
+      const nonTypeTags = activeEvent.tags.filter(tag => tag[0] !== type);
+      const reorderedTypeTags = [...renderedItems]
+        .reverse()
+        .map(item => {
+          if (type === 'e') {
+            return [
+              'e',
+              item.id,
+              item.relay || '',
+              item.pubkey || ''
+            ];
+          }
+
+          if (type === 'a') {
+            return item.relay
+              ? ['a', item.id, item.relay]
+              : ['a', item.id];
+          }
+
+          return [type, item.id];
+        });
+
+      const updatedEvent: Event = {
+        ...activeEvent,
+        tags: [...nonTypeTags, ...reorderedTypeTags]
+      };
+
+      await this.publish(updatedEvent, targetListId);
+      return;
+    }
+
+    const list = this.bookmarkLists().find(item => item.id === targetListId);
+    if (!list?.event) {
+      return;
+    }
+
+    const metadataTags = list.event.tags.filter(tag => tag[0] !== 'e' && tag[0] !== 'a' && tag[0] !== 't' && tag[0] !== 'r');
+    const otherBookmarkTags = list.event.tags.filter(tag => tag[0] !== type && (tag[0] === 'e' || tag[0] === 'a' || tag[0] === 't' || tag[0] === 'r'));
+    const reorderedTypeTags = [...renderedItems]
+      .reverse()
+      .map(item => {
+        if (type === 'e') {
+          return [
+            'e',
+            item.id,
+            item.relay || '',
+            item.pubkey || ''
+          ];
+        }
+
+        if (type === 'a') {
+          return item.relay
+            ? ['a', item.id, item.relay]
+            : ['a', item.id];
+        }
+
+        return [type, item.id];
+      });
+
+    if (list.isPrivate) {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        return;
+      }
+
+      const privateBookmarks = [...otherBookmarkTags, ...reorderedTypeTags];
+      const encryptedContent = await this.encryption.encryptNip44(JSON.stringify(privateBookmarks), pubkey);
+
+      const updatedEvent: Event = {
+        ...list.event,
+        tags: metadataTags,
+        content: encryptedContent
+      };
+
+      await this.publish(updatedEvent, targetListId);
+      await this.decryptPrivateList(targetListId);
+      return;
+    }
+
+    const updatedEvent: Event = {
+      ...list.event,
+      tags: [...metadataTags, ...otherBookmarkTags, ...reorderedTypeTags]
+    };
+
+    await this.publish(updatedEvent, targetListId);
   }
 
   async publish(event: Event, listId?: string) {

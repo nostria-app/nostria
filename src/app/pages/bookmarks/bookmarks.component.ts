@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,9 @@ import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
 import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
 import { BookmarkService, BookmarkType } from '../../services/bookmark.service';
+import { DataService } from '../../services/data.service';
+import { DatabaseService } from '../../services/database.service';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ApplicationStateService } from '../../services/application-state.service';
@@ -48,7 +52,14 @@ interface BookmarkCategory {
   color: string;
 }
 
-export type ViewMode = 'tiles' | 'content';
+export type ViewMode = 'tiles' | 'content' | 'list';
+
+interface CompactEventDetails {
+  contentPreview: string;
+  authorPubkey: string;
+  authorName: string;
+  authorPicture: string | null;
+}
 
 @Component({
   selector: 'app-bookmarks',
@@ -67,6 +78,7 @@ export type ViewMode = 'tiles' | 'content';
     MatProgressSpinnerModule,
     MatSelectModule,
     MatDividerModule,
+    DragDropModule,
     EventComponent,
     ArticleComponent,
     SocialPreviewComponent,
@@ -86,9 +98,15 @@ export class BookmarksComponent implements OnInit {
   private router = inject(Router);
   layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private data = inject(DataService);
+  private database = inject(DatabaseService);
+  private relayPool = inject(RelayPoolService);
 
   // Loading states
   loading = signal(false);
+  private compactEventDetails = signal<Record<string, CompactEventDetails>>({});
+  private loadingCompactEventIds = new Set<string>();
+  private compactEventRetryCounts = new Map<string, number>();
 
   // Pagination for continuous scrolling
   private readonly PAGE_SIZE = 10;
@@ -111,18 +129,27 @@ export class BookmarksComponent implements OnInit {
   // Paginated/sliced bookmarks for display
   displayedEvents = computed(() => {
     const events = this.bookmarkService.bookmarkEvents();
+    if (this.viewMode() === 'list') {
+      return events;
+    }
     const count = this.displayedEventCount();
     return events.slice(0, count);
   });
 
   displayedArticles = computed(() => {
     const articles = this.bookmarkService.bookmarkArticles();
+    if (this.viewMode() === 'list') {
+      return articles;
+    }
     const count = this.displayedArticleCount();
     return articles.slice(0, count);
   });
 
   displayedUrls = computed(() => {
     const urls = this.bookmarkService.bookmarkUrls();
+    if (this.viewMode() === 'list') {
+      return urls;
+    }
     const count = this.displayedUrlCount();
     return urls.slice(0, count);
   });
@@ -151,6 +178,14 @@ export class BookmarksComponent implements OnInit {
       this.logger.debug('View mode changed:', this.viewMode());
       this.saveViewMode();
     });
+
+    effect(() => {
+      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'events') {
+        return;
+      }
+
+      void this.loadCompactEventDetails(this.displayedEvents());
+    });
   }
 
   ngOnInit(): void {
@@ -174,6 +209,10 @@ export class BookmarksComponent implements OnInit {
    * Load more items when user scrolls near bottom
    */
   loadMore(): void {
+    if (this.viewMode() === 'list') {
+      return;
+    }
+
     const category = this.selectedCategory();
 
     if (category === 'events') {
@@ -218,6 +257,10 @@ export class BookmarksComponent implements OnInit {
    * Check if there are more items to load
    */
   hasMoreToLoad(): boolean {
+    if (this.viewMode() === 'list') {
+      return false;
+    }
+
     const category = this.selectedCategory();
 
     if (category === 'events') {
@@ -253,7 +296,7 @@ export class BookmarksComponent implements OnInit {
       const savedViewMode = this.accountLocalState.getBookmarksViewMode(pubkey);
       if (savedViewMode) {
         const viewMode = savedViewMode as ViewMode;
-        if (['tiles', 'content'].includes(viewMode)) {
+        if (['tiles', 'content', 'list'].includes(viewMode)) {
           this.viewMode.set(viewMode);
           this.logger.debug('Loaded view mode from storage:', viewMode);
         }
@@ -284,7 +327,18 @@ export class BookmarksComponent implements OnInit {
   }
 
   toggleViewMode(): void {
-    this.viewMode.set(this.viewMode() === 'content' ? 'tiles' : 'content');
+    const currentMode = this.viewMode();
+    if (currentMode === 'content') {
+      this.viewMode.set('tiles');
+      return;
+    }
+
+    if (currentMode === 'tiles') {
+      this.viewMode.set('list');
+      return;
+    }
+
+    this.viewMode.set('content');
   }
 
   getViewIcon(): string {
@@ -293,8 +347,44 @@ export class BookmarksComponent implements OnInit {
         return 'grid_view';
       case 'content':
         return 'view_agenda';
+      case 'list':
+        return 'view_list';
       default:
         return 'view_agenda';
+    }
+  }
+
+  async onBookmarksDrop(categoryId: string, event: CdkDragDrop<unknown>): Promise<void> {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    let bookmarkType: BookmarkType | null = null;
+
+    if (categoryId === 'events') {
+      bookmarkType = 'e';
+    } else if (categoryId === 'articles') {
+      bookmarkType = 'a';
+    } else if (categoryId === 'websites') {
+      bookmarkType = 'r';
+    }
+
+    if (!bookmarkType) {
+      return;
+    }
+
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.reorderBookmarksInActiveList(
+        bookmarkType,
+        event.previousIndex,
+        event.currentIndex
+      );
+    } catch (error) {
+      this.logger.error('Error reordering bookmarks:', error);
+      this.snackBar.open('Failed to reorder bookmarks', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
     }
   }
 
@@ -442,6 +532,216 @@ export class BookmarksComponent implements OnInit {
         return 'Website';
       default:
         return 'Bookmark';
+    }
+  }
+
+  getCompactEventLabel(id: string): string {
+    if (id.length <= 24) {
+      return id;
+    }
+
+    return `${id.slice(0, 10)}...${id.slice(-8)}`;
+  }
+
+  getCompactPubkeyLabel(pubkey: string): string {
+    if (!pubkey) {
+      return 'Article';
+    }
+
+    if (pubkey.length <= 24) {
+      return pubkey;
+    }
+
+    return `${pubkey.slice(0, 10)}...${pubkey.slice(-8)}`;
+  }
+
+  getCompactUrlLabel(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const value = `${parsed.hostname}${parsed.pathname === '/' ? '' : parsed.pathname}`;
+      if (value.length <= 56) {
+        return value;
+      }
+
+      return `${value.slice(0, 53)}...`;
+    } catch {
+      if (url.length <= 56) {
+        return url;
+      }
+
+      return `${url.slice(0, 53)}...`;
+    }
+  }
+
+  getListEventAuthorName(id: string): string {
+    return this.compactEventDetails()[id]?.authorName || 'Unknown';
+  }
+
+  getListEventAuthorPicture(id: string): string | null {
+    return this.compactEventDetails()[id]?.authorPicture || null;
+  }
+
+  getListEventContentPreview(id: string): string {
+    return this.compactEventDetails()[id]?.contentPreview || 'Loading...';
+  }
+
+  private async loadCompactEventDetails(items: Array<{ id: string; relay?: string }>): Promise<void> {
+    const dedupedById = new Map<string, { id: string; relay?: string }>();
+    items.forEach(item => {
+      if (!dedupedById.has(item.id)) {
+        dedupedById.set(item.id, item);
+      }
+    });
+
+    const uniqueItems = Array.from(dedupedById.values());
+    const current = this.compactEventDetails();
+    const missing = uniqueItems.filter(item => !current[item.id] && !this.loadingCompactEventIds.has(item.id));
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    missing.forEach(item => this.loadingCompactEventIds.add(item.id));
+
+    try {
+      const updates: Record<string, CompactEventDetails> = {};
+
+      await Promise.all(
+        missing.map(async item => {
+          const id = item.id;
+          let event = await this.database.getEventById(id);
+
+          if (!event) {
+            const record = await this.data.getEventById(id, { cache: true, save: true }, false);
+            event = record?.event || null;
+          }
+
+          if (!event && item.relay) {
+            event = await this.relayPool.getEventById([item.relay], id, 4000);
+            if (event) {
+              await this.database.saveEvent(event);
+            }
+          }
+
+          if (!event) {
+            const retries = this.compactEventRetryCounts.get(id) || 0;
+            if (retries < 2) {
+              this.compactEventRetryCounts.set(id, retries + 1);
+              setTimeout(() => {
+                void this.loadCompactEventDetails([item]);
+              }, 1500 * (retries + 1));
+            } else {
+              updates[id] = {
+                contentPreview: 'Unavailable event',
+                authorPubkey: '',
+                authorName: 'Unknown',
+                authorPicture: null,
+              };
+            }
+            return;
+          }
+
+          this.compactEventRetryCounts.delete(id);
+          const preview = this.toCompactPreview(event.content);
+          const authorPubkey = event.pubkey;
+
+          let authorName = this.getCompactPubkeyLabel(authorPubkey);
+          let authorPicture: string | null = null;
+
+          if (authorPubkey) {
+            const cachedProfile = this.data.getCachedProfile(authorPubkey);
+            const profile = cachedProfile || (await this.data.getProfile(authorPubkey));
+            const profileData = profile?.data as Record<string, unknown> | undefined;
+
+            if (profileData) {
+              const displayName = typeof profileData['display_name'] === 'string'
+                ? profileData['display_name']
+                : typeof profileData['name'] === 'string'
+                  ? profileData['name']
+                  : '';
+              const picture = typeof profileData['picture'] === 'string' ? profileData['picture'] : '';
+
+              if (displayName) {
+                authorName = displayName;
+              }
+              if (picture) {
+                authorPicture = picture;
+              }
+            }
+          }
+
+          updates[id] = {
+            contentPreview: preview,
+            authorPubkey,
+            authorName,
+            authorPicture,
+          };
+        })
+      );
+
+      this.compactEventDetails.update(existing => ({
+        ...existing,
+        ...updates,
+      }));
+    } finally {
+      missing.forEach(item => this.loadingCompactEventIds.delete(item.id));
+    }
+  }
+
+  private toCompactPreview(content: string): string {
+    if (!content) {
+      return '[no content]';
+    }
+
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+      return '[no content]';
+    }
+
+    if (normalized.length <= 90) {
+      return normalized;
+    }
+
+    return `${normalized.slice(0, 87)}...`;
+  }
+
+  openEventBookmark(id: string): void {
+    this.layout.openGenericEvent(id);
+  }
+
+  openArticleBookmark(id: string): void {
+    this.layout.openArticle(id);
+  }
+
+  openUrlBookmark(url: string): void {
+    window.open(url, '_blank');
+  }
+
+  async removeEventBookmark(id: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.addBookmark(id, 'e');
+      this.snackBar.open('Removed from bookmark list', 'Close', { duration: 2000 });
+    } catch (error) {
+      this.logger.error('Error removing bookmark:', error);
+      this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async removeUrlBookmark(url: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.addBookmark(url, 'r');
+      this.snackBar.open('Removed from bookmark list', 'Close', { duration: 2000 });
+    } catch (error) {
+      this.logger.error('Error removing bookmark:', error);
+      this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
     }
   }
 

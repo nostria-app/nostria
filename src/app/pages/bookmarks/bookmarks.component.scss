@@ -343,6 +343,202 @@
       }
     }
 
+    &[data-view='list'] {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .bookmark-drag-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .bookmark-list-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 36px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        background: var(--mat-sys-surface-container-low);
+        border: 1px solid var(--mat-sys-outline-variant);
+      }
+
+      .drag-handle-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        cursor: grab;
+        color: var(--mat-sys-on-surface-variant);
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          width: 16px;
+          height: 16px;
+          font-size: 16px;
+        }
+
+        &:active {
+          cursor: grabbing;
+        }
+      }
+
+      .bookmark-row-link {
+        flex: 1;
+        min-width: 0;
+        height: 34px;
+        border-radius: 6px;
+        padding: 0 8px;
+        justify-content: flex-start;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: none;
+      }
+
+      .bookmark-row-link--event {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0;
+        height: 42px;
+        padding: 2px 8px;
+      }
+
+      .bookmark-row-author {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .bookmark-row-avatar {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+
+      .bookmark-row-avatar-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
+      }
+
+      .bookmark-row-author-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .bookmark-row-preview {
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .bookmark-row-type {
+        flex-shrink: 0;
+        font-size: 11px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .bookmark-row-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .compact-remove-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          width: 16px;
+          height: 16px;
+          font-size: 16px;
+        }
+      }
+
+      .bookmark-list-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .bookmark-list-content--article {
+        position: relative;
+
+        .remove-bookmark-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 10;
+          background: var(--mat-sys-surface-container);
+          box-shadow: var(--mat-sys-level2);
+
+          &:hover {
+            background: var(--mat-sys-error-container);
+            color: var(--mat-sys-on-error-container);
+          }
+        }
+      }
+
+      .bookmark-detail {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        background: var(--mat-sys-surface-container);
+
+        .detail-icon {
+          color: var(--mat-sys-primary);
+        }
+
+        .detail-content {
+          flex: 1;
+          min-width: 0;
+
+          a {
+            color: var(--mat-sys-on-surface);
+            text-decoration: none;
+          }
+
+          h3 {
+            margin: 0;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+      }
+    }
+
     .empty-state {
       grid-column: 1 / -1;
       text-align: center;
@@ -468,6 +664,125 @@
         box-shadow: var(--mat-sys-level1);
       }
     }
+  }
+}
+
+.bookmarks-list {
+
+  .cdk-drag-placeholder {
+    opacity: 0.35;
+  }
+
+  .cdk-drop-list-dragging .bookmark-list-row:not(.cdk-drag-placeholder) {
+    transition: transform 180ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+::ng-deep .cdk-drag-preview.bookmark-row-drag-preview-host {
+  width: min(760px, calc(100vw - 32px));
+  border-radius: 8px;
+  border: 1px dashed var(--mat-sys-outline);
+  background: var(--mat-sys-surface-container-high);
+  box-shadow: var(--mat-sys-level3);
+  opacity: 0.96;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0;
+
+  .bookmark-row-drag-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 2px 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .drag-handle-btn,
+  .compact-remove-btn {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+    }
+  }
+
+  .bookmark-row-link {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    border-radius: 6px;
+    padding: 0 8px;
+    justify-content: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: none;
+  }
+
+  .bookmark-row-link--event {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    height: 42px;
+    padding: 2px 8px;
+  }
+
+  .bookmark-row-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bookmark-row-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .bookmark-row-avatar-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+
+  .bookmark-row-author-name,
+  .bookmark-row-preview,
+  .bookmark-row-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bookmark-row-author-name {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .bookmark-row-preview,
+  .bookmark-row-title {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface);
   }
 }
 
