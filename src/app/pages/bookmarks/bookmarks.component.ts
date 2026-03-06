@@ -22,6 +22,7 @@ import { BookmarkService, BookmarkType } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { OpenGraphService } from '../../services/opengraph.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ApplicationStateService } from '../../services/application-state.service';
@@ -59,6 +60,18 @@ interface CompactEventDetails {
   authorPubkey: string;
   authorName: string;
   authorPicture: string | null;
+}
+
+interface CompactAddressableDetails {
+  typeLabel: string;
+  contentPreview: string;
+  authorName: string;
+  authorPicture: string | null;
+}
+
+interface CompactUrlDetails {
+  title: string;
+  subtitle: string;
 }
 
 @Component({
@@ -101,11 +114,16 @@ export class BookmarksComponent implements OnInit {
   private data = inject(DataService);
   private database = inject(DatabaseService);
   private relayPool = inject(RelayPoolService);
+  private openGraph = inject(OpenGraphService);
 
   // Loading states
   loading = signal(false);
   private compactEventDetails = signal<Record<string, CompactEventDetails>>({});
+  private compactAddressableDetails = signal<Record<string, CompactAddressableDetails>>({});
+  private compactUrlDetails = signal<Record<string, CompactUrlDetails>>({});
   private loadingCompactEventIds = new Set<string>();
+  private loadingCompactAddressableIds = new Set<string>();
+  private loadingCompactUrlIds = new Set<string>();
   private compactEventRetryCounts = new Map<string, number>();
 
   // Pagination for continuous scrolling
@@ -185,6 +203,22 @@ export class BookmarksComponent implements OnInit {
       }
 
       void this.loadCompactEventDetails(this.displayedEvents());
+    });
+
+    effect(() => {
+      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'articles') {
+        return;
+      }
+
+      void this.loadCompactAddressableDetails(this.displayedArticles());
+    });
+
+    effect(() => {
+      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'websites') {
+        return;
+      }
+
+      void this.loadCompactUrlDetails(this.displayedUrls());
     });
   }
 
@@ -585,6 +619,30 @@ export class BookmarksComponent implements OnInit {
     return this.compactEventDetails()[id]?.contentPreview || 'Loading...';
   }
 
+  getListAddressableAuthorName(id: string): string {
+    return this.compactAddressableDetails()[id]?.authorName || 'Loading...';
+  }
+
+  getListAddressableAuthorPicture(id: string): string | null {
+    return this.compactAddressableDetails()[id]?.authorPicture || null;
+  }
+
+  getListAddressableTypeLabel(id: string): string {
+    return this.compactAddressableDetails()[id]?.typeLabel || 'Content';
+  }
+
+  getListAddressableContentPreview(id: string): string {
+    return this.compactAddressableDetails()[id]?.contentPreview || 'Loading details...';
+  }
+
+  getListUrlTitle(id: string): string {
+    return this.compactUrlDetails()[id]?.title || this.getCompactUrlLabel(id);
+  }
+
+  getListUrlSubtitle(id: string): string {
+    return this.compactUrlDetails()[id]?.subtitle || this.getCompactUrlLabel(id);
+  }
+
   private async loadCompactEventDetails(items: Array<{ id: string; relay?: string }>): Promise<void> {
     const dedupedById = new Map<string, { id: string; relay?: string }>();
     items.forEach(item => {
@@ -703,6 +761,201 @@ export class BookmarksComponent implements OnInit {
     }
 
     return `${normalized.slice(0, 87)}...`;
+  }
+
+  private getAddressableTypeLabel(kind: number): string {
+    if (kind === 30023) {
+      return 'Article';
+    }
+
+    if (kind === 30311) {
+      return 'Live';
+    }
+
+    if (kind === 30315) {
+      return 'Music';
+    }
+
+    if (kind === 30402) {
+      return 'Video';
+    }
+
+    if (kind === 31990 || kind === 31989) {
+      return 'Calendar';
+    }
+
+    return 'Content';
+  }
+
+  private getTagValue(eventTags: string[][], keys: string[]): string {
+    for (const key of keys) {
+      const value = eventTags.find(tag => tag[0] === key)?.[1];
+      if (value) {
+        return value;
+      }
+    }
+
+    return '';
+  }
+
+  private async resolveAuthorProfile(pubkey: string): Promise<{ name: string; picture: string | null }> {
+    if (!pubkey) {
+      return { name: 'Unknown', picture: null };
+    }
+
+    let name = this.getCompactPubkeyLabel(pubkey);
+    let picture: string | null = null;
+
+    const cachedProfile = this.data.getCachedProfile(pubkey);
+    const profile = cachedProfile || (await this.data.getProfile(pubkey));
+    const profileData = profile?.data as Record<string, unknown> | undefined;
+
+    if (profileData) {
+      const displayName = typeof profileData['display_name'] === 'string'
+        ? profileData['display_name']
+        : typeof profileData['name'] === 'string'
+          ? profileData['name']
+          : '';
+      const pictureUrl = typeof profileData['picture'] === 'string' ? profileData['picture'] : '';
+
+      if (displayName) {
+        name = displayName;
+      }
+
+      if (pictureUrl) {
+        picture = pictureUrl;
+      }
+    }
+
+    return { name, picture };
+  }
+
+  private async loadCompactAddressableDetails(items: Array<{ id: string; relay?: string }>): Promise<void> {
+    const dedupedById = new Map<string, { id: string; relay?: string }>();
+    items.forEach(item => {
+      if (!dedupedById.has(item.id)) {
+        dedupedById.set(item.id, item);
+      }
+    });
+
+    const uniqueItems = Array.from(dedupedById.values());
+    const current = this.compactAddressableDetails();
+    const missing = uniqueItems.filter(item => !current[item.id] && !this.loadingCompactAddressableIds.has(item.id));
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    missing.forEach(item => this.loadingCompactAddressableIds.add(item.id));
+
+    try {
+      const updates: Record<string, CompactAddressableDetails> = {};
+
+      await Promise.all(
+        missing.map(async item => {
+          const parsed = this.bookmarkService.parseArticleId(item.id);
+          const typeLabel = this.getAddressableTypeLabel(parsed.kind);
+
+          if (!parsed.slug) {
+            const author = await this.resolveAuthorProfile(parsed.id);
+            updates[item.id] = {
+              typeLabel,
+              contentPreview: this.getCompactPubkeyLabel(parsed.id),
+              authorName: author.name,
+              authorPicture: author.picture,
+            };
+            return;
+          }
+
+          let record = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+            parsed.id,
+            parsed.kind,
+            parsed.slug,
+            { cache: true, save: true }
+          );
+
+          if (!record?.event && item.relay) {
+            const fallbackEvent = await this.relayPool.get(
+              [item.relay],
+              {
+                authors: [parsed.id],
+                kinds: [parsed.kind],
+                '#d': [parsed.slug],
+              },
+              4500
+            );
+
+            if (fallbackEvent) {
+              await this.database.saveEvent(fallbackEvent);
+              record = { event: fallbackEvent, data: fallbackEvent.content };
+            }
+          }
+
+          const author = await this.resolveAuthorProfile(parsed.id);
+          const event = record?.event;
+
+          const tagTitle = event ? this.getTagValue(event.tags, ['title', 'name', 'subject', 'alt']) : '';
+          const contentSource = tagTitle || (event ? this.toCompactPreview(event.content) : '') || parsed.slug;
+
+          updates[item.id] = {
+            typeLabel,
+            contentPreview: this.toCompactPreview(contentSource),
+            authorName: author.name,
+            authorPicture: author.picture,
+          };
+        })
+      );
+
+      this.compactAddressableDetails.update(existing => ({
+        ...existing,
+        ...updates,
+      }));
+    } finally {
+      missing.forEach(item => this.loadingCompactAddressableIds.delete(item.id));
+    }
+  }
+
+  private async loadCompactUrlDetails(items: Array<{ id: string }>): Promise<void> {
+    const deduped = Array.from(new Set(items.map(item => item.id)));
+    const current = this.compactUrlDetails();
+    const missing = deduped.filter(id => !current[id] && !this.loadingCompactUrlIds.has(id));
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    missing.forEach(id => this.loadingCompactUrlIds.add(id));
+
+    try {
+      const updates: Record<string, CompactUrlDetails> = {};
+
+      await Promise.all(
+        missing.map(async url => {
+          try {
+            const meta = await this.openGraph.getOpenGraphData(url);
+            const fallbackTitle = this.getCompactUrlLabel(url);
+            const subtitle = meta.description || meta.siteName || new URL(url).hostname;
+
+            updates[url] = {
+              title: meta.title || fallbackTitle,
+              subtitle: this.toCompactPreview(subtitle || fallbackTitle),
+            };
+          } catch {
+            updates[url] = {
+              title: this.getCompactUrlLabel(url),
+              subtitle: this.getCompactUrlLabel(url),
+            };
+          }
+        })
+      );
+
+      this.compactUrlDetails.update(existing => ({
+        ...existing,
+        ...updates,
+      }));
+    } finally {
+      missing.forEach(id => this.loadingCompactUrlIds.delete(id));
+    }
   }
 
   openEventBookmark(id: string): void {

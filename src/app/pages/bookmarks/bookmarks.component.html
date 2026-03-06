@@ -188,16 +188,24 @@
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('articles', $event)">
       @for (bookmark of displayedArticles(); track bookmark.id) {
-      @let bm = bookmarkService.parseArticleId(bookmark.id);
       <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host">
         <ng-template cdkDragPreview>
           <div class="bookmark-row-drag-preview">
             <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
               <mat-icon>drag_indicator</mat-icon>
             </button>
-            <div class="bookmark-row-link">
-              <span class="bookmark-row-type">Article</span>
-              <span class="bookmark-row-title">{{ bm.slug || getCompactPubkeyLabel(bm.id) }}</span>
+            <div class="bookmark-row-link bookmark-row-link--event">
+              <span class="bookmark-row-author">
+                @if (getListAddressableAuthorPicture(bookmark.id); as picture) {
+                <img class="bookmark-row-avatar" [src]="picture" alt="Author avatar" />
+                } @else {
+                <mat-icon class="bookmark-row-avatar-icon">account_circle</mat-icon>
+                }
+                <span class="bookmark-row-author-name">
+                  {{ getListAddressableAuthorName(bookmark.id) }} · {{ getListAddressableTypeLabel(bookmark.id) }}
+                </span>
+              </span>
+              <span class="bookmark-row-preview">{{ getListAddressableContentPreview(bookmark.id) }}</span>
             </div>
             <button mat-icon-button class="compact-remove-btn" aria-label="Remove preview">
               <mat-icon>delete</mat-icon>
@@ -208,9 +216,19 @@
           aria-label="Drag to reorder bookmark">
           <mat-icon>drag_indicator</mat-icon>
         </button>
-        <button mat-button class="bookmark-row-link" (click)="openArticleBookmark(bookmark.id)">
-          <span class="bookmark-row-type">Article</span>
-          <span class="bookmark-row-title">{{ bm.slug || getCompactPubkeyLabel(bm.id) }}</span>
+        <button mat-button class="bookmark-row-link bookmark-row-link--event"
+          (click)="openArticleBookmark(bookmark.id)">
+          <span class="bookmark-row-author">
+            @if (getListAddressableAuthorPicture(bookmark.id); as picture) {
+            <img class="bookmark-row-avatar" [src]="picture" alt="Author avatar" />
+            } @else {
+            <mat-icon class="bookmark-row-avatar-icon">account_circle</mat-icon>
+            }
+            <span class="bookmark-row-author-name">
+              {{ getListAddressableAuthorName(bookmark.id) }} · {{ getListAddressableTypeLabel(bookmark.id) }}
+            </span>
+          </span>
+          <span class="bookmark-row-preview">{{ getListAddressableContentPreview(bookmark.id) }}</span>
         </button>
         <button mat-icon-button class="compact-remove-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
@@ -246,9 +264,13 @@
             <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
               <mat-icon>drag_indicator</mat-icon>
             </button>
-            <div class="bookmark-row-link">
-              <span class="bookmark-row-type">Website</span>
-              <span class="bookmark-row-title">{{ getCompactUrlLabel(bookmark.id) }}</span>
+            <div class="bookmark-row-link bookmark-row-link--event">
+              <span class="bookmark-row-author">
+                <mat-icon class="bookmark-row-avatar-icon">language</mat-icon>
+                <span class="bookmark-row-author-name">Website</span>
+              </span>
+              <span class="bookmark-row-preview">{{ getListUrlTitle(bookmark.id) }} · {{ getListUrlSubtitle(bookmark.id)
+                }}</span>
             </div>
             <button mat-icon-button class="compact-remove-btn" aria-label="Remove preview">
               <mat-icon>delete</mat-icon>
@@ -259,9 +281,13 @@
           aria-label="Drag to reorder bookmark">
           <mat-icon>drag_indicator</mat-icon>
         </button>
-        <button mat-button class="bookmark-row-link" (click)="openUrlBookmark(bookmark.id)">
-          <span class="bookmark-row-type">Website</span>
-          <span class="bookmark-row-title">{{ getCompactUrlLabel(bookmark.id) }}</span>
+        <button mat-button class="bookmark-row-link bookmark-row-link--event" (click)="openUrlBookmark(bookmark.id)">
+          <span class="bookmark-row-author">
+            <mat-icon class="bookmark-row-avatar-icon">language</mat-icon>
+            <span class="bookmark-row-author-name">Website</span>
+          </span>
+          <span class="bookmark-row-preview">{{ getListUrlTitle(bookmark.id) }} · {{ getListUrlSubtitle(bookmark.id)
+            }}</span>
         </button>
         <button mat-icon-button class="compact-remove-btn" (click)="removeUrlBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
