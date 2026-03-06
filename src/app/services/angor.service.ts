@@ -1,6 +1,10 @@
 import { Injectable, inject, signal, NgZone } from '@angular/core';
-import { SimplePool, Event } from 'nostr-tools';
+import { SimplePool, Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { AccountStateService } from './account-state.service';
+import { AccountRelayService } from './relays/account-relay';
+import { DatabaseService } from './database.service';
+import { RelaysService } from './relays/relays';
 
 /** Response item from the Angor mainnet indexer REST API */
 interface IndexerProject {
@@ -43,6 +47,7 @@ export interface AngorProject {
   eventId: string;
   pubkey: string;
   nostrPubKey: string;
+  metadataPubkey?: string;
   projectIdentifier: string;
   targetAmount: number;
   startDate: number;
@@ -57,6 +62,10 @@ export interface AngorProject {
 export class AngorService {
   private logger = inject(LoggerService);
   private zone = inject(NgZone);
+  private accountState = inject(AccountStateService);
+  private accountRelay = inject(AccountRelayService);
+  private database = inject(DatabaseService);
+  private relaysService = inject(RelaysService);
 
   /**
    * Angor mainnet indexer endpoints — tried in order until one succeeds.
@@ -69,13 +78,23 @@ export class AngorService {
   ];
 
   /**
-   * Angor-specific relays.
+   * Angor metadata relay-set constants (NIP-65 relay set: kind 30002).
    */
-  readonly ANGOR_RELAYS = ['wss://relay.angor.io', 'wss://relay2.angor.io'];
+  private readonly RELAY_SET_KIND = kinds.Relaysets;
+  private readonly ANGOR_RELAY_SET_D_TAG = 'angor';
+
+  /**
+   * Default relays for Angor project + metadata discovery.
+   * relay.angor.io stays first to make it the primary metadata source.
+   */
+  readonly ANGOR_DEFAULT_RELAYS = ['wss://relay.angor.io', 'wss://relay2.angor.io'];
 
   readonly ANGOR_PROJECT_KIND = 3030;
 
   private pool: SimplePool | null = null;
+
+  /** Cache the newest kind 0 metadata per pubkey to avoid refetching. */
+  private readonly metadataCache = new Map<string, { createdAt: number; metadata: AngorProjectMetadata }>();
 
   /** Reactive signal */
   readonly angorProjects = signal<AngorProject[]>([]);
@@ -107,11 +126,12 @@ export class AngorService {
       if (indexedProjects.length === 0) return;
 
       const pool = this.getPool();
+      const targetRelays = await this.resolveAngorRelays();
       const eventIds = indexedProjects.map(p => p.nostrEventId).filter(Boolean);
 
       // maxWait prevents the query from hanging if a relay is slow
       const kind3030Events = await pool.querySync(
-        this.ANGOR_RELAYS,
+        targetRelays,
         { kinds: [this.ANGOR_PROJECT_KIND], ids: eventIds },
         { maxWait: 8000 },
       );
@@ -129,6 +149,8 @@ export class AngorService {
         }
         if (!details.projectIdentifier || !details.nostrPubKey) continue;
 
+        const metadataPubkey = this.normalizePubkey(details.nostrPubKey) || this.normalizePubkey(event.pubkey);
+
         const existing = projectMap.get(details.projectIdentifier);
         if (existing && existing.createdAt >= event.created_at) continue;
 
@@ -136,6 +158,7 @@ export class AngorService {
           eventId: event.id,
           pubkey: event.pubkey,
           nostrPubKey: details.nostrPubKey,
+          metadataPubkey: metadataPubkey || undefined,
           projectIdentifier: details.projectIdentifier,
           targetAmount: details.targetAmount ?? 0,
           startDate: details.startDate ?? 0,
@@ -147,10 +170,13 @@ export class AngorService {
       // Fallback: projects whose kind 3030 events aren't on the relay yet.
       for (const indexed of indexedProjects) {
         if (!projectMap.has(indexed.projectIdentifier)) {
+          const fallbackPubkey = this.normalizePubkey(indexed.founderKey);
+
           projectMap.set(indexed.projectIdentifier, {
             eventId: indexed.nostrEventId,
             pubkey: indexed.founderKey,
             nostrPubKey: indexed.founderKey,
+            metadataPubkey: fallbackPubkey || undefined,
             projectIdentifier: indexed.projectIdentifier,
             targetAmount: 0,
             startDate: 0,
@@ -160,7 +186,7 @@ export class AngorService {
         }
       }
 
-      const projects = Array.from(projectMap.values());
+      const projects = this.applyCachedMetadata(Array.from(projectMap.values()));
       projects.sort((a, b) => b.createdAt - a.createdAt);
 
       // Publish basic project data immediately 
@@ -168,7 +194,7 @@ export class AngorService {
       this.projectsLoaded = true;
 
       // metadata runs in background, updates signal when done
-      this.fetchMetadata(projects, pool);
+      void this.fetchMetadata(projects, pool, targetRelays);
     } catch (err) {
       this.logger.error('AngorService: failed to load projects', err);
       this.zone.run(() => this.error.set('Failed to load Angor projects'));
@@ -178,23 +204,48 @@ export class AngorService {
   }
 
 
-  private async fetchMetadata(projects: AngorProject[], pool: SimplePool): Promise<void> {
-    const nostrPubKeys = [...new Set(projects.map(p => p.nostrPubKey).filter(Boolean))];
-    if (nostrPubKeys.length === 0) return;
+  private async fetchMetadata(projects: AngorProject[], pool: SimplePool, relays: string[]): Promise<void> {
+    const metadataPubkeys = [
+      ...new Set(
+        projects
+          .map(p => p.metadataPubkey || this.normalizePubkey(p.nostrPubKey))
+          .filter((pubkey): pubkey is string => !!pubkey),
+      ),
+    ];
+    if (metadataPubkeys.length === 0) return;
 
-    this.logger.info('AngorService: fetching kind 0 metadata for', nostrPubKeys.length, 'pubkeys');
+    const uncachedPubkeys = metadataPubkeys.filter(pubkey => !this.metadataCache.has(pubkey));
+    if (uncachedPubkeys.length === 0) {
+      this.applyMetadataFromCache();
+      return;
+    }
+
+    this.logger.info(
+      'AngorService: fetching kind 0 metadata for',
+      uncachedPubkeys.length,
+      'pubkeys from',
+      relays.length,
+      'relays'
+    );
 
     try {
-      // Query only Angor relays that is where project kind 0 metadata lives.
-      const metaEvents = await pool.querySync(
-        this.ANGOR_RELAYS,
-        { kinds: [0], authors: nostrPubKeys },
-        { maxWait: 8000 },
-      );
+      const metaEvents: Event[] = [];
+
+      // Split author filters into chunks to keep queries efficient as the list grows.
+      const chunkSize = 80;
+      for (let i = 0; i < uncachedPubkeys.length; i += chunkSize) {
+        const authors = uncachedPubkeys.slice(i, i + chunkSize);
+        const filter: Filter = { kinds: [0], authors };
+        const chunkEvents = await pool.querySync(relays, filter, { maxWait: 6000 });
+        metaEvents.push(...chunkEvents);
+      }
 
       this.logger.info('AngorService: received', metaEvents.length, 'metadata events');
 
-      if (metaEvents.length === 0) return;
+      if (metaEvents.length === 0) {
+        this.applyMetadataFromCache();
+        return;
+      }
 
       // Keep only the newest kind 0 per pubkey
       const metaMap = new Map<string, { event: Event; metadata: AngorProjectMetadata }>();
@@ -205,24 +256,126 @@ export class AngorService {
         } catch {
           continue;
         }
-        const existing = metaMap.get(event.pubkey);
+        const normalizedPubkey = this.normalizePubkey(event.pubkey) || event.pubkey;
+        const existing = metaMap.get(normalizedPubkey);
         if (!existing || event.created_at > existing.event.created_at) {
-          metaMap.set(event.pubkey, { event, metadata });
+          metaMap.set(normalizedPubkey, { event, metadata });
         }
       }
 
-      // Apply metadata and update the signal inside Angular's zone
-      this.zone.run(() => {
-        this.angorProjects.update(list =>
-          list.map(p => {
-            const entry = metaMap.get(p.nostrPubKey);
-            return entry ? { ...p, metadata: entry.metadata } : p;
-          })
-        );
-        this.logger.info('AngorService: applied metadata to', metaMap.size, 'projects');
-      });
+      for (const [pubkey, entry] of metaMap.entries()) {
+        this.metadataCache.set(pubkey, {
+          createdAt: entry.event.created_at,
+          metadata: entry.metadata,
+        });
+      }
+
+      this.applyMetadataFromCache();
+      this.logger.info('AngorService: applied metadata cache entries for', metaMap.size, 'pubkeys');
     } catch (err) {
       this.logger.warn('AngorService: metadata fetch failed', err);
+    }
+  }
+
+  private applyCachedMetadata(projects: AngorProject[]): AngorProject[] {
+    return projects.map(project => {
+      const metadataPubkey = project.metadataPubkey || this.normalizePubkey(project.nostrPubKey);
+      if (!metadataPubkey) return project;
+
+      const cached = this.metadataCache.get(metadataPubkey);
+      if (!cached) return project;
+
+      return {
+        ...project,
+        metadata: cached.metadata,
+      };
+    });
+  }
+
+  private applyMetadataFromCache(): void {
+    this.zone.run(() => {
+      this.angorProjects.update(list => this.applyCachedMetadata(list));
+    });
+  }
+
+  private async resolveAngorRelays(): Promise<string[]> {
+    const defaultRelays = this.ANGOR_DEFAULT_RELAYS;
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return defaultRelays;
+    }
+
+    try {
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+        pubkey,
+        this.RELAY_SET_KIND,
+        this.ANGOR_RELAY_SET_D_TAG,
+      );
+
+      let relayEvent = cachedEvent;
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const queryRelays = this.relaysService.getOptimalRelays(accountRelays);
+
+      if (queryRelays.length > 0) {
+        const latest = await this.getLatestRelaySetFromRelays(queryRelays, pubkey);
+        if (latest && (!relayEvent || latest.created_at > relayEvent.created_at)) {
+          relayEvent = latest;
+          const dTag = latest.tags.find(tag => tag[0] === 'd')?.[1];
+          await this.database.saveEvent({ ...latest, dTag });
+        }
+      }
+
+      const customRelays = relayEvent
+        ? relayEvent.tags
+          .filter(tag => tag[0] === 'relay' && !!tag[1])
+          .map(tag => tag[1])
+        : [];
+
+      const merged = [...new Set([defaultRelays[0], ...customRelays, ...defaultRelays])];
+      return merged.filter(Boolean);
+    } catch (err) {
+      this.logger.warn('AngorService: failed to resolve Angor relay set, using defaults', err);
+      return defaultRelays;
+    }
+  }
+
+  private async getLatestRelaySetFromRelays(relayUrls: string[], pubkey: string): Promise<Event | null> {
+    const pool = this.getPool();
+    const filter: Filter = {
+      kinds: [this.RELAY_SET_KIND],
+      authors: [pubkey],
+      '#d': [this.ANGOR_RELAY_SET_D_TAG],
+      limit: 1,
+    };
+
+    try {
+      const events = await pool.querySync(relayUrls, filter, { maxWait: 3000 });
+      if (!events.length) return null;
+
+      return events.sort((a, b) => b.created_at - a.created_at)[0];
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizePubkey(pubkey: string | undefined | null): string | null {
+    if (!pubkey) return null;
+
+    if (/^[0-9a-f]{64}$/i.test(pubkey)) {
+      return pubkey.toLowerCase();
+    }
+
+    try {
+      const decoded = nip19.decode(pubkey);
+      if (decoded.type === 'npub' && typeof decoded.data === 'string') {
+        return decoded.data.toLowerCase();
+      }
+      if (decoded.type === 'nprofile' && decoded.data && typeof decoded.data.pubkey === 'string') {
+        return decoded.data.pubkey.toLowerCase();
+      }
+      return null;
+    } catch {
+      return null;
     }
   }
 
