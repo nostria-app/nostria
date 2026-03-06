@@ -407,7 +407,6 @@ export class BookmarksComponent implements OnInit {
       return;
     }
 
-    this.loading.set(true);
     try {
       await this.bookmarkService.reorderBookmarksInActiveList(
         bookmarkType,
@@ -417,8 +416,6 @@ export class BookmarksComponent implements OnInit {
     } catch (error) {
       this.logger.error('Error reordering bookmarks:', error);
       this.snackBar.open('Failed to reorder bookmarks', 'Close', { duration: 3000 });
-    } finally {
-      this.loading.set(false);
     }
   }
 
