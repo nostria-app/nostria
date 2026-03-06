@@ -230,11 +230,6 @@ export class MessagingService implements NostriaService {
   }
 
   private isReactionFromTags(tags: string[][], content: string): boolean {
-    const syntheticKindTag = tags.find(tag => tag[0] === '_nostria_kind');
-    if (syntheticKindTag?.[1] === String(kinds.Reaction)) {
-      return true;
-    }
-
     const kTag = tags.find(tag => tag[0] === 'k');
     const hasETag = tags.some(tag => tag[0] === 'e' && !!tag[1]);
     if (!hasETag) {
@@ -249,29 +244,12 @@ export class MessagingService implements NostriaService {
   }
 
   private getReactionTargetFromTags(tags: string[][]): string | undefined {
-    const syntheticTarget = tags.find(tag => tag[0] === '_nostria_reaction_to');
-    if (syntheticTarget?.[1]) {
-      return syntheticTarget[1];
-    }
-
     const eTag = tags.find(tag => tag[0] === 'e');
     return eTag?.[1];
   }
 
-  private withInnerKindTag(tags: string[][], innerKind?: number): string[][] {
-    if (typeof innerKind !== 'number') {
-      return tags;
-    }
-
-    if (tags.some(tag => tag[0] === '_nostria_kind')) {
-      return tags;
-    }
-
-    return [...tags, ['_nostria_kind', String(innerKind)]];
-  }
-
   private normalizeMessage(message: DirectMessage): DirectMessage {
-    const tags = [...(message.tags || [])];
+    const tags = [...(message.tags || [])].filter(tag => !tag[0]?.startsWith('_nostria_'));
     const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, message.content || '');
 
     if (!isReaction) {
@@ -283,14 +261,6 @@ export class MessagingService implements NostriaService {
     }
 
     const reactionTarget = message.reactionTo || this.getReactionTargetFromTags(tags);
-
-    if (!tags.some(tag => tag[0] === '_nostria_kind')) {
-      tags.push(['_nostria_kind', String(kinds.Reaction)]);
-    }
-
-    if (reactionTarget && !tags.some(tag => tag[0] === '_nostria_reaction_to')) {
-      tags.push(['_nostria_reaction_to', reactionTarget]);
-    }
 
     return {
       ...message,
@@ -772,7 +742,7 @@ export class MessagingService implements NostriaService {
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
-          tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+          tags: unwrappedMessage.tags || [],
           isOutgoing: unwrappedMessage.pubkey === myPubkey,
           pending: false,
           failed: false,
@@ -806,7 +776,7 @@ export class MessagingService implements NostriaService {
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
-          tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+          tags: unwrappedMessage.tags || [],
           isOutgoing: event.pubkey === myPubkey,
           pending: false,
           failed: false,
@@ -922,7 +892,7 @@ export class MessagingService implements NostriaService {
                   pubkey: wrappedevent.pubkey,
                   created_at: wrappedevent.created_at,
                   content: wrappedevent.content,
-                  tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
+                  tags: wrappedevent.tags || [],
                   isOutgoing: wrappedevent.pubkey === myPubkey,
                   pending: false,
                   failed: false,
@@ -987,7 +957,7 @@ export class MessagingService implements NostriaService {
                   pubkey: unwrappedMessage.pubkey,
                   created_at: unwrappedMessage.created_at,
                   content: unwrappedMessage.content,
-                  tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+                  tags: unwrappedMessage.tags || [],
                   isOutgoing: event.pubkey === myPubkey,
                   pending: false,
                   failed: false,
@@ -1163,7 +1133,7 @@ export class MessagingService implements NostriaService {
               pubkey: unwrappedMessage.pubkey,
               created_at: unwrappedMessage.created_at,
               content: unwrappedMessage.content,
-              tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+              tags: unwrappedMessage.tags || [],
               isOutgoing: unwrappedMessage.pubkey === myPubkey,
               pending: false,
               failed: false,
@@ -1197,7 +1167,7 @@ export class MessagingService implements NostriaService {
               pubkey: unwrappedMessage.pubkey,
               created_at: unwrappedMessage.created_at,
               content: unwrappedMessage.content,
-              tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+              tags: unwrappedMessage.tags || [],
               isOutgoing: event.pubkey === myPubkey,
               pending: false,
               failed: false,
@@ -1375,7 +1345,7 @@ export class MessagingService implements NostriaService {
             pubkey: unwrappedMessage.pubkey,
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
-            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+            tags: unwrappedMessage.tags || [],
             isOutgoing: unwrappedMessage.pubkey === myPubkey,
             pending: false,
             failed: false,
@@ -1422,7 +1392,7 @@ export class MessagingService implements NostriaService {
             pubkey: unwrappedMessage.pubkey,
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
-            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+            tags: unwrappedMessage.tags || [],
             isOutgoing: event.pubkey === myPubkey,
             pending: false,
             failed: false,
@@ -1718,7 +1688,7 @@ export class MessagingService implements NostriaService {
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
             isOutgoing: isOutgoing,
-            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+            tags: unwrappedMessage.tags || [],
             pending: false,
             failed: false,
             received: true,
@@ -1923,7 +1893,7 @@ export class MessagingService implements NostriaService {
                 pubkey: wrappedevent.pubkey,
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
-                tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
+                tags: wrappedevent.tags || [],
                 isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -2000,7 +1970,7 @@ export class MessagingService implements NostriaService {
                 pubkey: unwrappedMessage.pubkey,
                 created_at: unwrappedMessage.created_at,
                 content: unwrappedMessage.content,
-                tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+                tags: unwrappedMessage.tags || [],
                 isOutgoing: event.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -2074,7 +2044,7 @@ export class MessagingService implements NostriaService {
                 pubkey: wrappedevent.pubkey,
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
-                tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
+                tags: wrappedevent.tags || [],
                 isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -2151,7 +2121,7 @@ export class MessagingService implements NostriaService {
                 pubkey: unwrappedMessage.pubkey,
                 created_at: unwrappedMessage.created_at,
                 content: unwrappedMessage.content,
-                tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
+                tags: unwrappedMessage.tags || [],
                 isOutgoing: event.pubkey === myPubkey,
                 pending: false,
                 failed: false,

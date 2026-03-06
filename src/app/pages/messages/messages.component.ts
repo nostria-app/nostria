@@ -1844,8 +1844,30 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return true;
     }
 
-    const kindTag = message.tags.find(tag => tag[0] === '_nostria_kind');
-    return kindTag?.[1] === String(kinds.Reaction);
+    const kTag = message.tags.find(tag => tag[0] === 'k');
+    const hasETag = message.tags.some(tag => tag[0] === 'e' && !!tag[1]);
+    return hasETag && (kTag?.[1] === String(kinds.PrivateDirectMessage) || this.isLikelyReactionContent(message.reactionContent || message.content));
+  }
+
+  private isLikelyReactionContent(content: string): boolean {
+    if (!content) {
+      return false;
+    }
+
+    if (content === '+' || content === '-') {
+      return true;
+    }
+
+    if (/^:[A-Za-z0-9_\-+]+:$/.test(content)) {
+      return true;
+    }
+
+    const compact = content.trim();
+    if (!compact || compact.includes(' ')) {
+      return false;
+    }
+
+    return Array.from(compact).length <= 4;
   }
 
   getReactionDisplay(content: string): string {
@@ -2011,11 +2033,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private getReactionTargetFromTags(tags: string[][]): string | undefined {
-    const syntheticTag = tags.find(tag => tag[0] === '_nostria_reaction_to');
-    if (syntheticTag?.[1]) {
-      return syntheticTag[1];
-    }
-
     const eTag = tags.find(tag => tag[0] === 'e');
     return eTag?.[1];
   }
