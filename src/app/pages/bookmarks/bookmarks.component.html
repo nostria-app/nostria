@@ -130,8 +130,7 @@
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('events', $event)">
       @for (bookmark of displayedEvents(); track bookmark.id) {
-      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
-        cdkDragPreviewContainer="parent">
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host">
         <ng-template cdkDragPreview>
           <div class="bookmark-row-drag-preview">
             <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
@@ -190,8 +189,7 @@
       (cdkDropListDropped)="onBookmarksDrop('articles', $event)">
       @for (bookmark of displayedArticles(); track bookmark.id) {
       @let bm = bookmarkService.parseArticleId(bookmark.id);
-      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
-        cdkDragPreviewContainer="parent">
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host">
         <ng-template cdkDragPreview>
           <div class="bookmark-row-drag-preview">
             <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
@@ -242,8 +240,7 @@
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('websites', $event)">
       @for (bookmark of displayedUrls(); track bookmark.id) {
-      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host"
-        cdkDragPreviewContainer="parent">
+      <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host">
         <ng-template cdkDragPreview>
           <div class="bookmark-row-drag-preview">
             <button mat-icon-button class="drag-handle-btn" aria-label="Drag preview">
