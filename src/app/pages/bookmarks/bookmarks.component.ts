@@ -970,7 +970,10 @@ export class BookmarksComponent implements OnInit {
 
   getMoveTargetLists(): BookmarkList[] {
     const currentListId = this.bookmarkService.selectedListId();
-    return this.bookmarkService.allBookmarkLists().filter(list => list.id !== currentListId);
+    return this.bookmarkService
+      .allBookmarkLists()
+      .filter(list => list.id !== currentListId)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }
 
   openAddToAnotherList(
