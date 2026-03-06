@@ -440,7 +440,9 @@
               } @else {
               <span class="reaction-emoji">{{ getReactionDisplay(reaction.content) }}</span>
               }
+              @if (reaction.count > 1) {
               <span class="reaction-count">{{ reaction.count }}</span>
+              }
             </button>
             }
           </div>
