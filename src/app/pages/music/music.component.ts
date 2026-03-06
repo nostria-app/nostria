@@ -115,6 +115,8 @@ export class MusicComponent implements OnDestroy {
   private playlistSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
+  private syncingOwnMusicCache = false;
+  private lastSyncedOwnMusicPubkey: string | null = null;
 
   // Search input reference for focusing
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
@@ -474,6 +476,113 @@ export class MusicComponent implements OnDestroy {
     // Then load relay set and start subscriptions for fresh data
     await this.loadMusicRelaySet();
     this.startSubscriptions();
+
+    // Ensure the current account's own catalog is cached for offline playback/navigation.
+    void this.syncCurrentAccountMusicCache();
+  }
+
+  /**
+   * Sync all authored tracks/playlists for the current account into IndexedDB.
+   * This runs in the background and keeps offline "My Music" usable.
+   */
+  private async syncCurrentAccountMusicCache(): Promise<void> {
+    const pubkey = this.currentPubkey();
+    if (!pubkey || this.syncingOwnMusicCache || this.lastSyncedOwnMusicPubkey === pubkey) {
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
+
+    this.syncingOwnMusicCache = true;
+
+    try {
+      const [trackCount, playlistCount] = await Promise.all([
+        this.fetchAndCacheOwnEvents(pubkey, MUSIC_KIND, 300),
+        this.fetchAndCacheOwnEvents(pubkey, PLAYLIST_KIND, 200),
+      ]);
+
+      this.lastSyncedOwnMusicPubkey = pubkey;
+      if (trackCount > 0 || playlistCount > 0) {
+        this.logger.debug(
+          `[Music] Synced own authored cache: ${trackCount} tracks, ${playlistCount} playlists`
+        );
+      }
+    } catch (error) {
+      this.logger.warn('[Music] Failed to sync own authored music cache:', error);
+    } finally {
+      this.syncingOwnMusicCache = false;
+    }
+  }
+
+  /**
+   * Fetch authored events in pages and persist them to IndexedDB.
+   */
+  private async fetchAndCacheOwnEvents(pubkey: string, kind: number, batchSize: number): Promise<number> {
+    let until: number | undefined;
+    let totalCached = 0;
+    const seenIds = new Set<string>();
+    const maxPages = 20;
+
+    for (let page = 0; page < maxPages; page++) {
+      const filter: Filter = {
+        kinds: [kind],
+        authors: [pubkey],
+        limit: batchSize,
+      };
+      if (until !== undefined) {
+        filter.until = until;
+      }
+
+      const events = await this.accountRelay.getMany<Event>(filter, { timeout: 7000 });
+      if (events.length === 0) {
+        break;
+      }
+
+      const targetMap = kind === MUSIC_KIND ? this.trackMap : this.playlistMap;
+      let mapChanged = false;
+      let oldestTimestamp = Number.MAX_SAFE_INTEGER;
+
+      for (const event of events) {
+        if (seenIds.has(event.id)) {
+          continue;
+        }
+        seenIds.add(event.id);
+
+        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${event.pubkey}:${dTag}`;
+        const existing = targetMap.get(uniqueId);
+
+        if (!existing || event.created_at > existing.created_at) {
+          targetMap.set(uniqueId, event);
+          mapChanged = true;
+        }
+
+        totalCached++;
+        oldestTimestamp = Math.min(oldestTimestamp, event.created_at);
+
+        this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+          this.logger.warn('[Music] Failed to save authored music event to database:', err);
+        });
+      }
+
+      if (mapChanged) {
+        if (kind === MUSIC_KIND) {
+          this.allTracks.set(Array.from(this.trackMap.values()));
+        } else {
+          this.allPlaylists.set(Array.from(this.playlistMap.values()));
+        }
+      }
+
+      if (events.length < batchSize || oldestTimestamp === Number.MAX_SAFE_INTEGER) {
+        break;
+      }
+
+      until = oldestTimestamp - 1;
+    }
+
+    return totalCached;
   }
 
   /**

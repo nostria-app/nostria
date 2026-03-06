@@ -1014,8 +1014,14 @@ export class App implements OnInit, OnDestroy {
       const initialized = this.app.initialized();
       const pubkey = this.accountState.pubkey();
       const accountRelayUrls = this.accountRelay.relaysSignal().map((relay) => relay.url);
+      const accountRelayOwnerPubkey = this.accountRelay.activeAccountPubkey();
 
       if (!authenticated || !initialized || !pubkey) {
+        return;
+      }
+
+      // Avoid evaluating dead-relay warnings with stale relay URLs from a previously selected account.
+      if (accountRelayOwnerPubkey !== pubkey) {
         return;
       }
 

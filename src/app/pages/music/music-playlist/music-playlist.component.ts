@@ -18,6 +18,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LoggerService } from '../../../services/logger.service';
+import { DatabaseService } from '../../../services/database.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
@@ -72,6 +73,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
   private logger = inject(LoggerService);
+  private database = inject(DatabaseService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
   private accountState = inject(AccountStateService);
@@ -359,14 +361,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   private loadPlaylist(pubkey: string, identifier: string): void {
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-
-    if (relayUrls.length === 0) {
-      this.logger.warn('No relays available');
-      this.loading.set(false);
-      return;
-    }
-
     // Decode pubkey if it's an npub
     let decodedPubkey = pubkey;
     if (pubkey.startsWith('npub')) {
@@ -378,6 +372,17 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       } catch (e) {
         this.logger.error('Failed to decode npub:', e);
       }
+    }
+
+    // Load cached playlist first so details can open while offline.
+    void this.loadCachedPlaylist(decodedPubkey, identifier);
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      this.logger.warn('No relays available');
+      this.loading.set(false);
+      return;
     }
 
     const filter: Filter = {
@@ -397,12 +402,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       clearTimeout(timeout);
       this.playlist.set(event);
       this.loading.set(false);
+
+      this.database.saveEvent({ ...event, dTag: identifier }).catch((err: unknown) => {
+        this.logger.warn('[MusicPlaylist] Failed to save playlist to database:', err);
+      });
     });
 
     this.subscriptions.push(sub);
   }
 
-  private loadPlaylistTracks(refs: string[]): void {
+  private async loadPlaylistTracks(refs: string[]): Promise<void> {
     const requestedTrackKeys = new Set<string>();
 
     // Parse the a-tag references to get authors and d-tags
@@ -436,7 +445,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     const missingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
 
-    if (missingTrackKeys.length === 0) {
+    // Load any missing tracks from local cache before hitting relays.
+    await this.loadMissingTracksFromDatabase(missingTrackKeys, refs);
+
+    const remainingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+
+    if (remainingTrackKeys.length === 0) {
       this.loadingTracks.set(false);
       return;
     }
@@ -450,17 +464,17 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.logger.debug('Loading missing playlist tracks', { refs, missingTrackKeys });
+    this.logger.debug('Loading missing playlist tracks', { refs, missingTrackKeys: remainingTrackKeys });
 
     // Create a single filter with all authors and d-tags (deduplicated)
-    const uniqueAuthors = [...new Set(missingTrackKeys.map(k => k.author))];
-    const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
-    const missingKeysSet = new Set(missingTrackKeys.map(k => `${k.author}:${k.dTag}`));
+    const uniqueAuthors = [...new Set(remainingTrackKeys.map(k => k.author))];
+    const uniqueDTags = [...new Set(remainingTrackKeys.map(k => k.dTag))];
+    const missingKeysSet = new Set(remainingTrackKeys.map(k => `${k.author}:${k.dTag}`));
     const filter: Filter = {
       kinds: [MUSIC_KIND],
       authors: uniqueAuthors,
       '#d': uniqueDTags,
-      limit: missingTrackKeys.length * 2, // Allow for duplicates
+      limit: remainingTrackKeys.length * 2, // Allow for duplicates
     };
 
     this.logger.debug('Playlist tracks filter', { filter, relayUrls });
@@ -494,10 +508,14 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         this.trackMap.set(uniqueId, event);
         this.logger.debug('Added track to map', { uniqueId, mapSize: this.trackMap.size });
         this.updateTracks(refs);
+
+        this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+          this.logger.warn('[MusicPlaylist] Failed to save track to database:', err);
+        });
       }
 
       // Check if we have all missing tracks
-      const missingRemaining = missingTrackKeys.some(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+      const missingRemaining = remainingTrackKeys.some(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
       if (!missingRemaining) {
         clearTimeout(timeout);
         this.loadingTracks.set(false);
@@ -513,6 +531,56 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         this.loadingTracks.set(false);
       }
     }, 3000);
+  }
+
+  private async loadCachedPlaylist(pubkey: string, identifier: string): Promise<void> {
+    try {
+      const cached = await this.database.getParameterizedReplaceableEvent(pubkey, MUSIC_PLAYLIST_KIND, identifier);
+      if (cached) {
+        this.playlist.set(cached);
+        this.loading.set(false);
+      }
+    } catch (error) {
+      this.logger.warn('[MusicPlaylist] Failed to load cached playlist:', error);
+    }
+  }
+
+  private async loadMissingTracksFromDatabase(
+    missingTrackKeys: Array<{ author: string; dTag: string }>,
+    refs: string[]
+  ): Promise<void> {
+    if (missingTrackKeys.length === 0) {
+      return;
+    }
+
+    try {
+      const cachedEvents = await Promise.all(
+        missingTrackKeys.map(key =>
+          this.database.getParameterizedReplaceableEvent(key.author, MUSIC_KIND, key.dTag)
+        )
+      );
+
+      let updated = false;
+
+      for (const event of cachedEvents) {
+        if (!event) {
+          continue;
+        }
+        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+        const uniqueId = `${event.pubkey}:${dTag}`;
+        const existing = this.trackMap.get(uniqueId);
+        if (!existing || existing.created_at < event.created_at) {
+          this.trackMap.set(uniqueId, event);
+          updated = true;
+        }
+      }
+
+      if (updated) {
+        this.updateTracks(refs);
+      }
+    } catch (error) {
+      this.logger.warn('[MusicPlaylist] Failed to load cached tracks for playlist:', error);
+    }
   }
 
   private updateTracks(refs: string[]): void {
