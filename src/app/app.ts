@@ -116,6 +116,7 @@ import { EventFocusService } from './services/event-focus.service';
 import { RunesSettingsService } from './services/runes-settings.service';
 import { TextScaleService } from './services/text-scale.service';
 import { UtilitiesService } from './services/utilities.service';
+import { AccountRelayService } from './services/relays/account-relay';
 
 interface NavItem {
   path: string;
@@ -242,6 +243,7 @@ export class App implements OnInit, OnDestroy {
   private readonly eventFocus = inject(EventFocusService);
   private readonly textScale = inject(TextScaleService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -1011,6 +1013,7 @@ export class App implements OnInit, OnDestroy {
       const authenticated = this.app.authenticated();
       const initialized = this.app.initialized();
       const pubkey = this.accountState.pubkey();
+      const accountRelayUrls = this.accountRelay.relaysSignal().map((relay) => relay.url);
 
       if (!authenticated || !initialized || !pubkey) {
         return;
@@ -1020,12 +1023,17 @@ export class App implements OnInit, OnDestroy {
         return;
       }
 
-      this.deadRelaysPromptCheckedForPubkey = pubkey;
       this.deadRelaysPromptInFlight = true;
 
-      void this.checkAndShowDeadRelaysWarning(pubkey).finally(() => {
-        this.deadRelaysPromptInFlight = false;
-      });
+      void this.checkAndShowDeadRelaysWarning(pubkey, accountRelayUrls)
+        .then((checked) => {
+          if (checked && this.accountState.pubkey() === pubkey) {
+            this.deadRelaysPromptCheckedForPubkey = pubkey;
+          }
+        })
+        .finally(() => {
+          this.deadRelaysPromptInFlight = false;
+        });
     });
 
     // Effect to restore last route when account is loaded
@@ -2493,23 +2501,29 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
-  private async checkAndShowDeadRelaysWarning(pubkey: string): Promise<void> {
+  private async checkAndShowDeadRelaysWarning(pubkey: string, activeAccountRelayUrls: string[]): Promise<boolean> {
     try {
       const dismissed = this.accountLocalState.getDismissedDeadRelaysWarningDialog(pubkey);
       if (dismissed) {
-        return;
+        return true;
       }
 
-      const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-      const relayUrls = this.getRawRelayUrlsFromRelayListEvent(relayListEvent);
+      // Prefer active account relays because they are account-scoped and may be available
+      // before replaceable events are persisted to the account database.
+      let relayUrls = this.utilities.unique(activeAccountRelayUrls.filter((url) => !!url));
 
       if (relayUrls.length === 0) {
-        return;
+        const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        relayUrls = this.getRawRelayUrlsFromRelayListEvent(relayListEvent);
+      }
+
+      if (relayUrls.length === 0) {
+        return false;
       }
 
       const knownDeadRelayUrls = this.utilities.getKnownDeadRelayUrls(relayUrls);
       if (knownDeadRelayUrls.length === 0) {
-        return;
+        return true;
       }
 
       this.bottomSheet.open(DeadRelaysWarningSheetComponent, {
@@ -2519,8 +2533,11 @@ export class App implements OnInit, OnDestroy {
           relayUrls: knownDeadRelayUrls,
         },
       });
+
+      return true;
     } catch (error) {
       this.logger.warn('[App] Failed to evaluate dead relay warning prompt', error);
+      return false;
     }
   }
 
