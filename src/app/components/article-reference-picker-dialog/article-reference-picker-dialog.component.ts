@@ -291,6 +291,23 @@ export class ArticleReferencePickerDialogComponent {
     return title || subject || identifier || fallbackContent || `Event ${event.id.slice(0, 12)}...`;
   }
 
+  getBookmarkListEntryLabel(list: BookmarkList): string {
+    const count = this.getBookmarkListEntryCount(list);
+    return `${count} ${count === 1 ? 'entry' : 'entries'}`;
+  }
+
+  private getBookmarkListEntryCount(list: BookmarkList): number {
+    const tags = list.event?.tags;
+    if (!tags || tags.length === 0) {
+      return 0;
+    }
+
+    return tags.filter((tag) => {
+      const marker = tag[0];
+      return (marker === 'p' || marker === 'e' || marker === 'a') && !!tag[1];
+    }).length;
+  }
+
   private getReferenceForEvent(event: Event): string | null {
     try {
       const dTag = event.tags.find((tag) => tag[0] === 'd')?.[1];
