@@ -170,6 +170,32 @@
           </span>
           <span class="bookmark-row-preview">{{ getListEventContentPreview(bookmark.id) }}</span>
         </button>
+        <button mat-icon-button class="compact-more-btn" [matMenuTriggerFor]="eventRowActionsMenu"
+          (click)="$event.stopPropagation()" matTooltip="Bookmark actions" aria-label="Bookmark actions">
+          <mat-icon>more_horiz</mat-icon>
+        </button>
+        <mat-menu #eventRowActionsMenu="matMenu">
+          <button mat-menu-item
+            (click)="openAddToAnotherList(bookmark.id, 'e', $event, bookmark.relay, bookmark.pubkey)">
+            <mat-icon>bookmark_add</mat-icon>
+            <span>Add to another list</span>
+          </button>
+          <mat-divider></mat-divider>
+          @if (getMoveTargetLists().length === 0) {
+          <button mat-menu-item disabled>
+            <mat-icon>drive_file_move</mat-icon>
+            <span>No other lists available</span>
+          </button>
+          } @else {
+          @for (targetList of getMoveTargetLists(); track targetList.id) {
+          <button mat-menu-item
+            (click)="moveToAnotherList(bookmark.id, 'e', targetList.id, $event, bookmark.relay, bookmark.pubkey)">
+            <mat-icon>drive_file_move</mat-icon>
+            <span>Move to {{ targetList.name }}</span>
+          </button>
+          }
+          }
+        </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeEventBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
           <mat-icon>delete</mat-icon>
@@ -188,6 +214,7 @@
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('articles', $event)">
       @for (bookmark of displayedArticles(); track bookmark.id) {
+      @let bm = bookmarkService.parseArticleId(bookmark.id);
       <div class="bookmark-list-row" cdkDrag cdkDragPreviewClass="bookmark-row-drag-preview-host">
         <ng-template cdkDragPreview>
           <div class="bookmark-row-drag-preview">
@@ -230,6 +257,31 @@
           </span>
           <span class="bookmark-row-preview">{{ getListAddressableContentPreview(bookmark.id) }}</span>
         </button>
+        <button mat-icon-button class="compact-more-btn" [matMenuTriggerFor]="articleRowActionsMenu"
+          (click)="$event.stopPropagation()" matTooltip="Bookmark actions" aria-label="Bookmark actions">
+          <mat-icon>more_horiz</mat-icon>
+        </button>
+        <mat-menu #articleRowActionsMenu="matMenu">
+          <button mat-menu-item
+            (click)="openAddToAnotherList(bookmark.id, 'a', $event, bookmark.relay, undefined, bm.kind)">
+            <mat-icon>bookmark_add</mat-icon>
+            <span>Add to another list</span>
+          </button>
+          <mat-divider></mat-divider>
+          @if (getMoveTargetLists().length === 0) {
+          <button mat-menu-item disabled>
+            <mat-icon>drive_file_move</mat-icon>
+            <span>No other lists available</span>
+          </button>
+          } @else {
+          @for (targetList of getMoveTargetLists(); track targetList.id) {
+          <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'a', targetList.id, $event, bookmark.relay)">
+            <mat-icon>drive_file_move</mat-icon>
+            <span>Move to {{ targetList.name }}</span>
+          </button>
+          }
+          }
+        </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
           <mat-icon>delete</mat-icon>
@@ -289,6 +341,30 @@
           <span class="bookmark-row-preview">{{ getListUrlTitle(bookmark.id) }} · {{ getListUrlSubtitle(bookmark.id)
             }}</span>
         </button>
+        <button mat-icon-button class="compact-more-btn" [matMenuTriggerFor]="urlRowActionsMenu"
+          (click)="$event.stopPropagation()" matTooltip="Bookmark actions" aria-label="Bookmark actions">
+          <mat-icon>more_horiz</mat-icon>
+        </button>
+        <mat-menu #urlRowActionsMenu="matMenu">
+          <button mat-menu-item (click)="openAddToAnotherList(bookmark.id, 'r', $event)">
+            <mat-icon>bookmark_add</mat-icon>
+            <span>Add to another list</span>
+          </button>
+          <mat-divider></mat-divider>
+          @if (getMoveTargetLists().length === 0) {
+          <button mat-menu-item disabled>
+            <mat-icon>drive_file_move</mat-icon>
+            <span>No other lists available</span>
+          </button>
+          } @else {
+          @for (targetList of getMoveTargetLists(); track targetList.id) {
+          <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'r', targetList.id, $event)">
+            <mat-icon>drive_file_move</mat-icon>
+            <span>Move to {{ targetList.name }}</span>
+          </button>
+          }
+          }
+        </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeUrlBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
           <mat-icon>delete</mat-icon>

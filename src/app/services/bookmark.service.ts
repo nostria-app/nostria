@@ -505,6 +505,146 @@ export class BookmarkService {
     }
   }
 
+  async setBookmarkPresence(
+    id: string,
+    type: BookmarkType,
+    shouldExist: boolean,
+    listId?: string,
+    relay?: string,
+    pubkey?: string
+  ): Promise<boolean> {
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return false;
+    }
+
+    const targetListId = listId || this.selectedListId();
+    let event: Event;
+    let isPrivateList = false;
+
+    if (targetListId === 'default') {
+      event = this.bookmarkEvent() || {
+        kind: kinds.BookmarkList,
+        pubkey: this.accountState.pubkey(),
+        created_at: this.utilities.currentDate(),
+        content: '',
+        tags: [],
+        id: '',
+        sig: '',
+      };
+    } else {
+      const list = this.bookmarkLists().find(l => l.id === targetListId);
+      if (!list) {
+        this.snackBar.open('Bookmark list not found', 'Close', { duration: 3000 });
+        return false;
+      }
+
+      isPrivateList = list.isPrivate;
+      event = list.event || {
+        kind: 30003,
+        pubkey: this.accountState.pubkey(),
+        created_at: this.utilities.currentDate(),
+        content: '',
+        tags: [
+          ['d', targetListId],
+          ['title', list.name]
+        ],
+        id: '',
+        sig: '',
+      };
+    }
+
+    let changed = false;
+
+    if (isPrivateList) {
+      let bookmarks: string[][] = [];
+
+      if (event.content) {
+        try {
+          const decryptedContent = await this.encryption.decryptNip44(event.content, userPubkey);
+          bookmarks = JSON.parse(decryptedContent);
+        } catch (error) {
+          this.logger.error('Failed to decrypt private list content:', error);
+          bookmarks = [];
+        }
+      }
+
+      const existingIndex = bookmarks.findIndex(b => b[0] === type && b[1] === id);
+      if (shouldExist && existingIndex === -1) {
+        const entry: string[] = [type, id];
+        if (type === 'e') {
+          entry.push(relay || '', pubkey || '');
+        } else if (type === 'a' && relay) {
+          entry.push(relay);
+        }
+        bookmarks.push(entry);
+        changed = true;
+      }
+
+      if (!shouldExist && existingIndex !== -1) {
+        bookmarks.splice(existingIndex, 1);
+        changed = true;
+      }
+
+      if (!changed) {
+        return false;
+      }
+
+      const encryptedContent = await this.encryption.encryptNip44(JSON.stringify(bookmarks), userPubkey);
+      event.content = encryptedContent;
+    } else {
+      const existingIndex = event.tags.findIndex(tag => tag[0] === type && tag[1] === id);
+
+      if (shouldExist && existingIndex === -1) {
+        if (type === 'e') {
+          event.tags.push([type, id, relay || '', pubkey || '']);
+        } else if (type === 'a') {
+          const tag = [type, id];
+          if (relay) {
+            tag.push(relay);
+          }
+          event.tags.push(tag);
+        } else {
+          event.tags.push([type, id]);
+        }
+        changed = true;
+      }
+
+      if (!shouldExist && existingIndex !== -1) {
+        event.tags = event.tags.filter(tag => !(tag[0] === type && tag[1] === id));
+        changed = true;
+      }
+
+      if (!changed) {
+        return false;
+      }
+    }
+
+    await this.publish(event, targetListId);
+
+    if (isPrivateList && targetListId !== 'default') {
+      await this.decryptPrivateList(targetListId);
+    }
+
+    return true;
+  }
+
+  async ensureBookmarkInList(
+    id: string,
+    type: BookmarkType,
+    listId?: string,
+    relay?: string,
+    pubkey?: string
+  ): Promise<boolean> {
+    return this.setBookmarkPresence(id, type, true, listId, relay, pubkey);
+  }
+
+  async removeBookmarkFromList(id: string, type: BookmarkType, listId?: string): Promise<boolean> {
+    return this.setBookmarkPresence(id, type, false, listId);
+  }
+
   async addBookmarkToList(id: string, type: BookmarkType, listId: string) {
     return this.addBookmark(id, type, listId);
   }

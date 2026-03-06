@@ -18,7 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
 import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
-import { BookmarkService, BookmarkType } from '../../services/bookmark.service';
+import { BookmarkService, BookmarkList, BookmarkType } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
@@ -35,6 +35,7 @@ import { ArticleComponent } from '../../components/article/article.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { CreateListDialogComponent } from './create-list-dialog/create-list-dialog.component';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
+import { BookmarkListSelectorComponent } from '../../components/bookmark-list-selector/bookmark-list-selector.component';
 
 export interface Bookmark {
   id: string;
@@ -965,6 +966,71 @@ export class BookmarksComponent implements OnInit {
 
   openUrlBookmark(url: string): void {
     window.open(url, '_blank');
+  }
+
+  getMoveTargetLists(): BookmarkList[] {
+    const currentListId = this.bookmarkService.selectedListId();
+    return this.bookmarkService.allBookmarkLists().filter(list => list.id !== currentListId);
+  }
+
+  openAddToAnotherList(
+    itemId: string,
+    type: BookmarkType,
+    event: Event,
+    relay?: string,
+    pubkey?: string,
+    eventKind?: number
+  ): void {
+    event.stopPropagation();
+
+    this.dialog.open(BookmarkListSelectorComponent, {
+      width: '500px',
+      panelClass: 'responsive-dialog',
+      data: {
+        itemId,
+        type,
+        relay,
+        pubkey,
+        eventKind,
+      },
+    });
+  }
+
+  async moveToAnotherList(
+    itemId: string,
+    type: BookmarkType,
+    targetListId: string,
+    event: Event,
+    relay?: string,
+    pubkey?: string
+  ): Promise<void> {
+    event.stopPropagation();
+
+    const currentListId = this.bookmarkService.selectedListId();
+    if (!targetListId || targetListId === currentListId) {
+      return;
+    }
+
+    try {
+      await this.bookmarkService.ensureBookmarkInList(itemId, type, targetListId, relay, pubkey);
+
+      // Ensure target contains the bookmark before removing from source list.
+      if (!this.bookmarkService.isBookmarked(itemId, type, targetListId)) {
+        this.snackBar.open('Move failed: target list was not updated', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Remove from currently viewed list.
+      if (this.bookmarkService.isBookmarked(itemId, type, currentListId)) {
+        await this.bookmarkService.removeBookmarkFromList(itemId, type, currentListId);
+      }
+
+      const targetList = this.bookmarkService.allBookmarkLists().find(list => list.id === targetListId);
+      this.snackBar.open(`Moved to ${targetList?.name || 'another list'}`, 'Close', { duration: 2000 });
+    } catch (error) {
+      this.logger.error('Error moving bookmark to another list:', error);
+      this.snackBar.open('Failed to move bookmark', 'Close', { duration: 3000 });
+    }
   }
 
   async removeEventBookmark(id: string, event: Event): Promise<void> {

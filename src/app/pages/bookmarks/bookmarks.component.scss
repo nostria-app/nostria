@@ -468,7 +468,8 @@
         color: var(--mat-sys-on-surface);
       }
 
-      .compact-remove-btn {
+      .compact-remove-btn,
+      .compact-more-btn {
         width: 24px;
         height: 24px;
         min-width: 24px;
@@ -707,7 +708,8 @@
   }
 
   .drag-handle-btn,
-  .compact-remove-btn {
+  .compact-remove-btn,
+  .compact-more-btn {
     width: 24px;
     height: 24px;
     min-width: 24px;
