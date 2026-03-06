@@ -353,16 +353,14 @@ export class NwcService {
   }
 
   /**
-   * Format millisatoshis to a readable string
+   * Format millisatoshis to a readable string (always in sats)
    */
   formatMsats(msats: number): string {
     const sats = Math.floor(msats / 1000);
     if (sats >= 100000000) {
       return `${(sats / 100000000).toFixed(8)} BTC`;
-    } else if (sats >= 1000) {
-      return `${sats.toLocaleString()} sats`;
     }
-    return `${msats.toLocaleString()} msats`;
+    return `${sats.toLocaleString()} sats`;
   }
 
   /**
