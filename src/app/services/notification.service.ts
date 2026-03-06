@@ -17,7 +17,7 @@ import { AccountRelayService } from './relays/account-relay';
 @Injectable({
   providedIn: 'root',
 })
-export class NotificationService {
+export class NotificationService implements OnDestroy {
   private logger = inject(LoggerService);
   private database = inject(DatabaseService);
   private accountState = inject(AccountStateService);
